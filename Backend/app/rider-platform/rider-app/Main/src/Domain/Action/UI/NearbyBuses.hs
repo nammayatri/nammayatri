@@ -1,4 +1,4 @@
-module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextBusDetails) where
+module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails) where
 
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
@@ -137,17 +137,24 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
   -- Return the complete response
   return $ API.Types.UI.NearbyBuses.NearbyBusesResponse (concat nearbyBuses) recentRides
 
-getNextBusDetails ::
+getNextVehicleDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Text ->
     Text ->
+    Kernel.Prelude.Maybe Spe.VehicleCategory ->
     Environment.Flow JourneyUtils.UpcomingTripInfo
   )
-getNextBusDetails (mbPersonId, _) routeCode stopCode = do
+getNextVehicleDetails (mbPersonId, _) routeCode stopCode mbVehicleType = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   now <- getCurrentTime
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.BUS DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+  let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
+  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
   JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig.id
+  where
+    castToOnDemandVehicleCategory :: Spe.VehicleCategory -> BecknV2.OnDemand.Enums.VehicleCategory
+    castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
+    castToOnDemandVehicleCategory Spe.METRO = BecknV2.OnDemand.Enums.METRO
+    castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY

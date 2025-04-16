@@ -8,6 +8,7 @@ module API.Action.UI.NearbyBuses
 where
 
 import qualified API.Types.UI.NearbyBuses
+import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.NearbyBuses as Domain.Action.UI.NearbyBuses
@@ -29,16 +30,21 @@ type API =
            '[JSON]
            API.Types.UI.NearbyBuses.NearbyBusesResponse
       :<|> TokenAuth
-      :> "nextBusDetails"
+      :> "nextVehicleDetails"
       :> Capture "routeCode" Data.Text.Text
-      :> Capture "stopCode" Data.Text.Text
+      :> Capture
+           "stopCode"
+           Data.Text.Text
+      :> QueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
       :> Get
            '[JSON]
            Lib.JourneyModule.Utils.UpcomingTripInfo
   )
 
 handler :: Environment.FlowServer API
-handler = postNearbyBusBooking :<|> getNextBusDetails
+handler = postNearbyBusBooking :<|> getNextVehicleDetails
 
 postNearbyBusBooking ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -49,12 +55,13 @@ postNearbyBusBooking ::
   )
 postNearbyBusBooking a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.postNearbyBusBooking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getNextBusDetails ::
+getNextVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Data.Text.Text ->
     Data.Text.Text ->
+    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler Lib.JourneyModule.Utils.UpcomingTripInfo
   )
-getNextBusDetails a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextBusDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getNextVehicleDetails a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

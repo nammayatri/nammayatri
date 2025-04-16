@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Search where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
 import Control.Monad
@@ -152,6 +153,7 @@ extractSearchDetails now = \case
         routeCode = Nothing,
         destinationStopCode = Nothing,
         originStopCode = Nothing,
+        vehicleCategory = Nothing,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -166,6 +168,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         platformType = Nothing,
+        vehicleCategory = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -177,6 +180,7 @@ extractSearchDetails now = \case
         routeCode = Nothing,
         destinationStopCode = Nothing,
         originStopCode = Nothing,
+        vehicleCategory = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -192,6 +196,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         platformType = Nothing,
+        vehicleCategory = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -207,6 +212,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         platformType = Nothing,
+        vehicleCategory = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -329,6 +335,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       routeCode
       destinationStopCode
       originStopCode
+      vehicleCategory
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -536,8 +543,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Enums.VehicleCategory ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)

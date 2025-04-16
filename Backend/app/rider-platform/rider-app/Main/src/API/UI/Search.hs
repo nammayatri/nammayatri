@@ -217,63 +217,63 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
   now <- getCurrentTime
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.BUS (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
-
-  mbBusRouteDetails <- JMU.measureLatency (JMU.getBusRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig.id) "getBusRouteDetails"
-  otpResponse <- case mbBusRouteDetails of
-    Just busRouteDetails -> do
+  let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
+  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
+  mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig.id) "getSingleModeRouteDetails"
+  otpResponse <- case mbSingleModeRouteDetails of
+    Just singleModeRouteDetails -> do
       let fromStopDetails =
             MultiModalTypes.MultiModalStopDetails
-              { stopCode = Just busRouteDetails.fromStop.stopCode,
+              { stopCode = Just singleModeRouteDetails.fromStop.stopCode,
                 platformCode = Nothing,
-                name = Just busRouteDetails.fromStop.stopName,
-                gtfsId = Just busRouteDetails.fromStop.stopCode
+                name = Just singleModeRouteDetails.fromStop.stopName,
+                gtfsId = Just singleModeRouteDetails.fromStop.stopCode
               }
       let toStopDetails =
             MultiModalTypes.MultiModalStopDetails
-              { stopCode = Just busRouteDetails.toStop.stopCode,
+              { stopCode = Just singleModeRouteDetails.toStop.stopCode,
                 platformCode = Nothing,
-                name = Just busRouteDetails.toStop.stopName,
-                gtfsId = Just busRouteDetails.toStop.stopCode
+                name = Just singleModeRouteDetails.toStop.stopName,
+                gtfsId = Just singleModeRouteDetails.toStop.stopCode
               }
-      let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = busRouteDetails.fromStop.stopLat, longitude = busRouteDetails.fromStop.stopLon}}
-      let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = busRouteDetails.toStop.stopLat, longitude = busRouteDetails.toStop.stopLon}}
+      let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = singleModeRouteDetails.fromStop.stopLat, longitude = singleModeRouteDetails.fromStop.stopLon}}
+      let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = singleModeRouteDetails.toStop.stopLat, longitude = singleModeRouteDetails.toStop.stopLon}}
       let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
-      let duration = nominalDiffTimeToSeconds $ diffUTCTime busRouteDetails.toStop.stopArrivalTime busRouteDetails.fromStop.stopArrivalTime
+      let duration = nominalDiffTimeToSeconds $ diffUTCTime singleModeRouteDetails.toStop.stopArrivalTime singleModeRouteDetails.fromStop.stopArrivalTime
       let leg =
             MultiModalTypes.MultiModalLeg
               { distance = distance,
                 duration = duration,
-                polyline = Polyline {encodedPolyline = fromMaybe "" busRouteDetails.route.polyline},
-                mode = MultiModalTypes.Bus,
+                polyline = Polyline {encodedPolyline = fromMaybe "" singleModeRouteDetails.route.polyline},
+                mode = castVehicleCategoryToGeneralVehicleType vehicleCategory,
                 startLocation = fromStopLocation,
                 endLocation = toStopLocation,
                 fromStopDetails = Just fromStopDetails,
                 toStopDetails = Just toStopDetails,
                 routeDetails =
                   [ MultiModalTypes.MultiModalRouteDetails
-                      { gtfsId = Just busRouteDetails.route.code,
-                        longName = Just busRouteDetails.route.longName,
-                        shortName = Just busRouteDetails.route.shortName,
-                        alternateShortNames = busRouteDetails.availableRoutes,
-                        color = busRouteDetails.route.color,
+                      { gtfsId = Just singleModeRouteDetails.route.code,
+                        longName = Just singleModeRouteDetails.route.longName,
+                        shortName = Just singleModeRouteDetails.route.shortName,
+                        alternateShortNames = singleModeRouteDetails.availableRoutes,
+                        color = singleModeRouteDetails.route.color,
                         fromStopDetails = Just fromStopDetails,
                         toStopDetails = Just toStopDetails,
                         startLocation = fromStopLocation,
                         endLocation = toStopLocation,
                         subLegOrder = 0,
-                        fromArrivalTime = Just busRouteDetails.fromStop.stopArrivalTime,
-                        fromDepartureTime = Just busRouteDetails.fromStop.stopArrivalTime,
-                        toArrivalTime = Just busRouteDetails.toStop.stopArrivalTime,
-                        toDepartureTime = Just busRouteDetails.toStop.stopArrivalTime
+                        fromArrivalTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
+                        fromDepartureTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
+                        toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
+                        toDepartureTime = Just singleModeRouteDetails.toStop.stopArrivalTime
                       }
                   ],
                 serviceTypes = [],
                 agency = Nothing,
-                fromArrivalTime = Just busRouteDetails.fromStop.stopArrivalTime,
-                fromDepartureTime = Just busRouteDetails.fromStop.stopArrivalTime,
-                toArrivalTime = Just busRouteDetails.toStop.stopArrivalTime,
-                toDepartureTime = Just busRouteDetails.toStop.stopArrivalTime
+                fromArrivalTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
+                fromDepartureTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
+                toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
+                toDepartureTime = Just singleModeRouteDetails.toStop.stopArrivalTime
               }
       return $
         MInterface.MultiModalResponse
@@ -281,8 +281,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               [ MultiModalTypes.MultiModalRoute
                   { distance = distance,
                     duration = duration,
-                    startTime = Just busRouteDetails.fromStop.stopArrivalTime,
-                    endTime = Just busRouteDetails.toStop.stopArrivalTime,
+                    startTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
+                    endTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
                     legs = [leg],
                     relevanceScore = Nothing
                   }
@@ -395,6 +395,13 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
       DTrip.Subway -> Just MultiModalTypes.Subway
       DTrip.Walk -> Just MultiModalTypes.Walk
       _ -> Nothing
+
+    castVehicleCategoryToGeneralVehicleType :: BecknV2.OnDemand.Enums.VehicleCategory -> GeneralVehicleType
+    castVehicleCategoryToGeneralVehicleType vehicleCategory = case vehicleCategory of
+      BecknV2.OnDemand.Enums.BUS -> MultiModalTypes.Bus
+      BecknV2.OnDemand.Enums.METRO -> MultiModalTypes.MetroRail
+      BecknV2.OnDemand.Enums.SUBWAY -> MultiModalTypes.Subway
+      _ -> MultiModalTypes.Unspecified
 
     mkAutoLeg now toLocation = do
       let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}

@@ -82,7 +82,8 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             stops = stops',
             toLocation = toLocation',
             totalRidesCount = totalRidesCount,
-            validTill = validTill
+            validTill = validTill,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
@@ -150,5 +151,6 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.startTime = startTime,
         Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
         Beam.totalRidesCount = totalRidesCount,
-        Beam.validTill = validTill
+        Beam.validTill = validTill,
+        Beam.vehicleCategory = vehicleCategory
       }

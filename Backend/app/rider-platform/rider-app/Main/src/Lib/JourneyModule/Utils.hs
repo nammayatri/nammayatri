@@ -4,7 +4,6 @@ import BecknV2.FRFS.Enums as Spec
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
-import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
@@ -19,11 +18,6 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
-import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
-import qualified Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
-import qualified Storage.Queries.FRFSStageFare as QFRFSStageFare
-import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -149,69 +143,6 @@ filterServiceableTrips tripIds currentTime integratedBppConfigId = do
       serviceableTrips = filter (\rc -> if length rc.serviceability > today then (rc.serviceability !! today) > 0 else False) routeCalendars
   return $ map (.tripId) serviceableTrips
 
--- | Calculate stage-based fare for a route between two stops
-calculateStageFare ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m
-  ) =>
-  Text -> -- Route code
-  Text -> -- From stop code
-  Text -> -- To stop code
-  Spec.ServiceTierType -> -- Service tier type
-  Id DIntegratedBPPConfig.IntegratedBPPConfig ->
-  m (Maybe PriceAPIEntity)
-calculateStageFare routeCode fromStopCode toStopCode serviceTierType integratedBppConfigId = do
-  -- First get the fare policy for this route and service tier
-  routeFareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBppConfigId
-
-  -- Find a fare product that matches the service tier
-  mbFarePolicyId <- do
-    matchingProducts <-
-      filterM
-        ( \rp -> do
-            mbVehicleServiceTier <- QFRFSVehicleServiceTier.findById rp.vehicleServiceTierId
-            case mbVehicleServiceTier of
-              Just vst -> return $ vst._type == serviceTierType
-              Nothing -> return False
-        )
-        routeFareProducts
-    return $ (listToMaybe matchingProducts) <&> (.farePolicyId)
-
-  case mbFarePolicyId of
-    Nothing -> return Nothing
-    Just farePolicyId -> do
-      -- Get the fare policy to confirm if it's stage-based
-      mbFarePolicy <- QFRFSFarePolicy.findById farePolicyId
-
-      case mbFarePolicy of
-        Nothing -> return Nothing
-        Just farePolicy ->
-          if farePolicy._type == FRFSFarePolicy.StageBased
-            then do
-              -- For stage-based, we need to find which stage the stops belong to
-              fromStopStage <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicyId routeCode fromStopCode
-              toStopStage <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicyId routeCode toStopCode
-
-              case (fromStopStage, toStopStage) of
-                (Just fromStage, Just toStage) -> do
-                  -- Calculate number of stages traveled
-                  let stagesTraveled = max 1 $ abs (toStage.stage - fromStage.stage)
-
-                  -- Get the stage fare for this many stages
-                  stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicyId
-
-                  -- Find the fare for this number of stages
-                  let mbStageFare = find (\sf -> sf.stage == stagesTraveled) stageFares
-                  let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
-
-                  -- Return the price
-                  return $ fmap (\sf -> mkPriceAPIEntity (mkPrice (Just sf.currency) (sf.amount + cessCharge))) mbStageFare
-                _ -> return Nothing -- Either of the stops doesn't have a stage mapping
-            else return Nothing -- handle it later
-
 -- | Find all possible routes from originStop to destinationStop with trips in the next hour
 -- grouped by service tier type
 findPossibleRoutes ::
@@ -297,30 +228,23 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
               serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
               mbFare = availableServiceTier <&> (.fare)
           return (mbFare, serviceTierName, serviceTierDescription, quoteId)
-        Nothing -> do
-          mbFare <-
-            if null routeCodesForTier
-              then return Nothing
-              else calculateStageFare (head routeCodesForTier) fromStopCode toStopCode serviceTierType integratedBppConfigId
-          return (mbFare, Nothing, Nothing, Nothing)
+        Nothing -> return (Nothing, Nothing, Nothing, Nothing)
 
     logDebug $ "mbFare: " <> show mbFare
+    let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
     return $
-      ( \fare ->
-          AvailableRoutesByTier
-            { serviceTier = serviceTierType,
-              availableRoutes = routeShortNames,
-              nextAvailableBuses = sort arrivalTimes,
-              serviceTierName = serviceTierName,
-              serviceTierDescription = serviceTierDescription,
-              quoteId = quoteId,
-              fare = fare
-            }
-      )
-        <$> mbFare
+      AvailableRoutesByTier
+        { serviceTier = serviceTierType,
+          availableRoutes = routeShortNames,
+          nextAvailableBuses = sort arrivalTimes,
+          serviceTierName = serviceTierName,
+          serviceTierDescription = serviceTierDescription,
+          quoteId = quoteId,
+          fare = fare
+        }
 
   -- Only return service tiers that have available routes
-  return $ filter (\r -> not (null $ r.availableRoutes)) (catMaybes results)
+  return $ filter (\r -> not (null $ r.availableRoutes)) results
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
@@ -400,7 +324,7 @@ data StopDetails = StopDetails
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data BusRouteDetails = BusRouteDetails
+data SingleModeRouteDetails = SingleModeRouteDetails
   { fromStop :: StopDetails,
     toStop :: StopDetails,
     route :: Route,
@@ -417,7 +341,7 @@ measureLatency action label = do
   logDebug $ label <> " Latency: " <> show latency <> " seconds"
   return result
 
-getBusRouteDetails ::
+getSingleModeRouteDetails ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -428,8 +352,8 @@ getBusRouteDetails ::
   Maybe Text ->
   Maybe Text ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
-  m (Maybe BusRouteDetails)
-getBusRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopCode) integratedBppConfigId = do
+  m (Maybe SingleModeRouteDetails)
+getSingleModeRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopCode) integratedBppConfigId = do
   mbFromStop <- QStation.findByStationCode originStopCode integratedBppConfigId
   mbToStop <- QStation.findByStationCode destinationStopCode integratedBppConfigId
   mbRoute <- QRoute.findByRouteCode routeCode integratedBppConfigId
@@ -482,10 +406,10 @@ getBusRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopC
               fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
               toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
           possibleRoutes <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId) "findPossibleRoutes"
-          return $ Just $ BusRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
+          return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
         _ -> return Nothing
     _ -> return Nothing
-getBusRouteDetails _ _ _ _ = return Nothing
+getSingleModeRouteDetails _ _ _ _ = return Nothing
 
 convertSortingType :: DMP.JourneyOptionsSortingType -> MultiModal.SortingType
 convertSortingType sortType = case sortType of

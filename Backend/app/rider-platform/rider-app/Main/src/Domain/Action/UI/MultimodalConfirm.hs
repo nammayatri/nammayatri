@@ -20,7 +20,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalTransitOptionsLite,
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
-    getMultimodalOrderGetBusTierOptions,
+    getMultimodalOrderGetLegTierOptions,
   )
 where
 
@@ -201,7 +201,7 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   where
     getAlternateShortNames :: Flow (Maybe [Text])
     getAlternateShortNames = do
-      options <- getMultimodalOrderGetBusTierOptions (mbPersonId, merchantId) journeyId legOrder
+      options <- getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder
       let mbSelectedOption = find (\option -> option.quoteId == Just req.quoteId) options.options
       return $ mbSelectedOption <&> (.availableRoutes)
 
@@ -595,14 +595,14 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
           }
   return transportData
 
-getMultimodalOrderGetBusTierOptions ::
+getMultimodalOrderGetLegTierOptions ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
   Environment.Flow ApiTypes.LegServiceTierOptionsResp
-getMultimodalOrderGetBusTierOptions (mbPersonId, _merchantId) journeyId legOrder = do
+getMultimodalOrderGetLegTierOptions (mbPersonId, _merchantId) journeyId legOrder = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   legs <- JM.getJourneyLegs journeyId
@@ -611,7 +611,7 @@ getMultimodalOrderGetBusTierOptions (mbPersonId, _merchantId) journeyId legOrder
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
-  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId (castTravelModeToVehicleCategory journeyLegInfo.mode) DIBC.MULTIMODAL
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
@@ -619,3 +619,10 @@ getMultimodalOrderGetBusTierOptions (mbPersonId, _merchantId) journeyId legOrder
       availableRoutesByTier <- JLU.findPossibleRoutes (Just $ catMaybes availableServiceTiers) fromStopCode toStopCode now integratedBPPConfig.id
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
+  where
+    castTravelModeToVehicleCategory :: DTrip.MultimodalTravelMode -> Enums.VehicleCategory
+    castTravelModeToVehicleCategory DTrip.Bus = Enums.BUS
+    castTravelModeToVehicleCategory DTrip.Taxi = Enums.AUTO_RICKSHAW
+    castTravelModeToVehicleCategory DTrip.Walk = Enums.AUTO_RICKSHAW
+    castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
+    castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY

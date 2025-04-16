@@ -3,6 +3,7 @@
 
 module Storage.Beam.SearchRequest where
 
+import qualified BecknV2.OnDemand.Enums
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -82,7 +83,8 @@ data SearchRequestT f = SearchRequestT
     startTime :: B.C f Kernel.Prelude.UTCTime,
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    validTill :: B.C f Kernel.Prelude.UTCTime
+    validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 

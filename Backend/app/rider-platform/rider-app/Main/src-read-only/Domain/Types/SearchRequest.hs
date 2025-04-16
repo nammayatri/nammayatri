@@ -3,6 +3,7 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
 import qualified Domain.Types.Location
@@ -74,7 +75,8 @@ data SearchRequest = SearchRequest
     stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    validTill :: Kernel.Prelude.UTCTime
+    validTill :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
   deriving (Generic, Show)
 

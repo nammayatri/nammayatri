@@ -8,6 +8,7 @@ imports:
   PlatformType: Domain.Types.IntegratedBPPConfig
   Price: Kernel.Types.Price
   ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
   UpcomingTripInfo: Lib.JourneyModule.Utils
 
 module: NearbyBuses
@@ -53,10 +54,12 @@ apis:
         type: NearbyBusesResponse
 
   - GET:
-      endpoint: /nextBusDetails/{routeCode}/{stopCode}
+      endpoint: /nextVehicleDetails/{routeCode}/{stopCode}
       auth: TokenAuth
       params:
         routeCode: Text
         stopCode: Text
+      query:
+        vehicleType: VehicleCategory
       response:
         type: UpcomingTripInfo

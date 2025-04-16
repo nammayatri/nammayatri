@@ -1,5 +1,6 @@
 module SharedLogic.Search where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
 import Data.OpenApi hiding (Header, description, email)
@@ -117,6 +118,7 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     startTime :: Maybe UTCTime,
     routeCode :: Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -184,6 +186,7 @@ data SearchDetails = SearchDetails
     routeCode :: Maybe Text,
     destinationStopCode :: Maybe Text,
     originStopCode :: Maybe Text,
+    vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, Show)

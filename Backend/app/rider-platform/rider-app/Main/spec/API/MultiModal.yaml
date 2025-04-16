@@ -322,7 +322,7 @@ apis:
         type: PublicTransportData
 
   - GET:
-      endpoint: /multimodal/{journeyId}/order/{legOrder}/getBusTierOptions
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/getLegTierOptions
       params:
         journeyId: Id Journey
         legOrder: Int

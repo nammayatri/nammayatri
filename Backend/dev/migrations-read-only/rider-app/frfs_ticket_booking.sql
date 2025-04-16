@@ -208,5 +208,4 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN recent_location_id characte
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN os_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN os_build_version text ;
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN device_id text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN booking_auth_code text ;
