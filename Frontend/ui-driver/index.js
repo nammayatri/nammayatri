@@ -226,6 +226,11 @@ window.onMerchantEvent = function (_event, payload) {
       getPureScript()
     },0) 
   } else if (_event == "process") {
+    try {
+      window.JBridge.enableWebViewRecreate("true")
+    } catch (e) {
+      console.warn("window.JBridge.enableWebViewRecreate failed")
+    }
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
