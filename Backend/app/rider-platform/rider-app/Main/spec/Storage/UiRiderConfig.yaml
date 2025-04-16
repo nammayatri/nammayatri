@@ -10,6 +10,7 @@ imports:
 
 UiRiderConfig:
   tableName: ui_rider_config
+  derives: "Generic,Show,ToJSON,FromJSON,Eq,ToSchema"
 
   fields:
     id: Id UiRiderConfig
@@ -23,7 +24,7 @@ UiRiderConfig:
   constraints:
     id: PrimaryKey
 
-    sqlType:
+  sqlType:
     config: json
 
   excludedFields: [merchantId, merchantOperatingCityId]

@@ -174,22 +174,22 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
-      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig)) >>= fromMaybeM (InvalidRequest "DriverPoolConfig config not found")
+      defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTD.DriverPoolConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTD.DriverPoolConfig)) transporterConfig.referralLinkPassword req logicData
-    LYT.UI_DRIVER _ _ -> do
-      let def'' = Prelude.listToMaybe $ LYT.genDef (Proxy @DTDC.UiDriverConfig)
-      def' <- maybe (throwError $ InvalidRequest "No default found for UiDriverConfig") pure def''
-      logicData :: DTDC.UiDriverConfig <- YudhishthiraFlow.createLogicData def' (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTDC.UiDriverConfig) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG (LYT.UiConfig _ _) -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "No default found for UiDriverConfig") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTDC.UiDriverConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTDC.UiDriverConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTDC.UiDriverConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
-      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig)) >>= fromMaybeM (InvalidRequest "PayoutConfig config not found")
+      defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTP.PayoutConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
-      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig)) >>= fromMaybeM (InvalidRequest "RideRelatedNotificationConfig config not found")
+      defaultConfig <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTRN.RideRelatedNotificationConfig)) transporterConfig.referralLinkPassword req logicData
@@ -199,7 +199,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     --   logicData :: (LYT.Config DTM.MerchantMessage) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
     --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTM.MerchantMessage) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
-      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification)) >>= fromMaybeM (InvalidRequest "MerchantPushNotification config not found")
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantPushNotification config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) transporterConfig.referralLinkPassword req logicData
@@ -283,13 +283,13 @@ postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs
+  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYT.LogicDomain -> Environment.Flow LYT.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions
 
 getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYT.AppDynamicLogicDomainResp
-getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ LYT.allValues
+getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return LYT.allValues
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.Chakra -> Environment.Flow LYT.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
@@ -308,7 +308,7 @@ postNammaTagConfigPilotGetConfig _ _ uicr = do
   merchant <- findById (Id uicr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
   (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId
-  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.UI_DRIVER uicr.os uicr.platform)
+  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.DRIVER_CONFIG $ LYT.UiConfig uicr.os uicr.platform)
   case config of
     Just cfg -> pure (LYT.UiConfigResponse cfg.config (Text.pack .show <$> version) isExp)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
@@ -349,13 +349,13 @@ getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merch
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  TC.returnConfigs configType (cast merchantOpCityId)
+  TC.returnConfigs configType (cast merchantOpCityId) (cast merchant.id) _opCity
 
 postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs
+  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
 
 -- { os :: DeviceType,
 --     language :: Language,
