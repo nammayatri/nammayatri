@@ -246,6 +246,7 @@ library
       Domain.Action.UI.TicketService
       Domain.Action.UI.TrackRoute
       Domain.Action.UI.TriggerFCM
+      Domain.Action.UI.Voip
       Domain.Action.UI.Whatsapp
       Domain.Types.Booking.API
       Domain.Types.CacType
@@ -372,6 +373,7 @@ library
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.VoipCallStatus
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -576,6 +578,7 @@ library
       API.Action.UI.TicketService
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
+      API.Action.UI.Voip
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Customer
       API.Types.Dashboard.AppManagement.Endpoints.Customer
@@ -752,6 +755,7 @@ library
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
+      Domain.Types.VoipCallStatus
       Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq

@@ -35,6 +35,7 @@ import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
+import qualified API.Action.UI.Voip as Voip
 import qualified API.Action.UI.WMB as WMB
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
@@ -118,6 +119,7 @@ type API =
            :<|> ReferralPayout.API
            :<|> SpecialLocationWarrior.API
            :<|> WMB.API
+           :<|> Voip.API
            :<|> OH.API
        )
 
@@ -169,4 +171,5 @@ handler =
     :<|> ReferralPayout.handler
     :<|> SpecialLocationWarrior.handler
     :<|> WMB.handler
+    :<|> Voip.handler
     :<|> OH.handler
