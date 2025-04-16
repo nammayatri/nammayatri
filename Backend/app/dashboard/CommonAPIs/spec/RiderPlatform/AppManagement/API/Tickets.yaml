@@ -14,6 +14,7 @@ imports:
   ContactDetails: Domain.Types.TicketMerchantDetails
   RequestorRole: Domain.Types.MerchantOnboarding
   GetFileResponse: Domain.Types.MerchantOnboarding
+  TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
 
 importPackageOverrides:
   API.Types.UI.TicketService: "rider-app"
@@ -23,6 +24,8 @@ importPackageOverrides:
   Domain.Types.TicketBooking: "rider-app"
   Domain.Types.TicketMerchantDetails: "rider-app"
   Domain.Types.MerchantOnboarding: "rider-app"
+  Domain.Types.TicketDashboard: "rider-app"
+
 
 module: Tickets
 apiPrefix: ""
@@ -149,6 +152,35 @@ apis:
         type: SendVerifyOtpReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/info
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: TicketPlaceDashboardDetails
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/update
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      request:
+        type: TicketPlaceDashboardDetails
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /ticketdashboard/ticketplaces
+      auth: ApiAuthV2
+      query:
+        - status: Text
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: "[TicketPlace]"
 
 
 

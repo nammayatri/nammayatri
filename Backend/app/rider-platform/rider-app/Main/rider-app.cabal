@@ -274,6 +274,7 @@ library
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
       Domain.Types.RentalsIntercityCache
+      Domain.Types.TicketDashboard
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI

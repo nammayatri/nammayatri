@@ -18,3 +18,9 @@ ALTER TABLE atlas_app.business_hour ADD COLUMN booking_closing_time timestamp wi
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.business_hour ALTER COLUMN booking_closing_time TYPE time without time zone;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.business_hour ADD COLUMN place_id text ;
+ALTER TABLE atlas_app.business_hour ADD COLUMN name text ;

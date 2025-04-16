@@ -48,3 +48,8 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN terms_and_conditions_url text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN priority integer  default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN ticket_merchant_id text ;

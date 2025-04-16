@@ -19,6 +19,8 @@ data SpecialOccasionT f = SpecialOccasionT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entityId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialDayType :: B.C f Domain.Types.SpecialOccasion.SpecialDayType,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

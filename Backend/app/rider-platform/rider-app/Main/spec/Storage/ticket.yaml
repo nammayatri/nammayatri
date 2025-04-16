@@ -46,6 +46,7 @@ TicketPlace:
     closeTimings: Maybe TimeOfDay
     status: PlaceStatus
     allowSameDayBooking: Bool
+    ticketMerchantId: Maybe Text
     priority: Int
 
   types:
@@ -82,6 +83,13 @@ TicketPlace:
       kvFunction: findOneWithKV
       where:
         and: [name, merchantOperatingCityId]
+    findAllByTicketMerchantIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketMerchantId, status]
+    getAllTicketPlaces:
+      kvFunction: findAllWithKV
+      where: status
 
 TicketService:
   tableName: ticket_service
@@ -155,6 +163,8 @@ SpecialOccasion:
     specialDayType: SpecialDayType
     description: Maybe Text
     businessHours: "[Id BusinessHour]"
+    placeId: Maybe Text
+    name: Maybe Text
 
   types:
     SpecialDayType:
@@ -185,6 +195,12 @@ SpecialOccasion:
       kvFunction: findOneWithKV
       where:
         and: [specialDayType, entityId, date]
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+    findAllByEntityId:
+      kvFunction: findAllWithKV
+      where: entityId
 
 BusinessHour:
   tableName: business_hour
@@ -194,6 +210,9 @@ BusinessHour:
     btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
     categoryId: "[Id ServiceCategory]"
     bookingClosingTime : Maybe TimeOfDay
+    placeId: Maybe Text
+    name: Maybe Text
+
   types:
     BusinessHourType:
       enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
@@ -202,6 +221,9 @@ BusinessHour:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -216,11 +238,15 @@ ServiceCategory:
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     peopleCategory: "[Id ServicePeopleCategory]"
+    placeId: Maybe Text
 
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
 
   extraOperations:
   - EXTRA_QUERY_FILE
@@ -237,6 +263,7 @@ ServicePeopleCategory:
     timeBounds: TimeBound|NoRelation
     pricingType: PricingType
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    placeId: Maybe Text
 
   beamType:
     cancellationCharges: Maybe Value
@@ -286,6 +313,12 @@ ServicePeopleCategory:
   queries:
     findAllServicePeopleCategory:
       kvFunction: findAllWithKV
+      where: id
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+    findById:
+      kvFunction: findOneWithKV
       where: id
 
   extraOperations:

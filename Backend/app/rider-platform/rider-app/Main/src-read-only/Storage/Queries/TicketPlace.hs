@@ -22,6 +22,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketPlace.TicketPlace] -> m ())
 createMany = traverse_ create
 
+findAllByTicketMerchantIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.TicketPlace.PlaceStatus -> m [Domain.Types.TicketPlace.TicketPlace])
+findAllByTicketMerchantIdAndStatus ticketMerchantId status = do findAllWithKV [Se.And [Se.Is Beam.ticketMerchantId $ Se.Eq ticketMerchantId, Se.Is Beam.status $ Se.Eq status]]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe Domain.Types.TicketPlace.TicketPlace))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -29,6 +34,9 @@ findByNameAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.TicketPlace.TicketPlace))
 findByNameAndCity name merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.name $ Se.Eq name, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
+
+getAllTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketPlace.PlaceStatus -> m [Domain.Types.TicketPlace.TicketPlace])
+getAllTicketPlaces status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.TicketPlace.TicketPlace])
 getTicketPlaces merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -57,6 +65,7 @@ updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.termsAndConditions termsAndConditions,
       Se.Set Beam.termsAndConditionsUrl termsAndConditionsUrl,
+      Se.Set Beam.ticketMerchantId ticketMerchantId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -86,6 +95,7 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
             status = status,
             termsAndConditions = termsAndConditions,
             termsAndConditionsUrl = termsAndConditionsUrl,
+            ticketMerchantId = ticketMerchantId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -112,6 +122,7 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Beam.status = status,
         Beam.termsAndConditions = termsAndConditions,
         Beam.termsAndConditionsUrl = termsAndConditionsUrl,
+        Beam.ticketMerchantId = ticketMerchantId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

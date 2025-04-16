@@ -23,6 +23,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SpecialOccasion.SpecialOccasion] -> m ())
 createMany = traverse_ create
 
+findAllByEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
+findAllByEntityId entityId = do findAllWithKV [Se.Is Beam.entityId $ Se.Eq entityId]
+
+findAllByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
+findAllByPlaceId placeId = do findAllWithKV [Se.Is Beam.placeId $ Se.Eq placeId]
+
 findAllSpecialOccasionByEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
 findAllSpecialOccasionByEntityId entityId date = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.date $ Se.Eq date]]
 
@@ -67,6 +73,8 @@ updateByPrimaryKey (Domain.Types.SpecialOccasion.SpecialOccasion {..}) = do
       Se.Set Beam.dayOfWeek dayOfWeek,
       Se.Set Beam.description description,
       Se.Set Beam.entityId entityId,
+      Se.Set Beam.name name,
+      Se.Set Beam.placeId placeId,
       Se.Set Beam.specialDayType specialDayType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -86,6 +94,8 @@ instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOcc
             description = description,
             entityId = entityId,
             id = Kernel.Types.Id.Id id,
+            name = name,
+            placeId = placeId,
             specialDayType = specialDayType,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -102,6 +112,8 @@ instance ToTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccas
         Beam.description = description,
         Beam.entityId = entityId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.name = name,
+        Beam.placeId = placeId,
         Beam.specialDayType = specialDayType,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

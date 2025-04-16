@@ -16,6 +16,8 @@ data BusinessHourT f = BusinessHourT
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: B.C f [Kernel.Prelude.Text],
     id :: B.C f Kernel.Prelude.Text,
+    name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

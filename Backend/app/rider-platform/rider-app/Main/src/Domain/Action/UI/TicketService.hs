@@ -826,6 +826,8 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
                 specialDayType = specialDayType,
                 merchantId = mbMerchantId,
                 merchantOperatingCityId = Nothing,
+                name = Nothing,
+                placeId = Nothing,
                 createdAt = now,
                 updatedAt = now
               }

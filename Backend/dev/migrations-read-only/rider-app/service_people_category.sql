@@ -34,3 +34,8 @@ ALTER TABLE atlas_app.service_people_category ADD COLUMN pricing_type text  defa
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_people_category ADD COLUMN vendor_split_details json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_people_category ADD COLUMN place_id text ;

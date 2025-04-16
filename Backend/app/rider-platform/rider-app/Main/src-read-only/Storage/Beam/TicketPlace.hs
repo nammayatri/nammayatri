@@ -30,6 +30,7 @@ data TicketPlaceT f = TicketPlaceT
     status :: B.C f Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: B.C f [Kernel.Prelude.Text],
     termsAndConditionsUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketMerchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
