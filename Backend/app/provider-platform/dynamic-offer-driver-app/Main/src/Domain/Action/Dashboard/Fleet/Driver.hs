@@ -641,15 +641,14 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
       case mbStatus of
         -- This Status is Associated with Driver and
         Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
-        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
+        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId statusAwareVehicleNo
         -- make changes here for onride and tripassigned
-        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo (DTT.IN_PROGRESS)
-        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo (DTT.TRIP_ASSIGNED)
+        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo DTT.IN_PROGRESS
+        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo DTT.TRIP_ASSIGNED
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
         Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
         Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
-        -- also need to make changes here
         Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId
 
 castFleetVehicleStatus :: Maybe Common.FleetVehicleStatus -> Documents.VerificationStatus
@@ -1368,16 +1367,23 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC mbBadge trips = do
-  allTransactions <-
+  initialActiveTrip <- WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
+  let isActive = case initialActiveTrip of
+        Just _ -> True
+        Nothing -> False
+  (allTransactions, _) <-
     foldM
-      ( \accTransactions trip -> do
-          activeTrip <- WMB.findNextActiveTripTransaction (cast driverId)
-          tripTransactions <- case activeTrip of
-            Just _ -> makeTripTransactions trip DTT.UPCOMING
-            Nothing -> makeTripTransactions trip DTT.TRIP_ASSIGNED
-          return $ accTransactions <> tripTransactions
+      ( \(accTransactions, updatedIsActive) trip -> do
+          ( if updatedIsActive
+              then do
+                tripTransactions <- makeTripTransactions trip DTT.UPCOMING
+                return (accTransactions <> tripTransactions, updatedIsActive)
+              else do
+                tripTransactions <- makeTripTransactions trip DTT.TRIP_ASSIGNED
+                return (accTransactions <> tripTransactions, True)
+            )
       )
-      []
+      ([], isActive)
       trips
   WMB.findNextActiveTripTransaction (cast driverId)
     >>= \case
