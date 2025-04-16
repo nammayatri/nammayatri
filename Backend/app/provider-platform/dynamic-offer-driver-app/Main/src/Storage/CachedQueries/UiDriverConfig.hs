@@ -49,7 +49,7 @@ findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
         cacheAllTollsByMerchantOperatingCity merchantOperatingCityId os platform /=<< Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId
   case config' of
     Just config -> do
-      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.UI_DRIVER os platform) localTime Nothing toss
+      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DRIVER_CONFIG (LYT.UiConfig os platform)) localTime Nothing toss
       resp <- LYTU.runLogics allLogics config
       case (fromJSON resp.result :: Result UiDriverConfig) of
         Success dpc'' -> pure (Just dpc'', version)
@@ -74,3 +74,7 @@ create = Queries.create
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UiDriverConfig -> m ()
 updateByPrimaryKey = Queries.updateByPrimaryKey
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> m ()
+clearCache mocid dt pt =
+  Hedis.withCrossAppRedis $ Hedis.del (makeDriverUiConfigKey mocid dt pt)

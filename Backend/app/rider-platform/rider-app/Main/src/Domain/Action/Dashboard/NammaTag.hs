@@ -106,14 +106,12 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let merchantOpCityId = merchantOperatingCity.id
   _riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
-    LYTU.UI_RIDER _ _ -> do
-      let def'' = Prelude.listToMaybe $ LYTU.genDef (Proxy @DTURC.UiRiderConfig)
-      def' <- maybe (throwError $ InternalError "No default found") pure def''
-      logicData :: UiRiderConfig <- YudhishthiraFlow.createLogicData def' (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy UiRiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
-    -- TODO add defaults for config
+    LYTU.RIDER_CONFIG (LYTU.UiConfig _ _) -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTURC.UiRiderConfig)) >>= fromMaybeM (InvalidRequest "UiRiderConfig config not found")
+      let configWrap = LYTU.Config defaultConfig Nothing 1
+      logicData :: (LYTU.Config DTURC.UiRiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTURC.UiRiderConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-      -- fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @TagData)
       def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig)) >>= fromMaybeM (InvalidRequest "RiderConfig not found")
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DTR.RiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
@@ -217,7 +215,7 @@ getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity timeBound domai
 postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [LYTU.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq TC.returnConfigs
+  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq TC.returnConfigs opCity
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYTU.LogicDomain -> Environment.Flow LYTU.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions
@@ -264,7 +262,7 @@ postNammaTagConfigPilotGetConfig _ _ uicr = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
   let merchantOpCityId = merchantOperatingCity.id
   (config, version) <- UIRC.findUiConfig uicr merchantOpCityId
-  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform)
+  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.RIDER_CONFIG $ LYTU.UiConfig uicr.os uicr.platform)
   case config of
     Just cfg -> pure (LYTU.UiConfigResponse cfg.config (Text.pack . show <$> version) isExp)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
@@ -304,14 +302,15 @@ getNammaTagConfigPilotConfigDetails _merchantShortId _opCity configType = do
 getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
+  merchant <- findMerchantByShortId _merchantShortId
   let merchantOpCityId = merchantOperatingCity.id
-  TC.returnConfigs configType (cast merchantOpCityId)
+  TC.returnConfigs configType (cast merchantOpCityId) (cast merchant.id) _opCity
 
 postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just _opCity)
-  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs
+  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
 
 addCustomerTag :: Maybe [Text] -> Text -> [Text]
 addCustomerTag Nothing tag = [tag]
