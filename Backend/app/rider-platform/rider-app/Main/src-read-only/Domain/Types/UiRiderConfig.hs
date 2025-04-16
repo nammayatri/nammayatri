@@ -20,4 +20,4 @@ data UiRiderConfig = UiRiderConfig
     platform :: Lib.Yudhishthira.Types.PlatformType,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, Eq, ToSchema)

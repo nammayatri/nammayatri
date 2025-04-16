@@ -14,6 +14,7 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
@@ -467,16 +468,22 @@ callTheFrontEndHook ::
   m Kernel.Types.APISuccess.APISuccess
 callTheFrontEndHook merchantOpCityId domain = do
   case domain of
-    Lib.Yudhishthira.Types.UI_DRIVER dt pt -> do
-      let domain' = "ui_driver:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
-      res <- callWebHook domain'
-      logDebug $ "Response from Frontend Logic: " <> show res
-      return Kernel.Types.APISuccess.Success
-    Lib.Yudhishthira.Types.UI_RIDER dt pt -> do
-      let domain' = "ui_customer:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
-      res <- callWebHook domain'
-      logDebug $ "Response from Frontend Logic: " <> show res
-      return Kernel.Types.APISuccess.Success
+    Lib.Yudhishthira.Types.DRIVER_CONFIG cfg -> do
+      case cfg of
+        Lib.Yudhishthira.Types.UiConfig dt pt -> do
+          let domain' = "ui_driver:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
+          res <- callWebHook domain'
+          logDebug $ "Response from Frontend Logic: " <> show res
+          return Kernel.Types.APISuccess.Success
+        _ -> return Kernel.Types.APISuccess.Success
+    Lib.Yudhishthira.Types.RIDER_CONFIG cfg -> do
+      case cfg of
+        Lib.Yudhishthira.Types.UiConfig dt pt -> do
+          let domain' = "ui_customer:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
+          res <- callWebHook domain'
+          logDebug $ "Response from Frontend Logic: " <> show res
+          return Kernel.Types.APISuccess.Success
+        _ -> return Kernel.Types.APISuccess.Success
     _ -> return Kernel.Types.APISuccess.Success
 
 upsertLogicRollout ::
@@ -484,9 +491,10 @@ upsertLogicRollout ::
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   [Lib.Yudhishthira.Types.LogicRolloutObject] ->
-  (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> m LYT.TableDataResp) ->
+  (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) ->
+  Kernel.Types.Beckn.Context.City ->
   m Kernel.Types.APISuccess.APISuccess
-upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs = do
+upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity = do
   unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
   domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
   now <- getCurrentTime
@@ -498,7 +506,8 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs = do
           LYT.DRIVER_CONFIG ct -> return ct
           LYT.RIDER_CONFIG ct -> return ct
           _ -> throwError $ InternalError "Unsupported logic domain"
-        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId)
+        when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
+        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
         pushConfigHistory domain version merchantOpCityId configsJson
       return Kernel.Types.APISuccess.Success
     else handleOtherDomain merchantOpCityId now rolloutReq domain
@@ -690,7 +699,7 @@ getNammaTagConfigPilotAllConfigs merchantOpCityId mbUnderExp configChoice = do
             Lib.Yudhishthira.Types.RiderCfg -> map extractRiderConfig configsInExperiment
       return $ catMaybes configTypes
     _ -> do
-      let configTypes = Lib.Yudhishthira.Types.allValues
+      let configTypes = Lib.Yudhishthira.Types.allValuesConfigTypes
       return configTypes
 
 getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
@@ -712,8 +721,8 @@ getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
             isBasePatch = isBaseVersion == Just True
           }
 
-postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> m ()) -> (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> m LYT.TableDataResp) -> m Kernel.Types.APISuccess.APISuccess
-postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConfigDBUpdate' giveConfigs = do
+postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()) -> (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) -> Kernel.Types.Beckn.Context.City -> m Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConfigDBUpdate' giveConfigs opCity = do
   case req of
     LYT.Conclude concludeReq -> do
       expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain (cast merchantOpCityId) "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
@@ -722,7 +731,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
       when (expRollout.experimentStatus /= Just LYT.RUNNING) $ throwError $ InvalidRequest "The experiment should be in running state for getting concluded"
       baseElements <- CADLE.findByDomainAndVersion concludeReq.domain baseRollout.version
       let baseLogics = fmap (.logic) baseElements
-      handleConfigDBUpdate' (cast merchantOpCityId) concludeReq baseLogics
+      handleConfigDBUpdate' (cast merchantOpCityId) concludeReq baseLogics mbMerchantId opCity
       let originalBasePercentage = baseRollout.percentageRollout
           updatedBaseRollout =
             baseRollout
@@ -788,7 +797,8 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
           LYT.DRIVER_CONFIG ct -> return ct
           LYT.RIDER_CONFIG ct -> return ct
           _ -> throwError $ InternalError "Unsupported logic domain"
-        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId)
+        when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
+        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
         case req of
           LYT.Abort _ -> do
             pushConfigHistory domain version merchantOpCityId configsJson

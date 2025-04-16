@@ -29,6 +29,8 @@ import Kernel.Types.Version (DeviceType)
 import Kernel.Utils.Common (CacheFlow, fromMaybeM)
 import Kernel.Utils.Logging
 import Kernel.Utils.Time
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
@@ -46,21 +48,46 @@ findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
     Hedis.safeGet key >>= \case
       Just config -> pure config
       Nothing -> do
-        cacheAllTollsByMerchantOperatingCity merchantOperatingCityId os platform /=<< Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId
+        cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOperatingCityId os platform /=<< Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId
   case config' of
     Just config -> do
-      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.UI_DRIVER os platform) localTime Nothing toss
-      resp <- LYTU.runLogics allLogics config
-      case (fromJSON resp.result :: Result UiDriverConfig) of
-        Success dpc'' -> pure (Just dpc'', version)
+      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DRIVER_CONFIG (LYT.UiConfig os platform)) localTime Nothing toss
+      let configWrapper = LYT.Config config Nothing 0
+      resp <- LYTU.runLogics allLogics configWrapper
+      case (fromJSON resp.result :: Result (LYT.Config UiDriverConfig)) of
+        Success dpc'' -> pure (Just dpc''.config, version)
         A.Error e -> do
           logError $ "Error in applying dynamic logic: " <> show e
           incrementSystemConfigsFailedCounter "driver_ui_config_dynamic_logic_failure"
           pure (Just config, version)
     Nothing -> pure (Nothing, Nothing)
 
-cacheAllTollsByMerchantOperatingCity :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiDriverConfig -> m ()
-cacheAllTollsByMerchantOperatingCity merchantOpCityId os plt config = do
+findBaseUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe UiDriverConfig)
+findBaseUIConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
+  let key = makeDriverUiConfigKey merchantOperatingCityId os platform
+      domain = LYT.DRIVER_CONFIG (LYT.UiConfig os platform)
+  config' <-
+    Hedis.safeGet key >>= \case
+      Just config -> pure config
+      Nothing -> do
+        cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOperatingCityId os platform /=<< Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId
+  case config' of
+    Just config -> do
+      baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOperatingCityId) domain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+      baseElements <- CADLE.findByDomainAndVersion domain baseRollout.version
+      let baseLogics = fmap (.logic) baseElements
+      let configWrapper = LYT.Config config Nothing 0
+      resp <- LYTU.runLogics baseLogics configWrapper
+      case (fromJSON resp.result :: Result (LYT.Config UiDriverConfig)) of
+        Success dpc'' -> pure (Just dpc''.config)
+        A.Error e -> do
+          logError $ "Error in applying dynamic logic: " <> show e
+          incrementSystemConfigsFailedCounter "driver_ui_config_dynamic_logic_failure"
+          pure (Just config)
+    Nothing -> pure Nothing
+
+cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiDriverConfig -> m ()
+cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOpCityId os plt config = do
   let key = makeDriverUiConfigKey merchantOpCityId os plt
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp key config expTime
@@ -74,3 +101,7 @@ create = Queries.create
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UiDriverConfig -> m ()
 updateByPrimaryKey = Queries.updateByPrimaryKey
+
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> m ()
+clearCache mocid dt pt =
+  Hedis.del (makeDriverUiConfigKey mocid dt pt)
