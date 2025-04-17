@@ -46,6 +46,7 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Route
+import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
 import Storage.Beam.VehicleRegistrationCertificate
 
@@ -84,7 +85,8 @@ atlasDB =
         route = routeTable,
         operationHub = operationHubTable,
         operationHubRequests = operationHubRequestsTable,
-        fleetBadge = fleetBadgeTable
+        fleetBadge = fleetBadgeTable,
+        tripTransaction = tripTransactionTable
       }
 
 data AtlasDB f = AtlasDB
@@ -119,6 +121,7 @@ data AtlasDB f = AtlasDB
     route :: f (B.TableEntity RouteT),
     operationHub :: f (B.TableEntity OperationHubT),
     operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
-    fleetBadge :: f (B.TableEntity FleetBadgeT)
+    fleetBadge :: f (B.TableEntity FleetBadgeT),
+    tripTransaction :: f (B.TableEntity TripTransactionT)
   }
   deriving (Generic, B.Database be)
