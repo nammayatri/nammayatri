@@ -3,7 +3,6 @@
 module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideShareReceipt) where
 
 import qualified API.Types.UI.MeterRide
-import qualified Domain.Action.Internal.DriverReferee as DAIDR
 import qualified Domain.Action.UI.FareCalculator as AUF
 import Domain.Types
 import Domain.Types.Location (Location (..), LocationAddress)
@@ -23,7 +22,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Location as QL
@@ -31,7 +29,6 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
-import Tools.Utils
 
 postMeterRideAddDestination ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -100,25 +97,9 @@ postMeterRideShareReceipt ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMeterRideShareReceipt (Nothing, _merchantId, _merchantOpCityId) _rideId _ = throwError $ InvalidRequest "Need driver id for this operation"
-postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId req@API.Types.UI.MeterRide.SendRecietRequest {..} = do
+postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId API.Types.UI.MeterRide.SendRecietRequest {..} = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound $ "Ride not found for sending customer receipt, rideId: " <> rideId.getId)
-  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound $ merchantId.getId)
-  appBackendBapInternal <- asks (.appBackendBapInternal)
-  CallBAPInternal.CustomerInfoResponse {..} <- CallBAPInternal.getCustomerReferralInfo appBackendBapInternal.apiKey appBackendBapInternal.url req
   driverReferral <- QDR.findById driverId >>= fromMaybeM (InternalError $ "Driver referral should have been there, something bad happened.") -- maybe we can create here if it doesn't exist but that will not happen
-  when (isValidRide ride) $ do
-    let refreeLinkRequest =
-          DAIDR.RefereeLinkInfoReq
-            { referralCode = driverReferral.referralCode,
-              customerMobileNumber,
-              customerMobileCountryCode,
-              isMultipleDeviceIdExist,
-              alreadyReferred,
-              shareReferrerInfo = Nothing,
-              merchantOperatingCityId = merchantOpCityId.getId,
-              refereeLocation = Nothing
-            }
-    void $ DAIDR.linkReferee merchantId (Just merchant.internalApiKey) refreeLinkRequest
   let phoneNumber = customerMobileCountryCode <> customerMobileNumber
   withLogTag ("sending_communication_to_download_app" <> phoneNumber) $ do
     (mbSender, message) <-
