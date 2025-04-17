@@ -142,7 +142,7 @@ getRouteFare config merchantOperatingCityId request = do
       logInfo $ "Got response code: " <> responseCode encResp
       logInfo $ "Encrypted response data length: " <> show (T.length $ responseData encResp)
 
-      case decryptResponseData (responseData encResp) clientKey of
+      case decryptResponseData (responseData encResp) clientKey True of
         Left err -> throwError (InternalError $ "Failed to decrypt response: " <> T.pack err)
         Right decryptedJson -> do
           logInfo $ "Decrypted JSON: " <> decryptedJson
