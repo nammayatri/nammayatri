@@ -139,7 +139,7 @@ data CRISTicketData = CRISTicketData
     txnTime :: Text,
     jrnyCommencingString :: Text,
     showTicketValidity :: Text,
-    jrnyDate :: Text,
+    journeyDate :: Text,
     routeMessage :: Text,
     chargeableAmount :: HighPrecMoney
   }
@@ -211,7 +211,7 @@ convertToBookingResponse ticketData encrypted =
       transactionTime = ticketData.txnTime,
       journeyComment = ticketData.jrnyCommencingString,
       validUntil = ticketData.showTicketValidity,
-      journeyDate = ticketData.jrnyDate,
+      journeyDate = ticketData.journeyDate,
       routeMessage = ticketData.routeMessage,
       chargeableAmount = ticketData.chargeableAmount,
       encryptedTicketData = encrypted
