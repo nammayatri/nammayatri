@@ -162,6 +162,8 @@ apis:
         type: '[RateCardResp]'
   - GET:
       endpoint: /driver/vehiclePhotos
+      mandatoryQuery:
+        rcNo: Text
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: VehiclePhotosResp

@@ -3,11 +3,13 @@ module Domain.Action.Dashboard.Operator.Driver
     postDriverOperatorRespondHubRequest,
     opsHubRequestLockKey,
     postDriverOperatorCreateRequest,
+    getDriverOperationGetAllHubs,
     getDriverOperatorList,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Operator.Driver
+import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
 import qualified Dashboard.Common as Common
 import Data.Time hiding (getCurrentTime)
@@ -33,10 +35,23 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffset)
+import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+
+getDriverOperationGetAllHubs ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow [CommonDriver.OperationHub]
+getDriverOperationGetAllHubs merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  opsHub <- QOH.findAllByCityId merchantOpCity.id
+  pure $ map castOpsHub opsHub
+  where
+    castOpsHub DOH.OperationHub {..} = CommonDriver.OperationHub {id = cast id, merchantId = merchantId.getId, merchantOperatingCityId = merchantOperatingCityId.getId, ..}
 
 getDriverOperatorFetchHubRequests ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -49,7 +64,7 @@ getDriverOperatorFetchHubRequests ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
-  Maybe (Id Common.OperationHub) ->
+  Maybe (Id CommonDriver.OperationHub) ->
   Maybe Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp
 getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbReqOperationHubId mbRegistrationNo = do
@@ -59,10 +74,13 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
       defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-      mbOperationHubId = cast @Common.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
+      mbOperationHubId = cast @CommonDriver.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
   reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbRegistrationNo
-  pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {requests = map castHubRequests reqList}
+  logInfo $ "Driver Operator Fetch Hub Requests' params - mbFrom: " <> show mbFrom <> " from: " <> show from <> " to: " <> show to
+  let summary = Common.Summary {totalCount = 10000, count = length reqList}
+  requests <- mapM castHubRequests reqList
+  pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {..}
 
 postDriverOperatorCreateRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> Environment.Flow APISuccess)
 postDriverOperatorCreateRequest merchantShortId opCity req = do
@@ -107,17 +125,20 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 
-castHubRequests :: OperationHubRequests -> API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-castHubRequests OperationHubRequests {..} =
-  API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-    { driverId = driverId.getId,
-      id = id.getId,
-      operationHubId = cast @DOH.OperationHub @Common.OperationHub operationHubId,
-      registrationNo,
-      requestStatus = castReqStatus requestStatus,
-      requestTime = createdAt,
-      requestType = castReqType requestType
-    }
+castHubRequests :: (OperationHubRequests, DP.Person) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
+castHubRequests (hubReq, person) = do
+  driverPhoneNo <- mapM decrypt person.mobileNumber
+  pure $
+    API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
+      { driverId = hubReq.driverId.getId,
+        id = hubReq.id.getId,
+        operationHubId = cast @DOH.OperationHub @CommonDriver.OperationHub hubReq.operationHubId,
+        registrationNo = hubReq.registrationNo,
+        driverPhoneNo,
+        requestStatus = castReqStatus hubReq.requestStatus,
+        requestTime = hubReq.createdAt,
+        requestType = castReqType hubReq.requestType
+      }
 
 castReqStatusToDomain :: API.Types.ProviderPlatform.Operator.Driver.RequestStatus -> RequestStatus
 castReqStatusToDomain = \case

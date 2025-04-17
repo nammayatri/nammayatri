@@ -401,3 +401,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_doc
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bulk_waive_off_limit integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_expiry_checks boolean ;

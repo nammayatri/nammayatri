@@ -71,7 +71,7 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
   requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing (Just rcNo)
-  pure (OperationHubRequestsResp requests)
+  pure (OperationHubRequestsResp (map fst requests))
 
 opsHubDriverLockKey :: Text -> Text
 opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId

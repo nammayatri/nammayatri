@@ -52,6 +52,9 @@ type API =
       :<|> TokenAuth
       :> "driver"
       :> "vehiclePhotos"
+      :> MandatoryQueryParam
+           "rcNo"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
@@ -185,9 +188,10 @@ getDriverVehiclePhotos ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
   )
-getDriverVehiclePhotos a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverVehiclePhotos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

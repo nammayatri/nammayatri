@@ -23,16 +23,19 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationUnderReviewDrivers,
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
+    postDriverRegistrationRegisterAadhaar,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
@@ -278,6 +281,20 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
           ..
         }
     )
+
+postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
+postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  DOV.postDriverRegisterAadhaarCard (Just (cast driverId), merchant.id, merchantOpCityId) (castAadharReq req)
+  where
+    castAadharReq Common.AadhaarCardReq {..} = API.Types.UI.DriverOnboardingV2.AadhaarCardReq {aadhaarBackImageId = cast <$> aadhaarBackImageId, aadhaarFrontImageId = cast <$> aadhaarFrontImageId, validationStatus = convertValidationStatus validationStatus, ..}
+    convertValidationStatus status = case status of
+      Common.APPROVED -> API.Types.UI.DriverOnboardingV2.APPROVED
+      Common.DECLINED -> API.Types.UI.DriverOnboardingV2.DECLINED
+      Common.AUTO_APPROVED -> API.Types.UI.DriverOnboardingV2.AUTO_APPROVED
+      Common.AUTO_DECLINED -> API.Types.UI.DriverOnboardingV2.AUTO_DECLINED
+      Common.NEEDS_REVIEW -> API.Types.UI.DriverOnboardingV2.NEEDS_REVIEW
 
 --make a separate function casting the driverVehiclereq
 

@@ -7,18 +7,20 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
+import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, logError)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.OperationHubRequests as BeamOHR
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.OperationHubRequests ()
+import Storage.Queries.OrphanInstances.Person ()
 
 -- Extra code goes here --
 findAllRequestsInRange ::
@@ -33,7 +35,7 @@ findAllRequestsInRange ::
   Maybe Text ->
   Maybe (Id DOH.OperationHub) ->
   Maybe Text ->
-  m [OperationHubRequests]
+  m [(OperationHubRequests, Person)]
 findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbDriverId mbOperationHubId mbRegistrationNo = do
   dbConf <- getReplicaBeamConfig
   res <-
@@ -59,6 +61,11 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
                   pure (operationHubRequests, driver)
   case res of
     Right res' -> do
-      let operationHubRequests = fst <$> res'
-      catMaybes <$> mapM fromTType' operationHubRequests
-    Left _ -> pure []
+      finalRes <- forM res' $ \(operationHubRequests, person) -> runMaybeT $ do
+        o <- MaybeT $ fromTType' operationHubRequests
+        p <- MaybeT $ fromTType' person
+        pure (o, p)
+      pure $ catMaybes finalRes
+    Left err -> do
+      logError $ "Error in findAllRequestsInRange " <> show err
+      pure []
