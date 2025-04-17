@@ -1612,6 +1612,9 @@ window.getMerchantConfig = function () {
         "cityName" : "Trichy",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0431",
+        "enableNammaMeter" : {
+          "AUTO_RICKSHAW": true
+        },
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "enableGullak": false,
