@@ -6,7 +6,7 @@ import Common.Types.App as CTA
 import Data.Array (length, index)
 import Data.Foldable (minimum)
 import Data.Maybe (Maybe(..))
-import Data.Number (sqrt, max, min, pi, sin, cos, atan2)
+import Data.Number (sqrt, max, min, pi, sin, cos, atan2, pow, log, round)
 import Data.Number as DN
 -- import Data.Number (sqrt, pi, sin, cos, asin)
 import Data.Int (floor, toNumber)
@@ -124,3 +124,25 @@ rotationBetweenLatLons (API.LatLong latLng1) (API.LatLong latLng2) =
 --   where
 --     distances :: Array Number
 --     distances = map (\waypoint -> haversineDistance currentWaypoint waypoint) waypoints
+
+
+getZoomLevel :: Number -> Number
+getZoomLevel radius =
+  let
+    baseZoom = 17.0
+  in
+    if radius > 0.0 then
+      let
+        radiusElevated = radius + (radius / 2.0)
+        scale = radiusElevated / 500.0
+        zoom = 17.0 - (log scale / log 2.0)
+      in
+        roundTo 2.0 zoom
+    else
+      baseZoom
+
+roundTo :: Number -> Number -> Number
+roundTo n num =
+  let factor = pow 10.0 n
+      rounded = round (num * factor)
+  in rounded / factor

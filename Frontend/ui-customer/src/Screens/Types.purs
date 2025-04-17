@@ -3331,6 +3331,8 @@ type BusTicketBookingProps = {
  , srcLong :: Number
  , showAllTickets :: Boolean
  , locateOnMap :: Boolean
+ , expandTicketsView :: Boolean
+ , gotMapReady :: Boolean
 }
 
 -- ######################################### MultiModalFlow ####################################################
