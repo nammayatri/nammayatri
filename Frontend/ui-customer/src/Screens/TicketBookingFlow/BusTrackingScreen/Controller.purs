@@ -100,7 +100,7 @@ data Action
   = AfterRender
   | BackPressed
   | CurrentLocationCallBack String String String
-  | UpdateTracking (API.BusTrackingRouteResp)
+  | UpdateTracking (API.BusTrackingRouteResp) Int
   | MapReady String String String
   | NoAction
   | BookTicketButtonAction PrimaryButton.Action
@@ -165,7 +165,7 @@ eval BackPressed state = exit $ GoBackToSearchLocationScreen state
 
 eval ViewTicket state = exit $ GoToViewTicket state
 
-eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
+eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
   let trackingData = DA.concatMap extractTrackingInfo resp.vehicleTrackingInfo
   in 
     case state.props.vehicleTrackingId of
@@ -224,9 +224,8 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
             , props
               { busNearSourceData = DT.snd finalMap
               , minimumEtaDistance = calculateMinETADistance trackingData
-              , isMinimumEtaDistanceAvailable = case calculateMinETADistance trackingData of
-                  Mb.Just _ ->  Mb.Just true
-                  Mb.Nothing -> Mb.Just false
+              , isMinimumEtaDistanceAvailable = 
+                  if (count == 0) then Mb.Nothing else Mb.Just $ Mb.isJust $ calculateMinETADistance trackingData
               }
             }
           [ do
@@ -468,8 +467,8 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
   for_ vehicles
     $ \(item) -> do
         let pointerIcon = "ny_ic_bus_nav_on_map"
-            markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 120.0, zIndex = 0.1}
-            srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 135.0, zIndex = 0.0}
+            markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 80.0, zIndex = 0.1}
+            srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 80.0, zIndex = 0.0}
             vehicleRotationFromPrevLatLon = vehicleRotationCalculation item state
         locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts item.vehicleLat item.vehicleLon 1
         markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable item.vehicleId
@@ -484,8 +483,8 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
                 -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
                 }
           else do
-            void $ EHC.liftFlow $ JB.showMarker markerConfig item.vehicleLat item.vehicleLon 120 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-            void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} item.vehicleLat item.vehicleLon 135 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+            void $ EHC.liftFlow $ JB.showMarker markerConfig item.vehicleLat item.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+            void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} item.vehicleLat item.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
   pure unit
 
 vehicleRotationCalculation :: ST.VehicleData -> ST.BusTrackingScreenState -> Number
@@ -516,8 +515,8 @@ userBoardedActions state vehicles vehicle = do
   locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points : state.data.routePts.points}) (vehicle.vehicleLat) (vehicle.vehicleLon) 1
   -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (vehicle.vehicleLat) (vehicle.vehicleLon) 1
   let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
-  let srcMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" , markerSize = 160.0,  zIndex = 0.1}
-      srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 135.0, zIndex = 0.0}
+  let srcMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" , markerSize = 80.0,  zIndex = 0.1}
+      srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 80.0, zIndex = 0.0}
       vehicleRotationFromPrevLatLon = vehicleRotationCalculation vehicle state
       srcCode = Mb.maybe "" (_.stationCode) state.data.sourceStation
       destinationCode = Mb.maybe "" (_.stationCode) state.data.destinationStation
@@ -542,8 +541,8 @@ userBoardedActions state vehicles vehicle = do
           -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
           }
     else do
-      void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 120 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-      void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} vehicle.vehicleLat vehicle.vehicleLon 135 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} vehicle.vehicleLat vehicle.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
   EHC.liftFlow $ JB.animateCamera vehicle.vehicleLat vehicle.vehicleLon 17.0 "ZOOM"
   
   
