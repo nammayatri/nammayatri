@@ -139,7 +139,7 @@ data CRISTicketData = CRISTicketData
     txnTime :: Text,
     jrnyCommencingString :: Text,
     showTicketValidity :: Text,
-    jrnyDate :: Text,
+    journeyDate :: Text,
     routeMessage :: Text,
     chargeableAmount :: HighPrecMoney
   }
