@@ -139,6 +139,7 @@ rideActionModalConfig state =
     specialLocationTag = rideData.specialLocationTag,
     requestedVehicleVariant = rideData.requestedVehicleVariant,
     accessibilityTag = rideData.disabilityTag,
+    coinsRewardedOnGoldTierRide = rideData.coinsRewardedOnGoldTierRide,
     appConfig = state.data.config,
     waitTimeStatus = state.props.waitTimeStatus,
     waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
@@ -741,7 +742,11 @@ cancelConfirmationConfig state = let
     , height = V 250
     , width = MATCH_PARENT
     },
-    timerId = "PopUp"
+    timerId = "PopUp",
+    goldTierRewardConfig {
+      cancellationWarningText = getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
+      , coinsLoss = state.data.activeRide.coinsRewardedOnGoldTierRide
+    }
   }
   in popUpConfig'
 
@@ -1656,6 +1661,7 @@ getRideCompletedConfig state = let
   config' = config{
     isFreeRide = state.props.isFreeRide,
     serviceTierAndAC = state.data.endRideData.serviceTier,
+    coinsRewardedOnGoldTierRide = state.data.activeRide.coinsRewardedOnGoldTierRide,
     capacity = state.data.endRideData.capacity,
     primaryButtonConfig {
       width = MATCH_PARENT,
