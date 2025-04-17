@@ -475,6 +475,7 @@ data TripStatus
   | IN_PROGRESS
   | PAUSED
   | COMPLETED
+  | UPCOMING
   deriving stock (Show, Eq, Ord, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
