@@ -1139,6 +1139,7 @@ getOd =
     , customer_should_complete_a_valid_ride: "ଗ୍ରାହକ ଏକ ବୈଧ ଯାତ୍ରା ସମାପ୍ତ କରିବା ଉଚିତ"
     , driver_referral: "ଡ୍ରାଇଭର ରେଫରେଲ୍"
     , purple_ride_completed: "ପର୍ପଲ୍ ରାଇଡ୍ ସମାପ୍ତ ହୋଇଛି"
+    , gold_tier_ride_completed: "ଗୋଲ୍ଡ ଟିୟର୍ ରାଇଡ୍ ସମାପ୍ତ ହୋଇଛି"
     , training_complted: "ପ୍ରଶିକ୍ଷଣ ସମାପ୍ତ"
     , rides_in_a_day: "ଏକ ଦିନରେ ଯାତ୍ରାଗୁଡିକ"
     , top: "ଶୀର୍ଷ"

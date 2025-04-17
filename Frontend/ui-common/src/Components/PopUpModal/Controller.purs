@@ -123,7 +123,8 @@ type Config = {
     upiDetailConfig :: UPIDetailConfig,
     deliveryDetailsConfig :: DeliveryDetailsConfig,
     externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
-    voiceToTextConfig :: VoiceToTextConfig
+    voiceToTextConfig :: VoiceToTextConfig,
+    coinConfigOnCancellationWarning :: CoinWarningConfig
 }
 
 
@@ -298,6 +299,19 @@ type PopUpHeaderConfig = {
   , imageConfig :: ImageConfig
   , gravity :: Gravity
   }
+
+type CoinWarningConfig = {
+  text :: String,
+  coinsLoss :: Mb.Maybe Int,
+  cancellationWarningText :: String,
+  backgroundColor :: String,
+  textColor :: String,
+  cornerRadius :: Number,
+  padding :: Padding,
+  margin :: Margin,
+  coinImage :: ImageConfig,
+  arrowImage :: ImageConfig
+}  
 
 config :: Config
 config = {
@@ -762,7 +776,38 @@ config = {
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
   , externalHeader : Mb.Nothing
   , completeProfileLayout : Mb.Nothing
-  , voiceToTextConfig : dummyVoiceToTextConfig 
+  , voiceToTextConfig : dummyVoiceToTextConfig
+  ,  coinConfigOnCancellationWarning: {
+        text: "You will lose a chance to earn",
+        coinsLoss: Mb.Nothing,
+        cancellationWarningText: "",
+        backgroundColor: Color.lightOrange400,
+        textColor: Color.black800,
+        cornerRadius: 12.0,
+        padding: (Padding 8 12 10 12),
+        --padding: (Padding 0 0 0 0),
+        margin: (Margin 20 8 0 8),
+        --margin: (Margin 24 56 0 8),
+        coinImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_yatri_coin",
+          height: (V 20),
+          width: (V 20),
+          margin: (MarginLeft 8),
+          --margin: (Margin 0 0 0 0),
+          padding: (Padding 0 0 0 0)
+        },
+        arrowImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_arrow_down_red",
+          height: (V 12),
+          width: (V 12),
+          margin: MarginLeft 8,
+          --margin : (Margin 8 2 8 0),
+          --padding: (Padding 0 0 0 0)
+          padding: PaddingLeft 8
+        }
+    } 
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

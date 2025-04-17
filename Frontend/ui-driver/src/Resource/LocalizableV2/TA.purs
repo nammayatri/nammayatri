@@ -1143,6 +1143,7 @@ getTa =
     , customer_should_complete_a_valid_ride: "வாடிக்கையாளர் சரியான பயணத்தை முடிக்க வேண்டும்"
     , driver_referral: "வாகன பரிந்துரை"
     , purple_ride_completed: "பர்பிள் சவாரி முடிந்தது"
+    , gold_tier_ride_completed: "தங்கம் சவாரி முடிந்தது"
     , training_complted: "பயிற்சி முடிந்தது"
     , rides_in_a_day: "ஒரு நாளில் சவாரிகள்"
     , top: "முதல்"

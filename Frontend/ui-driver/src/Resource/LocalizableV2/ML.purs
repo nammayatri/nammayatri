@@ -1142,6 +1142,7 @@ getMl =
     , customer_should_complete_a_valid_ride: "ഉപഭോക്താവ് സാധുവായ ഒരു റൈഡ് പൂർത്തിയാക്കണം"
     , driver_referral: "ഡ്രൈവർ റഫറൽ"
     , purple_ride_completed: "പർപ്പിൾ റൈഡ് പൂർത്തിയാക്കി"
+    , gold_tier_ride_completed: "ഗോൾഡ് ടിയർ റൈഡ് പൂർത്തിയാക്കി"
     , training_complted: "പരിശീലനം പൂർത്തിയാക്കി"
     , rides_in_a_day: "ഒരു ദിവസത്തിൽ റൈഡുകൾ"
     , top: "മുകളിൽ"

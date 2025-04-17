@@ -1142,6 +1142,7 @@ getTe =
     , customer_should_complete_a_valid_ride: "కస్టమర్ సరైన రైడ్‌ను పూర్తి చేయాలి"
     , driver_referral: "డ్రైవర్ సూచన"
     , purple_ride_completed: "పర్పుల్ రైడ్ పూర్తయింది"
+    , gold_tier_ride_completed: "గోల్డ్ టియర్ రైడ్ పూర్తయింది"
     , training_complted: "శిక్షణ పూర్తయింది"
     , rides_in_a_day: "ఒక రోజులో సైకిల్లు"
     , top: "టాప్"

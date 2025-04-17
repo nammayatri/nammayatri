@@ -1141,6 +1141,7 @@ getBn =
     , customer_should_complete_a_valid_ride: "গ্রাহককে একটি বৈধ রাইড সম্পূর্ণ করতে হবে"
     , driver_referral: "ড্রাইভার রেফারেল"
     , purple_ride_completed: "পার্পল রাইড সম্পন্ন"
+    , gold_tier_ride_completed : "গোল্ড টিয়ার রাইড সম্পন্ন"
     , training_complted: "প্রশিক্ষণ সম্পন্ন"
     , rides_in_a_day: "একদিনে রাইড"
     , top: "শীর্ষ"

@@ -379,6 +379,39 @@ view push state =
                     , visibility $ state.headerInfo.visibility
                     ] <> (FontStyle.body1 TypoGraphy)
                 ]
+            ]     
+        , linearLayout
+           [ height WRAP_CONTENT
+            , gravity CENTER
+            , background state.coinConfigOnCancellationWarning.backgroundColor
+            , cornerRadius state.coinConfigOnCancellationWarning.cornerRadius
+            , padding state.coinConfigOnCancellationWarning.padding
+            , margin state.coinConfigOnCancellationWarning.margin
+            , visibility $ boolToVisibility 
+                (state.primaryText.text == state.coinConfigOnCancellationWarning.cancellationWarningText 
+                && isJust state.coinConfigOnCancellationWarning.coinsLoss)
+            ]
+            [ textView
+                [ text $ state.coinConfigOnCancellationWarning.text 
+                    <> " " 
+                    <> show (fromMaybe 0 state.coinConfigOnCancellationWarning.coinsLoss) 
+                    <> " Points"
+                , color state.coinConfigOnCancellationWarning.textColor
+                , margin $ MarginRight 8
+                , padding $ PaddingLeft 8
+                ]
+            , imageView
+                [ imageWithFallback state.coinConfigOnCancellationWarning.coinImage.imageUrl
+                , height state.coinConfigOnCancellationWarning.coinImage.height
+                , width state.coinConfigOnCancellationWarning.coinImage.width
+                , margin state.coinConfigOnCancellationWarning.coinImage.margin
+                ]
+            , imageView
+                [ imageWithFallback state.coinConfigOnCancellationWarning.arrowImage.imageUrl
+                , height state.coinConfigOnCancellationWarning.arrowImage.height
+                , width state.coinConfigOnCancellationWarning.arrowImage.width
+                , margin state.coinConfigOnCancellationWarning.arrowImage.margin
+                ]
             ]
         , linearLayout
           [ width MATCH_PARENT

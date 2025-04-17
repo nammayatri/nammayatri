@@ -146,6 +146,7 @@ dummyActiveRideData = {
   specialLocationTag : Nothing,
   requestedVehicleVariant : Nothing,
   disabilityTag : Nothing,
+  coinsRewardedOnGoldTierRide : Nothing,
   waitTimeSeconds : 0,
   enableFrequentLocationUpdates : false,
   tripScheduledAt : Nothing,

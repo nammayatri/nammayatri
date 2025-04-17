@@ -1142,6 +1142,7 @@ getKn =
     , customer_should_complete_a_valid_ride: "ಗ್ರಾಹಕರು ಮಾನ್ಯವಾದ ಸವಾರಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಬೇಕು"
     , driver_referral: "ಡ್ರೈವರ್ ರೆಫರಲ್"
     , purple_ride_completed: "ಪರ್ಪಲ್ ರೈಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ"
+    , gold_tier_ride_completed: "ಗೋಲ್ಡ್ ಟಿಯರ್ ರೈಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ"
     , training_complted: "ಪ್ರಶಿಕ್ಷಣ ಪೂರ್ಣಗೊಂಡಿದೆ"
     , rides_in_a_day: "ದಿನದಲ್ಲಿ ಸವಾರಿಗಳು"
     , top: "ಟಾಪ್"

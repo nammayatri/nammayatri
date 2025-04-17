@@ -1188,6 +1188,7 @@ newtype Keymap = Keymap {
   , customer_should_complete_a_valid_ride :: String
   , driver_referral :: String
   , purple_ride_completed :: String
+  , gold_tier_ride_completed :: String
   , training_complted :: String
   , rides_in_a_day :: String
   , top :: String
@@ -5367,6 +5368,9 @@ driver_referral = a
 
 purple_ride_completed :: Proxy "purple_ride_completed"
 purple_ride_completed = a
+
+gold_tier_ride_completed :: Proxy "gold_tier_ride_completed"
+gold_tier_ride_completed = a
 
 training_complted :: Proxy "training_complted"
 training_complted = a

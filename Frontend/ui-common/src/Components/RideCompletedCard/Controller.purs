@@ -108,7 +108,8 @@ type Config = {
   interCityTextConfig :: IntercityRideTextConfig,
   variant :: String,
   driverCity :: String,
-  driverInvoiceText :: String
+  driverInvoiceText :: String,
+  coinsRewardedOnGoldTierRide :: Maybe Int
 }
 
 data Theme = DARK | LIGHT
@@ -274,7 +275,8 @@ config = {
   },
   variant : "",
   driverCity : "",
-  driverInvoiceText : ""
+  driverInvoiceText : "",
+  coinsRewardedOnGoldTierRide : Nothing
 }
 
 type CustomerIssue = {
