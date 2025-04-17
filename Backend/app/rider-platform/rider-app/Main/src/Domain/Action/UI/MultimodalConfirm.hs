@@ -21,7 +21,6 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
     getMultimodalOrderGetLegTierOptions,
-    getMultimodalOrderGetBusTierOptions,
     postMultimodalPaymentUpdateOrder,
   )
 where
