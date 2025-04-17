@@ -746,6 +746,7 @@ cancelConfirmationConfig state = let
     goldTierRewardConfig {
       cancellationWarningText = getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
       , coinsLoss = state.data.activeRide.coinsRewardedOnGoldTierRide
+      , text = getString $ YOU_WILL_LOSE_A_CHANCE_TO_EARN (show $ fromMaybe 0 state.data.activeRide.coinsRewardedOnGoldTierRide)
     }
   }
   in popUpConfig'

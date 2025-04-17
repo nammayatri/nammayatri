@@ -1142,8 +1142,7 @@ getEn =
     , driver_referral: "Driver Referral"
     , purple_ride_completed: "Purple Ride Completed"
     , gold_tier_ride_completed: "Gold Tier Ride Completed"
-    , you_will_lose_a_chance_to_earn: "You will lose a chance to earn"
-    , points: "Points"
+    , you_will_lose_a_chance_to_earn: (\coins -> "You will lose a chance to earn " <> coins <> " points")
     , training_complted: "Training Completed"
     , rides_in_a_day: "Rides in a day"
     , top: "Top"

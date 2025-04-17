@@ -1140,8 +1140,7 @@ getOd =
     , driver_referral: "ଡ୍ରାଇଭର ରେଫରେଲ୍"
     , purple_ride_completed: "ପର୍ପଲ୍ ରାଇଡ୍ ସମାପ୍ତ ହୋଇଛି"
     , gold_tier_ride_completed: "ଗୋଲ୍ଡ ଟିୟର୍ ରାଇଡ୍ ସମାପ୍ତ ହୋଇଛି"
-    , you_will_lose_a_chance_to_earn: "ଆପଣ ଅର୍ଜନ କରିବାରେ ଏକ ସୁଯୋଗ ହାରାଇବେ"
-    , points: "ପଏଣ୍ଟଗୁଡିକ"
+    , you_will_lose_a_chance_to_earn: (\coins -> "ଆପଣ " <> coins <> " ପଏଣ୍ଟଗୁଡିକ ଅର୍ଜନ କରିବାରେ ଏକ ସୁଯୋଗ ହାରାଇବେ")
     , training_complted: "ପ୍ରଶିକ୍ଷଣ ସମାପ୍ତ"
     , rides_in_a_day: "ଏକ ଦିନରେ ଯାତ୍ରାଗୁଡିକ"
     , top: "ଶୀର୍ଷ"

@@ -1143,8 +1143,7 @@ getMl =
     , driver_referral: "ഡ്രൈവർ റഫറൽ"
     , purple_ride_completed: "പർപ്പിൾ റൈഡ് പൂർത്തിയാക്കി"
     , gold_tier_ride_completed: "ഗോൾഡ് ടിയർ റൈഡ് പൂർത്തിയാക്കി"
-    , you_will_lose_a_chance_to_earn: "നിങ്ങൾ സമ്പാദിക്കാൻ ഒരു അവസരം നഷ്ടപ്പെടും"
-    , points: "പോയിന്റുകൾ"
+    , you_will_lose_a_chance_to_earn: (\coins -> "നിങ്ങൾ " <> coins <> " പോയിന്റുകൾ സമ്പാദിക്കാൻ ഒരു അവസരം നഷ്ടപ്പെടും" )
     , training_complted: "പരിശീലനം പൂർത്തിയാക്കി"
     , rides_in_a_day: "ഒരു ദിവസത്തിൽ റൈഡുകൾ"
     , top: "മുകളിൽ"

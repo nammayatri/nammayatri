@@ -1143,8 +1143,7 @@ getTe =
     , driver_referral: "డ్రైవర్ సూచన"
     , purple_ride_completed: "పర్పుల్ రైడ్ పూర్తయింది"
     , gold_tier_ride_completed: "గోల్డ్ టియర్ రైడ్ పూర్తయింది"
-    , you_will_lose_a_chance_to_earn: "మీరు సంపాదించడానికి అవకాశం కోల్పోతారు"
-    , points: "పాయింట్లు"
+    , you_will_lose_a_chance_to_earn: (\coins -> "మీరు " <> coins <> " పాయింట్లు సంపాదించడానికి అవకాశం కోల్పోతారు")
     , training_complted: "శిక్షణ పూర్తయింది"
     , rides_in_a_day: "ఒక రోజులో సైకిల్లు"
     , top: "టాప్"

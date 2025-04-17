@@ -1143,8 +1143,7 @@ getKn =
     , driver_referral: "ಡ್ರೈವರ್ ರೆಫರಲ್"
     , purple_ride_completed: "ಪರ್ಪಲ್ ರೈಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ"
     , gold_tier_ride_completed: "ಗೋಲ್ಡ್ ಟಿಯರ್ ರೈಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ"
-    , you_will_lose_a_chance_to_earn: "ನೀವು ಸಂಪಾದಿಸಲು ಅವಕಾಶವನ್ನು ಕಳೆದುಕೊಳ್ಳುತ್ತೀರಿ"
-    , points: "ಪಾಯಿಂಟ್‌ಗಳು"
+    , you_will_lose_a_chance_to_earn:(\coins -> "ನೀವು " <> coins <> " ಪಾಯಿಂಟ್‌ಗಳು ಸಂಪಾದಿಸಲು ಅವಕಾಶವನ್ನು ಕಳೆದುಕೊಳ್ಳುತ್ತೀರಿ")
     , training_complted: "ಪ್ರಶಿಕ್ಷಣ ಪೂರ್ಣಗೊಂಡಿದೆ"
     , rides_in_a_day: "ದಿನದಲ್ಲಿ ಸವಾರಿಗಳು"
     , top: "ಟಾಪ್"

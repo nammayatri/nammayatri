@@ -1144,8 +1144,7 @@ getTa =
     , driver_referral: "வாகன பரிந்துரை"
     , purple_ride_completed: "பர்பிள் சவாரி முடிந்தது"
     , gold_tier_ride_completed: "தங்கம் சவாரி முடிந்தது"
-    , you_will_lose_a_chance_to_earn: "நீங்கள் சம்பாதிக்க வாய்ப்பு இழக்கிறீர்கள்"
-    , points: "புள்ளிகள்"  
+    , you_will_lose_a_chance_to_earn: (\coins -> "நீங்கள் " <> coins <> " புள்ளிகள் சம்பாதிக்க வாய்ப்பு இழக்கிறீர்கள்" )
     , training_complted: "பயிற்சி முடிந்தது"
     , rides_in_a_day: "ஒரு நாளில் சவாரிகள்"
     , top: "முதல்"
