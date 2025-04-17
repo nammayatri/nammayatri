@@ -159,6 +159,7 @@ postDriverFleetAddVehicle ::
   Common.AddVehicleReq ->
   Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode req = do
+  whenJust mbFleetOwnerId DCommon.checkFleetOwnerVerification
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -296,6 +297,7 @@ getDriverFleetGetDriverRequests ::
   Maybe Int ->
   Flow Common.DriverRequestResp
 getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName mbLimit mbOffset = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   tripAlertRequests <-
@@ -335,6 +337,7 @@ postDriverFleetRespondDriverRequest ::
   Common.RequestRespondReq ->
   Flow APISuccess
 postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -372,6 +375,7 @@ postDriverFleetAddRCWithoutDriver ::
   Common.RegisterRCReq ->
   Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = Id fleetOwnerId :: Id DP.Person
@@ -410,6 +414,7 @@ getDriverFleetGetAllVehicle ::
   Maybe Text ->
   Flow Common.ListVehicleRes
 getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
@@ -444,6 +449,7 @@ getDriverFleetGetAllDriver ::
   Maybe Text ->
   Flow Common.FleetListDriverRes
 getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   mobileNumberHash <- case mbSearchString of
@@ -480,6 +486,7 @@ postDriverFleetUnlink ::
   Text ->
   Flow APISuccess
 postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -510,6 +517,7 @@ postDriverFleetRemoveVehicle ::
   Text ->
   Flow APISuccess
 postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId_
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
@@ -538,6 +546,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
   unprocessedVehicleRouteMappingEntities <-
@@ -648,6 +657,7 @@ postDriverFleetRemoveDriver ::
   Id Common.Driver ->
   Flow APISuccess
 postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let personId = cast @Common.Driver @DP.Person driverId
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
@@ -665,6 +675,7 @@ getDriverFleetTotalEarning ::
   Maybe UTCTime ->
   Flow Common.FleetTotalEarningResponse
 getDriverFleetTotalEarning _merchantShortId _ fleetOwnerId mbFrom mbTo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId _merchantShortId
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
@@ -689,6 +700,7 @@ getDriverFleetVehicleEarning ::
   Maybe UTCTime ->
   Flow Common.FleetEarningListRes
 getDriverFleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOffset mbFrom mbTo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -769,6 +781,7 @@ getDriverFleetDriverEarning ::
   Maybe Common.SortOn ->
   Flow Common.FleetEarningListRes
 getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPhNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -837,6 +850,7 @@ getDriverFleetDriverVehicleAssociation ::
   Maybe UTCTime ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
@@ -923,6 +937,7 @@ getDriverFleetDriverAssociation ::
   Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
@@ -1016,6 +1031,7 @@ getDriverFleetVehicleAssociation ::
   Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
@@ -1102,6 +1118,7 @@ postDriverFleetVehicleDriverRcStatus ::
   Common.RCStatusReq ->
   Flow APISuccess
 postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -1263,6 +1280,7 @@ postDriverFleetLinkRCWithDriver ::
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
 postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash req.driverMobileNumber
@@ -1294,6 +1312,7 @@ postDriverDashboardFleetWmbTripEnd ::
   Maybe Common.ActionSource ->
   Flow APISuccess
 postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId mbTerminationSource = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   mbCurrentDriverLocation <-
@@ -1323,6 +1342,7 @@ castActionSource actionSource = case actionSource of
 
 getDriverFleetGetAllBadge :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Flow Common.FleetBadgeRes
 getDriverFleetGetAllBadge merchantShortId opCity fleetOwnerId limit offset mbSearchString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (toInteger <$> limit) (toInteger <$> offset) merchantOpCity.id fleetOwnerId
@@ -1346,6 +1366,7 @@ getDriverFleetRoutes ::
   Int ->
   Flow Common.RouteAPIResp
 getDriverFleetRoutes merchantShortId opCity fleetOwnerId mbCurrentLocation mbSearchString limit offset = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let vehicleType = DVC.BUS
@@ -1430,6 +1451,7 @@ getDriverFleetPossibleRoutes ::
   Text ->
   Flow Common.RouteAPIResp
 getDriverFleetPossibleRoutes merchantShortId opCity fleetOwnerId startStopCode = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   now <- getCurrentTime
@@ -1455,6 +1477,7 @@ postDriverFleetTripPlanner ::
   Common.TripPlannerReq ->
   Flow APISuccess
 postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
@@ -1570,6 +1593,7 @@ getDriverFleetTripTransactions ::
   Int ->
   Flow Common.TripTransactionResp
 getDriverFleetTripTransactions merchantShortId opCity fleetOwnerId driverId mbFrom mbTo mbVehicleNumber limit offset = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Id fleetOwnerId) (Just limit) (Just offset) (cast driverId) mbFrom mbTo mbVehicleNumber
@@ -1633,6 +1657,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   driverBusRouteDetails <- readCsv req.file
 
@@ -1761,6 +1786,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   driverDetails <- readCsv req.file
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   unprocessedEntities <-
@@ -1840,6 +1866,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
 ---------------------------------------------------------------------
 postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
 postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   void $
     mapM
       ( \driverId ->
@@ -1857,10 +1884,13 @@ postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
         }
 
 getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow Common.RouteDetails
-getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode
+getDriverFleetWmbRouteDetails _ _ fleetOwnerId routeCode = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
+  WMB.getRouteDetails routeCode
 
 postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
-postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
+postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id
   return $
