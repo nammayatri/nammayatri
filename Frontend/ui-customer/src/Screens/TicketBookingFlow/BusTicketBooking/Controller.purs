@@ -128,7 +128,7 @@ eval (ViewMoreClicked) state =
 
 
 eval (MapReady _ _ _) state = 
-  continueWithCmd state [ do
+  continueWithCmd state { props { gotMapReady = true } } [ do
     -- let markerName = HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
     --     markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
     -- _ <- pure $ JB.currentPosition ""
@@ -153,7 +153,7 @@ eval (NearbyDriverRespAC (API.NearbyDriverRes resp)) state =
       for_ busDetailsArray \busDetails -> do
         case busDetails.routeCode of
           Just routeCode -> 
-            void $ runEffectFn4 JB.showDynamicRouteMarker (show busDetails.lat) (show busDetails.lon) routeCode (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
+            when (state.props.gotMapReady) $ void $ runEffectFn4 JB.showDynamicRouteMarker (show busDetails.lat) (show busDetails.lon) routeCode (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
           Nothing -> pure unit
 
     transformNearByDriversBucketResp (API.NearByDriversBucket nearByDriversBucket) = 

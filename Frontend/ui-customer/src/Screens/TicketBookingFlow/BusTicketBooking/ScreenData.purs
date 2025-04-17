@@ -32,6 +32,8 @@ initData =
     srcLat :  0.0,
     srcLong :  0.0,
     showAllTickets : false,
-    locateOnMap : false
+    locateOnMap : false,
+    expandTicketsView : false,
+    gotMapReady : false
     } 
   }
