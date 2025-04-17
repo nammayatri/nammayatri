@@ -672,6 +672,7 @@
       "round_circle" : true,
       "round_corner_layout" : true,
       "rounded_corner_background" : true,
+      "rounded_yellow_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,

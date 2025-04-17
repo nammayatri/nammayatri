@@ -104,7 +104,7 @@ screen initialState =
                     liftFlowBT $ push $ UpdateStops (API.GetMetroStationResponse initialState.data.stopsList)
                   let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" initialState.data.busRouteCode
                   if (showPreBookingTracking "BUS") 
-                    then lift $ lift $ busLocationTracking 3000.0 0 initialState push
+                    then lift $ lift $ busLocationTracking 3000.0 0 initialState push 0
                     else pure unit
             pure $ pure unit
         )
@@ -485,7 +485,7 @@ stopListView push state showOnlyBullet =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance (calculateMinEtaTimeWithDelay state.data.vehicleData)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
+        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance (calculateMinEtaTimeWithDelay state.data.vehicleData) state.props.isMinimumEtaDistanceAvailable) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
   where
   stopMarginTop = if state.props.showRouteDetailsTab then 36 else 12
@@ -558,8 +558,8 @@ stopsViewHeader push state showOnlyBullet =
         MP.noView
     ]
 
-stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
-stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaDistance etaTime=
+stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> Mb.Maybe Int -> Mb.Maybe Boolean -> PrestoDOM (Effect Unit) w
+stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaDistance etaTime isMinimumEtaDistanceAvailable =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -573,7 +573,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
         -- , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId)
         , if (index /=0 && checkPreviousStopIsSource && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId))
-            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance etaTime
+            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance etaTime isMinimumEtaDistanceAvailable
             else 
               MP.noView
         ]
@@ -631,8 +631,8 @@ separatorView color' margin' =
     ]
     []
 
-busLocationTracking :: Number -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Flow GlobalState Unit
-busLocationTracking duration id state push = do
+busLocationTracking :: Number -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> Flow GlobalState Unit
+busLocationTracking duration id state push count = do
   let
     routeCode = state.data.busRouteCode
     trackingId = runFn3 getFromCache "BUS_LOCATION_TRACKING" Mb.Nothing Mb.Just
@@ -640,19 +640,19 @@ busLocationTracking duration id state push = do
     pure unit
   else do
     EHC.liftFlow $ JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 3500 true
-    resp <- Remote.trackRouteVehicles $ API.BusTrackingRouteReq routeCode
-    case resp of
+    eitherRespOrError <- Remote.trackRouteVehicles $ API.BusTrackingRouteReq routeCode
+    case eitherRespOrError of
       Right (API.BusTrackingRouteResp resp) -> do
-        EHC.liftFlow $ push $ UpdateTracking $ API.BusTrackingRouteResp resp
+        EHC.liftFlow $ push $ UpdateTracking (API.BusTrackingRouteResp resp) count
         void $ delay $ Milliseconds $ duration
-        busLocationTracking duration id state push
+        busLocationTracking duration id state push (count + 1)
       Left err -> do
         void $ delay $ Milliseconds $ duration
-        busLocationTracking duration id state push
+        busLocationTracking duration id state push (count + 1)
 
 
-showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
-showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADistance mbETATime =
+showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> Mb.Maybe Int -> Mb.Maybe Boolean -> PrestoDOM (Effect Unit) w
+showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADistance mbETATime isMinimumEtaDistanceAvailable =
   PrestoAnim.animationSet [fadeInWithDelay 0 true]
   $ linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
@@ -694,7 +694,7 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
   , textView
     $ [ text etaTextInMinutesOrDistance
       , margin $ MarginLeft 8
-      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && (Mb.isJust state.props.isMinimumEtaDistanceAvailable)
+      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && (Mb.isJust isMinimumEtaDistanceAvailable)
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   -- , linearLayout [weight 1.0] []
@@ -717,14 +717,12 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
         Mb.Nothing -> state.data.nearestStopFromCurrentLoc
     
     etaTextInMinutesOrDistance = 
-        case mbETATime of
-          Mb.Just etaTimeInSeconds -> 
-            "Next bus in " <> (HU.secondsToHms etaTimeInSeconds)
-          Mb.Nothing ->
-            case mbETADistance of
-              Mb.Just distance ->
-                "Next bus is " <> (JB.fromMetersToKm distance) <> " away"
-              Mb.Nothing ->  "No bus is coming towards your stop"
+      case isMinimumEtaDistanceAvailable, mbETATime of
+        Mb.Just true, Mb.Just etaTimeInSeconds -> 
+          "Next bus in " <> (HU.secondsToHms etaTimeInSeconds)
+        Mb.Just true, Mb.Nothing -> "Next bus is " <> (JB.fromMetersToKm $ Mb.fromMaybe 0 mbETADistance) <> " away"
+        Mb.Just false, Mb.Nothing -> "No bus is coming towards your stop"
+        _, _ -> ""
     
     -- roundedNextStopDistance :: String
     -- roundedNextStopDistance = 
