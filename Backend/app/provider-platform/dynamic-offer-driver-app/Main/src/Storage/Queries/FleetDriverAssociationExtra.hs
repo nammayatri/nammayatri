@@ -1,10 +1,11 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
-import Control.Applicative (liftA2)
+import Control.Applicative (liftA2, liftA3)
 import Data.Text (takeEnd, toLower)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
+import Domain.Types.DriverInformation
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import Domain.Types.VehicleCategory
@@ -21,6 +22,7 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 import qualified Storage.Beam.Person as BeamP
+import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 import Storage.Queries.OrphanInstances.Person ()
 
@@ -66,8 +68,8 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> m [(FleetDriverAssociation, Person)]
-findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive (Just mode) = do
+findAllActiveDriverByFleetOwnerIdWithDriverInfo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> m [(FleetDriverAssociation, Person, DriverInformation)]
+findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive mbMode = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   encryptedMobileNumberHash <- mapM getDbHash mbSearchString
@@ -83,7 +85,7 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                   ( \(fleetDriverAssociation, driver, driverInformation) ->
                       fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
-                        B.&&?. driverInformation.mode B.==?. B.val_ (Just mode)
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mode -> driverInformation.mode B.==?. B.val_ (Just mode)) mbMode
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
@@ -99,10 +101,12 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                     pure (fleetDriverAssociation, driver, driverInformation)
   case res of
     Right res' -> do
-      let fleetDriverList = (\(fleetDriverAssociation, driver, _) -> (fleetDriverAssociation, driver)) <$> res'
-      catMaybes <$> mapM (\(f, d) -> liftA2 (,) <$> fromTType' f <*> fromTType' d) fleetDriverList
+      let fleetDriverList = (\(fleetDriverAssociation, driver, driverInformation) -> (fleetDriverAssociation, driver, driverInformation)) <$> res'
+      catMaybes <$> mapM (\(f, d, di) -> liftA3 (,,) <$> fromTType' f <*> fromTType' d <*> fromTType' di) fleetDriverList
     Left _ -> pure []
-findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive Nothing = do
+
+findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> m [(FleetDriverAssociation, Person)]
+findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   encryptedMobileNumberHash <- mapM getDbHash mbSearchString
