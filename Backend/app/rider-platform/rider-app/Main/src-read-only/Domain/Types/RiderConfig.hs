@@ -14,7 +14,6 @@ import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import qualified IssueManagement.Common
-import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -35,7 +34,6 @@ data RiderConfig = RiderConfig
     driverReferredSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     dynamicLogicUpdatePassword :: Kernel.Prelude.Text,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
-    enableBusFiltering :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
@@ -56,24 +54,17 @@ data RiderConfig = RiderConfig
     kaptureConfig :: IssueManagement.Common.KaptureConfig,
     kaptureQueue :: Kernel.Prelude.Text,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    makeMultiModalSearch :: Kernel.Prelude.Bool,
-    maxAllowedPublicTransportLegs :: Kernel.Prelude.Int,
-    maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metroBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    minimumWalkDistance :: Kernel.Types.Common.Meters,
-    multimodalTesting :: Kernel.Prelude.Bool,
     nearByDriverRingBucketCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.RingBucketCfg],
-    nearbyDriverSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,
     payoutReferralStartDate :: Kernel.Prelude.UTCTime,
     payoutReferralThresholdPerDay :: Kernel.Prelude.Int,
     payoutReferralThresholdPerMonth :: Kernel.Prelude.Int,
-    permissibleModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
@@ -84,8 +75,6 @@ data RiderConfig = RiderConfig
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialZoneRadius :: Kernel.Prelude.Int,
-    straightLineThreshold :: Kernel.Types.Common.Meters,
-    suburbanBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     thresholdCancellationPercentageToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
