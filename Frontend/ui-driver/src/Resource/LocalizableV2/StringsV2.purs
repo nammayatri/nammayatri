@@ -1262,6 +1262,9 @@ getProxy str = case str of
   CUSTOMER_SHOULD_COMPLETE_A_VALID_RIDE -> \a -> a @~ customer_should_complete_a_valid_ride
   DRIVER_REFERRAL -> \a -> a @~ driver_referral
   PURPLE_RIDE_COMPLETED -> \a -> a @~ purple_ride_completed
+  GOLD_TIER_RIDE_COMPLETED -> \a -> a @~ gold_tier_ride_completed
+  YOU_WILL_LOSE_A_CHANCE_TO_EARN -> \a -> a @~ you_will_lose_a_chance_to_earn
+  POINTS -> \a -> a @~ points
   TRAINING_COMPLTED -> \a -> a @~ training_complted
   RIDES_IN_A_DAY -> \a -> a @~ rides_in_a_day
   TOP -> \a -> a @~ top

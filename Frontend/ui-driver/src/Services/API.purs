@@ -691,6 +691,7 @@ newtype RidesInfo = RidesInfo
       requestedVehicleVariant :: Maybe String,
       customerExtraFee :: Maybe Int,
       disabilityTag :: Maybe String,
+      coinsRewardedOnGoldTierRide :: Maybe Int,
       payerVpa :: Maybe String,
       autoPayStatus :: Maybe String,
       driverGoHomeRequestId :: Maybe String,
@@ -3550,6 +3551,7 @@ data DriverCoinsFunctionType
   | TenRidesCompleted
   | EightPlusRidesInOneDay
   | PurpleRideCompleted
+  | GoldTierRideCompleted
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction

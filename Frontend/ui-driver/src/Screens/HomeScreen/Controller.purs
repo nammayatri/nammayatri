@@ -2231,6 +2231,7 @@ activeRideDetail state (RidesInfo ride) =
                          else if isSafetyRide then
                             Just ST.SAFETY
                          else Nothing,
+  coinsRewardedOnGoldTierRide : ride.coinsRewardedOnGoldTierRide,                       
   tripScheduledAt: ride.tripScheduledAt,
   tripType: tripType,
   tripStartTime: ride.tripStartTime,

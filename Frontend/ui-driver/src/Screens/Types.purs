@@ -1324,6 +1324,7 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
+  coinsRewardedOnGoldTierRide :: Maybe Int,
   waitTimeSeconds :: Int,
   enableFrequentLocationUpdates :: Boolean,
   tripScheduledAt :: Maybe String,

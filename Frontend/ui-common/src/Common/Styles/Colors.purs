@@ -436,3 +436,6 @@ brightRed = "#E64848"
 
 argent :: Color
 argent = "#888888"
+
+lightOrange400 :: Color
+lightOrange400 = "#FAEBDE"

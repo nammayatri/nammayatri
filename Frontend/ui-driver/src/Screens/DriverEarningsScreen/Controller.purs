@@ -773,6 +773,7 @@ dummyRideHistoryItem = RidesInfo {
       requestedVehicleVariant : Nothing,
       customerExtraFee : Nothing,
       disabilityTag : Nothing,
+      coinsRewardedOnGoldTierRide : Nothing,
       payerVpa : Nothing,
       autoPayStatus : Nothing,
       driverGoHomeRequestId : Nothing,

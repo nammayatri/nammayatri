@@ -30,6 +30,7 @@ import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
+import Language.Strings (getString)
 
 instance showAction :: Show Action where
   show (OnButton1Click) = "OnButton1Click"
@@ -123,7 +124,8 @@ type Config = {
     upiDetailConfig :: UPIDetailConfig,
     deliveryDetailsConfig :: DeliveryDetailsConfig,
     externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
-    voiceToTextConfig :: VoiceToTextConfig
+    voiceToTextConfig :: VoiceToTextConfig,
+    goldTierRewardConfig :: CoinWarningConfig
 }
 
 
@@ -298,6 +300,19 @@ type PopUpHeaderConfig = {
   , imageConfig :: ImageConfig
   , gravity :: Gravity
   }
+
+type CoinWarningConfig = {
+  text :: String,
+  coinsLoss :: Mb.Maybe Int,
+  cancellationWarningText :: String,
+  backgroundColor :: String,
+  textColor :: String,
+  cornerRadius :: Number,
+  padding :: Padding,
+  margin :: Margin,
+  coinImage :: ImageConfig,
+  arrowImage :: ImageConfig
+}  
 
 config :: Config
 config = {
@@ -762,7 +777,33 @@ config = {
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
   , externalHeader : Mb.Nothing
   , completeProfileLayout : Mb.Nothing
-  , voiceToTextConfig : dummyVoiceToTextConfig 
+  , voiceToTextConfig : dummyVoiceToTextConfig
+  ,  goldTierRewardConfig: {
+        text: "",
+        coinsLoss: Mb.Nothing,
+        cancellationWarningText: "",
+        backgroundColor: Color.lightOrange400,
+        textColor: Color.black800,
+        cornerRadius: 12.0,
+        padding: (Padding 8 12 10 12),
+        margin: (Margin 20 8 0 8),
+        coinImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_yatri_coin",
+          height: (V 20),
+          width: (V 20),
+          margin: (MarginLeft 8),
+          padding: (Padding 0 0 0 0)
+        },
+        arrowImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_arrow_down_red",
+          height: (V 12),
+          width: (V 12),
+          margin: MarginLeft 8,
+          padding: PaddingLeft 8
+        }
+    } 
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

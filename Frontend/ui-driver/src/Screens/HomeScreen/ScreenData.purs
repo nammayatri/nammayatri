@@ -395,6 +395,7 @@ dummyRideData = {
       , driverVehicle : ""
       , requestedVehicleVariant: Nothing
       , disabilityTag: Nothing
+      , coinsRewardedOnGoldTierRide: Nothing
       , enableFrequentLocationUpdates: false
       , tripScheduledAt: Nothing
       , tripType: ST.OneWay
