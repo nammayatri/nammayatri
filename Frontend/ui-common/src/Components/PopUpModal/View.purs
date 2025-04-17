@@ -392,11 +392,7 @@ view push state =
                 && isJust state.goldTierRewardConfig.coinsLoss)
             ]
             [ textView
-                [ text $ getString YOU_WILL_LOSE_A_CHANCE_TO_EARN
-                    <> " " 
-                    <> show (fromMaybe 0 state.goldTierRewardConfig.coinsLoss) 
-                    <> " "
-                    <> getString POINTS
+                [ text state.goldTierRewardConfig.text
                 , color state.goldTierRewardConfig.textColor
                 , margin $ MarginRight 8
                 , padding $ PaddingLeft 8

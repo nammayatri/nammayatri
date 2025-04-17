@@ -1189,8 +1189,7 @@ newtype Keymap = Keymap {
   , driver_referral :: String
   , purple_ride_completed :: String
   , gold_tier_ride_completed :: String
-  , you_will_lose_a_chance_to_earn :: String 
-  , points :: String
+  , you_will_lose_a_chance_to_earn :: String -> String
   , training_complted :: String
   , rides_in_a_day :: String
   , top :: String

@@ -1144,8 +1144,7 @@ getHi =
     , driver_referral: "ड्राइवर रेफरल"
     , purple_ride_completed: "पर्पल सवारी पूरी हुई"
     , gold_tier_ride_completed: "गोल्ड टियर सवारी पूरी हुई"
-    , you_will_lose_a_chance_to_earn: "आप कमाई का एक मौका खो देंगे"
-    , points: "अंक" 
+    , you_will_lose_a_chance_to_earn:(\coins -> "आप " <> coins <> " अंक कमाई का एक मौका खो देंगे")
     , training_complted: "प्रशिक्षण पूरा हुआ"
     , rides_in_a_day: "एक दिन में सवारियां"
     , top: "शीर्ष"
