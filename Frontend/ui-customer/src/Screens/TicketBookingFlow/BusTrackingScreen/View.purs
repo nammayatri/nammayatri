@@ -86,6 +86,7 @@ import Accessor (_code)
 import Data.Lens ((^.))
 import Effect.Uncurried (runEffectFn3)
 import Animation (fadeInWithDelay)
+import Data.Foldable (minimum, maximum)
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState = 
@@ -135,6 +136,7 @@ view push state =
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
                 , id $ EHC.getNewIDWithTag "BusTrackingScreenMap"
+                , padding $ PaddingBottom bottomSheetHeight
                 , onAnimationEnd
                     ( \action -> do
                         void $ JB.showMap (EHC.getNewIDWithTag "BusTrackingScreenMap") true "satellite" 14.0 state.props.srcLat state.props.srcLon push MapReady
@@ -166,6 +168,8 @@ view push state =
                 ]
             ]
         ]
+  where
+    bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height]
 
 journeyLegTitleView :: forall w. Boolean -> String -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
 journeyLegTitleView isSource name state =
@@ -667,9 +671,9 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
           runEffectFn3 JB.scrollToChildInScrollView 
             (EHC.getNewIDWithTag "busStopsView") 
             (EHC.getNewIDWithTag ("verticalLineView1false17")) 
-            (show $ Mb.maybe 0 (\(API.FRFSStationAPI stop) -> (Mb.fromMaybe 0 stop.sequenceNum) - 1) mbPickupStop)
+            (show $ Mb.maybe 0 (\(API.FRFSStationAPI stop) -> Mb.fromMaybe 0 $ minimum [(DA.length state.data.stopsList) - 3, ((Mb.fromMaybe 0 stop.sequenceNum) - 1)]) mbPickupStop)
       )
-      (const NoAction)
+      (const $ if isNearToLastStop == Mb.Just true then UpdateToExpandView else NoAction)
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
   [ linearLayout
     [ height WRAP_CONTENT
@@ -719,10 +723,13 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
     etaTextInMinutesOrDistance = 
       case isMinimumEtaDistanceAvailable, mbETATime of
         Mb.Just true, Mb.Just etaTimeInSeconds -> 
-          "Next bus in " <> (HU.secondsToHms etaTimeInSeconds)
+          let secondsTohhmm = HU.secondsToHms etaTimeInSeconds
+          in "Next bus in " <> (if secondsTohhmm == "--" then "less than 1 min" else secondsTohhmm)
         Mb.Just true, Mb.Nothing -> "Next bus is " <> (JB.fromMetersToKm $ Mb.fromMaybe 0 mbETADistance) <> " away"
         Mb.Just false, Mb.Nothing -> "No bus is coming towards your stop"
         _, _ -> ""
+    
+    isNearToLastStop = mbPickupStop <#> (\(API.FRFSStationAPI stop) -> (DA.length state.data.stopsList) - 3 > ((Mb.fromMaybe 0 stop.sequenceNum) - 1))
     
     -- roundedNextStopDistance :: String
     -- roundedNextStopDistance = 

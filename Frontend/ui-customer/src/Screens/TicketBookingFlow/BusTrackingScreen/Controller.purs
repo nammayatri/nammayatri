@@ -109,6 +109,7 @@ data Action
   | ViewTicket
   | UserBoarded
   | SaveRoute JB.Locations
+  | UpdateToExpandView 
 
 -- | API.BusTrackingRouteResp
 eval :: Action -> ST.BusTrackingScreenState -> Eval Action ScreenOutput ST.BusTrackingScreenState
@@ -313,7 +314,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
             -- , nextStopTravelDistance: item.nextStopTravelDistance
             , nearestWaypointConfig: nearestWaypointConfig
             , etaDistance: if nextStopSequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
-            , eta: Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
+            , eta: Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop item.vehicleId) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
             , delta : lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta) -- spy "codex-delta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.delta)
             } ]
     
@@ -321,13 +322,14 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
     --   let (API.Stop stop) = upcomingStop.stop
     --   in stop.stopIdx
 
-    calculateETAFromUpcomingStop lastReachedStop (API.UpcomingStop stop) = 
+    calculateETAFromUpcomingStop lastReachedStop (API.UpcomingStop stop) vehicleId = 
       let etaTimeStamp = stop.eta
           delayInSeconds = DI.floor $ Mb.fromMaybe 0.0 stop.delta
             --DI.floor $ Mb.fromMaybe 0.0 $ lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
           etaInSeconds = EHC.compareUTCDate etaTimeStamp (EHC.getCurrentUTC "")
-          _ = spy "UTC TimeStamp of ETA and currentTime " $ Tuple etaTimeStamp (EHC.getCurrentUTC "")
-          _ = spy "ETA in seconds and the delat" $ Tuple etaInSeconds delayInSeconds
+          -- _ = spy "UTC TimeStamp of ETA and currentTime " $ Tuple etaTimeStamp (EHC.getCurrentUTC "")
+          -- _ = spy "ETA in seconds and the delat" $ Tuple etaInSeconds delayInSeconds
+          _ = spy "Proper ETA with Delay" $ Tuple vehicleId (etaInSeconds + delayInSeconds)
       in if etaInSeconds + delayInSeconds > 0
         then Mb.Just $ etaInSeconds + delayInSeconds
         else Mb.Nothing 
@@ -399,6 +401,8 @@ eval UserBoarded state = do
 
 eval (SaveRoute route) state = continue state {data{routePts = route}}
 
+eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
+
 eval _ state = update state
 
 drawDriverRoute :: Array API.FRFSStationAPI -> ST.BusTrackingScreenState -> Flow GlobalState Unit
@@ -467,8 +471,8 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
   for_ vehicles
     $ \(item) -> do
         let pointerIcon = "ny_ic_bus_nav_on_map"
-            markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 80.0, zIndex = 0.1}
-            srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 80.0, zIndex = 0.0}
+            markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 70.0, zIndex = 0.1}
+            srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 105.0, zIndex = 0.0}
             vehicleRotationFromPrevLatLon = vehicleRotationCalculation item state
         locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts item.vehicleLat item.vehicleLon 1
         markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable item.vehicleId
@@ -483,8 +487,8 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
                 -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
                 }
           else do
-            void $ EHC.liftFlow $ JB.showMarker markerConfig item.vehicleLat item.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-            void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} item.vehicleLat item.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+            void $ EHC.liftFlow $ JB.showMarker markerConfig item.vehicleLat item.vehicleLon 70 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+            void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} item.vehicleLat item.vehicleLon 105 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
   pure unit
 
 vehicleRotationCalculation :: ST.VehicleData -> ST.BusTrackingScreenState -> Number
@@ -515,8 +519,8 @@ userBoardedActions state vehicles vehicle = do
   locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points : state.data.routePts.points}) (vehicle.vehicleLat) (vehicle.vehicleLon) 1
   -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (vehicle.vehicleLat) (vehicle.vehicleLon) 1
   let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
-  let srcMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" , markerSize = 80.0,  zIndex = 0.1}
-      srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 80.0, zIndex = 0.0}
+  let srcMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" , markerSize = 70.0,  zIndex = 0.1}
+      srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 105.0, zIndex = 0.0}
       vehicleRotationFromPrevLatLon = vehicleRotationCalculation vehicle state
       srcCode = Mb.maybe "" (_.stationCode) state.data.sourceStation
       destinationCode = Mb.maybe "" (_.stationCode) state.data.destinationStation
@@ -541,8 +545,8 @@ userBoardedActions state vehicles vehicle = do
           -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
           }
     else do
-      void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-      void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} vehicle.vehicleLat vehicle.vehicleLon 80 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 70 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} vehicle.vehicleLat vehicle.vehicleLon 105 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
   EHC.liftFlow $ JB.animateCamera vehicle.vehicleLat vehicle.vehicleLon 17.0 "ZOOM"
   
   

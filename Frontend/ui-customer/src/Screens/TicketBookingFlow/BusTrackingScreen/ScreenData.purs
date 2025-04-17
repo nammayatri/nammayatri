@@ -61,7 +61,7 @@ initData =
         }
     , props:
         { showRouteDetailsTab: true
-        , expandStopsView: false
+        , expandStopsView: true
         , verticalLineHeight: 0
         , srcLat: 0.0
         , srcLon: 0.0
