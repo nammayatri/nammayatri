@@ -62,12 +62,16 @@ encryptPayload jsonStr clientKey = do
       pure encryptedBase64
 
 -- Function to decrypt response data
-decryptResponseData :: Text -> Text -> Either String Text
-decryptResponseData encryptedText clientKey = do
+decryptResponseData :: Text -> Text -> Bool -> Either String Text
+decryptResponseData encryptedText clientKey isBase64 = do
   cipher <- cipherInit clientKey
-  decodedData <- case B64.decode $ encodeUtf8 encryptedText of
-    Right d -> Right d
-    Left err -> Left $ "Base64 decode failed: " <> show err
+
+  decodedData <-
+    if isBase64
+      then case B64.decode $ encodeUtf8 encryptedText of
+        Right d -> Right d
+        Left err -> Left $ "Base64 decode failed: " <> show err
+      else Right $ encodeUtf8 encryptedText
 
   -- Decrypt
   let decrypted = CT.ecbDecrypt cipher decodedData

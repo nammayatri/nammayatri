@@ -180,7 +180,7 @@ getBookJourney config request = do
   -- 3. Handle the encrypted response
   if respCode encResponse == 0
     then do
-      case decryptResponseData encResponse.agentTicketData decryptedAgentDataKey of
+      case decryptResponseData encResponse.agentTicketData decryptedAgentDataKey False of
         Left err -> throwError $ InternalError $ "Failed to decrypt ticket data: " <> T.pack err
         Right decryptedJson -> do
           logInfo $ "Decrypted ticket data: " <> decryptedJson
