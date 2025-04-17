@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -55,7 +55,7 @@ getRoute :: String -> String
 getRoute routeType = (getBaseUrl "10") <> case routeType of
                                                 "trip" -> "/trip/route"
                                                 "intercity" -> "/route"
-                                                _ -> "/pickup/route" 
+                                                _ -> "/pickup/route"
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"
@@ -66,15 +66,15 @@ confirmRide quoteId = (getBaseUrl "13") <> "/rideSearch/quotes/" <>  quoteId <> 
 getQuotes :: String -> String
 getQuotes searchId = (getBaseUrl "14") <> "/rideSearch/"<> searchId <> "/results"
 
-selectEstimate :: String -> String 
+selectEstimate :: String -> String
 selectEstimate estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/select2"
 
 selectList :: String -> String
 selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/results"
 
 rideBookingList :: String -> String -> String -> Maybe String -> Maybe String -> String
-rideBookingList limit offset isActive status clientId = 
-  maybe 
+rideBookingList limit offset isActive status clientId =
+  maybe
     ((getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
     (\rideStatus ->
       let clientIdStr = (fromMaybe "" clientId)
@@ -113,7 +113,7 @@ placeDetails dummyString =  (getBaseUrl "24") <> "/maps/getPlaceDetails"
 callCustomerToDriver :: String ->  String
 callCustomerToDriver  rideId =  (getBaseUrl "25") <> "/ride/" <> rideId <> "/call/driver"
 
-getPlaceName :: String -> String 
+getPlaceName :: String -> String
 getPlaceName dummyString = (getBaseUrl "26") <> "/maps/getPlaceName"
 
 feedback :: String -> String
@@ -122,25 +122,25 @@ feedback dummy = (getBaseUrl "27") <> "/feedback/rateRide"
 profile :: String -> String
 profile _ = (getBaseUrl "28") <> "/profile"
 
-addLocation :: String -> String 
+addLocation :: String -> String
 addLocation _ = (getBaseUrl "29") <> "/savedLocation"
 
-savedLocation :: String -> String 
+savedLocation :: String -> String
 savedLocation _ = (getBaseUrl "30") <> "/savedLocation/list"
 
-deleteLocation :: String -> String 
+deleteLocation :: String -> String
 deleteLocation tag = (getBaseUrl "31") <> "/savedLocation/" <> tag
 
 getCoordinates :: String -> String -> String
 getCoordinates id  language = (getBaseUrl "32") <> "/googleMaps/getCoordinates?placeId=" <> id <> "&language=" <> language
 
-flowStatus :: String -> String 
+flowStatus :: String -> String
 flowStatus dummy = (getBaseUrl "33") <> "/frontend/flowStatus"
 
-notifyFlowEvent :: String -> String 
+notifyFlowEvent :: String -> String
 notifyFlowEvent dummy = (getBaseUrl "34") <> "/frontend/notifyEvent"
 
-cancelEstimate :: String -> String 
+cancelEstimate :: String -> String
 cancelEstimate estimateId = (getBaseUrl "35") <> "/estimate/" <> estimateId <> "/cancel"
 
 emergencyContacts :: String -> String
@@ -199,15 +199,15 @@ uploadFile :: String -> String
 uploadFile dummy = (getBaseUrl "42") <> "/issue/upload"
 
 getOptions :: String -> String -> String -> String -> String -> String
-getOptions categoryId optionId rideId issueReportId language = 
+getOptions categoryId optionId rideId issueReportId language =
   getBaseUrl "43" <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language <> rideIdQueryParam <> optionIdQueryParam
   where
     rideIdQueryParam = if null rideId then "" else "&rideId=" <> rideId
-    optionIdQueryParam = 
-      if null optionId then "" 
+    optionIdQueryParam =
+      if null optionId then ""
       else "&optionId=" <> optionId <> issueReportIdQueryParam
-    issueReportIdQueryParam = 
-      if null issueReportId then "" 
+    issueReportIdQueryParam =
+      if null issueReportId then ""
       else "&issueReportId=" <> issueReportId
 
 issueInfo :: String -> String -> String
@@ -265,7 +265,7 @@ getMetroBookingStatus :: String -> String
 getMetroBookingStatus bookingId = (getBaseUrl "51") <> "/frfs/booking/" <> bookingId <> "/status"
 
 getMetroBookingList :: String -> Maybe String -> Maybe String -> String
-getMetroBookingList vehicleType limit offset = 
+getMetroBookingList vehicleType limit offset =
   (getBaseUrl "52")
     <>  (case limit, offset of
           Just limit', Just offset' -> "/frfs/booking/list?vehicleType=\"" <> vehicleType <> "\"" <> "&limit=" <> limit' <> "&offset=" <> offset'
@@ -299,8 +299,8 @@ editStop rideBookingId = (getBaseUrl "48") <> "/rideBooking/" <> rideBookingId <
 rentalSearch :: String -> String
 rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
 
-addOrEditStop :: Boolean -> String -> String 
-addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 
+addOrEditStop :: Boolean -> String -> String
+addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop"
 
 editLocation :: String -> String
 editLocation rideId = (getBaseUrl "58") <> "/ride/" <> rideId <> "/edit/location"
@@ -321,15 +321,15 @@ getEmergencyContactsTrackingStatus rideId = (getBaseUrl "59") <> "/followRide/EC
 getManuallySharedRideDetails :: String -> String
 getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rideId <> "/customerDetails"
 
-multiChat :: String -> String 
+multiChat :: String -> String
 multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
 
 getFavouriteDriverList :: String
-getFavouriteDriverList = ((getBaseUrl "58") <> "/driver/favorites") 
+getFavouriteDriverList = ((getBaseUrl "58") <> "/driver/favorites")
 
 getFavouriteDriverTrips :: String -> String -> String -> Maybe String -> Maybe String -> String
-getFavouriteDriverTrips limit offset isActive status clientId = 
-  maybe 
+getFavouriteDriverTrips limit offset isActive status clientId =
+  maybe
     ((getBaseUrl "16") <> "/rideBooking/favourites/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
     (\rideStatus ->
       let clientIdStr = (fromMaybe "" clientId)
@@ -340,18 +340,18 @@ getFavouriteDriverTrips limit offset isActive status clientId =
     status
 
 removeFavouriteDriver :: String -> String
-removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove") 
+removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove")
 
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
 
 busAutoComplete :: String -> String -> String -> Maybe String -> String -> Maybe String -> String
-busAutoComplete vehicleType city location input limit offset = 
-  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <> 
+busAutoComplete vehicleType city location input limit offset =
+  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <>
   "&limit=" <> limit <> "&offset=" <> (fromMaybe "0" offset) <>
   maybe "" (\i -> "&input=" <> i) input
 
-trackRouteBus :: String -> String 
+trackRouteBus :: String -> String
 trackRouteBus route = (getBaseUrl "61") <> "/track/"<>route <> "/vehicles"
 
 triggerAadhaarOTP :: String -> String
@@ -380,3 +380,24 @@ payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"
 
 deletePerson :: String -> String
 deletePerson _ = (getBaseUrl "62") <> "/deleted/person"
+
+verifyVpa :: String -> String
+verifyVpa vpa = (getBaseUrl "50") <> "/referral/verifyVpa?vpa=" <> vpa
+
+updateVpa :: String -> String
+updateVpa dummy = (getBaseUrl "50") <> "/payoutVpa/upsert"
+
+payoutHistory :: String -> String
+payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"
+
+deletePerson :: String -> String
+deletePerson _ = (getBaseUrl "62") <> "/deleted/person"
+
+verifyVpa :: String -> String
+verifyVpa vpa = (getBaseUrl "50") <> "/referral/verifyVpa?vpa=" <> vpa
+
+updateVpa :: String -> String
+updateVpa dummy = (getBaseUrl "50") <> "/payoutVpa/upsert"
+
+payoutHistory :: String -> String
+payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"

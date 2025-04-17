@@ -1342,3 +1342,5 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
   void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_INTERVAL locationUpdateServiceConfig.batchInterval
   void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_SIZE locationUpdateServiceConfig.batchSize
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge
+  void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_TIME_THRESHOLD locationUpdateServiceConfig.maxTimeThreshold
+  void $ pure $ Storage.setValueToLocalStore LOCATION_PRIORITY locationUpdateServiceConfig.priority

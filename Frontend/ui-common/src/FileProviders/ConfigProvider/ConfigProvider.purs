@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module ConfigProvider (
@@ -45,13 +45,13 @@ foreign import loadInWindow :: forall a. Fn2 String a Unit
 
 foreign import loadFileInDUI :: String -> String
 
-foreign import getAppConfigFromWindow :: Fn3 String (Maybe AppConfig) (AppConfig -> (Maybe AppConfig)) (Maybe AppConfig) 
+foreign import getAppConfigFromWindow :: Fn3 String (Maybe AppConfig) (AppConfig -> (Maybe AppConfig)) (Maybe AppConfig)
 
 loadAppConfig :: String -> AppConfig
 loadAppConfig _ =
   let defaultConfig = encode DefaultConfig.config
       merchantConfig = getConfigFromFile ReExport.configuration_file
-      
+
       mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig
       decodeAppConfig = decodeForeignObject mergedConfig DefaultConfig.config
       _ = runFn2 loadInWindow ReExport.appConfig mergedConfig
@@ -61,15 +61,15 @@ loadAppConfig _ =
 getConfigFromFile :: String -> Array Foreign
 getConfigFromFile fileName = do
   let config = loadFileInDUI $ fileName <> ReExport.dotJSA
-  if isFilePresent config 
-    then 
+  if isFilePresent config
+    then
       [encode $ evalJSString config]
     else do
       let jsConfig = getConfigFromJS fileName
-      if isFilePresent jsConfig 
+      if isFilePresent jsConfig
         then do
           [encode $ evalJSString jsConfig]
-        else 
+        else
           let _ = printLog "File Not found" $ fileName <> " is not present"
           in []
 
@@ -94,7 +94,7 @@ getAppConfigEff :: EffectFn1 String AppConfig
 getAppConfigEff = mkEffectFn1 \key -> pure $ getAppConfig key
 
 getAppConfig :: String -> AppConfig
-getAppConfig _ = do 
+getAppConfig _ = do
   let
     mBconfig = runFn3 getAppConfigFromWindow ReExport.decodeAppConfig Nothing Just
   case mBconfig of

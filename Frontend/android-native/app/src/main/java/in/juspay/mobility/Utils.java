@@ -201,7 +201,7 @@ public class Utils {
         CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
         if (BuildConfig.DEBUG) {
             SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
-        }        
+        }
         SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
         SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
             @Override
@@ -217,7 +217,7 @@ public class Utils {
                 }
                 return score >= scoreThreshold;
             }
-        });  
+        });
     }
 
     private static boolean getBooleanWithFallback (SharedPreferences sharedPref, String key) {

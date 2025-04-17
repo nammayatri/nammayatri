@@ -160,7 +160,7 @@ data KeyStore = USER_NAME
                 | LOGS_TRACKING
                 | FUNCTION_EXECUTED_IN_SESSION
                 | EVENT_STORAGE
-                | LAST_PLAYED_RIDE_ID 
+                | LAST_PLAYED_RIDE_ID
                 | GO_TO_PLANS_PAGE
                 | LAST_EXECUTED_TIME
                 | SHOW_PARCEL_INTRODUCTION_POPUP
@@ -176,6 +176,10 @@ data KeyStore = USER_NAME
                 | LOCATION_REQUEST_INTERVAL
                 | LOCATION_MAX_BATCH_AGE
                 | LOCATION_FRESHNESS_THRESHOLD
+                | LOCATION_MAX_TIME_THRESHOLD
+                | LOCATION_PRIORITY
+                | METER_RIDE_ACTIVE
+
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -209,9 +213,9 @@ isLocalStageOn :: HomeScreenStage -> Boolean
 isLocalStageOn stage = (getValueToLocalNativeStore LOCAL_STAGE) == show stage
 
 isOnFreeTrial :: LazyCheck -> Boolean
-isOnFreeTrial dummy = do 
+isOnFreeTrial dummy = do
   let freeTrialFromLocal = getValueToLocalNativeStore IS_ON_FREE_TRIAL
-  if freeTrialFromLocal /= "Nothing" then 
-    freeTrialFromLocal == "true" 
-  else 
+  if freeTrialFromLocal /= "Nothing" then
+    freeTrialFromLocal == "true"
+  else
     fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
