@@ -11,11 +11,11 @@ import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.GenericPretty
-import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 
-data ServiceProvider = CAUTIO
+data ServiceProvider = CAUTIO | OWNED
   deriving stock (Eq, Ord, Generic, Show, Read)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
@@ -39,12 +39,6 @@ instance ToParamSchema ServiceNames where
       & type_ L.?~ OpenApiString
       & format L.?~ (show f)
 
-instance FromHttpApiData ServiceNames where
-  parseUrlPiece a = readEither a
-
-instance ToHttpApiData ServiceNames where
-  toQueryParam serviceName = show serviceName
-
 instance Read ServiceNames where
   readsPrec d' =
     readParen
@@ -63,6 +57,8 @@ instance Read ServiceNames where
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+
+$(mkHttpInstancesForEnum ''ServiceNames)
 
 instance Show PlanBaseAmount where
   show (PERRIDE_BASE amount) = "PERRIDE_" <> T.unpack (show amount)

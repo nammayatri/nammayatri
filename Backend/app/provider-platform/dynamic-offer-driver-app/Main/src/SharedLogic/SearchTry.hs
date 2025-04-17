@@ -286,25 +286,31 @@ buildTripQuoteDetail ::
   [DAC.ConditionalCharges] ->
   Bool ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare' isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
         item <- CQDVST.findByServiceTierTypeAndCityId vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
+  let extraChargesToAdd = sum $ map (.charge) conditionalCharges
+  let baseFare = baseFare' + extraChargesToAdd
   (driverParkingCharge, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
     case (mbDriverParkingCharge, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
-      (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
+      (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just charge, Just minFee, Just $ maxFee + extraChargesToAdd, Just stepFee, Just defaultStepFee)
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
+        maxBoundWithExtraFee <- do
+          case (mbDriverExtraFeeBounds <&> (.maxFee)) of
+            Just maxBound' -> pure $ Just (maxBound' + extraChargesToAdd)
+            Nothing -> pure Nothing
         return $
           ( farePolicy.parkingCharge,
             USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
             mbDriverExtraFeeBounds <&> (.maxFee),
-            mbDriverExtraFeeBounds <&> (.stepFee),
+            maxBoundWithExtraFee,
             mbDriverExtraFeeBounds <&> (.defaultStepFee)
           )
   return $ TripQuoteDetail {..}
