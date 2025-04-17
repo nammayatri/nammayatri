@@ -40,7 +40,7 @@ instance ToJSON EncryptedRequest where
     object ["app" .= app, "data" .= data_]
 
 data EncryptedResponse = EncryptedResponse
-  { respCode :: Text,
+  { respCode :: Int,
     respMessage :: Text,
     encrypted :: Text,
     agentTicketData :: Text
@@ -103,12 +103,12 @@ data CRISBookingRequest = CRISBookingRequest
 
 data CRISBookingResponse = CRISBookingResponse
   { ticketNumber :: Text, -- utsno
-    amount :: Text, -- cashReceived
+    amount :: HighPrecMoney, -- cashReceived
     source :: Text,
     destination :: Text,
     via :: Text,
-    numAdults :: Text, -- adult
-    numChildren :: Text, -- child
+    numAdults :: Int, -- adult
+    numChildren :: Int, -- child
     classCode :: Text,
     ticketType :: Text, -- tktType
     trainType :: Text,
@@ -118,22 +118,22 @@ data CRISBookingResponse = CRISBookingResponse
     validUntil :: Text, -- showTicketValidity
     journeyDate :: Text, -- jrnyDate
     routeMessage :: Text,
-    chargeableAmount :: Text,
+    chargeableAmount :: HighPrecMoney,
     encryptedTicketData :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 -- Add type for decrypted ticket data
 data CRISTicketData = CRISTicketData
-  { utsno :: Text,
-    cashReceived :: Text,
+  { utsNumber :: Text,
+    cashReceived :: HighPrecMoney,
     source :: Text,
     destination :: Text,
     via :: Text,
-    adult :: Text,
-    child :: Text,
+    adult :: Int,
+    child :: Int,
     classCode :: Text,
-    tktType :: Text,
+    ticketType :: Text,
     trainType :: Text,
     serviceTax :: Text,
     txnTime :: Text,
@@ -141,7 +141,7 @@ data CRISTicketData = CRISTicketData
     showTicketValidity :: Text,
     jrnyDate :: Text,
     routeMessage :: Text,
-    chargeableAmount :: Text
+    chargeableAmount :: HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -178,7 +178,7 @@ getBookJourney config request = do
   encResponse <- callCRISAPI config bookJourneyAPI (eulerClientFn encReq) "bookJourney"
 
   -- 3. Handle the encrypted response
-  if respCode encResponse == "0"
+  if respCode encResponse == 0
     then do
       case decryptResponseData encResponse.agentTicketData decryptedAgentDataKey of
         Left err -> throwError $ InternalError $ "Failed to decrypt ticket data: " <> T.pack err
@@ -187,7 +187,7 @@ getBookJourney config request = do
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
             Left err -> throwError $ InternalError $ "Failed to parse ticket data: " <> T.pack err
             Right ticketData -> pure $ convertToBookingResponse ticketData encResponse.encrypted
-    else throwError $ InternalError $ "Booking failed with code: " <> respCode encResponse
+    else throwError $ InternalError $ "Booking failed with code: " <> (show $ respCode encResponse)
   where
     eulerClientFn encReq token =
       let client = ET.client bookJourneyAPI
@@ -197,7 +197,7 @@ getBookJourney config request = do
 convertToBookingResponse :: CRISTicketData -> Text -> CRISBookingResponse
 convertToBookingResponse ticketData encrypted =
   CRISBookingResponse
-    { ticketNumber = ticketData.utsno,
+    { ticketNumber = ticketData.utsNumber,
       amount = ticketData.cashReceived,
       source = ticketData.source,
       destination = ticketData.destination,
@@ -205,7 +205,7 @@ convertToBookingResponse ticketData encrypted =
       numAdults = ticketData.adult,
       numChildren = ticketData.child,
       classCode = ticketData.classCode,
-      ticketType = ticketData.tktType,
+      ticketType = ticketData.ticketType,
       trainType = ticketData.trainType,
       serviceTax = ticketData.serviceTax,
       transactionTime = ticketData.txnTime,
