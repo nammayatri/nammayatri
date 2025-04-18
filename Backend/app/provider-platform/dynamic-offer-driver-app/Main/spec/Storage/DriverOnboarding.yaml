@@ -312,13 +312,15 @@ Image:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, personId, imageType]
-    findImagesByRCAndType:
-      kvFunction: findAllWithKV
-      where:
-        and: [merchantId, rcId, imageType]
+      orderBy:
+        field: createdAt
+        order: desc
     findByMerchantId:
       kvFunction: findAllWithDb
       where: merchantId
+    findAllByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     addFailureReason:
       kvFunction: updateWithKV
       params: [failureReason]

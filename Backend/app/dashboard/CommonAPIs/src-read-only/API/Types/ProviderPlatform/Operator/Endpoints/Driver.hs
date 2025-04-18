@@ -36,7 +36,7 @@ data DriverInfo = DriverInfo
 data DriverOperationHubRequest = DriverOperationHubRequest
   { creatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Prelude.Text,
-    operationHubId :: Kernel.Types.Id.Id Dashboard.Common.OperationHub,
+    operationHubId :: Kernel.Types.Id.Id OperationHub,
     registrationNo :: Kernel.Prelude.Text,
     requestType :: RequestType
   }
@@ -46,10 +46,25 @@ data DriverOperationHubRequest = DriverOperationHubRequest
 instance Kernel.Types.HideSecrets.HideSecrets DriverOperationHubRequest where
   hideSecrets = Kernel.Prelude.identity
 
+data OperationHub = OperationHub
+  { address :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    id :: Kernel.Types.Id.Id OperationHub,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    merchantId :: Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Text,
+    name :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data OperationHubDriverRequest = OperationHubDriverRequest
   { driverId :: Kernel.Prelude.Text,
+    driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
-    operationHubId :: Kernel.Types.Id.Id Dashboard.Common.OperationHub,
+    operationHubId :: Kernel.Types.Id.Id OperationHub,
     registrationNo :: Kernel.Prelude.Text,
     requestStatus :: RequestStatus,
     requestTime :: Kernel.Prelude.UTCTime,
@@ -58,7 +73,7 @@ data OperationHubDriverRequest = OperationHubDriverRequest
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype OperationHubReqResp = OperationHubReqResp {requests :: [OperationHubDriverRequest]}
+data OperationHubReqResp = OperationHubReqResp {requests :: [OperationHubDriverRequest], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -82,7 +97,7 @@ data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prel
 instance Kernel.Types.HideSecrets.HideSecrets RespondHubRequest where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper))
 
 type GetDriverOperatorFetchHubRequests =
   ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
@@ -104,7 +119,7 @@ type GetDriverOperatorFetchHubRequests =
            Kernel.Prelude.Text
       :> QueryParam
            "mbOperationHubId"
-           (Kernel.Types.Id.Id Dashboard.Common.OperationHub)
+           (Kernel.Types.Id.Id OperationHub)
       :> QueryParam
            "mbRegistrationNo"
            Kernel.Prelude.Text
@@ -112,6 +127,8 @@ type GetDriverOperatorFetchHubRequests =
            '[JSON]
            OperationHubReqResp
   )
+
+type GetDriverOperationGetAllHubs = ("operation" :> "getAllHubs" :> Get '[JSON] [OperationHub])
 
 type PostDriverOperatorRespondHubRequest = ("operator" :> "respond" :> "hubRequest" :> ReqBody '[JSON] RespondHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -134,7 +151,8 @@ type GetDriverOperatorListHelper =
   )
 
 data DriverAPIs = DriverAPIs
-  { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
+  { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
+    getDriverOperationGetAllHubs :: EulerHS.Types.EulerClient [OperationHub],
     postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverInfo]
@@ -143,10 +161,11 @@ data DriverAPIs = DriverAPIs
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverOperatorFetchHubRequests :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList = driverClient
+    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_OPERATOR_FETCH_HUB_REQUESTS
+  | GET_DRIVER_OPERATION_GET_ALL_HUBS
   | POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST
   | POST_DRIVER_OPERATOR_CREATE_REQUEST
   | GET_DRIVER_OPERATOR_LIST

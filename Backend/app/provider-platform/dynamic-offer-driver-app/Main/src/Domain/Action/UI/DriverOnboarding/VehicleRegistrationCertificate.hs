@@ -362,7 +362,16 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
-  let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
+      rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
+      checks =
+        [ ("fitnessUpto", convertTextToUTC rcVerificationResponse.fitnessUpto),
+          ("insuranceValidity", convertTextToUTC rcVerificationResponse.insuranceValidity),
+          ("permitValidityUpto", convertTextToUTC rcVerificationResponse.permitValidityUpto),
+          ("pucValidityUpto", convertTextToUTC rcVerificationResponse.pucValidityUpto)
+        ]
+  case DL.find (\(_, expiry) -> maybe False (< now) expiry) checks of
+    Just (field, _) -> throwError (RCDependentDocExpired field)
+    Nothing -> pure ()
   mVehicleRC <- do
     case mbVehicleVariant of
       Just vehicleVariant ->
@@ -436,7 +445,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           { id,
             documentImageId = input.documentImageId,
             certificateNumber,
-            fitnessExpiry = addUTCTime (secondsToNominalDiffTime 788400000) now, -- TODO :: Please fix me, if my usage is critical. I am hardcoded for next 50 years.
+            fitnessExpiry = fromMaybe (addUTCTime (secondsToNominalDiffTime 788400000) now) input.fitnessUpto, -- TODO :: Please fix me, if my usage is critical. I am hardcoded for next 50 years.
             permitExpiry = input.permitValidityUpto,
             pucExpiry = input.pucValidityUpto,
             vehicleClass = input.vehicleClass,

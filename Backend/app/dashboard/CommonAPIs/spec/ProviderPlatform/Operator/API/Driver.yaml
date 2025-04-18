@@ -1,5 +1,5 @@
 imports:
-  OperationHub: Dashboard.Common
+  Summary: Dashboard.Common
   Driver: Dashboard.Common
   StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 
@@ -22,6 +22,12 @@ apis:
         - mbRegistrationNo: Text
       response:
         type: OperationHubReqResp
+
+  - GET:
+      endpoint: /operation/getAllHubs
+      auth: ApiAuthV2
+      response:
+        type: "[OperationHub]"
 
   - POST: # RespondOperationHubRequest
       endpoint: /operator/respond/hubRequest
@@ -61,6 +67,16 @@ apis:
               type: "[DriverInfo]"
 
 types:
+  OperationHub:
+    id : Id OperationHub
+    name : Text
+    address : Text
+    lat: Double
+    lon: Double
+    mobileNumber: Text
+    description: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
   DriverOperationHubRequest:
     requestType: RequestType
     operationHubId: Id OperationHub
@@ -75,12 +91,13 @@ types:
     enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
     derive: "HttpInstance"
   OperationHubReqResp:
-    - recordType: NewType
     - requests: [OperationHubDriverRequest]
+    - summary: Summary
   OperationHubDriverRequest:
     id: Text
     operationHubId: Id OperationHub
     driverId: Text
+    driverPhoneNo: Maybe Text
     registrationNo: Text
     requestType: RequestType
     requestStatus: RequestStatus

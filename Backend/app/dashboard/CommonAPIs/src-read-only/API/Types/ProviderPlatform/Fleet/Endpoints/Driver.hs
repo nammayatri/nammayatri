@@ -291,7 +291,9 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gstImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetConfig :: Kernel.Prelude.Maybe FleetConfig
+    fleetConfig :: Kernel.Prelude.Maybe FleetConfig,
+    operatorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operatorContact :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -546,6 +548,7 @@ data VerificationDocsStatus = VerificationDocsStatus
     vehiclePermit :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     vehicleFitness :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     vehicleInsurance :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehiclePUC :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     driverLicense :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
   }
   deriving stock (Generic)

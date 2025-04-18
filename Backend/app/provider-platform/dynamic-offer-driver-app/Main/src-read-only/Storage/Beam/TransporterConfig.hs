@@ -178,6 +178,7 @@ data TransporterConfigT f = TransporterConfigT
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     qarCalRadiusInKm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
+    rcExpiryChecks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rcLimit :: B.C f Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     recomputeDistanceThresholds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

@@ -74,6 +74,7 @@ import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types.Alert as DTA
 import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
+import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetConfig as DFC
@@ -134,6 +135,7 @@ import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
@@ -989,6 +991,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
                           vehicleRegistrationCertificate = Nothing,
                           vehicleFitness = Nothing,
                           vehiclePermit = Nothing,
+                          vehiclePUC = Nothing,
                           vehicleInsurance = Nothing
                         },
                   ..
@@ -1047,12 +1050,14 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
+        vehicleImages <- QImage.findAllByRcId (Just vrc.id.getId)
         let verificationDocs =
               Common.VerificationDocsStatus
                 { vehicleRegistrationCertificate = Just $ DCommon.castVerificationStatus vrc.verificationStatus,
-                  vehiclePermit = Nothing, ------ currently we are not verifying these docs therefore
-                  vehicleInsurance = Nothing,
-                  vehicleFitness = Nothing,
+                  vehiclePermit = Just $ if any (\img -> img.imageType == DDoc.VehiclePermit && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING, ------ currently we are not verifying these docs therefore
+                  vehicleInsurance = Just $ if any (\img -> img.imageType == DDoc.VehicleInsurance && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleFitness = Just $ if any (\img -> img.imageType == DDoc.VehicleFitnessCertificate && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehiclePUC = Just $ if any (\img -> img.imageType == DDoc.VehiclePUC && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   driverLicense = Nothing
                 }
         let ls =
@@ -1165,10 +1170,17 @@ getDriverFleetOwnerInfo _ _ driverId = do
   panNumber <- case panDetails of
     Just pan -> Just <$> decrypt pan.panCardNumber
     Nothing -> pure Nothing
-  makeFleetOwnerInfoRes panNumber fleetConfig fleetOwnerInfo
+  mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
+  (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
+    Nothing -> pure (Nothing, Nothing)
+    Just fleetOperatorAssoc -> do
+      person <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
+      contact <- mapM decrypt person.mobileNumber
+      pure $ (Just (person.firstName <> fromMaybe "" person.middleName <> fromMaybe "" person.lastName), contact)
+  makeFleetOwnerInfoRes panNumber fleetConfig fleetOwnerInfo operatorName operatorContact
   where
-    makeFleetOwnerInfoRes :: Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes panNumber mbFleetConfig DFOI.FleetOwnerInformation {..} = do
+    makeFleetOwnerInfoRes :: Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes panNumber mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
               Common.FleetConfig

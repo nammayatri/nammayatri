@@ -23,6 +23,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationUnderReviewDrivers,
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
+    postDriverRegistrationRegisterAadhaar,
   )
 where
 
@@ -113,3 +114,9 @@ postDriverRegistrationDocumentsUpdate merchantShortId opCity apiTokenInfo req = 
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsUpdate) req
+
+postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
+postDriverRegistrationRegisterAadhaar merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterAadhaar) driverId req

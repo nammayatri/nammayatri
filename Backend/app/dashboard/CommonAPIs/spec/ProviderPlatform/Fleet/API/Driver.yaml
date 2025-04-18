@@ -1107,6 +1107,7 @@ types:
     - vehiclePermit: Maybe VerificationStatus
     - vehicleFitness: Maybe VerificationStatus
     - vehicleInsurance: Maybe VerificationStatus
+    - vehiclePUC: Maybe VerificationStatus
     - driverLicense: Maybe VerificationStatus
   DriverMode:
     - enum: "ONLINE, OFFLINE, SILENT"
@@ -1135,6 +1136,8 @@ types:
     - gstImageId: Maybe Text
     - panNumber: Maybe Text
     - fleetConfig: Maybe FleetConfig
+    - operatorName: Maybe Text
+    - operatorContact: Maybe Text
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

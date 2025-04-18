@@ -61,7 +61,6 @@ import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
-import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.Image as ImageQuery
@@ -69,6 +68,7 @@ import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -145,38 +145,21 @@ getDriverVehiclePhotos ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
   ) ->
+  Text ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
-getDriverVehiclePhotos (mbPersonId, merchantId, _) = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  mActiveAssociation <- DAQuery.findActiveAssociationByDriver personId True
-  maybe
-    (return emptyVehiclePhotosResp)
-    ( \association -> do
-        let rcId = Just association.rcId.getId
-        odometer <- getVehicleImages rcId Domain.Odometer
-        front <- getVehicleImages rcId Domain.VehicleFront
-        back <- getVehicleImages rcId Domain.VehicleBack
-        right <- getVehicleImages rcId Domain.VehicleRight
-        left <- getVehicleImages rcId Domain.VehicleLeft
-        frontInterior <- getVehicleImages rcId Domain.VehicleFrontInterior
-        backInterior <- getVehicleImages rcId Domain.VehicleBackInterior
-
-        return API.Types.UI.DriverOnboardingV2.VehiclePhotosResp {..}
-    )
-    mActiveAssociation
+getDriverVehiclePhotos (_, merchantId, _) rcNo = do
+  encryptedRC <- encrypt rcNo
+  rc <- VRCE.findByRC encryptedRC >>= fromMaybeM (RCNotFound rcNo)
+  odometer <- getVehicleImages rc Domain.Odometer
+  front <- getVehicleImages rc Domain.VehicleFront
+  back <- getVehicleImages rc Domain.VehicleBack
+  right <- getVehicleImages rc Domain.VehicleRight
+  left <- getVehicleImages rc Domain.VehicleLeft
+  frontInterior <- getVehicleImages rc Domain.VehicleFrontInterior
+  backInterior <- getVehicleImages rc Domain.VehicleBackInterior
+  return API.Types.UI.DriverOnboardingV2.VehiclePhotosResp {..}
   where
-    getVehicleImages rcId imageType = map (.id.getId) <$> runInReplica (ImageQuery.findImagesByRCAndType merchantId rcId imageType)
-
-    emptyVehiclePhotosResp =
-      API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
-        { odometer = [],
-          front = [],
-          back = [],
-          right = [],
-          left = [],
-          frontInterior = [],
-          backInterior = []
-        }
+    getVehicleImages rc imageType = map (.s3Path) <$> runInReplica (ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType)
 
 getDriverRateCard ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

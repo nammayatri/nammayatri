@@ -71,6 +71,11 @@ updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone re
     )
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
+findByRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => EncryptedHashedField 'AsEncrypted Text -> m (Maybe VehicleRegistrationCertificate)
+findByRC certNumber = do
+  let certNumberHash = certNumber & (.hash)
+  findOneWithKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash]
+
 findByRCAndExpiry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
   let certNumberHash = certNumber & (.hash)

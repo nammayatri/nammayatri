@@ -4,6 +4,7 @@ import qualified Data.List as DL
 import qualified Data.Time as DT
 import Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image as DImage
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -113,6 +114,18 @@ findByPersonIdAndImageTypes personId imageTypes = do
     [ Se.And
         [ Se.Is BeamI.personId $ Se.Eq (Kernel.Types.Id.getId personId),
           Se.Is BeamI.imageType $ Se.In imageTypes
+        ]
+    ]
+
+findImagesByRCAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Id DM.Merchant -> Maybe Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [DImage.Image])
+findImagesByRCAndType merchantId rcId imageType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is BeamI.rcId $ Se.Eq rcId,
+          Se.Is BeamI.imageType $ Se.Eq imageType
         ]
     ]
 

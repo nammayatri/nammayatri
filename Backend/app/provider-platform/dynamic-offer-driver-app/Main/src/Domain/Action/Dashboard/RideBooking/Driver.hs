@@ -581,7 +581,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
 
   let createRCInput = createRCInputFromVehicle req
   unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures -- validate here too
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")

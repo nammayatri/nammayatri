@@ -72,6 +72,15 @@ apis:
         endpoint: DriverRegistrationAPI RegisterRCEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
+  - POST: # RegisterAadhaarAPI
+      endpoint: /{driverId}/register/aadhaar
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AadhaarCardReq
+      response:
+        type: APISuccess
   - POST: # GenerateAadhaarOtpAPI
       endpoint: /{driverId}/register/generateAadhaarOtp
       auth: ApiAuthV2
@@ -132,6 +141,9 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
 
 types:
+  ValidationStatus:
+    enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
+    derive: "Read"
   DLDetails:
     - driverName: Maybe Text
     - driverLicenseNumber: Text
@@ -207,6 +219,18 @@ types:
     - imageId2: Maybe (Id Image)
     - dateOfIssue: Maybe UTCTime
     - derive: "'HideSecrets"
+  AadhaarCardReq:
+    aadhaarFrontImageId: Maybe (Id Image)
+    aadhaarBackImageId: Maybe (Id Image)
+    maskedAadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+    consent: Bool
+    consentTimestamp: UTCTime
+    validationStatus: ValidationStatus
+    transactionId: Text
+    derive: "'HideSecrets"
   RegisterRCReq:
     - vehicleRegistrationCertNumber: Text
     - imageId: Id Image
