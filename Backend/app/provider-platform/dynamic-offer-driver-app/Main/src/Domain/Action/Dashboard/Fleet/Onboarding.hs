@@ -9,6 +9,7 @@ import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -82,6 +83,7 @@ getOnboardingRegisterStatus ::
   Maybe Bool ->
   Environment.Flow CommonOnboarding.StatusRes
 getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
