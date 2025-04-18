@@ -83,6 +83,7 @@ import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Font.Style (bold, semiBold)
 import RemoteConfig.Utils
 import RemoteConfig.Types
+import Common.RemoteConfig (fetchRemoteConfigString)
 import Data.Array (filter)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Types.App (GlobalState(..), FlowBT)
@@ -108,7 +109,8 @@ screen initialState =
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
-                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                    (GlobalState globalState) <- getState
+                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true globalState.useHVDlSdkEnabled
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
                 driverProfileResp <- Remote.fetchDriverProfile false

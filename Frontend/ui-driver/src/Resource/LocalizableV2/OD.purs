@@ -1611,6 +1611,7 @@ getOd =
     , we_will_nofity_you_when_it_is_available: (\vehicle -> "ଆମେ ଆପଣଙ୍କୁ ସୂଚନା ଦେବୁ ଯେତେବେଳେ " <> vehicle <> " ସମର୍ଥନ ଆପଣଙ୍କ ସହରରେ ଉପଲବ୍ଧ ହେବ")
     , cannot_detect_pan_card: "PAN କାର୍ଡ ଚିହ୍ନଟ କରିପାରିବା ନାହିଁ। ଦୟାକରି ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।"
     , cannot_detect_aadhaar: "ଆଧାର କାର୍ଡ ଚିହ୍ନଟ କରିପାରିବା ନାହିଁ। ଦୟାକରି ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।"
+    , cannot_detect_dl: "ଲାଇସେନ୍ସ ଚିହ୍ନଟ କରିପାରିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
     , db_check_and_name_match_failed: "PAN ସତ୍ୟାପନ ବିଫଳ ହୋଇଛି"
     , add_upi_to_receive_referral_reward: "ରେଫରାଲ ରିୱାର୍ଡ ରାଶି ପାଇବାକୁ UPI ବିବରଣୀ ଯୋଡନ୍ତୁ"
     , do_you_want_to_receive_amount_here: "ଆପଣ ଏହି ଖାତାରେ ରେଫରାଲ ରିୱାର୍ଡ ରାଶି ପାଇବାକୁ ଚାହୁଁଛନ୍ତି କି?"
@@ -1852,4 +1853,14 @@ getOd =
     , poor_cancellation_score : "ଆପଣଙ୍କର ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର ଖାରାପ ହୋଇଛି"
     , good : "ଭାଲୋ"
     , poor : "ଖାରାପ"
+    , unable_to_process : "ଆମେ ଆପଣଙ୍କର ଆବେଦନକୁ ପ୍ରକ୍ରିୟାକରଣ କରିପାରିଲୁ ନାହିଁ। ଦୟାକରି କିଛି ସମୟ ପରେ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
+    , some_error_occurred : "କିଛି ତ୍ରୁଟି ଘଟିଛି। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
+    , face_match_low_confidence : "କମ ଆତ୍ମବିଶ୍ୱାସ ସହିତ ଫେସ୍ ମ୍ୟାଚ୍ ପାସ୍"
+    , face_not_detected : "ଚେହେରା ଚିହ୍ନଟ ହୋଇନାହିଁ |"
+    , document_not_supported : "ଡକ୍ୟୁମେଣ୍ଟ୍ ସମର୍ଥିତ ନୁହେଁ |"
+    , capture_original_doc : "ମୂଳ ଡକ୍ୟୁମେଣ୍ଟ୍ କ୍ୟାପଚର୍ କରନ୍ତୁ |"
+    , forged_document : "ଡକ୍ୟୁମେଣ୍ଟରେ ଫଟୋ ଜାଲ୍ |"
+    , unable_to_extract_document : "ଡକ୍ୟୁମେଣ୍ଟ୍ ବାହାର କରିବାରେ ଅସମର୍ଥ |"
+    , unable_to_extract_document_number : "ଡକ୍ୟୁମେଣ୍ଟ ନମ୍ବର ବାହାର କରିବାରେ ଅସମର୍ଥ"
+    , dl_not_detected : "ଲାଇସେନ୍ସ ଚିହ୍ନଟ ହୋଇନାହିଁ"
   }

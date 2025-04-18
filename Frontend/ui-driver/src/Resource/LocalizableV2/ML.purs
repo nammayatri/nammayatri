@@ -1570,6 +1570,7 @@ getMl =
     , discount_points_upto: (\discountPoints -> "നിങ്ങൾ " <> discountPoints <> " കിഴിവ് പോയിൻ്റുകൾക്ക് യോഗ്യനാണ്")
     , cannot_detect_pan_card: "പാൻ കാർഡ് കണ്ടെത്താൻ കഴിയുന്നില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
     , cannot_detect_aadhaar: "ആധാർ കാർഡ് കണ്ടെത്താൻ കഴിയുന്നില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+    , cannot_detect_dl: "ലൈസൻസ് കണ്ടെത്താൻ കഴിയുന്നില്ല. വീണ്ടും ശ്രമിക്കുക."
     , document_already_validated: "പ്രമാണം ഇതിനകം സാധൂകരിച്ചിരിക്കുന്നു."
     , document_under_manual_review: "മാനുവൽ അവലോകനത്തിന് കീഴിലുള്ള പ്രമാണം."
     , document_already_linked_to_another_driver: "പ്രമാണം ഇതിനകം മറ്റൊരു ഡ്രൈവറുമായി ലിങ്ക് ചെയ്‌തിരിക്കുന്നു."
@@ -1852,4 +1853,14 @@ getMl =
     , poor_cancellation_score : "നിങ്ങളുടെ റദ്ദുചെയ്യുന്ന സ്കോർ ഖാരാബിസ്തു"
     , good : "ഉത്തമ"
     , poor : "ഖാരാബിസ്തു"
+    , unable_to_process : "നിങ്ങളുടെ അപേക്ഷ പ്രോസസ്സ് ചെയ്യാൻ ഞങ്ങൾക്ക് കഴിഞ്ഞില്ല. ദയവായി കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക."
+    , some_error_occurred : "എന്തോ പിശക് സംഭവിച്ചു, ദയവായി വീണ്ടും ശ്രമിക്കുക."
+    , face_match_low_confidence : "കുറഞ്ഞ ആത്മവിശ്വാസത്തോടെ ഫേസ് മാച്ച് പാസായി"
+    , face_not_detected : "മുഖം കണ്ടെത്തിയില്ല"
+    , document_not_supported : "ഡോക്യുമെന്റ് പിന്തുണയ്ക്കുന്നില്ല"
+    , capture_original_doc : "യഥാർത്ഥ ഡോക്യുമെന്റ് പകർത്തുക"
+    , forged_document : "രേഖയിൽ ഫോട്ടോ വ്യാജമായി ഉണ്ടാക്കി"
+    , unable_to_extract_document : "ഡോക്യുമെന്റ് വേർതിരിച്ചെടുക്കാൻ കഴിയുന്നില്ല"
+    , unable_to_extract_document_number : "ഡോക്യുമെന്റ് നമ്പർ വേർതിരിച്ചെടുക്കാൻ കഴിയുന്നില്ല."
+    , dl_not_detected : "ലൈസൻസ് കണ്ടെത്തിയില്ല"
     }

@@ -25,7 +25,7 @@ import Data.Lens ((^.))
 import Services.Accessor (_distance_meters)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
-import Data.String (Pattern(..), split) as DS
+import Data.String (Pattern(..), split, joinWith) as DS
 import Data.Array as DA
 import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
@@ -1252,6 +1252,24 @@ getHvErrorMsg errorCode =
     Just "126" -> getString FACE_BLOCKED
     Just "140" -> getString REMOVE_EYEWERE
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
+    Just "110" -> getString UNABLE_TO_PROCESS
+    Just "111" -> getString SOME_ERROR_OCCURRED
+    Just "144" -> getString FACE_MATCH_FAILED
+    Just "115" -> getString FACE_MATCH_FAILED
+    Just "122" -> getString FACE_MATCH_LOW_CONFIDENCE
+    Just "116" -> getString FACE_NOT_DETECTED
+    Just "117" -> getString FACE_NOT_DETECTED
+    Just "118" -> getString FACE_NOT_DETECTED
+    Just "132" -> getString DOCUMENT_NOT_SUPPORTED
+    Just "129" -> getString CAPTURE_ORIGINAL_DOC
+    Just "130" -> getString FORGED_DOC
+    Just "150" -> getString UNABLE_TO_EXTRACT_NAME
+    Just "153" -> getString UNABLE_TO_EXTRACT_DOCUMENT
+    Just "143" -> getString UNABLE_TO_EXTRACT_DOB
+    Just "138" -> getString FAILED_TO_EXTRACT_DOCUMENT_NUMBER
+    Just "121" -> getString FACE_NOT_DETECTED
+    Just "119" -> getString CAPTURE_ORIGINAL_DOC
+    Just "137" -> getString DL_NOT_DETECTED
     _ -> getString UNKNOWN_ERROR
 
 isTokenWithExpValid :: String -> Boolean
@@ -1342,3 +1360,6 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
   void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_INTERVAL locationUpdateServiceConfig.batchInterval
   void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_SIZE locationUpdateServiceConfig.batchSize
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge
+
+reverseHVDateFormat :: String -> String
+reverseHVDateFormat date = (DS.joinWith "-" $ DA.reverse $ DS.split(DS.Pattern ("-")) date) <> "T00:00:00Z"

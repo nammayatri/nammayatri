@@ -1628,6 +1628,7 @@ getEn =
     , we_will_nofity_you_when_it_is_available: (\vehicle -> "We will notify you when " <> vehicle <> " support is available in your city ")
     , cannot_detect_pan_card: "Cannot detect PAN card. Please Try Again."
     , cannot_detect_aadhaar: "Cannot detect Aadhaar Card. Please Try Again."
+    , cannot_detect_dl: "Cannot detect license. Please Try Again."
     , db_check_and_name_match_failed: "Pan verification failed"
     , add_upi_to_receive_referral_reward: "Add UPI detail to receive referral reward amount"
     , do_you_want_to_receive_amount_here: "Do you want to receive referral reward amount in this account?"
@@ -1852,4 +1853,14 @@ getEn =
     , poor_cancellation_score : "Your cancellation\nscore is poor"
     , good : "Good"
     , poor : "Poor"
+    , unable_to_process : "We could not process your application. Please try again after sometime."
+    , some_error_occurred : "some error occurred."
+    , face_match_low_confidence : "Face match passed with low confidence."
+    , face_not_detected : "Face not detected"
+    , document_not_supported : "Document Not Supported"
+    , capture_original_doc : "Non Live document detected. Please capture or upload original"
+    , forged_document : "Photo forged on document"
+    , unable_to_extract_document : "unable to extract document"
+    , unable_to_extract_document_number : "unable to extract document number"
+    , dl_not_detected : "Driver license not detected"
     }

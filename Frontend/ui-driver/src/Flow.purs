@@ -64,7 +64,7 @@ import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn3, runEffectFn9, runEffectFn10)
-import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT, modifyState)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, markPerformance, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
@@ -166,6 +166,7 @@ import Resource.Constants (hvSdkTokenExp)
 import PrestoDOM.Core(terminateUI)
 import Common.RemoteConfig.Utils as CommonRC
 import Common.RemoteConfig.Types (FeaturesConfigData(..))
+import Common.RemoteConfig (fetchRemoteConfigString, fetchRemoteConfig)
 import RemoteConfig.Utils
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenInitData
 import Engineering.Helpers.RippleCircles
@@ -213,6 +214,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
+    let (useHVDlSdkEnabled' :: Boolean) = fetchRemoteConfig "use_hv_dl_sdk" -- this flag for globally enabling/disabling dl sdk in one go and also can be used for staggering if required.
+    void $ modifyState (\(GlobalState state) -> GlobalState $ state{ useHVDlSdkEnabled = useHVDlSdkEnabled'}) 
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
     when baseFlow $ showParcelIntroductionPopup
@@ -755,7 +758,7 @@ onBoardingFlow = do
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true allState.useHVDlSdkEnabled
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -842,7 +845,7 @@ onBoardingFlow = do
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
       permissionsScreenFlow Nothing Nothing Nothing
-    AADHAAR_PAN_SELFIE_UPLOAD state (ST.HyperVergeKycResult result) -> do
+    DL_AADHAAR_PAN_SELFIE_UPLOAD state (ST.HyperVergeKycResult result) -> do
       let currentTime = getCurrentUTC ""
       let status = fromMaybe "needs_review" result.status
       let convertedStatus = convertToRequestStatus status
@@ -857,7 +860,7 @@ onBoardingFlow = do
           case image' of
             Nothing -> void $ pure $ toast (getString TIMEOUT)
             Just image -> do
-              resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "ProfilePhoto" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+              resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "ProfilePhoto" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.declineReason)
               case resp of
                 Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                 Right response -> pure unit
@@ -875,7 +878,7 @@ onBoardingFlow = do
             case image' of
               Nothing -> void $ pure $ toast (getString TIMEOUT)
               Just image -> do
-                resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.declineReason)
                 case resp of
                   Right (ValidateImageRes response)-> do
                     resp <- lift $ lift $ Remote.registerDriverPAN (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
@@ -898,8 +901,8 @@ onBoardingFlow = do
             imageFront <- lift $ lift  $ await imageFrontControl
             case imageFront, imageBack of
               Just imageFront, Just imageBack -> do
-                respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageFront "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
-                respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageFront "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.declineReason)
+                respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.declineReason)
                 case respFrontImage, respBackImage of
                   Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
                     resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
@@ -911,13 +914,65 @@ onBoardingFlow = do
                   _, _ -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER else pure unit
               _, _ -> void $ pure $ toast (getString TIMEOUT)
             pure unit
+        Just (ST.DL_DETAILS (ST.DriverLicenseDetails detail)) | (isJust detail.imageIdFront || isJust detail.imageIdBack) -> do
+          if result.status == (Just "auto_declined") && isJust detail.errorCode
+            then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode
+          else pure unit
+          imageFrontControl <- lift $ lift $ fork $ doAff $ maybe (pure Nothing) (\frontURL -> JB.encodeToBase64Type frontURL 10000) detail.imageIdFront
+          mbImageBack <- lift $ lift $ doAff $ maybe (pure Nothing) (\backURL -> JB.encodeToBase64Type backURL 10000) detail.imageIdBack
+          mbImageFront <- lift $ lift  $ await imageFrontControl
+          (Tuple imageId1 imageId2) <- case mbImageFront, mbImageBack of
+            Just frntImg, Just bckImg -> do
+              respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq frntImg "DriverLicense" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.errorMessage)
+              respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq bckImg "DriverLicense" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.errorMessage)
+              case respFrontImage, respBackImage of
+                Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) -> pure $ Tuple (Just frontResp.imageId) (Just backResp.imageId)
+                Left errPayload , Right (ValidateImageRes backResp) -> do
+                  if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  pure $ Tuple (Just backResp.imageId) Nothing
+                Right (ValidateImageRes frontResp), Left errPayload -> do
+                  if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  pure $ Tuple (Just frontResp.imageId) Nothing
+                Left errPayload, _ -> do
+                  if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  pure $ Tuple Nothing Nothing
+                _, _ -> do
+                  if result.status /= (Just "auto_declined") then void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER else pure unit
+                  pure $ Tuple Nothing Nothing
+            Just frntImg, Nothing -> do
+              respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq frntImg "DriverLicense" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.errorMessage)
+              case respFrontImage of
+                Right (ValidateImageRes frontResp) -> pure $ Tuple (Just frontResp.imageId) Nothing
+                Left errPayload -> do
+                  if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  pure $ Tuple Nothing Nothing
+            Nothing, Just bckImg -> do
+              respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq bckImg "DriverLicense" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory detail.errorMessage)
+              case respBackImage of
+                Right (ValidateImageRes backResp) -> pure $ Tuple (Just backResp.imageId) Nothing
+                Left errPayload -> do
+                  if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  pure $ Tuple Nothing Nothing
+            Nothing, Nothing -> do
+              void $ pure $ toast (getString TIMEOUT)
+              pure $ Tuple Nothing Nothing
+          case imageId1 of
+            Just imgId1 | (result.status /= (Just "auto_declined") && isJust detail.dob) -> do
+              rsp <- lift $ lift $ Remote.registerDriverDL (Remote.makeDriverDLReq detail.dlNumber (HU.reverseHVDateFormat $ fromMaybe "" detail.dob) (maybe Nothing (\doi -> Just $ HU.reverseHVDateFormat doi) detail.dateOfIssue) imgId1 imageId2 state.data.vehicleCategory detail.nameOnCard detail.requestId result.transactionId)
+              case rsp of
+                Right response -> pure unit
+                Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+            _ -> if isNothing detail.dob
+              then void $ pure $ toast $ getString CANNOT_DETECT_DL
+              else if result.status /= (Just "auto_declined") then void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER else pure unit
+
         _ -> do
           void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
           void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
       void $ lift $ lift $ toggleLoader false
       onBoardingFlow
     GO_TO_APP_UPDATE_POPUP_SCREEN _ -> appUpdatedFlow {title : (getString APP_UPDATE), description : (getString APP_UPDATE_MESSAGE), image : ""} ST.REG_PROF_PAN_AADHAAR
-    AADHAAR_PAN_SELFIE_UPLOAD state _ -> onBoardingFlow
+    DL_AADHAAR_PAN_SELFIE_UPLOAD state _ -> onBoardingFlow
     LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN state ->
       if state.props.manageVehicle
@@ -1102,12 +1157,12 @@ uploadDrivingLicenseFlow = do
   flow <- UI.uploadDrivingLicense
   case flow of
     VALIDATE_DL_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing Nothing Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing Nothing Nothing state.data.vehicleCategory Nothing)
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
         modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageIDFront = resp.imageId}, props{errorVisibility = false}})
-        registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue resp.imageId resp.imageId state.data.vehicleCategory)
+        registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue resp.imageId Nothing state.data.vehicleCategory Nothing Nothing Nothing)
         void $ pure $ setValueToLocalStore ENTERED_DL state.data.driver_license_number
         case registerDriverDLResp of
           Right (API.ApiSuccessResult resp) -> do
@@ -1146,7 +1201,7 @@ uploadDrivingLicenseFlow = do
     VALIDATE_DATA_API state -> do
       void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
-      registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront state.data.imageIDFront state.data.vehicleCategory)
+      registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront Nothing state.data.vehicleCategory Nothing Nothing Nothing)
       void $ pure $ setValueToLocalStore ENTERED_DL state.data.driver_license_number
       case registerDriverDLResp of
         Right (API.ApiSuccessResult resp) -> do
@@ -1187,7 +1242,7 @@ addVehicleDetailsflow addRcFromProf = do
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing Nothing Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing Nothing Nothing state.data.vehicleCategory Nothing)
       void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
@@ -1213,7 +1268,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true state'.useHVDlSdkEnabled
                 let multiRcStatus  = getStatusValue resp.rcVerificationStatus
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
@@ -2329,7 +2384,7 @@ currentRideFlow activeRideResp isActiveRide = do
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   -- Deprecated case for aadhaar popup shown after HV Integration
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true allState.useHVDlSdkEnabled
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
@@ -4663,7 +4718,7 @@ documentcaptureScreenFlow = do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
     TA.UPLOAD_DOC_API state imageType -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory
+      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory Nothing
       case validateImageResp of
         Right (ValidateImageRes resp) -> do
           void $ pure $ toast $ getString DOCUMENT_UPLOADED_SUCCESSFULLY

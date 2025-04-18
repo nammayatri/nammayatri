@@ -1570,6 +1570,7 @@ getBn =
     , discount_points_upto: (\discountPoints -> "আপনি " <> discountPoints <> " পর্যন্ত ডিসকাউন্ট পয়েন্টের জন্য যোগ্য৷")
     , cannot_detect_pan_card: "প্যান কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
     , cannot_detect_aadhaar: "আধার কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
+    , cannot_detect_dl: "লাইসেন্সের সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
     , document_under_manual_review: "ম্যানুয়াল পর্যালোচনা অধীনে নথি।"
     , document_already_linked_to_another_driver: "ডকুমেন্টটি ইতিমধ্যেই অন্য ড্রাইভারের সাথে লিঙ্ক করা আছে।"
     , document_already_validated: "নথি যাচাই করা হয়েছে।"
@@ -1852,4 +1853,14 @@ getBn =
     , poor_cancellation_score : "আপনার রদ্দু মাড়ালু স্কোর খারাপ"
     , good : "ভালো"
     , poor : "খারাপ"
+    , unable_to_process: "আমরা আপনার আবেদন প্রক্রিয়া করতে পারিনি। অনুগ্রহ করে কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+    , some_error_occurred : "কিছু ত্রুটি ঘটেছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+    , face_match_low_confidence: "কম আত্মবিশ্বাসের সাথে ফেস ম্যাচটি পাস হয়েছে।"
+    , face_not_detected: "মুখ শনাক্ত হয়নি"
+    , document_not_supported: "নথি সমর্থিত নয়"
+    , capture_original_doc: "মূল নথি ক্যাপচার"
+    , forged_document: "নথিতে ছবি জাল"
+    , unable_to_extract_document: "নথি বের করতে অক্ষম"
+    , unable_to_extract_document_number: "নথি বের করতে অক্ষম"
+    , dl_not_detected: "লাইসেন্স সনাক্ত করা হয়নি"
     }

@@ -3268,11 +3268,12 @@ data Details =
   LIVE_SELFIE LiveSelfie
   | PAN_DETAILS PanDetails
   | AADHAAR_DETAILS AadhaarCardDetails
+  | DL_DETAILS DriverLicenseDetails
 
 derive instance genericDetails :: Generic Details _
 instance decodeDetails :: Decode Details
   where
-   decode body = (AADHAAR_DETAILS <$> decode body) <|> (PAN_DETAILS <$> decode body) <|> (LIVE_SELFIE <$> decode body) <|> (fail $ ForeignError "Unknown response")
+   decode body = (AADHAAR_DETAILS <$> decode body) <|> (PAN_DETAILS <$> decode body) <|> (LIVE_SELFIE <$> decode body) <|> (DL_DETAILS <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeDetails  :: Encode Details where encode = defaultEncode
 instance showDetails :: Show Details where show = genericShow
 
@@ -3326,6 +3327,23 @@ derive instance genericAadhaarCardDetails :: Generic AadhaarCardDetails _
 instance decodeAadhaarCardDetails :: Decode AadhaarCardDetails where decode = defaultDecode
 instance encodeAadhaarCardDetails  :: Encode AadhaarCardDetails where encode = defaultEncode
 instance showAadhaarCardDetails :: Show AadhaarCardDetails where show = genericShow
+
+data DriverLicenseDetails = DriverLicenseDetails
+  { dlNumber :: String,
+    dob :: Maybe String,
+    dateOfIssue :: Maybe String,
+    imageIdFront :: Maybe String,
+    imageIdBack :: Maybe String,
+    requestId :: Maybe String,
+    nameOnCard :: Maybe String,
+    errorMessage :: Maybe String,
+    errorCode :: Maybe String
+  }
+
+derive instance genericDriverLicenseDetails :: Generic DriverLicenseDetails _
+instance decodeDriverLicenseDetails :: Decode DriverLicenseDetails where decode = defaultDecode
+instance encodeDriverLicenseDetails  :: Encode DriverLicenseDetails where encode = defaultEncode
+instance showDriverLicenseDetails :: Show DriverLicenseDetails where show = genericShow
 
 data HvErrorCode = HvErrorCode
   { errorCode :: Int

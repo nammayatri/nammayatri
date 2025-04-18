@@ -1570,6 +1570,7 @@ getTa =
     , discount_points_upto: (\discountPoints -> "நீங்கள் " <> discountPoints <> " தள்ளுபடி புள்ளிகள் வரை தகுதியுடையவர்")
     , cannot_detect_pan_card: "பான் கார்டைக் கண்டறிய முடியவில்லை. தயவு செய்து மீண்டும் முயற்சிக்கவும்."
     , cannot_detect_aadhaar: "ஆதார் அட்டையை கண்டறிய முடியவில்லை. தயவு செய்து மீண்டும் முயற்சிக்கவும்."
+    , cannot_detect_dl: "உரிமத்தைக் கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
     , document_already_validated: "ஆவணம் ஏற்கனவே சரிபார்க்கப்பட்டது."
     , document_under_manual_review: "கைமுறை மதிப்பாய்வின் கீழ் ஆவணம்."
     , document_already_linked_to_another_driver: "ஆவணம் ஏற்கனவே மற்றொரு இயக்கியுடன் இணைக்கப்பட்டுள்ளது."
@@ -1852,4 +1853,14 @@ getTa =
     , poor_cancellation_score: "மோசமான ரத்து\nமதிப்பெண்"
     , good: "நல்லது"
     , poor: "மோசமானது"
+    , unable_to_process: "உங்கள் விண்ணப்பத்தை எங்களால் செயல்படுத்த முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்."
+    , some_error_occurred: "ஏதோ பிழை ஏற்பட்டுள்ளது. மீண்டும் முயற்சிக்கவும்."
+    , face_match_low_confidence: "முகம் பொருத்தத்திற்கான அளவை விட குறைந்த அளவில் பொருந்தியுள்ளது"
+    , face_not_detected: "முகம் கண்டறியப்படவில்லை"
+    , document_not_supported: "ஆவணம் ஆதரிக்கப்படவில்லை"
+    , capture_original_doc: "அசல் ஆவணத்தை கைப்பற்றவும்"
+    , forged_document: "ஆவணத்தில் போலியான புகைப்படம்"
+    , unable_to_extract_document: "ஆவணத்தைப் பிரித்தெடுக்க முடியவில்லை"
+    , unable_to_extract_document_number: "ஆவண எண்ணைப் பிரித்தெடுக்க முடியவில்லை."
+    , dl_not_detected: "ஓட்டுநர் உரிமம் கண்டறியப்படவில்லை"
     }

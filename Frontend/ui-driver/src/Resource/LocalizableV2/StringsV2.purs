@@ -1665,6 +1665,7 @@ getProxy str = case str of
   DISCOUNT_POINTS_UPTO arg1 -> \a -> (a @~ discount_points_upto) arg1
   CANNOT_DETECT_PAN_CARD -> \a -> a @~ cannot_detect_pan_card
   CANNOT_DETECT_AADHAAR -> \a -> a @~ cannot_detect_aadhaar
+  CANNOT_DETECT_DL -> \a -> a @~ cannot_detect_dl
   DOCUMENT_ALREADY_VALIDATED -> \a -> a @~ document_already_validated
   DOCUMENT_UNDER_MANUAL_REVIEW -> \a -> a @~ document_under_manual_review
   DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER -> \a -> a @~ document_already_linked_to_another_driver
@@ -1880,4 +1881,14 @@ getProxy str = case str of
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1
+  UNABLE_TO_PROCESS -> \a -> a @~ unable_to_process
+  SOME_ERROR_OCCURRED -> \a -> a @~ some_error_occurred
+  FACE_MATCH_LOW_CONFIDENCE -> \a -> a @~ face_match_low_confidence
+  FACE_NOT_DETECTED -> \a -> a @~ face_not_detected
+  DOCUMENT_NOT_SUPPORTED -> \a -> a @~ document_not_supported
+  CAPTURE_ORIGINAL_DOC -> \a -> a @~ capture_original_doc
+  FORGED_DOC -> \a -> a @~ forged_document
+  UNABLE_TO_EXTRACT_DOCUMENT -> \a -> a @~ unable_to_extract_document
+  FAILED_TO_EXTRACT_DOCUMENT_NUMBER -> \a -> a @~ unable_to_extract_document_number
+  DL_NOT_DETECTED -> \a -> a @~ dl_not_detected
 

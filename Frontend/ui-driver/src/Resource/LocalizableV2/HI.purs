@@ -1570,6 +1570,7 @@ getHi =
     , discount_points_upto: (\discountPoints -> "आप " <> discountPoints <> " तक छूट अंक के लिए पात्र हैं")
     , cannot_detect_pan_card: "पैन कार्ड का पता नहीं चल सका। कृपया पुन: प्रयास करें।"
     , cannot_detect_aadhaar: "आधार कार्ड का पता नहीं चल सका. कृपया पुन: प्रयास करें।"
+    , cannot_detect_dl: "लाइसेंस का पता नहीं लगाया जा सका. कृपया पुनः प्रयास करें।"
     , document_already_validated: "दस्तावेज़ पहले से ही मान्य है।"
     , document_under_manual_review: "दस्तावेज़ की मैन्युअल समीक्षा की जा रही है।"
     , document_already_linked_to_another_driver: "दस्तावेज़ पहले से ही किसी अन्य ड्राइवर से जुड़ा हुआ है।"
@@ -1852,4 +1853,14 @@ getHi =
     , poor_cancellation_score : "आपका रद्दीकरण स्कोर खराब है"
     , good : "अच्छा"
     , poor : "खराब"
+    , unable_to_process : "कृपया ध्यान रखें कि आपके आवेदन पर तुरन्त कार्रवाई नहीं की जाएगी। कृपया कुछ समय बाद पुनः प्रयास करें"
+    , some_error_occurred : "कुछ त्रुटि हुई है. कृपया पुनः प्रयास करें"
+    , face_match_low_confidence : "फेस मैच कम आत्मविश्वास से पास हुआ"
+    , face_not_detected : "चेहरे का पता नहीं चला"
+    , document_not_supported : "दस्तावेज़ समर्थित नहीं है"
+    , capture_original_doc : "कृपया मूल दस्तावेज़ अपने साथ रखें"
+    , forged_document : "दस्तावेज़ पर जाली फ़ोटो"
+    , unable_to_extract_document : "दस्तावेज़ निकालने में असमर्थ"
+    , unable_to_extract_document_number : "दस्तावेज़ संख्या निकालने में असमर्थ"
+    , dl_not_detected : "लाइसेंस का पता नहीं चला"
     }

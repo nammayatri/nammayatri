@@ -1569,6 +1569,7 @@ getKn =
     , gst_with_percentage: (\per -> "ಜಿಎಸ್ಟಿ (" <> per <> "%)")
     , cannot_detect_pan_card: "PAN ಕಾರ್ಡ್ ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
     , cannot_detect_aadhaar: "ಆಧಾರ್ ಕಾರ್ಡ್ ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
+    , cannot_detect_dl: "ಪರವಾನಗಿಯನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
     , document_already_validated: "ಡಾಕ್ಯುಮೆಂಟ್ ಈಗಾಗಲೇ ಮೌಲ್ಯೀಕರಿಸಲಾಗಿದೆ."
     , document_under_manual_review: "ಹಸ್ತಚಾಲಿತ ಪರಿಶೀಲನೆಯಲ್ಲಿ ಡಾಕ್ಯುಮೆಂಟ್."
     , document_already_linked_to_another_driver: "ಡಾಕ್ಯುಮೆಂಟ್ ಈಗಾಗಲೇ ಮತ್ತೊಂದು ಡ್ರೈವರ್‌ಗೆ ಲಿಂಕ್ ಮಾಡಲಾಗಿದೆ."
@@ -1852,4 +1853,14 @@ getKn =
     , poor_cancellation_score : "ನಿಮ್ಮ ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್ ಖಾರಾಬಿಸ್ತು"
     , good : "ಉತ್ತಮ"
     , poor : "ಖಾರಾಬಿಸ್ತು"
+    , unable_to_process : "ನಿಮ್ಮ ಅರ್ಜಿಯನ್ನು ನಮಗೆ ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+    , some_error_occurred : "ಏನೋ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+    , face_match_low_confidence : "ಕಡಿಮೆ ಆತ್ಮವಿಶ್ವಾಸದಿಂದ ಫೇಸ್ ಮ್ಯಾಚ್ ಪಾಸ್ ಆಗಿದೆ"
+    , face_not_detected : "ಮುಖ ಪತ್ತೆಯಾಗಿಲ್ಲ"
+    , document_not_supported : "ಡಾಕ್ಯುಮೆಂಟ್ ಬೆಂಬಲಿಸುವುದಿಲ್ಲ"
+    , capture_original_doc : "ಮೂಲ ದಾಖಲೆಯನ್ನು ಸೆರೆಹಿಡಿಯಿರಿ"
+    , forged_document : "ಡಾಕ್ಯುಮೆಂಟ್‌ನಲ್ಲಿ ನಕಲಿ ಫೋಟೋ"
+    , unable_to_extract_document : "ಡಾಕ್ಯುಮೆಂಟ್ ಅನ್ನು ಹೊರತೆಗೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ"
+    , unable_to_extract_document_number : "ದಾಖಲೆ ಸಂಖ್ಯೆಯನ್ನು ಹೊರತೆಗೆಯಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ."
+    , dl_not_detected : "ಪರವಾನಗಿ ಪತ್ತೆಯಾಗಿಲ್ಲ"
     }

@@ -97,8 +97,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: Boolean -> String
-driverRegistrationStatus queryParam = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam
+driverRegistrationStatus :: Boolean -> Boolean -> String
+driverRegistrationStatus queryParam queryParam2 = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> "&useHVSdkForDL=" <> show queryParam2
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"

@@ -1570,6 +1570,7 @@ getTe =
     , discount_points_upto: (\discountPoints -> "మీరు గరిష్టంగా " <> discountPoints <> " తగ్గింపు పాయింట్‌లకు అర్హులు")
     , cannot_detect_pan_card: "PAN కార్డ్‌ని గుర్తించడం సాధ్యం కాదు. దయచేసి మళ్లీ ప్రయత్నించండి."
     , cannot_detect_aadhaar: "ఆధార్ కార్డును గుర్తించడం సాధ్యం కాదు. దయచేసి మళ్లీ ప్రయత్నించండి."
+    , cannot_detect_dl: "లైసెన్స్‌ను గుర్తించలేకపోయాము. దయచేసి మళ్ళీ ప్రయత్నించండి."
     , document_already_validated: "పత్రం ఇప్పటికే ధృవీకరించబడింది."
     , document_under_manual_review: "మాన్యువల్ సమీక్షలో పత్రం."
     , document_already_linked_to_another_driver: "పత్రం ఇప్పటికే మరొక డ్రైవర్‌కి లింక్ చేయబడింది."
@@ -1852,4 +1853,14 @@ getTe =
     , poor_cancellation_score : "మీ రద��దు స్కోర్ ఖారాబిస్తుంది"
     , good : "ఉత్తమంగా"
     , poor : "ఖారాబిస్తుంది"
+    , unable_to_process : "మేము మీ దరఖాస్తును ప్రాసెస్ చేయలేకపోయాము. దయచేసి కొంత సమయం తర్వాత మళ్ళీ ప్రయత్నించండి."
+    , some_error_occurred : "ఏదో లోపం సంభవించింది. దయచేసి మళ్ళీ ప్రయత్నించండి." 
+    , face_match_low_confidence : "తక్కువ విశ్వాసంతో ఫేస్‌మ్యాచ్ ఉత్తీర్ణత సాధించింది."
+    , face_not_detected : "ముఖం గుర్తించబడలేదు"
+    , document_not_supported : "డాక్యుమెంట్ మద్దతు లేదు"
+    , capture_original_doc : "అసలు డాక్యుమెంట్ సంగ్రహించండి"
+    , forged_document : "డాక్యుమెన్‌లో ఫోటో నకిలీ చేయబడింది"
+    , unable_to_extract_document : "డాక్యుమెంట్ సంగ్రహించడం సాధ్యం కాలేదు"
+    , unable_to_extract_document_number : "డాక్యుమెంట్ నంబర్‌ను సంగ్రహించలేకపోయింది"
+    , dl_not_detected : "లైసెన్స్ కనుగొనబడలేదు"
     }

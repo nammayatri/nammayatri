@@ -1591,6 +1591,7 @@ newtype Keymap = Keymap {
   , discount_points_upto :: String -> String
   , cannot_detect_pan_card :: String
   , cannot_detect_aadhaar :: String
+  , cannot_detect_dl :: String
   , document_already_validated :: String
   , document_under_manual_review :: String
   , document_already_linked_to_another_driver :: String
@@ -1866,6 +1867,16 @@ newtype Keymap = Keymap {
     , poor_cancellation_score :: String
     , good :: String
     , poor :: String
+    , unable_to_process :: String
+    , some_error_occurred :: String
+    , face_match_low_confidence :: String
+    , face_not_detected :: String
+    , document_not_supported :: String
+    , capture_original_doc :: String
+    , forged_document :: String
+    , unable_to_extract_document :: String
+    , unable_to_extract_document_number :: String
+    , dl_not_detected :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6573,6 +6584,9 @@ cannot_detect_pan_card = a
 cannot_detect_aadhaar :: Proxy "cannot_detect_aadhaar"
 cannot_detect_aadhaar = a
 
+cannot_detect_dl :: Proxy "cannot_detect_dl"
+cannot_detect_dl = a
+
 document_already_validated :: Proxy "document_already_validated"
 document_already_validated = a
 
@@ -7407,3 +7421,32 @@ good = a
 poor :: Proxy "poor"
 poor = a
 
+unable_to_process :: Proxy "unable_to_process"
+unable_to_process = a
+
+some_error_occurred :: Proxy "some_error_occurred"
+some_error_occurred = a
+
+face_match_low_confidence :: Proxy "face_match_low_confidence"
+face_match_low_confidence = a
+
+face_not_detected :: Proxy "face_not_detected"
+face_not_detected = a
+
+document_not_supported :: Proxy "document_not_supported"
+document_not_supported = a
+
+capture_original_doc :: Proxy "capture_original_doc"
+capture_original_doc = a
+
+forged_document :: Proxy "forged_document"
+forged_document = a
+
+unable_to_extract_document :: Proxy "unable_to_extract_document"
+unable_to_extract_document = a
+
+unable_to_extract_document_number :: Proxy "unable_to_extract_document_number"
+unable_to_extract_document_number = a
+
+dl_not_detected :: Proxy "dl_not_detected"
+dl_not_detected = a
