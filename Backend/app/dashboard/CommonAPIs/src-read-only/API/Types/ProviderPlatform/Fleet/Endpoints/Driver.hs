@@ -327,6 +327,8 @@ data FleetVehicleStatus
   | Valid
   | Invalid
   | Pending
+  | OnRide
+  | TripAssigned
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -475,6 +477,7 @@ data TripStatus
   | IN_PROGRESS
   | PAUSED
   | COMPLETED
+  | UPCOMING
   deriving stock (Show, Eq, Ord, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
