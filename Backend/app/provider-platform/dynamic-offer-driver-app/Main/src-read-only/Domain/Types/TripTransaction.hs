@@ -56,6 +56,7 @@ data ActionSource
   | Dashboard
   | ForceDashboard
   | CronJob
+  | AutoRecovery
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
