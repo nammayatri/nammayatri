@@ -1116,7 +1116,8 @@ data WMBTripAssignedData = WMBTripAssignedData
     vehicleNumber :: Text,
     vehicleServiceTierType :: ServiceTierType,
     roundRouteCode :: Maybe Text,
-    isFirstBatchTrip :: Bool
+    isFirstBatchTrip :: Bool,
+    status :: DTT.TripStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
