@@ -81,6 +81,7 @@ import com.google.gson.Gson;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
@@ -98,6 +99,7 @@ import java.util.concurrent.TimeoutException;
 
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
+import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
@@ -434,6 +436,19 @@ public class MainActivity extends AppCompatActivity {
             driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
         } else {
             preInitFutureTaskResult = preInitFlow();
+        }
+        boolean isUpdated = Boolean.parseBoolean(KeyValueStore.read(context, context.getString(in.juspay.mobility.app.R.string.preference_file_key), "isOldVersionUpdated", "false"));
+        if (!isUpdated) {
+            try {
+                File deleteFile = new File(context.getDir("juspay", MODE_PRIVATE), "v1-assets_downloader_godel_2.1.33.jsa");
+                if (deleteFile.exists()) deleteFile.delete();
+                deleteFile = new File(context.getDir("juspay", MODE_PRIVATE), "v1-index_bundle_godel_2.1.33.jsa");
+                if (deleteFile.exists()) deleteFile.delete();
+                KeyValueStore.write(context, context.getString(in.juspay.mobility.app.R.string.preference_file_key), "isOldVersionUpdated", "true");
+                KeyValueStore.remove(context, context.getString(in.juspay.mobility.app.R.string.preference_file_key), "isUpdated");
+            } catch (Exception e) {
+                Log.e("MobilityServiceHolder", e.toString());
+            }
         }
 
         handleSplashScreen();
