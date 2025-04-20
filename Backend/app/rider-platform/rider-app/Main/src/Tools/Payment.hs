@@ -223,7 +223,7 @@ data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMul
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)
 
-data SplitType = FIXED deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
+data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
 
 instance ToJSON SplitType where
   toJSON = String . show
