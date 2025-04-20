@@ -139,7 +139,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vrc (Just driver.firstName)
         -- TODO :: Handle Transaction Failure
         QTT.create tripTransaction
-        assignTripTransaction tripTransaction route False currentLocation destinationStopInfo.point False
+        assignTripTransaction tripTransaction route False currentLocation startStopInfo.point destinationStopInfo.point False
         startTripTransaction tripTransaction route closestStop startStopInfo currentLocation destinationStopInfo.point True
     )
     >>= \case
@@ -189,8 +189,8 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
         findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
           Just advancedTripTransaction -> do
             route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
-            (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
-            assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point True
+            (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
+            assignTripTransaction advancedTripTransaction route False currentLocation sourceStopInfo.point destinationStopInfo.point True
           Nothing -> do
             if fleetConfig.allowAutomaticRoundTripAssignment
               then do
@@ -233,8 +233,8 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                         findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
                           Just advancedTripTransaction -> do
                             route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
-                            (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
-                            assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point True
+                            (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
+                            assignTripTransaction advancedTripTransaction route False currentLocation sourceStopInfo.point destinationStopInfo.point True
                           Nothing -> do
                             QDI.updateOnRide False tripTransaction.driverId
                             unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
@@ -249,27 +249,28 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
       Right _ -> return ()
       Left _ -> throwError (InternalError "Process for Trip Cancellation is Already Ongoing, Please try again!")
 
-buildBusTripInfo :: Text -> Text -> LatLong -> Text -> Id Person -> Flow LT.RideInfo
-buildBusTripInfo vehicleNumber routeCode destinationLocation longName driverId = do
+buildBusTripInfo :: Text -> Text -> LatLong -> LatLong -> Text -> Id Person -> Flow LT.RideInfo
+buildBusTripInfo vehicleNumber routeCode sourceLocation destinationLocation longName driverId = do
   driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   return $
     LT.Bus $
       LT.BusRideInfo
         { busNumber = vehicleNumber,
+          source = sourceLocation,
           destination = destinationLocation,
           routeLongName = (Just longName),
           driverName = Just $ driver.firstName <> maybe "" (" " <>) driver.lastName,
           ..
         }
 
-assignTripTransaction :: TripTransaction -> Route -> Bool -> LatLong -> LatLong -> Bool -> Flow ()
-assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation destination notify = do
+assignTripTransaction :: TripTransaction -> Route -> Bool -> LatLong -> LatLong -> LatLong -> Bool -> Flow ()
+assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation source destination notify = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey tripTransaction.driverId TRIP_ASSIGNED)
     60
     ( do
         unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination route.longName tripTransaction.driverId
+        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode source destination route.longName tripTransaction.driverId
         void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
         QDI.updateOnRide True tripTransaction.driverId
         when notify $ do
@@ -287,7 +288,7 @@ startTripTransaction tripTransaction route closestStop sourceStopInfo currentLoc
     60
     ( do
         unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination route.longName tripTransaction.driverId
+        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode sourceStopInfo.point destination route.longName tripTransaction.driverId
         void $ LF.rideStart (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
         now <- getCurrentTime
         QDI.updateOnRide True tripTransaction.driverId

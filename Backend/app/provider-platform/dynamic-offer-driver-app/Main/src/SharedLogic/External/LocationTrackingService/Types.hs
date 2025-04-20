@@ -114,6 +114,7 @@ data DriverBlockTillReq = DriverBlockTillReq
 data BusRideInfo = BusRideInfo
   { routeCode :: Text,
     busNumber :: Text,
+    source :: LatLong,
     destination :: LatLong,
     routeLongName :: Maybe Text,
     driverName :: Maybe Text
@@ -135,6 +136,7 @@ instance FromJSON RideInfo where
         <$> ( obj .: "bus" >>= \busObj ->
                 BusRideInfo <$> busObj .: "routeCode"
                   <*> busObj .: "busNumber"
+                  <*> busObj .: "source"
                   <*> busObj .: "destination"
                   <*> busObj .:? "routeLongName"
                   <*> busObj .:? "driverName"
@@ -149,12 +151,13 @@ instance FromJSON RideInfo where
 
 instance ToJSON RideInfo where
   toJSON = \case
-    Bus (BusRideInfo routeCode busNumber destination routeLongName driverName) ->
+    Bus (BusRideInfo routeCode busNumber source destination routeLongName driverName) ->
       object
         [ "bus"
             .= object
               [ "routeCode" .= routeCode,
                 "busNumber" .= busNumber,
+                "source" .= source,
                 "destination" .= destination,
                 "routeLongName" .= routeLongName,
                 "driverName" .= driverName
