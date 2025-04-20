@@ -54,6 +54,7 @@ library
       API.Internal.DriverMode
       API.Internal.DriverReachedDestination
       API.Internal.DriverReferee
+      API.Internal.DriverSourceDeparted
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.KnowYourDriver
@@ -183,6 +184,7 @@ library
       Domain.Action.Internal.DriverMode
       Domain.Action.Internal.DriverReachedDestination
       Domain.Action.Internal.DriverReferee
+      Domain.Action.Internal.DriverSourceDeparted
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.KnowYourDriver
