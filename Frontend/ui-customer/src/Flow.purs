@@ -5842,6 +5842,7 @@ predictionClickedFlow prediction state = do
               --     modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
               --     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , routeSelected = busRouteSelected}, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing , stopsSearchedList = state.data.updatedStopsSearchedList , updatedStopsSearchedList = state.data.updatedStopsSearchedList } })
               -- searchLocationFlow
+              logField_ <- lift $ lift $ getLogFields
               let busConfigs = RC.getBusFlowConfigs $ getValueToLocalStore CUSTOMER_LOCATION
               let rideType = if state.data.rideType == ROUTES then Nothing else Just STOP
               if busConfigs.showBusTracking then do
@@ -5859,8 +5860,12 @@ predictionClickedFlow prediction state = do
                     , currentLon = state.props.srcLong
                     }
                   })
+                liftFlowBT $ logEvent logField_ "ny_user_entered_routeBasedTracking"
+                liftFlowBT $ logEvent logField_ "ny_user_clicked_routeBasedFlow"
                 busTrackingScreenFlow
-              else if rideType == Just STOP then metroTicketBookingFlow
+              else if rideType == Just STOP then do
+                liftFlowBT $ logEvent logField_ "ny_user_clicked_routeBasedFlow"
+                metroTicketBookingFlow
               else searchLocationFlow
 
           else do

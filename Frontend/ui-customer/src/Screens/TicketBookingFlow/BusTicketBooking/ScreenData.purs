@@ -17,6 +17,7 @@ module Screens.TicketBookingFlow.BusTicketBooking.ScreenData where
 import Data.Maybe (Maybe(..))
 import Services.API as API
 import Screens.Types as ST
+import Foreign.Object (empty)
 
 initData :: ST.BusTicketBookingState
 initData =
@@ -27,6 +28,7 @@ initData =
     , ticketServiceType : API.METRO
     , ticketDetailsState : Nothing
     , busDetailsArray : []
+    , logField : empty
     }
   , props: {
     srcLat :  0.0,

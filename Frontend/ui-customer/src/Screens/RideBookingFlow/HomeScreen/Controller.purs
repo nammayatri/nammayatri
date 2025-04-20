@@ -3346,6 +3346,8 @@ eval (ServicesOnClick service) state = do
       -- if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
       --   then updateAndExit newState $ GoToBusTicketBookingFlow state
       --   else updateAndExit newState $ GoToSearchLocationScreenForBusRoutes state
+      let _ = unsafePerformEffect $ logEvent newState.data.logField "ys_user_bus_module_click"
+          _ = spy "ys_user_bus_module_click" "ys_user_bus_module_click"
       updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.AMBULANCE_SERVICE ->
