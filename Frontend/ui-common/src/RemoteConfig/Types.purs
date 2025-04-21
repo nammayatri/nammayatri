@@ -326,3 +326,15 @@ type WmbFlowConfig = {
   maxAllowedTimeDiffInLTSinSec :: Int,
   maxSnappingOnRouteDistance :: Number
 }
+
+type PollingConfigList = {
+  pollingConfigList :: Array PollingConfig
+}
+
+type PollingConfig = {
+  functionName :: String,
+  disable :: Boolean,
+  pollingIntervalInMilliSecond :: Int,
+  pollingIntervalDelayMultiplier :: Int,
+  pollingRetryCount :: Int
+}

@@ -586,7 +586,7 @@ mapView' :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> Pre
 mapView' push state =
     Keyed.relativeLayout
     [ width MATCH_PARENT
-    , height $ V $ (EHC.screenHeight unit - 400)
+    , height MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
     ]
@@ -597,6 +597,7 @@ mapView' push state =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , id $ EHC.getNewIDWithTag "BusTicketBookingScreenMap"
+            , padding $ PaddingBottom 400
             , onAnimationEnd
                 ( \action -> do
                     void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" 17.0 state.props.srcLat state.props.srcLong push MapReady

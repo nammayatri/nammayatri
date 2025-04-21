@@ -644,6 +644,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 double srcHeaderArrowSize = srcHeaderArrowMarker.optDouble("markerSize", 80.0);
                 Marker marker = (Marker) markers.get(vehicleMarkerId);
                 Marker markerHeaderArrow = (Marker) markers.get(srcHeaderArrowMarkerId);
+                double vehicleRotationFromPrevLatLon = payload.optDouble("vehicleRotationFromPrevLatLon", -1.0);
 //                boolean autoZoom = payload.optBoolean("autoZoom", true);
     //            String json = payload.optString("json", "");
     //            JSONObject jsonObject = new JSONObject(json);
@@ -664,7 +665,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             marker.setPosition(newPosition);
                             if (markerHeaderArrow != null){
                                 String srcHeaderArrowMarkerIcon = srcHeaderArrowMarker.optString("pointerIcon", "");
-                                float rotation = bearingBetweenLocations(startPosition, currentLatLng);
+                                float rotation = (vehicleRotationFromPrevLatLon == -1.0) ? bearingBetweenLocations(startPosition, currentLatLng) : (float) vehicleRotationFromPrevLatLon;
                                 if (rotation > 1.0){
                                     MarkerConfig markerConfig = new MarkerConfig();
     //                                markerConfig.locationName(infoLabelText);

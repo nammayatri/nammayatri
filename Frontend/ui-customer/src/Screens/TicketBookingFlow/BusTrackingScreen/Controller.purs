@@ -300,8 +300,6 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
             -- deltaFinal =  firstUpcomingStop !! lastReachedDelta
           in 
             [ { vehicleId: item.vehicleId
-            -- , updatedAt: nextStop.updatedAt
-            -- , createdAt: nextStop.createdAt
             , timestamp: vehicleInfoForRoute.timestamp
             , nextStop: Mb.fromMaybe "" $ upcomingNextStop <#> (\(API.Stop stop) -> stop.stopCode)
             , nextStopDistance: haversineDistance vehicleLatLong $ nextStopLatLon
@@ -309,9 +307,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
             , vehicleLon: vehicleLatLong ^._lon
             , nextStopLat: nextStopLatLon ^._lat
             , nextStopLon: nextStopLatLon ^._lon
-            -- , nextStopTravelTime: item.nextStopTravelTime
             , nextStopSequence: nextStopSequenceNum
-            -- , nextStopTravelDistance: item.nextStopTravelDistance
             , nearestWaypointConfig: nearestWaypointConfig
             , etaDistance: if nextStopSequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
             , eta: Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop item.vehicleId) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
@@ -474,6 +470,7 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
             markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 70.0, zIndex = 0.1}
             srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 105.0, zIndex = 0.0}
             vehicleRotationFromPrevLatLon = vehicleRotationCalculation item state
+            wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
         locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts item.vehicleLat item.vehicleLon 1
         markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable item.vehicleId
         if (markerAvailable)
@@ -484,7 +481,7 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
                 , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap")
                 , srcMarker = markerConfig {position = { lat: item.vehicleLat, lng: item.vehicleLon}}
                 , srcHeaderArrowMarker = srcHeaderArrowMarkerConfig {position = { lat: item.vehicleLat, lng: item.vehicleLon}}
-                -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
+                , vehicleRotationFromPrevLatLon = if item.nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters then vehicleRotationFromPrevLatLon else (-1.0)
                 }
           else do
             void $ EHC.liftFlow $ JB.showMarker markerConfig item.vehicleLat item.vehicleLon 70 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
@@ -525,6 +522,7 @@ userBoardedActions state vehicles vehicle = do
       srcCode = Mb.maybe "" (_.stationCode) state.data.sourceStation
       destinationCode = Mb.maybe "" (_.stationCode) state.data.destinationStation
       destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) state.data.stopsList
+      wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
   -- filteredRoute <- case destinationStation, DS.null state.data.bookingId of
   --   Mb.Just (API.FRFSStationAPI dest), false -> do
   --     -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (Mb.fromMaybe 0.0 vehicle.vehicleLat) (Mb.fromMaybe 0.0 vehicle.vehicleLon) 1
@@ -534,7 +532,6 @@ userBoardedActions state vehicles vehicle = do
   markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable vehicle.vehicleId
   EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   if (markerAvailable)
-    -- then EHC.liftFlow $ runEffectFn1 JB.updateRoute JB.updateRouteConfig { json = {points: DA.reverse locationResp.points}, eta = JB.fromMetersToKm locationResp.distance, srcMarker = vehicle.vehicleId , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap"),  polylineKey = "DEFAULT"}
     then 
       EHC.liftFlow $ runEffectFn1 JB.updateMarkersOnRoute
         JB.updateMarkerOnRouteConfig
@@ -542,7 +539,7 @@ userBoardedActions state vehicles vehicle = do
           , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap")
           , srcMarker = srcMarkerConfig {position = { lat: vehicle.vehicleLat, lng: vehicle.vehicleLon} }--, eta = metersToKm locationResp.distance false}
           , srcHeaderArrowMarker = srcHeaderArrowMarkerConfig {position = { lat: vehicle.vehicleLat, lng: vehicle.vehicleLon}}
-          -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
+          , vehicleRotationFromPrevLatLon = if vehicle.nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters then vehicleRotationFromPrevLatLon else (-1.0)
           }
     else do
       void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 70 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
