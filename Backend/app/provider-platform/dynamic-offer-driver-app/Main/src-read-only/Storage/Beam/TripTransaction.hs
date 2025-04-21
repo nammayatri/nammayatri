@@ -37,6 +37,7 @@ data TripTransactionT f = TripTransactionT
     status :: B.C f Domain.Types.TripTransaction.TripStatus,
     tripCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     tripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    tripStartSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource),
     tripStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     tripTerminationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,

@@ -160,7 +160,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True
-  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location
+  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect
   pure $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
@@ -230,7 +230,7 @@ postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  void $ WMB.startTripTransaction tripTransaction route closestStop sourceStopInfo (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
+  void $ WMB.startTripTransaction tripTransaction route closestStop sourceStopInfo (LatLong req.location.lat req.location.lon) destinationStopInfo.point True DriverDirect
   pure Success
 
 postWmbTripEnd ::

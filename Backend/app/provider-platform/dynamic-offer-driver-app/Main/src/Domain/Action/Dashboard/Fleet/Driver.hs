@@ -1560,6 +1560,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             merchantOperatingCityId = merchantOpCityId,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
+            tripStartSource = Nothing,
             tripTerminationSource = Nothing,
             endRideApprovalRequestId = Nothing,
             createdAt = now,
