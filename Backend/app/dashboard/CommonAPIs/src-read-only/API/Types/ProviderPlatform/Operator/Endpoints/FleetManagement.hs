@@ -4,13 +4,14 @@
 module API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement where
 
 import qualified Dashboard.Common
-import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
@@ -27,14 +28,53 @@ data FleetInfo = FleetInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("operator" :> GetFleetManagementFleetsHelper)
+data FleetOwnerCreateReq = FleetOwnerCreateReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype FleetOwnerCreateRes = FleetOwnerCreateRes {personId :: Kernel.Types.Id.Id Dashboard.Common.Person}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerCreateRes where
+  hideSecrets = Kernel.Prelude.identity
+
+data FleetOwnerRegisterReq = FleetOwnerRegisterReq
+  { firstName :: Kernel.Prelude.Text,
+    lastName :: Kernel.Prelude.Text,
+    personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetType :: Kernel.Prelude.Maybe FleetType,
+    panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    panImageId1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    panImageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    gstCertificateImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    businessLicenseImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOwnerRegisterTReq = FleetOwnerRegisterTReq {firstName :: Kernel.Prelude.Text, lastName :: Kernel.Prelude.Text, personId :: Kernel.Types.Id.Id Dashboard.Common.Person, fleetType :: Kernel.Prelude.Maybe FleetType}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetType
+  = RENTAL_FLEET
+  | NORMAL_FLEET
+  | BUSINESS_FLEET
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = ("operator" :> (GetFleetManagementFleetsHelper :<|> PostFleetManagementFleetCreateHelper :<|> PostFleetManagementFleetRegisterHelper))
 
 type GetFleetManagementFleets =
   ( "fleets" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "verified" Kernel.Prelude.Bool :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> Get ('[JSON]) [FleetInfo]
+      :> Get '[JSON] [FleetInfo]
   )
 
 type GetFleetManagementFleetsHelper =
@@ -44,26 +84,43 @@ type GetFleetManagementFleetsHelper =
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Get ('[JSON]) [FleetInfo]
+      :> Get '[JSON] [FleetInfo]
   )
 
-newtype FleetManagementAPIs = FleetManagementAPIs {getFleetManagementFleets :: (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [FleetInfo])}
+type PostFleetManagementFleetCreate = ("fleet" :> "create" :> ReqBody '[JSON] FleetOwnerCreateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostFleetManagementFleetCreateHelper =
+  ( "fleet" :> "create" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] FleetOwnerCreateReq
+      :> Post
+           '[JSON]
+           FleetOwnerCreateRes
+  )
+
+type PostFleetManagementFleetRegister = ("fleet" :> "register" :> ReqBody '[JSON] FleetOwnerRegisterReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostFleetManagementFleetRegisterHelper =
+  ( "fleet" :> "register" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] FleetOwnerRegisterReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+data FleetManagementAPIs = FleetManagementAPIs
+  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [FleetInfo],
+    postFleetManagementFleetCreate :: Kernel.Prelude.Text -> FleetOwnerCreateReq -> EulerHS.Types.EulerClient FleetOwnerCreateRes,
+    postFleetManagementFleetRegister :: Kernel.Prelude.Text -> FleetOwnerRegisterReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  }
 
 mkFleetManagementAPIs :: (Client EulerHS.Types.EulerClient API -> FleetManagementAPIs)
 mkFleetManagementAPIs fleetManagementClient = (FleetManagementAPIs {..})
   where
-    getFleetManagementFleets = fleetManagementClient
+    getFleetManagementFleets :<|> postFleetManagementFleetCreate :<|> postFleetManagementFleetRegister = fleetManagementClient
 
 data FleetManagementUserActionType
   = GET_FLEET_MANAGEMENT_FLEETS
+  | POST_FLEET_MANAGEMENT_FLEET_CREATE
+  | POST_FLEET_MANAGEMENT_FLEET_REGISTER
   deriving stock (Show, Read, Generic, Eq, Ord)
-  deriving anyclass (ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance ToJSON FleetManagementUserActionType where
-  toJSON (GET_FLEET_MANAGEMENT_FLEETS) = Data.Aeson.String "GET_FLEET_MANAGEMENT_FLEETS"
-
-instance FromJSON FleetManagementUserActionType where
-  parseJSON (Data.Aeson.String "GET_FLEET_MANAGEMENT_FLEETS") = pure GET_FLEET_MANAGEMENT_FLEETS
-  parseJSON _ = fail "GET_FLEET_MANAGEMENT_FLEETS expected"
-
-$(Data.Singletons.TH.genSingletons [(''FleetManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''FleetManagementUserActionType])

@@ -1,5 +1,6 @@
 imports:
   Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
 
 module: FleetManagement
 apiPrefix: operator
@@ -29,6 +30,41 @@ apis:
             response:
               type: "[FleetInfo]"
 
+  - POST:
+      endpoint: /fleet/create
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerCreateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/create
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerCreateReq
+            response:
+              type: FleetOwnerCreateRes
+  - POST:
+      endpoint: /fleet/register
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerRegisterReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/register
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerRegisterReq
+            response:
+              type: APISuccess
+
 types:
   FleetInfo:
     - id: Id Person
@@ -38,3 +74,33 @@ types:
     - mobileNumber: Text
     - vehicleCount: Int
     - verified: Bool
+  FleetOwnerRegisterReq:
+    - firstName: Text
+    - lastName: Text
+    - personId: Id Person
+    - email: Maybe Text
+    - fleetType: Maybe FleetType
+    - panNumber: Maybe Text
+    - gstNumber: Maybe Text
+    - businessLicenseNumber: Maybe Text
+    - panImageId1: Maybe Text
+    - panImageId2: Maybe Text
+    - gstCertificateImage: Maybe Text
+    - businessLicenseImage: Maybe Text
+  FleetOwnerRegisterTReq: # hide secrets
+    - firstName: Text
+    - lastName: Text
+    - personId: Id Person
+    - fleetType: Maybe FleetType
+  FleetType:
+    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+  FleetOwnerCreateReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  FleetOwnerCreateRes:
+    - personId: Id Person
+    - recordType: NewType
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

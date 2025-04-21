@@ -31,6 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -103,15 +104,23 @@ newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-fleetOwnerRegister :: FleetOwnerRegisterReq -> Flow APISuccess
-fleetOwnerRegister req = do
+fleetOwnerRegister :: Maybe Text -> FleetOwnerRegisterReq -> Flow APISuccess
+fleetOwnerRegister mbRequestorId req = do
+  let fleetOwnerId = req.personId.getId
   person <- QP.findById req.personId >>= fromMaybeM (PersonDoesNotExist req.personId.getId)
   fleetOwnerInfo <- QFOI.findByPrimaryKey req.personId >>= fromMaybeM (PersonDoesNotExist req.personId.getId)
   void $ QP.updateByPrimaryKey person{firstName = req.firstName, lastName = Just req.lastName}
   void $ updateFleetOwnerInfo fleetOwnerInfo req
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+
+  mbRequestedOperatorId <- case mbRequestorId of
+    Just requestorId -> do
+      requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+      if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
+    Nothing -> pure Nothing
+
   mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-  whenJust mbReferredOperatorId $ \referredOperatorId -> do
+  whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
     fleetAssocs <- QFOA.findAllFleetAssociations req.personId.getId
     when (null fleetAssocs) $ do
       fleetOperatorAssocData <- makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId (req.personId.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
@@ -201,10 +210,11 @@ createFleetOwnerInfo personId merchantId enabled = do
   QFOI.create fleetOwnerInfo
 
 fleetOwnerLogin ::
+  Maybe Text ->
   Maybe Bool ->
   FleetOwnerLoginReq ->
   Flow FleetOwnerRegisterRes
-fleetOwnerLogin enabled req = do
+fleetOwnerLogin _mbRequestorId enabled req = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber

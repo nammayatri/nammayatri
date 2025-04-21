@@ -1,15 +1,22 @@
-module Domain.Action.Dashboard.Operator.FleetManagement (getFleetManagementFleets) where
+module Domain.Action.Dashboard.Operator.FleetManagement
+  ( getFleetManagementFleets,
+    postFleetManagementFleetRegister,
+    postFleetManagementFleetCreate,
+  )
+where
 
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Control.Monad.Extra (mapMaybeM)
+import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation (fleetOwnerId))
-import Domain.Types.FleetOwnerInformation (FleetOwnerInformation (..))
+import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (PersonError (PersonDoesNotExist, PersonNotFound))
 import qualified Kernel.Types.Id as ID
@@ -39,7 +46,7 @@ getFleetManagementFleets _merchantShortId _opCity mbIsActive mbVerified mbLimit 
     mapMaybeM (findByPersonIdAndEnabledAndVerified mbIsActive mbVerified . ID.Id . fleetOwnerId) activeFleetOwnerLs
   mapM createFleetInfo fleetOwnerInfoLs
   where
-    createFleetInfo FleetOwnerInformation {..} = do
+    createFleetInfo FOI.FleetOwnerInformation {..} = do
       totalVehicle <- VRCQuery.countAllActiveRCForFleet fleetOwnerPersonId.getId merchantId
       person <-
         QP.findById fleetOwnerPersonId
@@ -57,3 +64,62 @@ getFleetManagementFleets _merchantShortId _opCity mbIsActive mbVerified mbLimit 
             vehicleCount = totalVehicle,
             verified = verified
           }
+
+postFleetManagementFleetCreate ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Common.FleetOwnerCreateReq ->
+  Environment.Flow Common.FleetOwnerCreateRes
+postFleetManagementFleetCreate merchantShortId opCity requestorId req = do
+  let enabled = Just True
+  mkFleetOwnerRegisterRes <$> DRegistration.fleetOwnerLogin (Just requestorId) enabled (mkFleetOwnerLoginReq merchantShortId opCity req)
+
+mkFleetOwnerLoginReq ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.FleetOwnerCreateReq ->
+  DRegistration.FleetOwnerLoginReq
+mkFleetOwnerLoginReq merchantShortId opCity (Common.FleetOwnerCreateReq {..}) = do
+  DRegistration.FleetOwnerLoginReq
+    { otp = Nothing,
+      merchantId = merchantShortId.getShortId,
+      city = opCity,
+      ..
+    }
+
+mkFleetOwnerRegisterRes ::
+  DRegistration.FleetOwnerRegisterRes ->
+  Common.FleetOwnerCreateRes
+mkFleetOwnerRegisterRes DRegistration.FleetOwnerRegisterRes {..} =
+  Common.FleetOwnerCreateRes {personId = ID.Id personId}
+
+postFleetManagementFleetRegister ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text ->
+  Common.FleetOwnerRegisterReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postFleetManagementFleetRegister merchantShortId opCity requestorId req =
+  DRegistration.fleetOwnerRegister (Just requestorId) $ mkFleetOwnerRegisterReq merchantShortId opCity req
+
+mkFleetOwnerRegisterReq ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.FleetOwnerRegisterReq ->
+  DRegistration.FleetOwnerRegisterReq
+mkFleetOwnerRegisterReq merchantShortId opCity (Common.FleetOwnerRegisterReq {..}) = do
+  DRegistration.FleetOwnerRegisterReq
+    { personId = ID.cast @Common.Person @DP.Person personId,
+      fleetType = castFleetType <$> fleetType,
+      operatorReferralCode = Nothing,
+      merchantId = merchantShortId.getShortId,
+      city = opCity,
+      ..
+    }
+
+castFleetType :: Common.FleetType -> FOI.FleetType
+castFleetType = \case
+  Common.RENTAL_FLEET -> FOI.RENTAL_FLEET
+  Common.NORMAL_FLEET -> FOI.NORMAL_FLEET
+  Common.BUSINESS_FLEET -> FOI.BUSINESS_FLEET

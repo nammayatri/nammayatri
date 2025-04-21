@@ -77,7 +77,7 @@ fleetOwnerLogin req = withFlowHandlerAPI' $ do
     Just _ -> pure Success
     Nothing -> do
       let req' = buildFleetOwnerRegisterReq req
-      void $ registerFleetOwner req' $ Just res.personId
+      void $ registerFleetOwner False req' $ Just res.personId
       pure Success
 
 fleetOwnerVerfiy :: DP.FleetOwnerLoginReq -> FlowHandler DP.FleetOwnerVerifyRes
