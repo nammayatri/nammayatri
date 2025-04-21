@@ -194,3 +194,8 @@ newtype TransactionLogId = TransactionLogId Text
 
 instance Kernel.Types.HideSecrets.HideSecrets TransactionLogId where
   hideSecrets = Kernel.Prelude.identity
+
+data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | ForceDashboard | CronJob
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''ActionSource)

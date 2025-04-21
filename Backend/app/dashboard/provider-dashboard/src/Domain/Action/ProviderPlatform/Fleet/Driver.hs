@@ -279,12 +279,12 @@ postDriverFleetRespondDriverRequest merchantShortId opCity apiTokenInfo mbFleetO
   T.withTransactionStoring transaction $
     Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRespondDriverRequest) fleetOwnerId req
 
-postDriverDashboardFleetWmbTripEnd :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.TripTransaction -> Maybe Text -> Flow APISuccess
-postDriverDashboardFleetWmbTripEnd merchantShortId opCity apiTokenInfo tripTransactionId mbFleetOwnerId = do
+postDriverDashboardFleetWmbTripEnd :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.TripTransaction -> Maybe Text -> Maybe Common.ActionSource -> Flow APISuccess
+postDriverDashboardFleetWmbTripEnd merchantShortId opCity apiTokenInfo tripTransactionId mbFleetOwnerId mbTerminationSource = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just $ DCommon.TransactionLogId tripTransactionId.getId)
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverDashboardFleetWmbTripEnd) tripTransactionId fleetOwnerId
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverDashboardFleetWmbTripEnd) tripTransactionId fleetOwnerId mbTerminationSource
 
 postDriverFleetUnlink :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Maybe Text -> Flow APISuccess
 postDriverFleetUnlink merchantShortId opCity apiTokenInfo driverId vehicleNo mbFleetOwnerId = do
