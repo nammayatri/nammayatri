@@ -162,6 +162,36 @@ mkSplitSettlementDetails vendorFees totalAmount = do
                 subMid = firstFee.vendorId
               }
 
+mkSplitSettlementDetails2 :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
+mkSplitSettlementDetails2 vendorFees totalAmount = do
+  let vendorSplits =
+        map
+          ( \fee ->
+              Split
+                { amount = roundToTwoDecimalPlaces (VF.amount fee),
+                  merchantCommission = 0,
+                  subMid = VF.vendorId fee
+                }
+          )
+          vendorFees
+
+  let totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
+      marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+
+  logInfo $ "totalVendorAmount: " <> show totalVendorAmount <> " marketplaceAmount: " <> show marketplaceAmount <> " totalAmount: " <> show totalAmount
+
+  when (marketplaceAmount < 0) $ do
+    logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> " totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
+    throwError (InternalError "Marketplace amount is negative")
+
+  return $
+    Just $
+      SplitSettlementDetails
+        { marketplace = Marketplace marketplaceAmount,
+          mdrBorneBy = ALL,
+          vendor = Vendor vendorSplits
+        }
+
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
 roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 
