@@ -324,7 +324,12 @@ type WmbFlowConfig = {
   maxDeviatedDistanceInMeters :: Number,
   showAllDeviatedBus :: Boolean,
   maxAllowedTimeDiffInLTSinSec :: Int,
-  maxSnappingOnRouteDistance :: Number
+  maxSnappingOnRouteDistance :: Number,
+  defaultRadiusForFindingBus :: Number,
+  minimumRadiusForFindingBus :: Number,
+  defaultZoomLevelOnMap :: Number,
+  maxRadiusCanBeSearched :: Number,
+  radiusMultiplier :: Number
 }
 
 type PollingConfigList = {
