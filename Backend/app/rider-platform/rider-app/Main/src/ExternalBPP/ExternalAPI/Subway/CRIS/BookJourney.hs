@@ -116,7 +116,7 @@ data CRISBookingResponse = CRISBookingResponse
     transactionTime :: Text, -- txnTime
     journeyComment :: Text, -- jrnyCommencingString
     validUntil :: Text, -- showTicketValidity
-    journeyDate :: Text, -- jrnyDate
+    journeyDate :: Text, -- journeyDate
     routeMessage :: Text,
     chargeableAmount :: HighPrecMoney,
     encryptedTicketData :: Text
@@ -139,7 +139,7 @@ data CRISTicketData = CRISTicketData
     txnTime :: Text,
     jrnyCommencingString :: Text,
     showTicketValidity :: Text,
-    jrnyDate :: Text,
+    journeyDate :: Text,
     routeMessage :: Text,
     chargeableAmount :: HighPrecMoney
   }
@@ -177,10 +177,12 @@ getBookJourney config request = do
 
   encResponse <- callCRISAPI config bookJourneyAPI (eulerClientFn encReq) "bookJourney"
 
+  let (encryptedData, _) = T.breakOn "#" encResponse.agentTicketData
+
   -- 3. Handle the encrypted response
   if respCode encResponse == 0
     then do
-      case decryptResponseData encResponse.agentTicketData decryptedAgentDataKey of
+      case decryptResponseData encryptedData decryptedAgentDataKey of
         Left err -> throwError $ InternalError $ "Failed to decrypt ticket data: " <> T.pack err
         Right decryptedJson -> do
           logInfo $ "Decrypted ticket data: " <> decryptedJson
@@ -211,7 +213,7 @@ convertToBookingResponse ticketData encrypted =
       transactionTime = ticketData.txnTime,
       journeyComment = ticketData.jrnyCommencingString,
       validUntil = ticketData.showTicketValidity,
-      journeyDate = ticketData.jrnyDate,
+      journeyDate = ticketData.journeyDate,
       routeMessage = ticketData.routeMessage,
       chargeableAmount = ticketData.chargeableAmount,
       encryptedTicketData = encrypted
