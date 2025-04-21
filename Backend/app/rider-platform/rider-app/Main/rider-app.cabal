@@ -800,6 +800,7 @@ library
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
+      Domain.Types.VendorSplitDetails
       Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -930,6 +931,7 @@ library
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
+      Storage.Beam.VendorSplitDetails
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
@@ -1115,6 +1117,7 @@ library
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
+      Storage.Queries.VendorSplitDetails
       Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:
