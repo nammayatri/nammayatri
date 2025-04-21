@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.library'
+    
+    
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        targetSdk 34
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        qa {
+            initWith release
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildTypes.configureEach {
+        def moduleName = project.name.replaceAll('-', '_')
+        resValue 'string', "${moduleName}_version", rootProject.ext.hyper_sdk_version
+        resValue 'string', "${moduleName}_build_version", rootProject.ext.hyper_sdk_build_version
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    namespace 'in.juspay.hyperlottie'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation "com.airbnb.android:lottie:5.2.0"
+    implementation project(path: ':hyper')
+    implementation 'androidx.core:core-ktx:1.1.0'
+}
+
+
+

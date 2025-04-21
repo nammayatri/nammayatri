@@ -1,0 +1,76 @@
+<html>
+<head>
+    <title>MYSTIQUE</title>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+</script>
+<script type="text/javascript">
+    window.__PROXY_FN = {}
+    window.__FN_INDEX = 1
+    window.version = "1.0.0"
+    window["onMerchantEvent"] = function (event, payload, callback){
+        if (event == "initiate") {
+            return;
+        }
+        if (!callback) {
+            callback = function (code) {
+                return function (payload) {
+                    return function () {
+                        var modifiedPayload = JSON.parse(payload)
+                        var innerPayload = modifiedPayload.payload
+                        innerPayload.event = modifiedPayload.event
+                        if(innerPayload.service == "in.juspay.ec") {
+                            innerPayload.service = JOS.self
+                        }
+                        JOS.emitEvent("java")("onEvent")(JSON.stringify(innerPayload))()()
+                    }
+                }
+            }
+        }
+        payload = JSON.parse(payload)
+        if(payload.service == JOS.self) {
+            payload.service = "in.juspay.ec"
+        }
+        payload = JSON.stringify(payload)
+        console.log(event, payload, callback)
+        JOS.emitEvent("in.juspay.ec")("onMerchantEvent")([event, payload])(callback)()
+    }
+    JOS.addEventListener("onMerchantEvent")();
+
+    window["onEvent"] = function(payload) {
+        try{
+            var x = JSON.parse(payload);
+            if (x.event == "initiate_result" && JOS.parent == "java") {
+                if(x.payload && x.payload.service == "in.juspay.ec") {
+                    var innerPayload = x.payload
+                    innerPayload.event = x.event
+                    innerPayload.service = JOS.self
+                    JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify(innerPayload))()();
+                }
+                // IGNORE initiate_results of all other micro apps
+            } else {
+                JOS.emitEvent(JOS.parent)("onEvent")(payload)()();
+            }
+        } catch(e){
+            console.log("event parse failed", e)
+        }
+    }
+    JOS.addEventListener("onEvent")();
+
+    var payload =  {
+        action : "DUI_READY",
+        service : JOS.self
+    }
+    JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()()
+
+    payload =  {
+        fileName:"payments/"+ JOS.self + "/v1-index_bundle.jsa"
+    }
+    JBridge.runInJuspayBrowser("onBundleLoaded", JSON.stringify(payload), "");
+</script>
+</html>

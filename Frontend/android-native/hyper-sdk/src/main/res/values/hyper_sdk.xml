@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="juspay_encryption_version">v1</string>
+
+    <!-- Build Info -->
+    <string name="godel_app_name">godel</string>
+    <string name="ec_remotes_version">2.0rc1</string>
+    <string name="godel_remotes_version">2.0rc1</string>
+    <string name="upi_remotes_version">2.0rc1</string>
+    <string name="checkout_remotes_version">2.0rc1</string>
+    <string name="vies_remotes_version">2.0rc1</string>
+    <bool name="godel_debuggable">false</bool>
+    <bool name="use_local_assets">false</bool>
+    <string name="beta_assets">false</string>
+    <string name="beckn_version">1.0rc1</string>
+
+    <!--This strings are the Endpoints through which config.js is downloaded and logs are posted by default. This can be overridden through godel.properties file-->
+    <!--<string name="juspay_config_location">https://d3e0hckk6jr53z.cloudfront.net/godel/v1-config.zip</string>-->
+    <string name="juspay_analytics_endpoint">https://logs.juspay.in/godel/analytics</string>
+    <string name="juspay_analytics_endpoint_sandbox">https://debug.logs.juspay.net/godel/analytics</string>
+    <string name="config_location">https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip</string>
+</resources>

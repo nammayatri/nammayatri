@@ -7,3 +7,8 @@ include ':mobility-app'
 if (includeDynamicFeature.toBoolean()){
     include ':dynamicfeature'
 }
+include ':hyper-sms-handler'
+include ':hyper-lottie'
+include ':hyper-sdk'
+include ':hyper-qr'
+include ':hyper'

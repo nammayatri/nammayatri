@@ -1,0 +1,56 @@
+plugins {
+    id 'com.android.library'
+    
+    
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        targetSdk 34
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            consumerProguardFiles 'merchant-proguard.pro'
+        }
+        qa {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildTypes.configureEach {
+        def moduleName = project.name.replaceAll('-', '_')
+        resValue 'string', "${moduleName}_version", rootProject.ext.hyper_sdk_version
+        resValue 'string', "${moduleName}_build_version", rootProject.ext.hyper_sdk_build_version
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    namespace 'in.juspay.hypersmshandler'
+}
+
+dependencies {
+
+    implementation 'com.google.android.gms:play-services-auth-api-phone:17.3.0'
+    implementation 'androidx.core:core-ktx:1.1.0'
+}
+
+
+
+
