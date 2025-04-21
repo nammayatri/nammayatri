@@ -453,14 +453,14 @@ dependencies {
 //    passCulturePartnerImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
 //    ysDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
 //    yatriDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-//    nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-//    myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-//    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-//    oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-//    bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-//    passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
-//    ysDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-//    yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
+    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    ysDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     nyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     myDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     apDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
@@ -475,6 +475,16 @@ def tmpSource = "/tmp/juspay"
 def jsSource = "${projectDir}/src"
 def assetSource = "${projectDir}/src"
 def shouldMinify = false
+
+tasks.register("prepareKotlinBuildScriptModel") {
+    // This task is run when Gradle Sync is running.
+    // We create it here so we can let it depend on preBuild inside the android{}
+}
+
+tasks.named("prepareKotlinBuildScriptModel") {
+    dependsOn(":hermes-engine:downloadHermesSource")
+}
+
 
 tasks.create(name: 'minifyJsFiles') {
     def jsFiles = []
