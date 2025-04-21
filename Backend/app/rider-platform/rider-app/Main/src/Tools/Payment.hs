@@ -36,6 +36,7 @@ module Tools.Payment
     VendorSplitDetails (..),
     SplitType (..),
     mkSplitSettlementDetails,
+    mkUnaggregatedSplitSettlementDetails,
     groupSumVendorSplits,
     roundVendorFee,
     getIsSplitEnabled,
@@ -238,7 +239,7 @@ data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMul
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)
 
-data SplitType = FIXED deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
+data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
 
 instance ToJSON SplitType where
   toJSON = String . show
@@ -284,6 +285,32 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEna
                 merchantCommission = 0,
                 subMid = firstFee.vendorId
               }
+
+mkUnaggregatedSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
+mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+  False -> Nothing
+  True -> do
+    let vendorSplits =
+          map
+            ( \fee ->
+                let roundedFee = roundVendorFee fee
+                 in Split
+                      { amount = splitAmount roundedFee,
+                        merchantCommission = 0,
+                        subMid = vendorId roundedFee
+                      }
+            )
+            vendorFees
+
+        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
+        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+
+    Just $
+      SplitSettlementDetails
+        { marketplace = Marketplace marketplaceAmount,
+          mdrBorneBy = ALL,
+          vendor = Vendor vendorSplits
+        }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
 groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))
