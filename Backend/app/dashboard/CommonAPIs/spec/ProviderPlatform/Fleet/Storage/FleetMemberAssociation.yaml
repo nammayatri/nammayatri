@@ -2,17 +2,23 @@ FleetMemberAssociation:
   tableName: fleet_member_association
 
   fields:
-    fleetMemberId : Text
-    fleetOwnerId : Text
-    enabled : Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    fleetMemberId: Text
+    fleetOwnerId: Text
+    isFleetOwner: Bool
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     fleetMemberId: PrimaryKey
     fleetOwnerId: SecondaryKey
 
   queries:
+    findOneByFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, isFleetOwner]
+
     findAllByfleetMemberId:
       kvFunction: findAllWithKV
       where:

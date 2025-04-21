@@ -12,6 +12,7 @@ data FleetMemberAssociation = FleetMemberAssociation
     enabled :: Kernel.Prelude.Bool,
     fleetMemberId :: Kernel.Prelude.Text,
     fleetOwnerId :: Kernel.Prelude.Text,
+    isFleetOwner :: Kernel.Prelude.Bool,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

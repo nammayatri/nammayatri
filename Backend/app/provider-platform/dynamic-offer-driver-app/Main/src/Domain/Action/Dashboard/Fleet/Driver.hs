@@ -75,6 +75,7 @@ import qualified Domain.Types.Alert as DTA
 import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetConfig as DFC
@@ -453,7 +454,7 @@ getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
     Nothing -> case mbMobileNumber of
       Just phNo -> Just <$> getDbHash phNo
       Nothing -> pure Nothing
-  pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString (Just True) Nothing
+  pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString (Just True)
   fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
   return $ Common.FleetListDriverRes fleetDriversInfos
 
@@ -840,7 +841,7 @@ getDriverFleetDriverVehicleAssociation ::
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
+  (listOfAllDrivers, _, _) <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
@@ -885,7 +886,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
                     }
             pure listItem
 
-getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Flow [FleetDriverAssociation]
+getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
 getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString = do
   let limit = min 10 $ fromMaybe 5 mbLimit
       offset = fromMaybe 0 mbOffset
@@ -897,9 +898,9 @@ getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMod
       Nothing -> pure Nothing
 
   let mode = castDashboardDriverStatus <$> mbMode
-  pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
-  let (fleetDriverAssociation, _) = unzip pairs
-  return fleetDriverAssociation
+  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
+  let (fleetDriverAssociation, person, driverInformation) = unzip3 driverAssociationAndInfo
+  return (fleetDriverAssociation, person, driverInformation)
 
 castDashboardDriverStatus :: Common.DriverMode -> DrInfo.DriverMode
 castDashboardDriverStatus = \case
@@ -931,10 +932,9 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
   where
-    createFleetDriverAssociationListItem :: [FleetDriverAssociation] -> Flow [Common.DriveVehicleAssociationListItem]
-    createFleetDriverAssociationListItem fdaList = do
-      let driverList = map (\fda -> fda.driverId) fdaList
-      driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverList
+    createFleetDriverAssociationListItem :: ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) -> Flow [Common.DriveVehicleAssociationListItem]
+    createFleetDriverAssociationListItem (fdaList, personList, driverInfoList) = do
+      let driverListWithInfo = zip personList driverInfoList
       now <- getCurrentTime
       let defaultFrom = UTCTime (utctDay now) 0
           from = fromMaybe defaultFrom mbFrom
@@ -1509,7 +1509,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
         whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
           route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
           (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-          WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
+          WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
@@ -1807,6 +1807,10 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
+      QFDV.findByDriverId driverId True 
+        >>=\ case
+          Just fleetDriverAssociation -> unless (fleetDriverAssociation.driverId == driverId) $ throwError (InvalidRequest "Driver already exists in another fleet")
+          Nothing -> return ()
       WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do

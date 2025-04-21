@@ -27,6 +27,9 @@ findAllActiveByfleetMemberId fleetMemberId enabled = do findAllWithKV [Se.And [S
 findAllByfleetMemberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.FleetMemberAssociation.FleetMemberAssociation])
 findAllByfleetMemberId fleetMemberId = do findAllWithKV [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId]]
 
+findOneByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetMemberAssociation.FleetMemberAssociation))
+findOneByFleetOwnerId fleetOwnerId isFleetOwner = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is Beam.isFleetOwner $ Se.Eq isFleetOwner]]
+
 updateFleetMemberActiveStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 updateFleetMemberActiveStatus enabled fleetMemberId fleetOwnerId = do
   _now <- getCurrentTime
@@ -47,6 +50,7 @@ updateByPrimaryKey (Domain.Types.FleetMemberAssociation.FleetMemberAssociation {
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
+      Se.Set Beam.isFleetOwner isFleetOwner,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId]]
