@@ -1,0 +1,34 @@
+<html>
+  <head>
+    <title>MYSTIQUE</title>
+  </head>
+  <body></body>
+  <script type="text/javascript">
+    window.__OS = "ANDROID";
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+  </script>
+  <script type="text/javascript">
+    var headID = document.getElementsByTagName("head")[0];
+    var newScript = document.createElement("script");
+    newScript.type = "text/javascript";
+    newScript.id = "mystique";
+    var bundleLoadStart = Date.now();
+    newScript.innerHTML = DUIGatekeeper.loadFileInDUI("payments/com.juspay.gemi/v1-index_bundle.jsa");
+    var bundleLoadEnd = Date.now();
+    window.__gemiStart = Date.now();
+    var loadLatency = bundleLoadEnd - bundleLoadStart;
+    var obj = {};
+    obj["gemi_bundle_load"] = {
+      bundle_load_start: bundleLoadStart,
+      bundle_load_end: bundleLoadEnd,
+      bundle_load_latency: loadLatency,
+    };
+    try {
+      JOS.tracker._trackLifeCycle("hypersdk")("info")("latency")(obj)();
+    } catch (e) {}
+
+    headID.appendChild(newScript);
+  </script>
+</html>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="juspay_content_area_height">230dp</dimen>
+    <dimen name="osd_collapsed_height">48dp</dimen>
+</resources>

@@ -1,0 +1,29 @@
+<html>
+<head>
+    <title>MYSTIQUE</title>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+    window.__OS = "ANDROID";
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+    window.__DEVICE_DETAILS = top.__DEVICE_DETAILS;
+</script>
+
+<script type="text/javascript">
+    var ip = DUIGatekeeper.getResourceByName("local_ip");
+    var url = "http://" + ip + ":8083";
+	var reloadApp = function() {
+		console.log("Reloading app")
+		var headID = document.getElementsByTagName("head")[0];
+        var newScript = document.createElement('script');
+        newScript.type = 'text/javascript';
+        newScript.id = 'mystique';
+        newScript.src = url + '/dist/index_bundle.js';
+        headID.appendChild(newScript);
+	}
+	reloadApp();
+</script>
+</html>

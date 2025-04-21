@@ -1,0 +1,56 @@
+<html>
+
+<head>
+    <title>MYSTIQUE</title>
+</head>
+
+<body>
+</body>
+
+<script type="text/javascript">
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+    window.__OS = "ANDROID"
+
+    window.__payload.client_id = window.__payload.client_id || window.__payload.payload.clientId;
+    window.JOS.addEventListener("onMerchantEvent")();
+</script>
+
+<script type="text/javascript">
+    var bundleLoadStart = Date.now();
+    var loadIndex = function () {
+        var headID = document.getElementsByTagName("head")[0];
+        var newScript = document.createElement('script');
+        newScript.type = 'text/javascript';
+        newScript.id = 'mystique';
+        const file = 'payments/in.juspay.hyperpay/v1-index_bundle.jsa';
+        newScript.innerHTML = DUIGatekeeper.loadFileInDUI(file);
+        headID.appendChild(newScript);
+        logViaTracker ();
+        setTimeout (function () {
+            if (typeof window.onMerchantEvent !== "function") {
+                newScript.innerHTML = DUIGatekeeper.loadFileInDUI(file);
+                headID.appendChild(newScript);
+                logViaTracker ();
+                var retryObj = {"retry_tried": "true"}
+                try {
+                    JOS.tracker._trackLifeCycle("hypersdk")("info")("bundle_load_retry")(retryObj)()
+                } catch (e) {}
+            }
+        }, 1000);
+    }
+    var logViaTracker = function () {
+        var bundleLoadEnd = Date.now();
+        window.__hyperpayStart = Date.now();
+        var loadLatency = bundleLoadEnd - bundleLoadStart;
+        var obj = {}
+        obj["hyperpay_bundle_load"] = {"bundle_load_start":bundleLoadStart, "bundle_load_end":bundleLoadEnd, "bundle_load_latency":loadLatency}
+        try {
+            JOS.tracker._trackLifeCycle("hypersdk")("info")("latency")(obj)()
+        } catch (e) {}
+    }
+    loadIndex();
+</script>
+
+</html>
