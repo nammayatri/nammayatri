@@ -71,10 +71,10 @@ handler _ _ =
     :<|> fleetOwnerRegister
 
 fleetOwnerLogin :: Maybe Bool -> DFleet.FleetOwnerLoginReq -> FlowHandler DFleet.FleetOwnerRegisterRes
-fleetOwnerLogin enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerLogin enabled req
+fleetOwnerLogin enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerLogin Nothing enabled req
 
 fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
 fleetOwnerRegister :: DFleet.FleetOwnerRegisterReq -> FlowHandler APISuccess
-fleetOwnerRegister = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister
+fleetOwnerRegister = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister Nothing
