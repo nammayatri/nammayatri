@@ -1,0 +1,180 @@
+// hermes-engine/build.gradle
+
+plugins {
+    id 'com.android.library'
+    // Add kotlin-android if you used Kotlin, otherwise remove
+    // id 'org.jetbrains.kotlin.android'
+}
+
+// Configuration for Hermes build
+ext {
+    hermesVersion = 'main' // Or a specific tag like 'release-v0.12.0'
+    hermesRepoUrl = 'https://github.com/facebook/hermes.git'
+    hermesSourceDir = file("${project.projectDir}/hermes_src") // Download destination
+    hermesBuildDir = file("${project.buildDir}/hermes_build") // CMake build dir
+
+    // ICU Configuration (NEEDS ADJUSTMENT BASED ON YOUR CHOSEN ICU STRATEGY)
+    // Example: Assuming you will download/place prebuilt ICU libs/headers
+    icuIncludeDir = file("${project.projectDir}/icu/include") // Adjust path
+    icuLibDir = file("${project.projectDir}/icu/lib")       // Adjust path containing libicuuc.a, libicui18n.a etc per ABI
+    usePrebuiltIcu = true // Set to true if using prebuilt ICU
+    // OR: Define ICU source download/build if using Option A
+}
+
+android {
+    namespace "com.moving.hermes"
+    compileSdk 34 // Or your project's compileSdk
+
+    defaultConfig {
+        minSdk 21 // Or your project's minSdk
+        // targetSdk 33 // Add if needed
+        // No test runner needed for this module unless you add Java/Kotlin tests
+        // testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+
+        // --- NDK/CMake Configuration ---
+        externalNativeBuild {
+            cmake {
+                version "3.22.1"
+                // Pass arguments to CMake
+                // !! ABI-specific ICU paths might be needed here or configured via CMake toolchain !!
+                arguments "-DHERMES_ENABLE_INTL=ON",
+                        "-DHERMES_BUILD_SHARED_LIBS=OFF", // Build static lib hermes.a
+                        "-DHERMES_ENABLE_DEBUGGER=OFF",
+                        "-DHERMES_ENABLE_TEST_SUITE=OFF",
+                        "-DHERMES_DISABLE_JIT=ON", // Often desired for mobile
+                        "-DHERMES_FACEBOOK_BUILD=OFF", // Usually disable FB-specifics
+                        "-DCMAKE_BUILD_TYPE=Release"  // Gradle handles Debug/Release generally, but can set default
+
+                // Add ICU configuration if using prebuilt (Option C)
+                // You might need more specific flags depending on how Hermes finds ICU
+                // Check hermes/CMakeLists.txt and hermes/cmake/Configuration.cmake
+                if (project.ext.usePrebuiltIcu) {
+                    // These flags are *examples* - Hermes might use different var names
+                    // You might need to point to ABI-specific subdirs within icuLibDir
+                    // arguments += "-DICU_ROOT=${project.ext.icuLibDir.parentFile.absolutePath}" // Example if ICU_ROOT is expected
+                    // arguments += "-DICU_INCLUDE_DIR=${project.ext.icuIncludeDir.absolutePath}"
+                    // arguments += "-DICU_LIBRARY_DIR=${project.ext.icuLibDir.absolutePath}" // Might need ABI path
+                    // arguments += "-DHERMES_USE_STATIC_ICU=ON" // Likely needed if linking .a files
+                }
+
+                // Specify the targets from Hermes' CMakeLists to build
+                targets "hermes" // Common target name for the static library, VERIFY this in Hermes CMakeLists
+
+                // C++ flags (optional, NDK usually handles defaults well)
+                // cppFlags "-std=c++17"
+            }
+        }
+        ndk {
+            // Specify the ABIs you want to build for
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            // Debug specific settings if needed
+        }
+    }
+
+    // --- Point to the CMakeLists.txt file ---
+    externalNativeBuild {
+        cmake {
+            // IMPORTANT: Point to the CMakeLists.txt *inside the downloaded source*
+            path file("${project.ext.hermesSourceDir}/CMakeLists.txt")
+            version "3.22.1"  // Specify your CMake version if needed
+        }
+    }
+
+    // Optional: Make Hermes headers available to consumers
+    // This requires knowing where headers are installed by the build
+    // sourceSets {
+    //     main {
+    //         jniLibs.srcDirs = ["${project.ext.hermesBuildDir}/lib"] // Adjust path where .a is placed
+    //         // This might require a custom CMake install step or copying headers
+    //         // cpp.srcDirs += ["${project.ext.hermesBuildDir}/include"] // Example path
+    //     }
+    // }
+
+    // Prevent packaging native libs if building static hermes
+    // packagingOptions {
+    //     doNotStrip '*/armeabi-v7a/libhermes-executor.so' // Example if needed
+    // }
+}
+
+// --- Custom Task to Download Hermes Source ---
+task downloadHermesSource(type: Exec) {
+    description "Downloads Hermes source code via Git if not already present."
+    workingDir project.projectDir // Run git from the module's directory
+    outputs.dir project.ext.hermesSourceDir // Mark output directory for Gradle's up-to-date checks
+
+    // Only run if the source directory doesn't exist
+    onlyIf { !project.ext.hermesSourceDir.exists() }
+
+    // Git command
+    commandLine 'git', 'clone', '--depth', '1', '--branch', project.ext.hermesVersion, project.ext.hermesRepoUrl, project.ext.hermesSourceDir.name
+    // '--depth 1' for shallow clone, faster download
+    // Use .name to clone *into* the hermes_src directory within the module dir
+
+    doLast {
+        println "Hermes source downloaded to ${project.ext.hermesSourceDir}"
+    }
+}
+
+// --- Task to Download/Prepare ICU (Placeholder - Needs Implementation) ---
+// This is highly dependent on your chosen ICU strategy (Option A, B, C, D)
+// task prepareIcu(type: ???) { // Could be Exec for git clone, Copy for prebuilts, etc.
+//     description "Downloads or prepares ICU libraries and headers."
+//     // ... implementation depends heavily on source/prebuilt choice ...
+//     // Make sure outputs are declared (e.g., outputs.dir project.ext.icuIncludeDir)
+// }
+
+
+// --- Task Dependencies ---
+// Ensure source is downloaded before CMake configuration tries to find CMakeLists.txt
+// Use afterEvaluate to ensure android components are configured
+afterEvaluate {
+    // Find the relevant preBuild tasks for all variants and ABIs
+    android.libraryVariants.all { variant ->
+        def variantName = variant.name.capitalize()
+        def preBuildTaskName = "pre${variantName}Build"
+        tasks.named(preBuildTaskName).configure {
+            dependsOn downloadHermesSource
+            // if (project.ext.usePrebuiltIcu) {
+            //     dependsOn prepareIcu // Add dependency if using prepareIcu task
+            // }
+        }
+
+        // The CMake configure task depends on download task
+        // Task names might vary slightly based on Gradle/AGP version
+        // Examples: externalNativeBuildConfigureDebug, generateJsonModelDebug
+        // It's often easier to make preBuild depend on downloads, as preBuild runs before configuration.
+    }
+}
+
+
+
+// Optional: Clean task extension
+tasks.named('clean') {
+    doLast {
+        delete(project.ext.hermesSourceDir)
+        delete(project.ext.hermesBuildDir) // Delete CMake build output dir
+        // delete(project.ext.icuIncludeDir.parentFile) // Delete ICU dir if downloaded/prepared
+        println "Cleaned Hermes source and build directories."
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name.contains("prepareKotlinBuildScriptModel")) {
+        dependsOn(downloadHermesSource)
+    }
+}
+dependencies {
+    // No standard dependencies likely needed unless you add Java/Kotlin wrappers
+    // implementation "androidx.core:core-ktx:1.9.0"
+    // implementation "androidx.appcompat:appcompat:1.6.1"
+}
