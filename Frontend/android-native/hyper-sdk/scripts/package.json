@@ -1,0 +1,24 @@
+{
+  "name": "godel-scripts",
+  "version": "1.0.0",
+  "description": "",
+  "author": "",
+  "scripts": {
+    "createJsaFiles": "./init && node src/createJsaFiles",
+    "remoteAssetSync": "./init && node src/remoteAssetSync",
+    "manifestGen": "./init && node src/manifestGen"
+  },
+  "dependencies": {
+    "execa": "^3.4.0",
+    "fs-extra": "^8.1.0",
+    "glob": "^7.1.4",
+    "java-properties": "^1.0.2",
+    "java.io": "^2.4.0",
+    "jsa-tools": "git+ssh://git@ssh.bitbucket.juspay.net:picaf/jsa-tools.git#v1.1.67",
+    "multipipe": "^3.0.1",
+    "nodemailer": "^6.3.1"
+  },
+  "devDependencies": {
+    "mocha": "^10.2.0"
+  }
+}

@@ -1,0 +1,122 @@
+plugins {
+    id 'com.android.library'
+    
+    
+    id 'org.jetbrains.kotlin.android'
+//    id 'dexguard'
+//    id 'com.google.gms.google-services'
+}
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        targetSdk 34
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        qa {
+            initWith release
+            debuggable true
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            consumerProguardFiles 'merchant-proguard.pro'
+        }
+    }
+
+    buildTypes.configureEach {
+        resValue 'string', 'godel_version', rootProject.ext.hyper_sdk_version
+        resValue 'string', 'godel_build_version', rootProject.ext.hyper_sdk_build_version
+        resValue 'bool', 'use_rc', "${rootProject.ext.useRc}"
+        resValue 'string', 'jp_merchant', 'picasso'
+        resValue 'string', 'using_androidx', project.properties.getOrDefault('android.useAndroidX', false).toString()
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    lint {
+        abortOnError false
+    }
+
+    sourceSets {
+        def useDynamicAssets = rootProject.ext.useDynamicAssetsPlugin
+        def assetDirs = useDynamicAssets ? [] : ['src/upiintent/assets', 'src/ec/assets', 'src/vies/assets', 'src/dotp/assets', 'src/godel/assets']
+        def resDirs = useDynamicAssets ? [] : ['src/upiintent/res', 'src/vies/res', 'src/dotp/res', 'src/godel/res']
+        main {
+            assets {
+                srcDirs += assetDirs
+            }
+            res {
+                srcDirs += resDirs
+            }
+        }
+    }
+
+    // This is required for local testing, otherwise, instrumented tests will not
+    // be recognized by android studio. The default for this value is 'debug'.
+    testBuildType "qa"
+    namespace 'in.juspay.hypersdk'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+
+    implementation project(":hyper")
+    implementation project(":hyper-sms-handler")
+    implementation 'androidx.core:core-ktx:1.1.0'
+    compileOnly project(':hyper-lottie')
+    compileOnly project(':hyper-qr')
+
+    // Extra dependencies added due to micro-modules added as compileOnly dependency
+    // This is done temporarily to make SDK work with AGP 8
+    // For long term, plan to automate module addition by plugin
+    compileOnly 'com.google.android.gms:play-services-wallet:19.1.0'
+    compileOnly 'in.juspay:qrscanner:2.1.0'
+    compileOnly 'in.juspay:card-reader-lib:1.0.3'
+    compileOnly 'in.payu:threeds-sdk:1.0.22'
+    compileOnly ('in.juspay:trident:1.0.5') {
+        exclude module: "hypersmshandler"
+    }
+
+    compileOnly project(':mobility-customer')
+    compileOnly project(':mobility-driver')
+    compileOnly project(':mobility-app')
+
+    implementation 'com.google.android.gms:play-services-auth-api-phone:17.3.0'
+    implementation 'com.squareup.okhttp3:okhttp:3.3.0'
+
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+
+    //Shimmer Layout
+    compileOnly('com.facebook.shimmer:shimmer:0.5.0')
+    compileOnly 'com.airbnb.android:lottie:5.2.0'
+
+    compileOnly 'androidx.browser:browser:1.3.0'
+    compileOnly 'androidx.media:media:1.0.0'
+    compileOnly 'com.google.android.material:material:1.1.0'
+    compileOnly 'com.google.android.flexbox:flexbox:3.0.0'
+}
+
+
+
+

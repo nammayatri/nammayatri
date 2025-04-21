@@ -23,6 +23,7 @@ buildscript {
         classpath 'com.android.tools.build:gradle:8.0.2'
         classpath 'com.google.gms:google-services:4.3.15'
         classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.5'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22"
         classpath 'javax.activation:activation:1.1'
         classpath 'javax.mail:mail:1.4.1'
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.9.1' // GRPC
@@ -57,6 +58,13 @@ ext {
         if (build == 'release' && flavor == 'dev')
             variant.setIgnore(true)
     }
+
+    hyperVersion = "2.1.33"
+    def versionArr = hyperVersion.split("-")
+    useRc = versionArr.length > 1
+    hyper_sdk_version = versionArr[0]
+    hyper_sdk_build_version = versionArr.length > 1 ? versionArr[1] : ""
+    useDynamicAssetsPlugin = false
 }
 
 task clean(type: Delete) {

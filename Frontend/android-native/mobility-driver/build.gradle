@@ -46,7 +46,7 @@ dependencies {
 
     implementation project(':mobility-common')
     compileOnly project(':mobility-app')
-    implementation 'in.juspay:hyper:2.1.33-nammayatri.17'
+    implementation project(':hyper')
     implementation 'androidx.work:work-runtime:2.8.1'
     implementation "androidx.camera:camera-core:$cameraxVersion"
     implementation "androidx.camera:camera-camera2:$cameraxVersion"

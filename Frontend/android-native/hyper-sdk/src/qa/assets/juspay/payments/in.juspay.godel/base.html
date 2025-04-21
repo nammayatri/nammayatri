@@ -1,0 +1,73 @@
+<html>
+<head>
+    <title>MYSTIQUE</title>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+
+    var loaderShown = false;
+    window.showLoader = function() {
+        if(loaderShown) {
+            return;
+        }
+
+        loaderShown = true;
+        var id = {};
+        for(var i = 0; i < 20; i++) {
+            id[i] = Android.getNewID();
+        }
+
+        console.log("showing loader");
+
+        var text = {"type":"android.widget.LinearLayout","props":{"root":true,"id":id[1],"runInUI":"set_PARAMS=android.widget.LinearLayout$LayoutParams->new:i_-1,i_-1;this->setLayoutParams:get_PARAMS;this->setOrientation:i_0;this->setGravity:i_17;this->setClickable:b_true;this->setId:i_" + id[1] + ";set_DRAWABLE=android.graphics.drawable.GradientDrawable->new;set_colorInt=android.graphics.Color->parseColor:s_#44000000;get_DRAWABLE->setColor:get_colorInt;get_DRAWABLE->setCornerRadius:dpf_0;this->setBackground:get_DRAWABLE;","node_id":"" + id[1],"__filename":"filename not added"},"children":[{"type":"android.widget.LinearLayout","props":{"root":true,"animation":"[{\"startImmediate\":\"truetrue\",\"props\":\"[{\\\"to\\\":\\\"1.0\\\",\\\"prop\\\":\\\"alpha\\\",\\\"from\\\":\\\"0.0\\\"}]\",\"easing\":\"ease-in-out\",\"duration\":\"400.0\",\"id\":\"showProcessing\"}]","id":id[2],"runInUI":"set_PARAMS=android.widget.LinearLayout$LayoutParams->new:dp_304,dp_150;get_PARAMS->setMargins:dp_0,dp_0,dp_0,dp_0;get_PARAMS->setMarginStart:dp_0;get_PARAMS->setMarginEnd:dp_0;this->setLayoutParams:get_PARAMS;this->setOrientation:i_1;this->setGravity:i_1;this->setPaddingRelative:dp_14,dp_41,dp_14,dp_0;this->setTranslationZ:f_12;this->setId:i_" + id[2] + ";set_DRAWABLE=android.graphics.drawable.GradientDrawable->new;set_colorInt=android.graphics.Color->parseColor:s_#ffffffff;get_DRAWABLE->setColor:get_colorInt;get_DRAWABLE->setCornerRadius:dpf_6;this->setBackground:get_DRAWABLE;","node_id":"" + id[2],"__filename":"filename not added"},"children":[{"type":"android.widget.ProgressBar","props":{"id":id[3],"runInUI":"set_PARAMS=android.widget.LinearLayout$LayoutParams->new:dp_34,dp_34;get_PARAMS->setMargins:dp_121,dp_0,dp_121,dp_0;get_PARAMS->setMarginStart:dp_121;get_PARAMS->setMarginEnd:dp_121;this->setLayoutParams:get_PARAMS;this->setId:i_" + id[3] + ";","node_id":"" + id[3],"__filename":"filename not added"},"children":[]},{"type":"android.widget.TextView","props":{"lineHeight":"15px","id":id[4],"runInUI":"set_PARAMS=android.widget.LinearLayout$LayoutParams->new:i_-1,dp_17;get_PARAMS->setMargins:dp_0,dp_5,dp_0,dp_0;get_PARAMS->setMarginStart:dp_0;get_PARAMS->setMarginEnd:dp_0;this->setLayoutParams:get_PARAMS;this->setTextSize:f_14;set_colorInt=android.graphics.Color->parseColor:s_#ff898989;this->setTextColor:get_colorInt;set_fontFace=android.graphics.Typeface->create:s_sans-serif,i_1;this->setTypeface:get_fontFace,i_1;this->setGravity:i_17;this->setText:cs_Processing;this->setId:i_" + id[4] + ";","node_id":"" + id[4],"__filename":"filename not added"},"children":[]}]}]}
+        var root = {"type":"android.widget.RelativeLayout","props":{"root":"true","id":id[0],"runInUI":"set_PARAMS=android.widget.RelativeLayout$LayoutParams->new:i_-1,i_-1;this->setLayoutParams:get_PARAMS;this->setId:i_" + id[0] + ";","node_id":"" + id[0],"__filename":"filename not added"},"children":[text]}
+        window.idToBeRemoved = id[0];
+        Android.Render(JSON.stringify(root), null, "false");
+        Android.addViewToParent(root.props.id, JSON.stringify(root), 0, null, null);
+    }
+
+    window.hideLoader = function() {
+        if(!loaderShown) {
+            return;
+        }
+
+        loaderShown = false;
+        Android.runInUI("set_VIEW=ctx->findViewById:i_" + window.idToBeRemoved + ";get_VIEW->removeAllViews;", null);
+        Android.runInUI("set_VIEW=ctx->findViewById:i_" + window.idToBeRemoved + ";set_PARENT=get_VIEW->getParent;get_PARENT->removeView:get_VIEW;", null);
+        window.idToBeRemoved = null;
+    }
+
+    if(window.__payload.show_loader == "true") {
+        window.showLoader();
+    }
+</script>
+<script type="text/javascript">
+    var headID = document.getElementsByTagName("head")[0];
+    var newScript = document.createElement('script');
+    newScript.type = 'text/javascript';
+    newScript.id = 'boot_loader';
+    newScript.innerHTML = DUIGatekeeper.loadFileInDUI('payments/in.juspay.godel/v1-boot_loader.jsa');
+    headID.appendChild(newScript);
+</script>
+<script type="text/javascript">
+    var headID = document.getElementsByTagName("head")[0];
+    var newScript = document.createElement('script');
+    newScript.type = 'text/javascript';
+    newScript.id = 'mystique';
+    var bundleLoadStart = Date.now();
+    newScript.innerHTML = DUIGatekeeper.loadFileInDUI('payments/in.juspay.godel/v1-index_bundle.jsa');
+    var bundleLoadEnd = Date.now();
+    window.__godelStart = Date.now();
+    var loadLatency = bundleLoadEnd - bundleLoadStart;
+    var obj ={}
+    obj["godel_bundle_load"] = {"bundle_load_start":bundleLoadStart, "bundle_load_end":bundleLoadEnd, "bundle_load_latency":loadLatency}
+    try {
+        JOS.tracker._trackLifeCycle("hypersdk")("info")("latency")(obj)()
+    } catch (e) { }
+    headID.appendChild(newScript);
+</script>
+</html>

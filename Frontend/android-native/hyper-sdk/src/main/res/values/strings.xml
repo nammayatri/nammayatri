@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Hyper SDK</string>
+
+    <string name="hyper_version">2.0.1_1</string>
+    <string name="hyper_build_version">1</string>
+    <string name="remotes_version">2.0rc1</string>
+    <string name="hyper_remotes_version">2.0rc1</string>
+    <string name="jp_android_lib_app_name">Juspay-Android-Library</string>
+    <string name="jp_android_lib_version">3.1.2</string> <!-- major.rc.min -->
+    <string name="build_version">20</string>
+    <string name="log_version">2.0.1</string>
+<!--    <string name="juspay_encryption_version">v1</string>-->
+<!--    <string name="juspay_analytics_endpoint">https://logs.juspay.in/godel/analytics</string>-->
+    <string name="rc_version">0</string>
+</resources>

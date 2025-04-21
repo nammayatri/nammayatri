@@ -39,7 +39,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
 
-    implementation 'in.juspay:hyper:2.1.33-nammayatri.17'
+    implementation project(':hyper')
     compileOnly 'in.juspay:hypersdk:2.1.33-nammayatri.17'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'

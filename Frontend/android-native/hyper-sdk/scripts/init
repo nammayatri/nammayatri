@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+which node > /dev/null 2>&1
+
+if [ $? -ne 0 ]
+then
+  echo "Could not find node executable. Please install node and add it to your PATH variable"
+  exit 1
+fi
+
+NODE_VERSION=$(node --version | sed -E "s/v([0-9]+).*/\1/")
+if [ $NODE_VERSION -lt 8 ];
+then
+  echo "Please use node version 8 or above (Current version: $(node --version))"
+  exit 1
+fi
+
+echo "Verifying build-scripts dependencies..."
+npm ls > /dev/null 2>&1
+
+DEPENDENCIES_OK=$?
+
+set -e
+
+if [ $DEPENDENCIES_OK -ne 0 ]
+then
+  echo "Downloading/Updating dependencies for build-scripts..."
+  npm i
+else
+  echo "Dependencies up-to-date"
+fi

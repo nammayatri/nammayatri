@@ -350,10 +350,11 @@ dependencies {
     implementation "androidx.camera:camera-camera2:${cameraxVersion}"
     implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation "in.juspay:hypersdk:$jpSDKversion"
-    implementation "in.juspay:hyperqr:$jpSDKversion"
-    implementation "in.juspay:hypersmshandler:$jpSDKversion"
+    implementation project(path: ':hyper-sdk')
     implementation project(path: ':mobility-app')
+    implementation project(path: ':hyper')
+    implementation project(path: ':hyper-qr')
+    implementation project(path: ':hyper-sms-handler')
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
@@ -426,10 +427,8 @@ dependencies {
     implementation 'com.github.freshworks:freshchat-android:6.0.0'
     api(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
     api("com.squareup.okhttp3:okhttp")
-    compileOnly 'com.facebook.react:react-android:0.72.3'
 
     implementation fileTree(dir: "libs", include: ["*.jar"])
-    compileOnly 'com.facebook.soloader:soloader:0.10.5'
     implementation files('libs/android-jsc-r250231.aar')
     nyDriverImplementation 'com.google.code.gson:gson:2.8.8'
     myDriverImplementation 'com.google.code.gson:gson:2.8.8'
@@ -439,30 +438,29 @@ dependencies {
     passCulturePartnerImplementation 'com.google.code.gson:gson:2.8.8'
     ysDriverImplementation 'com.google.code.gson:gson:2.8.8'
     yatriDriverImplementation 'com.google.code.gson:gson:2.8.8'
-    nyDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    myDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    apDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    oyDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    bridgeDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    passCulturePartnerImplementation 'com.facebook.react:react-android:0.72.3'
-    ysDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    yatriDriverImplementation 'com.facebook.react:react-android:0.72.3'
-    nyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    myDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    apDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    oyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    bridgeDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    passCulturePartnerImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    ysDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    yatriDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
-    nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-    myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-    oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-    bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-    passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
-    ysDriverImplementation "com.facebook.soloader:soloader:0.10.5"
-    yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    nyDriverImplementation 'com.facebook.react:react-android:0.72.3'
+//    myDriverImplementation 'com.facebook.react:react-android:0.72.3'
+//    oyDriverImplementation 'com.facebook.react:react-android:0.72.3'
+//    bridgeDriverImplementation 'com.facebook.react:react-android:0.72.3'
+//    passCulturePartnerImplementation 'com.facebook.react:react-android:0.72.3'
+//    ysDriverImplementation 'com.facebook.react:react-android:0.72.3'
+//    yatriDriverImplementation 'com.facebook.react:react-android:0.72.3'
+//    nyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    myDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    apDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    oyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    bridgeDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    passCulturePartnerImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    ysDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    yatriDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+//    nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
+//    ysDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+//    yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     nyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     myDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     apDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'

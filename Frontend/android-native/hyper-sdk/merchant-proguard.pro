@@ -1,0 +1,70 @@
+-keep class in.juspay.** {*;}
+-keep class org.json.** { *; }
+-keepnames class org.json.** { *; }
+-dontwarn org.npci.**
+-dontwarn in.org.npci.**
+-dontwarn org.apache.**
+-dontwarn com.axis.axismerchantsdk.**
+-dontwarn com.mgs.yesbank_merchant.**
+-dontwarn com.phonepe.android.sdk.api.builders.**
+-dontwarn com.phonepe.android.sdk.api.**
+-dontwarn com.phonepe.android.sdk.base.**
+-dontwarn com.upi.merchanttoolkit.security.**
+-dontwarn amazonpay.silentpay.**
+-dontwarn com.amazon.**
+-dontwarn com.google.**
+-dontwarn in.juspay.widget.qrscanner.**
+-dontwarn com.airbnb.**
+-dontwarn lib.android.paypal.com.**
+-dontwarn org.bouncycastle.**
+-dontwarn android.os.ServiceManager
+-dontwarn com.android.internal.telephony.**
+-dontwarn android.webkit.WebViewFactory
+-dontwarn com.visa.**
+-keepnames public class com.google.android.gms.common.api.ApiException
+-keepnames public interface com.google.android.gms.tasks.OnCompleteListener
+-keepnames public class com.google.android.gms.tasks.Task
+-keepnames public class com.google.android.apps.nbu.paisa.inapp.client.api.Wallet
+-keepnames public class com.google.android.apps.nbu.paisa.inapp.client.api.PaymentsClient
+-keepnames public class in.juspay.juspayppsafemode.JuspaySafeModeActivity
+-keepnames public class com.facebook.shimmer.ShimmerFrameLayout
+-keepnames public class com.facebook.shimmer.Shimmer
+-keepnames public class com.facebook.shimmer.ShimmerDrawable
+
+-dontwarn in.juspay.hyperapay.APayBridge
+-dontwarn in.juspay.hyperapayupi.APayUPIBridge
+-dontwarn in.juspay.hypergpay.GPayBridge
+-dontwarn in.juspay.hypergpayintl.GPayIntlBridge
+-dontwarn in.juspay.hyperlottie.LottieAnimation
+-dontwarn in.juspay.hypernfc.NfcBridge
+-dontwarn in.juspay.hyperpaypal.PaypalBridge
+-dontwarn in.juspay.hyperpayu.PayUBridge
+-dontwarn in.juspay.hyperqr.QrBridge
+-dontwarn in.juspay.hypersimpl.SimplBridge
+-dontwarn in.juspay.hyperupi.UPIBridge
+
+-dontwarn in.juspay.mobility.app.MobilityAppBridge
+-dontwarn in.juspay.mobility.customer.MobilityCustomerBridge
+-dontwarn in.juspay.mobility.driver.MobilityDriverBridge
+-dontwarn in.juspay.hypertrident.TridentBridge
+-dontwarn com.google.android.gms.location.FusedLocationProviderClient
+-dontwarn com.google.android.gms.location.LocationRequest
+-dontwarn com.google.maps.android.data.geojson.GeoJsonFeature
+-dontwarn com.google.maps.android.data.geojson.GeoJsonLayer
+-dontwarn com.clevertap.android.sdk.CleverTapAPI
+-dontwarn com.google.android.play.core.review.ReviewManager
+-dontwarn com.google.firebase.analytics.FirebaseAnalytics
+-dontwarn com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+-dontwarn com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+
+-keep class org.npci.**.* {*;}
+-keep class in.org.npci.**.* {*;}
+-keep class org.apache.xml.security.**.* {*;}
+-keep class org.apache.**.* {*;}
+-keep class org.apache.xml.security.* {*;}
+-keep class org.apache.xml.security.Init {*;}
+-keep class org.apache.commons.logging.LogFactory {*;}
+-keep class com.facebook.shimmer.* {*;}
+-keep class java.util.Vector {*;}
+-dontwarn ch.qos.**
+-dontwarn org.slf4j.**
