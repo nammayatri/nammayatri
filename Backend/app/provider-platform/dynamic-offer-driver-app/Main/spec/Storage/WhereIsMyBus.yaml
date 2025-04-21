@@ -69,6 +69,7 @@ TripTransaction:
     endRideApprovalRequestId: Maybe (Id AlertRequest)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripStartSource: Maybe ActionSource
     tripTerminationSource: Maybe ActionSource
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -107,7 +108,7 @@ TripTransaction:
     updateOnStart:
       kvFunction: updateOneWithKV
       params:
-        [tripCode, startedNearStopCode, startLocation, status, tripStartTime]
+        [tripCode, startedNearStopCode, startLocation, status, tripStartTime, tripStartSource]
       where: id
     updateOnEnd:
       kvFunction: updateOneWithKV

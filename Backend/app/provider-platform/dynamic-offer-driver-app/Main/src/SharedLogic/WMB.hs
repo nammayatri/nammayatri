@@ -124,8 +124,8 @@ buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCo
       isFirstBatchTrip = isFirstBatchTrip
     }
 
-assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> StopInfo -> LatLong -> Flow TripTransaction
-assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber startStopInfo destinationStopInfo currentLocation = do
+assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> StopInfo -> LatLong -> ActionSource -> Flow TripTransaction
+assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber startStopInfo destinationStopInfo currentLocation tripStartSource = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey driverId TRIP_ASSIGNED <> tripTransactionKey driverId IN_PROGRESS)
     60
@@ -140,7 +140,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         -- TODO :: Handle Transaction Failure
         QTT.create tripTransaction
         assignTripTransaction tripTransaction route False currentLocation startStopInfo.point destinationStopInfo.point False
-        startTripTransaction tripTransaction route closestStop startStopInfo currentLocation destinationStopInfo.point True
+        startTripTransaction tripTransaction route closestStop startStopInfo currentLocation destinationStopInfo.point True tripStartSource
     )
     >>= \case
       Right tripTransaction -> return tripTransaction
@@ -171,6 +171,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           tripStartTime = Just now,
           tripEndTime = Nothing,
           tripTerminationSource = Nothing,
+          tripStartSource = Nothing,
           driverName = firstName,
           ..
         }
@@ -200,7 +201,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
                   vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
                   vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (VehicleRouteMappingNotFound tripTransaction.vehicleNumber roundRouteCode)
                   when (not vehicleRouteMapping.blocked) $ do
-                    void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber sourceStopInfo destinationStopInfo currentLocation
+                    void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber sourceStopInfo destinationStopInfo currentLocation AutoDetect
               else do
                 QDI.updateOnRide False tripTransaction.driverId
                 unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
@@ -281,8 +282,8 @@ assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation sou
       Right _ -> return ()
       Left _ -> throwError (InternalError "Process for Trip Assignment is Already Ongoing, Please try again!")
 
-startTripTransaction :: TripTransaction -> Route -> StopData -> StopInfo -> LatLong -> LatLong -> Bool -> Flow TripTransaction
-startTripTransaction tripTransaction route closestStop sourceStopInfo currentLocation destination notify = do
+startTripTransaction :: TripTransaction -> Route -> StopData -> StopInfo -> LatLong -> LatLong -> Bool -> ActionSource -> Flow TripTransaction
+startTripTransaction tripTransaction route closestStop sourceStopInfo currentLocation destination notify tripStartSource = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey tripTransaction.driverId IN_PROGRESS)
     60
@@ -293,7 +294,7 @@ startTripTransaction tripTransaction route closestStop sourceStopInfo currentLoc
         now <- getCurrentTime
         QDI.updateOnRide True tripTransaction.driverId
         let tripStartTransaction = tripTransaction {tripCode = Just closestStop.tripCode, startedNearStopCode = Just closestStop.stopCode, startLocation = Just currentLocation, status = IN_PROGRESS, tripStartTime = Just now}
-        QTT.updateOnStart tripStartTransaction.tripCode tripStartTransaction.startedNearStopCode tripStartTransaction.startLocation tripStartTransaction.status tripStartTransaction.tripStartTime tripStartTransaction.id
+        QTT.updateOnStart tripStartTransaction.tripCode tripStartTransaction.startedNearStopCode tripStartTransaction.startLocation tripStartTransaction.status tripStartTransaction.tripStartTime (Just tripStartSource) tripStartTransaction.id
         when notify $ do
           TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
         fork "Check Wrong Start Stop" $ checkWrongStartStop tripStartTransaction

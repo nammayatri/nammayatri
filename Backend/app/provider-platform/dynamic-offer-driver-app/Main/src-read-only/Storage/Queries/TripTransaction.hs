@@ -52,8 +52,8 @@ updateOnEnd status endLocation tripEndTime tripTerminationSource id = do
 
 updateOnStart ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Domain.Types.TripTransaction.TripStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
-updateOnStart tripCode startedNearStopCode startLocation status tripStartTime id = do
+  (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Domain.Types.TripTransaction.TripStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+updateOnStart tripCode startedNearStopCode startLocation status tripStartTime tripStartSource id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.tripCode tripCode,
@@ -62,6 +62,7 @@ updateOnStart tripCode startedNearStopCode startLocation status tripStartTime id
       Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),
       Se.Set Beam.status status,
       Se.Set Beam.tripStartTime tripStartTime,
+      Se.Set Beam.tripStartSource tripStartSource,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -98,6 +99,7 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.tripCode tripCode,
       Se.Set Beam.tripEndTime tripEndTime,
+      Se.Set Beam.tripStartSource tripStartSource,
       Se.Set Beam.tripStartTime tripStartTime,
       Se.Set Beam.tripTerminationSource tripTerminationSource,
       Se.Set Beam.updatedAt _now,
