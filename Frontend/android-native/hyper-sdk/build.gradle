@@ -82,6 +82,7 @@ dependencies {
 
     implementation project(":hyper")
     implementation project(":hyper-sms-handler")
+    implementation project(":hermes-engine")
     implementation 'androidx.core:core-ktx:1.1.0'
     compileOnly project(':hyper-lottie')
     compileOnly project(':hyper-qr')
@@ -99,6 +100,7 @@ dependencies {
 
     compileOnly project(':mobility-customer')
     compileOnly project(':mobility-driver')
+    compileOnly project(':mobility-common')
     compileOnly project(':mobility-app')
 
     implementation 'com.google.android.gms:play-services-auth-api-phone:17.3.0'
