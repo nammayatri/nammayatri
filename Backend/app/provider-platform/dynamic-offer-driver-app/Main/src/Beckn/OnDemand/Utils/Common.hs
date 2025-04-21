@@ -772,19 +772,21 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
               tagDisplay = Just False,
               tagValue = driverAlternateNumber
             }
-    isSafetyPlusSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
-                    descriptorName = Just "is safety plus driver",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show isSafetyPlus
-          }
+    isSafetyPlusSingleton
+      | not isSafetyPlus = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
+                      descriptorName = Just "is safety plus driver",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isSafetyPlus
+            }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkLocationTagGroupV2 location' =
