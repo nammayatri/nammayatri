@@ -40,6 +40,7 @@ data TripTransaction = TripTransaction
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    tripStartSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripTerminationSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     updatedAt :: Kernel.Prelude.UTCTime,
