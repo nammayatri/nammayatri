@@ -8,8 +8,6 @@ import BecknV2.FRFS.Utils
 import Control.Applicative
 import Data.List (sortBy, sortOn)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import Domain.Action.UI.Location (makeLocationAPIEntity)
-import Domain.Types.Booking.API as DBA
 import Domain.Types.Extra.Booking
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
@@ -20,6 +18,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RecentLocation as DRL
+import Domain.Types.SearchRequest as DTS
 import Domain.Types.Station
 import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
@@ -560,75 +559,75 @@ isCancellable searchId = do
     Nothing -> do
       return $ JT.IsCancellableResponse {canCancel = True}
 
-getLegSourceAndDestination :: Maybe DJourneyLeg.JourneyLeg -> Bool -> Flow DBA.JourneyLocation
-getLegSourceAndDestination Nothing _ = pure Null
-getLegSourceAndDestination (Just leg) getSource = do
+getLegSourceAndDestination :: Maybe DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> DTS.SearchRequest -> Bool -> Flow (Maybe Text)
+getLegSourceAndDestination Nothing _ _ _ = pure Nothing
+getLegSourceAndDestination (Just leg) allLegs parentSearchReq getSource = do
   let legSearchId = Id <$> leg.legSearchId
   case legSearchId of
-    Nothing -> pure Null
+    Nothing -> pure Nothing
     Just searchId -> case leg.mode of
       DTrip.Walk -> getWalkLocation searchId
       DTrip.Taxi -> getTaxiLocation searchId
-      _ -> getPublicTransportLocation searchId
+      _ -> getPublicTransportLocation leg
   where
     getLegLocation :: a -> a -> Flow a
     getLegLocation fromLocation toLocation = pure $ if getSource then fromLocation else toLocation
 
-    getWalkLocation :: Id Text -> Flow DBA.JourneyLocation
+    getWalkLocation :: Id Text -> Flow (Maybe Text)
     getWalkLocation searchId = do
       legData <- QWalkLeg.findById (cast searchId) >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
       toLocation' <- legData.toLocation & fromMaybeM (InvalidRequest "To location not found")
       location <- getLegLocation legData.fromLocation toLocation'
-      pure $ DBA.Taxi $ makeLocationAPIEntity location
+      pure $ Just $ Kernel.Types.Id.getId location.id
 
-    getTaxiLocation :: Id Text -> Flow DBA.JourneyLocation
+    getTaxiLocation :: Id Text -> Flow (Maybe Text)
     getTaxiLocation searchId = do
-      mbBooking <- QBooking.findByTransactionIdAndStatus searchId.getId (activeBookingStatus <> [COMPLETED])
+      mbBooking <- QBooking.findByTransactionIdAndStatus searchId.getId (activeBookingStatus <> [Domain.Types.Extra.Booking.COMPLETED])
       case mbBooking of
         Just booking -> do
           toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
           location <- getLegLocation booking.fromLocation toLocation
-          pure $ DBA.Taxi $ makeLocationAPIEntity location
+          pure $ Just $ Kernel.Types.Id.getId location.id
         Nothing -> do
           searchReq <- QSearchRequest.findById (cast searchId) >>= fromMaybeM (SearchRequestNotFound searchId.getId)
           toLocation <- searchReq.toLocation & fromMaybeM (InvalidRequest "To location not found")
           location <- getLegLocation searchReq.fromLocation toLocation
-          pure $ DBA.Taxi $ makeLocationAPIEntity location
+          pure $ Just $ Kernel.Types.Id.getId location.id
 
-    getPublicTransportLocation :: Id Text -> Flow DBA.JourneyLocation
-    getPublicTransportLocation searchId = do
-      mbBooking <- QTBooking.findBySearchId (cast searchId)
-      case mbBooking of
-        Just booking -> getFrfsLocation booking.vehicleType booking.journeyRouteDetails
-        Nothing -> do
-          searchReq <- QFRFSSearch.findById (cast searchId) >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          getFrfsLocation searchReq.vehicleType searchReq.journeyRouteDetails
+    getPublicTransportLocation :: DJourneyLeg.JourneyLeg -> Flow (Maybe Text)
+    getPublicTransportLocation journeyLeg = do
+      let currentOrder = journeyLeg.sequenceNumber
+          lastOrder = length allLegs - 1
+      if getSource
+        then handleSourceLocation currentOrder allLegs
+        else handleDestinationLocation currentOrder lastOrder allLegs
+      where
+        handleSourceLocation order legs
+          | order == 0 = pure $ Just $ Kernel.Types.Id.getId parentSearchReq.fromLocation.id
+          | otherwise = getPreviousLegLocation (order - 1) legs
 
-    getFrfsLocation :: Spec.VehicleCategory -> [JPT.MultiModalJourneyRouteDetails] -> Flow DBA.JourneyLocation
-    getFrfsLocation Spec.BUS journeyRouteDetails = do
-      journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
-      fromStation <- getStation journeyRouteDetail.fromStationId
-      toStation <- getStation journeyRouteDetail.toStationId
-      location <- getLegLocation fromStation toStation
-      pure $ DBA.Frfs $ JT.stationToStationAPI location
-    getFrfsLocation Spec.METRO journeyRouteDetails = do
-      metroLegRouteInfo <- JT.getMetroLegRouteInfo journeyRouteDetails
-      getFrfsSourceAndDestinationHelper (map Right metroLegRouteInfo)
-    getFrfsLocation Spec.SUBWAY journeyRouteDetails = do
-      subwayLegRouteInfo <- JT.getSubwayLegRouteInfo journeyRouteDetails
-      getFrfsSourceAndDestinationHelper (map Left subwayLegRouteInfo)
+        handleDestinationLocation order lastOrder legs
+          | order == lastOrder =
+            case parentSearchReq.toLocation of
+              Nothing -> pure Nothing
+              Just location -> pure $ Just $ Kernel.Types.Id.getId location.id
+          | otherwise = getNextLegLocation (order + 1) legs
 
-    getFrfsSourceAndDestinationHelper :: [Either JT.SubwayLegRouteInfo JT.MetroLegRouteInfo] -> Flow DBA.JourneyLocation
-    getFrfsSourceAndDestinationHelper routeInfo = do
-      let (source, destination) = getFrfsSourceAndDestination routeInfo
-      case getSource of
-        True -> pure $ either DBA.Frfs (const Null) source
-        False -> pure $ either DBA.Frfs (const Null) destination
+        getPreviousLegLocation prevOrder legs = do
+          case find (\prevLeg -> prevLeg.sequenceNumber == prevOrder) legs of
+            Nothing -> pure Nothing
+            Just prevLeg -> getTransferLocation prevLeg False
 
-    getStation :: Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station) -> Flow Domain.Types.Station.Station
-    getStation stationId = do
-      stationId' <- fromMaybeM (InternalError "StationId is missing") stationId
-      QStation.findById stationId' >>= fromMaybeM (InternalError "Station not found")
+        getNextLegLocation nextOrder legs = do
+          case find (\nextLeg -> nextLeg.sequenceNumber == nextOrder) legs of
+            Nothing -> pure Nothing
+            Just nextLeg -> getTransferLocation nextLeg True
+
+        getTransferLocation transferedLeg isSource =
+          case transferedLeg.mode of
+            DTrip.Walk -> getLegSourceAndDestination (Just transferedLeg) allLegs parentSearchReq isSource
+            DTrip.Taxi -> getLegSourceAndDestination (Just transferedLeg) allLegs parentSearchReq isSource
+            _ -> pure Nothing
 
 getFrfsSourceAndDestination :: [Either JT.SubwayLegRouteInfo JT.MetroLegRouteInfo] -> (Either FRFSStationAPI (Maybe FRFSStationAPI), Either FRFSStationAPI (Maybe FRFSStationAPI))
 getFrfsSourceAndDestination legsRouteInfo =

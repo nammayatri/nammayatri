@@ -21,9 +21,12 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
+import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
+import Domain.Utils (safeLast)
 import Environment
+import EulerHS.Prelude (safeHead)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
@@ -42,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
+import Lib.JourneyLeg.Common.FRFS hiding (isCancellable)
 import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyLeg.Metro ()
 import Lib.JourneyLeg.Subway ()
@@ -71,6 +75,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
+import Storage.Queries.JourneyExtra (updateSourceAndDestination)
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -143,7 +148,7 @@ init journeyReq = do
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) searchReq.fromLocation searchReq.toLocation journeyReq.relevanceScore
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -152,6 +157,11 @@ init journeyReq = do
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
+
+getJourneyLegsUnfiltered :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
+getJourneyLegsUnfiltered journeyId = do
+  legs <- QJourneyLeg.findAllByJourneyId journeyId
+  return $ sortBy (comparing (.sequenceNumber)) legs
 
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs journeyId = do
@@ -191,10 +201,11 @@ getAllLegsInfo journeyId = do
         DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
 
 getAllLegsStatus ::
-  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
   m [JL.JourneyLegState]
 getAllLegsStatus journey = do
+  parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
   allLegsRawData <- getJourneyLegs journey.id
   riderLastPoints <- getLastThreePoints journey.id
   (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
@@ -208,9 +219,23 @@ getAllLegsStatus journey = do
         && journey.status /= DJourney.CANCELLED
     )
     $ do
+      updateJourneyLocation parentSearchReq allLegsRawData
       updateJourneyStatus journey DJourney.FEEDBACK_PENDING
   return allLegsState
   where
+    updateJourneyLocation :: (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => SearchRequest -> [DJourneyLeg.JourneyLeg] -> m ()
+    updateJourneyLocation parentSearchReq allLegsRawData = do
+      if (not (null allLegsRawData))
+        then do
+          let mbFirstLeg = safeHead allLegsRawData
+              mbLastLeg = safeLast allLegsRawData
+          allLegs <- getJourneyLegsUnfiltered journey.id
+          firstLegLocationId <- getLegSourceAndDestination mbFirstLeg allLegs parentSearchReq True
+          lastLegLocationId <- getLegSourceAndDestination mbLastLeg allLegs parentSearchReq False
+          updateSourceAndDestination firstLegLocationId lastLegLocationId journey.id
+          pure ()
+        else pure ()
+
     processLeg ::
       (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
       [APITypes.RiderLocationReq] ->

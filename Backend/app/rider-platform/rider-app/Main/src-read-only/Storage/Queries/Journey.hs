@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.convenienceCost convenienceCost,
+      Se.Set Beam.toLocationId (Kernel.Types.Id.getId <$> (endLocation <&> (.id))),
       Se.Set Beam.endTime endTime,
       Se.Set Beam.distanceUnit ((.unit) estimatedDistance),
       Se.Set Beam.estimatedDistance ((.value) estimatedDistance),
@@ -52,6 +53,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.relevanceScore relevanceScore,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
+      Se.Set Beam.fromLocationId (Kernel.Types.Id.getId <$> (startLocation <&> (.id))),
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status (Just status),
       Se.Set Beam.totalLegs totalLegs,

@@ -16,7 +16,6 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
-import API.Types.RiderPlatform.Management.Endpoints.FRFSTicket (FRFSStationAPI)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
@@ -64,9 +63,6 @@ import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 
-data JourneyLocation = Taxi LocationAPIEntity | Frfs FRFSStationAPI | Null
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
 newtype BookingListResV2 = BookingListResV2
   { list :: [BookingAPIEntityV2]
   }
@@ -78,8 +74,8 @@ data BookingAPIEntityV2 = Ride BookingAPIEntity | MultiModalRide JourneyAPIEntit
 data JourneyAPIEntity = JourneyAPIEntity
   { id :: Id Journey,
     fare :: PriceAPIEntity,
-    fromLocation :: JourneyLocation,
-    toLocation :: JourneyLocation,
+    fromLocation :: Maybe LocationAPIEntity,
+    toLocation :: Maybe LocationAPIEntity,
     startTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     status :: JourneyStatus

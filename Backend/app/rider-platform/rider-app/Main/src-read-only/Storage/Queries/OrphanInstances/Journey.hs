@@ -12,13 +12,17 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.Journey as Beam
+import qualified Storage.Queries.Transformers.MultiModal
 
 instance FromTType' Beam.Journey Domain.Types.Journey.Journey where
   fromTType' (Beam.JourneyT {..}) = do
+    endLocation' <- maybe (pure Nothing) Storage.Queries.Transformers.MultiModal.getToLocationByLocationId toLocationId
+    startLocation' <- maybe (pure Nothing) (fmap Just . Storage.Queries.Transformers.MultiModal.getFromLocationByLocationId) fromLocationId
     pure $
       Just
         Domain.Types.Journey.Journey
           { convenienceCost = convenienceCost,
+            endLocation = endLocation',
             endTime = endTime,
             estimatedDistance = Kernel.Types.Common.Distance estimatedDistance distanceUnit,
             estimatedDuration = estimatedDuration,
@@ -29,6 +33,7 @@ instance FromTType' Beam.Journey Domain.Types.Journey.Journey where
             relevanceScore = relevanceScore,
             riderId = Kernel.Types.Id.Id riderId,
             searchRequestId = Kernel.Types.Id.Id searchRequestId,
+            startLocation = startLocation',
             startTime = startTime,
             status = fromMaybe Domain.Types.Journey.NEW status,
             totalLegs = totalLegs,
@@ -42,6 +47,7 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
   toTType' (Domain.Types.Journey.Journey {..}) = do
     Beam.JourneyT
       { Beam.convenienceCost = convenienceCost,
+        Beam.toLocationId = Kernel.Types.Id.getId <$> (endLocation <&> (.id)),
         Beam.endTime = endTime,
         Beam.distanceUnit = (.unit) estimatedDistance,
         Beam.estimatedDistance = (.value) estimatedDistance,
@@ -53,6 +59,7 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
         Beam.relevanceScore = relevanceScore,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.searchRequestId = Kernel.Types.Id.getId searchRequestId,
+        Beam.fromLocationId = Kernel.Types.Id.getId <$> (startLocation <&> (.id)),
         Beam.startTime = startTime,
         Beam.status = Just status,
         Beam.totalLegs = totalLegs,

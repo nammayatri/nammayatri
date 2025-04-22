@@ -5,6 +5,7 @@ module Domain.Types.Journey where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -18,6 +19,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Journey = Journey
   { convenienceCost :: Kernel.Prelude.Int,
+    endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -28,6 +30,7 @@ data Journey = Journey
     relevanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    startLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.Journey.JourneyStatus,
     totalLegs :: Kernel.Prelude.Int,

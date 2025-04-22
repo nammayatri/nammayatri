@@ -24,6 +24,7 @@ import Data.Maybe
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
+import Domain.Action.UI.Location (makeLocationAPIEntity)
 import Domain.Action.UI.Serviceability
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
@@ -43,7 +44,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.Trip as DTrip
-import Domain.Utils (safeHead, safeLast)
 import Environment
 import EulerHS.Prelude hiding (id, pack, safeHead)
 import Kernel.Beam.Functions as B
@@ -57,7 +57,6 @@ import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Common.FRFS (getLegSourceAndDestination)
 import Lib.JourneyModule.Base (getJourneyLegs)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified SharedLogic.CallBPP as CallBPP
@@ -274,14 +273,12 @@ buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
       allLegsRawData <- getJourneyLegs journey.id
       allLegsFare <- mapM getLegFare allLegsRawData
       totalJourneyFare <- foldM addPrice (Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}) allLegsFare
-      legSourceLocation <- getLegSourceAndDestination (safeHead allLegsRawData) True
-      legDestinationLocation <- getLegSourceAndDestination (safeLast allLegsRawData) False
       return $
         SRB.JourneyAPIEntity
           { id = journey.id,
             fare = mkPriceAPIEntity totalJourneyFare,
-            fromLocation = legSourceLocation,
-            toLocation = legDestinationLocation,
+            fromLocation = makeLocationAPIEntity <$> journey.startLocation,
+            toLocation = makeLocationAPIEntity <$> journey.endLocation,
             startTime = journey.startTime,
             createdAt = journey.createdAt,
             status = journey.status

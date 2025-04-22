@@ -3,6 +3,7 @@ module Storage.Queries.Transformers.MultiModal where
 import qualified Domain.Types.Location
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types
 import qualified Storage.Queries.Location as QL
@@ -20,6 +21,12 @@ getToLocation id = do
   mbToLocationMapping <- QLM.getLatestEndByEntityId id
   toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
   return toLocation
+
+getFromLocationByLocationId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Kernel.Prelude.Text -> m Domain.Types.Location.Location
+getFromLocationByLocationId id = QL.findById (Kernel.Types.Id.Id id) >>= fromMaybeM (FromLocationNotFound id)
+
+getToLocationByLocationId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.Location.Location)
+getToLocationByLocationId id = QL.findById $ Kernel.Types.Id.Id id
 
 mkJourneyLegInfo :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData)
 mkJourneyLegInfo agency (Just convenienceCost) isDeleted (Just journeyId) (Just journeyLegOrder) pricingId (Just skipBooking) = Just $ Lib.JourneyLeg.Types.JourneySearchData {..}

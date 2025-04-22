@@ -56,3 +56,11 @@ findAllByRiderIdAndStatusAndMOCId (Kernel.Types.Id.Id personId) status (Kernel.T
     (Se.Desc Beam.createdAt)
     (Just 10)
     Nothing
+
+updateSourceAndDestination :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Maybe Text -> (Kernel.Types.Id.Id DJ.Journey -> m ())
+updateSourceAndDestination fromLocation toLocation id = do
+  updateWithKV
+    [ Se.Set Beam.fromLocationId fromLocation,
+      Se.Set Beam.toLocationId toLocation
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
