@@ -448,16 +448,17 @@ apis:
         - status: DriverMode
         - name: Text
         - mbSearchString: Text
+        - fleetOwnerId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/getFleetDriverAssociation
+            endpoint: /{requestorId}/fleet/getFleetDriverAssociation
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             query:
               - isActive: Bool
               - limit: Int
@@ -470,6 +471,7 @@ apis:
               - status: DriverMode
               - name: Text
               - mbSearchString: Text
+              - fleetOwnerId: Text
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -486,16 +488,17 @@ apis:
         - status: FleetVehicleStatus
         - mbSearchString: Text
         - statusAwareVehicleNo: Text
+        - fleetOwnerId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/getFleetVehicleAssociation
+            endpoint: /{requestorId}/fleet/getFleetVehicleAssociation
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             query:
               - limit: Int
               - offset: Int
@@ -506,6 +509,7 @@ apis:
               - status: FleetVehicleStatus
               - mbSearchString: Text
               - statusAwareVehicleNo: Text
+              - fleetOwnerId: Text
             response:
               type: DrivertoVehicleAssociationRes
 

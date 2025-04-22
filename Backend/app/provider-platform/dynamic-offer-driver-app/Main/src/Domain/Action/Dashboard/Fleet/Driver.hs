@@ -915,16 +915,22 @@ getDriverFleetDriverAssociation ::
   Maybe Common.DriverMode ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString = do
+getDriverFleetDriverAssociation merchantShortId _opCity requestorId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId = do
   merchant <- findMerchantByShortId merchantShortId
+  fleetOwnerId <- case mbFleetOwnerId of
+    Just fleetId -> do
+      fleetOwner <- checkRequestorAccessToFleet (Just requestorId) fleetId
+      pure fleetOwner.id.getId
+    Nothing -> pure $ requestorId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
-  listItems <- createFleetDriverAssociationListItem listOfAllDrivers
+  listItems <- createFleetDriverAssociationListItem listOfAllDrivers fleetOwnerId
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
   where
-    createFleetDriverAssociationListItem :: ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) -> Flow [Common.DriveVehicleAssociationListItem]
-    createFleetDriverAssociationListItem (fdaList, personList, driverInfoList) = do
+    createFleetDriverAssociationListItem :: ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) -> Text -> Flow [Common.DriveVehicleAssociationListItem]
+    createFleetDriverAssociationListItem (fdaList, personList, driverInfoList) fleetOwnerId = do
       let driverListWithInfo = zip personList driverInfoList
       now <- getCurrentTime
       let defaultFrom = UTCTime (utctDay now) 0
@@ -1008,16 +1014,22 @@ getDriverFleetVehicleAssociation ::
   Maybe Common.FleetVehicleStatus ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
+getDriverFleetVehicleAssociation merchantShortId _opCity requestorId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId = do
   merchant <- findMerchantByShortId merchantShortId
+  fleetOwnerId <- case mbFleetOwnerId of
+    Just fleetId -> do
+      fleetOwner <- checkRequestorAccessToFleet (Just requestorId) fleetId
+      pure fleetOwner.id.getId
+    Nothing -> pure $ requestorId
   listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
-  listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
+  listItems <- createFleetVehicleAssociationListItem listOfAllVehicle fleetOwnerId
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
   where
-    createFleetVehicleAssociationListItem :: [VehicleRegistrationCertificate] -> Flow [Common.DriveVehicleAssociationListItem]
-    createFleetVehicleAssociationListItem vrcList = do
+    createFleetVehicleAssociationListItem :: [VehicleRegistrationCertificate] -> Text -> Flow [Common.DriveVehicleAssociationListItem]
+    createFleetVehicleAssociationListItem vrcList fleetOwnerId = do
       now <- getCurrentTime
       forM vrcList $ \vrc -> do
         decryptedVehicleRC <- decrypt vrc.certificateNumber
