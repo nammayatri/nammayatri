@@ -17,8 +17,10 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
   )
 where
 
+import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as List
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
@@ -37,6 +39,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTR
+import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps
 import Kernel.Prelude
@@ -119,20 +122,25 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
-  coinsRewardedOnGoldTierRideRequest <-
+  -- This is a cache for coin configurations by vehicle category
+  coinConfigCache <-
     if isContainsGoldTierTag searchReq.customerNammaTags
-      then
-        CoinsConfig.fetchCoinConfigByFunctionAndMerchant
-          DCT.GoldTierRideCompleted
-          searchReq.providerId
-          searchReq.merchantOperatingCityId
-          >>= \maybeCoinsConfig ->
-            pure (maybeCoinsConfig >>= (\config -> Just config.coins))
-      else pure Nothing
-  logInfo $ "Coins rewarded on gold tier ride request: " <> show coinsRewardedOnGoldTierRideRequest
+      then do
+        -- This is a map of vehicle categories to coin configurations
+        let vehicleCategories = List.nub $ map (\tqd -> BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapServiceTierToCategory tqd.vehicleServiceTier) tripQuoteDetails
+        coinConfigs <- forM vehicleCategories $ \vehicleCategory -> do
+          maybeCoinsConfig <-
+            CoinsConfig.fetchCoinConfigByFunctionAndMerchant
+              DCT.GoldTierRideCompleted
+              searchReq.providerId
+              searchReq.merchantOperatingCityId
+              (Just vehicleCategory)
+          return (vehicleCategory, maybeCoinsConfig >>= (\config -> Just config.coins))
+        return $ M.fromList coinConfigs
+      else return M.empty
 
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinsRewardedOnGoldTierRideRequest) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -218,10 +226,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       UTCTime ->
       DTR.TransporterConfig ->
       Maybe (Id RiderDetails) ->
-      Maybe Int ->
+      M.Map DTV.VehicleCategory (Maybe Int) ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinsRewardedOnGoldTierRideRequest dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -231,6 +239,12 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       let isEligibleForSafetyPlusCharge = maybe False (.enableServiceUsageCharge) driverPlanSafetyPlus && searchReq.preferSafetyPlus
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
+
+      let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapVariantToVehicle dpRes.variant
+      let driverCoinsRewardedOnGoldTierRideRequest = join $ M.lookup vehicleCategory coinConfigCache
+
+      logInfo $ "Coins rewarded on gold tier ride request: " <> show driverCoinsRewardedOnGoldTierRideRequest
+
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
           farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
@@ -310,7 +324,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 driverTagScore = dpwRes.score,
                 conditionalCharges = additionalChargeConditional isEligibleForSafetyPlusCharge tripQuoteDetail.conditionalCharges,
                 isSafetyPlus = Just isEligibleForSafetyPlusCharge,
-                coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRideRequest,
+                coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
                 ..
               }
       pure searchRequestForDriver
