@@ -60,7 +60,7 @@ android {
         }
     }
 
-    // If you are not able to generate signed APK uncomment this 
+    // If you are not able to generate signed APK uncomment this
     // packagingOptions {
     //     exclude 'META-INF/DEPENDENCIES'
     //     exclude 'META-INF/LICENSE'
@@ -103,7 +103,7 @@ android {
                     appIcon     : "@mipmap/ic_launcher",
                     appIconRound: "@mipmap/ic_launcher_round"
             ]
-            
+
         }
     }
     Properties properties = new Properties()
@@ -206,6 +206,12 @@ android {
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
+        apDriver {
+            applicationId "in.mobility.aapleyatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
         bridgeUser {
             applicationId "com.mobility.movingtech"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
@@ -259,6 +265,7 @@ android {
         bridgeUser.setRoot('src/user/bridge')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
         myDriver.setRoot('src/driver/manaYatriPartner')
+        apDriver.setRoot('src/driver/aapleYatriPartner')
         oyDriver.setRoot('src/driver/odishaYatriPartner')
         ksDriver.setRoot('src/driver/keralaSavaariPartner')
         bridgeDriver.setRoot('src/driver/bridgeDriver')
@@ -274,6 +281,7 @@ android {
         yatriUser.res.srcDir('src/user/common/res')
         nyDriver.res.srcDir('src/driver/common/res')
         myDriver.res.srcDir('src/driver/common/res')
+        apDriver.res.srcDir('src/driver/common/res')
         bridgeDriver.res.srcDir('src/driver/common/res')
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
@@ -342,6 +350,7 @@ dependencies {
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
+    apDriverImplementation project(path: ':mobility-driver')
     oyDriverImplementation project(path: ':mobility-driver')
     ksDriverImplementation project(path: ':mobility-driver')
     bridgeDriverImplementation project(path: ':mobility-driver')
@@ -417,6 +426,7 @@ dependencies {
     implementation files('libs/android-jsc-r250231.aar')
     nyDriverImplementation 'com.google.code.gson:gson:2.8.8'
     myDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    apDriverImplementation 'com.google.code.gson:gson:2.8.8'
     oyDriverImplementation 'com.google.code.gson:gson:2.8.8'
     bridgeDriverImplementation 'com.google.code.gson:gson:2.8.8'
     passCulturePartnerImplementation 'com.google.code.gson:gson:2.8.8'
@@ -424,6 +434,7 @@ dependencies {
     yatriDriverImplementation 'com.google.code.gson:gson:2.8.8'
     nyDriverImplementation 'com.facebook.react:react-android:0.72.3'
     myDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    apDriverImplementation 'com.facebook.react:react-android:0.72.3'
     oyDriverImplementation 'com.facebook.react:react-android:0.72.3'
     bridgeDriverImplementation 'com.facebook.react:react-android:0.72.3'
     passCulturePartnerImplementation 'com.facebook.react:react-android:0.72.3'
@@ -431,6 +442,7 @@ dependencies {
     yatriDriverImplementation 'com.facebook.react:react-android:0.72.3'
     nyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     myDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    apDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     oyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     bridgeDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     passCulturePartnerImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
@@ -438,6 +450,7 @@ dependencies {
     yatriDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
@@ -445,6 +458,7 @@ dependencies {
     yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     nyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     myDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    apDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     oyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     bridgeDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     passCulturePartnerImplementation 'com.google.android.play:feature-delivery:2.1.0'
