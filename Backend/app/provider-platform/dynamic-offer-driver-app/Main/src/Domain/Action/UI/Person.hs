@@ -15,7 +15,7 @@
 
 module Domain.Action.UI.Person where
 
-import Data.Aeson
+import Data.Aeson hiding (Success)
 import Data.OpenApi (ToSchema)
 import Domain.Types.Person
 import EulerHS.Prelude hiding (id)
@@ -23,8 +23,12 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
+import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
-import Kernel.Utils.Common (Centesimal, maskText)
+import Kernel.Utils.Common (CacheFlow, Centesimal, EsqDBFlow, MonadFlow, fromMaybeM, maskText)
+import qualified Storage.Queries.Person as QP
+import Storage.Queries.PersonExtra (updatePersonRole)
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
@@ -60,3 +64,13 @@ getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> 
 
 roundToOneDecimal :: Centesimal -> Centesimal
 roundToOneDecimal x = fromIntegral @Integer @Centesimal (round @Centesimal @Integer (x * 10)) / 10
+
+assignRole ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  Role ->
+  m APISuccess
+assignRole personId role = do
+  _person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  updatePersonRole personId role
+  pure Success

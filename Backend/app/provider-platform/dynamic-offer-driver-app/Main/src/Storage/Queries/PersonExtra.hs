@@ -534,3 +534,13 @@ updatePersonMobileByFleetRole personId encMobileNumber = do
     [ Se.Is BeamP.id $ Se.Eq personId,
       Se.Is BeamP.role $ Se.Eq Person.FLEET_OWNER
     ]
+
+updatePersonRole :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Role -> m ()
+updatePersonRole personId role = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.role role,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]

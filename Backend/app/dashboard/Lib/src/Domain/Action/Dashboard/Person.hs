@@ -17,10 +17,12 @@ module Domain.Action.Dashboard.Person where
 import Dashboard.Common
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Person as UIP
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as BPPDP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Person.Type as SP
@@ -251,9 +253,13 @@ assignRole ::
   m APISuccess
 assignRole _ personId roleId = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   QP.updatePersonRole personId roleId
-  pure Success
+  let assignRoleWithPersonId = UIP.assignRole (cast personId)
+  case role.dashboardAccessType of
+    r | r `elem` [DRole.RENTAL_FLEET_OWNER, DRole.FLEET_OWNER] -> assignRoleWithPersonId BPPDP.FLEET_OWNER
+    DRole.DASHBOARD_OPERATOR -> assignRoleWithPersonId BPPDP.OPERATOR
+    _ -> pure Success
 
 assignMerchantCityAccess ::
   ( BeamFlow m r,
