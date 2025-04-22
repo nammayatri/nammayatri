@@ -162,6 +162,7 @@ postDriverFleetAddVehicle ::
   Common.AddVehicleReq ->
   Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode req = do
+  whenJust mbFleetOwnerId DCommon.checkFleetOwnerVerification
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -375,6 +376,7 @@ postDriverFleetAddRCWithoutDriver ::
   Common.RegisterRCReq ->
   Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = Id fleetOwnerId :: Id DP.Person
@@ -413,6 +415,7 @@ getDriverFleetGetAllVehicle ::
   Maybe Text ->
   Flow Common.ListVehicleRes
 getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
@@ -447,6 +450,7 @@ getDriverFleetGetAllDriver ::
   Maybe Text ->
   Flow Common.FleetListDriverRes
 getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   mobileNumberHash <- case mbSearchString of
@@ -483,6 +487,7 @@ postDriverFleetUnlink ::
   Text ->
   Flow APISuccess
 postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -513,6 +518,7 @@ postDriverFleetRemoveVehicle ::
   Text ->
   Flow APISuccess
 postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId_
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
@@ -541,6 +547,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
   unprocessedVehicleRouteMappingEntities <-
@@ -651,6 +658,7 @@ postDriverFleetRemoveDriver ::
   Id Common.Driver ->
   Flow APISuccess
 postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   let personId = cast @Common.Driver @DP.Person driverId
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
@@ -840,6 +848,7 @@ getDriverFleetDriverVehicleAssociation ::
   Maybe UTCTime ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   (listOfAllDrivers, _, _) <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
@@ -926,6 +935,7 @@ getDriverFleetDriverAssociation ::
   Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
@@ -1019,6 +1029,7 @@ getDriverFleetVehicleAssociation ::
   Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
@@ -1107,6 +1118,7 @@ postDriverFleetVehicleDriverRcStatus ::
   Common.RCStatusReq ->
   Flow APISuccess
 postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -1275,6 +1287,7 @@ postDriverFleetLinkRCWithDriver ::
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
 postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash req.driverMobileNumber
@@ -1774,6 +1787,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  DCommon.checkFleetOwnerVerification fleetOwnerId
   driverDetails <- readCsv req.file
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   unprocessedEntities <-

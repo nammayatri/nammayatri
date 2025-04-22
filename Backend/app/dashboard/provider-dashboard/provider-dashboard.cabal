@@ -39,6 +39,7 @@ library
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.Overlay
       Domain.Action.ProviderPlatform.AppManagement.Subscription
+      Domain.Action.ProviderPlatform.CheckVerification
       Domain.Action.ProviderPlatform.Fleet.Driver
       Domain.Action.ProviderPlatform.Fleet.Onboarding
       Domain.Action.ProviderPlatform.IssueManagement.Issue
