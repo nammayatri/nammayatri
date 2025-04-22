@@ -3,3 +3,4 @@
 module API.Types.ProviderPlatform.Operator.Driver (module ReExport) where
 
 import API.Types.ProviderPlatform.Operator.Endpoints.Driver as ReExport
+import Dashboard.ProviderPlatform.Operator.Driver as ReExport

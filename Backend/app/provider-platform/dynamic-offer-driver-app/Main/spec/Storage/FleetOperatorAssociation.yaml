@@ -36,3 +36,10 @@ FleetOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [fleetOwnerId, isActive]
+    findByOperatorIdAndFleetOwnerId: # TODO remove duplicated with findByFleetIdAndOperatorId
+      kvFunction: findOneWithKV
+      where:
+        and: [operatorId, fleetOwnerId, isActive]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

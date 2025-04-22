@@ -1189,7 +1189,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
     isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
       case (requestedPersonDetails.role, personDetails.role) of
-        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id.getId personDetails.id
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id personDetails.id
         (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation requestedPersonDetails.id.getId personDetails.id.getId
         (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id.getId personDetails.id
         _ -> return False

@@ -53,6 +53,7 @@ import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types hiding (fromList)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
+import Kernel.Prelude (when)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -62,10 +63,13 @@ import Kernel.Utils.Common
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCT
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -86,6 +90,7 @@ import qualified Storage.Queries.VehicleRouteMapping as VRM
 import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as TN
+import Utils.Common.Cac.KeyNameConstants
 
 availableRoutes :: (Text, ServiceTierType) -> Text -> Flow AvailableRoute
 availableRoutes (routeCode, vehicleServiceTierType) vhclNo = do
@@ -371,15 +376,22 @@ postFleetConsent ::
     ) ->
     Flow APISuccess
   )
-postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
+postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
   onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId driver
+
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
-  QDI.updateEnabledVerifiedState driverId True (Just True)
+
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $
+    QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

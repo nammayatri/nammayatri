@@ -1,0 +1,80 @@
+imports:
+  City: Kernel.Types.Beckn.Context
+
+module: Fleet
+apiPrefix: ""
+
+apis:
+  # - POST:
+  #     endpoint: /operator/fleet/register
+  #     auth: ApiAuthV2
+  #     request:
+  #       type: FleetOwnerRegisterReq
+  #     response:
+  #       type: APISuccess
+  #     helperApi:
+  #       - POST:
+  #           endpoint: /operator/fleet/register
+  #           auth: ApiAuthV2
+  #           mandatoryQuery:
+  #             - requestorId: Text
+  #           request:
+  #             type: FleetOwnerRegisterReq
+  #           response:
+  #             type: FleetOwnerRegisterRes
+
+  - POST:
+      endpoint: operator/fleet/{fleetOwnerId}/link
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: operator/fleet/{fleetOwnerId}/link
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+
+  - POST:
+      endpoint: operator/fleet/{fleetOwnerId}/unlink
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: operator/fleet/{fleetOwnerId}/unlink
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+
+types: {}
+  # FleetOwnerRegisterReq: # TODO reuse this type
+  #   firstName: Text
+  #   lastName: Text
+  #   mobileNumber: Text
+  #   mobileCountryCode: Text
+  #   merchantId: Text
+  #   email: Maybe Text
+  #   city: City
+  #   fleetType: Maybe Text # FIXME FleetType
+  #   panNumber: Maybe Text
+  #   gstNumber: Maybe Text
+  #   panImageId1: Maybe Text
+  #   panImageId2: Maybe Text
+  #   gstCertificateImage: Maybe Text
+  #   operatorReferralCode: Maybe Text
+  # FleetOwnerRegisterRes:
+  #   personId: Text
+  #   recordType: NewType
