@@ -48,7 +48,7 @@ import Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
-import Lib.Yudhishthira.Types
+import Lib.Yudhishthira.Types (TagNameValue (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -116,7 +116,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       }
 
   coinsRewardedOnGoldTierRideRequest <-
-    if isContainsGoldTierTag searchReq.customerNammaTags
+    if isContainsGoldTierTag (fmap (map TagNameValue) searchReq.customerNammaTags)
       then
         CoinsConfig.fetchCoinConfigByFunctionAndMerchant
           DCT.GoldTierRideCompleted
