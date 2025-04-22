@@ -18,6 +18,7 @@ data BusRideInfo = BusRideInfo
   { busNumber :: Data.Text.Text,
     destination :: Kernel.External.Maps.Types.LatLong,
     driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    groupId :: Kernel.Prelude.Maybe Data.Text.Text,
     routeCode :: Data.Text.Text,
     routeLongName :: Kernel.Prelude.Maybe Data.Text.Text
   }

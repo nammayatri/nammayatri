@@ -108,7 +108,8 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
           onRide = Nothing,
           vehicleType = Just vehicleTypes,
           radius,
-          merchantId = merchant.driverOfferMerchantId
+          merchantId = merchant.driverOfferMerchantId,
+          groupId = Nothing
         }
 
     buildBuckets :: MonadFlow m => VVToSTT -> [RingBucketCfg] -> [LTSTypes.NearByDriverRes] -> m [ND.NearByDriversBucket]

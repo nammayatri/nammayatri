@@ -1877,9 +1877,9 @@ getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> Context.City -> Text -> 
 getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode
 
 postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
-postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
+postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
-  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id (Just fleetOwnerId)
   return $
     Common.NearbyDriverResp $
       catMaybes $

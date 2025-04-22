@@ -181,7 +181,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
     ( do
         unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         now <- getCurrentTime
-        void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing (Just (LT.Bus (LT.BusRideInfo tripTransaction.routeCode tripTransaction.vehicleNumber (fromMaybe currentLocation tripTransaction.startLocation) currentLocation Nothing Nothing)))
+        void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing (Just (LT.Bus (LT.BusRideInfo tripTransaction.routeCode tripTransaction.vehicleNumber (fromMaybe currentLocation tripTransaction.startLocation) currentLocation Nothing Nothing (Just fleetConfig.fleetOwnerId.getId))))
         QTT.updateOnEnd (if isCancelled then CANCELLED else COMPLETED) (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
         TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
         findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
@@ -250,8 +250,8 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
       Right _ -> return ()
       Left _ -> throwError (InternalError "Process for Trip Cancellation is Already Ongoing, Please try again!")
 
-buildBusTripInfo :: Text -> Text -> LatLong -> LatLong -> Text -> Id Person -> Flow LT.RideInfo
-buildBusTripInfo vehicleNumber routeCode sourceLocation destinationLocation longName driverId = do
+buildBusTripInfo :: Text -> Text -> LatLong -> LatLong -> Text -> Id Person -> Text -> Flow LT.RideInfo
+buildBusTripInfo vehicleNumber routeCode sourceLocation destinationLocation longName driverId fleetOwnerId = do
   driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   return $
     LT.Bus $
@@ -261,6 +261,7 @@ buildBusTripInfo vehicleNumber routeCode sourceLocation destinationLocation long
           destination = destinationLocation,
           routeLongName = (Just longName),
           driverName = Just $ driver.firstName <> maybe "" (" " <>) driver.lastName,
+          groupId = Just fleetOwnerId,
           ..
         }
 
@@ -271,7 +272,7 @@ assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation sou
     60
     ( do
         unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode source destination route.longName tripTransaction.driverId
+        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode source destination route.longName tripTransaction.driverId tripTransaction.fleetOwnerId.getId
         void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
         QDI.updateOnRide True tripTransaction.driverId
         when notify $ do
@@ -289,7 +290,7 @@ startTripTransaction tripTransaction route closestStop sourceStopInfo currentLoc
     60
     ( do
         unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode sourceStopInfo.point destination route.longName tripTransaction.driverId
+        busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode sourceStopInfo.point destination route.longName tripTransaction.driverId tripTransaction.fleetOwnerId.getId
         void $ LF.rideStart (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
         now <- getCurrentTime
         QDI.updateOnRide True tripTransaction.driverId
