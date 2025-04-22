@@ -13,6 +13,7 @@ import qualified API.Internal.DriverCoordinates as DriverCoordinates
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReachedDestination as DriverReachedDestination
 import qualified API.Internal.DriverReferee as DriverReferee
+import qualified API.Internal.DriverSourceDeparted as DriverSourceDeparted
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
@@ -47,6 +48,7 @@ type API =
            :<|> StopDetection.API
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
+           :<|> DriverSourceDeparted.API
            :<|> ViolationDetection.API
        )
 
@@ -70,4 +72,5 @@ handler =
     :<|> StopDetection.handler
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
+    :<|> DriverSourceDeparted.handler
     :<|> ViolationDetection.handler
