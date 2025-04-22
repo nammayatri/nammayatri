@@ -1,8 +1,5 @@
--- {-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.Operator.Fleet
-  ( -- postFleetOperatorFleetRegister,
-    postFleetOperatorFleetLink,
+  ( postFleetOperatorFleetLink,
     postFleetOperatorFleetUnlink,
   )
 where
@@ -23,9 +20,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QP
 import Tools.Error
-
--- postFleetOperatorFleetRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Operator.Fleet.FleetOwnerRegisterReq -> Environment.Flow API.Types.ProviderPlatform.Operator.Fleet.FleetOwnerRegisterRes)
--- postFleetOperatorFleetRegister _merchantShortId _opCity requestorId req = do error "Logic yet to be decided" requestorId req
 
 postFleetOperatorFleetLink ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

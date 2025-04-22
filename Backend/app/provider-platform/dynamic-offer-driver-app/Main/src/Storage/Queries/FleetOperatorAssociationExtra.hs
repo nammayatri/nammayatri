@@ -1,18 +1,14 @@
 module Storage.Queries.FleetOperatorAssociationExtra where
 
 import Domain.Types.FleetOperatorAssociation
--- import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation)
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
--- import Kernel.External.Encryption
 import Kernel.Prelude
--- import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOperatorAssociation as Beam
 import qualified Storage.Beam.FleetOperatorAssociation as BeamFOA
--- import Storage.Queries.FleetOperatorAssociation ()
 import Storage.Queries.OrphanInstances.FleetOperatorAssociation ()
 
 findAllActiveByOperatorIdWithLimitOffset ::
