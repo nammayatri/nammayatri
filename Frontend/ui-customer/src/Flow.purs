@@ -7551,7 +7551,7 @@ busTrackingScreenFlow = do
           { props 
               { actionType = BusStopSelectionAction
               , canSelectFromFav = false
-              , focussedTextField = Just SearchLocPickup
+              , focussedTextField = Just SearchLocDrop
               , routeSelected = busRouteSelected
               , isAutoComplete = false
               }

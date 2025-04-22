@@ -22,9 +22,9 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried as DFU
+import Data.Foldable (maximum, minimum)
 import Data.Maybe (maybe, fromMaybe, Maybe(..), isNothing, isJust)
 import Data.String as DS
-import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Debug (spy)
 import Effect (Effect)
@@ -70,6 +70,7 @@ import Data.Function.Uncurried (runFn2, runFn3)
 import LocalStorage.Cache
 import MapUtils as MU
 import Data.Int as DI
+import Common.RemoteConfig.Utils as CRU
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -78,11 +79,15 @@ busTicketBookingScreen initialState =
   , name: "BusTicketBookingScreen"
   , globalEvents: [(\push -> do
       void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-        getTicketBookingListEvent push -- Calling TicketBookingList API to show all previous tickets being booked
-        -- getNearbyDriversEvent 10000.0 0 initialState push
-      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" "true"
-          _ = spy "BusTicketBookingScreen globalEvents" initialState
-      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent 5000.0 0 initialState push 1000.0
+        -- Calling TicketBookingList API to show all previous tickets being booked
+        getTicketBookingListEvent push
+     
+      let getNearbyDriversEventPollingConfig = CRU.pollingConfig "getNearbyDriversEvent"
+      when (not getNearbyDriversEventPollingConfig.disable) do
+        let pollingId = EHC.getCurrentUTC ""
+            _ = runFn2 setInCache "BUS_LOCATION_TRACKING_ID" pollingId
+            wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig 0 initialState push wmbFlowConfig.defaultRadiusForFindingBus false 
       pure $ pure unit
   )]
   , eval:
@@ -98,10 +103,11 @@ busTicketBookingScreen initialState =
         lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
       else pure unit
 
-    getNearbyDriversEvent duration id state push radius = do
-      EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ radius * 1.25) "ZOOM"
-      let busLocationTracking = runFn3 getFromCache "BUS_LOCATION_TRACKING" Nothing Just
-      if (busLocationTracking == Just "true") then do
+    getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus = do
+      -- Removed recursive Auto Zoom for now, looking bad from UI perspective
+      -- when (gotClosestBus) $ EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ radius * wmbFlowConfig.radiusMultiplier) "ZOOM"
+      let busLocationTrackingPollingId = runFn3 getFromCache "BUS_LOCATION_TRACKING_ID" Nothing Just
+      if (busLocationTrackingPollingId == Just pollingId) then do
         eitherRespOrError <- Remote.postNearbyDrivers $ 
           API.NearbyDriverReq 
             { location: API.LatLong 
@@ -113,17 +119,30 @@ busTicketBookingScreen initialState =
             }
         case eitherRespOrError of
           Right (API.NearbyDriverRes resp) -> do
-            if (DA.null resp.buckets && radius < 32001.0) then do
-              void $ delay $ Milliseconds $ duration
-              getNearbyDriversEvent duration id state push (DI.toNumber $ DI.floor $ radius * 1.25)
+            if (DA.null resp.buckets && radius < wmbFlowConfig.maxRadiusCanBeSearched) then do
+              void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+              getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push (DI.toNumber $ DI.floor $ radius * wmbFlowConfig.radiusMultiplier) gotClosestBus
             else do
-              doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
-              void $ delay $ Milliseconds $ duration
-              getNearbyDriversEvent duration id state push radius
+              if gotClosestBus
+                then do
+                  doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
+                  void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+                  getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus
+                else do
+                  let closestBusFromCurrentLoc = fromMaybe wmbFlowConfig.minimumRadiusForFindingBus $ minimum $ map (\(API.NearByDriversBucket item) -> getClosestDistance item.driverInfo (API.LatLong {lat: state.props.srcLat, lon: state.props.srcLong})) resp.buckets
+                  EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ radius * wmbFlowConfig.radiusMultiplier) "ZOOM"
+                  getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push (DI.toNumber $ DI.floor $ closestBusFromCurrentLoc * wmbFlowConfig.radiusMultiplier) true
           Left err -> do
-            void $ delay $ Milliseconds $ duration
-            getNearbyDriversEvent duration id state push radius
+            void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+            getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus
       else pure unit
+    
+    getClosestDistance driverInfo currLoc =
+      fromMaybe 1000.0 $ minimum $ map 
+        (\(API.DriverInfo item) -> 
+          MU.haversineDistance currLoc (API.LatLong {lat: item.lat, lon: item.lon})
+        ) driverInfo
+
 
 view :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -196,13 +215,13 @@ headerView push state =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  , padding $ Padding 18 18 18 18
+  , padding $ Padding 18 12 18 12
   ]
   [ imageView
     [ width $ V 40
     , height $ V 40
     , onClick push $ const GoBack
-    , padding $ Padding 4 8 4 4
+    , padding $ Padding 4 4 4 4
     , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_left"
     , rippleColor Color.rippleShade
     , margin $ MarginRight 10
@@ -214,6 +233,7 @@ headerView push state =
     , singleLine true
     , maxLines 1
     , textSize $ FontSize.a_18
+    , padding $ PaddingBottom 4
     ] <> FontStyle.subHeading3 TypoGraphy
   , linearLayout [weight 1.0] [] 
   , linearLayout
@@ -600,7 +620,8 @@ mapView' push state =
             , padding $ PaddingBottom 400
             , onAnimationEnd
                 ( \action -> do
-                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" 17.0 state.props.srcLat state.props.srcLong push MapReady
+                    let wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
+                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" wmbFlowConfig.defaultZoomLevelOnMap state.props.srcLat state.props.srcLong push MapReady
                     push action
                 )
                 (const NoAction)
@@ -624,7 +645,7 @@ mapView' push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       ][ linearLayout
-          [ height $ V 35
+          [ height $ V 30
           , width MATCH_PARENT
           , gradient (Linear 180.0 [Color.white900, Color.transparent])
           ][]
