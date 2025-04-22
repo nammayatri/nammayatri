@@ -5,17 +5,14 @@ module API.Types.ProviderPlatform.Operator.Endpoints.Driver where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified Dashboard.Common
-import qualified Dashboard.ProviderPlatform.Fleet.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
 import Data.Aeson
-import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.Prelude
-import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
@@ -121,7 +118,7 @@ data VerifyOperatorJoiningOtpReq = VerifyOperatorJoiningOtpReq
 instance Kernel.Types.HideSecrets.HideSecrets VerifyOperatorJoiningOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper :<|> PostDriverOperatorSendJoiningOtpHelper :<|> PostDriverOperatorVerifyJoiningOtpHelper :<|> PostDriverOperatorAddDriversHelper))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper :<|> PostDriverOperatorSendJoiningOtpHelper :<|> PostDriverOperatorVerifyJoiningOtpHelper))
 
 type GetDriverOperatorFetchHubRequests =
   ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
@@ -205,21 +202,6 @@ type PostDriverOperatorVerifyJoiningOtpHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type PostDriverOperatorAddDrivers =
-  ( "operator" :> "addDrivers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp CreateDriversReq
-      :> Post
-           '[JSON]
-           Dashboard.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities
-  )
-
-type PostDriverOperatorAddDriversHelper =
-  ( "operator" :> "addDrivers" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           CreateDriversReq
-      :> Post '[JSON] Dashboard.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities
-  )
-
 data DriverAPIs = DriverAPIs
   { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
     getDriverOperationGetAllHubs :: EulerHS.Types.EulerClient [OperationHub],
@@ -227,19 +209,13 @@ data DriverAPIs = DriverAPIs
     postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverInfo],
     postDriverOperatorSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
-    postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverOperatorAddDrivers ::
-      Kernel.Prelude.Text ->
-      ( Data.ByteString.Lazy.ByteString,
-        CreateDriversReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities
+    postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList :<|> postDriverOperatorSendJoiningOtp :<|> postDriverOperatorVerifyJoiningOtp :<|> postDriverOperatorAddDrivers = driverClient
+    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList :<|> postDriverOperatorSendJoiningOtp :<|> postDriverOperatorVerifyJoiningOtp = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_OPERATOR_FETCH_HUB_REQUESTS
@@ -249,7 +225,6 @@ data DriverUserActionType
   | GET_DRIVER_OPERATOR_LIST
   | POST_DRIVER_OPERATOR_SEND_JOINING_OTP
   | POST_DRIVER_OPERATOR_VERIFY_JOINING_OTP
-  | POST_DRIVER_OPERATOR_ADD_DRIVERS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

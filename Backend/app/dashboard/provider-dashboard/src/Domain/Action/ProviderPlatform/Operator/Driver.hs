@@ -6,16 +6,13 @@ module Domain.Action.ProviderPlatform.Operator.Driver
     getDriverOperatorList,
     postDriverOperatorSendJoiningOtp,
     postDriverOperatorVerifyJoiningOtp,
-    postDriverOperatorAddDrivers,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
-import qualified Dashboard.ProviderPlatform.Fleet.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
-import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -87,12 +84,3 @@ postDriverOperatorVerifyJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merc
 postDriverOperatorVerifyJoiningOtp merchantShortId opCity apiTokenInfo authId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorVerifyJoiningOtp) authId apiTokenInfo.personId.getId req
-
-postDriverOperatorAddDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.CreateDriversReq -> Environment.Flow Dashboard.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities)
-postDriverOperatorAddDrivers merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverOperatorAddDrivers)) apiTokenInfo.personId.getId req
-  where
-    addMultipartBoundary :: LBS.ByteString -> (Text -> (LBS.ByteString, req) -> res) -> Text -> req -> res
-    addMultipartBoundary boundary clientFn requestorId reqBody = clientFn requestorId (boundary, reqBody)

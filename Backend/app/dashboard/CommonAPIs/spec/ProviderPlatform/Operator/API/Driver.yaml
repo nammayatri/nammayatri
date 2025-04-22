@@ -5,7 +5,6 @@ imports:
   OperationHub: Dashboard.Common
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
-  APISuccessWithUnprocessedEntities: Dashboard.ProviderPlatform.Fleet.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
 
 module: Driver
@@ -112,24 +111,6 @@ apis:
             response:
               type: APISuccess
 
-  - POST: # BulkUploadDriversForOperatorAPI
-      endpoint: /operator/addDrivers
-      auth: ApiAuthV2
-      multipart:
-        type: CreateDriversReq
-      response:
-        type: APISuccessWithUnprocessedEntities
-      helperApi:
-        - POST:
-            endpoint: /operator/addDrivers
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            multipart:
-              type: CreateDriversReq
-            response:
-              type: APISuccessWithUnprocessedEntities
-
 types:
   OperationHub:
     id : Id OperationHub
@@ -193,6 +174,3 @@ types:
     - file: FilePath
     - recordType: NewType
     - derive: "'HideSecrets"
-
-extraOperations:
-  - EXTRA_API_TYPES_FILE
