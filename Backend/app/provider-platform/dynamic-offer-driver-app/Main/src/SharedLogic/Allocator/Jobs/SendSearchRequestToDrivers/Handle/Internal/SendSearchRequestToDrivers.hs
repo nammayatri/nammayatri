@@ -20,6 +20,7 @@ where
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as List
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
@@ -38,6 +39,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTR
+import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps
 import Kernel.Prelude
@@ -120,8 +122,25 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
+  -- This is a cache for coin configurations by vehicle category
+  coinConfigCache <-
+    if isContainsGoldTierTag searchReq.customerNammaTags
+      then do
+        -- This is a map of vehicle categories to coin configurations
+        let vehicleCategories = List.nub $ map (\tqd -> BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapServiceTierToCategory tqd.vehicleServiceTier) tripQuoteDetails
+        coinConfigs <- forM vehicleCategories $ \vehicleCategory -> do
+          maybeCoinsConfig <-
+            CoinsConfig.fetchCoinConfigByFunctionAndMerchant
+              DCT.GoldTierRideCompleted
+              searchReq.providerId
+              searchReq.merchantOperatingCityId
+              (Just vehicleCategory)
+          return (vehicleCategory, maybeCoinsConfig >>= (\config -> Just config.coins))
+        return $ M.fromList coinConfigs
+      else return M.empty
+
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -207,9 +226,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       UTCTime ->
       DTR.TransporterConfig ->
       Maybe (Id RiderDetails) ->
+      M.Map DTV.VehicleCategory (Maybe Int) ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -220,19 +240,9 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
 
-      let vehicleCategory = Just $ BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapVariantToVehicle dpRes.variant
+      let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapVariantToVehicle dpRes.variant
+      let driverCoinsRewardedOnGoldTierRideRequest = join $ M.lookup vehicleCategory coinConfigCache
 
-      driverCoinsRewardedOnGoldTierRideRequest <-
-        if isContainsGoldTierTag searchReq.customerNammaTags
-          then
-            CoinsConfig.fetchCoinConfigByFunctionAndMerchant
-              DCT.GoldTierRideCompleted
-              searchReq.providerId
-              searchReq.merchantOperatingCityId
-              vehicleCategory
-              >>= \maybeCoinsConfig ->
-                pure (maybeCoinsConfig >>= (\config -> Just config.coins))
-          else pure Nothing
       logInfo $ "Coins rewarded on gold tier ride request: " <> show driverCoinsRewardedOnGoldTierRideRequest
 
       baseFare <- case tripQuoteDetail.tripCategory of
