@@ -60,7 +60,6 @@ library
       Domain.Action.ProviderPlatform.Management.System
       Domain.Action.ProviderPlatform.Management.VehicleInfo
       Domain.Action.ProviderPlatform.Operator.Driver
-      Domain.Action.ProviderPlatform.Operator.Fleet
       Domain.Action.ProviderPlatform.Operator.FleetManagement
       Domain.Action.ProviderPlatform.Operator.Registration
       Domain.Action.ProviderPlatform.RideBooking.Driver
@@ -105,7 +104,6 @@ library
       API.Action.ProviderPlatform.Management.VehicleInfo
       API.Action.ProviderPlatform.Operator
       API.Action.ProviderPlatform.Operator.Driver
-      API.Action.ProviderPlatform.Operator.Fleet
       API.Action.ProviderPlatform.Operator.FleetManagement
       API.Action.ProviderPlatform.Operator.Registration
       API.Action.ProviderPlatform.RideBooking
