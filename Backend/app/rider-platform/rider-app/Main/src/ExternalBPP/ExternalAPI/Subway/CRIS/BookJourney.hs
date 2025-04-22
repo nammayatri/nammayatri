@@ -286,7 +286,7 @@ createOrder config booking = do
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
 
-  qrValidityTime <- case parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S" (T.unpack bookJourneyResp.validUntil) of
+  qrValidityTime <- case parseTimeM True defaultTimeLocale "%d/%m/%Y %H:%M:%S" (T.unpack bookJourneyResp.validUntil) :: Maybe UTCTime of
     Nothing -> throwError $ InternalError $ "Failed to parse ticket validity time: " <> bookJourneyResp.validUntil
     Just time -> pure time
 
