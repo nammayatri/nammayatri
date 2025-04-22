@@ -40,18 +40,6 @@ findByFleetIdAndOperatorId fleetOwnerId operatorId isActive = do
 findByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation))
 findByFleetOwnerId fleetOwnerId isActive = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is Beam.isActive $ Se.Eq isActive]]
 
-findByOperatorIdAndFleetOwnerId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation))
-findByOperatorIdAndFleetOwnerId operatorId fleetOwnerId isActive = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.operatorId $ Se.Eq operatorId,
-          Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId,
-          Se.Is Beam.isActive $ Se.Eq isActive
-        ]
-    ]
-
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation -> m (Maybe Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation))

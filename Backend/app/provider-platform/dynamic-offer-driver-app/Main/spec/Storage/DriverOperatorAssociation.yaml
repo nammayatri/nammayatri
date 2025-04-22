@@ -26,10 +26,6 @@ DriverOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [driverId, isActive]
-    # findByDriverIdAndOperatorId: # duplicated
-    #   kvFunction: findOneWithKV
-    #   where:
-    #     and: [driverId, operatorId, isActive]
 
   sqlType:
     id: text

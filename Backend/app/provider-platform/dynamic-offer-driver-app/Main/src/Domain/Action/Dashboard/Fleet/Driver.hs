@@ -1203,7 +1203,7 @@ checkRequestorAccessToFleet mbRequestorId fleetOwnerId = do
             throwError (InvalidRequest "Invalid fleet owner")
         DP.OPERATOR -> do
           association <-
-            QFleetOperatorAssociation.findByOperatorIdAndFleetOwnerId requestor.id.getId fleetOwner.id.getId True
+            QFleetOperatorAssociation.findByFleetIdAndOperatorId fleetOwner.id.getId requestor.id.getId True
               >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
           whenJust association.associatedTill \associatedTill -> do
             now <- getCurrentTime
@@ -1839,7 +1839,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               QP.findByMobileNumberAndMerchantAndRole DCommon.mobileIndianCode mobileNumberHash merchant.id DP.FLEET_OWNER
                 >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
           association <-
-            QFleetOperatorAssociation.findByOperatorIdAndFleetOwnerId operator.id.getId fleetOwner.id.getId True
+            QFleetOperatorAssociation.findByFleetIdAndOperatorId fleetOwner.id.getId operator.id.getId True
               >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
           whenJust association.associatedTill \associatedTill -> do
             now <- getCurrentTime
