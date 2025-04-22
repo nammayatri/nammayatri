@@ -132,7 +132,6 @@ function refreshFlow() {
     if (JBridge.removeCallBackOpenChatScreen) {
       JBridge.removeCallBackOpenChatScreen();
     }
-    window.chatMessages = undefined;
     window.JBridge.setKeysInSharedPrefs("CALL_REFRESH", "false");
     // purescript.onConnectivityEvent("REFRESH")();
     for(const key in window.onResumeListenersMap) {
