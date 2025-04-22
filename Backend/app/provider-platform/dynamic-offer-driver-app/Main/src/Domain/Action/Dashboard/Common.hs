@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.Common
     runVerifyRCFlow,
     appendPlusInMobileCountryCode,
     castStatus,
+    checkFleetOwnerVerification,
   )
 where
 
@@ -32,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.Queries.FleetOwnerInformation as QFI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -147,3 +149,11 @@ castStatus status = case status of -- only PENDING and OVERDUE possible
   REFUND_MANUAL_REVIEW_REQUIRED -> Common.REFUND_MANUAL_REVIEW_REQUIRED
   ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
   SETTLED -> Common.SETTLED
+
+checkFleetOwnerVerification :: Text -> Flow ()
+checkFleetOwnerVerification personId = do
+  fleetOwnerInfo <-
+    QFI.findByPrimaryKey (Id personId)
+      >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
+  unless fleetOwnerInfo.verified $
+    throwError (InvalidRequest "Fleet owner is not verified")
