@@ -234,7 +234,9 @@ data JourneyLeg = JourneyLeg
     color :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     colorCode :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     duration :: Maybe Seconds,
-    distance :: Maybe Distance
+    distance :: Maybe Distance,
+    estimatedMinFare :: Maybe HighPrecMoney,
+    estimatedMaxFare :: Maybe HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -410,7 +412,9 @@ getJourneys searchRequest hasMultimodalSearch = do
                     colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
                     routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
-                    distance = journeyLeg.distance
+                    distance = journeyLeg.distance,
+                    estimatedMinFare = journeyLeg.estimatedMinFare,
+                    estimatedMaxFare = journeyLeg.estimatedMaxFare
                   }
           let estimatedMinFare = sum $ mapMaybe (.estimatedMinFare) journeyLegsFromOtp
           let estimatedMaxFare = sum $ mapMaybe (.estimatedMaxFare) journeyLegsFromOtp
