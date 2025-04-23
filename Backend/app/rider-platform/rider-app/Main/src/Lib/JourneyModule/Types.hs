@@ -321,7 +321,8 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     sdkToken :: Maybe Text,
     providerRouteId :: Maybe Text,
     deviceId :: Maybe Text,
-    ticketTypeCode :: Maybe Text
+    ticketTypeCode :: Maybe Text,
+    selectedServiceTier :: Maybe LegServiceTier
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -711,6 +712,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
+          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
           mbPerson <- QPerson.findById booking.riderId
           imeiNumber <- decrypt `mapM` (mbPerson >>= (.imeiNumber))
           return $
@@ -722,7 +724,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
-                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode) -- not required for show cris ticket but still sending for future use
+                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for show cris ticket but still sending for future use
+                  selectedServiceTier = mbSelectedServiceTier
                 }
 
 getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
@@ -867,6 +870,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
                 }
         Spec.SUBWAY -> do
+          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
           return $
             Subway $
               SubwayLegExtraInfo
@@ -876,7 +880,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for cris sdk initiation
                   deviceId = Nothing, -- not required for cris sdk initiation
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- required for cris sdk initiation
-                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode) -- required for cris sdk initiation
+                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- required for cris sdk initiation
+                  selectedServiceTier = mbSelectedServiceTier
                 }
 
 getServiceTierFromQuote :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSQuote.FRFSQuote -> m (Maybe LegServiceTier)
