@@ -45,6 +45,8 @@ initData = {
   , eventDiscountAmount : Mb.Nothing
   , discounts : []
   , applyDiscounts : Nothing
+  , srcId : ""
+  , destId : ""
   },
   props: {
     isLimitExceeded : false

@@ -56,7 +56,7 @@ screen fromStationCode toStationCode initialState =
   , globalEvents : [(\push -> do
                       _ <- pure $ spy "debug route" (fromStationCode <> " " <> toStationCode)
                       when (isNothing initialState.data.quotes) $
-                        void $ launchAff $ flowRunner defaultGlobalState $ getSearchId push UpdateQuotes fromStationCode toStationCode
+                        void $ launchAff $ flowRunner defaultGlobalState $ getSearchId push UpdateQuotes (Just fromStationCode) (Just toStationCode)
                       pure $ pure unit)
                     ]
   , eval :
@@ -337,9 +337,9 @@ headerView state push =
     , background Color.white900
     ][  GenericHeader.view (push <<< GenericHeaderAC) (headerConfig state) ]
       
-getSearchId :: (Action -> Effect Unit) -> ((Array FrfsQuote) -> Action) -> String -> String -> Flow GlobalState Unit
+getSearchId :: (Action -> Effect Unit) -> ((Array FrfsQuote) -> Action) -> Maybe String -> Maybe String -> Flow GlobalState Unit
 getSearchId push action srcCode destCode = do
-  resp <- Remote.frfsSearch "BUS" (Remote.makeSearchMetroReq srcCode destCode 1 Nothing)
+  resp <- Remote.frfsSearch "BUS" (Remote.makeSearchMetroReq srcCode destCode 1 Nothing Nothing Nothing)
   case resp of
     Right (FrfsSearchResp response) -> do
       _ <- pure $ spy "debug route searchId" response.searchId

@@ -2851,6 +2851,8 @@ type MetroTicketBookingScreenData = {
   , searchRideType :: API.SearchRideType
   , discounts :: Array API.FRFSDiscountRes
   , applyDiscounts :: Maybe (Array API.FRFSDiscountReq)
+  , srcId :: String
+  , destId :: String
 }
 
 type MetroTicketBookingScreenProps = {

@@ -1401,12 +1401,14 @@ busAutoCompleteBT vehicleType city location input limit offset = do
       BackT $ pure GoBack 
 
 
-makeSearchMetroReq :: String -> String -> Int -> Maybe String-> FRFSSearchAPIReq
-makeSearchMetroReq srcCode destCode count routeCode = FRFSSearchAPIReq {
+makeSearchMetroReq :: Maybe String ->  Maybe String -> Int -> Maybe String-> Maybe String -> Maybe String -> FRFSSearchAPIReq
+makeSearchMetroReq srcCode destCode count routeCode srcId destId = FRFSSearchAPIReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
     "quantity" : count,
-    "routeCode" : routeCode
+    "routeCode" : routeCode,
+    "fromStationId" : srcId,
+    "toStationId" : destId
     }
 
 frfsQuotesBT :: String -> FlowBT String FrfsQuotesRes

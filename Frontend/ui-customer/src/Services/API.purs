@@ -3433,7 +3433,8 @@ newtype FRFSStationAPI = FRFSStationAPI {
     lon :: Maybe Number,
     name :: String,
     sequenceNum :: Maybe Int,
-    stationType :: Maybe String
+    stationType :: Maybe String,
+    stationId :: String
 }
 
 derive instance genericGetMetroStationResponse :: Generic GetMetroStationResponse _
@@ -3500,10 +3501,12 @@ instance encodeGetBusRoutesReq   :: Encode GetBusRoutesReq where encode = defaul
 data FrfsSearchRequest = FrfsSearchRequest FRFSSearchAPIReq String
 
 newtype FRFSSearchAPIReq = FRFSSearchAPIReq {
-  fromStationCode :: String,
-  toStationCode :: String,
+  fromStationCode :: Maybe String,
+  toStationCode :: Maybe String,
   quantity :: Int,
-  routeCode :: Maybe String
+  routeCode :: Maybe String,
+  fromStationId :: Maybe String,
+  toStationId :: Maybe String
 }
 
 newtype FrfsSearchResp = FrfsSearchResp {
