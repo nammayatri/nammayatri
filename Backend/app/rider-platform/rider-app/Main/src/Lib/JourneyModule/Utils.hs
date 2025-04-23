@@ -1,6 +1,7 @@
 module Lib.JourneyModule.Utils where
 
 import BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
@@ -157,7 +158,7 @@ findPossibleRoutes ::
   Text ->
   UTCTime ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
-  m [AvailableRoutesByTier]
+  m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfigId = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- QRouteStopMapping.findByStopCode fromStopCode integratedBppConfigId
@@ -197,6 +198,15 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
             let arrivalTime = getISTArrivalTime timing.timeOfArrival currentTime,
             arrivalTime > currentTimeIST && arrivalTime <= nextHourCutoff
         ]
+
+  let sortedTimings =
+        sortBy
+          ( \a b ->
+              let aTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime a.timeOfArrival currentTime) currentTimeIST
+                  bTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime b.timeOfArrival currentTime) currentTimeIST
+               in compare aTime bTime
+          )
+          validTimings
 
   -- Group by service tier
   let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) validTimings
@@ -244,7 +254,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         }
 
   -- Only return service tiers that have available routes
-  return $ filter (\r -> not (null $ r.availableRoutes)) results
+  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes)) results)
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
@@ -353,60 +363,65 @@ getSingleModeRouteDetails ::
   Maybe Text ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
   m (Maybe SingleModeRouteDetails)
-getSingleModeRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopCode) integratedBppConfigId = do
+getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfigId = do
   mbFromStop <- QStation.findByStationCode originStopCode integratedBppConfigId
   mbToStop <- QStation.findByStationCode destinationStopCode integratedBppConfigId
-  mbRoute <- QRoute.findByRouteCode routeCode integratedBppConfigId
   currentTime <- getCurrentTime
 
-  case (mbFromStop, mbToStop, mbRoute) of
-    (Just fromStop, Just toStop, Just route) -> do
+  case (mbFromStop, mbToStop) of
+    (Just fromStop, Just toStop) -> do
       case (fromStop.lat, fromStop.lon, toStop.lat, toStop.lon) of
         (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-          -- Get timing information for this route at the origin stop
-          originStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode [routeCode] originStopCode integratedBppConfigId
-          destStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode [routeCode] destinationStopCode integratedBppConfigId
+          (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId) "findPossibleRoutes"
 
-          -- Get trip IDs for calendar checking
-          let tripIds = map (.tripId) originStopTimings
+          let routeCode = mbRouteCode <|> nextAvailableRouteCode
+          mbRoute <- maybe (return Nothing) (\rc -> QRoute.findByRouteCode rc integratedBppConfigId) routeCode
+          case mbRoute of
+            Just route -> do
+              -- Get timing information for this route at the origin stop
+              originStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode [route.code] originStopCode integratedBppConfigId
+              destStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode [route.code] destinationStopCode integratedBppConfigId
+              -- Get trip IDs for calendar checking
+              let tripIds = map (.tripId) originStopTimings
 
-          -- Get IST time info
-          let (_, currentTimeIST) = getISTTimeInfo currentTime
+              -- Get IST time info
+              let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-          -- Check which trips are serviceable today
-          serviceableTripIds <- filterServiceableTrips tripIds currentTime integratedBppConfigId
+              -- Check which trips are serviceable today
+              serviceableTripIds <- filterServiceableTrips tripIds currentTime integratedBppConfigId
 
-          -- Find the earliest upcoming departure from origin stop
-          let validOriginTimings =
-                [ timing
-                  | timing <- originStopTimings,
-                    timing.tripId `elem` serviceableTripIds,
-                    let departureTime = getISTArrivalTime timing.timeOfDeparture currentTime,
-                    departureTime > currentTimeIST
-                ]
+              -- Find the earliest upcoming departure from origin stop
+              let validOriginTimings =
+                    [ timing
+                      | timing <- originStopTimings,
+                        timing.tripId `elem` serviceableTripIds,
+                        let departureTime = getISTArrivalTime timing.timeOfDeparture currentTime,
+                        departureTime > currentTimeIST
+                    ]
 
-          let mbEarliestOriginTiming =
-                listToMaybe $
-                  sortBy
-                    ( \a b ->
-                        compare
-                          (getISTArrivalTime a.timeOfDeparture currentTime)
-                          (getISTArrivalTime b.timeOfDeparture currentTime)
-                    )
-                    validOriginTimings
+              let mbEarliestOriginTiming =
+                    listToMaybe $
+                      sortBy
+                        ( \a b ->
+                            compare
+                              (getISTArrivalTime a.timeOfDeparture currentTime)
+                              (getISTArrivalTime b.timeOfDeparture currentTime)
+                        )
+                        validOriginTimings
 
-          -- Find the corresponding destination arrival for the same trip
-          let mbDestinationTiming = do
-                originTiming <- mbEarliestOriginTiming
-                find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
+              -- Find the corresponding destination arrival for the same trip
+              let mbDestinationTiming = do
+                    originTiming <- mbEarliestOriginTiming
+                    find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
 
-          -- Create stop details
-          let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
-              mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
-              fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
-              toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
-          possibleRoutes <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId) "findPossibleRoutes"
-          return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
+              -- Create stop details
+              let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
+                  mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
+                  fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
+                  toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
+
+              return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
+            Nothing -> return Nothing
         _ -> return Nothing
     _ -> return Nothing
 getSingleModeRouteDetails _ _ _ _ = return Nothing

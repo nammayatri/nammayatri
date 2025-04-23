@@ -316,7 +316,6 @@ data MetroLegRouteInfo = MetroLegRouteInfo
 
 data SubwayLegExtraInfo = SubwayLegExtraInfo
   { routeInfo :: [SubwayLegRouteInfo],
-    availableServiceTiers :: [LegServiceTier],
     tickets :: Maybe [Text],
     providerName :: Maybe Text,
     sdkToken :: Maybe Text,
@@ -720,7 +719,6 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 { routeInfo = subwayRouteInfo',
                   tickets = Just qrDataList,
                   providerName = Just booking.providerName,
-                  availableServiceTiers = [], -- TODO: add available service tiers once we option to upgrade service tier
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
@@ -869,13 +867,10 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
                 }
         Spec.SUBWAY -> do
-          quotes <- QFRFSQuote.findAllBySearchId id
-          availableServiceTiers <- mapM getServiceTierFromQuote quotes
           return $
             Subway $
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
-                  availableServiceTiers = catMaybes availableServiceTiers,
                   tickets = Nothing,
                   providerName = Nothing,
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for cris sdk initiation
