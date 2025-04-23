@@ -116,7 +116,7 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     originStopCode :: Text,
     destinationStopCode :: Text,
     startTime :: Maybe UTCTime,
-    routeCode :: Text,
+    routeCode :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType

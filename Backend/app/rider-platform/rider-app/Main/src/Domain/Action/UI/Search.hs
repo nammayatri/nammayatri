@@ -230,7 +230,6 @@ extractSearchDetails now = \case
         fareParametersInRateCard = Nothing,
         quotesUnifiedFlow = Nothing,
         placeNameSource = Nothing,
-        routeCode = Just routeCode,
         destinationStopCode = Just destinationStopCode,
         originStopCode = Just originStopCode,
         ..
