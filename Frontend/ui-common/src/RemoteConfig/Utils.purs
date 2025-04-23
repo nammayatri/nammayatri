@@ -434,6 +434,7 @@ defaultWmbFlowConfig =
   , defaultZoomLevelOnMap : 17.0
   , maxRadiusCanBeSearched : 16001.0
   , radiusMultiplier : 2.0
+  , updatePollingRadiusToClosestBus : false
   }
 
 -- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)

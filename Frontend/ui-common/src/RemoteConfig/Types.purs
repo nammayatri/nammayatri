@@ -329,7 +329,8 @@ type WmbFlowConfig = {
   minimumRadiusForFindingBus :: Number,
   defaultZoomLevelOnMap :: Number,
   maxRadiusCanBeSearched :: Number,
-  radiusMultiplier :: Number
+  radiusMultiplier :: Number,
+  updatePollingRadiusToClosestBus :: Boolean
 }
 
 type PollingConfigList = {

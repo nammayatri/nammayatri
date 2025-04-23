@@ -82,6 +82,7 @@ import Common.Resources.Constants (zoomLevel, chatService)
 import Data.Set as DSet
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
+import Screens (getScreen, ScreenName(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -95,6 +96,8 @@ data ScreenOutput
   | GoToSearchLocation ST.BusTrackingScreenState
   | GoToViewTicket ST.BusTrackingScreenState
   | GoBackToSearchLocationScreen ST.BusTrackingScreenState
+  | GoToBusTicketBookingScreen ST.BusTrackingScreenState
+  | GoBackToMetroMyTicketsScreen ST.BusTrackingScreenState
 
 data Action
   = AfterRender
@@ -162,7 +165,11 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = exit $ GoToSearchLocation state
 
-eval BackPressed state = exit $ GoBackToSearchLocationScreen state
+eval BackPressed state =
+    case state.props.fromScreen of
+      "bus_ticket_booking_screen" -> exit $ GoToBusTicketBookingScreen state
+      "metro_my_tickets_screen" -> exit $ GoBackToMetroMyTicketsScreen state
+      _ -> exit $ GoBackToSearchLocationScreen state
 
 eval ViewTicket state = exit $ GoToViewTicket state
 
@@ -310,13 +317,16 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
             , nextStopSequence: nextStopSequenceNum
             , nearestWaypointConfig: nearestWaypointConfig
             , etaDistance: if nextStopSequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
-            , eta: Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop item.vehicleId) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
+            , eta: filterETAForOlderLatLong vehicleInfoForRoute.timestamp $ Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop item.vehicleId) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
             , delta : lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta) -- spy "codex-delta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.delta)
             } ]
-    
+     
     -- calLastReachedDelta (API.UpcomingStop upcomingStop) =
     --   let (API.Stop stop) = upcomingStop.stop
     --   in stop.stopIdx
+    filterETAForOlderLatLong timeStamp eta' = 
+      let timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") $ timeStamp
+      in if (timeDiff < 120) then eta' else Mb.Nothing
 
     calculateETAFromUpcomingStop lastReachedStop (API.UpcomingStop stop) vehicleId = 
       let etaTimeStamp = stop.eta
@@ -414,11 +424,10 @@ drawDriverRoute resp state = do
         $ case response of
             Right (API.FRFSRouteAPI routeResp) -> Mb.fromMaybe [] routeResp.waypoints
             Left err -> []
-
     destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) resp
   filteredRoute <- case destinationStation, DS.null state.data.bookingId of
     Mb.Just (API.FRFSStationAPI dest), false -> do
-      locationResp <- EHC.liftFlow $ JB.isCoordOnPath route (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+      locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
       pure $ if locationResp.isInPath then { points: locationResp.points } else route
     _, _ -> pure route
   push <- EHC.liftFlow $ getPushFn Mb.Nothing "BusTrackingScreen"
@@ -438,7 +447,8 @@ drawDriverRoute resp state = do
       markerId = item.code
       pointertype = getStopType item.code index state
       size = getStopMarkerSize pointertype state.data.rideType index
-    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size } lat lon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      markerZIndex = getZIndex pointertype
+    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size, zIndex = markerZIndex } lat lon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
     when (DA.elem pointertype [SOURCE_STOP, DESTINATION_STOP] && (state.data.rideType == Mb.Just ST.STOP || index /= 0)) $ EHC.liftFlow $ runEffectFn1 
       EHR.upsertMarkerLabel 
         { id: item.code <> "label"

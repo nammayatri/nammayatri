@@ -129,6 +129,13 @@ getStopMarkerSize stopType rideType stopIndex =
     ROUTE_END, _ -> 120
     _, _ -> 50
 
+getZIndex :: StopType -> Number
+getZIndex stopType = do
+  case stopType of
+    SOURCE_STOP      -> 1.0
+    DESTINATION_STOP -> 1.0
+    _                -> 0.0
+
 getStopType :: String -> Int -> BusTrackingScreenState-> StopType 
 getStopType code index state = do
   let srcCode = maybe (state.data.nearestStopFromCurrentLoc <#> (\(API.FRFSStationAPI nearestStop) -> nearestStop.code)) (\item -> Just $ item.stationCode) state.data.sourceStation

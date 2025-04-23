@@ -87,7 +87,7 @@ busTicketBookingScreen initialState =
         let pollingId = EHC.getCurrentUTC ""
             _ = runFn2 setInCache "POLLING_ID" pollingId
             wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
-        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig 0 initialState push wmbFlowConfig.defaultRadiusForFindingBus false 
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig initialState push wmbFlowConfig.defaultRadiusForFindingBus false 
       pure $ pure unit
   )]
   , eval:
@@ -103,40 +103,47 @@ busTicketBookingScreen initialState =
         lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
       else pure unit
 
-    getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus = do
-      -- Removed recursive Auto Zoom for now, looking bad from UI perspective
-      -- when (gotClosestBus) $ EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ radius * wmbFlowConfig.radiusMultiplier) "ZOOM"
+    getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus = do
       let busLocationTrackingPollingId = runFn3 getFromCache "POLLING_ID" Nothing Just
-      if (busLocationTrackingPollingId == Just pollingId) then do
-        eitherRespOrError <- Remote.postNearbyDrivers $ 
-          API.NearbyDriverReq 
-            { location: API.LatLong 
-                { lat: state.props.srcLat
-                , lon: state.props.srcLong
-                }
-            , vehicleVariants: Just ["BUS_AC", "BUS_NON_AC"]
-            , radius: radius
-            }
-        case eitherRespOrError of
-          Right (API.NearbyDriverRes resp) -> do
-            if (DA.null resp.buckets && radius < wmbFlowConfig.maxRadiusCanBeSearched) then do
+          isMapReady = (runFn3 getFromCache "MAP_READY" Nothing Just) == Just "true"
+      case (busLocationTrackingPollingId == Just pollingId), isMapReady of
+        true, false -> do
+          void $ delay $ Milliseconds 1000.0 -- Delay for 1 second in the case when polling is started but map is not yet ready
+          getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus
+        true, _ -> do
+          eitherRespOrError <- Remote.postNearbyDrivers $ 
+            API.NearbyDriverReq 
+              { location: API.LatLong 
+                  { lat: state.props.srcLat
+                  , lon: state.props.srcLong
+                  }
+              , vehicleVariants: Just ["BUS_AC", "BUS_NON_AC"]
+              , radius: radius
+              }
+          case eitherRespOrError of
+            Right (API.NearbyDriverRes resp) -> do
+              if (DA.null resp.buckets && radius < wmbFlowConfig.maxRadiusCanBeSearched) then do
+                void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+                getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push (DI.toNumber $ DI.floor $ radius * wmbFlowConfig.radiusMultiplier) gotClosestBus
+              else do
+                if gotClosestBus
+                  then do
+                    doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
+                    void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+                    getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus
+                  else do
+                    doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
+                    let closestBusBeforeMultiplier = fromMaybe wmbFlowConfig.minimumRadiusForFindingBus $ minimum $ map (\(API.NearByDriversBucket item) -> getClosestDistance item.driverInfo (API.LatLong {lat: state.props.srcLat, lon: state.props.srcLong})) resp.buckets
+                        closestBusDistance = closestBusBeforeMultiplier * wmbFlowConfig.radiusMultiplier
+                    doAff do liftEffect $ push $ UpdateClosestBusZoomLevel closestBusDistance
+                    EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel closestBusDistance) "ZOOM"
+                    if (wmbFlowConfig.updatePollingRadiusToClosestBus)
+                      then getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push (DI.toNumber $ DI.floor $ closestBusDistance) true
+                      else getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius true
+            Left err -> do
               void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
-              getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push (DI.toNumber $ DI.floor $ radius * wmbFlowConfig.radiusMultiplier) gotClosestBus
-            else do
-              if gotClosestBus
-                then do
-                  doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
-                  void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
-                  getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus
-                else do
-                  doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
-                  let closestBusFromCurrentLoc = fromMaybe wmbFlowConfig.minimumRadiusForFindingBus $ minimum $ map (\(API.NearByDriversBucket item) -> getClosestDistance item.driverInfo (API.LatLong {lat: state.props.srcLat, lon: state.props.srcLong})) resp.buckets
-                  EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ closestBusFromCurrentLoc * wmbFlowConfig.radiusMultiplier) "ZOOM"
-                  getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push (DI.toNumber $ DI.floor $ closestBusFromCurrentLoc * wmbFlowConfig.radiusMultiplier) true
-          Left err -> do
-            void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
-            getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus
-      else pure unit
+              getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus
+        _, _ -> pure unit
     
     getClosestDistance driverInfo currLoc =
       fromMaybe 1000.0 $ minimum $ map 
@@ -622,6 +629,7 @@ mapView' push state =
             , onAnimationEnd
                 ( \action -> do
                     let wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
+                        _ = runFn2 setInCache "MAP_READY" "true"
                     void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" wmbFlowConfig.defaultZoomLevelOnMap state.props.srcLat state.props.srcLong push MapReady
                     push action
                 )
@@ -694,6 +702,7 @@ recenterButtonView push state =
                 ( \action -> do
                     _ <- push action
                     _ <- JB.getCurrentPosition push UpdateCurrentLocation
+                    void $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel state.data.closestBusDistance) "ZOOM"
                     -- _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
                     pure unit
                 )

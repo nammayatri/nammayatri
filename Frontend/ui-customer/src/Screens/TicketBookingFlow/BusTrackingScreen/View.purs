@@ -169,7 +169,7 @@ view push state =
             ]
         ]
   where
-    bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height - 86]
+    bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height -100 ]
 
 journeyLegTitleView :: forall w. Boolean -> String -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
 journeyLegTitleView isSource name state =
@@ -236,7 +236,7 @@ verticalLineView push idTag showOnlyBullet vehicles =
     linearLayout 
       [height MATCH_PARENT
       , width MATCH_PARENT
-      , visibility $ boolToVisibility $ showPreBookingTracking "BUS"
+      -- , visibility $ boolToVisibility $ showPreBookingTracking "BUS"
       ]
       [ imageView
         [ width MATCH_PARENT

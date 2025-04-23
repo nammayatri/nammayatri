@@ -36,6 +36,7 @@ import Data.Maybe (Maybe(..))
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import Screens(ScreenName(..), getScreen)
 
 initData :: ST.BusTrackingScreenState
 initData =
@@ -77,6 +78,7 @@ initData =
         , currentLon : 0.0
         , minimumEtaDistance : Nothing
         , isMinimumEtaDistanceAvailable : Nothing
+        , fromScreen : getScreen BUS_ROUTE_STOPS_SEARCH_SCREEN
         }
     }
 
