@@ -142,7 +142,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
           applicableServiceTierTypes = Map.findWithDefault [] driverLoc.vehicleType vvToSttMapping,
           distance = distanceInMeters,
           driverId = driverLoc.driverId.getId,
-          bearing = driverLoc.bear,
+          bearing = round <$> driverLoc.bear,
           rideDetails = (\rideDetails -> ND.RideDetails {rideId = rideDetails.rideId, rideInfo = buildRideInfo <$> rideDetails.rideInfo}) <$> driverLoc.rideDetails
         }
 

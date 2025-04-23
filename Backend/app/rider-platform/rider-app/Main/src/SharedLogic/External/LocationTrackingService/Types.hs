@@ -108,7 +108,7 @@ data NearByDriverRes = NearByDriverRes
     coordinatesCalculatedAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    bear :: Maybe Int,
+    bear :: Maybe Double,
     vehicleType :: VV.VehicleVariant,
     rideDetails :: Maybe RideDetails
   }
