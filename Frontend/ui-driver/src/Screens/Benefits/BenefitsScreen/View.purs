@@ -1015,10 +1015,9 @@ checkTokenAndInitSDK push action = do
       isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (HU.getCurrentUTC "")) > 0
   if isTokenValid && not (DS.null cachedToken) then do
     void $ pure $ setValueToLocalStore DONT_CALL_REFRESH "true"
-    void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = cachedToken, param2 = "false"}) push action
+    void $ liftFlow $ JB.startGActivity cachedToken
     pure unit
   else do
-    void $ EHU.loaderText (getString LT.LOADING) (getString LT.PLEASE_WAIT_WHILE_IN_PROGRESS)
     response <- HelperAPI.callApi $ API.GetSdkTokenReq "0" API.Gullak
     case response of
       Left _ -> do
@@ -1027,6 +1026,6 @@ checkTokenAndInitSDK push action = do
       Right (API.GetSdkTokenResp resp) -> do
         void $ pure $ setValueToLocalStore GULLAK_TOKEN $ resp.token <> "<$>" <> fromMaybe "" resp.expiry
         void $ pure $ setValueToLocalStore DONT_CALL_REFRESH "true"
-        void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = resp.token, param2 = "false"}) push action
+        void $ liftFlow $ JB.startGActivity resp.token
         pure unit
   pure unit

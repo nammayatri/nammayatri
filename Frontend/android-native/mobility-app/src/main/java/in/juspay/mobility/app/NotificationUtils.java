@@ -808,8 +808,9 @@ public class NotificationUtils {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         boolean useSilentFCMForForwardBatch = fetchUseSilentFCMForForwardBatch(entity_payload);
         sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.NEW_RIDE_AVAILABLE)).apply();
+        boolean isAppOnAnotherActivity = sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true");
         boolean activityBasedChecks = Arrays.asList("onPause", "onDestroy").contains(sharedPref.getString("ACTIVITY_STATUS", "null"));
-        boolean useWidgetService = (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch;
+        boolean useWidgetService = !isAppOnAnotherActivity && ((sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch);
         boolean widgetCheckForNonOverlay = useWidgetService && !NotificationUtils.overlayFeatureNotAvailable(context);
          boolean reqPresentCheckForWidget = binder == null && widgetCheckForNonOverlay;
          if (reqPresentCheckForWidget) {
