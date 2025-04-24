@@ -155,5 +155,5 @@ checkFleetOwnerVerification personId = do
   fleetOwnerInfo <-
     QFI.findByPrimaryKey (Id personId)
       >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
-  unless fleetOwnerInfo.verified $
-    throwError (InvalidRequest "Fleet owner is not verified")
+  unless (fleetOwnerInfo.verified && fleetOwnerInfo.enabled) $
+    throwError (InvalidRequest "Fleet owner is not verified or is not enabled")

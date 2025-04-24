@@ -1,18 +1,27 @@
 module Domain.Action.Dashboard.Management.Account
   ( getAccountFetchUnverifiedAccounts,
     postAccountVerifyAccount,
+    putAccountUpdateRole,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Management.Account as Common
+import qualified Dashboard.Common
+import Domain.Action.Dashboard.Fleet.Registration (createFleetOwnerInfo)
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person as DP
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Error (GenericError (InternalError), PersonError (PersonDoesNotExist))
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM, throwError)
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import Storage.Queries.Person ()
+import qualified Storage.Queries.Person as QP
+import Storage.Queries.PersonExtra (updatePersonRole)
 
 -- This function will not be called.
 getAccountFetchUnverifiedAccounts ::
@@ -39,3 +48,24 @@ postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} =
         _ -> False
   QFOI.updateFleetOwnerEnabledStatus enabled $ Kernel.Types.Id.cast fleetOwnerId
   pure Kernel.Types.APISuccess.Success
+
+putAccountUpdateRole ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Dashboard.Common.Person ->
+  Common.DashboardAccessType ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
+  let personId = Kernel.Types.Id.cast personId'
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
+  when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo)
+    . createFleetOwnerInfo personId person.merchantId
+    $ Just False
+  updatePersonRole personId =<< castRole accessType
+  pure Kernel.Types.APISuccess.Success
+  where
+    castRole role = case role of
+      Common.FLEET_OWNER -> pure DP.FLEET_OWNER
+      Common.DASHBOARD_OPERATOR -> pure DP.OPERATOR
+      _ -> throwError . InternalError $ "This role will not be able to set: " <> show role

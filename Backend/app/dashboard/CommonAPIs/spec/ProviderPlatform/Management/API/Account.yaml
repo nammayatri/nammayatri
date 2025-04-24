@@ -25,6 +25,23 @@ apis:
         type: VerifyAccountReq
       response:
         type: APISuccess
+  - PUT:
+      endpoint: /updateRole/{personId}/{roleId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+        roleId: Id Role
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /updateRole/{personId}/{accessType}
+            auth: ApiAuthV2
+            params:
+              personId: Id Person
+              accessType: DashboardAccessType
+            response:
+              type: APISuccess
 
 
 types:
@@ -53,6 +70,7 @@ types:
     - rejectedAt: Maybe UTCTime
   DashboardAccessType:
     - enum: DASHBOARD_USER, DASHBOARD_ADMIN, FLEET_OWNER, DASHBOARD_RELEASE_ADMIN, MERCHANT_ADMIN, RENTAL_FLEET_OWNER, MERCHANT_MAKER, MERCHANT_SERVER, DASHBOARD_OPERATOR, TICKET_DASHBOARD_USER, TICKET_DASHBOARD_MERCHANT, TICKET_DASHBOARD_ADMIN, TICKET_DASHBOARD_APPROVER
+    - derive: "HttpInstance"
   RoleAPIEntity:
     - id: Id Role
     - name: Text

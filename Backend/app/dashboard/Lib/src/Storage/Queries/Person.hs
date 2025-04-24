@@ -264,11 +264,12 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
           merchantIds = merchantAccessList <&> MerchantAccess.merchantShortId
        in (person, role, merchantIds, cities)
 
-updatePersonRole :: BeamFlow m r => Id Person -> Id Role -> m ()
-updatePersonRole personId roleId = do
+updatePersonRole :: BeamFlow m r => Id Person -> Role -> m ()
+updatePersonRole personId role = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamP.roleId $ getId roleId,
+    [ Se.Set BeamP.roleId $ getId role.id,
+      Se.Set BeamP.dashboardAccessType $ Just role.dashboardAccessType,
       Se.Set BeamP.updatedAt now
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId

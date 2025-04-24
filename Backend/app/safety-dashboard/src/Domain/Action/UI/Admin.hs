@@ -123,7 +123,7 @@ postMerchantUserAssignRole tokenInfo req = do
     Just _ -> do
       when (person.id == tokenInfo.personId) $ throwError $ InvalidRequest "Can't change your own role."
       role <- QRole.findByName req.roleName >>= fromMaybeM (RoleDoesNotExist req.roleName)
-      QP.updatePersonRole person.id role.id
+      QP.updatePersonRole person.id role
       return Kernel.Types.APISuccess.Success
 
 deleteMerchantUserDelete :: TokenInfo -> API.Types.UI.Admin.DeleteMerchantUserReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess

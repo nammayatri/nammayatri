@@ -1,11 +1,13 @@
 module Domain.Action.ProviderPlatform.Management.Account
   ( getAccountFetchUnverifiedAccounts,
     postAccountVerifyAccount,
+    putAccountUpdateRole,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Account as Common
+import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Person.Type as DP
 import qualified Domain.Types.Role as DRole
@@ -26,6 +28,7 @@ import "lib-dashboard" Storage.Queries.Person
     softDeletePerson,
     updatePersonVerifiedStatus,
   )
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
@@ -115,3 +118,35 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       opCity
       (.accountDSL.postAccountVerifyAccount)
       req
+
+putAccountUpdateRole ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Kernel.Types.Id.Id Dashboard.Common.Person ->
+  Kernel.Types.Id.Id Dashboard.Common.Role ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
+  let personId = Kernel.Types.Id.cast personId'
+      roleId = Kernel.Types.Id.cast roleId'
+  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  QP.updatePersonRole personId role
+  let mbAccessType =
+        case role.dashboardAccessType of
+          r | r `elem` [DRole.RENTAL_FLEET_OWNER, DRole.FLEET_OWNER] -> Just Common.FLEET_OWNER
+          DRole.DASHBOARD_OPERATOR -> Just Common.DASHBOARD_OPERATOR
+          _ -> Nothing
+  whenJust mbAccessType \accessType -> do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+    _ <-
+      SharedLogic.Transaction.withTransactionStoring transaction $
+        API.Client.ProviderPlatform.Management.callManagementAPI
+          checkedMerchantId
+          opCity
+          (.accountDSL.putAccountUpdateRole)
+          personId'
+          accessType
+    pure ()
+  pure Kernel.Types.APISuccess.Success

@@ -33,7 +33,7 @@ data DashboardAccessType
   | TICKET_DASHBOARD_ADMIN
   | TICKET_DASHBOARD_APPROVER
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data FleetOwnerStatus
   = Approved
@@ -71,7 +71,7 @@ data VerifyAccountReq = VerifyAccountReq {status :: FleetOwnerStatus, reason :: 
 instance Kernel.Types.HideSecrets.HideSecrets VerifyAccountReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("account" :> (GetAccountFetchUnverifiedAccounts :<|> PostAccountVerifyAccount))
+type API = ("account" :> (GetAccountFetchUnverifiedAccounts :<|> PostAccountVerifyAccount :<|> PutAccountUpdateRoleHelper))
 
 type GetAccountFetchUnverifiedAccounts =
   ( "fetchUnverifiedAccounts" :> QueryParam "fromDate" Kernel.Prelude.UTCTime :> QueryParam "toDate" Kernel.Prelude.UTCTime
@@ -90,21 +90,39 @@ type GetAccountFetchUnverifiedAccounts =
 
 type PostAccountVerifyAccount = ("verifyAccount" :> ReqBody '[JSON] VerifyAccountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PutAccountUpdateRole =
+  ( "updateRole" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Capture "roleId" (Kernel.Types.Id.Id Dashboard.Common.Role)
+      :> Put
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PutAccountUpdateRoleHelper =
+  ( "updateRole" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Capture "accessType" DashboardAccessType
+      :> Put
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data AccountAPIs = AccountAPIs
   { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [PersonAPIEntity],
-    postAccountVerifyAccount :: VerifyAccountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postAccountVerifyAccount :: VerifyAccountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    putAccountUpdateRole :: Kernel.Types.Id.Id Dashboard.Common.Person -> DashboardAccessType -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkAccountAPIs :: (Client EulerHS.Types.EulerClient API -> AccountAPIs)
 mkAccountAPIs accountClient = (AccountAPIs {..})
   where
-    getAccountFetchUnverifiedAccounts :<|> postAccountVerifyAccount = accountClient
+    getAccountFetchUnverifiedAccounts :<|> postAccountVerifyAccount :<|> putAccountUpdateRole = accountClient
 
 data AccountUserActionType
   = GET_ACCOUNT_FETCH_UNVERIFIED_ACCOUNTS
   | POST_ACCOUNT_VERIFY_ACCOUNT
+  | PUT_ACCOUNT_UPDATE_ROLE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''DashboardAccessType)
 
 $(mkHttpInstancesForEnum ''FleetOwnerStatus)
 
