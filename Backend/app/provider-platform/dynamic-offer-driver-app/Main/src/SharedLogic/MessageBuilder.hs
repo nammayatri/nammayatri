@@ -33,12 +33,18 @@ module SharedLogic.MessageBuilder
     addBroadcastMessageToKafka,
     BuildFleetJoiningMessageReq (..),
     buildFleetJoiningMessage,
+    BuildOperatorJoinAndDownloadAppMessageReq (..),
+    buildOperatorJoinAndDownloadAppMessage,
+    BuildOperatorJoiningMessageReq (..),
+    buildOperatorJoiningMessage,
     BuildDownloadAppMessageReq (..),
     buildFleetJoinAndDownloadAppMessage,
     BuildFleetDeepLinkAuthMessage (..),
     buildFleetDeepLinkAuthMessage,
     BuildSendReceiptMessageReq (..),
     buildSendReceiptMessage,
+    BuildOperatorDeepLinkAuthMessage (..),
+    buildOperatorDeepLinkAuthMessage,
   )
 where
 
@@ -263,6 +269,23 @@ buildFleetJoiningMessage merchantOperatingCityId req = do
 
   pure (merchantMessage.senderHeader, msg)
 
+data BuildOperatorJoiningMessageReq = BuildOperatorJoiningMessageReq
+  { operatorName :: Text,
+    otp :: Text
+  }
+
+buildOperatorJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorJoiningMessageReq -> m (Maybe Text, Text)
+buildOperatorJoiningMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.OPERATOR_JOINING_MESSAGE Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.OPERATOR_JOINING_MESSAGE))
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "operatorName") req.operatorName
+          & T.replace (templateText "otp") req.otp
+
+  pure (merchantMessage.senderHeader, msg)
+
 newtype BuildDownloadAppMessageReq = BuildDownloadAppMessageReq
   { fleetOwnerName :: Text
   }
@@ -278,6 +301,21 @@ buildFleetJoinAndDownloadAppMessage merchantOperatingCityId req = do
 
   pure (merchantMessage.senderHeader, msg)
 
+newtype BuildOperatorJoinAndDownloadAppMessageReq = BuildOperatorJoinAndDownloadAppMessageReq
+  { operatorName :: Text
+  }
+
+buildOperatorJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorJoinAndDownloadAppMessageReq -> m (Maybe Text, Text)
+buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE))
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "operatorName") req.operatorName
+
+  pure (merchantMessage.senderHeader, msg)
+
 newtype BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
   { fleetOwnerName :: Text
   }
@@ -288,4 +326,16 @@ buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
   let dynamicMsg =
         staticMsg
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+  pure (senderHeader, dynamicMsg)
+
+newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage
+  { operatorName :: Text
+  }
+
+buildOperatorDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorDeepLinkAuthMessage -> m (Maybe Text, Text)
+buildOperatorDeepLinkAuthMessage merchantOperatingCityId req = do
+  (senderHeader, staticMsg) <- buildGenericMessage merchantOperatingCityId DMM.OPERATOR_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
+  let dynamicMsg =
+        staticMsg
+          & T.replace (templateText "operatorName") req.operatorName
   pure (senderHeader, dynamicMsg)

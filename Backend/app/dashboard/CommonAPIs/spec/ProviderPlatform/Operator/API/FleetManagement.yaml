@@ -65,6 +65,41 @@ apis:
               type: FleetOwnerRegisterReq
             response:
               type: APISuccess
+  - POST:
+      endpoint: fleet/{fleetOwnerId}/link
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: fleet/{fleetOwnerId}/link
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+
+  - POST:
+      endpoint: fleet/{fleetOwnerId}/unlink
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: fleet/{fleetOwnerId}/unlink
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
 
 types:
   FleetInfoRes:

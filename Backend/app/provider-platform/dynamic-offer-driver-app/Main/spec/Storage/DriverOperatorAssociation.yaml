@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
 
 DriverOperatorAssociation:
   tableName: driver_operator_association
@@ -13,6 +14,7 @@ DriverOperatorAssociation:
     driverId: Id Person
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
+    onboardingVehicleCategory: Maybe VehicleCategory
 
   constraints:
     id: PrimaryKey
@@ -24,12 +26,11 @@ DriverOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [driverId, isActive]
-    findByDriverIdAndOperatorId:
-      kvFunction: findOneWithKV
-      where:
-        and: [driverId, operatorId, isActive]
 
   sqlType:
     id: text
     operatorId: text
     driverId: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

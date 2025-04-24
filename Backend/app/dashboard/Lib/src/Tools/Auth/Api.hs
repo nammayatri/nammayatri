@@ -19,6 +19,7 @@ import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Role as DRole
 import Domain.Types.ServerName as Reexport (ServerName (..))
 import qualified Domain.Types.ServerName as DSN
 import Kernel.Prelude
@@ -54,7 +55,8 @@ data ApiTokenInfo = ApiTokenInfo
   { personId :: Id DP.Person,
     merchant :: DM.Merchant,
     city :: City.City,
-    userActionType :: DMatrix.UserActionType
+    userActionType :: DMatrix.UserActionType,
+    dashboardAccessType :: Maybe DRole.DashboardAccessType
   }
 
 instance VerificationMethod VerifyApi where
@@ -78,7 +80,7 @@ verifyApi ::
   m ApiTokenInfo
 verifyApi requiredAccessLevel token = do
   (personId, merchantId, city) <- Common.verifyPerson token
-  verifiedPersonId <- verifyAccessLevel requiredAccessLevel personId
+  (verifiedPersonId, dashboardAccessType) <- verifyAccessLevel requiredAccessLevel personId
   verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
   _ <- verifyCity verifiedMerchant city
   pure
@@ -86,7 +88,8 @@ verifyApi requiredAccessLevel token = do
       { personId = verifiedPersonId,
         merchant = verifiedMerchant,
         city = city,
-        userActionType = requiredAccessLevel.userActionType
+        userActionType = requiredAccessLevel.userActionType,
+        dashboardAccessType
       }
 
 instance
@@ -101,14 +104,14 @@ instance
         userActionType = fromSing (sing @uat)
       }
 
-verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person, Maybe DRole.DashboardAccessType)
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType) $
     throwError AccessDenied
-  pure person.id
+  pure (person.id, person.dashboardAccessType)
 
 checkUserAccess :: DMatrix.UserAccessType -> Bool
 checkUserAccess DMatrix.USER_FULL_ACCESS = True

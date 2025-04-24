@@ -21,7 +21,6 @@ import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.DailyStats as DDS
-import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -36,6 +35,7 @@ import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -128,7 +128,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           if hasNoAssociation
             then do
               DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-              driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+              driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
               void $ QDOA.create driverOperatorAssData
               incrementOnboardedCount DriverReferral dr.driverId transporterConfig
               return Success
@@ -140,24 +140,6 @@ getReferredDrivers (personId, _, _) = do
   di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
   let totalRef = fromMaybe 0 di.totalReferred
   pure $ GetReferredDriverRes {value = totalRef}
-
-makeDriverOperatorAssociation :: (MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
-makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    DriverOperatorAssociation
-      { id = id,
-        operatorId = operatorId,
-        isActive = True,
-        driverId = driverId,
-        associatedOn = Just now,
-        associatedTill = end,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
 
 checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m Bool
 checkDriverHasNoAssociation driverId = do
