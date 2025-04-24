@@ -1198,6 +1198,29 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
           ]
 
 {- Run this to trigger realtime GRPC notifications -}
+notifyFleetWithGRPCProvider ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ToJSON a
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Text ->
+  Text ->
+  Id Person ->
+  a ->
+  m ()
+notifyFleetWithGRPCProvider merchantOpCityId category title body driverId entityData = do
+  clientId <-
+    QFDA.findByDriverId driverId True
+      >>= \case
+        Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
+        Nothing -> pure driverId
+  notifyWithGRPCProvider merchantOpCityId category title body clientId entityData
+
+{- Run this to trigger realtime GRPC notifications -}
 notifyWithGRPCProvider ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -1212,22 +1235,17 @@ notifyWithGRPCProvider ::
   Id Person ->
   a ->
   m ()
-notifyWithGRPCProvider merchantOpCityId category title body driverId entityData = do
+notifyWithGRPCProvider merchantOpCityId category title body clientId entityData = do
   merchantNotificationServiceConfig <-
     QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
       notificationId <- generateGUID
-      clientId <-
-        QFDA.findByDriverId driverId True
-          >>= \case
-            Just fleetDriverAssociation -> pure fleetDriverAssociation.fleetOwnerId
-            Nothing -> pure driverId.getId
-      GRPC.notifyPerson cfg (notificationData clientId) notificationId
+      GRPC.notifyPerson cfg notificationData notificationId
     _ -> throwError $ InternalError "Unknow Service Config"
   where
-    notificationData clientId =
+    notificationData =
       Notification.NotificationReq
         { category = category,
           subCategory = Nothing,
@@ -1237,7 +1255,7 @@ notifyWithGRPCProvider merchantOpCityId category title body driverId entityData 
           dynamicParams = EmptyDynamicParam,
           body = body,
           title = title,
-          auth = Notification.Auth clientId Nothing Nothing,
+          auth = Notification.Auth clientId.getId Nothing Nothing,
           ttl = Nothing,
           sound = Nothing
         }

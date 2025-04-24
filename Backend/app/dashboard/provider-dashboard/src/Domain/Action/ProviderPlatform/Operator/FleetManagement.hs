@@ -2,6 +2,8 @@ module Domain.Action.ProviderPlatform.Operator.FleetManagement
   ( getFleetManagementFleets,
     postFleetManagementFleetRegister,
     postFleetManagementFleetCreate,
+    postFleetManagementFleetLink,
+    postFleetManagementFleetUnlink,
   )
 where
 
@@ -72,3 +74,17 @@ buildFleetOwnerRegisterReq merchantShortId opCity API.Types.ProviderPlatform.Ope
       email = Nothing,
       ..
     }
+
+postFleetManagementFleetLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFleetManagementFleetLink merchantShortId opCity apiTokenInfo fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $
+    Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLink) fleetOwnerId apiTokenInfo.personId.getId
+
+postFleetManagementFleetUnlink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFleetManagementFleetUnlink merchantShortId opCity apiTokenInfo fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ do
+    Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetUnlink) fleetOwnerId apiTokenInfo.personId.getId

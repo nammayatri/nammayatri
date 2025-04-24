@@ -2,6 +2,10 @@ imports:
   Summary: Dashboard.Common
   Driver: Dashboard.Common
   StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  OperationHub: Dashboard.Common
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
 
 module: Driver
 
@@ -66,6 +70,47 @@ apis:
             response:
               type: DriverInfoResp
 
+  # following apis currently used only for Driver Cum Owner case
+  - POST: # SendFleetJoiningOtpAPI
+      endpoint: /operator/sendJoiningOtp
+      auth: ApiAuthV2
+      request:
+        type: AuthReq
+      response:
+        type: AuthRes
+      helperApi:
+        - POST:
+            endpoint: /operator/sendJoiningOtp
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: AuthReq
+            response:
+              type: AuthRes
+
+  - POST: # VerifyFleetJoiningOtpAPI
+      endpoint: /operator/verifyJoiningOtp
+      auth: ApiAuthV2
+      query:
+        - authId: Text
+      request:
+        type: VerifyOperatorJoiningOtpReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /operator/verifyJoiningOtp
+            auth: ApiAuthV2
+            query:
+              - authId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: VerifyOperatorJoiningOtpReq
+            response:
+              type: APISuccess
+
 types:
   DriverInfoResp:
     - listItem: [DriverInfo]
@@ -107,7 +152,7 @@ types:
     requestTime: UTCTime
   RespondHubRequest:
     status: RequestStatus
-    registrationNo: Text
+    registrationNo: Text # FIXME hide secrets
     operationHubRequestId: Text
     operatorId: Text
     remarks: Text
@@ -122,3 +167,13 @@ types:
     - mobileNumber: Text
     - vehicle: Maybe Text
     - documents: StatusRes
+  VerifyOperatorJoiningOtpReq:
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - otp: Text
+    - deviceToken: Maybe FCMRecipientToken
+    - derive: "'HideSecrets"
+  CreateDriversReq:
+    - file: FilePath
+    - recordType: NewType
+    - derive: "'HideSecrets"

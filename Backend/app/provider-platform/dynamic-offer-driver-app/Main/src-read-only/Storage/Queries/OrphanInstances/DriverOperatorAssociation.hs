@@ -1,27 +1,28 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OrphanInstances.FleetOperatorAssociation where
+module Storage.Queries.OrphanInstances.DriverOperatorAssociation where
 
-import qualified Domain.Types.FleetOperatorAssociation
+import qualified Domain.Types.DriverOperatorAssociation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.Beam.FleetOperatorAssociation as Beam
+import qualified Storage.Beam.DriverOperatorAssociation as Beam
 
-instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
-  fromTType' (Beam.FleetOperatorAssociationT {..}) = do
+instance FromTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation where
+  fromTType' (Beam.DriverOperatorAssociationT {..}) = do
     pure $
       Just
-        Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation
+        Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation
           { associatedOn = associatedOn,
             associatedTill = associatedTill,
-            fleetOwnerId = fleetOwnerId,
+            driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
+            onboardingVehicleCategory = onboardingVehicleCategory,
             operatorId = operatorId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -29,14 +30,15 @@ instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAsso
             updatedAt = updatedAt
           }
 
-instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
-  toTType' (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation {..}) = do
-    Beam.FleetOperatorAssociationT
+instance ToTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation where
+  toTType' (Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation {..}) = do
+    Beam.DriverOperatorAssociationT
       { Beam.associatedOn = associatedOn,
         Beam.associatedTill = associatedTill,
-        Beam.fleetOwnerId = fleetOwnerId,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
+        Beam.onboardingVehicleCategory = onboardingVehicleCategory,
         Beam.operatorId = operatorId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

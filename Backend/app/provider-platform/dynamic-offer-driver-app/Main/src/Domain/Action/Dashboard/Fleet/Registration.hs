@@ -16,7 +16,6 @@ module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
-import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
@@ -25,7 +24,6 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import Domain.Types.FleetOperatorAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -44,6 +42,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -124,7 +123,7 @@ fleetOwnerRegister mbRequestorId req = do
   whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
     fleetAssocs <- QFOA.findAllFleetAssociations req.personId.getId
     when (null fleetAssocs) $ do
-      fleetOperatorAssocData <- makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId (req.personId.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId (req.personId.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFOA.create fleetOperatorAssocData
       DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
   when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
@@ -152,24 +151,6 @@ getOperatorIdFromReferralCode (Just refCode) = do
   result <- isValidReferralForRole referralReq DP.OPERATOR
   case result of
     SuccessCode val -> return $ Just val
-
-makeFleetOperatorAssociation :: (MonadFlow m) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Maybe UTCTime -> m FleetOperatorAssociation
-makeFleetOperatorAssociation merchantId merchantOpCityId fleetOwnerId operatorId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    FleetOperatorAssociation
-      { id = id,
-        operatorId = operatorId,
-        isActive = True,
-        fleetOwnerId = fleetOwnerId,
-        associatedOn = Just now,
-        associatedTill = end,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
 
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Flow DP.Person
 createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled = do

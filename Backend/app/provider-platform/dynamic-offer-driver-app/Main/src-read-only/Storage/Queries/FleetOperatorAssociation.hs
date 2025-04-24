@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.FleetOperatorAssociation where
+module Storage.Queries.FleetOperatorAssociation (module Storage.Queries.FleetOperatorAssociation, module ReExport) where
 
 import qualified Domain.Types.FleetOperatorAssociation
 import Kernel.Beam.Functions
@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOperatorAssociation as Beam
+import Storage.Queries.FleetOperatorAssociationExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation -> m ())
 create = createWithKV
@@ -59,35 +60,3 @@ updateByPrimaryKey (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociati
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
-  fromTType' (Beam.FleetOperatorAssociationT {..}) = do
-    pure $
-      Just
-        Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation
-          { associatedOn = associatedOn,
-            associatedTill = associatedTill,
-            fleetOwnerId = fleetOwnerId,
-            id = Kernel.Types.Id.Id id,
-            isActive = isActive,
-            operatorId = operatorId,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
-  toTType' (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation {..}) = do
-    Beam.FleetOperatorAssociationT
-      { Beam.associatedOn = associatedOn,
-        Beam.associatedTill = associatedTill,
-        Beam.fleetOwnerId = fleetOwnerId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.isActive = isActive,
-        Beam.operatorId = operatorId,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

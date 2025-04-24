@@ -64,6 +64,7 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.mobileNumber mobileNumber,
       Se.Set Beam.name name,
       Se.Set Beam.onlinePayment onlinePayment,
+      Se.Set Beam.overwriteAssociation overwriteAssociation,
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.state state,
