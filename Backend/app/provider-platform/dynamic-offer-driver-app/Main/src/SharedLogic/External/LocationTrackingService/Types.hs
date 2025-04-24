@@ -53,7 +53,8 @@ data NearByReq = NearByReq
     onRide :: Maybe Bool,
     vehicleType :: Maybe [VehicleVariant],
     radius :: Int,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    groupId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -118,7 +119,8 @@ data BusRideInfo = BusRideInfo
     source :: LatLong,
     destination :: LatLong,
     routeLongName :: Maybe Text,
-    driverName :: Maybe Text
+    driverName :: Maybe Text,
+    groupId :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToSchema)
 
@@ -141,6 +143,7 @@ instance FromJSON RideInfo where
                   <*> busObj .: "destination"
                   <*> busObj .:? "routeLongName"
                   <*> busObj .:? "driverName"
+                  <*> busObj .:? "groupId"
             )
     )
       <|> ( Car
@@ -152,7 +155,7 @@ instance FromJSON RideInfo where
 
 instance ToJSON RideInfo where
   toJSON = \case
-    Bus (BusRideInfo routeCode busNumber source destination routeLongName driverName) ->
+    Bus (BusRideInfo routeCode busNumber source destination routeLongName driverName groupId) ->
       object
         [ "bus"
             .= object
@@ -161,7 +164,8 @@ instance ToJSON RideInfo where
                 "source" .= source,
                 "destination" .= destination,
                 "routeLongName" .= routeLongName,
-                "driverName" .= driverName
+                "driverName" .= driverName,
+                "groupId" .= groupId
               ]
         ]
     Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints) ->

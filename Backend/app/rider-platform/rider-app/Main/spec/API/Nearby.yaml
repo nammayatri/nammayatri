@@ -45,6 +45,7 @@ types:
     destination: LatLong
     routeLongName: Maybe Text
     driverName: Maybe Text
+    groupId : Maybe Text
 
   CarRideInfo:
     pickupLocation: LatLong
