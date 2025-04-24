@@ -11,6 +11,7 @@ import qualified Tools.Beam.UtilsTH
 data MerchantOnboardingStepConfig = MerchantOnboardingStepConfig
   { createdAt :: Kernel.Prelude.UTCTime,
     dependency :: [Kernel.Prelude.Text],
+    isAdminOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalRequired :: Kernel.Prelude.Bool,
     onboardingType :: Domain.Types.MerchantOnboarding.OnboardingType,
     stepDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

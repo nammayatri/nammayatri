@@ -133,12 +133,12 @@ merchantOnboardingReject merchantShortId opCity apiTokenInfo onboardingId _ _ re
   requestorRole <- getDashboardAccessType requestorId
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingReject) onboardingId (Just requestorId) (Just requestorRole) req
 
-merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.OnboardingStatus) -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
-merchantOnboadingListAll merchantShortId opCity apiTokenInfo _ _ status = do
+merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.OnboardingStatus) -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI])
+merchantOnboadingListAll merchantShortId opCity apiTokenInfo _ _ status onboardingType limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboadingListAll) (Just requestorId) (Just requestorRole) status
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboadingListAll) (Just requestorId) (Just requestorRole) status onboardingType limit offset
 
 merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> Environment.Flow [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep])
 merchantOnboardingStepList merchantShortId opCity apiTokenInfo onboardingId _ _ = do

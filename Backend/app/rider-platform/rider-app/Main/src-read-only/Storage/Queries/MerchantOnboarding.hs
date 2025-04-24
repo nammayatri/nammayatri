@@ -21,6 +21,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOnboarding.MerchantOnboarding] -> m ())
 createMany = traverse_ create
 
+findAllByOnboardingType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+findAllByOnboardingType limit offset onboardingType = do findAllWithOptionsKV [Se.Is Beam.onboardingType $ Se.Eq onboardingType] (Se.Desc Beam.createdAt) limit offset
+
 findAllByRequestorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
 findAllByRequestorId requestorId = do findAllWithKV [Se.Is Beam.requestorId $ Se.Eq requestorId]
 
@@ -52,8 +57,8 @@ updateOnboardingStatusAndRemarks status remarks id = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))
-findByPrimaryKey id requestorId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.requestorId $ Se.Eq requestorId]]
+  (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
 updateByPrimaryKey (Domain.Types.MerchantOnboarding.MerchantOnboarding {..}) = do
@@ -63,10 +68,11 @@ updateByPrimaryKey (Domain.Types.MerchantOnboarding.MerchantOnboarding {..}) = d
       Se.Set Beam.description description,
       Se.Set Beam.onboardingType onboardingType,
       Se.Set Beam.remarks remarks,
+      Se.Set Beam.requestorId requestorId,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.requestorId $ Se.Eq requestorId]]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.MerchantOnboarding Domain.Types.MerchantOnboarding.MerchantOnboarding where
   fromTType' (Beam.MerchantOnboardingT {..}) = do

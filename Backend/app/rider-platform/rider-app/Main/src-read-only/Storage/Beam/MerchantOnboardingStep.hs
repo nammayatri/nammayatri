@@ -13,17 +13,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantOnboardingStepT f = MerchantOnboardingStepT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    dependency :: (B.C f [Kernel.Prelude.Text]),
-    id :: (B.C f Kernel.Prelude.Text),
-    isApprovalRequired :: (B.C f Kernel.Prelude.Bool),
-    merchantOnboardingId :: (B.C f Kernel.Prelude.Text),
-    payload :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    remarks :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    status :: (B.C f Domain.Types.MerchantOnboardingStep.StepStatus),
-    stepDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    stepNameIdentifier :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    dependency :: B.C f [Kernel.Prelude.Text],
+    id :: B.C f Kernel.Prelude.Text,
+    isAdminOnly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isApprovalRequired :: B.C f Kernel.Prelude.Bool,
+    merchantOnboardingId :: B.C f Kernel.Prelude.Text,
+    payload :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    remarks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    status :: B.C f Domain.Types.MerchantOnboardingStep.StepStatus,
+    stepDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    stepNameIdentifier :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +34,6 @@ instance B.Table MerchantOnboardingStepT where
 
 type MerchantOnboardingStep = MerchantOnboardingStepT Identity
 
-$(enableKVPG (''MerchantOnboardingStepT) [('id)] [[('merchantOnboardingId)]])
+$(enableKVPG ''MerchantOnboardingStepT ['id] [['merchantOnboardingId]])
 
-$(mkTableInstances (''MerchantOnboardingStepT) "merchant_onboarding_step")
+$(mkTableInstances ''MerchantOnboardingStepT "merchant_onboarding_step")

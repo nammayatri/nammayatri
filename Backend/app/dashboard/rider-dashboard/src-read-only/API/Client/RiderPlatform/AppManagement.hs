@@ -15,7 +15,11 @@ import Servant
 import qualified "lib-dashboard" Tools.Auth.Merchant
 import qualified "lib-dashboard" Tools.Client
 
-data AppManagementAPIs = AppManagementAPIs {customerDSL :: API.Types.Dashboard.AppManagement.Customer.CustomerAPIs, merchantOnboardingDSL :: API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingAPIs, ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs}
+data AppManagementAPIs = AppManagementAPIs
+  { customerDSL :: API.Types.Dashboard.AppManagement.Customer.CustomerAPIs,
+    merchantOnboardingDSL :: API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingAPIs,
+    ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs
+  }
 
 mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> AppManagementAPIs)
 mkAppManagementAPIs merchantId city token = do

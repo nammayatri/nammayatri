@@ -142,8 +142,11 @@ apis:
         - requestorId: Text
         - requestorRole: RequestorRole
         - status: OnboardingStatus
+        - onboardingType: OnboardingType
+        - limit: Int
+        - offset: Int
       response:
-        type: "[MerchantOnboarding]"
+        type: "[MerchantOnboardingAPI]"
   - GET: #MerchantOnboardingStepList
       endpoint: /onboarding/{onboardingId}/step/list
       name: MerchantOnboardingStepList

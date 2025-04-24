@@ -32,9 +32,21 @@ instance Text.Read.Read AppManagementUserActionType where
       (d' > app_prec)
       ( \r ->
           [(CUSTOMER v1, r2) | r1 <- stripPrefix "CUSTOMER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
-            ++ [ (MERCHANT_ONBOARDING v1, r2) | r1 <- stripPrefix "MERCHANT_ONBOARDING/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+            ++ [ ( MERCHANT_ONBOARDING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "MERCHANT_ONBOARDING/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
                ]
-            ++ [(TICKETS v1, r2) | r1 <- stripPrefix "TICKETS/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( TICKETS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TICKETS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10

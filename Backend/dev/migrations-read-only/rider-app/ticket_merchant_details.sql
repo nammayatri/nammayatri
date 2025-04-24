@@ -26,3 +26,9 @@ ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN pan_hash bytea NOT NULL
 ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN state text NOT NULL;
 ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_merchant_details ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN is_bank_onboarded boolean ;

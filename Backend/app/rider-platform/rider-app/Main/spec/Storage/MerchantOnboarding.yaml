@@ -23,6 +23,7 @@ MerchantOnboardingStep:
     payload: Maybe Value
     status: StepStatus
     isApprovalRequired: Bool
+    isAdminOnly: Maybe Bool
     dependency: "[Id MerchantOnboardingStep]"
     remarks: Maybe Text
     createdAt: UTCTime
@@ -101,7 +102,13 @@ MerchantOnboarding:
 
   constraints:
     id: PrimaryKey
-    requestorId: PrimaryKey
+
+  extraIndexes:
+  - columns: [requestorId, onboardingType]
+    unique: true
+
+  extraOperations:
+   - GENERATE_INDEXES
 
   excludedFields: [merchantOperatingCityId, merchantId]
 
@@ -112,6 +119,9 @@ MerchantOnboarding:
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
+    findAllByOnboardingType:
+      kvFunction: findAllWithOptionsKV
+      where: onboardingType
     findByRequestorIdAndOnboardingType:
       kvFunction: findOneWithKV
       where:
@@ -142,6 +152,7 @@ MerchantOnboardingStepConfig:
     stepNameIdentifier: Text
     stepDescription: Maybe Text
     isApprovalRequired: Bool
+    isAdminOnly: Maybe Bool
     dependency: "[Text]"
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -191,6 +202,7 @@ TicketMerchantDetails:
     docPan: EncryptedHashedField e Text
     docCancelledCheque: Maybe (EncryptedHashedField e Text)
     agreementLetter: Maybe (EncryptedHashedField e Text)
+    isBankOnboarded: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -228,4 +240,8 @@ TicketMerchantDetails:
   queries:
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateIsBankOnboarded:
+      kvFunction: updateOneWithKV
+      params: [isBankOnboarded]
       where: id
