@@ -7411,19 +7411,19 @@ busTicketBookingFlow = do
   action <- lift $ lift $ runScreen $ UI.busTicketBookingScreen currentState.busTicketBookingScreen
   case action of
     BusTicketBookingController.GoToHomeScreen state -> 
-      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+      let _ = runFn2 setInCache "POLLING_ID" ""
       in homeScreenFlow
     BusTicketBookingController.RefreshScreen state -> do
-      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+      let _ = runFn2 setInCache "POLLING_ID" ""
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> state)
       parcelDeliveryFlow
     BusTicketBookingController.GoToMyTicketsScreen state -> do
-      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+      let _ = runFn2 setInCache "POLLING_ID" ""
       modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroMyTicketsScreen { props { ticketServiceType = BUS , entryPoint = ST.MetroTicketBookingToMetroMyTickets, fromScreen = Just $ Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN} })
       metroMyTicketsFlow
     BusTicketBookingController.GoToSearchLocationScreenForRoutes state source ->do
      let 
-       _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+       _ = runFn2 setInCache "POLLING_ID" ""
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
@@ -7440,7 +7440,7 @@ busTicketBookingFlow = do
      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
-      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+      let _ = runFn2 setInCache "POLLING_ID" ""
       -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
       ----------------------------
       void $ lift $ lift $ toggleLoader true
@@ -7506,7 +7506,7 @@ busTicketBookingFlow = do
       --------------------------------
     BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
-          _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+          _ = runFn2 setInCache "POLLING_ID" ""
           routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FRFSRouteAPI)) of
                             Nothing -> ""
                             Just routes -> case head routes of

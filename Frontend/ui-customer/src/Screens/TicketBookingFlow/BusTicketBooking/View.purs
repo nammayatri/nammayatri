@@ -85,7 +85,7 @@ busTicketBookingScreen initialState =
       let getNearbyDriversEventPollingConfig = CRU.pollingConfig "getNearbyDriversEvent"
       when (not getNearbyDriversEventPollingConfig.disable) do
         let pollingId = EHC.getCurrentUTC ""
-            _ = runFn2 setInCache "BUS_LOCATION_TRACKING_ID" pollingId
+            _ = runFn2 setInCache "POLLING_ID" pollingId
             wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig 0 initialState push wmbFlowConfig.defaultRadiusForFindingBus false 
       pure $ pure unit
@@ -106,7 +106,7 @@ busTicketBookingScreen initialState =
     getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus = do
       -- Removed recursive Auto Zoom for now, looking bad from UI perspective
       -- when (gotClosestBus) $ EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ radius * wmbFlowConfig.radiusMultiplier) "ZOOM"
-      let busLocationTrackingPollingId = runFn3 getFromCache "BUS_LOCATION_TRACKING_ID" Nothing Just
+      let busLocationTrackingPollingId = runFn3 getFromCache "POLLING_ID" Nothing Just
       if (busLocationTrackingPollingId == Just pollingId) then do
         eitherRespOrError <- Remote.postNearbyDrivers $ 
           API.NearbyDriverReq 
@@ -129,8 +129,9 @@ busTicketBookingScreen initialState =
                   void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
                   getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push radius gotClosestBus
                 else do
+                  doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
                   let closestBusFromCurrentLoc = fromMaybe wmbFlowConfig.minimumRadiusForFindingBus $ minimum $ map (\(API.NearByDriversBucket item) -> getClosestDistance item.driverInfo (API.LatLong {lat: state.props.srcLat, lon: state.props.srcLong})) resp.buckets
-                  EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ radius * wmbFlowConfig.radiusMultiplier) "ZOOM"
+                  EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel $ closestBusFromCurrentLoc * wmbFlowConfig.radiusMultiplier) "ZOOM"
                   getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig id state push (DI.toNumber $ DI.floor $ closestBusFromCurrentLoc * wmbFlowConfig.radiusMultiplier) true
           Left err -> do
             void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond

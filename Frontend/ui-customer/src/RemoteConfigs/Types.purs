@@ -95,7 +95,7 @@ type Service = {
   preferredEstimateOrder :: Array String
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_RIDE | METRO_OFFER | BUS | AMBULANCE_SERVICE
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_RIDE | METRO_OFFER | BUS | AMBULANCE_SERVICE | TICKETING
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq

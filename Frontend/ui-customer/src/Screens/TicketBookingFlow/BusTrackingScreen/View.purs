@@ -103,7 +103,7 @@ screen initialState =
                     liftFlowBT $ push $ UpdateStops getMetroStationResp
                   else
                     liftFlowBT $ push $ UpdateStops (API.GetMetroStationResponse initialState.data.stopsList)
-                  let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" initialState.data.busRouteCode
+                  let _ = runFn2 setInCache "POLLING_ID" initialState.data.busRouteCode
                   if (showPreBookingTracking "BUS") 
                     then lift $ lift $ busLocationTracking 3000.0 0 initialState push 0
                     else pure unit
@@ -169,7 +169,7 @@ view push state =
             ]
         ]
   where
-    bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height]
+    bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height - 86]
 
 journeyLegTitleView :: forall w. Boolean -> String -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
 journeyLegTitleView isSource name state =
@@ -639,7 +639,7 @@ busLocationTracking :: Number -> Int -> ST.BusTrackingScreenState -> (Action -> 
 busLocationTracking duration id state push count = do
   let
     routeCode = state.data.busRouteCode
-    trackingId = runFn3 getFromCache "BUS_LOCATION_TRACKING" Mb.Nothing Mb.Just
+    trackingId = runFn3 getFromCache "POLLING_ID" Mb.Nothing Mb.Just
   if Mb.isJust trackingId && trackingId /= Mb.Just routeCode then
     pure unit
   else do

@@ -1140,6 +1140,6 @@ type MakerPositionConfig =
   , longitude :: Number
   }
 
-foreign import scrollToChildInScrollView :: forall action. EffectFn3 String String String Unit
+foreign import scrollToChildInScrollView :: EffectFn3 String String String Unit
 
-foreign import showDynamicRouteMarker :: forall action . EffectFn4 String String String String Unit
+foreign import showDynamicRouteMarker :: EffectFn4 String String String String Unit

@@ -35,7 +35,7 @@ busTrackingScreen = do
   case act of
   
     _ -> do
-      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+      let _ = runFn2 setInCache "POLLING_ID" ""
 
       -- modifyScreenState $ JourneyTrackingScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> (pure $ act)

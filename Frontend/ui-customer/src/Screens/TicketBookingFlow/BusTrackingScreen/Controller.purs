@@ -427,7 +427,7 @@ drawDriverRoute resp state = do
     routeConfig = transformStationsForMap resp filteredRoute srcCode destinationCode
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
-  EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
   void $ foldM processStop 0 state.data.stopsList
   where
@@ -530,7 +530,7 @@ userBoardedActions state vehicles vehicle = do
   --     pure $ if locationResp.isInPath then { points: DA.reverse locationResp.points } else state.data.routePts
   --   _, _ -> pure state.data.routePts
   markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable vehicle.vehicleId
-  EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   if (markerAvailable)
     then 
       EHC.liftFlow $ runEffectFn1 JB.updateMarkersOnRoute

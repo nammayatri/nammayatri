@@ -3612,41 +3612,19 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    protected PolylineDataPoints setRouteCustomTheme(PolylineOptions options, int color, String style, final int width, JSONObject mapRouteConfigObject, GoogleMap gMap, Boolean isOverLine, String key, String gmapKey) {
-        // Define common cap style for smoother polyline rendering
-        options.startCap(new RoundCap());
-        options.endCap(new RoundCap());
-        options.width(width);
-        options.geodesic(true); // Route follows earth's curvature
-        options.jointType(JointType.ROUND); // Rounded corners for smoother appearance
-
-        // Define pattern items for different styles
+    public PolylineDataPoints setRouteCustomTheme(PolylineOptions options, int color, String style, final int width, JSONObject mapRouteConfigObject,GoogleMap gMap, Boolean isOverLine, String key, String gmapKey) {
         PatternItem DOT = new Dot();
         PatternItem GAP = new Gap(10);
+        options.width(width);
         List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(GAP, DOT);
         List<PatternItem> PATTERN_POLYLINE_DASHED_WITH_GAP = Collections.singletonList(new Dash(20));
-
-        // If a config object is provided, check for custom dash settings and traffic density
-        if (mapRouteConfigObject != null) {
-            if (mapRouteConfigObject.has("dashUnit") && mapRouteConfigObject.has("gapUnit")) {
+        if (mapRouteConfigObject != null){
+            if (mapRouteConfigObject.has("dashUnit") && mapRouteConfigObject.has("gapUnit")){
                 int gap = mapRouteConfigObject.optInt("gapUnit", 0);
                 int dash = mapRouteConfigObject.optInt("dashUnit", 1);
                 PATTERN_POLYLINE_DASHED_WITH_GAP = Arrays.asList(new Dash(dash), new Gap(gap));
             }
-            // Add glow effect by using multiple polylines
-            if (!isOverLine && gMap != null) {
-                PolylineOptions glowOptions = new PolylineOptions()
-                    .addAll(options.getPoints())
-                    .width(width + 6)  // slightly increased width for glow
-                    .color(adjustAlpha(color, 50))  // lower alpha for a glow effect
-                    .geodesic(true)
-                    .jointType(JointType.ROUND)
-                    .startCap(new RoundCap())
-                    .endCap(new RoundCap());
-                gMap.addPolyline(glowOptions);
-            }
         }
-        // Set the main polyline color and apply the chosen pattern style
         options.color(color);
         switch (style) {
             case "DASH":
@@ -3656,57 +3634,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 options.pattern(PATTERN_POLYLINE_DOTTED);
                 break;
             default:
-                // For a solid line or any other style, no pattern is set.
                 break;
         }
-
-        // Add the polyline to the map
-        Polyline polylineData = (gMap != null) ? gMap.addPolyline(options) : googleMap.addPolyline(options);
-
-        // Retrieve polyline data points object and assign the polyline appropriately
-        PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(gmapKey, key);
-        if (isOverLine) {
-            polylineDataPoints.setOverlayPolylines(polylineData);
-        } else {
-            polylineDataPoints.setPolyline(polylineData);
-        }
+        Polyline polylineData = gMap!= null ? gMap.addPolyline(options) : googleMap.addPolyline(options);
+        PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(gmapKey,key);
+        if (isOverLine) { polylineDataPoints.setOverlayPolylines(polylineData);}
+        else {polylineDataPoints.setPolyline(polylineData);}
         return polylineDataPoints;
-    }
-
-    /**
-     * Adjusts the base color toward red based on the given traffic density.
-     * Higher traffic densities will result in a more reddish color.
-     */
-    private int adjustColorForTraffic(int baseColor, int trafficDensity) {
-        // You can tune these thresholds and blend ratio as needed
-        if (trafficDensity > 70) {
-            return Color.RED;
-        } else if (trafficDensity > 40) {
-            // Blend the base color with red; ratio is adjustable.
-            return blendColors(baseColor, Color.RED, 0.5f);
-        } else {
-            return baseColor;
-        }
-    }
-
-    /**
-     * Blends two colors together based on the given ratio.
-     * ratio = 0.0 returns color1, ratio = 1.0 returns color2.
-     */
-    private int blendColors(int color1, int color2, float ratio) {
-        final float inverseRatio = 1f - ratio;
-        int a = (int) (Color.alpha(color1) * inverseRatio + Color.alpha(color2) * ratio);
-        int r = (int) (Color.red(color1) * inverseRatio + Color.red(color2) * ratio);
-        int g = (int) (Color.green(color1) * inverseRatio + Color.green(color2) * ratio);
-        int b = (int) (Color.blue(color1) * inverseRatio + Color.blue(color2) * ratio);
-        return Color.argb(a, r, g, b);
-    }
-
-    /**
-     * Adjusts the alpha value of the given color.
-     */
-    private int adjustAlpha(int color, int alpha) {
-        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color));
     }
 
     // endregion

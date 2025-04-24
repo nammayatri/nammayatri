@@ -723,7 +723,9 @@ scheduledRideExistsPopUpView push state =
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state = let 
   viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
-  enableBusBooking = state.data.config.feature.enableBusBooking -- && isJust (Arr.find (\service -> service.type == RemoteConfig.BUS) (nammaServices FunctionCall))
+  enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+  enableBusBooking = isJust $ Arr.find (_ == (show RemoteConfig.BUS)) enabledServices
+  enableTicketBooking = isJust $ Arr.find (_ == (show RemoteConfig.TICKETING)) enabledServices
   in
   linearLayout
     [ height MATCH_PARENT
@@ -733,11 +735,11 @@ bottomNavBarView push state = let
     , visibility viewVisibility
     , gravity BOTTOM
     , orientation VERTICAL
+    -- , visibility $ boolToVisibility $ enableBusBooking || enableTicketBooking
     ][  separator (V 1) Color.grey900 state.props.currentStage
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , padding $ PaddingVertical 10 (10+safeMarginBottom)
           , background Color.white900
           ](map (\item -> 
               linearLayout
@@ -747,6 +749,7 @@ bottomNavBarView push state = let
               , onClick push $ const $ BottomNavBarAction item.id
               , orientation VERTICAL
               , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
+              , padding $ PaddingVertical 10 (10+safeMarginBottom)
               ][  imageView
                     [ height $ V 24 
                     , width $ V 24 
@@ -760,9 +763,9 @@ bottomNavBarView push state = let
                     ] <> FontStyle.body9 TypoGraphy
 
               ]
-            ) ([{text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}]
-                <> (if enableBusBooking then [{text : "Bus" , image : "ny_ic_bus_black", id : BUS_}] else [])
-                <> [{text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]
+            )( [{text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}]
+              <> (if enableBusBooking then [{text : "Bus" , image : "ny_ic_bus_black", id : BUS_}] else [])
+              <> (if enableTicketBooking then [{text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING_ }] else [])
               )
             )
     ]

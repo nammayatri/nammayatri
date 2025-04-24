@@ -1157,7 +1157,7 @@ type EditedLocation = {
   gps :: LatLong ,
   address :: Address
 }
-data BottomNavBarIcon = TICKETING | MOBILITY | BUS_
+data BottomNavBarIcon = TICKETING_ | MOBILITY | BUS_
 
 type BookingTime = {
   rideStartTime :: String,

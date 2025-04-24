@@ -2893,7 +2893,7 @@ eval (RentalBannerClick) state = maybe (exit $ GoToScheduledRides state Nothing)
 eval (BottomNavBarAction id) state = do 
   let newState = state {props {focussedBottomIcon = id , busClicked = true}}
   case id of 
-    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    TICKETING_ -> updateAndExit newState $ GoToTicketBookingFlow newState
     BUS_ -> do
       let updatedState = newState { props { ticketServiceType = API.BUS } }
       -- if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
