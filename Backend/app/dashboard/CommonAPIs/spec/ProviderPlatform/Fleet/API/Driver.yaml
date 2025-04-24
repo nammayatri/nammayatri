@@ -448,6 +448,7 @@ apis:
         - status: DriverMode
         - name: Text
         - mbSearchString: Text
+        - fleetOwnerId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -470,6 +471,7 @@ apis:
               - status: DriverMode
               - name: Text
               - mbSearchString: Text
+              - requestorId: Text
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -486,6 +488,7 @@ apis:
         - status: FleetVehicleStatus
         - mbSearchString: Text
         - statusAwareVehicleNo: Text
+        - fleetOwnerId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -506,6 +509,7 @@ apis:
               - status: FleetVehicleStatus
               - mbSearchString: Text
               - statusAwareVehicleNo: Text
+              - requestorId: Text
             response:
               type: DrivertoVehicleAssociationRes
 

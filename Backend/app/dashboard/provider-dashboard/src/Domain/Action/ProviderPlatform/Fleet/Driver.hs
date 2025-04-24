@@ -460,15 +460,16 @@ getDriverFleetTripTransactions merchantShortId opCity apiTokenInfo driverId mbFr
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.TripTransactionDetail {..} = Common.TripTransactionDetailT {..}
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString mbFleetOwnerId = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId Nothing
   listItem <-
     concatMapM
       ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverAssociation) fleetOwnerId' mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString
+          let fleetId = fromMaybe fleetOwnerId' mbFleetOwnerId
+          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverAssociation) fleetId mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString (Just apiTokenInfo.personId.getId)
           return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) listItem
       )
       fleetOwnerIds
@@ -481,15 +482,16 @@ getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimi
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.DriveVehicleAssociationListItem {..} = Common.DriveVehicleAssociationListItemT {..}
 
-getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
+getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId Nothing
   listItem <-
     concatMapM
       ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) fleetOwnerId' mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo
+          let fleetId = fromMaybe fleetOwnerId' mbFleetOwnerId
+          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) fleetId mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo (Just apiTokenInfo.personId.getId)
           return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) listItem
       )
       fleetOwnerIds

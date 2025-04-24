@@ -920,9 +920,11 @@ getDriverFleetDriverAssociation ::
   Maybe Common.DriverMode ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString = do
+getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbRequestorId = do
   DCommon.checkFleetOwnerVerification fleetOwnerId
+  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
@@ -1014,9 +1016,11 @@ getDriverFleetVehicleAssociation ::
   Maybe Common.FleetVehicleStatus ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
+getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbRequestorId = do
   DCommon.checkFleetOwnerVerification fleetOwnerId
+  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
