@@ -1376,6 +1376,7 @@ getTicketDashboardAgreement merchant templateName = do
   where
     getMessageKey = \case
       "TICKET_MERCHANT_AGREEMENT_TEMPLATE" -> pure $ DMM.TICKET_MERCHANT_AGREEMENT_TEMPLATE
+      "TICKET_MERCHANT_SNLTR_TEMPLATE" -> pure $ DMM.TICKET_MERCHANT_SNLTR_TEMPLATE
       _ -> throwError $ InvalidRequest "Invalid template name"
 
 sendverifyotpHitsCountKey :: Text -> Text

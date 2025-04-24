@@ -8,3 +8,9 @@ ALTER TABLE atlas_app.merchant_onboarding_step_config ADD COLUMN step_descriptio
 ALTER TABLE atlas_app.merchant_onboarding_step_config ADD COLUMN step_name_identifier text NOT NULL;
 ALTER TABLE atlas_app.merchant_onboarding_step_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.merchant_onboarding_step_config ADD PRIMARY KEY ( onboarding_type, step_name_identifier);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_onboarding_step_config ADD COLUMN is_admin_only boolean ;

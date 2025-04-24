@@ -8,6 +8,7 @@ import qualified Domain.Types.TicketMerchantDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -25,6 +26,13 @@ findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketMerchantDetails.TicketMerchantDetails -> m (Maybe Domain.Types.TicketMerchantDetails.TicketMerchantDetails))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateIsBankOnboarded ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.TicketMerchantDetails.TicketMerchantDetails -> m ())
+updateIsBankOnboarded isBankOnboarded id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isBankOnboarded isBankOnboarded, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -53,6 +61,7 @@ updateByPrimaryKey (Domain.Types.TicketMerchantDetails.TicketMerchantDetails {..
       Se.Set Beam.docPanHash (docPan & hash),
       Se.Set Beam.gstinEncrypted (gstin <&> unEncrypted . (.encrypted)),
       Se.Set Beam.gstinHash (gstin <&> (.hash)),
+      Se.Set Beam.isBankOnboarded isBankOnboarded,
       Se.Set Beam.orgAddress orgAddress,
       Se.Set Beam.orgName orgName,
       Se.Set Beam.panEncrypted (pan & unEncrypted . encrypted),
@@ -78,6 +87,7 @@ instance FromTType' Beam.TicketMerchantDetails Domain.Types.TicketMerchantDetail
             docPan = EncryptedHashed (Encrypted docPanEncrypted) docPanHash,
             gstin = EncryptedHashed <$> (Encrypted <$> gstinEncrypted) <*> gstinHash,
             id = Kernel.Types.Id.Id id,
+            isBankOnboarded = isBankOnboarded,
             orgAddress = orgAddress,
             orgName = orgName,
             pan = EncryptedHashed (Encrypted panEncrypted) panHash,
@@ -107,6 +117,7 @@ instance ToTType' Beam.TicketMerchantDetails Domain.Types.TicketMerchantDetails.
         Beam.gstinEncrypted = gstin <&> unEncrypted . (.encrypted),
         Beam.gstinHash = gstin <&> (.hash),
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isBankOnboarded = isBankOnboarded,
         Beam.orgAddress = orgAddress,
         Beam.orgName = orgName,
         Beam.panEncrypted = pan & unEncrypted . encrypted,

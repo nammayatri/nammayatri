@@ -79,8 +79,23 @@ handleMerchantDetailsApprove stepId _ = do
         state = mp.state,
         createdAt = now,
         updatedAt = now,
+        isBankOnboarded = Just False,
         ..
       }
+  pure $
+    H.StepHandlerResult
+      { success = True,
+        message = Just "Merchant Approved successfully",
+        nextSteps = [],
+        dashboardSideHandler = Nothing
+      }
+
+handleBankOnboardingApproval :: Id MOS.MerchantOnboardingStep -> Value -> Flow H.StepHandlerResult
+handleBankOnboardingApproval stepId _ = do
+  step <- QMOS.findByStepId stepId >>= fromMaybeM (InvalidRequest "Step not found")
+  onboarding <- QMO.findById (Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "Onboarding Id not found")
+  let rid = onboarding.requestorId
+  QTMD.updateIsBankOnboarded (Just True) (Id rid)
   pure $
     H.StepHandlerResult
       { success = True,

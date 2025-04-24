@@ -32,6 +32,7 @@ data TicketMerchantDetailsT f = TicketMerchantDetailsT
     gstinEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstinHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     id :: B.C f Kernel.Prelude.Text,
+    isBankOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     orgAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     orgName :: B.C f Kernel.Prelude.Text,
     panEncrypted :: B.C f Kernel.Prelude.Text,

@@ -59,6 +59,7 @@ updateByPrimaryKey (Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep {
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dependency (Kernel.Types.Id.getId <$> dependency),
+      Se.Set Beam.isAdminOnly isAdminOnly,
       Se.Set Beam.isApprovalRequired isApprovalRequired,
       Se.Set Beam.merchantOnboardingId merchantOnboardingId,
       Se.Set Beam.payload payload,
@@ -78,6 +79,7 @@ instance FromTType' Beam.MerchantOnboardingStep Domain.Types.MerchantOnboardingS
           { createdAt = createdAt,
             dependency = Kernel.Types.Id.Id <$> dependency,
             id = Kernel.Types.Id.Id id,
+            isAdminOnly = isAdminOnly,
             isApprovalRequired = isApprovalRequired,
             merchantOnboardingId = merchantOnboardingId,
             payload = payload,
@@ -94,6 +96,7 @@ instance ToTType' Beam.MerchantOnboardingStep Domain.Types.MerchantOnboardingSte
       { Beam.createdAt = createdAt,
         Beam.dependency = Kernel.Types.Id.getId <$> dependency,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isAdminOnly = isAdminOnly,
         Beam.isApprovalRequired = isApprovalRequired,
         Beam.merchantOnboardingId = merchantOnboardingId,
         Beam.payload = payload,

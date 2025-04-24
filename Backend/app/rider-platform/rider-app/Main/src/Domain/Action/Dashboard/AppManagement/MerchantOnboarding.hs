@@ -187,6 +187,7 @@ merchantOnboardingStart merchantShortId opCity onboardingType' requestorId _mbRe
                   dependency = stepDependencies,
                   status = initialStatus,
                   isApprovalRequired = config.isApprovalRequired,
+                  isAdminOnly = config.isAdminOnly,
                   payload = Nothing,
                   remarks = Nothing,
                   createdAt = now,
@@ -211,6 +212,9 @@ merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId _mbReques
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
   unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  let isAdminOnlyStep = fromMaybe False step.isAdminOnly
+  when (reqRole `notElem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER] && isAdminOnlyStep) $
+    throwError $ InvalidRequest "Don't have permission to submit this step"
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
     throwError $ InvalidRequest "Step is not available for submission"
   let mbHandler = Map.lookup (onboarding.onboardingType, step.stepNameIdentifier <> "-SUBMIT-HANDLER") Handlers.handlerRegistry.handlers
@@ -339,14 +343,17 @@ merchantOnboardingReject merchantShortId opCity onboardingId requestorId _mbRequ
   QMO.updateOnboardingStatusAndRemarks DMO.REJECTED (Just rejectReq.remarks) onboarding.id
   return Kernel.Types.APISuccess.Success
 
-merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
-merchantOnboadingListAll merchantShortId opCity mbRequestorId _mbRequestorRole mbStatus = do
-  status <- mbStatus & fromMaybeM (InvalidRequest "Status filter is required")
+merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI])
+merchantOnboadingListAll merchantShortId opCity mbRequestorId _mbRequestorRole mbStatus mbOnboardingType limit offset = do
+  onboardingType <- mbOnboardingType & fromMaybeM (InvalidRequest "OnboardingType is required")
   reqId <- mbRequestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   unless (reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
-  QMO.findAllByStatus status
+  onboardings <- filter (\ob -> maybe True (== ob.status) mbStatus) <$> QMO.findAllByOnboardingType limit offset onboardingType
+  forM onboardings $ \onboarding -> do
+    steps <- getStepsAndUpdate onboarding.id
+    return $ mkMerchantOnboardingAPI onboarding steps
 
 merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow [DMOS.MerchantOnboardingStep])
 merchantOnboardingStepList merchantShortId opCity onboardingId requestorId _mbRequestorRole = do

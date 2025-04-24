@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig] -> m ())
 createMany = traverse_ create
 
-findByOnboardingType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.OnboardingType -> m ([Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig]))
+findByOnboardingType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig])
 findByOnboardingType onboardingType = do findAllWithKV [Se.Is Beam.onboardingType $ Se.Eq onboardingType]
 
 findByOnboardingTypeAndStepNameIdentifier ::
@@ -49,6 +49,7 @@ updateByPrimaryKey (Domain.Types.MerchantOnboardingStepConfig.MerchantOnboarding
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dependency dependency,
+      Se.Set Beam.isAdminOnly isAdminOnly,
       Se.Set Beam.isApprovalRequired isApprovalRequired,
       Se.Set Beam.stepDescription stepDescription,
       Se.Set Beam.updatedAt _now
@@ -62,6 +63,7 @@ instance FromTType' Beam.MerchantOnboardingStepConfig Domain.Types.MerchantOnboa
         Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig
           { createdAt = createdAt,
             dependency = dependency,
+            isAdminOnly = isAdminOnly,
             isApprovalRequired = isApprovalRequired,
             onboardingType = onboardingType,
             stepDescription = stepDescription,
@@ -74,6 +76,7 @@ instance ToTType' Beam.MerchantOnboardingStepConfig Domain.Types.MerchantOnboard
     Beam.MerchantOnboardingStepConfigT
       { Beam.createdAt = createdAt,
         Beam.dependency = dependency,
+        Beam.isAdminOnly = isAdminOnly,
         Beam.isApprovalRequired = isApprovalRequired,
         Beam.onboardingType = onboardingType,
         Beam.stepDescription = stepDescription,

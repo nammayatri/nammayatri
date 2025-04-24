@@ -13,6 +13,7 @@ data MerchantOnboardingStep = MerchantOnboardingStep
   { createdAt :: Kernel.Prelude.UTCTime,
     dependency :: [Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep],
     id :: Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep,
+    isAdminOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalRequired :: Kernel.Prelude.Bool,
     merchantOnboardingId :: Kernel.Prelude.Text,
     payload :: Kernel.Prelude.Maybe Data.Aeson.Value,
@@ -26,6 +27,6 @@ data MerchantOnboardingStep = MerchantOnboardingStep
 
 data StepStatus = UNAVAILABLE | AVAILABLE | INPROGRESS | SUBMITTED | COMPLETED | REOPENED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''StepStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StepStatus)
 
-$(mkHttpInstancesForEnum (''StepStatus))
+$(mkHttpInstancesForEnum ''StepStatus)
