@@ -1,6 +1,7 @@
 imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
+  Summary: Dashboard.Common
 
 module: FleetManagement
 apiPrefix: operator
@@ -15,7 +16,7 @@ apis:
         - limit: Int
         - offset: Int
       response:
-        type: "[FleetInfo]"
+        type: FleetInfoRes
       helperApi:
         - GET:
             endpoint: /fleets
@@ -28,7 +29,7 @@ apis:
             mandatoryQuery:
               - requestorId: Text
             response:
-              type: "[FleetInfo]"
+              type: FleetInfoRes
 
   - POST:
       endpoint: /fleet/create
@@ -66,6 +67,9 @@ apis:
               type: APISuccess
 
 types:
+  FleetInfoRes:
+    - listItem: [FleetInfo]
+    - summary: Summary
   FleetInfo:
     - id: Id Person
     - name: Text

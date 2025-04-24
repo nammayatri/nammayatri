@@ -169,14 +169,17 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Text ->
-  Environment.Flow [API.Types.ProviderPlatform.Operator.Driver.DriverInfo]
+  Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
 getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset requestorId = do
   person <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
   driverOperatorAssociationLs <-
     findAllByOperatorIdWithLimitOffset requestorId mbIsActive mbLimit mbOffset
-  mapM createDriverInfo driverOperatorAssociationLs
+  listItem <- mapM createDriverInfo driverOperatorAssociationLs
+  let count = length listItem
+  let summary = Common.Summary {totalCount = 10000, count}
+  pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
     createDriverInfo drvOpAsn = do
       let driverId = drvOpAsn.driverId

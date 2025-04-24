@@ -28,6 +28,10 @@ data FleetInfo = FleetInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetInfoRes = FleetInfoRes {listItem :: [FleetInfo], summary :: Dashboard.Common.Summary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FleetOwnerCreateReq = FleetOwnerCreateReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -74,7 +78,7 @@ type GetFleetManagementFleets =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> Get '[JSON] [FleetInfo]
+      :> Get '[JSON] FleetInfoRes
   )
 
 type GetFleetManagementFleetsHelper =
@@ -84,7 +88,7 @@ type GetFleetManagementFleetsHelper =
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Get '[JSON] [FleetInfo]
+      :> Get '[JSON] FleetInfoRes
   )
 
 type PostFleetManagementFleetCreate = ("fleet" :> "create" :> ReqBody '[JSON] FleetOwnerCreateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -106,7 +110,7 @@ type PostFleetManagementFleetRegisterHelper =
   )
 
 data FleetManagementAPIs = FleetManagementAPIs
-  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [FleetInfo],
+  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetInfoRes,
     postFleetManagementFleetCreate :: Kernel.Prelude.Text -> FleetOwnerCreateReq -> EulerHS.Types.EulerClient FleetOwnerCreateRes,
     postFleetManagementFleetRegister :: Kernel.Prelude.Text -> FleetOwnerRegisterReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }

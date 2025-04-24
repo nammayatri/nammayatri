@@ -66,7 +66,7 @@ getDriverOperatorList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Environment.Flow [API.Types.ProviderPlatform.Operator.Driver.DriverInfo]
+    Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
   )
 getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city

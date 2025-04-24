@@ -52,7 +52,7 @@ apis:
         - limit: Int
         - offset: Int
       response:
-        type: "[DriverInfo]"
+        type: DriverInfoResp
       helperApi:
         - GET:
             endpoint: /operator/list
@@ -64,9 +64,12 @@ apis:
             mandatoryQuery:
               - requestorId: Text
             response:
-              type: "[DriverInfo]"
+              type: DriverInfoResp
 
 types:
+  DriverInfoResp:
+    - listItem: [DriverInfo]
+    - summary: Summary
   OperationHub:
     id : Id OperationHub
     name : Text
