@@ -120,7 +120,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
 
   -- This is a cache for coin configurations by vehicle category
   coinConfigCache <-
-    if isContainsGoldTierTag (fmap (map TagNameValue) searchReq.customerNammaTags)
+    if isContainsGoldTierTag (fmap (map TagNameValue) searchReq.customerNammaTags) && fromMaybe 0 searchReq.estimatedDistance > 1000
       then do
         -- This is a map of vehicle categories to coin configurations
         let vehicleCategories = List.nub $ map (\tqd -> BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapServiceTierToCategory tqd.vehicleServiceTier) tripQuoteDetails
