@@ -63,7 +63,6 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
-import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg

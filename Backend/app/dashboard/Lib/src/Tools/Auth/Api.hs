@@ -19,6 +19,7 @@ import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Role as DRole
 import Domain.Types.ServerName as Reexport (ServerName (..))
 import qualified Domain.Types.ServerName as DSN
 import Kernel.Prelude
