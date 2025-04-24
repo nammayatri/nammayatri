@@ -921,3 +921,19 @@ instance IsHTTPError FRFSSBookingError where
     FRFSBookingNotMadeThroughPartnerOrg _ -> E500
 
 instance IsAPIError FRFSSBookingError
+
+data CustomAuthError = TooManyHitsLimitError deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomAuthError
+
+instance IsBaseError CustomAuthError where
+  toMessage = \case
+    TooManyHitsLimitError -> Just "Rate Limit Exceed, Too Many Requests In Short Duration"
+
+instance IsHTTPError CustomAuthError where
+  toErrorCode = \case
+    TooManyHitsLimitError -> "HITS_LIMIT_EXCEED"
+  toHttpCode = \case
+    TooManyHitsLimitError -> E429
+
+instance IsAPIError CustomAuthError

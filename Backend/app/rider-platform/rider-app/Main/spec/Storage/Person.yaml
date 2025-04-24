@@ -108,6 +108,8 @@ Person:
     payoutVpa: Maybe Text
     frequentLocGeohashes: "Maybe [Text]"
     dateOfBirth: Maybe UTCTime
+    authBlocked : Maybe Bool
+    blockedUntil : Maybe UTCTime
     profilePicture: Maybe Text
     verificationChannel: Maybe Text
     liveActivityToken : Maybe Text
@@ -239,6 +241,8 @@ Person:
     totalRatings: "0"
     enabled: "true"
     merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
+    blockedUntil : "''"
+    authBlocked : "false"
 
   queries:
     findById:

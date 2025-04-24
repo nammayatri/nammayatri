@@ -23,6 +23,9 @@ module SharedLogic.MerchantConfig
     mkCancellationByDriverKey,
     blockCustomer,
     getRidesCountInWindow,
+    updateCustomerAuthCounters,
+    checkAuthFraud,
+    cusomterAuthBlock,
   )
 where
 
@@ -60,6 +63,9 @@ mkSearchCounterKey ind idtxt = "Customer:SearchCounter:" <> idtxt <> ":" <> ind
 mkRideWindowCountKey :: Text -> Text -> Text
 mkRideWindowCountKey ind idtxt = "Customer:RidesCount:" <> idtxt <> ":" <> ind
 
+mkAuthCounterKey :: Text -> Text -> Text
+mkAuthCounterKey ind idtxt = "Customer:AuthCount: " <> idtxt <> ":" <> ind
+
 updateSearchFraudCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateSearchFraudCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudSearchCountWindow) merchantConfigs
@@ -77,6 +83,12 @@ updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCross
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudBookingCancellationCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
+
+updateCustomerAuthCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
+updateCustomerAuthCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+  mapM_ (\mc -> whenJust mc.fraudAuthCountWindow $ \window -> incrementCount mc.id.getId window) merchantConfigs
+  where
+    incrementCount ind = SWC.incrementWindowCount (mkAuthCounterKey ind riderId.getId)
 
 updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
 updateTotalRidesCounters rider = do
@@ -153,12 +165,51 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSear
           let totalRideCount = sum rideCount
           return $ totalRideCount <= mc.fraudRideCountThreshold
 
+checkAuthFraud :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => [DMC.MerchantConfig] -> Id Person.Person -> m (Bool, Maybe (Id DMC.MerchantConfig))
+checkAuthFraud mc riderId = do
+  let configsWithThreshold = filter (\mc' -> isJust mc'.fraudAuthCountThreshold) mc
+
+  results <- forM configsWithThreshold $ \selectedMc -> do
+    fraudDetected <- case selectedMc.fraudAuthCountWindow of
+      Nothing -> pure False
+      Just window -> do
+        authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId riderId.getId) window
+        let threshold = selectedMc.fraudAuthCountThreshold
+        let isOverThreshold = maybe False (authCount >=) threshold
+
+        when isOverThreshold $ do
+          logInfo $ "Auth fraud detected for user " <> riderId.getId <> " with count " <> show authCount
+          SWC.deleteCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId riderId.getId) window
+
+        pure isOverThreshold
+
+    pure (fraudDetected, if fraudDetected then Just selectedMc.id else Nothing)
+
+  let authFraudDetected = any fst results
+  let fraudMerchantConfigId = listToMaybe [mcId | (True, Just mcId) <- results]
+
+  pure (authFraudDetected, fraudMerchantConfigId)
+
 blockCustomer :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> m ()
 blockCustomer riderId mcId = do
   regTokens <- RT.findAllByPersonId riderId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
-  -- runNoTransaction $ do
   _ <- RT.deleteByPersonId riderId
   void $ QP.updatingEnabledAndBlockedState riderId mcId True
+
+cusomterAuthBlock :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
+cusomterAuthBlock riderId mcId blockDurationMinutes = do
+  regTokens <- RT.findAllByPersonId riderId
+  for_ regTokens $ \regToken -> do
+    let key = authTokenCacheKey regToken.token
+    void $ Redis.del key
+
+  blockedUntil <- case blockDurationMinutes of
+    Nothing -> pure Nothing
+    Just mins -> do
+      now <- getCurrentTime
+      pure $ Just $ addUTCTime (fromIntegral (mins * 60)) now
+  _ <- RT.deleteByPersonId riderId
+  void $ QP.updatingAuthEnabledAndBlockedState riderId mcId (Just True) blockedUntil

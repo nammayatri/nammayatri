@@ -252,3 +252,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_booking_allowed boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN straight_line_threshold integer  default 300;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN blocked_until_in_mins int  default 1440;
