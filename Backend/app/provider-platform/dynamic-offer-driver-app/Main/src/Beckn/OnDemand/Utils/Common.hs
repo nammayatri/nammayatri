@@ -1825,6 +1825,39 @@ castPaymentType "ON_ORDER" = return DMPM.ON_FULFILLMENT
 castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
 castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
 
+mkIsSafetyPlusTagGroupV2 :: Bool -> Maybe [Spec.TagGroup]
+mkIsSafetyPlusTagGroupV2 isSafetyPlus =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
+                  descriptorName = Just "Driver Details",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just isSafetyPlusSingleton
+        }
+    ]
+  where
+    isSafetyPlusSingleton
+      | not isSafetyPlus = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
+                      descriptorName = Just "is safety plus driver",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isSafetyPlus
+            }
+
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkForwardBatchTagGroupV2 previousRideDropLocation' =
   previousRideDropLocation' <&> \previousRideDropLocation ->
