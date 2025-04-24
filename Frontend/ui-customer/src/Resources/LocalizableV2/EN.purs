@@ -1683,7 +1683,7 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
-, bus__ : "Bus"
+, bus__ : "Bus Tickets"
 , tickets_for_chennai_bus : "Tickets for Chennai Bus"
 , buy_bus_tickets : "Buy Bus Tickets"
 , book_and_pay : "Book & Pay"
