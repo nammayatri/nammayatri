@@ -2002,7 +2002,7 @@ locationTagBarConfig state =
             , id: item.id
             }
         )
-        ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
+        ( [ { image: "ny_ic_instant", text: (getString INSTANT) , id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
           ]
             <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])

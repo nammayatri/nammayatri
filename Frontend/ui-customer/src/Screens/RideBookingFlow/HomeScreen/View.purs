@@ -3735,6 +3735,7 @@ servicesView push state =
       height WRAP_CONTENT
       , margin $ MarginTop 12
       , width MATCH_PARENT
+      , orientation HORIZONTAL
     ] ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
   ]
    
@@ -3777,6 +3778,7 @@ verticalServiceView push index service =
   linearLayout
   [ height WRAP_CONTENT
   , weight 1.0
+  , width $ V 0 
   , orientation VERTICAL
   , gravity CENTER
   , accessibility ENABLE
