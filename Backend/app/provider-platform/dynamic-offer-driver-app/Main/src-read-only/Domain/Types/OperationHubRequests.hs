@@ -15,7 +15,6 @@ import qualified Tools.Beam.UtilsTH
 
 data OperationHubRequests = OperationHubRequests
   { creatorId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fulfilledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.OperationHubRequests.OperationHubRequests,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

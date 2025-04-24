@@ -9,6 +9,7 @@ import Domain.Types.OperationHubRequests
 import Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -28,12 +29,15 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
   runRequestValidation validateDriverOperationHubRequest req
-  driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  Redis.whenWithLockRedis (opsHubDriverLockKey driverId.getId) 60 $ do
+  Redis.whenWithLockRedis (opsHubDriverLockKey req.creatorId) 60 $ do
     id <- generateGUID
     now <- getCurrentTime
-    opsHubReq <- QOHR.findByDriverStatusAndType driverId PENDING req.requestType
-    unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
+    creatorId <- case mbPersonId of
+      Just driverId -> do
+        opsHubReq <- QOHR.findByCreatorStatusAndType driverId PENDING req.requestType
+        unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
+        pure driverId
+      _ -> pure (Id req.creatorId)
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
           OperationHubRequests
@@ -46,7 +50,6 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
               fulfilledAt = Nothing,
               operatorId = Nothing,
               remarks = Nothing,
-              creatorId = Id $ fromMaybe driverId.getId req.creatorId,
               ..
             }
     void $ QOHR.create operationHubReq
@@ -70,8 +73,9 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
       defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing (Just rcNo)
-  pure (OperationHubRequestsResp (map fst requests))
+  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing (Just rcNo)
+  reqs <- mapM castHubRequests requests
+  pure (OperationHubRequestsResp reqs)
 
 opsHubDriverLockKey :: Text -> Text
 opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId
@@ -82,3 +86,18 @@ validateDriverOperationHubRequest DriverOperationHubRequest {..} =
     [ validateField "registrationNo" registrationNo $
         LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
+
+castHubRequests :: (OperationHubRequests, Person, OperationHub) -> Flow OperationHubDriverRequest
+castHubRequests (hubReq, person, hub) = do
+  driverPhoneNo <- mapM decrypt person.mobileNumber
+  pure $
+    OperationHubDriverRequest
+      { id = hubReq.id.getId,
+        operationHubId = hubReq.operationHubId,
+        operationHubName = hub.name,
+        registrationNo = hubReq.registrationNo,
+        driverPhoneNo,
+        requestStatus = hubReq.requestStatus,
+        requestTime = hubReq.createdAt,
+        requestType = hubReq.requestType
+      }

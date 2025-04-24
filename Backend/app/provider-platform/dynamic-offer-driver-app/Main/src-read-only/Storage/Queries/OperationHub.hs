@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OperationHub where
+module Storage.Queries.OperationHub (module Storage.Queries.OperationHub, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.OperationHub
@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.OperationHub as Beam
+import Storage.Queries.OperationHubExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.OperationHub.OperationHub -> m ())
 create = createWithKV
@@ -43,37 +44,3 @@ updateByPrimaryKey (Domain.Types.OperationHub.OperationHub {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.OperationHub Domain.Types.OperationHub.OperationHub where
-  fromTType' (Beam.OperationHubT {..}) = do
-    pure $
-      Just
-        Domain.Types.OperationHub.OperationHub
-          { address = address,
-            description = description,
-            id = Kernel.Types.Id.Id id,
-            lat = lat,
-            lon = lon,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            mobileNumber = mobileNumber,
-            name = name,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.OperationHub Domain.Types.OperationHub.OperationHub where
-  toTType' (Domain.Types.OperationHub.OperationHub {..}) = do
-    Beam.OperationHubT
-      { Beam.address = address,
-        Beam.description = description,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.lon = lon,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.mobileNumber = mobileNumber,
-        Beam.name = name,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

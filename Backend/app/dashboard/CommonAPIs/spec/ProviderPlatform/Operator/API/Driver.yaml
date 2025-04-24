@@ -19,6 +19,7 @@ apis:
         - mbDriverId: Text
         - mbMobileNumber: Text
         - mbOperationHubId: Id OperationHub
+        - mbOperationHubName: Text
         - mbRegistrationNo: Text
       response:
         type: OperationHubReqResp
@@ -84,8 +85,7 @@ types:
     requestType: RequestType
     operationHubId: Id OperationHub
     registrationNo: Text
-    driverId: Text
-    creatorId: Maybe Text
+    creatorId: Text
     derive: "'HideSecrets"
   RequestStatus:
     enum: "PENDING,APPROVED,REJECTED"
@@ -99,7 +99,7 @@ types:
   OperationHubDriverRequest:
     id: Text
     operationHubId: Id OperationHub
-    driverId: Text
+    operationHubName: Text
     driverPhoneNo: Maybe Text
     registrationNo: Text
     requestType: RequestType
