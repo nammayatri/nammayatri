@@ -37,14 +37,17 @@ getFleetManagementFleets ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Text ->
-  Environment.Flow [Common.FleetInfo]
+  Environment.Flow Common.FleetInfoRes
 getFleetManagementFleets _merchantShortId _opCity mbIsActive mbVerified mbLimit mbOffset requestorId = do
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
   activeFleetOwnerLs <- findAllActiveByOperatorIdWithLimitOffset requestorId mbLimit mbOffset
   fleetOwnerInfoLs <-
     mapMaybeM (findByPersonIdAndEnabledAndVerified mbIsActive mbVerified . ID.Id . fleetOwnerId) activeFleetOwnerLs
-  mapM createFleetInfo fleetOwnerInfoLs
+  listItem <- mapM createFleetInfo fleetOwnerInfoLs
+  let count = length listItem
+  let summary = Common.Summary {totalCount = 10000, count}
+  pure Common.FleetInfoRes {..}
   where
     createFleetInfo FOI.FleetOwnerInformation {..} = do
       totalVehicle <- VRCQuery.countAllActiveRCForFleet fleetOwnerPersonId.getId merchantId

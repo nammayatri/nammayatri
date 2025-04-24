@@ -33,6 +33,10 @@ data DriverInfo = DriverInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverInfoResp = DriverInfoResp {listItem :: [DriverInfo], summary :: Dashboard.Common.Summary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverOperationHubRequest = DriverOperationHubRequest
   { creatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Prelude.Text,
@@ -138,7 +142,7 @@ type GetDriverOperatorList =
   ( "operator" :> "list" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
            '[JSON]
-           [DriverInfo]
+           DriverInfoResp
   )
 
 type GetDriverOperatorListHelper =
@@ -147,7 +151,7 @@ type GetDriverOperatorListHelper =
            "offset"
            Kernel.Prelude.Int
       :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Get '[JSON] [DriverInfo]
+      :> Get '[JSON] DriverInfoResp
   )
 
 data DriverAPIs = DriverAPIs
@@ -155,7 +159,7 @@ data DriverAPIs = DriverAPIs
     getDriverOperationGetAllHubs :: EulerHS.Types.EulerClient [OperationHub],
     postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverInfo]
+    getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoResp
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
