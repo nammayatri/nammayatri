@@ -251,8 +251,8 @@ assignRole ::
   m APISuccess
 assignRole _ personId roleId = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  QP.updatePersonRole personId roleId
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  QP.updatePersonRole personId role
   pure Success
 
 assignMerchantCityAccess ::

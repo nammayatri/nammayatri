@@ -160,7 +160,7 @@ dashboardSideHandler handler = case handler.handlerName of
     personId <- getMetadataValue "rid" & fromMaybeM (InternalError "Dashboard Handler failed")
     person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
     role <- QR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
-    QP.updatePersonRole person.id role.id
+    QP.updatePersonRole person.id role
   where
     getMetadataValue :: Text -> Maybe Text
     getMetadataValue key = snd <$> find (\(k, _) -> k == key) handler.metadata
