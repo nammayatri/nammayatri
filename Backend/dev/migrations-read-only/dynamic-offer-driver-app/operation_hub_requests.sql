@@ -1,7 +1,6 @@
 CREATE TABLE atlas_driver_offer_bpp.operation_hub_requests ();
 
 ALTER TABLE atlas_driver_offer_bpp.operation_hub_requests ADD COLUMN creator_id character varying(36) NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.operation_hub_requests ADD COLUMN driver_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.operation_hub_requests ADD COLUMN fulfilled_at timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.operation_hub_requests ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.operation_hub_requests ADD COLUMN merchant_id character varying(36) NOT NULL;

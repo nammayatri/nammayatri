@@ -25,6 +25,9 @@ OperationHub:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
 OperationHubRequests:
   tableName: operation_hub_requests
   types:
@@ -38,7 +41,6 @@ OperationHubRequests:
     id : Id OperationHubRequests
     operationHubId : Id OperationHub
     requestType : RequestType
-    driverId: Id Person
     registrationNo: Text
     requestStatus: RequestStatus
     merchantId: Id Merchant
@@ -62,7 +64,7 @@ OperationHubRequests:
       params: [requestStatus, remarks, fulfilledAt, operatorId]
       where: id
 
-    findByDriverStatusAndType:
+    findByCreatorStatusAndType:
       kvFunction: findOneWithKV
       where:
-        and: [driverId, requestStatus, requestType]
+        and: [creatorId, requestStatus, requestType]

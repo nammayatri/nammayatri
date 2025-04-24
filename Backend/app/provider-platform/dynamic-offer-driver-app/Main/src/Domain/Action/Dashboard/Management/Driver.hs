@@ -53,6 +53,8 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
     getDriverStats,
+    checkDriverOperatorAssociation,
+    checkFleetOperatorAssociation,
   )
 where
 
@@ -1189,22 +1191,10 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
     isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
       case (requestedPersonDetails.role, personDetails.role) of
-        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id.getId personDetails.id
-        (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation requestedPersonDetails.id.getId personDetails.id.getId
-        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id.getId personDetails.id
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id personDetails.id
+        (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
         _ -> return False
-      where
-        checkFleetDriverAssociation fleetId driverId = do
-          mbAssoc <- QFleetDriver.findByDriverIdAndFleetOwnerId driverId fleetId True
-          return $ isJust mbAssoc
-
-        checkFleetOperatorAssociation fleetId operatorId = do
-          mbAssoc <- QFleetOperator.findByFleetIdAndOperatorId fleetId operatorId True
-          return $ isJust mbAssoc
-
-        checkDriverOperatorAssociation operatorId driverId = do
-          mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
-          return $ isJust mbAssoc
 
     validatePersonAccessAndAssociation ::
       (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -1219,3 +1209,18 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
        in if distanceInKm.getMeters == 0
             then HighPrecMoney 0.0
             else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
+
+checkFleetDriverAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAssociation fleetId driverId = do
+  mbAssoc <- QFleetDriver.findByDriverIdAndFleetOwnerId driverId fleetId.getId True
+  return $ isJust mbAssoc
+
+checkFleetOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetOperatorAssociation fleetId operatorId = do
+  mbAssoc <- QFleetOperator.findByFleetIdAndOperatorId fleetId.getId operatorId.getId True
+  return $ isJust mbAssoc
+
+checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkDriverOperatorAssociation operatorId driverId = do
+  mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId.getId True
+  return $ isJust mbAssoc

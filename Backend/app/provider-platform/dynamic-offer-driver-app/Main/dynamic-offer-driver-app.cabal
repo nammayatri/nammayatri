@@ -584,6 +584,7 @@ library
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
       Storage.Queries.NotificationExtra
+      Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
       Storage.Queries.Person.GetNearestDrivers
@@ -1200,6 +1201,7 @@ library
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
       Storage.Queries.OrphanInstances.Notification
+      Storage.Queries.OrphanInstances.OperationHub
       Storage.Queries.OrphanInstances.OperationHubRequests
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person

@@ -37,6 +37,7 @@ import Storage.Beam.Message
 import Storage.Beam.MessageReport
 import Storage.Beam.MessageTranslation
 import Storage.Beam.Notification
+import Storage.Beam.OperationHub
 import Storage.Beam.OperationHubRequests
 import Storage.Beam.Person
 import Storage.Beam.Quote
@@ -81,6 +82,7 @@ atlasDB =
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
         route = routeTable,
+        operationHub = operationHubTable,
         operationHubRequests = operationHubRequestsTable,
         fleetBadge = fleetBadgeTable
       }
@@ -115,6 +117,7 @@ data AtlasDB f = AtlasDB
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
     route :: f (B.TableEntity RouteT),
+    operationHub :: f (B.TableEntity OperationHubT),
     operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
     fleetBadge :: f (B.TableEntity FleetBadgeT)
   }

@@ -7,6 +7,7 @@ imports:
   RequestStatus: Domain.Types.OperationHubRequests
   OperationHubRequests: Domain.Types.OperationHubRequests
   UTCTime: Kernel.Prelude
+  Summary: Dashboard.Common
 
 module: OperationHub
 
@@ -15,10 +16,19 @@ types:
     requestType: RequestType
     operationHubId: Id OperationHub
     registrationNo: Text
-    creatorId: Maybe Text
+    creatorId: Text
   OperationHubRequestsResp:
-    recordType: NewType
-    requests: [OperationHubRequests]
+    - recordType: NewType
+    - requests: [OperationHubDriverRequest]
+  OperationHubDriverRequest:
+    id: Text
+    operationHubId: Id OperationHub
+    operationHubName: Text
+    driverPhoneNo: Maybe Text
+    registrationNo: Text
+    requestType: RequestType
+    requestStatus: RequestStatus
+    requestTime: UTCTime
 apis:
   - GET:
       endpoint: /operation/getAllHubs
