@@ -128,6 +128,7 @@ import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 import Components.TripStageTopBar as TripStageTopBar
 import RemoteConfig.Utils (getPerfConfigData)
+import Screens.HomeScreen.ScreenData
 
 screen :: HomeScreenState -> GlobalState -> LoggableScreen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -1305,7 +1306,7 @@ offlineView push state =
                     , width $ V 132
                     , cornerRadius 75.0
                     , background if showGoInRed then Color.red900 else if showGoInYellow then Color.yellowText else Color.darkMint
-                    , onClick  push  (const $ SwitchDriverStatus Online)
+                    , onClick  push  (const $ SwitchDriverStatus Online DriverStatusChangeNormalEntry)
                     , rippleColor Color.rippleShade
                     ][]
                   , textView
@@ -1590,7 +1591,7 @@ driverStatusPill pillConfig push state index =
       , height MATCH_PARENT
       , gravity CENTER
       , orientation HORIZONTAL
-      , onClick push (const $ SwitchDriverStatus pillConfig.status)
+      , onClick push (const $ SwitchDriverStatus pillConfig.status DriverStatusChangeNormalEntry)
       , clickable isStatusBtnClickable
       , cornerRadius 20.0
       ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
@@ -2474,7 +2475,7 @@ offlineNavigationLinks push state =
     ]
     where
       navLinksArray = [
-        {title : "Open Meter", icon : "ny_ic_open_meter_icon", action : GotoMeterRideScreen, color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
+        {title : "Open Meter", icon : "ny_ic_open_meter_icon", action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
         {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
