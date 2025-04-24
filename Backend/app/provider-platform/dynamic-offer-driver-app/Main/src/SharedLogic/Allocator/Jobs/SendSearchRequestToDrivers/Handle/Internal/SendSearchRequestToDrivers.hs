@@ -236,8 +236,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       let dpRes = dpwRes.driverPoolResult
       driverStats <- runInReplica $ QDriverStats.findById dpRes.driverId
       driverPlanSafetyPlus <- QDP.findByDriverIdWithServiceName dpwRes.driverPoolResult.driverId (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
-      let isEligibleForSafetyPlusCharge = maybe False (.enableServiceUsageCharge) driverPlanSafetyPlus && searchReq.preferSafetyPlus
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
+      let isEligibleForSafetyPlusCharge = maybe False (.enableServiceUsageCharge) driverPlanSafetyPlus && searchReq.preferSafetyPlus
+          additionalChargesEligiblFor = additionalChargeConditional isEligibleForSafetyPlusCharge tripQuoteDetail.conditionalCharges
+          additionalCharges = sum $ map (\ac -> if ac.chargeCategory `elem` additionalChargesEligiblFor then ac.charge else 0.0) tripQuoteDetail.conditionalCharges
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
 
       let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapVariantToVehicle dpRes.variant
@@ -249,7 +251,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         DTC.Ambulance _ -> do
           farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
           getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
-        _ -> pure $ tripQuoteDetail.baseFare
+        _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
       deploymentVersion <- asks (.version)
       isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
       let searchRequestForDriver =
@@ -322,7 +324,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 parcelType = searchReq.parcelType,
                 parcelQuantity = searchReq.parcelQuantity,
                 driverTagScore = dpwRes.score,
-                conditionalCharges = additionalChargeConditional isEligibleForSafetyPlusCharge tripQuoteDetail.conditionalCharges,
+                conditionalCharges = additionalChargesEligiblFor,
                 isSafetyPlus = Just isEligibleForSafetyPlusCharge,
                 coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
                 ..
