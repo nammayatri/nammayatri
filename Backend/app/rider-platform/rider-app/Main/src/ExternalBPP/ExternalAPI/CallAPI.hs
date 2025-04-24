@@ -114,6 +114,7 @@ getTicketStatus integrationBPPConfig booking = do
     CMRL config' -> CMRLStatus.getTicketStatus config' booking
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
+    CRIS _config' -> return []
     _ -> throwError $ InternalError "Unimplemented!"
 
 verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Text -> m TicketPayload
