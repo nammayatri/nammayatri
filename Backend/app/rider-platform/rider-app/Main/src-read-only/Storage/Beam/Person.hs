@@ -21,11 +21,13 @@ import Tools.Beam.UtilsTH
 data PersonT f = PersonT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
     androidId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    authBlocked :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blocked :: B.C f Kernel.Prelude.Bool,
     blockedAt :: B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime),
     blockedByRuleId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blockedCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    blockedUntil :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
