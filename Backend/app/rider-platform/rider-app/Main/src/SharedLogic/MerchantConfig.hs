@@ -166,7 +166,7 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSear
           return $ totalRideCount <= mc.fraudRideCountThreshold
 
 checkAuthFraud :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => [DMC.MerchantConfig] -> Id Person.Person -> m (Bool, Maybe (Id DMC.MerchantConfig))
-checkAuthFraud mc riderId = do
+checkAuthFraud mc riderId = Redis.withNonCriticalCrossAppRedis $ do
   let configsWithThreshold = filter (\mc' -> isJust mc'.fraudAuthCountThreshold) mc
 
   results <- forM configsWithThreshold $ \selectedMc -> do
