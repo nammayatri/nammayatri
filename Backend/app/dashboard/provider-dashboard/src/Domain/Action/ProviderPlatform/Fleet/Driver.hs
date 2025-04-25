@@ -138,7 +138,7 @@ getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId = do
     _ -> do
       -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
       fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-      return (Just fleetOwnerId, fleetOwnerId)
+      return (fleetOwnerId, fleetOwnerId)
 
 data FleetOwnerInfo = FleetOwnerInfo
   { fleetOwnerId :: Text,
