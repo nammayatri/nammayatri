@@ -426,6 +426,7 @@ initData = let
     , showBookAnyOptions : false
     , showBoostSearch : false
     , enquiryBannerUndoTimer : Nothing
+    , isBottomSheetOpened : false
   }
 }
 
