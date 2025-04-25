@@ -628,7 +628,7 @@ instanceExceptionWithParent 'HTTPException ''PaymentError
 instance IsBaseError PaymentError where
   toMessage = \case
     PaymentMethodRequired -> Just "Payment method is required to book a ride"
-    CustomerPaymentIdNotFound cusomterId -> Just $ "Customer payment id with id \"" <> show cusomterId <> "\" not found."
+    CustomerPaymentIdNotFound customerId -> Just $ "Customer payment id with id \"" <> show customerId <> "\" not found."
     PaymentMethodIdNotFound bookingId -> Just $ "Payment method for booking with id \"" <> show bookingId <> "\" not found."
     DriverAccountIdNotFound bookingId -> Just $ "Driver account for booking with id \"" <> show bookingId <> "\" not found."
 

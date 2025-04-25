@@ -1132,8 +1132,11 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-        Nothing ->
+            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            case mbPayoutOrderResp of
+              Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
+              _ -> pure ()
+        Nothing -> do
           when isReferredByPerson $ do
             setPayoutCountForReferree person.id.getId dailyPayoutCount
             QPersonStats.updateEarningsAndActivations (referredByPersonStats.referralEarnings + amount) (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
@@ -1187,15 +1190,16 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
       let dailyPayoutCountKey = getDailyPayoutCountKey personId
       Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
 
-    sendPNToPerson person oldCustomer = do
-      let pnKey =
-            if oldCustomer
-              then maybe "REFERRAL_REWARD_ADD_VPA" (const "REFERRAL_REWARD") (person.payoutVpa)
-              else maybe "REFERRED_BY_REWARD_ADD_VPA" (const "REFERRED_BY_REWARD") (person.payoutVpa)
-      mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
-      whenJust mbMerchantPN $ \merchantPN -> do
-        let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
-        Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+    sendPNToPerson person oldCustomer =
+      when (isNothing person.payoutVpa) $ do
+        let pnKey =
+              if oldCustomer
+                then "REFERRAL_REWARD_ADD_VPA"
+                else "REFERRED_BY_REWARD_ADD_VPA"
+        mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
+        whenJust mbMerchantPN $ \merchantPN -> do
+          let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
+          Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
