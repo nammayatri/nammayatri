@@ -705,7 +705,7 @@ getMultimodalOrderGetLegTierOptions ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
   Environment.Flow ApiTypes.LegServiceTierOptionsResp
-getMultimodalOrderGetLegTierOptions (mbPersonId, _merchantId) journeyId legOrder = do
+getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   legs <- JM.getJourneyLegs journeyId
@@ -719,7 +719,7 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, _merchantId) journeyId legOrder
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
       let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
-      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode now integratedBPPConfig.id
+      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode now integratedBPPConfig.id merchantId person.merchantOperatingCityId
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
   where

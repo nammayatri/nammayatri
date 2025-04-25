@@ -8,6 +8,8 @@ import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNomi
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
+import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
@@ -19,6 +21,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -158,8 +161,10 @@ findPossibleRoutes ::
   Text ->
   UTCTime ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
   m (Maybe Text, [AvailableRoutesByTier])
-findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfigId = do
+findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfigId mid mocid = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- QRouteStopMapping.findByStopCode fromStopCode integratedBppConfigId
 
@@ -178,7 +183,9 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         ]
 
   -- Get the timing information for these routes at the origin stop
-  routeStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode validRoutes fromStopCode integratedBppConfigId
+
+  routeStopTimings <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid validRoutes ("chennai_bus:" <> fromStopCode)) "fetch route stop timing through graphql"
+  _ <- measureLatency (QRouteStopTiming.findByRouteCodeAndStopCode validRoutes fromStopCode integratedBppConfigId) "fetch route stop timing through sql"
 
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
@@ -188,7 +195,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   let tripIds = map (.tripId) routeStopTimings
 
   -- Check which trips are serviceable today
-  serviceableTripIds <- filterServiceableTrips tripIds currentTime integratedBppConfigId
+  let serviceableTripIds = tripIds
 
   -- Filter timings by serviceable trips and future arrivals within the next hour
   let validTimings =
@@ -270,12 +277,15 @@ findUpcomingTrips ::
   Maybe Spec.ServiceTierType ->
   UTCTime ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
   m UpcomingTripInfo
-findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppConfigId = do
+findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppConfigId mid mocid = do
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode routeCodes stopCode integratedBppConfigId
+  routeStopTimings <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes ("chennai_bus:" <> stopCode)) "fetch route stop timing through graphql"
+  _ <- measureLatency (QRouteStopTiming.findByRouteCodeAndStopCode routeCodes stopCode integratedBppConfigId) "fetch route stop timing through sql"
 
   let filteredByService = case mbServiceType of
         Just serviceType -> filter (\rst -> rst.serviceTierType == serviceType) routeStopTimings
@@ -284,7 +294,7 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
   let tripIds = map (.tripId) filteredByService
 
   -- Check which trips are serviceable today
-  serviceableTripIds <- filterServiceableTrips tripIds currentTime integratedBppConfigId
+  let serviceableTripIds = tripIds
 
   -- Combine stop timings with their calendars and get arrival times
   -- Filter out trips that have already passed the stop
@@ -362,8 +372,10 @@ getSingleModeRouteDetails ::
   Maybe Text ->
   Maybe Text ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
   m (Maybe SingleModeRouteDetails)
-getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfigId = do
+getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfigId mid mocid = do
   mbFromStop <- QStation.findByStationCode originStopCode integratedBppConfigId
   mbToStop <- QStation.findByStationCode destinationStopCode integratedBppConfigId
   currentTime <- getCurrentTime
@@ -372,15 +384,17 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
     (Just fromStop, Just toStop) -> do
       case (fromStop.lat, fromStop.lon, toStop.lat, toStop.lon) of
         (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-          (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId) "findPossibleRoutes"
+          (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId mid mocid) "findPossibleRoutes"
 
           let routeCode = mbRouteCode <|> nextAvailableRouteCode
           mbRoute <- maybe (return Nothing) (\rc -> QRoute.findByRouteCode rc integratedBppConfigId) routeCode
           case mbRoute of
             Just route -> do
               -- Get timing information for this route at the origin stop
-              originStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode [route.code] originStopCode integratedBppConfigId
-              destStopTimings <- QRouteStopTiming.findByRouteCodeAndStopCode [route.code] destinationStopCode integratedBppConfigId
+              originStopTimings <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid [route.code] ("chennai_bus:" <> originStopCode)) "route stop timing through graphql"
+              _ <- measureLatency (QRouteStopTiming.findByRouteCodeAndStopCode [route.code] originStopCode integratedBppConfigId) "route stop timing through sql"
+              destStopTimings <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid [route.code] ("chennai_bus:" <> originStopCode)) "route stop timing through graphql"
+              _ <- measureLatency (QRouteStopTiming.findByRouteCodeAndStopCode [route.code] destinationStopCode integratedBppConfigId) "route stop timing through sql"
               -- Get trip IDs for calendar checking
               let tripIds = map (.tripId) originStopTimings
 
@@ -424,7 +438,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
             Nothing -> return Nothing
         _ -> return Nothing
     _ -> return Nothing
-getSingleModeRouteDetails _ _ _ _ = return Nothing
+getSingleModeRouteDetails _ _ _ _ _ _ = return Nothing
 
 convertSortingType :: DMP.JourneyOptionsSortingType -> MultiModal.SortingType
 convertSortingType sortType = case sortType of

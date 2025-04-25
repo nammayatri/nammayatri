@@ -146,13 +146,13 @@ getNextVehicleDetails ::
     Kernel.Prelude.Maybe Spe.VehicleCategory ->
     Environment.Flow JourneyUtils.UpcomingTripInfo
   )
-getNextVehicleDetails (mbPersonId, _) routeCode stopCode mbVehicleType = do
+getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   now <- getCurrentTime
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
-  JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig.id
+  JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig.id mid person.merchantOperatingCityId
   where
     castToOnDemandVehicleCategory :: Spe.VehicleCategory -> BecknV2.OnDemand.Enums.VehicleCategory
     castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
