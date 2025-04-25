@@ -34,7 +34,7 @@ data Action
   | AddTip TipViewProps
   | ChangeTip TipViewProps
   | ShowOfferPopUp 
-
+  | SheetStateChanged String
 
 type Config
   = { rideDistance :: String
@@ -61,6 +61,7 @@ type Config
     , startTimeUTC :: Maybe String
     , returnTimeUTC :: Maybe String
     , roundTrip :: Boolean
+    , pushSheetChangedAction :: Boolean
     }
 
 type BookAnyProps 
@@ -108,6 +109,7 @@ config =
   , startTimeUTC : Nothing
   , returnTimeUTC : Nothing
   , roundTrip : false
+  , pushSheetChangedAction : false
   }
 
 bookAnyProps :: BookAnyProps

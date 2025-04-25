@@ -1164,6 +1164,7 @@ type HomeScreenStateProps =
   , busClicked :: Boolean
   , ticketServiceType :: API.TicketServiceType
   , enquiryBannerUndoTimer :: Maybe Int
+  , isBottomSheetOpened :: Boolean
   }
 
 type EditedLocation = {

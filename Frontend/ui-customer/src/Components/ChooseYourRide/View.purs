@@ -22,7 +22,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, bind, negate, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=), (<), (<>), otherwise)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout, alpha)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout, alpha, onStateChanged)
 import PrestoDOM.Properties (cornerRadii)
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -74,14 +74,15 @@ view push config =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ][bottomSheetLayout
-          [ height WRAP_CONTENT
+          ([ height WRAP_CONTENT
           , width MATCH_PARENT
           , accessibility DISABLE
           , enableShift false
           , peakHeight $ if null config.quoteList then 300 else getPeekHeight config
           , sheetState COLLAPSED
           , orientation VERTICAL
-          ][linearLayout
+          ] <> if config.pushSheetChangedAction then [onStateChanged push SheetStateChanged] else [])
+          [linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
