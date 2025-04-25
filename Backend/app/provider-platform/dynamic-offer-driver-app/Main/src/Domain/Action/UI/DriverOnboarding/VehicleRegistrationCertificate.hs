@@ -555,6 +555,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   rcValidationRules <- findByCityId person.merchantOperatingCityId
   let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer}
   failures <- case rcValidationRules of
@@ -563,30 +564,39 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
       rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       checks =
-        [ ("fitnessUpto", convertTextToUTC rcVerificationResponse.fitnessUpto),
-          ("insuranceValidity", convertTextToUTC rcVerificationResponse.insuranceValidity),
-          ("permitValidityUpto", convertTextToUTC rcVerificationResponse.permitValidityUpto),
-          ("pucValidityUpto", convertTextToUTC rcVerificationResponse.pucValidityUpto)
-        ]
-  case DL.find (\(_, expiry) -> maybe False (< now) expiry) checks of
-    Just (field, _) -> throwError (RCDependentDocExpired field)
-    Nothing -> pure ()
+        if transporterConfig.rcExpiryChecks == Just True
+          then
+            [ ("fitnessUpto", convertTextToUTC rcVerificationResponse.fitnessUpto),
+              ("insuranceValidity", convertTextToUTC rcVerificationResponse.insuranceValidity),
+              ("permitValidityUpto", convertTextToUTC rcVerificationResponse.permitValidityUpto),
+              ("pucValidityUpto", convertTextToUTC rcVerificationResponse.pucValidityUpto)
+            ]
+          else []
+      expiryFailures =
+        mapMaybe
+          ( \(field, expiry) ->
+              if maybe False (< now) expiry
+                then Just ("Document expired: " <> field)
+                else Nothing
+          )
+          checks
+      allFailures = failures <> expiryFailures
   mVehicleRC <- do
     case mbVehicleVariant of
       Just vehicleVariant ->
         maybeM
           (return Nothing)
-          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant failures)
+          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
-      Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput failures
+      Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
     then do
-      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId failures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
+      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
           resVerifyRes <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
           case resVerifyRes of
-            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId failures
+            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures
             Right verifyRes -> do
               case verifyRes.verifyRCResp of
                 Verification.AsyncResp res -> do
@@ -597,7 +607,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
                 Verification.SyncResp resp -> do
                   onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
-    else initiateRCCreation mVehicleRC now mbFleetOwnerId failures
+    else initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
     createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
@@ -679,7 +689,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             unencryptedCertificateNumber = input.registrationNumber,
             updatedAt = now
           }
-    initiateRCCreation mVehicleRC now mbFleetOwnerId failures = do
+    initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
         Just vehicleRC -> do
           -- upsert vehicleRC
@@ -705,7 +715,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
               whenJust mbVehicle $ \vehicle -> do
-                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null failures) $ do
+                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null allFailures) $ do
                   driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                   driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
