@@ -97,7 +97,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mbMobi
                   do
                     fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
                     driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamP.id driver)
-                    driverInformation <- B.join_ (BeamCommon.driverInformation BeamCommon.atlasDB) (\driverInfo -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamDI.driverId driverInfo)
+                    driverInformation <- B.join_ (BeamCommon.driverInformation BeamCommon.atlasDB) (\driverInfo -> BeamP.id driver B.==. BeamDI.driverId driverInfo)
                     pure (fleetDriverAssociation, driver, driverInformation)
   case res of
     Right res' -> do
