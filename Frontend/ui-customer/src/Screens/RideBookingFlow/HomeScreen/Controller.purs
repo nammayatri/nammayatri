@@ -83,7 +83,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, setKeyInSharedPref, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image, checkAndAskMicrophonePermission, storeCallBackMicrophonePermission)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, setKeyInSharedPref, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image, checkAndAskMicrophonePermission, storeCallBackMicrophonePermission,cleverTapCustomEventWithParams)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds,formatMonth,calculateDateInfo)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -947,6 +947,7 @@ eval BackPressed state = do
             , hasEstimateBackpoint = false
           , searchLocationModelProps {tripType = ONE_WAY_TRIP}
           , isTripSchedulable = false
+          , isBottomSheetOpened = false
             }
           }
     ConfirmingLocation -> do
@@ -2839,6 +2840,9 @@ eval (ChooseYourRideAction( ChooseYourRideController.RadioButtonClick autoAssign
   continueWithCmd state [ do
     pure (CheckBoxClick autoAssign)
   ]
+eval (ChooseYourRideAction (ChooseYourRideController.SheetStateChanged sheetState)) state = do
+  if not state.props.isBottomSheetOpened then void $ pure $ cleverTapCustomEventWithParams "ny_user_estimate_screen_bottom_sheet_state_changed" "search_id" state.props.searchId else pure unit
+  update state { props { isBottomSheetOpened = true} }
 
 eval (ChooseYourRideAction (ChooseYourRideController.OnIconClick autoAssign)) state =
   continue state { props {showMultipleRideInfo = not autoAssign}}
