@@ -1171,6 +1171,7 @@ type HomeScreenStateProps =
   , firstTimeAmbulanceSearch :: Boolean
   , searchType :: Maybe String
   , enquiryBannerUndoTimer :: Maybe Int
+  , isBottomSheetOpened :: Boolean
   }
 
 type EditedLocation = {
