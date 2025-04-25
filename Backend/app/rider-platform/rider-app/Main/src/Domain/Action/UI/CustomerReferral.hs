@@ -138,7 +138,10 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           let serviceName = DEMSC.PayoutService PT.Juspay
               createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId serviceName
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          void $ try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          case mbPayoutOrderResp of
+            Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
+            _ -> pure ()
         Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found During Backlog Payout for cityId: " <> merchantOpCityId.getId
 
     getEntityName toPayReferredByReward toPayBacklogAmount = case (toPayReferredByReward, toPayBacklogAmount) of

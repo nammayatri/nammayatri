@@ -1184,8 +1184,11 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-        Nothing ->
+            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            case mbPayoutOrderResp of
+              Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
+              _ -> pure ()
+        Nothing -> do
           when isReferredByPerson $ do
             setPayoutCountForReferree person.id.getId dailyPayoutCount
             QPersonStats.updateEarningsAndActivations (referredByPersonStats.referralEarnings + amount) (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id

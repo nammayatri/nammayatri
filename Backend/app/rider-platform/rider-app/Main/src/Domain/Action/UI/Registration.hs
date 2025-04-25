@@ -57,6 +57,7 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -81,6 +82,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.MerchantConfig as CQM
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -203,6 +205,7 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
+    ClickhouseFlow m r,
     EsqDBFlow m r,
     EncFlow m r
   ) =>
@@ -217,6 +220,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
+  now <- getCurrentTime
   merchantTemp <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
@@ -247,10 +251,20 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         return (person, EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
 
+  when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError TooManyHitsLimitError
   void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
-  checkSlidingWindowLimit (authHitsCountKey person)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  merchantConfigs <- CQM.findAllByMerchantOperatingCityId merchantOperatingCityId Nothing
+  fork "Fraud Auth Check Processing" $ do
+    when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
+    SMC.updateCustomerAuthCounters person.id merchantConfigs
+    (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraud merchantConfigs person.id
+    when isFraudDetected $ do
+      whenJust mbMerchantConfigId $ \mcId ->
+        SMC.customerAuthBlock person.id (Just mcId) riderConfig.blockedUntilInMins
 
+  checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -288,7 +302,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
           EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
-            riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
@@ -460,6 +473,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         dateOfBirth = Nothing,
         profilePicture = Nothing,
         verificationChannel = Nothing,
+        blockedUntil = Nothing,
+        authBlocked = Nothing,
         imeiNumber = Nothing -- TODO: take it from the request
       }
 
