@@ -72,8 +72,8 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> m [DriverLocation]
-nearBy lat lon onRide vt radius merchantId = do
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> m [DriverLocation]
+nearBy lat lon onRide vt radius merchantId groupId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   let req =
@@ -83,7 +83,8 @@ nearBy lat lon onRide vt radius merchantId = do
             onRide,
             radius,
             vehicleType = vt,
-            merchantId = merchantId
+            merchantId = merchantId,
+            groupId
           }
   nearByRes <-
     callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
