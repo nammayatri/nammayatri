@@ -8,7 +8,6 @@ import qualified Data.Time
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
@@ -149,11 +148,13 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   updateWithKV
     [ Se.Set Beam.aadhaarVerified aadhaarVerified,
       Se.Set Beam.androidId androidId,
+      Se.Set Beam.authBlocked authBlocked,
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.blocked blocked,
       Se.Set Beam.blockedAt (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
       Se.Set Beam.blockedByRuleId (Kernel.Types.Id.getId <$> blockedByRuleId),
       Se.Set Beam.blockedCount blockedCount,
+      Se.Set Beam.blockedUntil blockedUntil,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),

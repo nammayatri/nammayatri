@@ -174,3 +174,10 @@ ALTER TABLE atlas_app.person ADD COLUMN imei_number_encrypted character varying(
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN blocked_until timestamp with time zone;
+ALTER TABLE atlas_app.person ADD COLUMN auth_blocked boolean  default false;

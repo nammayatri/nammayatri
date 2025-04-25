@@ -13,6 +13,7 @@ imports:
   RentalsConfig: Domain.Types.RentalsIntercityCache
   IntercitySearchLocation: Domain.Types.RentalsIntercityCache
   VehicleVariant: Domain.Types.VehicleVariant
+  Minutes: Kernel.Types.Common
 
 RiderConfig:
   types:
@@ -97,6 +98,7 @@ RiderConfig:
     enableBusFiltering: Maybe Bool
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
     fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
+    blockedUntilInMins : Maybe Minutes
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -223,6 +225,7 @@ RiderConfig:
     payoutReferralProgram: "false"
     payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
     multimodalTesting: "false"
+    blockedUntilInMins: "1440"
 
   queries:
     findByMerchantOperatingCityId:
@@ -252,6 +255,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: "json"
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
+    blockedUntilInMins: int
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

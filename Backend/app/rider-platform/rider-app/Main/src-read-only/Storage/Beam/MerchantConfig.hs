@@ -15,6 +15,8 @@ import Tools.Beam.UtilsTH
 data MerchantConfigT f = MerchantConfigT
   { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     enabled :: B.C f Kernel.Prelude.Bool,
+    fraudAuthCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    fraudAuthCountWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     fraudBookingCancellationCountThreshold :: B.C f Kernel.Prelude.Int,
     fraudBookingCancellationCountWindow :: B.C f Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     fraudBookingCancelledByDriverCountThreshold :: B.C f Kernel.Prelude.Int,
