@@ -600,7 +600,11 @@ export const openUrlInMailApp = function (str) {
 
 export const showMarkerImpl = function (showMarkerConfig) {
   if (window.JBridge.showMarker) {
-    window.JBridge.showMarker(JSON.stringify(showMarkerConfig));
+    if (showMarkerConfig.markerConfig.pointerIcon == "ny_ic_customer_current_location") {
+      window.JBridge.upsertMarker(showMarkerConfig.markerConfig.pointerIcon, showMarkerConfig.lat, showMarkerConfig.lng, showMarkerConfig.markerSize, showMarkerConfig.anchorV, showMarkerConfig.anchorV1);
+    } else {
+      window.JBridge.showMarker(JSON.stringify(showMarkerConfig));
+    }
   } else {
     window.JBridge.upsertMarker(showMarkerConfig.markerConfig.pointerIcon, showMarkerConfig.lat, showMarkerConfig.lng, showMarkerConfig.markerSize, showMarkerConfig.anchorV, showMarkerConfig.anchorV1);
   }
