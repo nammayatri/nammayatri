@@ -34,7 +34,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
     namespace "in.juspay.mobility"
 
     buildFeatures{
@@ -43,7 +43,7 @@ android {
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 34
     versionCode 147
     versionName "2.5.17"
         multiDexEnabled true
