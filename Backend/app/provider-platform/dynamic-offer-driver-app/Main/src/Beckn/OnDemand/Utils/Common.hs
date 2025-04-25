@@ -1602,7 +1602,7 @@ mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp 
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
       fareParamsBreakups =
         case fareParametersInRateCard of
-          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardBreakupItem) fareParams
+          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams
           _ -> []
       filteredFareParamsBreakups = filter (not . findDup farePolicyBreakups) fareParamsBreakups
       combainedParams = farePolicyBreakups <> filteredFareParamsBreakups
@@ -1660,6 +1660,9 @@ mkVehicleIconTag mbBaseUrl =
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem
+
+mkRateCardFareParamsBreakupItem :: Text -> Text -> RateCardBreakupItem
+mkRateCardFareParamsBreakupItem title value = RateCardBreakupItem {title = title <> "_FARE_PARAM", ..}
 
 buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
 buildRateCardTags RateCardBreakupItem {..} =
