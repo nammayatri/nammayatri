@@ -136,6 +136,7 @@ dependencies:
   - insert-ordered-containers
   - mtl
   - transformers
+  - morpheus-graphql-client
 
 ghc-options:
   - -fwrite-ide-info

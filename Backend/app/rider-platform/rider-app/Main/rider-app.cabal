@@ -401,6 +401,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.RideRelatedNotificationConfig
+      Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
       Storage.CachedQueries.Station
@@ -417,6 +418,8 @@ library
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
+      Storage.GraphqlQueries.Client
+      Storage.GraphqlQueries.RouteStopTimeTable
       Storage.Queries.AppInstallsExtra
       Storage.Queries.BBPSExtra
       Storage.Queries.BecknConfigExtra
@@ -1145,6 +1148,7 @@ library
     , lens-aeson
     , memory
     , mobility-core
+    , morpheus-graphql-client
     , mtl
     , openapi3
     , passetto-client
@@ -1280,6 +1284,7 @@ executable rider-app-exe
     , lens-aeson
     , memory
     , mobility-core
+    , morpheus-graphql-client
     , mtl
     , openapi3
     , passetto-client

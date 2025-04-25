@@ -393,7 +393,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails = do
           now <- getCurrentTime
           -- Above getFares function return fares for all types of buses (e.g. AC, Non-AC, Ordinary, etc.) but instead of showing all types of buses to user,
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
-          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode now integratedBPPConfigId
+          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode now integratedBPPConfigId merchant.id merchantOperatingCity.id
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
           return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
         _ -> return (Nothing, fares)

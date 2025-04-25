@@ -86,8 +86,10 @@ instance FromTType' Beam.RouteStopTimeTable Domain.Types.RouteStopTimeTable.Rout
       Just
         Domain.Types.RouteStopTimeTable.RouteStopTimeTable
           { integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
+            providedByGraphQl = Kernel.Prelude.Just False,
             routeCode = routeCode,
             serviceTierType = serviceTierType,
+            serviceability = Kernel.Prelude.Just mempty,
             stopCode = stopCode,
             timeOfArrival = timeOfArrival,
             timeOfDeparture = timeOfDeparture,

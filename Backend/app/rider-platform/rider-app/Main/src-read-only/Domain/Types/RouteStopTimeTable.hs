@@ -14,8 +14,10 @@ import qualified Tools.Beam.UtilsTH
 
 data RouteStopTimeTable = RouteStopTimeTable
   { integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    providedByGraphQl :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     routeCode :: Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceability :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     stopCode :: Kernel.Prelude.Text,
     timeOfArrival :: Kernel.Prelude.TimeOfDay,
     timeOfDeparture :: Kernel.Prelude.TimeOfDay,
