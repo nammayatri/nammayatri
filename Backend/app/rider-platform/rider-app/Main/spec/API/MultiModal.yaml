@@ -142,6 +142,8 @@ types:
     cd: Text
     sN: Text
     lN: Text
+    dTC: Maybe Int
+    stC: Maybe Int
     vt: Text
     clr: Maybe Text
 

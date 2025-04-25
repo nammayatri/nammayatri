@@ -477,7 +477,7 @@ FRFSTicketBooking:
     findAllByJourneyId:
       kvFunction: findAllWithKV
       where: journeyId
-    findAByJourneyIdCond:
+    findAllByJourneyIdCond:
       kvFunction: findAllWithKVAndConditionalDB
       where: journeyId
     updateOnInitDone:
@@ -747,6 +747,8 @@ Route:
     color: Maybe Text
     polyline: Maybe Text
     timeBounds: TimeBound
+    dailyTripCount: Maybe Int
+    stopCount: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     integratedBppConfigId: Id IntegratedBPPConfig

@@ -160,7 +160,15 @@ data SwitchTaxiReq = SwitchTaxiReq {estimateId :: Kernel.Types.Id.Id Domain.Type
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TransportRoute = TransportRoute {cd :: Kernel.Prelude.Text, clr :: Kernel.Prelude.Maybe Kernel.Prelude.Text, lN :: Kernel.Prelude.Text, sN :: Kernel.Prelude.Text, vt :: Kernel.Prelude.Text}
+data TransportRoute = TransportRoute
+  { cd :: Kernel.Prelude.Text,
+    clr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dTC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    lN :: Kernel.Prelude.Text,
+    sN :: Kernel.Prelude.Text,
+    stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vt :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

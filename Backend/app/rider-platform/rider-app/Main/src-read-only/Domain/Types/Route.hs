@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data Route = Route
   { code :: Kernel.Prelude.Text,
     color :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dailyTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     endPoint :: Kernel.External.Maps.Types.LatLong,
     id :: Kernel.Types.Id.Id Domain.Types.Route.Route,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
@@ -26,6 +27,7 @@ data Route = Route
     polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     shortName :: Kernel.Prelude.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
+    stopCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,

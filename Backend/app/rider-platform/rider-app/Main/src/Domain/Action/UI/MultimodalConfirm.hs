@@ -654,6 +654,8 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
                         { cd = r.code,
                           sN = r.shortName,
                           lN = r.longName,
+                          dTC = r.dailyTripCount,
+                          stC = r.stopCount,
                           vt = show r.vehicleType,
                           clr = r.color
                         }

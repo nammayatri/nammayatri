@@ -18,3 +18,10 @@ ALTER TABLE atlas_app.route ADD COLUMN vehicle_type text NOT NULL;
 ALTER TABLE atlas_app.route ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route ADD COLUMN stop_count integer ;
+ALTER TABLE atlas_app.route ADD COLUMN daily_trip_count integer ;

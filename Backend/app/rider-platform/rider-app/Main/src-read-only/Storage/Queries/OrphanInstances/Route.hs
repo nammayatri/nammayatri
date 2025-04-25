@@ -20,6 +20,7 @@ instance FromTType' Beam.Route Domain.Types.Route.Route where
         Domain.Types.Route.Route
           { code = code,
             color = color,
+            dailyTripCount = dailyTripCount,
             endPoint = Kernel.External.Maps.Types.LatLong endLat endLon,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
@@ -29,6 +30,7 @@ instance FromTType' Beam.Route Domain.Types.Route.Route where
             polyline = polyline,
             shortName = shortName,
             startPoint = Kernel.External.Maps.Types.LatLong startLat startLon,
+            stopCount = stopCount,
             timeBounds = timeBounds,
             vehicleType = vehicleType,
             createdAt = createdAt,
@@ -40,6 +42,7 @@ instance ToTType' Beam.Route Domain.Types.Route.Route where
     Beam.RouteT
       { Beam.code = code,
         Beam.color = color,
+        Beam.dailyTripCount = dailyTripCount,
         Beam.endLat = (.lat) endPoint,
         Beam.endLon = (.lon) endPoint,
         Beam.id = Kernel.Types.Id.getId id,
@@ -51,6 +54,7 @@ instance ToTType' Beam.Route Domain.Types.Route.Route where
         Beam.shortName = shortName,
         Beam.startLat = (.lat) startPoint,
         Beam.startLon = (.lon) startPoint,
+        Beam.stopCount = stopCount,
         Beam.timeBounds = timeBounds,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,

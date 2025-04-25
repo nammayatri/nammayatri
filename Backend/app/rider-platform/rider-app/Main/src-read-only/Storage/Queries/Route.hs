@@ -64,6 +64,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
   updateWithKV
     [ Se.Set Beam.code code,
       Se.Set Beam.color color,
+      Se.Set Beam.dailyTripCount dailyTripCount,
       Se.Set Beam.endLat ((.lat) endPoint),
       Se.Set Beam.endLon ((.lon) endPoint),
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
@@ -74,6 +75,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.shortName shortName,
       Se.Set Beam.startLat ((.lat) startPoint),
       Se.Set Beam.startLon ((.lon) startPoint),
+      Se.Set Beam.stopCount stopCount,
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
