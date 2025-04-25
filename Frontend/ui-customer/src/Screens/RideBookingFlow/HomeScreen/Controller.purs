@@ -79,7 +79,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams, firebaseLogEventWithArrayOfKeyValue)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
@@ -2895,11 +2895,9 @@ eval (BottomNavBarAction id) state = do
   case id of 
     TICKETING_ -> updateAndExit newState $ GoToTicketBookingFlow newState
     BUS_ -> do
+      void $ pure $ firebaseLogEventWithArrayOfKeyValue (HU.getLogEventPrefix <> "bus_ticketing_clicked") [(Tuple "bus_ticketing_clicked" "true")]
       let updatedState = newState { props { ticketServiceType = API.BUS } }
-      -- if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
       updateAndExit updatedState $ GoToBusTicketBookingFlow state
-      --   else updateAndExit updatedState $ GoToSearchLocationScreenForBusRoutes state
-     -- updateAndExit updatedState $ GoToSearchLocationScreenForRoutes updatedState ST.Src
     MOBILITY -> continue newState 
     _ -> update state 
     

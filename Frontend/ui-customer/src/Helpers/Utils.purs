@@ -44,7 +44,7 @@ import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..), toLower)
 import Data.String as DS
-import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Data.String.CodeUnits (fromCharArray, toCharArray, singleton)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
@@ -1148,7 +1148,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
             "" 
             "" 
             "" 
-            ["This ticket is non-transferrable and non-refundable" , "The ticket is valid for 12 hours from the time of booking"] 
+            ["This ticket is non-transferrable and non-refundable" , "The ticket is valid for 24 hours from the time of booking"] 
             "" 
             false 
             config
@@ -1654,3 +1654,12 @@ isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
   "DELIVERY_TRUCK_MEDIUM",
   "DELIVERY_TRUCK_LARGE",
   "DELIVERY_TRUCK_ULTRA_LARGE"]
+
+getLogEventPrefix :: String
+getLogEventPrefix =
+  abbreviate $ fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+  where
+    abbreviate :: String -> String
+    abbreviate input =
+      let initials = map (fromMaybe "" <<< DA.head <<< map singleton <<< toCharArray) $ DS.split (DS.Pattern " ") input
+      in DS.toLower (DS.joinWith "" initials) <> "_"

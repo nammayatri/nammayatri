@@ -51,6 +51,7 @@ import Effect.Uncurried (runEffectFn4)
 import Data.Lens ((^.))
 import Accessor (_lat, _lon, _routeCode)
 import Data.Foldable (for_)
+import Data.String as DS
 
 
 instance showAction :: Show Action where
@@ -152,8 +153,9 @@ eval (NearbyDriverRespAC (API.NearbyDriverRes resp)) state =
     showAllMarkersOnMap busDetailsArray = do
       for_ busDetailsArray \busDetails -> do
         case busDetails.routeCode of
-          Just routeCode -> 
-            when (state.props.gotMapReady) $ void $ runEffectFn4 JB.showDynamicRouteMarker (show busDetails.lat) (show busDetails.lon) routeCode (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
+          Just routeCode -> do
+            let routeCodeFinal = fromMaybe "" $ DA.head $ DS.split (DS.Pattern "-") routeCode
+            when (state.props.gotMapReady) $ void $ runEffectFn4 JB.showDynamicRouteMarker (show busDetails.lat) (show busDetails.lon) routeCodeFinal (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
           Nothing -> pure unit
 
     transformNearByDriversBucketResp (API.NearByDriversBucket nearByDriversBucket) = 
