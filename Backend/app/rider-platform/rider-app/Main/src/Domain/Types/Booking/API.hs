@@ -340,7 +340,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         tripCategory = booking.tripCategory,
         estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
         vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
-        isSafetyPlus = booking.preferSafetyPlus
+        isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus)
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -499,7 +499,7 @@ buildBookingStatusAPIEntity booking = do
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
       destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
       talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
-      isSafetyPlus = booking.preferSafetyPlus
+      isSafetyPlus = fromMaybe False $ mbActiveRide <&> (.isSafetyPlus)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus
 
