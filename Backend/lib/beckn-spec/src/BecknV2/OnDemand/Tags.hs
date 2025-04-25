@@ -552,8 +552,8 @@ instance CompleteTag BecknTag where
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
     PARCEL_TYPE -> DELIVERY
     PARCEL_QUANTITY -> DELIVERY
-    IS_SAFETY_PLUS -> DRIVER_DETAILS
-    SAFETY_PLUS_CHARGES -> DRIVER_DETAILS
+    IS_SAFETY_PLUS -> GENERAL_INFO
+    SAFETY_PLUS_CHARGES -> GENERAL_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

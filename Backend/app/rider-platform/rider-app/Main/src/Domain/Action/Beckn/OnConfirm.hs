@@ -167,4 +167,4 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
         email <- mapM decrypt person.email
         return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, isSafetyPlus = booking.preferSafetyPlus, ..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, ..}
