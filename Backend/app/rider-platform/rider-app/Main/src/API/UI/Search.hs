@@ -325,7 +325,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         else do
           case req' of
             DSearch.PTSearch _ -> do
-              let onlySingleModeRoutes = filter (\r -> all (\l -> l.mode `elem` [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType vehicleCategory]) r.legs) otpResponse''.routes
+              let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
               let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
               return (null onlySingleModeRoutes, MInterface.MultiModalResponse {routes = if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks})
             _ -> return (False, otpResponse'')
@@ -372,6 +372,12 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         showMultimodalWarning
       }
   where
+    eitherWalkOrSingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
+    eitherWalkOrSingleMode selectedMode leg = leg.mode `elem` [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode]
+
+    onlySingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
+    onlySingleMode selectedMode leg = leg.mode == castVehicleCategoryToGeneralVehicleType selectedMode
+
     filterWalkLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
     filterWalkLegs MultiModalTypes.MultiModalRoute {..} = do
       let legsWithIndex = zip [0 ..] legs
@@ -380,7 +386,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               | (index, leg) <- legsWithIndex,
                 not ((index == 0 || index == length legs - 1) && leg.mode `elem` [MultiModalTypes.Walk, MultiModalTypes.Unspecified])
             ]
-      MultiModalTypes.MultiModalRoute {legs = filteredLegs, ..}
+      MultiModalTypes.MultiModalRoute {legs = if null filteredLegs then legs else filteredLegs, ..}
 
     processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> Flow ()
     processRestOfRoutes routes = do
