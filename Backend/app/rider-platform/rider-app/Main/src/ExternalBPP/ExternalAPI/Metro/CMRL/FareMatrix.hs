@@ -36,6 +36,7 @@ data FareMatrixAPIRes = FareMatrixAPIRes
 type FareMatrixAPI =
   "cumta" :> "farematrix"
     :> Header "Authorization" T.Text
+    :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] FareMatrixAPIRes
 
 fareMatrixAPI :: Proxy FareMatrixAPI
@@ -43,6 +44,6 @@ fareMatrixAPI = Proxy
 
 getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m [FareMatrixRes]
 getFareMatrix config = do
-  let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken)
+  let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   fareMatrixRes <- callCMRLAPI config eulerClient "getFareMatrix" fareMatrixAPI
   return fareMatrixRes.result

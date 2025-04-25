@@ -58,6 +58,7 @@ type TicketStatusAPI =
   "cumta" :> "ticketStatus"
     :> Header "Authorization" T.Text
     :> MandatoryQueryParam "ticketNo" T.Text
+    :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] TicketStatusRes
 
 ticketStatusAPI :: Proxy TicketStatusAPI
@@ -71,7 +72,7 @@ getTicketStatus config booking = do
       ( \ticket -> do
           if ticket.status == Ticket.ACTIVE
             then do
-              let eulerClient = \accessToken -> ET.client ticketStatusAPI (Just $ "Bearer " <> accessToken) ticket.ticketNumber
+              let eulerClient = \accessToken -> ET.client ticketStatusAPI (Just $ "Bearer " <> accessToken) ticket.ticketNumber cmrlAppType
               ticketStatus <- callCMRLAPI config eulerClient "getTicketStatus" ticketStatusAPI
               let qrStatus = mkTicketStatus ticketStatus.result
               return $

@@ -42,6 +42,7 @@ type FareByOriginDestAPI =
     :> MandatoryQueryParam "origin" T.Text
     :> MandatoryQueryParam "destination" T.Text
     :> MandatoryQueryParam "ticketType" T.Text
+    :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] FareByOriginDestAPIRes
 
 fareByOriginDestAPI :: Proxy FareByOriginDestAPI
@@ -49,7 +50,7 @@ fareByOriginDestAPI = Proxy
 
 getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
 getFareByOriginDest config fareReq = do
-  let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType
+  let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType cmrlAppType
   fareByODRes <- callCMRLAPI config eulerClient "getFareByOriginDest" fareByOriginDestAPI
   logDebug $ "CMRL Get Fares API Response : " <> show fareByODRes
   case fareByODRes.result >>= (.result) of

@@ -18,7 +18,8 @@ import Tools.Error
 
 data AuthReq = AuthReq
   { username :: Text,
-    password :: Text
+    password :: Text,
+    appType :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -45,6 +46,9 @@ authAPI = Proxy
 authTokenKey :: Text
 authTokenKey = "CMRLAuth:Token"
 
+cmrlAppType :: Text
+cmrlAppType = "CMRL_CUM_IQR"
+
 getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m Text
 getAuthToken config = do
   authToken :: (Maybe Text) <- Hedis.get authTokenKey
@@ -56,7 +60,7 @@ resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CM
 resetAuthToken config = do
   password <- decrypt config.password
   auth <-
-    callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password) "authCMRL" authAPI
+    callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
       >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
   Hedis.setExp authTokenKey auth.result.access_token (2 * 3600)
   return auth.result.access_token

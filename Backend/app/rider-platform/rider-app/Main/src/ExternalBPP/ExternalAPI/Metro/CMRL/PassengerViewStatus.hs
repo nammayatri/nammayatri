@@ -15,7 +15,8 @@ import Kernel.Utils.Common
 import Servant
 
 data PassengerViewStatusReq = PassengerViewStatusReq
-  { mobileNumber :: T.Text
+  { mobileNumber :: T.Text,
+    appType :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

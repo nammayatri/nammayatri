@@ -34,12 +34,15 @@ createOrder config booking mRiderNumber = do
         { origin = fromStation.code,
           destination = toStation.code,
           ticketType = "SJT", -- TODO: FIX THIS
-          noOfTickets = booking.quantity,
+          noOfTickets = 1, -- Always set to 1 as per requirement
           ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice),
           customerMobileNo = fromMaybe "9999999999" mRiderNumber,
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,
-          paymentMode = "UPI" -- TODO: fix this
+          paymentMode = "UPI",
+          appType = cmrlAppType,
+          paxCount = booking.quantity, -- Number of tickets
+          qrTypeCode = "FQR"
         }
   tickets <-
     ticketsData `forM` \TicketInfo {..} -> do
@@ -64,7 +67,10 @@ data GenerateQRReq = GenerateQRReq
     customerMobileNo :: T.Text,
     uniqueTxnRefNo :: T.Text,
     bankRefNo :: T.Text,
-    paymentMode :: T.Text
+    paymentMode :: T.Text,
+    appType :: T.Text,
+    paxCount :: Int,
+    qrTypeCode :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

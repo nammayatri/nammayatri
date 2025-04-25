@@ -4,6 +4,7 @@
 
 module Storage.Queries.RouteStopTimeTable where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RouteStopTimeTable
 import Kernel.Beam.Functions
@@ -47,11 +48,12 @@ findByRouteCodeAndStopCode routeCode stopCode integratedBppConfigId = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> Kernel.Prelude.Text -> Kernel.Prelude.TimeOfDay -> Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable -> m (Maybe Domain.Types.RouteStopTimeTable.RouteStopTimeTable))
-findByPrimaryKey integratedBppConfigId stopCode timeOfArrival tripId = do
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Prelude.Text -> Kernel.Prelude.TimeOfDay -> Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable -> m (Maybe Domain.Types.RouteStopTimeTable.RouteStopTimeTable))
+findByPrimaryKey integratedBppConfigId serviceTierType stopCode timeOfArrival tripId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId),
+          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
           Se.Is Beam.stopCode $ Se.Eq stopCode,
           Se.Is Beam.timeOfArrival $ Se.Eq timeOfArrival,
           Se.Is Beam.tripId $ Se.Eq (Kernel.Types.Id.getId tripId)
@@ -63,7 +65,6 @@ updateByPrimaryKey (Domain.Types.RouteStopTimeTable.RouteStopTimeTable {..}) = d
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.routeCode routeCode,
-      Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.timeOfDeparture timeOfDeparture,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -72,6 +73,7 @@ updateByPrimaryKey (Domain.Types.RouteStopTimeTable.RouteStopTimeTable {..}) = d
     ]
     [ Se.And
         [ Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId),
+          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
           Se.Is Beam.stopCode $ Se.Eq stopCode,
           Se.Is Beam.timeOfArrival $ Se.Eq timeOfArrival,
           Se.Is Beam.tripId $ Se.Eq (Kernel.Types.Id.getId tripId)

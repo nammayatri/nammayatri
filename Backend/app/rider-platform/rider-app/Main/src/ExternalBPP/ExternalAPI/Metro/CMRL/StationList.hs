@@ -34,6 +34,7 @@ data StationListResponse = StationListResponse
 type StationListAPI =
   "cumta" :> "stations"
     :> Header "Authorization" Text
+    :> MandatoryQueryParam "appType" Text
     :> Get '[JSON] StationListResponse
 
 stationListAPI :: Proxy StationListAPI
@@ -41,6 +42,6 @@ stationListAPI = Proxy
 
 getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m [Station]
 getStationList config = do
-  let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken)
+  let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   response <- callCMRLAPI config eulerClient "getStationList" stationListAPI
   return response.result

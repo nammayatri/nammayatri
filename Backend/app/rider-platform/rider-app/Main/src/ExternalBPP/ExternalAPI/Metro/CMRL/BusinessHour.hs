@@ -34,6 +34,7 @@ data BusinessHourRes = BusinessHourRes
 type BusinessHourAPI =
   "cumta" :> "businesshour"
     :> Header "Authorization" T.Text
+    :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] BusinessHourRes
 
 businessHourAPI :: Proxy BusinessHourAPI
@@ -41,6 +42,6 @@ businessHourAPI = Proxy
 
 getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m BusinessHourResult
 getBusinessHour config = do
-  let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken)
+  let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   response <- callCMRLAPI config eulerClient "getBusinessHour" businessHourAPI
   return response.result

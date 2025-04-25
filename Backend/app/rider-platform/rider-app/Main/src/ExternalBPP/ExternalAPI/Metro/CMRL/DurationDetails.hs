@@ -15,7 +15,8 @@ import Servant
 
 data DurationDetailsReq = DurationDetailsReq
   { originStationId :: T.Text,
-    destinationStationId :: T.Text
+    destinationStationId :: T.Text,
+    appType :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

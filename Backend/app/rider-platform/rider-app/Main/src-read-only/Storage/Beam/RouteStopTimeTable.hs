@@ -28,12 +28,12 @@ data RouteStopTimeTableT f = RouteStopTimeTableT
 
 instance B.Table RouteStopTimeTableT where
   data PrimaryKey RouteStopTimeTableT f
-    = RouteStopTimeTableId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.TimeOfDay) (B.C f Kernel.Prelude.Text)
+    = RouteStopTimeTableId (B.C f Kernel.Prelude.Text) (B.C f BecknV2.FRFS.Enums.ServiceTierType) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.TimeOfDay) (B.C f Kernel.Prelude.Text)
     deriving (Generic, B.Beamable)
-  primaryKey = RouteStopTimeTableId <$> integratedBppConfigId <*> stopCode <*> timeOfArrival <*> tripId
+  primaryKey = RouteStopTimeTableId <$> integratedBppConfigId <*> serviceTierType <*> stopCode <*> timeOfArrival <*> tripId
 
 type RouteStopTimeTable = RouteStopTimeTableT Identity
 
-$(enableKVPG ''RouteStopTimeTableT ['integratedBppConfigId, 'stopCode, 'timeOfArrival, 'tripId] [])
+$(enableKVPG ''RouteStopTimeTableT ['integratedBppConfigId, 'serviceTierType, 'stopCode, 'timeOfArrival, 'tripId] [])
 
 $(mkTableInstances ''RouteStopTimeTableT "route_stop_time_table")
