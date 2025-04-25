@@ -25,7 +25,7 @@ module SharedLogic.MerchantConfig
     getRidesCountInWindow,
     updateCustomerAuthCounters,
     checkAuthFraud,
-    cusomterAuthBlock,
+    customerAuthBlock,
   )
 where
 
@@ -199,8 +199,8 @@ blockCustomer riderId mcId = do
   _ <- RT.deleteByPersonId riderId
   void $ QP.updatingEnabledAndBlockedState riderId mcId True
 
-cusomterAuthBlock :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
-cusomterAuthBlock riderId mcId blockDurationMinutes = do
+customerAuthBlock :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
+customerAuthBlock riderId mcId blockDurationMinutes = do
   regTokens <- RT.findAllByPersonId riderId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token

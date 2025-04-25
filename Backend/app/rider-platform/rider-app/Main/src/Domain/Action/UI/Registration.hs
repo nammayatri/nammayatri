@@ -262,7 +262,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
     (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraud merchantConfigs person.id
     when isFraudDetected $ do
       whenJust mbMerchantConfigId $ \mcId ->
-        SMC.cusomterAuthBlock person.id (Just mcId) riderConfig.blockedUntilInMins
+        SMC.customerAuthBlock person.id (Just mcId) riderConfig.blockedUntilInMins
 
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)

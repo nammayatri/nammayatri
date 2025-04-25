@@ -1,6 +1,6 @@
--- prod, master queries
 INSERT INTO atlas_app.merchant_config
 (
+    id,
     merchant_id,
     merchant_operating_city_id,
     fraud_booking_cancellation_count_threshold,
@@ -17,6 +17,7 @@ INSERT INTO atlas_app.merchant_config
     fraud_auth_count_window
 )
 SELECT
+md5(random()::text || clock_timestamp()::text)::uuid,
     merchant_id,
     id as operating_city_id,
     1000,
@@ -36,4 +37,3 @@ FROM atlas_app.merchant_operating_city;
 UPDATE atlas_app.rider_config
 SET blocked_until_in_mins = 1440
 WHERE blocked_until_in_mins IS NULL;
-
