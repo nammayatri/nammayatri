@@ -287,7 +287,8 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     extraDistanceFare :: Maybe Kernel.Types.Common.Price,
     fareProductType :: Maybe Text,
     bppRideId :: Maybe (Id DRide.BPPRide),
-    driverMobileNumber :: Maybe Text
+    driverMobileNumber :: Maybe Text,
+    exoPhoneNumber :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -500,7 +501,8 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 fareProductType = Just $ getBookingDetailsConstructor booking.bookingDetails,
                 extraDistanceFare = (.amount) <$> find (\item -> item.description == "DIST_BASED_FARE") fareBreakups,
                 bppRideId = mRide <&> (.bppRideId),
-                driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide
+                driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide,
+                exoPhoneNumber = Just booking.primaryExophone
               },
         actualDistance = mRide >>= (.traveledDistance),
         totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare))
@@ -567,7 +569,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 extraDistanceFare = Nothing,
                 fareProductType = Nothing,
                 bppRideId = Nothing,
-                driverMobileNumber = Nothing
+                driverMobileNumber = Nothing,
+                exoPhoneNumber = Nothing
               },
         actualDistance = Nothing,
         totalFare = Nothing
