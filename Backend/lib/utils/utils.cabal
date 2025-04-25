@@ -21,6 +21,8 @@ source-repository head
 
 library
   exposed-modules:
+      Lib.Utils.Storage.Beam.BeamFlow
+      Lib.Utils.Storage.Queries.VoipCallStatusExtra
       Tools.DynamicLogic
       Tools.SharedRedisKeys
       Utils.Common.Cac.ContextConstants
@@ -32,11 +34,18 @@ library
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
+      Utils.Common.Voip.Types.VoipApiType
+      Utils.Common.Voip.Types.VoipStorageType
       Utils.QRCode.Scanner
+      Lib.Utils.Storage.Beam.VoipCallStatus
+      Lib.Utils.Storage.Queries.OrphanInstances.VoipCallStatus
+      Lib.Utils.Storage.Queries.VoipCallStatus
+      Lib.Utils.Types.VoipCallStatus
   other-modules:
       Paths_utils
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -72,6 +81,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
+      DerivingStrategies
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       JuicyPixels

@@ -40,6 +40,7 @@ import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
+import qualified API.Action.UI.Voip as Voip
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
@@ -128,6 +129,7 @@ type API =
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> Voip.API
            :<|> RentalsIntercityCache.API
            :<|> Miscellaneous.API
            :<|> NearbyDrivers.API
@@ -187,6 +189,7 @@ handler =
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> Voip.handler
     :<|> RentalsIntercityCache.handler
     :<|> Miscellaneous.handler
     :<|> NearbyDrivers.handler

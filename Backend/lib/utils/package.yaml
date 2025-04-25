@@ -50,6 +50,7 @@ default-extensions:
   - StandaloneDeriving
   - PackageImports
   - TemplateHaskell
+  - DerivingStrategies
 
 dependencies:
   - aeson
@@ -125,7 +126,9 @@ ghc-options:
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
     - -Wall
     - -Wcompat
