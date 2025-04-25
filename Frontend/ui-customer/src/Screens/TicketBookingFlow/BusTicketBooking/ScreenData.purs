@@ -27,6 +27,7 @@ initData =
     , ticketServiceType : API.METRO
     , ticketDetailsState : Nothing
     , busDetailsArray : []
+    , closestBusDistance : 0.0
     }
   , props: {
     srcLat :  0.0,

@@ -16,6 +16,7 @@ import JBridge as JB
 import Screens.Types (NearestWaypointConfig)
 import Services.API as API
 import Debug (spy)
+import Data.Int as DI
 
 dummyWaypointConfig :: NearestWaypointConfig
 dummyWaypointConfig = 
@@ -129,13 +130,12 @@ rotationBetweenLatLons (API.LatLong latLng1) (API.LatLong latLng2) =
 getZoomLevel :: Number -> Number
 getZoomLevel radius =
   let
-    baseZoom = 17.0
+    baseZoom = 16.0
   in
     if radius > 0.0 then
       let
-        radiusElevated = radius + (radius / 2.0)
-        scale = radiusElevated / 500.0
-        zoom = 17.0 - (log scale / log 2.0)
+        scale = radius / 500.0
+        zoom = 16.0 - (log scale / log 2.0)
       in
         roundTo 2.0 zoom
     else

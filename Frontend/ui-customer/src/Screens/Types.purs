@@ -3324,6 +3324,7 @@ type BusTicketBookingData = {
   , ticketServiceType :: API.TicketServiceType
   , ticketDetailsState :: Maybe MetroMyTicketsScreenState
   , busDetailsArray :: Array BusDetails
+  , closestBusDistance :: Number
 }
 
 type BusTicketBookingProps = {
@@ -3397,7 +3398,8 @@ type BusTrackingScreenProps = {
   currentLat :: Number,
   currentLon :: Number,
   minimumEtaDistance :: Maybe Int,
-  isMinimumEtaDistanceAvailable :: Maybe Boolean
+  isMinimumEtaDistanceAvailable :: Maybe Boolean,
+  fromScreen :: String
 }
 
 data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen

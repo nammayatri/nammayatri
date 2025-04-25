@@ -51,6 +51,7 @@ import Effect.Uncurried (runEffectFn4)
 import Data.Lens ((^.))
 import Accessor (_lat, _lon, _routeCode)
 import Data.Foldable (for_)
+import MapUtils as MU
 import Data.String as DS
 
 
@@ -77,6 +78,7 @@ data Action
   | UpdateCurrentLocation String String
   | RecenterCurrentLocation
   | NearbyDriverRespAC API.NearbyDriverRes
+  | UpdateClosestBusZoomLevel Number
 
 data ScreenOutput
   = GoToHomeScreen ST.BusTicketBookingState
@@ -174,6 +176,8 @@ eval (NearbyDriverRespAC (API.NearbyDriverRes resp)) state =
             _ -> Nothing
         _ -> Nothing
 
+eval (UpdateClosestBusZoomLevel closestDistance) state =
+  continue state { data { closestBusDistance = closestDistance } }
 
 eval _ state = continue state
 
