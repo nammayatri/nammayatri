@@ -435,6 +435,7 @@ initData = let
     , busClicked : false
     , ticketServiceType : API.METRO
     , enquiryBannerUndoTimer : Nothing
+    , isBottomSheetOpened : false
   }
 }
 
