@@ -1152,6 +1152,7 @@ type HomeScreenStateProps =
   , showBookAnyOptions :: Boolean
   , showBoostSearch :: Boolean
   , enquiryBannerUndoTimer :: Maybe Int
+  , isBottomSheetOpened :: Boolean
   }
 
 type EditedLocation = {

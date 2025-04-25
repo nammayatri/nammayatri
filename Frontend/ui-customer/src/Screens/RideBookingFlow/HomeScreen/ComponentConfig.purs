@@ -1651,6 +1651,7 @@ chooseYourRideConfig state =
       , startTimeUTC = startTimeUTC
       , returnTimeUTC =  returnTimeUTC
       , roundTrip = roundTrip
+      , pushSheetChangedAction = not state.props.isBottomSheetOpened
       }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
