@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   updateWithKV
     [ Se.Set Beam.address address,
       Se.Set Beam.code code,
+      Se.Set Beam.hindiName hindiName,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
@@ -68,6 +69,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.possibleTypes possibleTypes,
+      Se.Set Beam.regionalName regionalName,
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

@@ -184,9 +184,11 @@ data TransportRouteStopMapping = TransportRouteStopMapping {rc :: Kernel.Prelude
 data TransportStation = TransportStation
   { ad :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cd :: Kernel.Prelude.Text,
+    hin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ln :: Kernel.Prelude.Double,
     lt :: Kernel.Prelude.Double,
     nm :: Kernel.Prelude.Text,
+    rgn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
