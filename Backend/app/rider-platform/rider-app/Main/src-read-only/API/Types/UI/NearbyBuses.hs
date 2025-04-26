@@ -26,7 +26,13 @@ data NearbyBus = NearbyBus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyBusesRequest = NearbyBusesRequest {platformType :: Domain.Types.IntegratedBPPConfig.PlatformType, requireRecentRide :: Kernel.Prelude.Bool, userLat :: Kernel.Prelude.Double, userLon :: Kernel.Prelude.Double}
+data NearbyBusesRequest = NearbyBusesRequest
+  { platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
+    requireNearbyBuses :: Kernel.Prelude.Bool,
+    requireRecentRide :: Kernel.Prelude.Bool,
+    userLat :: Kernel.Prelude.Double,
+    userLon :: Kernel.Prelude.Double
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
