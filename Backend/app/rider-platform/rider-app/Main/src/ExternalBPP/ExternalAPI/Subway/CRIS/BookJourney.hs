@@ -104,22 +104,22 @@ data CRISBookingRequest = CRISBookingRequest
 
 data CRISBookingResponse = CRISBookingResponse
   { ticketNumber :: Text, -- utsno
-    amount :: HighPrecMoney, -- cashReceived
-    source :: Text,
-    destination :: Text,
-    via :: Text,
-    numAdults :: Int, -- adult
-    numChildren :: Int, -- child
-    classCode :: Text,
-    ticketType :: Text, -- tktType
-    trainType :: Text,
-    serviceTax :: Text,
-    transactionTime :: Text, -- txnTime
-    journeyComment :: Text, -- jrnyCommencingString
+    amount :: Maybe HighPrecMoney, -- cashReceived
+    source :: Maybe Text,
+    destination :: Maybe Text,
+    via :: Maybe Text,
+    numAdults :: Maybe Int, -- adult
+    numChildren :: Maybe Int, -- child
+    classCode :: Maybe Text,
+    ticketType :: Maybe Text, -- tktType
+    trainType :: Maybe Text,
+    serviceTax :: Maybe Text,
+    transactionTime :: Maybe Text, -- txnTime
+    journeyComment :: Maybe Text, -- jrnyCommencingString
     validUntil :: Text, -- showTicketValidity
-    journeyDate :: Text, -- journeyDate
-    routeMessage :: Text,
-    chargeableAmount :: HighPrecMoney,
+    journeyDate :: Maybe Text, -- journeyDate
+    routeMessage :: Maybe Text,
+    chargeableAmount :: Maybe HighPrecMoney,
     encryptedTicketData :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
@@ -127,22 +127,22 @@ data CRISBookingResponse = CRISBookingResponse
 -- Add type for decrypted ticket data
 data CRISTicketData = CRISTicketData
   { utsNumber :: Text,
-    cashReceived :: HighPrecMoney,
-    source :: Text,
-    destination :: Text,
-    via :: Text,
-    adult :: Int,
-    child :: Int,
-    classCode :: Text,
-    ticketType :: Text,
-    trainType :: Text,
-    serviceTax :: Text,
-    txnTime :: Text,
-    jrnyCommencingString :: Text,
+    cashReceived :: Maybe HighPrecMoney,
+    source :: Maybe Text,
+    destination :: Maybe Text,
+    via :: Maybe Text,
+    adult :: Maybe Int,
+    child :: Maybe Int,
+    classCode :: Maybe Text,
+    ticketType :: Maybe Text,
+    trainType :: Maybe Text,
+    serviceTax :: Maybe Text,
+    txnTime :: Maybe Text,
+    jrnyCommencingString :: Maybe Text,
     showTicketValidity :: Text,
-    journeyDate :: Text,
-    routeMessage :: Text,
-    chargeableAmount :: HighPrecMoney
+    journeyDate :: Maybe Text,
+    routeMessage :: Maybe Text,
+    chargeableAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -283,7 +283,7 @@ createOrder config booking = do
             bookAuthCode = bookAuthCode,
             agentAppTxnId = show frfsTicketBookingPayment.paymentOrderId,
             bankDeductedAmount = round booking.price.amount.getHighPrecMoney,
-            tpBookType = 1
+            tpBookType = 0
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
@@ -299,7 +299,7 @@ createOrder config booking = do
           [ ProviderTicket
               { ticketNumber = bookJourneyResp.ticketNumber,
                 vehicleNumber = Nothing,
-                description = Just bookJourneyResp.journeyComment,
+                description = bookJourneyResp.journeyComment,
                 qrData = bookJourneyResp.encryptedTicketData,
                 qrStatus = "UNCLAIMED",
                 qrValidity = qrValidityTime,
