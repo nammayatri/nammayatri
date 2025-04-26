@@ -97,7 +97,8 @@ data CRISBookingRequest = CRISBookingRequest
     agentAccountId :: Text,
     bookAuthCode :: Text,
     agentAppTxnId :: Text,
-    bankDeductedAmount :: Int
+    bankDeductedAmount :: Int,
+    tpBookType :: Int
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -281,7 +282,8 @@ createOrder config booking = do
             agentAccountId = show config.tpAccountId,
             bookAuthCode = bookAuthCode,
             agentAppTxnId = show frfsTicketBookingPayment.paymentOrderId,
-            bankDeductedAmount = round booking.price.amount.getHighPrecMoney
+            bankDeductedAmount = round booking.price.amount.getHighPrecMoney,
+            tpBookType = 1
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
@@ -348,7 +350,8 @@ constructBookingJson request = do
             "agentAccountID" .= request.agentAccountId,
             "bookAuthCode" .= request.bookAuthCode,
             "agentAppTxnID" .= request.agentAppTxnId,
-            "bankDeductedAmount" .= (request.bankDeductedAmount :: Int)
+            "bankDeductedAmount" .= (request.bankDeductedAmount :: Int),
+            "tpBookType" .= (request.tpBookType :: Int)
           ]
   decodeUtf8 $ LBS.toStrict $ encode bookingRequest
 
