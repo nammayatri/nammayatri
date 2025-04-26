@@ -128,7 +128,7 @@ confirm ::
 confirm DConfirmReq {..} = do
   now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
-  bppQuoteId <- getBppQuoteId now quote.quoteDetails
+  (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -170,7 +170,7 @@ confirm DConfirmReq {..} = do
   void $ QBPL.createMany bookingParties
   unless isScheduled $
     void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
-  void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
+  whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
     _ -> return Nothing
@@ -203,17 +203,17 @@ confirm DConfirmReq {..} = do
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
       DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
-      DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
+      DQuote.RentalDetails rentalDetails -> pure (rentalDetails.id.getId, Nothing)
       DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
-      DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
-      DQuote.InterCityDetails details -> pure details.id.getId
-      DQuote.MeterRideDetails details -> pure details.quoteId
+      DQuote.OneWaySpecialZoneDetails details -> pure (details.quoteId, Nothing)
+      DQuote.InterCityDetails details -> pure (details.id.getId, Nothing)
+      DQuote.MeterRideDetails details -> pure (details.quoteId, Nothing)
 
     getBppQuoteIdFromDriverOffer driverOffer now = do
       estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
       when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
       when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
-      pure driverOffer.bppQuoteId
+      pure (driverOffer.bppQuoteId, Just estimate.id)
 
     checkIfActiveRidePresentForParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DBPL.BookingPartiesLink] -> m ()
     checkIfActiveRidePresentForParties bookingParties = do

@@ -262,10 +262,6 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   QSearchRequest.updatePricingId legSearchId (Just req.estimateId.getId)
 
   whenJust mbEstimate $ \estimate -> do
-    when (estimate.status == DEst.COMPLETED) $ do
-      cancelPrevSearch legSearchId estimate.id
-      void $ QEstimate.updateStatus DEst.NEW req.estimateId
-      JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
@@ -433,7 +429,7 @@ getMultimodalJourneyStatus ::
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  journeyChangeLogCounter :: Int <- (Redis.safeGet mkJourneyChangeLogKey) <&> fromMaybe 0
+  journeyChangeLogCounter <- JM.getJourneyChangeLogCounter journeyId
   paymentStatus <-
     if journey.isPaymentSuccess /= Just True
       then do
@@ -457,8 +453,6 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
           else return Nothing
   return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
   where
-    mkJourneyChangeLogKey = "Journey:Change:Counter:JourneyId-" <> journeyId.getId
-
     transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
     transformLeg legState =
       case legState of
