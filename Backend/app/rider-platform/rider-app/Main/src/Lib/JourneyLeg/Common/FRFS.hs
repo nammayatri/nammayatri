@@ -27,6 +27,7 @@ import Domain.Utils (safeHead, safeLast)
 import Environment
 import EulerHS.Prelude (comparing, (+||), (||+))
 import ExternalBPP.CallAPI as CallExternalBPP
+import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface.Types as EMTypes
 import Kernel.Prelude
@@ -43,6 +44,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JT
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -352,63 +354,57 @@ getState mode searchId riderLastPoints isLastCompleted = do
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> m (Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails = do
-  QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
-    >>= \case
-      Just bapConfig -> do
-        try @_ @SomeException
-          ( case vehicleCategory of
-              Spec.BUS -> do
-                mapM
-                  ( \FRFSRouteDetails {..} ->
-                      case routeCode of
-                        Just routeCode' -> CallExternalBPP.getFares riderId merchant merchantOperatingCity bapConfig routeCode' startStationCode endStationCode vehicleCategory DIBC.MULTIMODAL
-                        Nothing -> return []
-                  )
-                  routeDetails
-              _ -> do
-                -- In case of metro fares of all exchanges are calculated together
-                let mbRouteDetail = mergeFFRFSRouteDetails routeDetails
-                case mbRouteDetail of
-                  Just routeDetail -> do
-                    case routeDetail.routeCode of
-                      Just routeCode' -> do
-                        fares <- CallExternalBPP.getFares riderId merchant merchantOperatingCity bapConfig routeCode' routeDetail.startStationCode routeDetail.endStationCode vehicleCategory DIBC.MULTIMODAL
-                        return [fares]
-                      Nothing -> return []
-                  Nothing -> return []
-          )
-          >>= \case
-            Right [] -> do
-              logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory
-              return Nothing
-            Right farePerRouteAcrossVehicleServiceTiers -> do
-              let minFarePerRoute = catMaybes (selectMinFare <$> farePerRouteAcrossVehicleServiceTiers)
-              let maxFarePerRoute = catMaybes (selectMaxFare <$> farePerRouteAcrossVehicleServiceTiers)
-              if length minFarePerRoute /= length farePerRouteAcrossVehicleServiceTiers
-                then do
-                  logError $ "Not Getting Fares for All Transit Routes for Vehicle Category : " <> show vehicleCategory
+  let mbRouteDetail = mergeFFRFSRouteDetails routeDetails
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
+  case (mbRouteDetail >>= (.routeCode), mbRouteDetail <&> (.startStationCode), mbRouteDetail <&> (.endStationCode)) of
+    (Just routeCode, Just startStationCode, Just endStationCode) -> do
+      QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
+        >>= \case
+          Just bapConfig -> do
+            try @_ @SomeException (Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig routeCode startStationCode endStationCode vehicleCategory)
+              >>= \case
+                Right [] -> do
+                  logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory
                   return Nothing
-                else do
-                  let minFare = sum $ map ((.getHighPrecMoney) . (.amount) . (.price)) minFarePerRoute
-                  let maxFare = sum $ map ((.getHighPrecMoney) . (.amount) . (.price)) maxFarePerRoute
-                  return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = minFare}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = maxFare}})
-            Left err -> do
-              logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Error : " <> show err
-              return Nothing
-      Nothing -> do
-        logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
-        return Nothing
+                Right fares -> do
+                  (possibleServiceTiers, availableFares) <- filterAvailableBuses startStationCode endStationCode integratedBPPConfig.id fares
+                  let mbMinFarePerRoute = selectMinFare availableFares
+                  let mbMaxFarePerRoute = selectMaxFare availableFares
+                  case (mbMinFarePerRoute, mbMaxFarePerRoute) of
+                    (Just minFare, Just maxFare) -> do
+                      return (Just $ JT.GetFareResponse {serviceTypes = possibleServiceTiers, estimatedMinFare = minFare.price.amount, estimatedMaxFare = maxFare.price.amount})
+                    _ -> do
+                      logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory
+                      return Nothing
+                Left err -> do
+                  logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Error : " <> show err
+                  return Nothing
+          Nothing -> do
+            logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
+            return Nothing
+    _ -> do
+      logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory
+      return Nothing
   where
-    sortedFares :: [FRFSFare] -> [FRFSFare]
-    sortedFares fares = sortOn (\fare -> fare.price.amount.getHighPrecMoney) fares
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r) => Text -> Text -> Id DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
+    filterAvailableBuses startStationCode endStationCode integratedBPPConfigId fares = do
+      case vehicleCategory of
+        Spec.BUS -> do
+          now <- getCurrentTime
+          -- Above getFares function return fares for all types of buses (e.g. AC, Non-AC, Ordinary, etc.) but instead of showing all types of buses to user,
+          -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
+          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode now integratedBPPConfigId
+          let possibleServiceTiers = map (.serviceTier) possibleRoutes
+          return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
+        _ -> return (Nothing, fares)
 
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing
-    selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (sortedFares fares)
+    selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
 
     selectMaxFare :: [FRFSFare] -> Maybe FRFSFare
     selectMaxFare [] = Nothing
-    selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (sortedFares fares)
+    selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
 getInfo searchId fallbackFare distance duration = do

@@ -21,7 +21,6 @@ import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.Person
 import Environment
 import EulerHS.Prelude ((+||), (||+))
 import qualified ExternalBPP.Flow as Flow
@@ -33,7 +32,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
-import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Station as QStation
@@ -168,8 +166,3 @@ verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encrypte
       let verificationOnStatusReq = DOnStatus.TicketVerification onStatusReq
       (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
       DOnStatus.onStatus merchant' booking' verificationOnStatusReq
-
-getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> DIBC.PlatformType -> m [FRFSUtils.FRFSFare]
-getFares riderId merchant merchantOperatingCity bapConfig routeCode startStationCode endStationCode vehicleCategory platformType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| platformType ||+ "")
-  Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig routeCode startStationCode endStationCode vehicleCategory

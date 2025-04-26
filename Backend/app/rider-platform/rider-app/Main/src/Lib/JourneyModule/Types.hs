@@ -211,7 +211,7 @@ data JourneyLegStateData = JourneyLegStateData
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney}
+data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney, serviceTypes :: Maybe [Spec.ServiceTierType]}
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -699,7 +699,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
           route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
           mbQuote <- QFRFSQuote.findById booking.quoteId
-          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
+          let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Bus $
               BusLegExtraInfo
@@ -715,7 +715,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
-          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
+          let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           mbPerson <- QPerson.findById booking.riderId
           imeiNumber <- decrypt `mapM` (mbPerson >>= (.imeiNumber))
           return $
@@ -858,7 +858,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
           route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
-          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
+          let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Bus $
               BusLegExtraInfo
@@ -873,7 +873,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
                 }
         Spec.SUBWAY -> do
-          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
+          let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Subway $
               SubwayLegExtraInfo
@@ -887,19 +887,18 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   selectedServiceTier = mbSelectedServiceTier
                 }
 
-getServiceTierFromQuote :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSQuote.FRFSQuote -> m (Maybe LegServiceTier)
+getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
 getServiceTierFromQuote quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
   let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-  return $
-    mbServiceTier <&> \serviceTier -> do
-      LegServiceTier
-        { fare = mkPriceAPIEntity quote.price,
-          quoteId = quote.id,
-          serviceTierName = serviceTier.shortName,
-          serviceTierType = serviceTier._type,
-          serviceTierDescription = serviceTier.description
-        }
+  mbServiceTier <&> \serviceTier -> do
+    LegServiceTier
+      { fare = mkPriceAPIEntity quote.price,
+        quoteId = quote.id,
+        serviceTierName = serviceTier.shortName,
+        serviceTierType = serviceTier._type,
+        serviceTierDescription = serviceTier.description
+      }
 
 stationToStationAPI :: DTS.Station -> FRFSStationAPI
 stationToStationAPI station =
@@ -972,7 +971,7 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = leg.toStopDetails,
-        serviceTypes = Nothing,
+        serviceTypes = fare >>= (.serviceTypes),
         estimatedMinFare = fare <&> (.estimatedMinFare),
         estimatedMaxFare = fare <&> (.estimatedMaxFare),
         merchantId = Just merchantId,

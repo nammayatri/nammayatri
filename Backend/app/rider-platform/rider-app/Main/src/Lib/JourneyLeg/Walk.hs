@@ -102,6 +102,7 @@ instance JT.JourneyLeg WalkLegRequest m where
       Just $
         JT.GetFareResponse
           { estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0},
-            estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0}
+            estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0},
+            serviceTypes = Nothing
           }
   getFare _ = throwError (InternalError "Not supported")

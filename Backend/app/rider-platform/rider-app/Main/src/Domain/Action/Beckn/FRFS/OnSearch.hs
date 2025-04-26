@@ -36,6 +36,8 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JourneyLegTypes
+import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -44,6 +46,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.IntegratedBPPConfig as QIBP
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -153,7 +156,7 @@ onSearch onSearchReq validatedReq = do
       let updatedQuotes = map updateQuotes zippedQuotes
       for_ updatedQuotes \quote -> QQuote.updateCachedQuoteByPrimaryKey quote
   let search = validatedReq.search
-      mbRequiredQuote = filterQuotes quotes
+  mbRequiredQuote <- filterQuotes quotes search.journeyLegInfo
   whenJust mbRequiredQuote $ \requiredQuote -> do
     void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
@@ -169,9 +172,16 @@ onSearch onSearchReq validatedReq = do
               }
       CachedQuote.cacheByFRFSCachedQuoteKey key CachedQuote.FRFSCachedQuote {CachedQuote.price = quote.price, CachedQuote.stationsJson = quote.stationsJson}
 
-filterQuotes :: [Quote.FRFSQuote] -> Maybe Quote.FRFSQuote
-filterQuotes [] = Nothing
-filterQuotes quotes = Just $ minimumBy (\quote1 quote2 -> compare quote1.price.amount.getHighPrecMoney quote2.price.amount.getHighPrecMoney) quotes
+filterQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => [Quote.FRFSQuote] -> Maybe JourneyLegTypes.JourneySearchData -> m (Maybe Quote.FRFSQuote)
+filterQuotes [] _ = return Nothing
+filterQuotes quotes (Just journeySearchData) = do
+  mbJourneyLeg <- QJourneyLeg.findByJourneyIdAndSequenceNumber (Id journeySearchData.journeyId) journeySearchData.journeyLegOrder
+  filteredQuotes <- case mbJourneyLeg >>= (.serviceTypes) of
+    Just serviceTypes -> do
+      return $ quotes & filter (maybe False (\serviceTier -> serviceTier.serviceTierType `elem` serviceTypes) . JourneyTypes.getServiceTierFromQuote)
+    Nothing -> return quotes
+  return $ Just $ minimumBy (\quote1 quote2 -> compare quote1.price.amount.getHighPrecMoney quote2.price.amount.getHighPrecMoney) (if null filteredQuotes then quotes else filteredQuotes)
+filterQuotes _ Nothing = return Nothing
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do

@@ -30,6 +30,7 @@ module Domain.Action.UI.Quote
 where
 
 import qualified Beckn.ACL.Cancel as CancelACL
+import qualified BecknV2.FRFS.Enums as FRFSEnums
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -235,6 +236,7 @@ data JourneyLeg = JourneyLeg
     colorCode :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     duration :: Maybe Seconds,
     distance :: Maybe Distance,
+    serviceTypes :: Maybe [FRFSEnums.ServiceTierType],
     estimatedMinFare :: Maybe HighPrecMoney,
     estimatedMaxFare :: Maybe HighPrecMoney
   }
@@ -412,6 +414,7 @@ getJourneys searchRequest hasMultimodalSearch = do
                     colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
                     routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
+                    serviceTypes = journeyLeg.serviceTypes,
                     distance = journeyLeg.distance,
                     estimatedMinFare = journeyLeg.estimatedMinFare,
                     estimatedMaxFare = journeyLeg.estimatedMaxFare
