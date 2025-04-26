@@ -39,6 +39,7 @@ types:
       userLon: Double
       platformType: PlatformType
       requireRecentRide: Bool
+      requireNearbyBuses: Bool
 
   NearbyBusesResponse:
       nearbyBuses: [NearbyBus]

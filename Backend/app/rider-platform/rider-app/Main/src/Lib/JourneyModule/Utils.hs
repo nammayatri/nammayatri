@@ -5,12 +5,15 @@ import Control.Applicative ((<|>))
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.MultimodalPreferences as DMP
+import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
@@ -22,6 +25,8 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -443,3 +448,60 @@ convertSortingType sortType = case sortType of
   DMP.MINIMUM_TRANSITS -> MultiModal.MinimumTransits
   DMP.MOST_RELEVANT -> MultiModal.MostRelevant
   _ -> MultiModal.Fastest -- Default case for any other values
+
+-- Helper functions for recent location
+convertModeToEntityType :: DTrip.MultimodalTravelMode -> DTRL.EntityType
+convertModeToEntityType DTrip.Bus = DTRL.BUS
+convertModeToEntityType DTrip.Metro = DTRL.METRO
+convertModeToEntityType DTrip.Subway = DTRL.SUBWAY
+convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to conditional check
+
+getRouteCode :: DJL.JourneyLeg -> Maybe Text
+getRouteCode leg = case leg.routeDetails of
+  (route : _) -> route.shortName
+  _ -> Nothing
+
+getRouteId :: DJL.JourneyLeg -> Maybe Text
+getRouteId leg = case leg.routeDetails of
+  (route : _) -> route.gtfsId
+  _ -> Nothing
+
+-- Main function to create recent location table entry
+createRecentLocationForSingleModeBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DB.Booking -> m ()
+createRecentLocationForSingleModeBooking booking = do
+  now <- getCurrentTime
+  if (isJust booking.recentLocationId)
+    then SQRL.increaceFrequencyById (fromJust booking.recentLocationId)
+    else do
+      case booking.journeyId of
+        Just journeyId -> do
+          journeyLegs <- QJourneyLeg.findAllByJourneyId journeyId
+          case journeyLegs of
+            [leg] | leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] && not (fromMaybe False leg.isDeleted) -> do
+              uuid <- generateGUID
+              let recentLocation =
+                    DTRL.RecentLocation
+                      { id = uuid,
+                        riderId = booking.riderId,
+                        frequency = 1,
+                        entityType = convertModeToEntityType leg.mode,
+                        address = Nothing,
+                        stopLat = Just leg.endLocation.latitude,
+                        stopLon = Just leg.endLocation.longitude,
+                        routeCode = getRouteCode leg,
+                        stopCode = leg.toStopDetails >>= (.stopCode),
+                        fromStopCode = leg.fromStopDetails >>= (.stopCode),
+                        fromStopName = leg.fromStopDetails >>= (.name),
+                        routeId = getRouteId leg,
+                        lat = leg.endLocation.latitude,
+                        lon = leg.endLocation.longitude,
+                        merchantOperatingCityId = booking.merchantOperatingCityId,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+              -- For multimodal journeys, ensure we have all required stop details
+              unless (isJust recentLocation.stopCode && isJust recentLocation.fromStopCode) $
+                logWarning $ "Missing stop details for " <> show leg.mode <> " leg in journey " <> show journeyId
+              SQRL.create recentLocation
+            _ -> pure ()
+        Nothing -> pure ()

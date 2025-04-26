@@ -9,7 +9,7 @@ RecentLocation:
 
   types:
     EntityType:
-      enum: "MULTIMODAL, BUS, METRO, TAXI"
+      enum: "MULTIMODAL, SUBWAY, BUS, METRO, TAXI"
 
 
   fields:
