@@ -159,6 +159,8 @@ Station:
     id: Id Station
     vehicleType: VehicleCategory
     name: Text
+    regionalName: Maybe Text
+    hindiName: Maybe Text
     code: Text
     lat: Maybe Double
     lon: Maybe Double

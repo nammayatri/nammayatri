@@ -298,7 +298,9 @@ getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset veh
           code = station.code,
           lat = station.lat,
           lon = station.lon,
-          address = station.address
+          address = station.address,
+          regionalName = station.regionalName,
+          hindiName = station.hindiName
         }
 
   pure frfsStations
@@ -326,6 +328,8 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
                 lat = Just req.lat,
                 lon = Just req.lon,
                 address = req.address,
+                regionalName = Nothing,
+                hindiName = Nothing,
                 merchantId = merchant.id,
                 timeBounds = Kernel.Types.TimeBound.Unbounded,
                 merchantOperatingCityId = merchantOpCity.id,

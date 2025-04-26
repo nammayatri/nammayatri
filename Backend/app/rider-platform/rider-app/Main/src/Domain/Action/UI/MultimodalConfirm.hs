@@ -654,7 +654,9 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
                               lt = lat,
                               ln = lon,
                               ad = s.address,
-                              vt = show s.vehicleType
+                              vt = show s.vehicleType,
+                              rgn = s.regionalName,
+                              hin = s.hindiName
                             }
                       _ -> Nothing
                   )

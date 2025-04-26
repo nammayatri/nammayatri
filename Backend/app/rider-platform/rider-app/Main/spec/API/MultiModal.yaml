@@ -155,6 +155,8 @@ types:
     ln: Double
     vt: Text
     ad: Maybe Text
+    rgn: Maybe Text
+    hin: Maybe Text
 
   TransportRouteStopMapping:
     rc: Text

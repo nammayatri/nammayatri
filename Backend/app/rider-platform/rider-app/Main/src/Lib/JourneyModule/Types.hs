@@ -908,7 +908,9 @@ stationToStationAPI station =
       code = station.code,
       lat = station.lat,
       lon = station.lon,
-      address = station.address
+      address = station.address,
+      regionalName = station.regionalName,
+      hindiName = station.hindiName
     }
 
 mkSearchReqLocation :: LocationAddress -> Maps.LatLngV2 -> SearchReqLocation
