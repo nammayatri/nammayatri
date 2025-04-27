@@ -12,23 +12,21 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RecentLocationT f = RecentLocationT
-  { address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    entityType :: (B.C f Domain.Types.RecentLocation.EntityType),
-    frequency :: (B.C f Kernel.Prelude.Int),
-    fromStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    fromStopName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    lat :: (B.C f Kernel.Prelude.Double),
-    lon :: (B.C f Kernel.Prelude.Double),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    riderId :: (B.C f Kernel.Prelude.Text),
-    routeCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    routeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    stopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    stopLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    stopLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    entityType :: B.C f Domain.Types.RecentLocation.EntityType,
+    frequency :: B.C f Kernel.Prelude.Int,
+    stopLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    stopLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    riderId :: B.C f Kernel.Prelude.Text,
+    routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    stopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +36,6 @@ instance B.Table RecentLocationT where
 
 type RecentLocation = RecentLocationT Identity
 
-$(enableKVPG (''RecentLocationT) [('id)] [[('riderId)]])
+$(enableKVPG ''RecentLocationT ['id] [['riderId]])
 
-$(mkTableInstances (''RecentLocationT) "recent_location")
+$(mkTableInstances ''RecentLocationT "recent_location")

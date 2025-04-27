@@ -8,6 +8,7 @@ import Data.Aeson
 import Domain.Types.Extra.RecentLocation as ReExport
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -17,18 +18,14 @@ data RecentLocation = RecentLocation
     createdAt :: Kernel.Prelude.UTCTime,
     entityType :: Domain.Types.RecentLocation.EntityType,
     frequency :: Kernel.Prelude.Int,
+    fromLatLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     fromStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fromStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation,
-    lat :: Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Double,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    stopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    stopLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    stopLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    toLatLong :: Kernel.External.Maps.Types.LatLong,
+    toStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

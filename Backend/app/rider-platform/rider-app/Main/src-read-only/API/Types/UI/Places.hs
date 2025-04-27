@@ -15,9 +15,7 @@ import Tools.Auth
 
 data MultiModalLocation = MultiModalLocation
   { address :: Data.Text.Text,
-    distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     fromStationCode :: Kernel.Prelude.Maybe Data.Text.Text,
-    fromStationName :: Kernel.Prelude.Maybe Data.Text.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     mode :: Kernel.Prelude.Maybe Domain.Types.RecentLocation.EntityType,
@@ -26,9 +24,7 @@ data MultiModalLocation = MultiModalLocation
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Kernel.Prelude.Maybe Data.Text.Text,
-    routeId :: Kernel.Prelude.Maybe Data.Text.Text,
     toStationCode :: Kernel.Prelude.Maybe Data.Text.Text,
-    toStationName :: Kernel.Prelude.Maybe Data.Text.Text,
     type_ :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)

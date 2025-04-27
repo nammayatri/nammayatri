@@ -104,3 +104,13 @@ ALTER TABLE atlas_app.recent_location ADD COLUMN from_stop_code text ;
 
 
 ------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

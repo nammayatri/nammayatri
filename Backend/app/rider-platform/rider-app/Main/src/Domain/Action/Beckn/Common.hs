@@ -100,7 +100,7 @@ import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Constants
 import Tools.Error
 import Tools.Event
-import Tools.Maps (LatLong)
+import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
@@ -682,7 +682,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
 
-  createRecentLocationForTaxi booking
+  when (isNothing booking.journeyId) $ createRecentLocationForTaxi booking
 
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
@@ -1266,8 +1266,8 @@ createRecentLocationForTaxi booking = do
   now <- getCurrentTime
   if (isJust booking.recentLocationId)
     then SQRL.increaceFrequencyById (fromJust booking.recentLocationId)
-    else when (isNothing booking.journeyId) $ do
-      let toLocation = case booking.bookingDetails of
+    else do
+      let mbToLocation = case booking.bookingDetails of
             DRB.OneWayDetails details -> Just details.toLocation
             DRB.RentalDetails _ -> Nothing
             DRB.DriverOfferDetails details -> Just details.toLocation
@@ -1277,42 +1277,32 @@ createRecentLocationForTaxi booking = do
             DRB.DeliveryDetails details -> Just details.toLocation
             DRB.MeterRideDetails details -> details.toLocation
 
-      let address' = case toLocation of
-            Nothing -> Nothing
-            Just loc -> case loc of
-              locationData ->
-                Just $
-                  mconcat
-                    [ fromMaybe "" locationData.address.building,
-                      ", ",
-                      fromMaybe "" locationData.address.street,
-                      ", ",
-                      fromMaybe "" locationData.address.city,
-                      ", ",
-                      fromMaybe "" locationData.address.state,
-                      ", ",
-                      fromMaybe "" locationData.address.country
-                    ]
-
-      uuid <- generateGUID
-      let recentLocation =
-            DTRL.RecentLocation
-              { DTRL.address = address',
-                DTRL.createdAt = now,
-                DTRL.entityType = DTRL.TAXI,
-                DTRL.frequency = 1,
-                DTRL.fromStopCode = Nothing,
-                DTRL.fromStopName = Nothing,
-                DTRL.id = uuid,
-                DTRL.lat = maybe 0.0 (\loc -> loc.lat) toLocation,
-                DTRL.lon = maybe 0.0 (\loc -> loc.lon) toLocation,
-                DTRL.merchantOperatingCityId = booking.merchantOperatingCityId,
-                DTRL.riderId = booking.riderId,
-                DTRL.routeCode = Nothing,
-                DTRL.routeId = Nothing,
-                DTRL.stopCode = Nothing,
-                DTRL.stopLat = Nothing,
-                DTRL.stopLon = Nothing,
-                DTRL.updatedAt = now
-              }
-      SQRL.create recentLocation
+      whenJust mbToLocation $ \toLocation -> do
+        let address' =
+              Text.intercalate ", " $
+                catMaybes
+                  [ toLocation.address.title,
+                    toLocation.address.building,
+                    toLocation.address.street,
+                    toLocation.address.city,
+                    toLocation.address.state,
+                    toLocation.address.country
+                  ]
+        uuid <- generateGUID
+        let recentLocation =
+              DTRL.RecentLocation
+                { DTRL.address = Just address',
+                  DTRL.entityType = DTRL.TAXI,
+                  DTRL.frequency = 1,
+                  DTRL.fromStopCode = Nothing,
+                  DTRL.id = uuid,
+                  DTRL.toLatLong = LatLong toLocation.lat toLocation.lon,
+                  DTRL.merchantOperatingCityId = booking.merchantOperatingCityId,
+                  DTRL.riderId = booking.riderId,
+                  DTRL.routeCode = Nothing,
+                  DTRL.toStopCode = Nothing,
+                  DTRL.fromLatLong = Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon,
+                  DTRL.createdAt = now,
+                  DTRL.updatedAt = now
+                }
+        SQRL.create recentLocation

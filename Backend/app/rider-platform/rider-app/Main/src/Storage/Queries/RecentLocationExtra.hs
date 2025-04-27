@@ -24,16 +24,40 @@ getRecentLocationByLatLon :: Transactionable m => Double -> Double -> Int -> Id.
 getRecentLocationByLatLon lat lon radius personId merchantOperatingCityId = do
   Esq.findAll $ do
     recentLocation <- from $ table @TRL.RecentLocationT
-    where_ $ F.pointCloseByOrWithin (lon, lat) (val radius) &&. recentLocation ^. TRL.RecentLocationMerchantOperatingCityId ==. val (Id.getId merchantOperatingCityId) &&. recentLocation ^. TRL.RecentLocationRiderId ==. val (Id.getId personId)
+    where_ $
+      F.pointCloseByOrWithin (lon, lat) (val radius)
+        &&. recentLocation ^. TRL.RecentLocationMerchantOperatingCityId ==. val (Id.getId merchantOperatingCityId)
+        &&. recentLocation ^. TRL.RecentLocationRiderId ==. val (Id.getId personId)
     pure recentLocation
 
-findByPersonIdAndRouteId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Id.Id MerchantOperatingCity -> Text -> m [RecentLocation]
-findByPersonIdAndRouteId personId mocId routeId = do
-  findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Id.getId personId), Se.Is Beam.merchantOperatingCityId $ Se.Eq (Id.getId mocId), Se.Is Beam.routeId $ Se.Eq $ Just routeId]]
+getRecentLocationByLatLonAndEntityType :: Transactionable m => DRecentLocation.EntityType -> Double -> Double -> Int -> Id.Id Person.Person -> Id.Id MerchantOperatingCity -> m [RecentLocation]
+getRecentLocationByLatLonAndEntityType entityType lat lon radius personId merchantOperatingCityId = do
+  Esq.findAll $ do
+    recentLocation <- from $ table @TRL.RecentLocationT
+    where_ $
+      F.pointCloseByOrWithin (lon, lat) (val radius)
+        &&. recentLocation ^. TRL.RecentLocationMerchantOperatingCityId ==. val (Id.getId merchantOperatingCityId)
+        &&. recentLocation ^. TRL.RecentLocationRiderId ==. val (Id.getId personId)
+        &&. recentLocation ^. TRL.RecentLocationEntityType ==. val entityType
+    pure recentLocation
 
-findRecentLocationsByRouteIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> [Text] -> m [RecentLocation]
-findRecentLocationsByRouteIds personId routeIds = do
-  findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Id.getId personId), Se.Is Beam.routeId $ Se.In (map Just routeIds)]]
+findByPersonIdAndRouteCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Id.Id MerchantOperatingCity -> Text -> m [RecentLocation]
+findByPersonIdAndRouteCode personId mocId routeCode = do
+  findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Id.getId personId), Se.Is Beam.merchantOperatingCityId $ Se.Eq (Id.getId mocId), Se.Is Beam.routeCode $ Se.Eq $ Just routeCode]]
+
+findRecentLocationsByRouteCodes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Id.Id MerchantOperatingCity -> [Text] -> m [RecentLocation]
+findRecentLocationsByRouteCodes personId mocId routeCodes = do
+  findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Id.getId personId), Se.Is Beam.merchantOperatingCityId $ Se.Eq (Id.getId mocId), Se.Is Beam.routeCode $ Se.In (map Just routeCodes)]]
+
+findRecentLocations :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRecentLocation.EntityType -> Id.Id Person.Person -> Id.Id MerchantOperatingCity -> m [RecentLocation]
+findRecentLocations entityType personId mocId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (Id.getId personId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Id.getId mocId),
+          Se.Is Beam.entityType $ Se.Eq entityType
+        ]
+    ]
 
 increaceFrequencyById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id RecentLocation -> m ()
 increaceFrequencyById id = do

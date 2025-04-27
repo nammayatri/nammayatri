@@ -6,6 +6,7 @@ module Storage.Queries.OrphanInstances.RecentLocation where
 import qualified Domain.Types.RecentLocation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -21,18 +22,14 @@ instance FromTType' Beam.RecentLocation Domain.Types.RecentLocation.RecentLocati
             createdAt = createdAt,
             entityType = entityType,
             frequency = frequency,
+            fromLatLong = Kernel.External.Maps.Types.LatLong <$> stopLat <*> stopLon,
             fromStopCode = fromStopCode,
-            fromStopName = fromStopName,
             id = Kernel.Types.Id.Id id,
-            lat = lat,
-            lon = lon,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             riderId = Kernel.Types.Id.Id riderId,
             routeCode = routeCode,
-            routeId = routeId,
-            stopCode = stopCode,
-            stopLat = stopLat,
-            stopLon = stopLon,
+            toLatLong = Kernel.External.Maps.Types.LatLong lat lon,
+            toStopCode = stopCode,
             updatedAt = updatedAt
           }
 
@@ -43,17 +40,15 @@ instance ToTType' Beam.RecentLocation Domain.Types.RecentLocation.RecentLocation
         Beam.createdAt = createdAt,
         Beam.entityType = entityType,
         Beam.frequency = frequency,
+        Beam.stopLat = fromLatLong <&> (.lat),
+        Beam.stopLon = fromLatLong <&> (.lon),
         Beam.fromStopCode = fromStopCode,
-        Beam.fromStopName = fromStopName,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.lon = lon,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeCode = routeCode,
-        Beam.routeId = routeId,
-        Beam.stopCode = stopCode,
-        Beam.stopLat = stopLat,
-        Beam.stopLon = stopLon,
+        Beam.lat = (.lat) toLatLong,
+        Beam.lon = (.lon) toLatLong,
+        Beam.stopCode = toStopCode,
         Beam.updatedAt = updatedAt
       }

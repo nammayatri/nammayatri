@@ -19,6 +19,7 @@ module Storage.Tabular.RecentLocation where
 
 import Domain.Types.RecentLocation
 import qualified Domain.Types.RecentLocation as Domain
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -62,21 +63,17 @@ instance FromTType RecentLocationT Domain.RecentLocation where
   fromTType RecentLocationT {..} = do
     return $
       Domain.RecentLocation
-        { id = Id id,
-          riderId = Id riderId,
-          routeCode = routeCode,
-          stopCode = stopCode,
-          stopLat = stopLat,
-          stopLon = stopLon,
-          address = address,
-          fromStopCode = fromStopCode,
-          fromStopName = fromStopName,
+        { address = address,
+          createdAt = createdAt,
           entityType = entityType,
           frequency = frequency,
-          routeId = routeId,
-          lat = lat,
-          lon = lon,
-          createdAt = createdAt,
-          updatedAt = updatedAt,
-          merchantOperatingCityId = Id merchantOperatingCityId
+          fromLatLong = Kernel.External.Maps.Types.LatLong <$> stopLat <*> stopLon,
+          fromStopCode = fromStopCode,
+          id = Id id,
+          merchantOperatingCityId = Id merchantOperatingCityId,
+          riderId = Id riderId,
+          routeCode = routeCode,
+          toLatLong = Kernel.External.Maps.Types.LatLong lat lon,
+          toStopCode = stopCode,
+          updatedAt = updatedAt
         }
