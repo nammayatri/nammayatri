@@ -28,16 +28,14 @@ types:
   RecentRide:
       fromStopCode: Text
       toStopCode: Text
-      fromStopName: Text
-      toStopName: Text
       fare: Price
       routeCode: Maybe Text
-
 
   NearbyBusesRequest:
       userLat: Double
       userLon: Double
       platformType: PlatformType
+      vehicleType: VehicleCategory
       requireRecentRide: Bool
       requireNearbyBuses: Bool
 

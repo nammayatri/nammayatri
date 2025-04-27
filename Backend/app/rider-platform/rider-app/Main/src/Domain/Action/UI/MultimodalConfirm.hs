@@ -66,7 +66,6 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
@@ -119,8 +118,7 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
     when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder
   void $ JM.startJourney confirmElements forcedBookLegOrder journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
-  booking <- QBooking.findByTransactionId journey.searchRequestId.getId >>= fromMaybeM (BookingNotFound journey.searchRequestId.getId)
-  JLU.createRecentLocationForSingleModeBooking booking
+  fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalBookingInfo ::

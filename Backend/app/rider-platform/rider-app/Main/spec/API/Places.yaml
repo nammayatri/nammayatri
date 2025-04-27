@@ -14,33 +14,27 @@ module: Places
 
 types:
   MultiModalLocation:
-      name: Text
-      address: Text
-      lat: Double
-      lon: Double
-      type_: Maybe Text
-      mode: Maybe EntityType
-      rating: Maybe Double
-      distance: Maybe Double  # in meters
-      multimodalRoutes: Maybe MultiModalResponse
-      toStationCode: Maybe Text
-      fromStationCode: Maybe Text
-      fromStationName: Maybe Text
-      toStationName: Maybe Text
-      routeCode: Maybe Text
-      routeId: Maybe Text
-      recentLocationId: Maybe (Id RecentLocation)
-
-
+    name: Text
+    address: Text
+    lat: Double
+    lon: Double
+    type_: Maybe Text
+    mode: Maybe EntityType
+    rating: Maybe Double
+    fromStationCode: Maybe Text
+    toStationCode: Maybe Text
+    routeCode: Maybe Text
+    multimodalRoutes: Maybe MultiModalResponse
+    recentLocationId: Maybe (Id RecentLocation)
 
   PlacesRequest:
-      userLat: Double
-      userLon: Double
-      integratedBppConfigId: Id IntegratedBPPConfig
+    userLat: Double
+    userLon: Double
+    integratedBppConfigId: Id IntegratedBPPConfig
 
   PlacesResponse:
-      popularLocations: [MultiModalLocation]
-      recentLocations: [MultiModalLocation]
+    popularLocations: [MultiModalLocation]
+    recentLocations: [MultiModalLocation]
 
 apis:
   - POST:

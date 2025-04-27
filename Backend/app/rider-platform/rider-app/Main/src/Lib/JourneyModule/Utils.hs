@@ -5,13 +5,12 @@ import Control.Applicative ((<|>))
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
-import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
+import Domain.Types.JourneyLeg
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.Route
@@ -22,9 +21,11 @@ import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
+import qualified Storage.Queries.FRFSSearch as QFRFSearch
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
@@ -32,6 +33,7 @@ import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.RouteStopTimeTable as QRouteStopTiming
 import qualified Storage.Queries.Station as QStation
+import Tools.Maps (LatLong (..))
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
 mapWithIndex f = go 0
@@ -456,52 +458,47 @@ convertModeToEntityType DTrip.Metro = DTRL.METRO
 convertModeToEntityType DTrip.Subway = DTRL.SUBWAY
 convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to conditional check
 
-getRouteCode :: DJL.JourneyLeg -> Maybe Text
-getRouteCode leg = case leg.routeDetails of
-  (route : _) -> route.shortName
-  _ -> Nothing
-
-getRouteId :: DJL.JourneyLeg -> Maybe Text
-getRouteId leg = case leg.routeDetails of
-  (route : _) -> route.gtfsId
-  _ -> Nothing
-
 -- Main function to create recent location table entry
-createRecentLocationForSingleModeBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DB.Booking -> m ()
-createRecentLocationForSingleModeBooking booking = do
-  now <- getCurrentTime
-  if (isJust booking.recentLocationId)
-    then SQRL.increaceFrequencyById (fromJust booking.recentLocationId)
-    else do
-      case booking.journeyId of
-        Just journeyId -> do
-          journeyLegs <- QJourneyLeg.findAllByJourneyId journeyId
-          case journeyLegs of
-            [leg] | leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] && not (fromMaybe False leg.isDeleted) -> do
-              uuid <- generateGUID
-              let recentLocation =
-                    DTRL.RecentLocation
-                      { id = uuid,
-                        riderId = booking.riderId,
-                        frequency = 1,
-                        entityType = convertModeToEntityType leg.mode,
-                        address = Nothing,
-                        stopLat = Just leg.endLocation.latitude,
-                        stopLon = Just leg.endLocation.longitude,
-                        routeCode = getRouteCode leg,
-                        stopCode = leg.toStopDetails >>= (.stopCode),
-                        fromStopCode = leg.fromStopDetails >>= (.stopCode),
-                        fromStopName = leg.fromStopDetails >>= (.name),
-                        routeId = getRouteId leg,
-                        lat = leg.endLocation.latitude,
-                        lon = leg.endLocation.longitude,
-                        merchantOperatingCityId = booking.merchantOperatingCityId,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-              -- For multimodal journeys, ensure we have all required stop details
-              unless (isJust recentLocation.stopCode && isJust recentLocation.fromStopCode) $
-                logWarning $ "Missing stop details for " <> show leg.mode <> " leg in journey " <> show journeyId
-              SQRL.create recentLocation
-            _ -> pure ()
-        Nothing -> pure ()
+createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Journey -> m ()
+createRecentLocationForMultimodal journey = do
+  journeyLegs <- QJourneyLeg.findAllByJourneyId journey.id
+  let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] && not (fromMaybe False leg.isDeleted)) journeyLegs
+  mbRecentLocationId <- getRecentLocationId onlyPublicTransportLegs
+  case mbRecentLocationId of
+    Just recentLocationId -> SQRL.increaceFrequencyById recentLocationId
+    Nothing -> do
+      now <- getCurrentTime
+      let legs = sortBy (comparing (.sequenceNumber)) onlyPublicTransportLegs
+      let mbFirstLeg = listToMaybe legs
+      let mbLastLeg = listToMaybe (reverse legs)
+      let mbFirstStopCode = mbFirstLeg >>= (.fromStopDetails) >>= (.stopCode)
+      let mbLastStopCode = mbLastLeg >>= (.toStopDetails) >>= (.stopCode)
+      let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.gtfsId)
+      let mbEndLocation = mbLastLeg <&> (.endLocation)
+      case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
+        (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do
+          uuid <- generateGUID
+          cityId <- journey.merchantOperatingCityId & fromMaybeM (InternalError $ "Merchant operating city id not found for journey: " <> journey.id.getId)
+          let recentLocation =
+                DTRL.RecentLocation
+                  { id = uuid,
+                    riderId = journey.riderId,
+                    frequency = 1,
+                    entityType = if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode,
+                    address = Nothing,
+                    fromLatLong = Just $ LatLong firstLeg.startLocation.latitude firstLeg.startLocation.longitude,
+                    routeCode = if length legs > 1 then Nothing else mbRouteCode,
+                    toStopCode = Just lastStopCode,
+                    fromStopCode = Just firstStopCode,
+                    toLatLong = LatLong endLocation.latitude endLocation.longitude,
+                    merchantOperatingCityId = cityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          SQRL.create recentLocation
+        _ -> return ()
+  where
+    getRecentLocationId :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => [JourneyLeg] -> m (Maybe (Id DTRL.RecentLocation))
+    getRecentLocationId legs = do
+      mbFrfsSearch <- maybe (pure Nothing) (QFRFSearch.findById . Id) ((listToMaybe legs) >>= (.legSearchId))
+      return $ mbFrfsSearch >>= (.recentLocationId)

@@ -2,6 +2,7 @@
 
 module API.Types.UI.NearbyBuses where
 
+import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.IntegratedBPPConfig
@@ -31,7 +32,8 @@ data NearbyBusesRequest = NearbyBusesRequest
     requireNearbyBuses :: Kernel.Prelude.Bool,
     requireRecentRide :: Kernel.Prelude.Bool,
     userLat :: Kernel.Prelude.Double,
-    userLon :: Kernel.Prelude.Double
+    userLon :: Kernel.Prelude.Double,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -40,13 +42,6 @@ data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [NearbyBus], rece
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RecentRide = RecentRide
-  { fare :: Kernel.Types.Price.Price,
-    fromStopCode :: Data.Text.Text,
-    fromStopName :: Data.Text.Text,
-    routeCode :: Kernel.Prelude.Maybe Data.Text.Text,
-    toStopCode :: Data.Text.Text,
-    toStopName :: Data.Text.Text
-  }
+data RecentRide = RecentRide {fare :: Kernel.Types.Price.Price, fromStopCode :: Data.Text.Text, routeCode :: Kernel.Prelude.Maybe Data.Text.Text, toStopCode :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

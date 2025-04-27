@@ -11,26 +11,42 @@ RecentLocation:
     EntityType:
       enum: "MULTIMODAL, SUBWAY, BUS, METRO, TAXI"
 
-
   fields:
     id : Id RecentLocation
     riderId : Id Person
     frequency : Int
     entityType: EntityType
     address: Maybe Text
-    stopLat: Maybe Double
-    stopLon: Maybe Double
+    fromLatLong: Maybe Kernel.External.Maps.Types.LatLong
+    toLatLong: Kernel.External.Maps.Types.LatLong
     routeCode: Maybe Text
-    stopCode: Maybe Text
     fromStopCode: Maybe Text
-    fromStopName: Maybe Text
-    routeId: Maybe Text
-    lat: Double
-    lon: Double
+    toStopCode: Maybe Text
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  beamFields:
+    toLatLong:
+      lat: Double
+      lon: Double
+    fromLatLong:
+      stopLat: Maybe Double
+      stopLon: Maybe Double
+    toStopCode:
+      stopCode: Maybe Text
+
+  fromTType:
+    toLatLong: Kernel.External.Maps.Types.LatLong lat lon|E
+    fromLatLong: Kernel.External.Maps.Types.LatLong <$> stopLat <*> stopLon|E
+    toStopCode: stopCode|E
+
+  toTType:
+    lat: (.lat)|I
+    lon: (.lon)|I
+    stopLat: fromLatLong <&> (.lat)|E
+    stopLon: fromLatLong <&> (.lon)|E
+    stopCode: toStopCode|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

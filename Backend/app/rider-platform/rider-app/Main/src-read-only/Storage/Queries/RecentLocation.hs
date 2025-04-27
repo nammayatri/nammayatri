@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RecentLocation.RecentLocation] -> m ())
 createMany = traverse_ create
 
-findAllRecentLocationsForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.RecentLocation.RecentLocation]))
+findAllRecentLocationsForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.RecentLocation.RecentLocation])
 findAllRecentLocationsForPerson riderId = do findAllWithDb [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation -> m (Maybe Domain.Types.RecentLocation.RecentLocation))
@@ -36,17 +36,15 @@ updateByPrimaryKey (Domain.Types.RecentLocation.RecentLocation {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.entityType entityType,
       Se.Set Beam.frequency frequency,
+      Se.Set Beam.stopLat (fromLatLong <&> (.lat)),
+      Se.Set Beam.stopLon (fromLatLong <&> (.lon)),
       Se.Set Beam.fromStopCode fromStopCode,
-      Se.Set Beam.fromStopName fromStopName,
-      Se.Set Beam.lat lat,
-      Se.Set Beam.lon lon,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeCode routeCode,
-      Se.Set Beam.routeId routeId,
-      Se.Set Beam.stopCode stopCode,
-      Se.Set Beam.stopLat stopLat,
-      Se.Set Beam.stopLon stopLon,
+      Se.Set Beam.lat ((.lat) toLatLong),
+      Se.Set Beam.lon ((.lon) toLatLong),
+      Se.Set Beam.stopCode toStopCode,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
