@@ -396,13 +396,10 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
               destStopTimings <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid [route.code] ("chennai_bus:" <> originStopCode)) "route stop timing through graphql"
               _ <- measureLatency (QRouteStopTiming.findByRouteCodeAndStopCode [route.code] destinationStopCode integratedBppConfigId) "route stop timing through sql"
               -- Get trip IDs for calendar checking
-              let tripIds = map (.tripId) originStopTimings
+              let serviceableTripIds = map (.tripId) originStopTimings
 
               -- Get IST time info
               let (_, currentTimeIST) = getISTTimeInfo currentTime
-
-              -- Check which trips are serviceable today
-              serviceableTripIds <- filterServiceableTrips tripIds currentTime integratedBppConfigId
 
               -- Find the earliest upcoming departure from origin stop
               let validOriginTimings =
