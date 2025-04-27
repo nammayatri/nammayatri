@@ -504,7 +504,6 @@ library
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
-      Storage.Tabular.RecentLocation
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

@@ -113,8 +113,7 @@ getNearbyBuses nearbyDriverSearchRadius req = do
 getRecentRides :: Domain.Types.Person.Person -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [Maybe API.Types.UI.NearbyBuses.RecentRide]
 getRecentRides person req = do
   let entityType = castToEntityType req.vehicleType
-  nearbyRecentLocations <- QRecentLocation.getRecentLocationByLatLonAndEntityType entityType req.userLat req.userLon 2000 person.id person.merchantOperatingCityId
-  recentLocations <- if null nearbyRecentLocations then QRecentLocation.findRecentLocations entityType person.id person.merchantOperatingCityId else return nearbyRecentLocations
+  recentLocations <- QRecentLocation.findRecentLocationsByEntityType entityType person.id person.merchantOperatingCityId
   forM recentLocations $ \recentLoc -> do
     case (recentLoc.fromStopCode, recentLoc.toStopCode, recentLoc.routeCode) of
       (Just fromStopCode, Just toStopCode, Just routeCode) -> do

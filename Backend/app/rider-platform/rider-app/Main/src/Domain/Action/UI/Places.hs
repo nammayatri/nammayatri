@@ -104,9 +104,8 @@ postPlaces (mbPersonId, merchantId) req = do
   personId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   popularLocations <- QPopularLocation.findAllByMerchantOperatingCityId person.merchantOperatingCityId
-  let searchRadius = 100 -- Need to move it config
   recentLocations <- do
-    recentJourneys <- QRecentLocation.getRecentLocationByLatLon req.userLat req.userLon searchRadius personId person.merchantOperatingCityId
+    recentJourneys <- QRecentLocation.findRecentLocations personId person.merchantOperatingCityId
     forM recentJourneys $ \recentJourney -> do
       case recentJourney.entityType of
         DRecntLoc.MULTIMODAL -> do
