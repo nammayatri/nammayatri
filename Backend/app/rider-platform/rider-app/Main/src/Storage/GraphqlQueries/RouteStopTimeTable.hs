@@ -45,6 +45,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
     MultiModalTypes.OTPTransitConfig cfg -> return cfg.baseUrl
     _ -> throwError $ InternalError "Transit service request is not OTPTransitConfig"
   result <- Client.executeRouteStopTimeTableQuery baseUrl variables
+  logDebug $ "GraphQL query result: " <> show result
 
   case result of
     Left err -> do
