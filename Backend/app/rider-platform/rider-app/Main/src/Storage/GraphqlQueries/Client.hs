@@ -12,12 +12,10 @@ where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson (eitherDecode, encode, object)
-import Data.Aeson.Types (Parser)
 import Data.List (isInfixOf)
 import Data.Morpheus.Client
 import Data.Morpheus.Client.CodeGen.Internal
-import Data.Text as Text (drop, length, splitOn, take, unpack)
-import Data.Time.Calendar
+import Data.Text as Text (splitOn, unpack)
 import qualified Data.Time.LocalTime as LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
@@ -62,8 +60,7 @@ data TripData = TripData
   { serviceId :: Text,
     tripShortName :: Maybe Text,
     gtfsId :: Text,
-    route :: RouteData,
-    activeDates :: [Text]
+    route :: RouteData
   }
   deriving (Show, Generic)
 
@@ -87,8 +84,7 @@ data TimetableEntry = TimetableEntry
     timeOfDeparture :: LocalTime.TimeOfDay,
     tripId :: Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    serviceability :: [Int]
+    updatedAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -122,10 +118,6 @@ instance FromJSON TripData where
       <*> obj .:? "tripShortName"
       <*> obj .: "gtfsId"
       <*> obj .: "route"
-      <*> obj .:? "activeDates" .!= []
-    where
-      (.!=) :: Parser (Maybe a) -> a -> Parser a
-      parser .!= def = fromMaybe def <$> parser
 
 instance FromJSON RouteData where
   parseJSON = withObject "RouteData" $ \obj -> do
@@ -151,7 +143,6 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "      trip {\n"
       ++ "        serviceId\n"
       ++ "        tripShortName\n"
-      ++ "        activeDates\n"
       ++ "        gtfsId\n"
       ++ "        route {\n"
       ++ "          gtfsId\n"
@@ -265,8 +256,7 @@ transformEntry stopData timestamp entry =
       timeOfDeparture = secondsToTime entry.scheduledDeparture,
       tripId = fromMaybe entry.trip.gtfsId $ lastMay $ splitOn ":" entry.trip.gtfsId,
       createdAt = timestamp,
-      updatedAt = timestamp,
-      serviceability = calculateServiceability entry.trip.activeDates
+      updatedAt = timestamp
     }
 
 -- Convert seconds from midnight to HH:MM:SS format
@@ -303,47 +293,3 @@ extractServiceCode routeCode = maybe "O" snd (find match patterns)
         ("-O-", "O")
       ]
     match (pat, _) = pat `isInfixOf` (unpack routeCode)
-
--- Calculate serviceability array from active dates
--- Returns an array of length 7, with 1s for days the service runs and 0s for days it doesn't
--- Index 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
-calculateServiceability :: [Text] -> [Int]
-calculateServiceability activeDates =
-  let defaultServiceability = replicate 7 0 -- Initialize with all zeroes
-      activeDaysOfWeek = mapMaybe getWeekdayFromDate activeDates
-      incrementDays = foldl' (\acc day -> updateAt day 1 acc) defaultServiceability activeDaysOfWeek
-   in incrementDays
-
--- Update the value at a specific index in a list
-updateAt :: Int -> a -> [a] -> [a]
-updateAt idx newVal list =
-  let (before, after) = splitAt idx list
-   in case after of
-        [] -> before
-        _ : xs -> before ++ [newVal] ++ xs
-
--- Parse a date string (YYYYMMDD format) to day of week (0 = Monday, 6 = Sunday)
-getWeekdayFromDate :: Text -> Maybe Int
-getWeekdayFromDate dateStr | Text.length dateStr /= 8 = Nothing
-getWeekdayFromDate dateStr = do
-  let yearStr = Text.take 4 dateStr
-      monthStr = Text.take 2 $ Text.drop 4 dateStr
-      dayStr = Text.take 2 $ Text.drop 6 dateStr
-  year <- readMaybe (toString yearStr)
-  month <- readMaybe (toString monthStr)
-  day <- readMaybe (toString dayStr)
-  let date = fromGregorian year month day
-      dow = dayOfWeek date
-      dowInt = dayOfWeekToInt dow
-  Just dowInt
-
--- Convert Day of week to Int (0 = Monday, 6 = Sunday)
-dayOfWeekToInt :: DayOfWeek -> Int
-dayOfWeekToInt = \case
-  Monday -> 0
-  Tuesday -> 1
-  Wednesday -> 2
-  Thursday -> 3
-  Friday -> 4
-  Saturday -> 5
-  Sunday -> 6
