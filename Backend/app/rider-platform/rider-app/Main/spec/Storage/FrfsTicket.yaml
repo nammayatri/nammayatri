@@ -1063,14 +1063,6 @@ RouteStopTimeTable:
     timeOfArrival: TimeOfDay
     serviceTierType: ServiceTierType
     integratedBppConfigId: Id IntegratedBPPConfig
-    serviceability: "Maybe [Int]"
-    providedByGraphQl: Maybe Bool
-  beamFields:
-    serviceability: {}
-    providedByGraphQl: {}
-  fromTType:
-    serviceability: Kernel.Prelude.Just mempty|E
-    providedByGraphQl: Kernel.Prelude.Just False|E
 
   constraints:
     tripId: PrimaryKey

@@ -45,7 +45,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
     Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
       Just a -> pure a
       Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode
-  logDebug $ "Fetched route stop time table cached: " <> show allTrips
+  logDebug $ "Fetched route stop time table cached: " <> show allTrips <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
   return $ P.filter (\trip -> trip.routeCode `P.elem` routeCodes) allTrips
 
 cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> m ()
