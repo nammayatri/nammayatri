@@ -41,15 +41,17 @@ findByRouteCodeAndStopCode ::
   Text ->
   m [RouteStopTimeTable]
 findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode = do
-  Hedis.safeGet (routeTimeTableKey routeCodes stopCode) >>= \case
-    Just a -> pure a
-    Nothing -> cacheRouteStopTimeInfo routeCodes stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode
+  allTrips <-
+    Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
+      Just a -> pure a
+      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode
+  return $ P.filter (\trip -> trip.routeCode `P.elem` routeCodes) allTrips
 
-cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => [Text] -> Text -> [RouteStopTimeTable] -> m ()
-cacheRouteStopTimeInfo routeCodes stopCode routeStopInfo = do
+cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> m ()
+cacheRouteStopTimeInfo stopCode routeStopInfo = do
   let expTime = 60 * 60
-  let idKey = routeTimeTableKey routeCodes stopCode
+  let idKey = routeTimeTableKey stopCode
   Hedis.setExp idKey routeStopInfo expTime
 
-routeTimeTableKey :: [Text] -> Text -> Text
-routeTimeTableKey routeCodes stopCode = "routeStop-time-table:" <> Text.pack (P.unwords (Text.unpack <$> routeCodes)) <> ":" <> stopCode
+routeTimeTableKey :: Text -> Text
+routeTimeTableKey stopCode = "routeStop-time-table:" <> stopCode
