@@ -216,7 +216,7 @@ executeRouteStopTimeTableQuery baseUrl vars = do
                   [ "stopId" .= vars.stopCode
                   ]
             ]
-
+  logDebug $ "Request body for GTFS: " <> show reqBody
   let req =
         initialRequest
           { method = "POST",
@@ -225,6 +225,7 @@ executeRouteStopTimeTableQuery baseUrl vars = do
           }
 
   response <- liftIO $ try $ httpLbs req manager
+  logDebug $ "Response from grfs server: " <> show response
 
   case response of
     Left (err :: SomeException) -> do
@@ -243,6 +244,7 @@ executeRouteStopTimeTableQuery baseUrl vars = do
           Right (otpResponse :: OTPResponse) -> do
             -- Transform OTP response to our domain model
             entries <- transformToTimeTableEntries otpResponse
+            logDebug $ "Transformed entries graphql: " <> show entries
             pure $ Right $ RouteStopTimeTableResponse entries
         else pure $ Left $ "HTTP error: " <> show status
 
