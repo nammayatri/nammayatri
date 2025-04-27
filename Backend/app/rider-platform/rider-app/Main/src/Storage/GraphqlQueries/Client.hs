@@ -19,9 +19,12 @@ import Data.Morpheus.Client.CodeGen.Internal
 import Data.Text as Text (drop, length, splitOn, take, unpack)
 import Data.Time.Calendar
 import qualified Data.Time.LocalTime as LocalTime
+import qualified EulerHS.Language as L
+import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Servant.Client as KSC
 import Network.HTTP.Client
 import Network.HTTP.Types (statusCode)
 
@@ -159,6 +162,30 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "}"
   __type _ = OPERATION_QUERY
 
+data HttpManager = HttpManager
+  deriving stock (Generic, Typeable, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance OptionEntity HttpManager Manager
+
+getOrCreateManager :: MonadFlow m => m Manager
+getOrCreateManager = do
+  manager <- L.getOption HttpManager
+  case manager of
+    Just m -> return m
+    Nothing -> do
+      logError "Manager not found in default creating a new one"
+      manager' <- liftIO $ newManager defaultManagerSettings
+      L.setOption HttpManager manager'
+      return manager'
+
+fromMaybeM' :: MonadFlow m => m a -> m (Maybe a) -> m a
+fromMaybeM' defaultValue maybeValue = do
+  value <- maybeValue
+  case value of
+    Just v -> return v
+    Nothing -> defaultValue
+
 -- Execute the query and transform the response
 executeRouteStopTimeTableQuery ::
   MonadFlow m =>
@@ -166,11 +193,11 @@ executeRouteStopTimeTableQuery ::
   RouteStopTimeTableQueryVars ->
   m (Either String RouteStopTimeTableResponse)
 executeRouteStopTimeTableQuery baseUrl vars = do
-  let graphqlUrl = showBaseUrl baseUrl <> "/otp/gtfs/v1"
+  let graphqlUrl = showBaseUrl baseUrl
 
   logInfo $ "Executing RouteStopTimeTable GraphQL query to " <> graphqlUrl
 
-  manager <- liftIO $ newManager defaultManagerSettings
+  manager <- fromMaybeM' getOrCreateManager (L.lookupHTTPManager (Just KSC.defaultHttpManager))
   initialRequest <-
     try (parseRequest (toString graphqlUrl))
       >>= \case
