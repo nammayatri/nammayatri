@@ -20,6 +20,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
+import Domain.Types.External.LiveEKD
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
@@ -149,6 +150,7 @@ data AppCfg = AppCfg
     nyGatewayUrl :: BaseUrl,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    vocalyticsCnfg :: VocalyticsCnfg,
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int
@@ -253,6 +255,7 @@ data AppEnv = AppEnv
     nyGatewayUrl :: BaseUrl,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    vocalyticsCnfg :: VocalyticsCnfg,
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int

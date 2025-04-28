@@ -1,0 +1,33 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Ride: Domain.Types.Ride
+
+
+CallFeedback:
+  tableName: call_feedback
+
+  fields:
+    id: Id CallFeedback
+    callId: Text
+    entityId: Maybe Text
+    optionIds: "[Text]"
+
+  constraints:
+    id: PrimaryKey
+    callId: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCallId:
+      kvFunction: findOneWithKV
+      where: callId
+
+  sqlType:
+    id: character varying (255)
+    callId: character varying (255)
+    entityId: character varying (255)
+    createdAt: timestamp with time zone

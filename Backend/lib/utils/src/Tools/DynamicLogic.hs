@@ -19,7 +19,7 @@ import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
 -- import Data.Aeson as A
 
-findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> m (Maybe a)
+findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> m (Maybe a)
 findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
@@ -36,7 +36,7 @@ findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimen
       cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) config
       return config
 
-findAllConfigs :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m [a]) -> m [a]
+findAllConfigs :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m [a] -> m [a]
 findAllConfigs merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
@@ -53,7 +53,7 @@ findAllConfigs merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDime
       cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) allConfigs
       return allConfigs
 
-findOneConfigWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> Text -> m (Maybe a)
+findOneConfigWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Text -> m (Maybe a)
 findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc cacheKey = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
@@ -70,12 +70,13 @@ findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersion
       cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion) config
       return config
 
-findAllConfigsWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m [a]) -> Text -> m [a]
+findAllConfigsWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m [a] -> Text -> m [a]
 findAllConfigsWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc cacheKey = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
   cachedConfig :: Maybe [a] <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
+  logDebug $ "cachedConfig: " <> (show $ isNothing cachedConfig)
   case cachedConfig of
     Just cfgs -> return cfgs
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
