@@ -1,0 +1,39 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+CallFeedbackOptions:
+  tableName: call_feedback_options
+
+  fields:
+    id: Id CallFeedbackOptions
+    category: Text
+    messageKey: Text
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCategory:
+      kvFunction: findOneWithKV
+      where: category
+
+    findByCategoryAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [category, merchantOperatingCityId]
+
+  sqlType:
+    category: character varying (255)
+    messageKey: character varying (255)
+    merchantId: character varying (36)
+    merchantOperatingCityId: character varying (255)
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+

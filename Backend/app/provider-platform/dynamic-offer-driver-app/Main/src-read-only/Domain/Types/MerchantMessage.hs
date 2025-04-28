@@ -75,7 +75,7 @@ data MessageKey
   | FLEET_UNLINK_SUCCESS_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantMessage = MerchantMessageD 'Safe
+type MerchantMessage = MerchantMessageD ('Safe)
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
@@ -85,6 +85,6 @@ instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MediaChannel))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))
