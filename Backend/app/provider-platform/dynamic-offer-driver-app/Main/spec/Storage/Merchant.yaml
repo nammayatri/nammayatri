@@ -1030,6 +1030,7 @@ TransporterConfig:
     weekStartMode : Int
     earningsWindowSize : Int
 
+    liveEKD: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1427,6 +1428,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     onboardingDocsCountLimit: "50"
+    liveEKD: "false"
     weekStartMode : "3"
     earningsWindowSize : "7"
   excludedDefaultQueries:

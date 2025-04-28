@@ -14,19 +14,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
-  { callAttempt :: B.C f (Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus),
-    callError :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    callId :: B.C f Kernel.Prelude.Text,
-    callService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService),
-    conversationDuration :: B.C f Kernel.Prelude.Int,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    dtmfNumberUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    entityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    recordingUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    status :: B.C f Kernel.External.Call.Interface.Types.CallStatus
+  { callAttempt :: (B.C f (Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus)),
+    callError :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    callId :: (B.C f Kernel.Prelude.Text),
+    callService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService)),
+    conversationDuration :: (B.C f Kernel.Prelude.Int),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    dtmfNumberUsed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    entityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    recordingUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    status :: (B.C f Kernel.External.Call.Interface.Types.CallStatus)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table CallStatusT where
 
 type CallStatus = CallStatusT Identity
 
-$(enableKVPG ''CallStatusT ['id] [['callId]])
+$(enableKVPG (''CallStatusT) [('id)] [[('callId)]])
 
-$(mkTableInstances ''CallStatusT "call_status")
+$(mkTableInstances (''CallStatusT) "call_status")

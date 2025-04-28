@@ -55,7 +55,7 @@ findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCatego
       Nothing
       (Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
       (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
-
+  logDebug $ "merchantPNs: " <> show merchantPNs
   if null merchantPNs
     then do
       pnsWithOutTripCategory <-
