@@ -48,6 +48,7 @@ initData = {
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
+        trainingsCompletionStatus : NOT_STARTED,
         vehicleTypeMismatch : false,
         documentStatusList : [],
         variantList : [],
@@ -65,8 +66,7 @@ initData = {
         accessToken : "",
         hvTxnId : Nothing,
         hvFlowId : Nothing,
-        refereeName : Nothing,
-        vehicleRegistrationCertNumber : Nothing
+        refereeName : Nothing
       },
       props: {
         limitReachedFor : Nothing,

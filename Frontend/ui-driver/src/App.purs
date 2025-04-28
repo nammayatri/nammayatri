@@ -417,6 +417,7 @@ data REGISTRATION_SCREEN_V2_OUTPUT = UPLOAD_DRIVER_LICENSE_V2 RegistrationScreen
                                 | SELECT_LANG_FROM_REGISTRATION_V2
                                 | AADHAAR_PAN_SELFIE_UPLOAD_V2 RegistrationScreenState HyperVergeKycResult
                                 | GO_TO_APP_UPDATE_POPUP_SCREEN_V2 RegistrationScreenState
+                                | GO_TO_TRAININGS_SCREEN RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
                                           | VALIDATE_DATA_API UploadDrivingLicenseState 
@@ -621,6 +622,9 @@ data BENEFITS_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                               | DRIVER_CONTEST_SCREEN
                               | GO_TO_LMS_VIDEO_SCREEN BenefitsScreenState
                               | CUSTOMER_REFERRAL_TRACKER_NAV Boolean
+                              | GO_TO_REGISTRATION_SCREEN BenefitsScreenState
+                              | SELECT_LANG_FROM_BENEFITS_SCREEN BenefitsScreenState
+                              | LOGOUT_FROM_BENEFITS_SCREEN
 
 data LMS_VIDEO_SCREEN_OUTPUT = GO_TO_QUIZ_SCREEN LmsVideoScreenState | REFRESH_LMS_VIDEO_SCREEN LmsVideoScreenState | GO_TO_BENEFITS_SCREEN | SELECT_LANGUAGE_FOR_VIDEOS LmsVideoScreenState
 
@@ -638,6 +642,7 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
                                       | UPLOAD_VEHICLE_API DocumentCaptureScreenState String 
                                       | GOTO_ONBOARDING_SCREEN DocumentCaptureScreenState
+                                      | GET_VEHICLE_PHOTOS_STATUS DocumentCaptureScreenState
 
 data OPERATION_HUB_SCREEN_OUTPUT = GO_BACK
                                   | CHANGE_LANG_FROM_OPERATION_HUB OperationHubScreenState

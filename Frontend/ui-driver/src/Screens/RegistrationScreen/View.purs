@@ -239,7 +239,6 @@ menuOptionModal push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 contactSupportView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w

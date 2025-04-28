@@ -107,7 +107,13 @@ referDriver :: String -> String
 referDriver dummyString = (getBaseUrl "") <> "/driver/referral"
 
 getDriverReferralDetails :: String -> String -> String
-getDriverReferralDetails value role = (getBaseUrl "") <> "/driver/referral/details?value=" <>  value <> "&role=" <> role
+getDriverReferralDetails value role = (getBaseUrl "") <> "/driver/referral/details?value=" <>  value <> "&role=" <> show role
+
+getOperationHubRequest :: String -> String -> String
+getOperationHubRequest rcNo mbFrom = (getBaseUrl "") <> "/operation/getRequests?rcNo=" <> rcNo <> "&mbFrom=" <> mbFrom 
+
+getVehiclePhotos :: String -> String
+getVehiclePhotos rcNo = (getBaseUrl "") <> "/driver/vehiclePhotos?rcNo=" <> rcNo
 
 getAllHubs :: String -> String
 getAllHubs dummyString = (getBaseUrl "") <> "/operation/getAllHubs"

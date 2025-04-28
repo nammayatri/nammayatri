@@ -411,6 +411,13 @@ getProxy str = case str of
   NO_CLOSED_EYES -> \a -> a @~ no_closed_eyes
   MORE_THAN_ONE_FACE -> \a -> a @~ more_than_one_face
   OUTSIDE_MARKED_AREA -> \a -> a @~ outside_marked_area
+  FRONT_STR -> \a -> a @~ front_str
+  LEFT_STR -> \a -> a @~ left_str
+  RIGHT_STR -> \a -> a @~ right_str
+  ODOMETER_STR -> \a -> a @~ odometer_str
+  FRONT_INTERIOR -> \a -> a @~ front_interior
+  REAR_INTERIOR -> \a -> a @~ rear_interior
+  ENTER_THE_SIX_DIGIT_CODE_SHARED_WITH_YOU -> \a -> a @~ enter_the_six_digit_code_shared_with_you
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number

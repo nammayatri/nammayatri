@@ -271,6 +271,13 @@ getBn =
     , no_closed_eyes : "চোখ বন্ধ নেই।"
     , more_than_one_face : "১টির বেশি মুখ"
     , outside_marked_area : "চিহ্নিত এলাকার বাইরে"
+    , front_str : "সামনের অংশ"
+    , left_str : "বাম"
+    , right_str : "দয়াঁ"
+    , odometer_str : "ওডোমিটার"
+    , front_interior : "সামনের অভ্যন্তর"
+    , rear_interior : "পিছনের অভ্যন্তর"
+    , enter_the_six_digit_code_shared_with_you : "অনবোর্ডিং এজেন্টের সাথে অনবোর্ডিং করার সময় শেয়ার করা ৬-সংখ্যার কোডটি লিখুন।"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি")
     , updated_at: "ম্যাপ শেষ আপডেট"
     , trip_count: "আজকের ট্রিপস"

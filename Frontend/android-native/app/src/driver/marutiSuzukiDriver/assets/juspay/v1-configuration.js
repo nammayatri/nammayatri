@@ -104,13 +104,26 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "colors" : {
-        "black800" : "#454545"
-      , "black900" : "#2C2F3A"
+        "black800" : "#3F4143"
+      , "black900" : "#0F1114"
       , "red" : "#E55454"
+      , "black700" : "#545454"
+      , "black650" : "#A1A1A1"
+      , "black600" : "#B2B2B2"
+      , "black500" : "#D6D6D6"
+      , "grey900" : "#E0E0E0"
+      , "grey800" : "#E2E2E3"
+      , "blue900" : "#171C8F"
+      , "blue800" : "#3482E6"
+      , "blue700" : "#A4CEFF"
+      , "blue600" : "#F9FAFC"
+      , "green900" : "#37B200"
+      , "yellow900" : "#F0B529"
+      , "red900" : "#F0373A"
       }
     , "themeColors" : {
       "goOnlineColor" : "#2E3494",
-      "navBarBackground" : "#2E3494",
+      "navBarBackground" : "#FFFFFF",
       "primaryStrokeColor" : "#2E3494",
       "openMapsStrokeColor" : "#A8AEF0",
       "secondaryStrokeColor" : "#A8AEF0",
@@ -127,7 +140,11 @@ window.getMerchantConfig = function () {
       "radioSelectedImage" : "ny_ic_radio_selected_purple",
       "radioActiveStroke" : "#1F171C8F",
       "onboardingStepImgBg" : "#0A171C8F",
-      "welcomeScreenBackground" : "#F9FAFC"
+      "welcomeScreenBackground" : "#F9FAFC",
+      "quizButtonStrokeAndText" : "#171C8F",
+      "quizOptionStrokeColor" : "#B2171C8F",
+      "quizOptionSelectedBgColor" : "#1F171C8F",
+      "quizOptionTextColor" : "#171C8F"
     }
     , "allowAllMobileNumber" : false
     , "acExplanation" : true

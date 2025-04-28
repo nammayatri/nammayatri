@@ -31,7 +31,7 @@ import Data.String as DS
 import Data.Maybe
 import Data.Function.Uncurried (runFn1)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (>), not, show, (*), (+), (/))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (>), not, show, (*), (+), (/), (-), (&&))
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons as EHC
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
@@ -59,8 +59,18 @@ import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude
 import Services.API as API
+import Engineering.Helpers.Utils as EHU
+import Effect.Aff (launchAff)
+import Types.App (defaultGlobalState)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Services.Backend as Remote
+import Control.Monad.Trans.Class (lift)
+import Presto.Core.Types.Language.Flow (doAff)
+import Effect.Class (liftEffect)
+
 
 screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
@@ -71,6 +81,14 @@ screen initialState =
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
     let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName initialState.data.docType) { module = HU.getRegisterationStepModule initialState.data.docType, source = HU.getRegisterationStepScreenSource initialState.data.docType }
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            let appName = JB.getAppName unit
+            if appName == "ONDC fleetX" && isJust initialState.data.linkedRc then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBT $ fromMaybe "" initialState.data.linkedRc
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotos (API.GetVehiclePhotosResp vehiclePhotosResp)
+            else pure unit
     pure $ pure unit
   )]
   , eval :
@@ -123,7 +141,6 @@ menuOptionModal push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
@@ -167,14 +184,16 @@ vehicleImageRowView push state index item =
   , margin $ MarginVertical 4 4
   , onAnimationEnd push $ const AfterRender
   ]
-  [ linearLayout 
-    [ weight 1.0
+  [ linearLayout [weight 1.0, gravity CENTER][
+    linearLayout 
+    [ width $ V ((EHC.screenWidth unit)/2 - 20)
     , height WRAP_CONTENT
     , visibility $ boolToVisibility $ isJust item.leftText
+    , gravity CENTER
     ]
     [ relativeLayout
       [ height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width MATCH_PARENT
       ]
       [ linearLayout
         [ width WRAP_CONTENT
@@ -182,54 +201,45 @@ vehicleImageRowView push state index item =
         , gravity CENTER
         , margin $ Margin 8 8 8 8
         , cornerRadius 8.0
+        , background Color.blue500
+        , onClick push $ const $ UploadImageWihType item.leftText
+        , orientation VERTICAL
         ]
         [ imageView 
-          [ width $ V $ ((EHC.screenWidth unit) * 4) / 10
-          , height WRAP_CONTENT
+          [ width $ V 156 
+          , height $ V 117
           , imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
           , id $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
+          , stroke $ "1," <> (EHU.getColorWithOpacity 70 Color.purple800)
+          , dashWidth 4
+          , gapWidth 4
+          , cornerRadius 8.0
+          , gravity CENTER
           ]
+        , textView 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text $ leftText
+            , color Color.black900
+            , margin $ MarginVertical 8 6
+            ]
         ]
       , linearLayout
-        [ height WRAP_CONTENT
-        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
-        , background Color.blue600
-        , alpha 0.8
-        , stroke $ "1," <> Color.blue800
-        -- , dashWidth 4
-        -- , gapWidth 4
-        , margin $ Margin 8 8 8 8
-        , cornerRadius 8.0
-        ]
-        [ imageView 
-          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
-          , visibility INVISIBLE
-          , width $ V $ ((EHC.screenWidth unit) * 4) / 10
-          ]
-        ]
-      , linearLayout
-        [ height $ V leftImageBounds.height
-        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
+        [ height $ V $ HU.getDefaultPixelSize leftImageBounds.height
+        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
         , margin $ Margin 8 8 8 8
         , gravity CENTER
         , orientation VERTICAL
-        , onClick push $ const $ UploadImageWihType item.leftText
         ]
         [ imageView 
-          [ height $ V 20
-          , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_plus_blue"
-          ]
-        , textView 
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text $ leftText
-          , color Color.black900
+          [ height $ V 40
+          , width $ V 40
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_plus_purple_circle"
           ]
         ]
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
+        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
         , gravity RIGHT
         , margin $ MarginLeft 16
         ]
@@ -242,14 +252,16 @@ vehicleImageRowView push state index item =
         ] 
       ]
     ]
-  , linearLayout 
-    [ weight 1.0
+    ]
+  , linearLayout [weight 1.0, gravity CENTER][
+    linearLayout 
+    [ width $ V ((EHC.screenWidth unit)/2 - 20)
     , height WRAP_CONTENT
-    , visibility $ boolToVisibility $ isJust item.rightText
+    , visibility $ boolToInvisibility $ isJust item.rightText
     ]
     [ relativeLayout
       [ height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width MATCH_PARENT
       ]
       [ linearLayout
         [ width WRAP_CONTENT
@@ -257,54 +269,44 @@ vehicleImageRowView push state index item =
         , cornerRadius 8.0
         , gravity CENTER
         , margin $ Margin 8 8 0 8
+        , background Color.blue500
+        , onClick push $ const $ UploadImageWihType item.rightText
+        , orientation VERTICAL
         ]
         [ imageView 
-          [ width $ V $ ((EHC.screenWidth unit) * 4) / 10
-          , height WRAP_CONTENT
+          [ width $ V 156 
+          , height $ V 117
           , imageWithFallback $ fetchImage FF_COMMON_ASSET item.rightImage
           , id $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
-          ]
-        ]
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
-        , background Color.blue600
-        , alpha 0.8
-        , stroke $ "1," <> Color.blue800
-        -- , dashWidth 4
-        -- , gapWidth 4
-        , margin $ Margin 8 8 0 8
-        , cornerRadius 8.0
-        ]
-        [ imageView 
-          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
-          , visibility INVISIBLE
-          , width $ V $ ((EHC.screenWidth unit) * 4) / 10
-          ]
-        ]
-      , linearLayout
-        [ height $ V rightImageBounds.height
-        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
-        , margin $ Margin 8 8 0 8
-        , gravity CENTER
-        , orientation VERTICAL
-        , onClick push $ const $ UploadImageWihType item.rightText
-        ]
-        [ imageView 
-          [ height $ V 20
-          , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_plus_blue"
+          , stroke $ "1," <> (EHU.getColorWithOpacity 70 Color.purple800)
+          , dashWidth 4
+          , gapWidth 4
+          , cornerRadius 8.0
           ]
         , textView 
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text $ rightText
-          , color Color.black900
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text $ rightText
+            , color Color.black900
+            , margin $ MarginVertical 8 6
+            ]
+        ]
+      , linearLayout
+        [ height $ V $ HU.getDefaultPixelSize rightImageBounds.height
+        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
+        , margin $ Margin 8 8 8 8
+        , gravity CENTER
+        , orientation VERTICAL
+        ]
+        [ imageView 
+          [ height $ V 40
+          , width $ V 40
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_plus_purple_circle"
           ]
         ]
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
+        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
         , gravity RIGHT
         , margin $ MarginLeft 16
         ]
@@ -317,16 +319,17 @@ vehicleImageRowView push state index item =
         ]
       ]
     ]
+    ]
   ]
   where getText text = 
           case text of
-            Just API.VehicleFront -> "Front"
-            Just API.VehicleBack -> "Back"
-            Just API.VehicleLeft -> "Left"
-            Just API.VehicleRight -> "Right"
-            Just API.VehicleFrontInterior -> "Front Interior"
-            Just API.VehicleBackInterior -> "Rear Interior" 
-            Just API.Odometer_ -> "Odometer"
+            Just API.VehicleFront -> getString FRONT_STR
+            Just API.VehicleBack -> getString BACK
+            Just API.VehicleLeft -> getString LEFT_STR
+            Just API.VehicleRight -> getString RIGHT_STR
+            Just API.VehicleFrontInterior -> getString FRONT_INTERIOR
+            Just API.VehicleBackInterior -> getString REAR_INTERIOR
+            Just API.Odometer_ -> getString ODOMETER_STR
             _ -> ""
 
 howToUpload :: (Action -> Effect Unit) ->  ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w

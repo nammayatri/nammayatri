@@ -253,13 +253,17 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
         text = state.data.referralCode,
         focusIndex = state.props.enterOtpFocusIndex
         , textStyle = FontStyle.Heading1
+        , suffixImageVisibility = false
+        , background = state.data.config.themeColors.radioInactiveBackground
+        , strokeColor = "1," <> (if DS.length state.data.referralCode >= 6 && isJust state.data.refereeName then state.data.config.themeColors.radioInactiveBackground else Color.purple800)
       },
       headingConfig {
         text = getString ENTER_REFERRAL_CODE
       },
       errorConfig {
         text = if state.props.isValidReferralCode then "" else getStringV2 LT2.invalid_code_please_re_enter,
-        visibility = boolToVisibility $ not state.props.isValidReferralCode
+        visibility = boolToVisibility $ not state.props.isValidReferralCode,
+        width = MATCH_PARENT
       },
       imageConfig {
         alpha = if(DS.length state.data.referralCode < 6) then 0.3 else 1.0
@@ -269,16 +273,17 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
         width = V 36,
         height = V 44
       },
-      modalType = ST.OTP,
+      modalType = ST.REFERRAL__CODE,
       subHeadingConfig {
         text =  getString $ VERIFIED_LINKED_WITH_NAME (fromMaybe "" state.data.refereeName),
         visibility = boolToVisibility $ not $ isNothing state.data.refereeName,
         textStyle = FontStyle.Body1,
         gravity = CENTER,
-        color = Color.green900
+        color = Color.green900,
+        width = MATCH_PARENT
       },
       bodyTextConfig {
-        text =  " ",
+        text = getStringV2 LT2.enter_the_six_digit_code_shared_with_you,
         visibility = VISIBLE,
         gravity = CENTER,
         margin = Margin 12 8 12 8,
@@ -291,8 +296,8 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
         }
         , visibility = VISIBLE
         , isClickable = DS.length state.data.referralCode >= 6
-      }
-    --   enableDeviceKeyboard = true
+      },
+      isValidAlternateNumber = state.props.isValidReferralCode
     }
 
 continueButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config

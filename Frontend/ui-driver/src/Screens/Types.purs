@@ -300,6 +300,7 @@ type RegistrationScreenData = {
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
+  trainingsCompletionStatus :: StageStatus,
   documentStatusList :: Array DocumentStatus,
   variantList :: Array VehicleCategory,
   lastUpdateTime :: String,
@@ -316,8 +317,7 @@ type RegistrationScreenData = {
   accessToken :: String,
   hvTxnId :: Maybe String,
   hvFlowId :: Maybe String,
-  refereeName :: Maybe String,
-  vehicleRegistrationCertNumber :: Maybe String
+  refereeName :: Maybe String
 }
 
 type DocumentStatus = {
@@ -935,7 +935,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE | REFERRAL__CODE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -2925,6 +2925,10 @@ type BenefitsScreenProps = {
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
 , glBannerClickable :: Boolean
+, fromRegistrationScreen :: Boolean
+, menuOptions :: Boolean
+, logoutModalView :: Boolean
+, contactSupportModal :: AnimType
 }
 
 type LmsModuleList =
@@ -3057,7 +3061,8 @@ type DocumentCaptureScreenData = {
   docId :: String,
   linkedRc :: Maybe String,
   cityConfig :: CityConfig,
-  config :: AppConfig
+  config :: AppConfig, 
+  vehiclePhotos :: API.GetVehiclePhotosResp
 } 
 
 type DocumentCaptureScreenProps = {

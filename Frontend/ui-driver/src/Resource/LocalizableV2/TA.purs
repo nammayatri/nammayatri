@@ -270,6 +270,13 @@ getTa =
     , no_closed_eyes : "மூடிய கண்கள் இல்லை"
     , more_than_one_face : "ஒன்றுக்கும் மேற்பட்ட முகம்"
     , outside_marked_area : "குறிக்கப்பட்ட பகுதிக்கு வெளியே"
+    , front_str : "முன்பக்கம்"
+    , left_str : "இடது"
+    , right_str : "தாயாங்"
+    , odometer_str : "ஓடோமீட்டர்"
+    , front_interior : "முன்பக்க உட்புறம்"
+    , rear_interior : "பின்புற உட்புறம்"
+    , enter_the_six_digit_code_shared_with_you : "ஆன்போர்டிங்கின் போது ஆன்போர்டிங் முகவர் உங்களுடன் பகிர்ந்து கொண்ட 6 இலக்கக் குறியீட்டை உள்ளிடவும்."
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "தற்போது,   கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்")
     , updated_at: "புதுப்பிக்கப்பட்டது"
     , trip_count: "இன்றைய பயணங்கள்"

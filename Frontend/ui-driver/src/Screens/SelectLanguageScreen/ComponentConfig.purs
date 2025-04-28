@@ -29,11 +29,9 @@ import Prelude ((==))
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config { textConfig
-      { text = if state.props.onlyGetTheSelectedLanguage then (getString CONFIRM_LANGUAGE) else (getString UPDATE)
-      , color = Color.primaryButtonColor}
+      { text = if state.props.onlyGetTheSelectedLanguage then (getString CONFIRM_LANGUAGE) else (getString UPDATE)}
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
-      , background = Color.black900
       , height = (V 60)
       , id = "SelectLanguageScreenPrimaryButton"
       , enableRipple = true

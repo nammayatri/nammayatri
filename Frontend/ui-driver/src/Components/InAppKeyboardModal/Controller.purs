@@ -85,6 +85,9 @@ type TextConfig =
     , margin :: Margin
     , weight :: Number
     , textStyle :: Style
+    , background :: String
+    , suffixImageVisibility :: Boolean
+    , strokeColor :: String
   }
 
 type ImageConfig =
@@ -147,6 +150,9 @@ config = {
     , margin : (Margin 0 0 0 0)
     , weight : 0.0
     , textStyle : Body1
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     headingConfig : {
       text : ""
@@ -161,6 +167,9 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (MarginLeft 16)
     , weight : 0.0
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     subHeadingConfig : {
       text : ""
@@ -175,6 +184,9 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , weight : 500.0
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     inputTextConfig : {
        text : ""
@@ -189,6 +201,9 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , weight : 1.0
+    , background : Color.transparent
+    , suffixImageVisibility : true
+    , strokeColor : "1," <> Color.borderColorLight
     },
     bodyTextConfig : {
        text : ""
@@ -203,6 +218,9 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , weight : 1.0
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     buttonConfig : {
       margin : (Margin 0 0 0 0)

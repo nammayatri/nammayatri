@@ -125,6 +125,19 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
+primaryButtonConfigInvisible :: ST.OperationHubScreenState -> PrimaryButton.Config
+primaryButtonConfigInvisible state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      {   textConfig
+        { text = getString CONTINUE } 
+        , margin = Margin 16 16 16 16
+        , id = "OperationHubButton"
+        , isClickable = isJust state.data.selectedHub
+        , visibility = INVISIBLE
+      }
+  in primaryButtonConfig'
+
 listExpandingAnimationConfig :: Boolean -> AnimConfig
 listExpandingAnimationConfig isExpanded = let 
   config = getConfig isExpanded 

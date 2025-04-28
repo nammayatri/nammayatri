@@ -72,6 +72,7 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | AfterRender
             | UploadImageWihType (Maybe API.VehicleImageType)
             | CallUploadVehicleImageAPI
+            | UpdateVehiclePhotos API.GetVehiclePhotosResp
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
@@ -80,6 +81,7 @@ data ScreenOutput = GoBack
                   | ChangeVehicle DocumentCaptureScreenState
                   | UploadVehicleImageAPI DocumentCaptureScreenState
                   | GoToOnboardingScreen DocumentCaptureScreenState
+                  | GetVehicleImagesStatus DocumentCaptureScreenState
 
 uploadFileConfig :: UploadFileConfig
 uploadFileConfig = UploadFileConfig {
@@ -93,11 +95,14 @@ eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput Documen
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
   if state.data.docType == ST.VEHICLE_PHOTOS && not state.props.uploadVehiclePhotos then do
     let (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
-    continue state {props {uploadVehiclePhotos = true, numberOfVehicleImagesUploaded = DA.length uploadedImagesUptoNow}} 
+        newState = state {props {uploadVehiclePhotos = true, numberOfVehicleImagesUploaded = DA.length uploadedImagesUptoNow}} 
+    exit $ GetVehicleImagesStatus newState 
   else continueWithCmd state [do
     let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
     void $ liftEffect $ JB.uploadFile uploadFileConfig true
     pure NoAction]
+
+eval (UpdateVehiclePhotos vehiclePhotosResp) state = continue state { data {vehiclePhotos = vehiclePhotosResp}}
 
 eval (VehicleUploadPrimaryButtonAC PrimaryButtonController.OnClick) state = exit $ GoToOnboardingScreen state
 
@@ -186,7 +191,7 @@ eval WhatsAppClick state = continueWithCmd state [do
 
 eval (UploadImageWihType imageType) state = continueWithCmd state {props{vehicleTypeImageToUpload = imageType}} [do
     -- let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
-    void $ liftEffect $ JB.uploadFile uploadFileConfig true
+    void $ liftEffect $ JB.uploadFile (UploadFileConfig {showAccordingToAspectRatio : true ,imageAspectHeight : 9, imageAspectWidth : 12}) true
     pure NoAction]
 
 eval AfterRender state = continue state 

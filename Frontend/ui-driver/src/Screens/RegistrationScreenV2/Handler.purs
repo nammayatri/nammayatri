@@ -47,7 +47,9 @@ registrationV2 = do
     LogoutAccount -> App.BackT $ App.BackPoint <$> (pure LOGOUT_FROM_REGISTERATION_SCREEN_V2)
     GoToOnboardSubscription updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ONBOARD_SUBSCRIPTION_V2 updatedState)
     GoToHomeScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN_V2 updatedState)
-    RefreshPage -> App.BackT $ App.BackPoint <$> (pure $ REFRESH_REGISTERATION_SCREEN_V2)
+    RefreshPage updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ REFRESH_REGISTERATION_SCREEN_V2)
     OperatorReferralCode updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFERRAL_CODE_SUBMIT_V2 updatedState)
@@ -66,7 +68,9 @@ registrationV2 = do
     GoToAppUpdatePopUpScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_APP_UPDATE_POPUP_SCREEN_V2 updatedState)
-    
+    GoToTrainingsScreen updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRAININGS_SCREEN updatedState)
     
     
     

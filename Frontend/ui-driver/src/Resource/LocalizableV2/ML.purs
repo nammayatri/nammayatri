@@ -270,6 +270,13 @@ getMl =
     , no_closed_eyes : "അടഞ്ഞ കണ്ണുകളില്ല."
     , more_than_one_face : "ഒന്നിലധികം മുഖങ്ങൾ"
     , outside_marked_area : "അടയാളപ്പെടുത്തിയ സ്ഥലത്തിന് പുറത്ത്"
+    , front_str : "ഫ്രണ്ട്"
+    , left_str : "ഇടത്"
+    , right_str : "ദായാങ്"
+    , odometer_str : "ഓഡോമീറ്റർ"
+    , front_interior : "മുൻവശത്തെ ഇന്റീരിയർ"
+    , rear_interior : "പിൻഭാഗത്തെ ഉൾഭാഗം"
+    , enter_the_six_digit_code_shared_with_you : "ഓൺബോർഡിംഗ് സമയത്ത് ഓൺബോർഡിംഗ് ഏജന്റ് നിങ്ങളുമായി പങ്കിട്ട 6 അക്ക കോഡ് നൽകുക."
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "നിലവിൽ, കർണാടകയിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ അനുവദനീയമായുള്ളു")
     , updated_at: "മാപ് അപ്ഡേറ്റ്"
     , trip_count: "ഇന്നത്തെ യാത്രകൾ"

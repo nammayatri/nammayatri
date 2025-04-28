@@ -439,6 +439,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , organization          :: OrganizationInfo
     , enabled               :: Boolean
     , verified              :: Boolean
+    , operatorReferralCode  :: Maybe String
     , language              :: Maybe String
     , referralCode          :: Maybe String
     , alternateNumber       :: Maybe String
@@ -3160,7 +3161,7 @@ instance makeGetReferralDetailsReq :: RestEndpoint GetReferralDetailsReq where
 
 derive instance genericGetReferralDetailsReq :: Generic GetReferralDetailsReq _
 instance showGetReferralDetailsReq :: Show GetReferralDetailsReq where show = genericShow
-instance standardEncodeGetReferralDetailsReq :: StandardEncode GetReferralDetailsReq where standardEncode req = standardEncode {}
+instance standardEncodeGetReferralDetailsReq :: StandardEncode GetReferralDetailsReq where standardEncode _ = standardEncode {}
 instance decodeGetReferralDetailsReq :: Decode GetReferralDetailsReq where decode = defaultDecode
 instance encodeGetReferralDetailsReq :: Encode GetReferralDetailsReq where encode = defaultEncode
 
@@ -3226,7 +3227,8 @@ instance standardEncodeRequestType :: StandardEncode RequestType where standardE
 newtype DriverOperationCreateRequestReq = DriverOperationCreateRequestReq {
     operationHubId :: String,
     registrationNo :: String,
-    requestType :: String
+    requestType :: String,
+    creatorId :: String
 }
 
 instance makeDriverOperationCreateRequestReq :: RestEndpoint DriverOperationCreateRequestReq where
@@ -3239,6 +3241,87 @@ instance showDriverOperationCreateRequestReq :: Show DriverOperationCreateReques
 instance standardEncodeDriverOperationCreateRequestReq :: StandardEncode DriverOperationCreateRequestReq where standardEncode (DriverOperationCreateRequestReq req) = standardEncode req
 instance decodeDriverOperationCreateRequestReq :: Decode DriverOperationCreateRequestReq where decode = defaultDecode
 instance encodeDriverOperationCreateRequestReq :: Encode DriverOperationCreateRequestReq where encode = defaultEncode
+
+----------------------------------------------------------------------- getOperationHubRequest ---------------------------------------------------------------
+
+data GetOperationHubReq = GetOperationHubReq String String
+
+instance makeGetOperationHubReq :: RestEndpoint GetOperationHubReq where
+    makeRequest reqBody@(GetOperationHubReq rcNo mbFrom) headers = defaultMakeRequestWithoutLogs GET (EP.getOperationHubRequest rcNo mbFrom) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetOperationHubReq :: Generic GetOperationHubReq _
+instance showGetOperationHubReq :: Show GetOperationHubReq where show = genericShow
+instance standardEncodeGetOperationHubReq :: StandardEncode GetOperationHubReq where standardEncode _ = standardEncode {}
+instance decodeGetOperationHubReq :: Decode GetOperationHubReq where decode = defaultDecode
+instance encodeGetOperationHubReq :: Encode GetOperationHubReq where encode = defaultEncode
+
+newtype OperationHubRequestsResp =  OperationHubRequestsResp {
+  requests :: Array OperationHubRequests
+}
+
+newtype OperationHubRequests = OperationHubRequests {
+  creatorId :: String,
+  driverId :: String,
+  fulfilledAt :: Maybe String,
+  id :: String,
+  merchantId :: String,
+  merchantOperatingCityId :: String,
+  operationHubId :: String,
+  operatorId :: Maybe String,
+  registrationNo :: String,
+  remarks :: Maybe String,
+  requestStatus :: String, -- Domain.Types.OperationHubRequests.RequestStatus,
+  requestType :: RequestType,
+  createdAt :: String,
+  updatedAt :: String
+}
+
+derive instance genericOperationHubRequests :: Generic OperationHubRequests _
+derive instance newtypeOperationHubRequests :: Newtype OperationHubRequests _
+instance showOperationHubRequests :: Show OperationHubRequests where show = genericShow
+instance standardEncodeOperationHubRequests :: StandardEncode OperationHubRequests where standardEncode _ = standardEncode {}
+instance decodeOperationHubRequests :: Decode OperationHubRequests where decode = defaultDecode
+instance encodeOperationHubRequests :: Encode OperationHubRequests where encode = defaultEncode
+
+derive instance genericOperationHubRequestsResp :: Generic OperationHubRequestsResp _
+derive instance newtypeOperationHubRequestsResp :: Newtype OperationHubRequestsResp _
+instance showOperationHubRequestsResp :: Show OperationHubRequestsResp where show = genericShow
+instance standardEncodeOperationHubRequestsResp :: StandardEncode OperationHubRequestsResp where standardEncode _ = standardEncode {}
+instance decodeOperationHubRequestsResp :: Decode OperationHubRequestsResp where decode = defaultDecode
+instance encodeOperationHubRequestsResp :: Encode OperationHubRequestsResp where encode = defaultEncode
+
+-------------------------------------------------------------- getVehiclePhotos ---------------------------------------------------------
+
+data GetVehiclePhotosReq = GetVehiclePhotosReq String
+
+instance makeGetVehiclePhotosReq :: RestEndpoint GetVehiclePhotosReq where
+    makeRequest reqBody@(GetVehiclePhotosReq rcNo) headers = defaultMakeRequestWithoutLogs GET (EP.getVehiclePhotos rcNo) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetVehiclePhotosReq :: Generic GetVehiclePhotosReq _
+instance showGetVehiclePhotosReq :: Show GetVehiclePhotosReq where show = genericShow
+instance standardEncodeGetVehiclePhotosReq :: StandardEncode GetVehiclePhotosReq where standardEncode (GetVehiclePhotosReq req) = standardEncode req
+instance decodeGetVehiclePhotosReq :: Decode GetVehiclePhotosReq where decode = defaultDecode
+instance encodeGetVehiclePhotosReq :: Encode GetVehiclePhotosReq where encode = defaultEncode
+
+
+newtype GetVehiclePhotosResp = GetVehiclePhotosResp {
+  back :: Array String,
+  backInterior :: Array String,
+  front :: Array String,
+  frontInterior :: Array String,
+  left :: Array String,
+  odometer :: Array String,
+  right :: Array String
+}
+
+derive instance genericGetVehiclePhotosResp :: Generic GetVehiclePhotosResp _
+derive instance newtypeGetVehiclePhotosResp :: Newtype GetVehiclePhotosResp _
+instance showGetVehiclePhotosResp :: Show GetVehiclePhotosResp where show = genericShow
+instance standardEncodeGetVehiclePhotosResp :: StandardEncode GetVehiclePhotosResp where standardEncode _ = standardEncode {}
+instance decodeGetVehiclePhotosResp :: Decode GetVehiclePhotosResp where decode = defaultDecode
+instance encodeGetVehiclePhotosResp :: Encode GetVehiclePhotosResp where encode = defaultEncode
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 

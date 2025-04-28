@@ -350,6 +350,13 @@ newtype Keymap
   , no_closed_eyes :: String
   , more_than_one_face :: String
   , outside_marked_area :: String
+  , front_str :: String
+  , left_str :: String
+  , right_str :: String
+  , odometer_str :: String
+  , front_interior :: String
+  , rear_interior :: String
+  , enter_the_six_digit_code_shared_with_you :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -2839,6 +2846,26 @@ more_than_one_face = a
 outside_marked_area :: Proxy "outside_marked_area"
 outside_marked_area = a
 
+front_str :: Proxy "front_str"
+front_str = a
+
+left_str :: Proxy "left_str"
+left_str = a
+
+right_str :: Proxy "right_str"
+right_str = a
+
+odometer_str :: Proxy "odometer_str"
+odometer_str = a
+
+front_interior :: Proxy "front_interior"
+front_interior = a
+
+rear_interior :: Proxy "rear_interior"
+rear_interior = a
+
+enter_the_six_digit_code_shared_with_you :: Proxy "enter_the_six_digit_code_shared_with_you"
+enter_the_six_digit_code_shared_with_you = a
 
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a

@@ -223,6 +223,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , organization          :  organizationInfo
     , enabled               :  false
     , verified              :  false
+    , operatorReferralCode  :  Nothing
     , language              :  Nothing 
     , referralCode          :  Nothing 
     , alternateNumber       :  Nothing 

@@ -123,7 +123,7 @@ data ScreenOutput = GoBack
                   | LogoutAccount
                   | GoToOnboardSubscription RegistrationScreenState
                   | GoToHomeScreen RegistrationScreenState
-                  | RefreshPage
+                  | RefreshPage RegistrationScreenState
                   | OperatorReferralCode RegistrationScreenState
                   | GetReferralDetils RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
@@ -131,6 +131,7 @@ data ScreenOutput = GoBack
                   | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
                   | GoToAppUpdatePopUpScreen RegistrationScreenState
                   | GoToOperationHubScreen RegistrationScreenState
+                  | GoToTrainingsScreen RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -213,7 +214,7 @@ eval (RegistrationActionV2 categoryItemWithSteps) state = do
     case categoryItemWithSteps.category of
         API.PERMISSION -> exit $ GoToPermissionScreen state
         API.VEHICLE -> continue state {props {selectedDocumentCategory = Mb.Just categoryItemWithSteps.category}}
-        API.TRAINING -> continue state {props {selectedDocumentCategory = Mb.Just categoryItemWithSteps.category}}
+        API.TRAINING -> exit $ GoToTrainingsScreen state -- {props {selectedDocumentCategory = Mb.Just categoryItemWithSteps.category}}
         API.DRIVER -> continue state {props {selectedDocumentCategory = Mb.Just categoryItemWithSteps.category}}
         _ -> continue state
 
@@ -299,9 +300,9 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
     pure unit
   exit $ GoToHomeScreen state
 
-eval Refresh state = updateAndExit state { props { refreshAnimation = true}} RefreshPage
+eval Refresh state = updateAndExit state { props { refreshAnimation = true}} $ RefreshPage state { props { refreshAnimation = true}}
 
-eval (CategorySpecificContinueButtonAC PrimaryButtonController.OnClick) state = updateAndExit state {props {selectedDocumentCategory = Mb.Nothing}} RefreshPage
+eval (CategorySpecificContinueButtonAC PrimaryButtonController.OnClick) state = updateAndExit state {props {selectedDocumentCategory = Mb.Nothing}} $ RefreshPage state {props {selectedDocumentCategory = Mb.Nothing}}
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
 
@@ -316,7 +317,9 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continueWithCmd newState [pure $ SupportClick true]
     "change_vehicle" -> continue newState { props { confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
-    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
+    "faqs" -> do
+      void $ pure $ unsafePerformEffect $ logEvent state.data.logField "dummy_faqs_button_clicked_1"
+      continue newState -- exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
@@ -330,8 +333,8 @@ eval (EnterReferralCode val ) state = if not val then do
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let
-    referralCode = if (index + 1) > (DS.length state.data.referralCode) then (DS.take 6 (state.data.referralCode <> key))
-                   else (DS.take index (state.data.referralCode)) <> key <> (DS.take 6 (DS.drop (index+1) state.data.referralCode))
+    referralCode = if (index + 1) > (DS.length state.data.referralCode) then (DS.take 7 (state.data.referralCode <> key))
+                   else (DS.take index (state.data.referralCode)) <> key <> (DS.take 7 (DS.drop (index+1) state.data.referralCode))
     focusIndex = DS.length referralCode
     newState = state { props = state.props {enterOtpFocusIndex = focusIndex }, data{referralCode = referralCode} }
   continue newState
@@ -347,7 +350,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
       referralCode = DS.take index state.data.referralCode
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, isValidReferralCode = true }, data {referralCode = referralCode} }
 
-eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = "", refereeName = Mb.Nothing} }
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = if Mb.isNothing state.data.refereeName then exit $ GetReferralDetils state else exit $ OperatorReferralCode state
 

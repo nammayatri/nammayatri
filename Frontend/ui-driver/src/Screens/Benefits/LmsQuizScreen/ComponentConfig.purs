@@ -49,14 +49,14 @@ quizDoneButtonConfig label state isRetryButtonVisible =
              "RETRY_QUESTION" -> (StringsV2.getString state.props.selectedLanguage RETRY_STR) <> " "
              _ -> ""
     , color = case label of
-               "RETRY_QUESTION" -> Color.black700
-               "CLOSE_QUIZ" -> Color.black700
-               _ -> Color.yellow900
+               "RETRY_QUESTION" -> state.data.config.themeColors.quizButtonStrokeAndText
+               "CLOSE_QUIZ" -> state.data.config.themeColors.quizButtonStrokeAndText
+               _ -> state.data.config.primaryTextColor
     }
   , background = case label of
                   "RETRY_QUESTION" -> Color.white900
                   "CLOSE_QUIZ" -> Color.white900
-                  _ -> Color.black900
+                  _ -> state.data.config.primaryButtonBackground
   , enableRipple = false
   , rippleColor = Color.white40Alpha
   , margin = case label of
@@ -64,8 +64,8 @@ quizDoneButtonConfig label state isRetryButtonVisible =
               "NEXT_QUESTION" -> if isRetryButtonVisible then Margin 8 0 0 0 else Margin 0 0 0 0
               _ -> Margin 0 0 0 0
   , stroke = case label of
-              "RETRY_QUESTION" -> "1," <> Color.black700
-              _ -> "0," <> Color.black
+              "RETRY_QUESTION" -> "1," <> state.data.config.themeColors.quizButtonStrokeAndText
+              _ -> "0," <> state.data.config.primaryButtonBackground
   , id = "QuizPrimaryButton_" <> label
   , enableLoader = (JB.getBtnLoader $ "QuizPrimaryButton_" <> label)
   , width = if isRetryButtonVisible then (V (sWidth/2))  else MATCH_PARENT
@@ -89,9 +89,9 @@ exitPopupConfig state =
     option1 {
       text = (StringsV2.getString state.props.selectedLanguage CANCEL)
     , enableRipple = true
-    , color = Color.yellow900
-    , background = Color.black900
-    , strokeColor = Color.black900
+    , color = state.data.config.primaryTextColor
+    , background = state.data.config.primaryButtonBackground
+    , strokeColor = state.data.config.primaryButtonBackground
     , width = MATCH_PARENT
     },
     option2 {

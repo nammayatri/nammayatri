@@ -200,7 +200,6 @@ menuOptionModal push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

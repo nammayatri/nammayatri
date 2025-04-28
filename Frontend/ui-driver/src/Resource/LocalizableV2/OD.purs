@@ -272,6 +272,13 @@ getOd =
     , no_closed_eyes : "ଆଖି ବନ୍ଦ ନାହିଁ"
     , more_than_one_face : "1ରୁ ଅଧିକ ଚେହେରା"
     , outside_marked_area : "ଚିହ୍ନିତ କ୍ଷେତ୍ରର ବାହାରେ"
+    , front_str : "ସାମ୍ନା"
+    , left_str : "ବାମ"
+    , right_str : "ଦାୟାଂ"
+    , odometer_str : "ଓଡୋମିଟର"
+    , front_interior : "ସାମ୍ନା ଭିତର ଅଂଶ"
+    , rear_interior : "ପଛ ଭିତର"
+    , enter_the_six_digit_code_shared_with_you : "ଅନବୋର୍ଡିଂ ସମୟରେ ଅନବୋର୍ଡିଂ ଏଜେଣ୍ଟଙ୍କ ଦ୍ୱାରା ଆପଣଙ୍କ ସହ ସେୟାର କରାଯାଇଥିବା 6-ଅଙ୍କ ବିଶିଷ୍ଟ କୋଡ୍ ଲେଖନ୍ତୁ।"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC ସ୍ଥାନ ଆପଣଙ୍କ ସ୍ଥାନ ସହିତ ମେଳ ହେଉ ନାହିଁ")
     , updated_at: "ମାନଚିତ୍ର ଅଦ୍ୟତନ ହୋଇଛି"
     , trip_count: "ରାଇଡ୍ ସଂଖ୍ୟା"

@@ -389,7 +389,7 @@ textOptionPill push state eQuestion optionText optionId options isInGrid isFirst
   ] <> [if isInGrid then width $ V pillSize  else width MATCH_PARENT]
     <> [if isInGrid then gravity CENTER else gravity CENTER_VERTICAL])[ textView $
      [ text optionText
-     , color Color.black800
+     , color state.data.config.themeColors.quizOptionTextColor
      , height $ WRAP_CONTENT
      ] <> FontStyle.body1 LanguageStyle
        <> if isInGrid then [width WRAP_CONTENT, layoutGravity "center", gravity CENTER] else [weight 1.0]
@@ -647,11 +647,11 @@ getOptionInfo :: LmsQuizScreenState -> LmsQuestion -> String -> Boolean -> Array
 getOptionInfo state eQuestion optionId isImageOption options = if state.props.isRetryEnabled then getOptionInfoAccordingToCurrentSelectedOptions state optionId isImageOption eQuestion
     else getOptionsInfoAccordingToValidationRes state eQuestion optionId isImageOption options
       
-getOptionsInfoAccordingToOptionsList :: String -> Boolean ->  Array OptionEntity -> {backgroundColor :: String, strokeWidth :: Int, strokeColor :: String, imageVisible :: Boolean, isClickable :: Boolean}
-getOptionsInfoAccordingToOptionsList optionId isImageOption options = case (find (\(OptionEntity option) -> option.optionId == optionId) options) of
-                                                          Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
+getOptionsInfoAccordingToOptionsList :: String -> Boolean ->  Array OptionEntity -> LmsQuizScreenState -> {backgroundColor :: String, strokeWidth :: Int, strokeColor :: String, imageVisible :: Boolean, isClickable :: Boolean}
+getOptionsInfoAccordingToOptionsList optionId isImageOption options state = case (find (\(OptionEntity option) -> option.optionId == optionId) options) of
+                                                          Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : false}
                                                           Just (OptionEntity option) -> if option.isCorrect then {backgroundColor : Color.greenOpacity10, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.green900, imageVisible : true, isClickable : false}
-                                                                         else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
+                                                                         else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : false}
 
 getOptionsInfoAccordingToValidationRes :: LmsQuizScreenState -> LmsQuestion -> String -> Boolean -> Array OptionEntity -> {backgroundColor :: String, strokeWidth :: Int, strokeColor :: String, imageVisible :: Boolean, isClickable :: Boolean}
 getOptionsInfoAccordingToValidationRes state eQuestion optionId isImageOption options =
@@ -660,9 +660,9 @@ getOptionsInfoAccordingToValidationRes state eQuestion optionId isImageOption op
     Just (API.QuestionConfirmRes validationRes) -> case validationRes.validationRes of
           API.SingleSelectedOptionValidation (API.ValidationResult res) -> if optionId == res.id && res.isCorrect then {backgroundColor : Color.greenOpacity10, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.green900, imageVisible : true, isClickable : false}
                                                                         else if optionId == res.id then {backgroundColor : Color.red900Alpha16, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.red900, imageVisible : false, isClickable : false}
-                                                                        else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
+                                                                        else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : false}
           API.MultiSelectedOptionValidation resArr -> case (find (\(API.ValidationResult res) -> res.id == optionId) resArr) of 
-                                                        Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
+                                                        Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : false}
                                                         Just (API.ValidationResult validatedOption) -> if validatedOption.isCorrect then {backgroundColor : Color.greenOpacity10, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.green900, imageVisible : true, isClickable : false}
                                                                                                        else {backgroundColor : Color.red900Alpha16, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.red900, imageVisible : false, isClickable : false}
 
@@ -672,20 +672,20 @@ getOptionInfoAccordingToPreviousHistory state eQuestion optionId isImageOption o
     Nothing -> getOptionInfoAccordingToCurrentSelectedOptions  state optionId isImageOption eQuestion
     Just (API.LmsQuizHistory history) ->  case history.status of
                                             API.CORRECT -> 
-                                                  if optionId `elem` history.selectedOptions then getOptionsInfoAccordingToOptionsList optionId isImageOption options
-                                                  else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
-                                            API.INCORRECT -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : true}
+                                                  if optionId `elem` history.selectedOptions then getOptionsInfoAccordingToOptionsList optionId isImageOption options state
+                                                  else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : false}
+                                            API.INCORRECT -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : true}
 
 getOptionInfoAccordingToCurrentSelectedOptions :: LmsQuizScreenState -> String -> Boolean -> LmsQuestion ->  {backgroundColor :: String, strokeWidth :: Int, strokeColor :: String, imageVisible :: Boolean, isClickable :: Boolean}
 getOptionInfoAccordingToCurrentSelectedOptions state optionId isImageOption eQuestion = 
   case eQuestion.options of
     API.SingleSelect _ -> case state.props.currentQuestionSelectedOptionsData.selectedSingleOption of
-                            Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : true}
-                            Just selOption -> if optionId == selOption.optionId then {backgroundColor : Color.blue9000, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.blue900, imageVisible : false, isClickable : true}
-                                              else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : true}
+                            Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : true}
+                            Just selOption -> if optionId == selOption.optionId then {backgroundColor : state.data.config.themeColors.quizOptionSelectedBgColor, strokeWidth : if isImageOption then 3 else 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false, isClickable : true}
+                                              else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : true}
     API.MultiSelect _ -> if optionId `elem` (map (\option -> option.optionId) state.props.currentQuestionSelectedOptionsData.selectedMultipleOptions) 
-                         then {backgroundColor : Color.blue9000, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.blue900, imageVisible : false, isClickable : true}
-                         else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : true}
+                         then {backgroundColor : state.data.config.themeColors.quizOptionSelectedBgColor, strokeWidth : if isImageOption then 3 else 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false, isClickable : true}
+                         else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : state.data.config.themeColors.quizOptionStrokeColor, imageVisible : false,  isClickable : true}
 
 type ButtonVisibility =
   { orientation :: Orientation,

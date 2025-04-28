@@ -39,7 +39,7 @@ view push state =
   ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , background if state.navBarOpen then Color.blackLessTrans else Color.transparent
+      -- , background if state.navBarOpen then Color.blackLessTrans else Color.transparent
       , orientation VERTICAL
       , padding $ Padding 16 16 16 16
       ]

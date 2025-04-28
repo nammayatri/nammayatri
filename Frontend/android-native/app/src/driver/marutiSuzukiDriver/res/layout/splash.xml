@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
+    android:background="#171C8F"
     android:id="@+id/splash">
 
     <FrameLayout
@@ -37,6 +37,7 @@
             android:layout_height="58dp"
             android:layout_margin="40dp"
             android:layout_gravity="center"
+            android:visibility="gone"
             android:src="@drawable/ic_powered_by" />
         </LinearLayout>
         <com.airbnb.lottie.LottieAnimationView

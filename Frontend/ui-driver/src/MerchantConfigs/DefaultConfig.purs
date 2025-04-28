@@ -1084,7 +1084,11 @@ config =
     radioSelectedImage : "ny_ic_radio_selected",
     radioActiveStroke : "#0066FF",
     onboardingStepImgBg : "#f4F7FF",
-    welcomeScreenBackground : "#FFFAED"
+    welcomeScreenBackground : "#FFFAED",
+    quizButtonStrokeAndText : "#6D7280",
+    quizOptionStrokeColor : "#0066FF",
+    quizOptionSelectedBgColor : "#1A0066FF",
+    quizOptionTextColor : "#454545"
   }
   , primaryButtonConfig : defaultPrimaryButtonConfig
   , fontConfig : defaultFontConfig

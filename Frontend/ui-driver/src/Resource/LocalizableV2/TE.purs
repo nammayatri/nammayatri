@@ -271,6 +271,13 @@ getTe =
     , no_closed_eyes : "కళ్ళు మూసుకోలేదు"
     , more_than_one_face : "1 కంటే ఎక్కువ ముఖం"
     , outside_marked_area : "గుర్తించబడిన ప్రాంతం వెలుపల"
+    , front_str : "ముందు"
+    , left_str : "ఎడమ"
+    , right_str : "దాయం"
+    , odometer_str : "ఓడోమీటర్"
+    , front_interior : "ముందు భాగం లోపలి భాగం"
+    , rear_interior : "వెనుక ఇంటీరియర్"
+    , enter_the_six_digit_code_shared_with_you : "ఆన్‌బోర్డింగ్ సమయంలో ఆన్‌బోర్డింగ్ ఏజెంట్ మీతో షేర్ చేసిన 6-అంకెల కోడ్‌ను నమోదు చేయండి."
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "ప్రస్తుతం, మేము కర్ణాటక రిజిస్టర్డ్ నంబర్‌ను మాత్రమే అనుమతిస్తున్నాము")
     , updated_at: "మ్యాప్ అప్‌డేట్ చేయబడిన సమయం"
     , trip_count: "ట్రిప్ కౌంట్"

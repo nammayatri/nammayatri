@@ -140,7 +140,11 @@ type ThemeColors = {
   radioSelectedImage :: String,
   radioActiveStroke :: String,
   onboardingStepImgBg :: String,
-  welcomeScreenBackground :: String
+  welcomeScreenBackground :: String,
+  quizButtonStrokeAndText :: String,
+  quizOptionStrokeColor :: String,
+  quizOptionSelectedBgColor :: String,
+  quizOptionTextColor :: String
 }
 
 type SubscriptionOfferBannerConfig = {

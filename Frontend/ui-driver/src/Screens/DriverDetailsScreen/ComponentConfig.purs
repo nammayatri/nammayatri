@@ -164,6 +164,7 @@ enterOtpState state = let
 
 enterMobileNumberState :: ST.DriverDetailsScreenState -> InAppKeyboardModalController.InAppKeyboardModalState
 enterMobileNumberState state = let
+      inputText = if(state.props.isEditAlternateMobile) then (if (state.data.driverEditAlternateMobile  == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverEditAlternateMobile)) else (if (state.data.driverAlternateMobile == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverAlternateMobile))
       config' = InAppKeyboardModalController.config
       inAppModalConfig' = config'{
         errorConfig {
@@ -178,10 +179,11 @@ enterMobileNumberState state = let
           visibility = GONE
         },
         inputTextConfig {
-          text = if(state.props.isEditAlternateMobile) then (if (state.data.driverEditAlternateMobile  == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverEditAlternateMobile)) else (if (state.data.driverAlternateMobile == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverAlternateMobile))
+          text = inputText
         , color = if(state.props.isEditAlternateMobile) then (if( state.data.driverEditAlternateMobile == Nothing ) then Color.black500 else Color.black800) else (if( state.data.driverAlternateMobile == Nothing ) then Color.black500 else Color.black800)
         , focusIndex = 0
         , gravity = LEFT
+        , suffixImageVisibility = (inputText /= getString ENTER_MOBILE_NUMBER)
         },
         imageConfig {
           alpha = case state.data.driverAlternateMobile of

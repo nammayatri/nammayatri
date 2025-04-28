@@ -20,7 +20,7 @@ import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalS
 import Components.PrimaryButton as PrimaryButton
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
-import Data.Array (mapWithIndex, insertAt)
+import Data.Array (mapWithIndex, insertAt, any)
 import Data.Maybe (fromMaybe)
 import Data.String (take, drop, length)
 import Effect (Effect)
@@ -207,10 +207,11 @@ singleTextBox push state =
   , orientation HORIZONTAL
   , gravity CENTER
   , cornerRadius 4.0
-  , visibility if state.modalType == KeyboardModalType.MOBILE__NUMBER then VISIBLE else GONE
+  , visibility if any (_ == state.modalType) [KeyboardModalType.MOBILE__NUMBER, KeyboardModalType.REFERRAL__CODE] then VISIBLE else GONE
   , clickable false
-  , padding (Padding 16 16 16 16)
-  , stroke ("1," <> if not state.isValidAlternateNumber then Color.textDanger else Color.borderColorLight )
+  , padding (Padding 8 8 8 8)
+  , background state.inputTextConfig.background
+  , stroke $  if not state.isValidAlternateNumber then ("1," <> Color.textDanger) else state.inputTextConfig.strokeColor
   ][textView $
       [ width state.inputTextConfig.width
       , height state.inputTextConfig.height
@@ -228,7 +229,7 @@ singleTextBox push state =
         [ width $ V 23
          , height $ V 23
          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
-         , visibility if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then GONE else VISIBLE
+         , visibility $ boolToVisibility state.inputTextConfig.suffixImageVisibility
          , onClick push (const (OnClickTextCross))
         ]
       ]
@@ -366,6 +367,7 @@ keyboard push state =
         KeyboardModalType.OTP -> length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && not state.otpIncorrect
         KeyboardModalType.ODOMETER -> length state.inputTextConfig.text > 3
         KeyboardModalType.MOBILE__NUMBER -> length state.inputTextConfig.text == 10 && state.isValidAlternateNumber
+        KeyboardModalType.REFERRAL__CODE -> length state.inputTextConfig.text >= 6 && state.isValidAlternateNumber
         _ -> false
 
 appKeyboardOdometerInput :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w

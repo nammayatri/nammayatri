@@ -127,6 +127,7 @@ data KeyStore = USER_NAME
                 | DRIVER_NAME
                 | DRIVER_OPERATION_CREATE_REQUEST_SUCCESS
                 | VEHICLE_PHOTOS_UPLOAD_STATUS
+                | TRAININGS_COMPLETED_STATUS
                 | SAVED_GOTO_COUNT
                 | OLD_COIN_BALANCE
                 | TIMES_OPENED_NEW_BENEFITS

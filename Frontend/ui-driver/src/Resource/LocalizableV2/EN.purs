@@ -272,6 +272,13 @@ getEn =
     , no_closed_eyes : "No closed eyes"
     , more_than_one_face : "More than 1 face"
     , outside_marked_area : "Outside Marked Area"
+    , front_str : "Front"
+    , left_str : "Left"
+    , right_str : "Right"
+    , odometer_str : "Odometer"
+    , front_interior : "Front Interior"
+    , rear_interior : "Rear Interior"
+    , enter_the_six_digit_code_shared_with_you : "Enter the 6-digit code shared with you by the onboarding agent during onboarding"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC location is not matching with your location")
     , updated_at: "Map updated at"
     , trip_count: "Trip Count"
