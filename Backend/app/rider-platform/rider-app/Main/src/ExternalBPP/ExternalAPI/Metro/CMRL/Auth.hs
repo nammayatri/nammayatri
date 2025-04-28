@@ -36,7 +36,7 @@ newtype TokenResult = TokenResult
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type AuthAPI =
-  "cumta" :> "authenticate"
+  "CmrlThirdParty" :> "authenticate"
     :> ReqBody '[JSON] AuthReq
     :> Post '[JSON] AuthRes
 

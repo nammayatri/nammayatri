@@ -47,7 +47,7 @@ data PassengerViewStatusRes = PassengerViewStatusRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type PassengerViewStatusAPI =
-  "cumta" :> "passengerviewstatus"
+  "CmrlThirdParty" :> "passengerviewstatus"
     :> Header "Authorization" T.Text
     :> ReqBody '[JSON] PassengerViewStatusReq
     :> Get '[JSON] PassengerViewStatusRes

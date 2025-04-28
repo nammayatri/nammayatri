@@ -4,6 +4,7 @@
 module ExternalBPP.ExternalAPI.Metro.CMRL.FareByOriginDest where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
@@ -25,7 +26,8 @@ data FareByOriginDestReq = FareByOriginDestReq
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data FareByOriginDestResInner = FareByOriginDestResInner
-  { result :: Maybe HighPrecMoney
+  { ticketTotalFare :: Maybe HighPrecMoney,
+    ticketDiscountFare :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -37,7 +39,7 @@ data FareByOriginDestAPIRes = FareByOriginDestAPIRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type FareByOriginDestAPI =
-  "cumta" :> "farebyod"
+  "CmrlThirdParty" :> "farebyod"
     :> Header "Authorization" T.Text
     :> MandatoryQueryParam "origin" T.Text
     :> MandatoryQueryParam "destination" T.Text
@@ -53,7 +55,7 @@ getFareByOriginDest config fareReq = do
   let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType cmrlAppType
   fareByODRes <- callCMRLAPI config eulerClient "getFareByOriginDest" fareByOriginDestAPI
   logDebug $ "CMRL Get Fares API Response : " <> show fareByODRes
-  case fareByODRes.result >>= (.result) of
+  case ((fareByODRes.result >>= (.ticketDiscountFare)) <|> (fareByODRes.result >>= (.ticketTotalFare))) of
     Just amount ->
       return $
         [ FRFSUtils.FRFSFare

@@ -32,7 +32,7 @@ data StationListResponse = StationListResponse
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type StationListAPI =
-  "cumta" :> "stations"
+  "CmrlThirdParty" :> "stations"
     :> Header "Authorization" Text
     :> MandatoryQueryParam "appType" Text
     :> Get '[JSON] StationListResponse

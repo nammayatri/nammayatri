@@ -36,7 +36,7 @@ data DurationDetailsRes = DurationDetailsRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type DurationDetailsAPI =
-  "cumta" :> "traveldistanceduration"
+  "CmrlThirdParty" :> "traveldistanceduration"
     :> Header "Authorization" T.Text
     :> ReqBody '[JSON] DurationDetailsReq
     :> Get '[JSON] DurationDetailsRes

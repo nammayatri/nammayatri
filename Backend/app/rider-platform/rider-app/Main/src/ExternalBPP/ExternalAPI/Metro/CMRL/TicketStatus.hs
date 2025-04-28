@@ -55,7 +55,7 @@ data TicketStatusRes = TicketStatusRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type TicketStatusAPI =
-  "cumta" :> "ticketStatus"
+  "CmrlThirdParty" :> "ticketStatus"
     :> Header "Authorization" T.Text
     :> MandatoryQueryParam "ticketNo" T.Text
     :> MandatoryQueryParam "appType" T.Text

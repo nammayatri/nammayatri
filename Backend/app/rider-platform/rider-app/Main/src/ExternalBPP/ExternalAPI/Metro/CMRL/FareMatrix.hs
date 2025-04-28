@@ -34,7 +34,7 @@ data FareMatrixAPIRes = FareMatrixAPIRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type FareMatrixAPI =
-  "cumta" :> "farematrix"
+  "CmrlThirdParty" :> "farematrix"
     :> Header "Authorization" T.Text
     :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] FareMatrixAPIRes

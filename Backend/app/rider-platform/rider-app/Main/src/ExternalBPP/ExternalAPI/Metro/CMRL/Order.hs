@@ -90,7 +90,7 @@ data GenerateQRRes = GenerateQRRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type GenerateQRAPI =
-  "cumta" :> "generateqrticket"
+  "CmrlThirdParty" :> "generateqrticket"
     :> Header "Authorization" T.Text
     :> ReqBody '[JSON] GenerateQRReq
     :> Post '[JSON] GenerateQRRes

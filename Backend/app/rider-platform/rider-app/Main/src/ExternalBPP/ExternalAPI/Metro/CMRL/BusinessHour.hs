@@ -32,7 +32,7 @@ data BusinessHourRes = BusinessHourRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type BusinessHourAPI =
-  "cumta" :> "businesshour"
+  "CmrlThirdParty" :> "businesshour"
     :> Header "Authorization" T.Text
     :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] BusinessHourRes
