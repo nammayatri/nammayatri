@@ -19,6 +19,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
 import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
+import qualified Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleRouteMapping
 import qualified Domain.Types.VehicleVariant as DVehVariant
@@ -193,8 +194,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
             assignTripTransaction advancedTripTransaction route False currentLocation sourceStopInfo.point destinationStopInfo.point True
           Nothing -> do
             findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
-              Just advancedTripTransaction -> do
-                assignUpcomingTripTransaction advancedTripTransaction currentLocation tripTerminationSource
+              Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
               Nothing -> do
                 if fleetConfig.allowAutomaticRoundTripAssignment
                   then do
@@ -242,8 +242,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                             assignTripTransaction advancedTripTransaction route False currentLocation sourceStopInfo.point destinationStopInfo.point True
                           Nothing -> do
                             findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
-                              Just advancedTripTransaction -> do
-                                assignUpcomingTripTransaction advancedTripTransaction currentLocation tripTerminationSource
+                              Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
                               Nothing -> do
                                 QDI.updateOnRide False tripTransaction.driverId
                                 unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
@@ -518,8 +517,8 @@ findNextActiveTripTransaction fleetOwnerId driverId = do
                         let location = listToMaybe locations
                         when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
                         return location
-                assignUpcomingTripTransaction tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) AutoRecovery
-                return (Just tripTransaction)
+                assignedTripTransaction <- assignUpcomingTripTransaction tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation)
+                return (Just assignedTripTransaction)
               Nothing -> pure Nothing
 
 -- Redis Transaction Lock Keys --
@@ -580,11 +579,12 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
       QTAR.updateIsViolated False tripAlertRequest.id
       pure tripAlertRequest.alertRequestId
 
-assignUpcomingTripTransaction :: TripTransaction -> LatLong -> ActionSource -> Flow ()
-assignUpcomingTripTransaction tripTransaction currentLocation tripTerminationSource = do
+assignUpcomingTripTransaction :: TripTransaction -> LatLong -> Flow TripTransaction
+assignUpcomingTripTransaction tripTransaction currentLocation = do
   unless (tripTransaction.status == UPCOMING) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-  now <- getCurrentTime
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  QTT.updateOnEnd TRIP_ASSIGNED (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
-  assignTripTransaction tripTransaction route False currentLocation sourceStopInfo.point destinationStopInfo.point True
+  let tripTransactionT = tripTransaction {DTT.status = TRIP_ASSIGNED}
+  QTT.updateStatus tripTransactionT.status tripTransaction.id
+  assignTripTransaction tripTransactionT route False currentLocation sourceStopInfo.point destinationStopInfo.point True
+  return tripTransactionT
