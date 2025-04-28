@@ -27,6 +27,7 @@ data FRFSConfig = FRFSConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metroStationTtl :: Kernel.Prelude.Int,
+    ondcSubscriberIdAndUniqueKeyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oneWayTicketLimit :: Kernel.Prelude.Int,
     providerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

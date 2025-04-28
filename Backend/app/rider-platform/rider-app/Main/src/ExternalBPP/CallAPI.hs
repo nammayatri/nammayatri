@@ -8,6 +8,7 @@ import qualified Beckn.ACL.FRFS.Search as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
@@ -28,8 +29,12 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Registry
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Registry as Registry
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -44,7 +49,8 @@ type FRFSSearchFlow m r =
     EsqDBReplicaFlow m r,
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "ondcRegistryUrl" r BaseUrl
   )
 
 type FRFSConfirmFlow m r =
@@ -74,8 +80,32 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
         toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
         bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just fromStation) (Just toStation) merchantOperatingCity.city
         logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
-        Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
-        void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
+        subscriberIdAndUniqueKeyId <- fromStation.ondcSubscriberIdAndUniqueKeyId & fromMaybeM (InvalidRequest "Invalid subscriber id and unique key id")
+        let mbSubscriberIdAndUniqueKeyId = splitSubscriberIdAndUniqueKeyId subscriberIdAndUniqueKeyId
+        (subscriberId, uniqueKeyId) <- mbSubscriberIdAndUniqueKeyId & fromMaybeM (InternalError $ "Error in parsing subscriber id and unique key id" <> show mbSubscriberIdAndUniqueKeyId)
+        ondcRegistryUrl <- asks (.ondcRegistryUrl)
+        let lookupRequest =
+              SimpleLookupRequest
+                { unique_key_id = uniqueKeyId,
+                  subscriber_id = subscriberId,
+                  merchant_id = merchant.id.getId,
+                  subscriber_type = Subscriber.BPP,
+                  domain = Context.PUBLIC_TRANSPORT
+                }
+        Registry.registryLookup ondcRegistryUrl lookupRequest bapConfig.subscriberId >>= \case
+          Just subscriber -> do
+            Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
+            void $ CallFRFSBPP.search subscriber.subscriber_url bknSearchReq merchant.id
+          Nothing -> do
+            logWarning $
+              "Subscriber with unique_key_id:"
+                <> uniqueKeyId
+                <> "; subscriber type: "
+                <> show lookupRequest.subscriber_type
+                <> "; domain: "
+                <> show lookupRequest.domain
+                <> " not found."
+            throwError $ LookUpFailed subscriberId
     _ -> do
       fork "FRFS External SearchReq" $ do
         onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
@@ -85,6 +115,11 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
     processOnSearch onSearchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
+    splitSubscriberIdAndUniqueKeyId :: T.Text -> Maybe (T.Text, T.Text)
+    splitSubscriberIdAndUniqueKeyId txt =
+      case T.splitOn (T.pack "|") txt of
+        [a, b] -> Just (a, b)
+        _ -> Nothing
 
 init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking platformType = do
@@ -111,8 +146,9 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking platfor
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Cancel Req" $ do
+        fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
         frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+          CQFRFSConfig.findByCityIdAndSubscriberId merchantOperatingCity.id fromStation.ondcSubscriberIdAndUniqueKeyId
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -135,8 +171,9 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
+        fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
         frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+          CQFRFSConfig.findByCityIdAndSubscriberId merchantOperatingCity.id fromStation.ondcSubscriberIdAndUniqueKeyId
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
         onConfirmHandler onConfirmReq

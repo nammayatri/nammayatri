@@ -51,6 +51,7 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -444,7 +445,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
       _ <- createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude merchantOpCity integratedBPPConfig
       _ <- createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude merchantOpCity integratedBPPConfig
       let routeCode = Nothing
-      return $ API.FRFSSearchAPIReq {..}
+      return $ API.FRFSSearchAPIReq {fromStationId = Nothing, toStationId = Nothing, ..}
 
     createStationIfRequired :: JT.SearchRequestFlow m r c => Maybe Text -> Text -> Double -> Double -> MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> m (Maybe Station)
     createStationIfRequired name code lat lon merchantOpCity integratedBPPConfig = do
@@ -478,6 +479,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
               integratedBppConfigId = integratedBPPConfig.id,
               regionalName = Nothing,
               hindiName = Nothing,
+              ondcSubscriberIdAndUniqueKeyId = Nothing,
               createdAt = now,
               updatedAt = now
             }
@@ -546,7 +548,8 @@ isCancellable searchId = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   case mbMetroBooking of
     Just metroBooking -> do
-      frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow metroBooking.merchantOperatingCityId [] >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
+      fromStation <- CQStation.findById metroBooking.fromStationId >>= fromMaybeM (StationNotFound metroBooking.fromStationId.getId)
+      frfsConfig <- CQFRFSConfig.findByCityIdAndSubscriberId metroBooking.merchantOperatingCityId fromStation.ondcSubscriberIdAndUniqueKeyId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
       case metroBooking.journeyLegStatus of
         Just journeyLegStatus -> do
           let isBookingCancellable = journeyLegStatus `elem` JT.cannotCancelStatus

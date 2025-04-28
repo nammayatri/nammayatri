@@ -25,6 +25,7 @@ data Station = Station
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
+    ondcSubscriberIdAndUniqueKeyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
     regionalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,

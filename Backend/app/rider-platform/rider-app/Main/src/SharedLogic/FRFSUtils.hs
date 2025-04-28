@@ -81,7 +81,7 @@ mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Mayb
 mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do
   pOrgStation <- maybe (pure Nothing) (B.runInReplica . CQPOS.findByStationIdAndPOrgId id) mbPOrgId
   let pOrgStationName = pOrgStation <&> (.name)
-  pure $ APITypes.FRFSStationAPI {name = fromMaybe name pOrgStationName, stationType = Nothing, color = Nothing, sequenceNum = Nothing, distance = Nothing, towards = Nothing, ..}
+  pure $ APITypes.FRFSStationAPI {name = fromMaybe name pOrgStationName, stationType = Nothing, color = Nothing, sequenceNum = Nothing, distance = Nothing, towards = Nothing, ondcId = ondcSubscriberIdAndUniqueKeyId, id = Just id, ..}
 
 mkTBPStatusAPI :: DTBP.FRFSTicketBookingPaymentStatus -> APITypes.FRFSBookingPaymentStatusAPI
 mkTBPStatusAPI = \case
@@ -96,11 +96,9 @@ mkFRFSConfigAPI Config.FRFSConfig {..} = do
   APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
 
 mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> DIBC.PlatformType -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
-mkPOrgStationAPI mbPOrgId merchantOperatingCityId vehicleType platformType stationAPI = do
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
-  station <- B.runInReplica $ CQS.findByStationCodeAndIntegratedBPPConfigId stationAPI.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")
+mkPOrgStationAPI mbPOrgId _ _ _ stationAPI = do
+  stationId <- fromMaybeM (InvalidRequest $ "Station Id Not Found") $ stationAPI.id
+  station <- B.runInReplica $ CQS.findById stationId >>= fromMaybeM (StationNotFound stationId.getId)
   mkPOrgStationAPIRes station mbPOrgId
 
 data FRFSTicketDiscountDynamic = FRFSTicketDiscountDynamic

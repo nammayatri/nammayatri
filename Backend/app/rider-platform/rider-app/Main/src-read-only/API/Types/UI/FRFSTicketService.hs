@@ -11,6 +11,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -148,11 +149,13 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { fromStationCode :: Data.Text.Text,
+    fromStationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station),
     journeySearchData :: Data.Maybe.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
-    toStationCode :: Data.Text.Text
+    toStationCode :: Data.Text.Text,
+    toStationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -166,9 +169,11 @@ data FRFSStationAPI = FRFSStationAPI
     code :: Data.Text.Text,
     color :: Data.Maybe.Maybe Data.Text.Text,
     distance :: Data.Maybe.Maybe Kernel.Types.Common.Meters,
+    id :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station),
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
+    ondcId :: Data.Maybe.Maybe Data.Text.Text,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
     towards :: Data.Maybe.Maybe Data.Text.Text

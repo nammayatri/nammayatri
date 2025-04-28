@@ -335,7 +335,8 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
                 merchantOperatingCityId = merchantOpCity.id,
                 integratedBppConfigId = integratedBPPConfig.id,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                ondcSubscriberIdAndUniqueKeyId = Nothing
               }
       QStation.create newStation
       pure Success

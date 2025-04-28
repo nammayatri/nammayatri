@@ -136,7 +136,8 @@ mkDStation stop seqNumber = do
         stopSequence = seqNumber,
         stationLat = fst <$> mLatLon,
         stationLon = snd <$> mLatLon,
-        towards = Nothing
+        towards = Nothing,
+        stationId = Nothing
       }
 
 sequenceStops :: [Spec.Stop] -> [Spec.Stop]
