@@ -71,6 +71,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
+import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
 
@@ -178,11 +179,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTD.DriverPoolConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTD.DriverPoolConfig)) transporterConfig.referralLinkPassword req logicData
-    LYT.DRIVER_CONFIG (LYT.UiConfig _ _) -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "No default found for UiDriverConfig") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTDC.UiDriverConfig))
-      let configWrap = LYT.Config defaultConfig Nothing 1
-      logicData :: (LYT.Config DTDC.UiDriverConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTDC.UiDriverConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG (LYT.UiConfig dt pt) -> do
+      let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+      defaultConfig <- SQU.findUIConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
+      let configWrap = LYT.Config defaultConfig.config Nothing 1
+      logicData :: (LYT.Config Value) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      -- Add type verification for driver side
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config Value)) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
       defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
@@ -298,7 +301,7 @@ postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Mercha
 postNammaTagConfigPilotGetVersion _ _ uicr = do
   merchant <- findById (Id uicr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
-  (_, version) <- QUiConfig.findUIConfig uicr merchantOpCityId
+  (_, version) <- QUiConfig.findUIConfig uicr merchantOpCityId False
   case version of
     Just ver -> pure $ Text.pack (show ver)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
@@ -307,7 +310,7 @@ postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchan
 postNammaTagConfigPilotGetConfig _ _ uicr = do
   merchant <- findById (Id uicr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
-  (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId
+  (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId False
   isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.DRIVER_CONFIG $ LYT.UiConfig uicr.os uicr.platform)
   case config of
     Just cfg -> pure (LYT.UiConfigResponse cfg.config (Text.pack .show <$> version) isExp)
@@ -315,6 +318,7 @@ postNammaTagConfigPilotGetConfig _ _ uicr = do
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
+  -- Add type verification for driver side
   merchant <- findById (Id ccr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just ccr.city)
   now <- getCurrentTime

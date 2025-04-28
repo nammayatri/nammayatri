@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use lambda-case" #-}
 module Tools.DynamicLogic where
 
 import Data.Aeson as A
@@ -6,6 +9,7 @@ import Data.List (nub)
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
@@ -16,8 +20,6 @@ import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
-
--- import Data.Aeson as A
 
 findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> m (Maybe a)
 findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
@@ -270,3 +272,34 @@ clearConfigCacheWithPrefix prefix merchanOperatingCityId configDomain mbVersion 
 deleteConfigHashKey :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m ()
 deleteConfigHashKey merchantOpCityId configDomain = do
   Hedis.withCrossAppRedis $ Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
+
+findOneUiConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r, HasField "config" a Value) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Bool -> m (Maybe a, Maybe Int)
+findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc isBaseLogic = do
+  currentTime <- getCurrentTime
+  let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
+  mbVersion <-
+    if isBaseLogic
+      then do
+        mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId cfgDomain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+        return $ Just mbBaseRollout.version
+      else getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
+  cachedConfig :: Maybe a <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
+  case cachedConfig of
+    Just cfg -> return (Just cfg, mbVersion)
+    Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
+  where
+    fetchAndCacheConfig mbVersion extraDimensionsWithTime = do
+      allLogics <-
+        if isBaseLogic
+          then do
+            getConfigLogic merchantOpCityId Nothing cfgDomain
+          else getConfigLogic merchantOpCityId mbVersion cfgDomain
+      mbConfig :: Maybe a <- getConfigFromDBFunc
+      config :: Maybe Value <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime (getField @"config" cfg :: Value)) mbConfig
+      -- apply the updated json to the old config and return the updated config
+      finalConfig :: Maybe a <- case (mbConfig, config) of
+        (Just oldCfg, Just newValue) -> do
+          return $ Just $ setField @"config" oldCfg newValue
+        _ -> return Nothing
+      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) finalConfig
+      return (finalConfig, mbVersion)
