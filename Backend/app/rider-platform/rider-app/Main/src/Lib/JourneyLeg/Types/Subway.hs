@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Types.Subway where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as FRFSSearch
@@ -39,6 +40,10 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    cancellationType :: Spec.CancellationType,
+    isSkipped :: Bool
+  }
 
 data SubwayLegRequestIsCancellableData = SubwayLegRequestIsCancellableData
 

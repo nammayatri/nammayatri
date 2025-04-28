@@ -61,7 +61,8 @@ data RouteFareDetails = RouteFareDetails
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data FareDetails = FareDetails
-  { ticketFare :: Text,
+  { adultFare :: Text,
+    childFare :: Text,
     distance :: Int,
     via :: Text, -- Added via field
     ticketTypeCode :: Text,
@@ -87,7 +88,7 @@ data AllowedValues = AllowedValues
 
 -- API type with updated endpoint
 type RouteFareAPI =
-  "t" :> "uts.cris.in" :> "tputs" :> "V" :> "get_route_fare_details_v1"
+  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v3"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
     :> ReqBody '[PlainText] Text
@@ -156,8 +157,8 @@ getRouteFare config merchantOperatingCityId request = do
   let fares = maybe [] (.fareDtlsList) firstRouteFareDetails
   let routeId = maybe 0 (.routeId) firstRouteFareDetails
   fares `forM` \fare -> do
-    let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.ticketFare
-    fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.ticketFare)
+    let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
+    fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.adultFare)
     classCode <- pure fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
     serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
     serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)

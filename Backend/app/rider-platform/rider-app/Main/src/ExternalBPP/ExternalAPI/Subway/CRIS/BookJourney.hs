@@ -49,7 +49,7 @@ data EncryptedResponse = EncryptedResponse
 
 -- API type using encrypted types
 type BookJourneyAPI =
-  "t" :> "uts.cris.in" :> "B" :> "1" :> "bookJrny"
+  "t" :> "uts.cris.in" :> "VBCU" :> "1" :> "bookJrny"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
     :> ReqBody '[JSON] EncryptedRequest
