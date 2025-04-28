@@ -63,6 +63,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
@@ -83,6 +84,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
@@ -113,10 +115,12 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AlertRequest as QAR
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
@@ -1837,7 +1841,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           )
           []
           driverDetails
-
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   unprocessedEntities <- case mbRequestorId of
     Nothing -> do
       -- old flow
@@ -1848,7 +1852,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       unless (fleetOwner.role == DP.FLEET_OWNER) $
         throwError (InvalidRequest "Invalid fleet owner")
       DCommon.checkFleetOwnerVerification fleetOwnerId
-      process (processDriverByFleetOwner merchant merchantOpCity fleetOwner)
+      process (processDriverByFleetOwner merchant merchantOpCity transporterConfig fleetOwner)
     Just requestorId -> do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
       case requestor.role of
@@ -1857,10 +1861,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           whenJust req.fleetOwnerId \id -> do
             unless (id == requestorId) $ throwError AccessDenied
             DCommon.checkFleetOwnerVerification id
-          process (processDriverByFleetOwner merchant merchantOpCity requestor)
-        DP.OPERATOR ->
+          process (processDriverByFleetOwner merchant merchantOpCity transporterConfig requestor)
+        DP.OPERATOR -> do
           -- fleetOwner is in csv row
-          process (processDriverByOperator merchant merchantOpCity requestor)
+          process (processDriverByOperator merchant merchantOpCity transporterConfig requestor)
         _ -> throwError AccessDenied
 
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
@@ -1868,11 +1872,11 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc fleetOwner = linkDriverToFleetOwner merchant moc fleetOwner Nothing
 
-    processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
-    processDriverByOperator merchant moc operator req_ = do
+    processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriverByOperator merchant moc transporterConfig operator req_ = do
       case req_.fleetPhoneNo of
         Nothing -> do
-          linkDriverToOperator merchant moc operator req_
+          linkDriverToOperator merchant moc transporterConfig operator req_
         Just fleetPhoneNo -> do
           mobileNumberHash <- getDbHash fleetPhoneNo
           fleetOwner <-
