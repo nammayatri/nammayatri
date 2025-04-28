@@ -673,7 +673,14 @@ cancelLeg journeyLeg cancellationReasonCode isSkipped = do
               cancellationType = Spec.CONFIRM_CANCEL,
               isSkipped
             }
-    DTrip.Subway -> JL.cancel $ SubwayLegRequestCancel SubwayLegRequestCancelData
+    DTrip.Subway ->
+      JL.cancel $
+        SubwayLegRequestCancel
+          SubwayLegRequestCancelData
+            { searchId = Id journeyLeg.searchId,
+              cancellationType = Spec.CONFIRM_CANCEL,
+              isSkipped
+            }
     DTrip.Bus ->
       JL.cancel $
         BusLegRequestCancel
