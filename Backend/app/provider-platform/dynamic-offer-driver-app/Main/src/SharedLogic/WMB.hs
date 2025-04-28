@@ -20,6 +20,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
 import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
+import qualified Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleRouteMapping
 import qualified Domain.Types.VehicleVariant as DVehVariant
@@ -501,6 +502,26 @@ findNextActiveTripTransaction :: Text -> Id Person -> Flow (Maybe TripTransactio
 findNextActiveTripTransaction fleetOwnerId driverId = do
   findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId IN_PROGRESS
     |<|>| findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId TRIP_ASSIGNED
+      >>= \case
+        Just tripTransaction -> return (Just tripTransaction)
+        Nothing ->
+          findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId UPCOMING
+            >>= \case
+              Just tripTransaction -> do
+                logError $ "Upcoming trip is assigned to driver by AutoRecovery" <> show tripTransaction.driverId
+                mbCurrentDriverLocation <-
+                  try @_ @SomeException (LF.driversLocation [tripTransaction.driverId])
+                    >>= \case
+                      Left _ -> do
+                        logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
+                        return Nothing
+                      Right locations -> do
+                        let location = listToMaybe locations
+                        when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
+                        return location
+                assignedTripTransaction <- assignUpcomingTripTransaction tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation)
+                return (Just assignedTripTransaction)
+              Nothing -> pure Nothing
 
 -- Redis Transaction Lock Keys --
 tripTransactionKey :: Id Person -> TripStatus -> Text
