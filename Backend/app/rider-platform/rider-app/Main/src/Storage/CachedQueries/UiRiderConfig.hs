@@ -15,73 +15,35 @@
 
 module Storage.CachedQueries.UiRiderConfig where
 
-import Data.Aeson as A
 import qualified Data.Text as Text
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.UiRiderConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
 import Kernel.Utils.Common (CacheFlow, fromMaybeM)
-import Kernel.Utils.Logging
 import Kernel.Utils.Time
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.UiRiderConfig as Queries
 import qualified Tools.DynamicLogic as TDL
 
-findUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe UiRiderConfig, Maybe Int)
-findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
-  let key = makeRiderUiConfigKey merchantOperatingCityId os platform
+findUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe UiRiderConfig, Maybe Int)
+findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
   localTime <- getLocalCurrentTime 19800 -- Fix Me
-  config' <-
-    Hedis.safeGet key >>= \case
-      Just config -> pure config
-      Nothing -> do
-        cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOperatingCityId os platform /=<< Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId
-  case config' of
-    Just config -> do
-      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.RIDER_CONFIG (LYT.UiConfig os platform)) localTime Nothing toss
-      resp <- LYTU.runLogics allLogics config
-      case (fromJSON resp.result :: Result (LYT.Config UiRiderConfig)) of
-        Success dpc'' -> pure (Just dpc''.config, version)
-        A.Error e -> do
-          logError $ "Error in applying dynamic logic: " <> show e
-          incrementSystemConfigsFailedCounter "Rider_ui_config_dynamic_logic_failure"
-          pure (Just config, version)
-    Nothing -> pure (Nothing, Nothing)
-
-findBaseUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe UiRiderConfig)
-findBaseUIConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
-  let key = makeRiderUiConfigKey merchantOperatingCityId os platform
-      domain = LYT.RIDER_CONFIG (LYT.UiConfig os platform)
-  config' <-
-    Hedis.safeGet key >>= \case
-      Just config -> pure config
-      Nothing -> do
-        cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOperatingCityId os platform /=<< Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId
-  case config' of
-    Just config -> do
-      baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOperatingCityId) domain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
-      baseElements <- CADLE.findByDomainAndVersion domain baseRollout.version
-      let baseLogics = fmap (.logic) baseElements
-      let configWrapper = LYT.Config config Nothing 0
-      resp <- LYTU.runLogics baseLogics configWrapper
-      case (fromJSON resp.result :: Result (LYT.Config UiRiderConfig)) of
-        Success dpc'' -> pure (Just dpc''.config)
-        A.Error e -> do
-          logError $ "Error in applying dynamic logic: " <> show e
-          incrementSystemConfigsFailedCounter "rider_ui_config_dynamic_logic_failure"
-          pure (Just config)
-    Nothing -> pure Nothing
+  version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) (LYT.RIDER_CONFIG (LYT.UiConfig os platform)) localTime toss >>= fromMaybeM (InvalidRequest $ "No version found. No dynamic logic found for merchantOpCityId: " <> show merchantOperatingCityId <> " and domain: " <> show (LYT.RIDER_CONFIG (LYT.UiConfig os platform)))
+  let mbConfigInExperimentVersions = Just [YType.ConfigVersionMap {config = LYT.RIDER_CONFIG (LYT.UiConfig os platform), version = version}]
+  TDL.findOneUiConfig
+    (cast merchantOperatingCityId)
+    (LYT.RIDER_CONFIG (LYT.UiConfig os platform))
+    mbConfigInExperimentVersions
+    Nothing
+    (Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId)
+    isBaseLogic
 
 cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiRiderConfig -> m ()
 cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOpCityId os plt config = do
@@ -101,4 +63,7 @@ updateByPrimaryKey = Queries.updateByPrimaryKey
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> m ()
 clearCache mocid dt pt =
-  Hedis.del (makeRiderUiConfigKey mocid dt pt)
+  TDL.clearConfigCache
+    (cast mocid)
+    (LYT.RIDER_CONFIG (LYT.UiConfig dt pt))
+    Nothing

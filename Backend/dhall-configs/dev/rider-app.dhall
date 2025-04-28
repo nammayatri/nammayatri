@@ -295,6 +295,8 @@ let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 
 let dashboardClickhouseCfg = riderClickhouseCfg
 
+let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -367,6 +369,7 @@ in  { esqDBCfg
     , hotSpotExpiry = +604800
     , cacConfig
     , cacTenants
+    , tsServiceConfig
     , superPositionConfig
     , collectRouteData = True
     , kafkaClickhouseCfg
