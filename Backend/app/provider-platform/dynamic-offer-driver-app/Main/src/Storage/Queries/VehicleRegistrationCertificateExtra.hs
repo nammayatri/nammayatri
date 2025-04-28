@@ -4,6 +4,7 @@ import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.Image hiding (id)
 import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate hiding (id)
 import Domain.Types.VehicleVariant as Vehicle
 import qualified EulerHS.Language as L
@@ -18,6 +19,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverRCAssociation as BeamDRA
 import qualified Storage.Beam.Person as BeamPerson
+import qualified Storage.Beam.TripTransaction as BeamTripTransaction
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
@@ -335,3 +337,71 @@ findAllValidRcByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetO
     Right res' -> do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
+
+findAllVehicleByStatusForFleetByLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> Id Merchant.Merchant -> Integer -> Integer -> Maybe Text -> Maybe Text -> DTT.TripStatus -> m [VehicleRegistrationCertificate]
+findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId (Id merchantId') limitVal offsetVal mbSearchString statusAwareVehicleNo tripStatus = do
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
+  mbSearchHash <- mapM getDbHash mbSearchString
+  case mbSearchString of
+    Just searchString -> do
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ limitVal $
+                B.offset_ offsetVal $
+                  B.orderBy_ (\(rc', _, _, _) -> B.desc_ rc'.createdAt) $
+                    B.filter_'
+                      ( \(rc, driverRcAssociation, driver, tripTransaction) ->
+                          rc.merchantId B.==?. B.val_ (Just merchantId')
+                            B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                            B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
+                            B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
+                            B.&&?. tripTransaction.status B.==?. B.val_ tripStatus
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cNum -> B.sqlBool_ $ B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))) statusAwareVehicleNo
+                            B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. ( B.sqlBool_ (B.like_ (B.lower_ driver.firstName) (B.val_ ("%" <> toLower searchString <> "%")))
+                                       B.||?. B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))
+                                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> driver.mobileNumberHash B.==?. B.val_ (Just hash)) mbSearchHash
+                                   )
+                      )
+                      do
+                        rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                        driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                        driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamPerson.id person B.==. BeamDRA.driverId driverRcAssociation)
+                        tripTransaction <- B.join_ (BeamCommon.tripTransaction BeamCommon.atlasDB) (\tripTransaction -> BeamDRA.driverId driverRcAssociation B.==. BeamTripTransaction.driverId tripTransaction)
+                        pure (rc, driverRcAssociation, driver, tripTransaction)
+      case res of
+        Right res' -> do
+          let rcList = (\(rc, _, _, _) -> rc) <$> res'
+          catMaybes <$> mapM fromTType' rcList
+        Left _ -> pure []
+    Nothing -> do
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ limitVal $
+                B.offset_ offsetVal $
+                  B.orderBy_ (\(rc', _, _) -> B.desc_ rc'.createdAt) $
+                    B.filter_'
+                      ( \(rc, driverRcAssociation, tripTransaction) ->
+                          rc.merchantId B.==?. B.val_ (Just merchantId')
+                            B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                            B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
+                            B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
+                            B.&&?. tripTransaction.status B.==?. B.val_ tripStatus
+                            B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cNum -> B.sqlBool_ $ B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))) statusAwareVehicleNo
+                      )
+                      do
+                        rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                        driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                        tripTransaction <- B.join_ (BeamCommon.tripTransaction BeamCommon.atlasDB) (\tripTransaction -> BeamDRA.driverId driverRcAssociation B.==. BeamTripTransaction.driverId tripTransaction)
+                        pure (rc, driverRcAssociation, tripTransaction)
+      case res of
+        Right res' -> do
+          let rcList = (\(rc, _, _) -> rc) <$> res'
+          catMaybes <$> mapM fromTType' rcList
+        Left _ -> pure []

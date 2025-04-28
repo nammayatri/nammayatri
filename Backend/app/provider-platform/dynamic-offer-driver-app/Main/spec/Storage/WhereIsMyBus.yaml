@@ -38,11 +38,11 @@ TripTransaction:
     # Assignment Trip Status Flow : TRIP_ASSIGNED -> CANCELLED | INPROGRESS
     # Inprogress Trip Status Flow : IN_PROGRESS -> PAUSED | COMPLETED
     TripStatus:
-      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     ActionSource:
-      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob"
+      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob, AutoRecovery"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
@@ -193,7 +193,7 @@ FleetConfig:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
-  fromTType: 
+  fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E

@@ -373,7 +373,7 @@ getDriverFleetGetAllDriver ::
   Maybe Text ->
   Maybe Bool ->
   Flow Common.FleetListDriverRes
-getDriverFleetGetAllDriver merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString mbIsActive = do
+getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString mbIsActive = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   mobileNumberHash <- case mbSearchString of
@@ -683,6 +683,10 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
         Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
         Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId statusAwareVehicleNo
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
+
+        -- make changes here for onride and tripassigned
+        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo DTT.IN_PROGRESS
+        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo DTT.TRIP_ASSIGNED
         Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
         Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
@@ -1455,11 +1459,17 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
         Nothing -> False
   (allTransactions, _) <-
     foldM
-      ( \accTransactions trip -> do
-          transactions <- makeTripTransactions trip
-          return $ accTransactions <> transactions
+      ( \(accTransactions, updatedIsActive) trip -> do
+          ( if updatedIsActive
+              then do
+                tripTransactions <- makeTripTransactions trip DTT.UPCOMING
+                return (accTransactions <> tripTransactions, updatedIsActive)
+              else do
+                tripTransactions <- makeTripTransactions trip DTT.TRIP_ASSIGNED
+                return (accTransactions <> tripTransactions, True)
+            )
       )
-      []
+      ([], isActive)
       trips
   WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
     >>= \case
@@ -1471,8 +1481,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
           WMB.postAssignTripTransaction tripTransaction route True routeSourceStopInfo.point routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
-    makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
-    makeTripTransactions trip = do
+    makeTripTransactions :: Common.TripDetails -> DTT.TripStatus -> Flow [DTT.TripTransaction]
+    makeTripTransactions trip tripStatus = do
       route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
       (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
       case (trip.roundTrip, route.roundRouteCode) of
@@ -1484,17 +1494,17 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           foldM
             ( \accTransactions freqIdx -> do
                 let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode
+                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode tripStatus
                 pure $ accTransactions <> [tripTransaction]
             )
             []
             [0 .. (2 * roundTrip.frequency) -1]
         (_, _) -> do
-          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code
+          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code tripStatus
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Maybe Text -> Text -> Flow DTT.TripTransaction
-    mkTransaction routeCode roundRouteCode endStopCode = do
+    mkTransaction :: Text -> Maybe Text -> Text -> DTT.TripStatus -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode tripStatus = do
       transactionId <- generateGUID
       now <- getCurrentTime
       vehicleNumber <- decrypt vehicleRC.certificateNumber
@@ -1510,7 +1520,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             isCurrentlyDeviated = False,
             startLocation = Nothing,
             startedNearStopCode = Nothing,
-            status = DTT.TRIP_ASSIGNED,
+            status = tripStatus,
             routeCode = routeCode,
             roundRouteCode = roundRouteCode,
             tripCode = Nothing,
@@ -1567,6 +1577,7 @@ getDriverFleetTripTransactions merchantShortId opCity fleetOwnerId driverId mbFr
       PAUSED -> Common.PAUSED
       COMPLETED -> Common.COMPLETED
       CANCELLED -> Common.CANCELLED
+      UPCOMING -> Common.UPCOMING
 
 ---------------------------------------------------------------------
 data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
@@ -1608,6 +1619,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   driverBusRouteDetails <- readCsv req.file
 
   when (length driverBusRouteDetails > 100) $ throwError $ MaxDriversLimitExceeded 100
@@ -1654,7 +1666,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
               Right (vehicleRC, mbDriverBadge, mbConductorBadge) -> do
                 try @_ @SomeException
                   ( do
-                      WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber vehicleRC
+                      WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId vehicleNumber vehicleRC
                       whenJust mbDriverBadge $ \driverBadge -> WMB.linkFleetBadge (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId driverBadge DFBT.DRIVER
                       whenJust mbConductorBadge $ \conductorBadge -> WMB.linkFleetBadge (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId conductorBadge DFBT.CONDUCTOR
                       createTripTransactions merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId (cast driver.id) vehicleRC mbDriverBadge mbConductorBadge tripPlannerRequests
@@ -1678,17 +1690,17 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 
     parseMappingInfo :: Int -> CreateDriverBusRouteMappingCSVRow -> Flow DriverBusRouteDetails
     parseMappingInfo idx row = do
-      driverPhoneNo <- Csv.cleanCSVField idx row.driverId "Driver Phone number"
-      vehicleNumber <- Csv.cleanCSVField idx row.vehicleNumber "Vehicle number"
-      routeCode <- Csv.cleanCSVField idx row.routeCode "Route code"
-      let roundTripFreq = Csv.readMaybeCSVField idx row.roundTripFreq "Round trip freq"
+      driverPhoneNo <- cleanCSVField idx row.driverId "Driver Phone number"
+      vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
+      routeCode <- cleanCSVField idx row.routeCode "Route code"
+      let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
       driverBadgeName <-
         case row.driverBadgeName of
-          Just driverBadgeName -> Just <$> Csv.cleanCSVField idx driverBadgeName "Driver Badge name"
+          Just driverBadgeName -> Just <$> cleanCSVField idx driverBadgeName "Driver Badge name"
           Nothing -> pure Nothing
       conductorBadgeName <-
         case row.conductorBadgeName of
-          Just conductorBadgeName -> Just <$> Csv.cleanCSVField idx conductorBadgeName "Conductor Badge name"
+          Just conductorBadgeName -> Just <$> cleanCSVField idx conductorBadgeName "Conductor Badge name"
           Nothing -> pure Nothing
       pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq driverBadgeName conductorBadgeName
 

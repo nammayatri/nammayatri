@@ -20,7 +20,7 @@ imports:
   FleetBadgeType: Domain.Types.FleetBadgeType
 module: Driver
 
-apis: 
+apis:
   - GET:
       endpoint: /fleet/access/list
       auth: ApiAuthV2
@@ -913,7 +913,7 @@ types:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
   TripStatus:
-    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
@@ -1065,7 +1065,7 @@ types:
     - hours: Int
     - minutes: Int
   FleetVehicleStatus:
-    - enum: "Active, InActive, Valid, Invalid, Pending"
+    - enum: "Active, InActive, Valid, Invalid, Pending, OnRide, TripAssigned"
     - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text

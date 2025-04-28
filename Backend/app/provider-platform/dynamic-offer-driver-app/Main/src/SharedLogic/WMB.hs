@@ -112,7 +112,7 @@ findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId status = d
     [] -> pure Nothing
 
 isNonTerminalTripStatus :: TripStatus -> Bool
-isNonTerminalTripStatus status = any (\status' -> status' == status) [TRIP_ASSIGNED, IN_PROGRESS]
+isNonTerminalTripStatus status = any (== status) [TRIP_ASSIGNED, IN_PROGRESS, UPCOMING]
 
 buildTripAssignedData :: Id TripTransaction -> ServiceTierType -> Text -> Text -> Text -> (Maybe Text) -> Bool -> TN.WMBTripAssignedData
 buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCode shortName roundRouteCode isFirstBatchTrip =
@@ -123,7 +123,8 @@ buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCo
       vehicleNumber = vehicleNumber,
       vehicleServiceTierType = vehicleServiceTier,
       roundRouteCode = roundRouteCode,
-      isFirstBatchTrip = isFirstBatchTrip
+      isFirstBatchTrip = isFirstBatchTrip,
+      status = TRIP_ASSIGNED
     }
 
 assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> StopInfo -> LatLong -> ActionSource -> Maybe (Id FleetBadge) -> Maybe Text -> Maybe (Id FleetBadge) -> Maybe Text -> Flow TripTransaction
@@ -143,14 +144,14 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
 assignTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> LatLong -> StopInfo -> StopInfo -> Maybe (Id FleetBadge) -> Maybe Text -> Maybe (Id FleetBadge) -> Maybe Text -> Flow TripTransaction
 assignTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber currentLocation startStopInfo destinationStopInfo driverFleetBadgeId driverName conductorFleetBadgeId conductorName = do
   vrc <- validateVehicleAssignment driverId vehicleNumber merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId
-  _ <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber vrc
-  tripTransaction <- buildTripAssignedTransaction vrc driver
+  _ <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId vehicleNumber vrc
+  tripTransaction <- buildTripAssignedTransaction vrc
   -- TODO :: Handle Transaction Failure
   QTT.create tripTransaction
   postAssignTripTransaction tripTransaction route False currentLocation startStopInfo.point destinationStopInfo.point False
   return tripTransaction
   where
-    buildTripAssignedTransaction vrc driver = do
+    buildTripAssignedTransaction vrc = do
       tripTransactionId <- generateGUID
       now <- getCurrentTime
       return $
@@ -161,7 +162,6 @@ assignTripTransaction fleetConfig merchantId merchantOperatingCityId driverId ro
             endLocation = Nothing,
             fleetOwnerId = vehicleRouteMapping.fleetOwnerId,
             id = tripTransactionId,
-            fleetBadgeId = Nothing,
             isCurrentlyDeviated = False,
             routeCode = route.code,
             roundRouteCode = route.roundRouteCode,
@@ -179,7 +179,6 @@ assignTripTransaction fleetConfig merchantId merchantOperatingCityId driverId ro
             tripEndTime = Nothing,
             tripTerminationSource = Nothing,
             tripStartSource = Nothing,
-            driverName = Just driver.firstName,
             endStopCode = destinationStopInfo.code,
             driverName = driverName,
             conductorName = conductorName,
@@ -232,12 +231,13 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
     (tripTransactionKey tripTransaction.driverId CANCELLED)
     60
     ( do
-        unless (tripTransaction.status `elem` [IN_PROGRESS, TRIP_ASSIGNED]) $ throwError (InvalidTripStatus $ show tripTransaction.status)
+        unless (tripTransaction.status `elem` [IN_PROGRESS, TRIP_ASSIGNED, UPCOMING]) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         findNextActiveTripTransaction tripTransaction.fleetOwnerId.getId tripTransaction.driverId
           >>= \case
             Nothing -> pure ()
             Just currentTripTransaction -> do
-              if currentTripTransaction.id == tripTransaction.id
+              let isCurrentlyOngoingTrip = currentTripTransaction.id == tripTransaction.id
+              if isCurrentlyOngoingTrip
                 then do
                   case currentTripTransaction.status of
                     TRIP_ASSIGNED -> do
@@ -289,7 +289,7 @@ postAssignTripTransaction tripTransaction route isFirstBatchTrip currentLocation
     (tripTransactionKey tripTransaction.driverId TRIP_ASSIGNED)
     60
     ( do
-        unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
+        unless (tripTransaction.status == TRIP_ASSIGNED || tripTransaction.status == UPCOMING) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         busTripInfo <- buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode source destination route.longName tripTransaction.driverId tripTransaction.fleetOwnerId.getId
         void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
         QDI.updateOnRide True tripTransaction.driverId
@@ -531,6 +531,7 @@ tripTransactionKey driverId = \case
   COMPLETED -> "WMB:TCO:" <> driverId.getId
   CANCELLED -> "WMB:TCA:" <> driverId.getId
   PAUSED -> "WMB:TP:" <> driverId.getId
+  UPCOMING -> "WMB:TU:" <> driverId.getId
 
 triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id AlertRequest)
 triggerAlertRequest driverId requesteeId title body requestData isViolated tripTransaction = do
