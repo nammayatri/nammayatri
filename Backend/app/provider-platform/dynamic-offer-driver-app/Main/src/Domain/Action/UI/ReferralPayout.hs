@@ -25,6 +25,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
+import Kernel.Types.Version (versionToText)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -36,6 +37,7 @@ import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Payout as TP
@@ -142,12 +144,16 @@ getPayoutOrderStatus ::
   )
 getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
-      serviceName = DEMSC.PayoutService PT.Juspay
+      serviceName =
+        if (versionToText <$> person.clientSdkVersion) == Just "14.0.0"
+          then DEMSC.PayoutService PT.Juspay
+          else DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do

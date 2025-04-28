@@ -192,7 +192,7 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
               { amount = req.amount,
                 orderShortId = show order.shortId
               }
-      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking updateReq
+      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking person.clientSdkVersion updateReq
       mbUpdatedOrder <- QOrder.updateAmount order.id req.amount
       logDebug $ "mbUpdatedOrder: " <> show mbUpdatedOrder
       case mbUpdatedOrder of

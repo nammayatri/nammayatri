@@ -165,7 +165,8 @@ data AppCfg = AppCfg
     locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
-    selfBaseUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl,
+    aaClientSdkVersion :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -265,7 +266,8 @@ data AppEnv = AppEnv
     locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
-    selfBaseUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl,
+    aaClientSdkVersion :: Text
   }
   deriving (Generic)
 
