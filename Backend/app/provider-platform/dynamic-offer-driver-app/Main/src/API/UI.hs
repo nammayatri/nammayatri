@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
@@ -119,6 +120,7 @@ type API =
            :<|> SpecialLocationWarrior.API
            :<|> WMB.API
            :<|> OH.API
+           :<|> CallFeedback.API
        )
 
 handler :: FlowServer API
@@ -170,3 +172,4 @@ handler =
     :<|> SpecialLocationWarrior.handler
     :<|> WMB.handler
     :<|> OH.handler
+    :<|> CallFeedback.handler
