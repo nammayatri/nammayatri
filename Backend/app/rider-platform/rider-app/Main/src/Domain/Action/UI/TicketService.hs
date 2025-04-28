@@ -45,6 +45,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Kernel.Types.Id
 import Kernel.Types.Time
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -270,7 +271,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
-      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal
+      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal person.clientSdkVersion
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
@@ -472,12 +473,13 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
   where
     mkTicketBookingDetails DTTB.TicketBooking {..} services = do
       refunds <- QRefunds.findAllByOrderId $ Kernel.Types.Id.Id shortId.getShortId
+      person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
       let isAnyRefundPending = any (\refund -> refund.status == Kernel.External.Payment.Interface.Types.REFUND_PENDING) refunds
       refundDetails <-
         if isAnyRefundPending
           then do
             let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
-                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal
+                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal person.clientSdkVersion
             paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall
             mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
           else pure refunds
@@ -688,9 +690,10 @@ postTicketBookingsVerify _ = processBookingService
 getTicketBookingsStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
 getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
   let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal -- api call
+      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal person.clientSdkVersion -- api call
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
@@ -725,7 +728,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                   )
                   ticketBookingServiceCategories
               LockBookingFailed -> do
-                intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId
+                intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId person.clientSdkVersion
                 QTB.updateStatusByShortId DTTB.RefundInitiated _shortId
                 QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
           when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
@@ -845,7 +848,7 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
           updateStatusForBooking ticketBooking ticketBookingService tbServiceCategory.bookedSeats
           case Map.lookup ticketBooking.personId personMap of
             Just person -> do
-              let refundCall = when (refundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) refundAmount person.merchantId person.merchantOperatingCityId
+              let refundCall = when (refundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) refundAmount person.merchantId person.merchantOperatingCityId person.clientSdkVersion
               let notificationCall = Notifications.notifyTicketCancelled ticketBooking.id.getId tbServiceCategory.name person
               pure (refundCall, notificationCall)
             Nothing -> pure (unit, unit)
@@ -875,8 +878,10 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
         _ -> logDebug $ "Could n't send Ticket Booking Cancellation SMS : " <> person.id.getId
 
 postTicketBookingCancel :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.TicketService.TicketBookingCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postTicketBookingCancel (_, merchantId) req = do
+postTicketBookingCancel (mbPersonId, merchantId) req = do
   let lockKeys = makeUserLockKeyTuple req
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   executeNLockOperations lockKeys $ do
     ticketBooking <- QTB.findByShortId req.ticketBookingShortId >>= fromMaybeM (TicketBookingNotFound req.ticketBookingShortId.getShortId)
     ticketBookingServices <- QTBS.findByShortIds $ (.shortId) <$> req.ticketBookingServices
@@ -896,7 +901,7 @@ postTicketBookingCancel (_, merchantId) req = do
 
     QTB.updateStatusAndCancelledSeatsById status (Just totalNoOfCancelledSeats) ticketBooking.id
 
-    when (totalRefundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) totalRefundAmount merchantId ticketBooking.merchantOperatingCityId
+    when (totalRefundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) totalRefundAmount merchantId ticketBooking.merchantOperatingCityId person.clientSdkVersion
 
   pure Kernel.Types.APISuccess.Success
   where
@@ -1017,8 +1022,8 @@ updateCancelledSeatsInSeatManagement categoryId noOfSeatsToCancel date = do
   mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId date
   whenJust mbSeatM $ \seatM -> QTSM.updateBookedSeats (max 0 $ seatM.booked - noOfSeatsToCancel) categoryId date
 
-intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow ()
-intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personMerchantId personMerchantOperatingCityId = do
+intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Maybe Version -> Environment.Flow ()
+intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personMerchantId personMerchantOperatingCityId sdkVersion = do
   refundId <- generateGUID
   let autoRefundReq =
         Payment.AutoRefundReq
@@ -1027,7 +1032,7 @@ intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personM
             requestId = refundId
           }
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
-      createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal
+      createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal sdkVersion
   void $ try @_ @SomeException $ DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) commonMerchantId createRefundCall
 
 tryUserTicketCancellationLock :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow () -> Environment.Flow ()

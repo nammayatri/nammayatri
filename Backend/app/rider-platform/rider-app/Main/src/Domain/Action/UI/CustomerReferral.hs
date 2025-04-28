@@ -66,7 +66,7 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
             customerId = Just personId.getId,
             vpa = vpa
           }
-      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal person.clientSdkVersion
   resp <- try @_ @SomeException $ DP.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e

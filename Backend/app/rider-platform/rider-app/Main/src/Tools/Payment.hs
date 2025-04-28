@@ -75,25 +75,26 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
 
-updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
+updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
 updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
-refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
+refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
 refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds
 
-verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
+verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
 
 ---- Ride Payment Related Functions (mostly stripe) ---
@@ -140,11 +141,15 @@ runWithServiceConfigAndServiceName ::
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id TicketPlace) ->
   PaymentServiceType ->
+  Maybe Version ->
   req ->
   m resp
-runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType req = do
+runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType clientSdkVersion req = do
   placeBasedConfig <- case mbPlaceId of
-    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Just id ->
+      if (versionToText <$> clientSdkVersion) == Just "14.0.0"
+        then CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+        else CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
@@ -158,7 +163,10 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
-      Normal -> DMSC.PaymentService Payment.Juspay
+      Normal ->
+        if (versionToText <$> clientSdkVersion) == Just "14.0.0"
+          then DMSC.PaymentService Payment.Juspay
+          else DMSC.PaymentService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay

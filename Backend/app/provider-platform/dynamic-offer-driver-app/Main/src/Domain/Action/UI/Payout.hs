@@ -43,6 +43,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Version (versionToText)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -178,17 +179,24 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     callPayoutService driverId payoutConfig payoutOrderId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand, personId = Just $ getId driverId}
-          serviceName = DEMSC.PayoutService TPayout.Juspay
+          serviceName =
+            if (versionToText <$> driver.clientSdkVersion) == Just "14.0.0"
+              then DEMSC.PayoutService TPayout.Juspay
+              else DEMSC.PayoutService TPayout.Juspay
           createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
     updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId payoutConfig dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
+      driver <- B.runInReplica $ QP.findById (cast dailyStats.driverId) >>= fromMaybeM (PersonDoesNotExist $ getId dailyStats.driverId)
       Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand, personId = Just $ getId dailyStats.driverId}
-          serviceName = DEMSC.PayoutService TPayout.Juspay
+          serviceName =
+            if (versionToText <$> driver.clientSdkVersion) == Just "14.0.0"
+              then DEMSC.PayoutService TPayout.Juspay
+              else DEMSC.PayoutService TPayout.Juspay
           createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchanOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast merchantId) (cast dailyStats.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
 

@@ -175,8 +175,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
       serviceConfig <-
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall serviceConfig.paymentServiceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
+      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall serviceConfig.paymentServiceName)
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do

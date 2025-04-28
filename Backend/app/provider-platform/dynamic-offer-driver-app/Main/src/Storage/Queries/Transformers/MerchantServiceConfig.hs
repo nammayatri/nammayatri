@@ -15,6 +15,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -129,10 +130,14 @@ getServiceName = \case
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> Domain.RentalPaymentService Payment.Juspay
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
+      _ -> Domain.RentalPaymentService Payment.AAJuspay
     Payment.StripeConfig _ -> Domain.RentalPaymentService Payment.Stripe
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> Domain.CautioPaymentService Payment.Juspay
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
+      _ -> Domain.RentalPaymentService Payment.AAJuspay
     Payment.StripeConfig _ -> Domain.CautioPaymentService Payment.Stripe
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
@@ -180,12 +185,15 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.PaymentService Payment.AAJuspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RentalPaymentService Payment.AAJuspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.CautioPaymentService Payment.Juspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.CautioPaymentService Payment.AAJuspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.CautioPaymentService Payment.Stripe -> Domain.CautioPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON

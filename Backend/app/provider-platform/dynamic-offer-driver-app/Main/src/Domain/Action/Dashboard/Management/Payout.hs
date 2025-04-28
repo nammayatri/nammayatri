@@ -46,6 +46,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (versionToText)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -386,8 +387,12 @@ createReq payoutConfig vpa uid driverId amount = do
 
 getPayoutOrderStatus :: (Id Dashboard.Common.Driver, Id Domain.Types.Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> PO.PayoutOrder -> DPC.PayoutConfig -> Environment.Flow Juspay.PayoutOrderStatusResp
 getPayoutOrderStatus (driverId, merchantId, merchantOpCityId) payoutOrder payoutConfig = do
+  person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let payoutOrderStatusReq = Juspay.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand, personId = Just $ getId driverId}
-      serviceName = DEMSC.PayoutService PT.Juspay
+      serviceName =
+        if (versionToText <$> person.clientSdkVersion) == Just "14.0.0"
+          then DEMSC.PayoutService PT.Juspay
+          else DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status payoutOrder.orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG, DLP.DAILY_STATS_VIA_DASHBOARD, DLP.RETRY_VIA_DASHBOARD]) payoutOrder.entityName) do

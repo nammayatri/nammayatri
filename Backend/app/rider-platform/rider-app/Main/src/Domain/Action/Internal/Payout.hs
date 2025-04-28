@@ -23,6 +23,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (versionToText)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -117,7 +118,11 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     callPayoutService payoutOrder payoutConfig person = do
       let personId = person.id
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
-          serviceName = DEMSC.PayoutService TPayout.Juspay
+          serviceName =
+            if (versionToText <$> person.clientSdkVersion) == Just "14.0.0"
+              then DEMSC.PayoutService TPayout.Juspay
+              else DEMSC.PayoutService TPayout.Juspay
+
           createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
