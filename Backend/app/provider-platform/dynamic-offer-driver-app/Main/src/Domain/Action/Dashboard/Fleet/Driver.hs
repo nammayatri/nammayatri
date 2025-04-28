@@ -754,6 +754,10 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
         Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
         Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId statusAwareVehicleNo
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
+
+        -- make changes here for onride and tripassigned
+        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo DTT.IN_PROGRESS
+        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo DTT.TRIP_ASSIGNED
         Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
         Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
@@ -1506,13 +1510,23 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC mbBadge trips = do
-  allTransactions <-
+  initialActiveTrip <- WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
+  let isActive = case initialActiveTrip of
+        Just _ -> True
+        Nothing -> False
+  (allTransactions, _) <-
     foldM
-      ( \accTransactions trip -> do
-          transactions <- makeTripTransactions trip
-          return $ accTransactions <> transactions
+      ( \(accTransactions, updatedIsActive) trip -> do
+          ( if updatedIsActive
+              then do
+                tripTransactions <- makeTripTransactions trip DTT.UPCOMING
+                return (accTransactions <> tripTransactions, updatedIsActive)
+              else do
+                tripTransactions <- makeTripTransactions trip DTT.TRIP_ASSIGNED
+                return (accTransactions <> tripTransactions, True)
+            )
       )
-      []
+      ([], isActive)
       trips
   WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
     >>= \case
@@ -1524,8 +1538,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
           WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
-    makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
-    makeTripTransactions trip = do
+    makeTripTransactions :: Common.TripDetails -> DTT.TripStatus -> Flow [DTT.TripTransaction]
+    makeTripTransactions trip tripStatus = do
       route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
       (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
       case (trip.roundTrip, route.roundRouteCode) of
@@ -1537,17 +1551,17 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           foldM
             ( \accTransactions freqIdx -> do
                 let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode
+                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode tripStatus
                 pure $ accTransactions <> [tripTransaction]
             )
             []
             [0 .. (2 * roundTrip.frequency) -1]
         (_, _) -> do
-          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code
+          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code tripStatus
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Maybe Text -> Text -> Flow DTT.TripTransaction
-    mkTransaction routeCode roundRouteCode endStopCode = do
+    mkTransaction :: Text -> Maybe Text -> Text -> DTT.TripStatus -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode tripStatus = do
       transactionId <- generateGUID
       now <- getCurrentTime
       vehicleNumber <- decrypt vehicleRC.certificateNumber
@@ -1563,7 +1577,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             isCurrentlyDeviated = False,
             startLocation = Nothing,
             startedNearStopCode = Nothing,
-            status = DTT.TRIP_ASSIGNED,
+            status = tripStatus,
             routeCode = routeCode,
             roundRouteCode = roundRouteCode,
             tripCode = Nothing,
@@ -1618,6 +1632,7 @@ getDriverFleetTripTransactions merchantShortId opCity fleetOwnerId driverId mbFr
       PAUSED -> Common.PAUSED
       COMPLETED -> Common.COMPLETED
       CANCELLED -> Common.CANCELLED
+      UPCOMING -> Common.UPCOMING
 
 ---------------------------------------------------------------------
 data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
