@@ -6,8 +6,8 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 
-makeFleetDriverAssociation :: (MonadFlow m) => Id Person -> Text -> Maybe UTCTime -> m FleetDriverAssociation
-makeFleetDriverAssociation driverId fleetOwnerId end = do
+makeFleetDriverAssociation :: (MonadFlow m) => Id Person -> Text -> Maybe (Id Person) -> Maybe UTCTime -> m FleetDriverAssociation
+makeFleetDriverAssociation driverId fleetOwnerId onboardedOperatorId end = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -19,6 +19,7 @@ makeFleetDriverAssociation driverId fleetOwnerId end = do
         associatedOn = Just now,
         associatedTill = end,
         onboardingVehicleCategory = Nothing,
+        onboardedOperatorId,
         createdAt = now,
         updatedAt = now
       }

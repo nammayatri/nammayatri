@@ -34,7 +34,8 @@ data MerchantE e = Merchant
     authToken :: Maybe (EncryptedHashedField e Text),
     createdAt :: UTCTime,
     enabled :: Maybe Bool,
-    requireAdminApprovalForFleetOnboarding :: Maybe Bool
+    requireAdminApprovalForFleetOnboarding :: Maybe Bool,
+    hasFleetMemberHierarchy :: Maybe Bool
   }
   deriving (Generic)
 

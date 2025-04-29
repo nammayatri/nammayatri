@@ -57,15 +57,17 @@ import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
-import Data.Text hiding (filter, find, length, map, null)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Text hiding (elem, filter, find, length, map, null)
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
 import Domain.Types.Alert
 import Domain.Types.FleetMemberAssociation as DFMA
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
-import EulerHS.Prelude hiding (find, length, map, null)
+import EulerHS.Prelude hiding (elem, find, length, map, null, whenJust)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -108,6 +110,66 @@ getFleetOwnerId memberPersonId mbFleetOwnerId = do
     )
     identity
     ((verifyFleetOwnerAccess memberPersonId) <$> mbFleetOwnerId)
+
+------------------------------------- Helper Functions --------------------------------------
+-- in case if fleet owner is mandatory
+getFleetOwnerAndRequestorIdMerchantBased :: ApiTokenInfo -> Maybe Text -> Flow (Text, Text)
+getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId = do
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  fleetOwnerId <- mbFleetOwnerId' & fromMaybeM (InvalidRequest "fleetOwnerId required")
+  return (fleetOwnerId, requestorId)
+
+-- in case if fleet owner is optional
+getMbFleetOwnerAndRequestorIdMerchantBased :: ApiTokenInfo -> Maybe Text -> Flow (Maybe Text, Text)
+getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId = do
+  case apiTokenInfo.merchant.hasFleetMemberHierarchy of
+    Just False -> do
+      -- MSIL: requestor is fleet owner or operator, access check on bpp side required!
+      let requestorId = apiTokenInfo.personId.getId
+      if apiTokenInfo.person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
+        then do
+          -- requestor is fleet owner
+          whenJust mbFleetOwnerId $ \fleetOwnerId ->
+            unless (fleetOwnerId == requestorId) $ throwError AccessDenied
+          return (Just requestorId, requestorId)
+        else do
+          -- requestor is operator
+          return (mbFleetOwnerId, requestorId)
+    _ -> do
+      -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
+      fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
+      return (Just fleetOwnerId, fleetOwnerId)
+
+data FleetOwnerInfo = FleetOwnerInfo
+  { fleetOwnerId :: Text,
+    fleetOwnerName :: Text,
+    requestorId :: Text
+  }
+
+getFleetOwnersInfoMerchantBased :: ApiTokenInfo -> Maybe Text -> Flow [FleetOwnerInfo]
+getFleetOwnersInfoMerchantBased apiTokenInfo mbFleetOwnerId = do
+  case apiTokenInfo.merchant.hasFleetMemberHierarchy of
+    Just False -> do
+      -- MSIL: requestor is fleet owner or operator, access check on bpp side required!
+      let requestor = apiTokenInfo.person
+          requestorId = requestor.id.getId
+      if apiTokenInfo.person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
+        then do
+          -- requestor is fleet owner
+          whenJust mbFleetOwnerId $ \fleetOwnerId ->
+            unless (fleetOwnerId == requestorId) $ throwError AccessDenied
+          let fleetOwnerName = requestor.firstName <> " " <> requestor.lastName
+          return [FleetOwnerInfo {fleetOwnerId = requestorId, fleetOwnerName, requestorId}]
+        else do
+          -- requestor is operator
+          fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
+          fleetOwner <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+          let fleetOwnerName = fleetOwner.firstName <> " " <> fleetOwner.lastName
+          return [FleetOwnerInfo {fleetOwnerId, fleetOwnerName, requestorId}]
+    _ -> do
+      -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
+      fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId mbFleetOwnerId
+      return $ (\(fleetOwnerId, fleetOwnerName) -> FleetOwnerInfo {fleetOwnerId, fleetOwnerName, requestorId = fleetOwnerId}) <$> fleetOwnerIds
 
 ------------------------------------- Multiple Fleet Owners Access --------------------------------------
 getFleetOwnerIds :: Text -> Maybe Text -> Flow [(Text, Text)]
@@ -230,16 +292,16 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId mbFl
 postDriverFleetSendJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Registration.AuthReq -> Flow Registration.AuthRes
 postDriverFleetSendJoiningOtp merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
+  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound fleetOwnerId)
   let dashboardUserName = person.firstName <> " " <> person.lastName
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetSendJoiningOtp) dashboardUserName req
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetSendJoiningOtp) dashboardUserName (Just fleetOwnerId) (Just requestorId) req
 
 postDriverFleetVerifyJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Common.VerifyFleetJoiningOtpReq -> Flow APISuccess
 postDriverFleetVerifyJoiningOtp merchantShortId opCity apiTokenInfo mbAuthId mbFleetOwnerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetVerifyJoiningOtp) fleetOwnerId mbAuthId req
+  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetVerifyJoiningOtp) fleetOwnerId mbAuthId (Just requestorId) req
 
 postDriverFleetLinkRCWithDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.LinkRCWithDriverForFleetReq -> Flow APISuccess
 postDriverFleetLinkRCWithDriver merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
@@ -268,8 +330,12 @@ postDriverFleetAddDrivers merchantShortId opCity apiTokenInfo mbFleetOwnerId req
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddDrivers)) req{fleetOwnerId = Just fleetOwnerId}
+  -- for MSIL flow fleetOwner is in csv row, so put fleetOwner in request is not mandatory
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddDrivers)) (Just requestorId) req{fleetOwnerId = mbFleetOwnerId'}
+  where
+    addMultipartBoundary :: LBS.ByteString -> (Maybe Text -> (LBS.ByteString, req) -> res) -> Maybe Text -> req -> res
+    addMultipartBoundary boundary clientFn requestorId reqBody = clientFn requestorId (boundary, reqBody)
 
 postDriverFleetAddDriverBusRouteMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.CreateDriverBusRouteMappingReq -> Flow Common.APISuccessWithUnprocessedEntities
 postDriverFleetAddDriverBusRouteMapping merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
@@ -439,18 +505,18 @@ getDriverFleetTripTransactions merchantShortId opCity apiTokenInfo driverId mbFr
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.TripTransactionDetail {..} = Common.TripTransactionDetailT {..}
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString mbFleetOwnerId = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId Nothing
+  fleetOwnersInfo <- getFleetOwnersInfoMerchantBased apiTokenInfo mbFleetOwnerId
   listItem <-
     concatMapM
-      ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverAssociation) fleetOwnerId' mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString
-          return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) listItem
+      ( \fleetOwnerInfo -> do
+          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverAssociation) fleetOwnerInfo.fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString (Just fleetOwnerInfo.requestorId)
+          return $ map (addFleetOwnerDetails fleetOwnerInfo.fleetOwnerId fleetOwnerInfo.fleetOwnerName) listItem
       )
-      fleetOwnerIds
+      fleetOwnersInfo
   return $
     Common.DrivertoVehicleAssociationResT
       { fleetOwnerId = apiTokenInfo.personId.getId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
@@ -460,18 +526,18 @@ getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimi
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.DriveVehicleAssociationListItem {..} = Common.DriveVehicleAssociationListItemT {..}
 
-getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
+getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId Nothing
+  fleetOwnersInfo <- getFleetOwnersInfoMerchantBased apiTokenInfo mbFleetOwnerId
   listItem <-
     concatMapM
-      ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) fleetOwnerId' mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo
-          return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) listItem
+      ( \fleetOwnerInfo -> do
+          Common.DrivertoVehicleAssociationRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) fleetOwnerInfo.fleetOwnerId mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo (Just fleetOwnerInfo.requestorId)
+          return $ map (addFleetOwnerDetails fleetOwnerInfo.fleetOwnerId fleetOwnerInfo.fleetOwnerName) listItem
       )
-      fleetOwnerIds
+      fleetOwnersInfo
   return $
     Common.DrivertoVehicleAssociationResT
       { fleetOwnerId = apiTokenInfo.personId.getId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets

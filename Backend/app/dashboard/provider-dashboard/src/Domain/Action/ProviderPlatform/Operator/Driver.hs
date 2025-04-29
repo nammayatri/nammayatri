@@ -4,12 +4,15 @@ module Domain.Action.ProviderPlatform.Operator.Driver
     postDriverOperatorCreateRequest,
     getDriverOperationGetAllHubs,
     getDriverOperatorList,
+    postDriverOperatorSendJoiningOtp,
+    postDriverOperatorVerifyJoiningOtp,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
+import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -72,3 +75,13 @@ getDriverOperatorList ::
 getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset apiTokenInfo.personId.getId
+
+postDriverOperatorSendJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> Environment.Flow Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes)
+postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorSendJoiningOtp) apiTokenInfo.personId.getId req
+
+postDriverOperatorVerifyJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Operator.Driver.VerifyOperatorJoiningOtpReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverOperatorVerifyJoiningOtp merchantShortId opCity apiTokenInfo authId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorVerifyJoiningOtp) authId apiTokenInfo.personId.getId req

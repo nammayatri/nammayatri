@@ -21,7 +21,6 @@ import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.DailyStats as DDS
-import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -36,6 +35,7 @@ import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -43,7 +43,6 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -111,7 +110,7 @@ addReferral ::
 addReferral (personId, merchantId, merchantOpCityId) req = do
   runRequestValidation validateReferralReq req
   di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
-  if isJust di.referralCode || isJust di.referredByDriverId
+  if isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId
     then return AlreadyReferred
     else do
       transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
@@ -124,15 +123,11 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
           return Success
         Person.OPERATOR -> do
-          hasNoAssociation <- checkDriverHasNoAssociation personId
-          if hasNoAssociation
-            then do
-              DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-              driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-              void $ QDOA.create driverOperatorAssData
-              incrementOnboardedCount DriverReferral dr.driverId transporterConfig
-              return Success
-            else return AlreadyReferred
+          DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
+          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+          void $ QDOA.create driverOperatorAssData
+          incrementOnboardedCount DriverReferral dr.driverId transporterConfig
+          return Success
         _ -> throwError (InvalidRequest "Invalid referral role")
 
 getReferredDrivers :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow GetReferredDriverRes
@@ -140,30 +135,6 @@ getReferredDrivers (personId, _, _) = do
   di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
   let totalRef = fromMaybe 0 di.totalReferred
   pure $ GetReferredDriverRes {value = totalRef}
-
-makeDriverOperatorAssociation :: (MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
-makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    DriverOperatorAssociation
-      { id = id,
-        operatorId = operatorId,
-        isActive = True,
-        driverId = driverId,
-        associatedOn = Just now,
-        associatedTill = end,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
-
-checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m Bool
-checkDriverHasNoAssociation driverId = do
-  mbOperatorAssoc <- QDOA.findByDriverId (cast driverId) True
-  mbFleetAssoc <- QFDA.findByDriverId (cast driverId) True
-  pure $ isNothing mbOperatorAssoc && isNothing mbFleetAssoc
 
 getDriverDetailsByReferralCode ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -182,7 +153,21 @@ getDriverDetailsByReferralCode (personId, _, merchantOpCityId) value mbRole = do
         role = dr.role
       }
 
-incrementOnboardedCount :: ReferralType -> Id Person.Person -> TransporterConfig -> Flow ()
+makeDriverReferredByOperator ::
+  forall m r.
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person.Person ->
+  Id Person.Person ->
+  m ()
+makeDriverReferredByOperator merchantOpCityId driverId referredOperatorId = do
+  di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
+  unless (isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId) $ do
+    transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    DriverInformation.updateReferredByOperatorId (Just referredOperatorId.getId) driverId
+    incrementOnboardedCount DriverReferral referredOperatorId transporterConfig
+
+incrementOnboardedCount :: forall m r. (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ReferralType -> Id Person.Person -> TransporterConfig -> m ()
 incrementOnboardedCount refType referredEntityId transporterConfig = do
   let lockKey = case refType of
         DriverReferral -> "Driver:Referral:Increment:"
@@ -192,7 +177,7 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
     incrementDriverStatsOnboardedCountInternal
     incrementDailyStatsOnboardedCountInternal
   where
-    incrementDriverStatsOnboardedCountInternal :: Flow ()
+    incrementDriverStatsOnboardedCountInternal :: m ()
     incrementDriverStatsOnboardedCountInternal = do
       let logTag = case refType of
             DriverReferral -> "INCREMENT_DRIVER_COUNT"
@@ -222,7 +207,7 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
               <> " to "
               <> show newCount
 
-    incrementDailyStatsOnboardedCountInternal :: Flow ()
+    incrementDailyStatsOnboardedCountInternal :: m ()
     incrementDailyStatsOnboardedCountInternal = do
       let logTagPrefix = case refType of
             DriverReferral -> "DRIVER"
@@ -251,7 +236,7 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
               <> show newCount
         Nothing -> createNewDailyStats localTime
 
-    createNewDailyStats :: UTCTime -> Flow ()
+    createNewDailyStats :: UTCTime -> m ()
     createNewDailyStats currentTime = do
       logDebug $ "DailyStats not found for driverId : " <> referredEntityId.getId
       newId <- generateGUIDText
