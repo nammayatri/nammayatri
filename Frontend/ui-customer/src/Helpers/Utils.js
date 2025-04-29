@@ -119,7 +119,8 @@ export const secondsToHms = function (d) {
 
   const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
   const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "--";
-  return hDisplay + mDisplay;
+  if(hDisplay != "" && mDisplay == "--") return hDisplay
+  else return hDisplay + mDisplay;
 }
 
 export const toIST = function (date) {

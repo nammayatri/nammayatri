@@ -38,16 +38,9 @@ transformStationsForMap stations route srcCode destCode = do
   let res = DA.foldl (\acc word -> if acc.index == 0 then acc{src = Just word, index = acc.index + 1}
                       else if acc.index == (DA.length stations -1)  then acc{dest = Just word, index = acc.index + 1}
                       else acc{stops = acc.stops <> [word], index = acc.index + 1} ) {src : Nothing, dest : Nothing, stops : [], index : 0} stations
-      _  = spy "res" res
   case res.src, res.dest of
     Just (API.FRFSStationAPI s), Just (API.FRFSStationAPI d) -> do
-  -- let 
-  -- mbSource = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (res.src) 
-  --     mbDest = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (res.dest)
       let stops = res.stops
-          _ = spy "s" s
-          _ = spy "sstops" stops
-          _ = spy "d" d
           markers = HU.normalRoute ""
           len = DA.length stops
           sourcePosition = {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0  s.lon}
@@ -65,31 +58,6 @@ transformStationsForMap stations route srcCode destCode = do
                             else if index == ln  then markers.destMarker
                             else "ny_ic_stop_black"
       markers = HU.normalRoute ""
-
-  -- let mbSrcIndex = DA.findIndex (\(API.FRFSStationAPI item) -> item.code == srcCode) stations
-  --     mbDestIndex = DA.findIndex (\(API.FRFSStationAPI item) -> item.code == destCode) stations
-  -- case mbSrcIndex, mbDestIndex of
-  --   Just srcIndex, Just destIndex -> do
-  --     let mbSource = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (stations DA.!! srcIndex) 
-  --         mbDest = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (stations DA.!! destIndex)
-  --         stops = DA.slice (srcIndex + 1) destIndex stations
-  --         markers = HU.normalRoute ""
-  --         sourcePosition = case mbSource of
-  --                            Just s -> {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0  s.lon}
-  --                            _ -> {lat : 0.0, lng : 0.0}
-  --         destPosition = case mbDest of
-  --                            Just s -> {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0 s.lon}
-  --                            _ -> {lat : 0.0, lng : 0.0}
-  --         srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "src", pointerIcon = markers.srcMarker, primaryText = fromMaybe "Source" (mbSource <#> _.name), position = sourcePosition}
-  --         destMarkerConfig = JB.defaultMarkerConfig{ markerId = "dest", pointerIcon = markers.destMarker, primaryText = fromMaybe "Dest" (mbDest <#> _.name), position = destPosition}
-  --         stopsConfig = map (\(API.FRFSStationAPI item) -> JB.defaultMarkerConfig{ markerId = item.code, pointerIcon = markers.srcMarker, position = {lat : fromMaybe 0.0 item.lat, lng : fromMaybe 0.0  item.lon}}) stops
-  --     JB.mkRouteConfig (Remote.walkCoordinates route.points) srcMarkerConfig destMarkerConfig (Just stopsConfig) "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig
-  --   _,_ -> JB.routeConfig
-  -- where
-  --   getPosition stop =  {
-  --     lat : fromMaybe 0.0 (stop <#> _.lat)
-  --     lng : fromMaybe 0.0 (stop <#> _.lon)
-  --   }
 
 getStationsFromBusRoute ::  API.FRFSRouteAPI -> Array API.FRFSStationAPI 
 getStationsFromBusRoute (API.FRFSRouteAPI stop) = fromMaybe [] stop.stations

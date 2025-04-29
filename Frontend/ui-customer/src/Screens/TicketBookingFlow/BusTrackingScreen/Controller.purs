@@ -132,12 +132,14 @@ eval ToggleStops state = do
 
 eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
   let
-    filteredResp = case state.data.destinationStation, DS.null state.data.bookingId of
-      Mb.Just dest, false -> do
-        case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
-          Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
-          Mb.Just index -> DA.take (index + 1) metroResponse
-      _, _ -> metroResponse
+    filteredResp = metroResponse
+    -- Right now showing all stops event though user has boooked a ticket from pickup and destination stop
+    -- case state.data.destinationStation, DS.null state.data.bookingId of
+      -- Mb.Just dest, false -> do
+      --   case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
+      --     Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
+      --     Mb.Just index -> DA.take (index + 1) metroResponse
+      -- _, _ -> metroResponse
     
     destinationStationSeq = Mb.maybe Mb.Nothing (\(API.FRFSStationAPI dest) -> dest.sequenceNum)(DA.last filteredResp)
 
@@ -295,7 +297,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
                 in (mbPickupStop <#> (\(API.FRFSStationAPI frfsStop) -> frfsStop.code)) == (Mb.Just $ stop.stopCode)
               ) $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
 
-            -- Calculate last reached Delta
+            -- Calculate last reached Stop
             lastReachedStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Reached") $ DA.reverse $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
 
             -- Extract first upcoming stop and next stop details
@@ -318,7 +320,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
             , nearestWaypointConfig: nearestWaypointConfig
             , etaDistance: if nextStopSequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
             , eta: filterETAForOlderLatLong vehicleInfoForRoute.timestamp $ Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop item.vehicleId) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
-            , delta : lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta) -- spy "codex-delta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.delta)
+            , delta : firstUpcomingStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
             } ]
      
     -- calLastReachedDelta (API.UpcomingStop upcomingStop) =
@@ -335,7 +337,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
           etaInSeconds = EHC.compareUTCDate etaTimeStamp (EHC.getCurrentUTC "")
           -- _ = spy "UTC TimeStamp of ETA and currentTime " $ Tuple etaTimeStamp (EHC.getCurrentUTC "")
           -- _ = spy "ETA in seconds and the delat" $ Tuple etaInSeconds delayInSeconds
-          _ = spy "Proper ETA with Delay" $ Tuple vehicleId (etaInSeconds + delayInSeconds)
+          -- _ = spy "Proper ETA with Delay" $ Tuple vehicleId (etaInSeconds + delayInSeconds)
       in if etaInSeconds + delayInSeconds > 0
         then Mb.Just $ etaInSeconds + delayInSeconds
         else Mb.Nothing 
@@ -425,18 +427,28 @@ drawDriverRoute resp state = do
             Right (API.FRFSRouteAPI routeResp) -> Mb.fromMaybe [] routeResp.waypoints
             Left err -> []
     destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) resp
-  filteredRoute <- case destinationStation, DS.null state.data.bookingId of
-    Mb.Just (API.FRFSStationAPI dest), false -> do
-      locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
-      pure $ if locationResp.isInPath then { points: locationResp.points } else route
-    _, _ -> pure route
+    sourceStation = DA.find (\(API.FRFSStationAPI item) -> item.code == srcCode) resp
   push <- EHC.liftFlow $ getPushFn Mb.Nothing "BusTrackingScreen"
-  EHC.liftFlow $ push $ SaveRoute filteredRoute
+  EHC.liftFlow $ push $ SaveRoute route
   let
-    routeConfig = transformStationsForMap resp filteredRoute srcCode destinationCode
+    routeConfig = transformStationsForMap resp route srcCode destinationCode
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
-  EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  case destinationStation, sourceStation, DS.null state.data.bookingId of
+    Mb.Just (API.FRFSStationAPI dest), Mb.Just(API.FRFSStationAPI src), false -> do
+      -- Not Showing route till just the stop location
+      -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+      -- pure $ if locationResp.isInPath then { points: locationResp.points } else route
+      
+      -- Breaking route drawing into 2 parts on top of each other
+      EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10, routeColor = "#919191"} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+
+      sourceToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+      pickupToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse sourceToDestinationRoute.points}) (Mb.fromMaybe 0.0 src.lat) (Mb.fromMaybe 0.0 src.lon) 1 
+      EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 8, routeColor = Color.black900, locations = {points : pickupToDestinationRoute.points} }] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+    _, _, _ ->
+      EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
   void $ foldM processStop 0 state.data.stopsList
   where
@@ -576,3 +588,7 @@ calculateMinETADistance trackingData =
 calculateMinEtaTimeWithDelay :: Array ST.VehicleData -> Mb.Maybe Int
 calculateMinEtaTimeWithDelay trackingData =
   minimum $ DA.mapMaybe (\item -> item.eta) trackingData
+
+isPostBookingTracking :: ST.BusTrackingScreenState -> Boolean
+isPostBookingTracking state = 
+  not $ DS.null state.data.bookingId
