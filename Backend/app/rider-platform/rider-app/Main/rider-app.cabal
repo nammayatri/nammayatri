@@ -391,6 +391,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
       Storage.CachedQueries.Merchant.MultiModalBus
+      Storage.CachedQueries.Merchant.MultiModalSuburban
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig

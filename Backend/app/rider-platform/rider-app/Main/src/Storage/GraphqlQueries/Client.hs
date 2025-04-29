@@ -7,6 +7,7 @@ module Storage.GraphqlQueries.Client
     StopData (..),
     OTPResponse (..),
     executeRouteStopTimeTableQuery,
+    mapToServiceTierType,
   )
 where
 

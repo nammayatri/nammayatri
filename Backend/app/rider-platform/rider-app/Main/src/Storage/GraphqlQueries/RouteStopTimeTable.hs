@@ -65,5 +65,7 @@ parseToRouteStopTimeTable integratedBPPConfig mid mocid entry =
       merchantId = Just mid,
       merchantOperatingCityId = Just mocid,
       createdAt = entry.createdAt,
-      updatedAt = entry.updatedAt
+      updatedAt = entry.updatedAt,
+      delay = Nothing,
+      source = GTFS
     }
