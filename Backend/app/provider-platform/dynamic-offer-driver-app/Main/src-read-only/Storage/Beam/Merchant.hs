@@ -35,6 +35,7 @@ data MerchantT f = MerchantT
     mobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     name :: B.C f Kernel.Prelude.Text,
     onlinePayment :: B.C f Kernel.Prelude.Bool,
+    overwriteAssociation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     registryUrl :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
     state :: B.C f Kernel.Types.Beckn.Context.IndianState,

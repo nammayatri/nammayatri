@@ -12,15 +12,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetDriverAssociationT f = FleetDriverAssociationT
-  { associatedOn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    associatedTill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    fleetOwnerId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    onboardingVehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { associatedOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Kernel.Prelude.Text,
+    fleetOwnerId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    onboardedOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    onboardingVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +31,6 @@ instance B.Table FleetDriverAssociationT where
 
 type FleetDriverAssociation = FleetDriverAssociationT Identity
 
-$(enableKVPG (''FleetDriverAssociationT) [('id)] [[('driverId)], [('fleetOwnerId)]])
+$(enableKVPG ''FleetDriverAssociationT ['id] [['driverId], ['fleetOwnerId]])
 
-$(mkTableInstances (''FleetDriverAssociationT) "fleet_driver_association")
+$(mkTableInstances ''FleetDriverAssociationT "fleet_driver_association")

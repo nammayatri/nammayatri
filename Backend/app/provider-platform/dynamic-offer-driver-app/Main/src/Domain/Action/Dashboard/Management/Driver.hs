@@ -1191,7 +1191,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
     isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
       case (requestedPersonDetails.role, personDetails.role) of
-        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id personDetails.id
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation personDetails.id requestedPersonDetails.id
         (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
         (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
         _ -> return False
@@ -1221,6 +1221,6 @@ checkFleetOperatorAssociation fleetId operatorId = do
   return $ isJust mbAssoc
 
 checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
-checkDriverOperatorAssociation operatorId driverId = do
-  mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId.getId True
+checkDriverOperatorAssociation driverId operatorId = do
+  mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
   return $ isJust mbAssoc

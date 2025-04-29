@@ -572,7 +572,7 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
             merchantId = tripTransaction.merchantId,
             merchantOperatingCityId = tripTransaction.merchantOperatingCityId
           }
-      TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
+      TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
       pure alertRequest.id
     else do
       tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)

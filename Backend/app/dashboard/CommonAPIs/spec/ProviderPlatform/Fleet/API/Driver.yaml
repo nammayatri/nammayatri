@@ -448,6 +448,7 @@ apis:
         - status: DriverMode
         - name: Text
         - mbSearchString: Text
+        - fleetOwnerId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -470,6 +471,7 @@ apis:
               - status: DriverMode
               - name: Text
               - mbSearchString: Text
+              - requestorId: Text
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -486,6 +488,7 @@ apis:
         - status: FleetVehicleStatus
         - mbSearchString: Text
         - statusAwareVehicleNo: Text
+        - fleetOwnerId: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -506,6 +509,7 @@ apis:
               - status: FleetVehicleStatus
               - mbSearchString: Text
               - statusAwareVehicleNo: Text
+              - requestorId: Text
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -586,10 +590,13 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
       helperApi:
         - POST:
-            endpoint: /{fleetOwnerId}/fleet/driver/sendJoiningOtp
+            endpoint: /{fleetOwnerName}/fleet/driver/sendJoiningOtp
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              fleetOwnerName: Text
+            query:
+              - fleetOwnerId: Text
+              - requestorId: Text
             request:
               type: AuthReq
             response:
@@ -615,6 +622,7 @@ apis:
               fleetOwnerId: Text
             query:
               - authId: Text
+              - requestorId: Text
             request:
               type: VerifyFleetJoiningOtpReq
             response:
@@ -740,6 +748,8 @@ apis:
         - POST:
             endpoint: /fleet/addDrivers
             auth: ApiAuthV2
+            query:
+              - requestorId: Text
             multipart:
               type: CreateDriversReq
             response:

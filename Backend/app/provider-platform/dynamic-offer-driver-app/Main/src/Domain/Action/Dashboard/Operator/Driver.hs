@@ -5,45 +5,63 @@ module Domain.Action.Dashboard.Operator.Driver
     postDriverOperatorCreateRequest,
     getDriverOperationGetAllHubs,
     getDriverOperatorList,
+    postDriverOperatorSendJoiningOtp,
+    postDriverOperatorVerifyJoiningOtp,
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
-import qualified Dashboard.Common as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import Domain.Action.Dashboard.RideBooking.Driver
+import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.OperationHub as Domain
+import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
-import qualified Environment
-import Kernel.Beam.Functions (runInReplica)
+import qualified Domain.Types.RegistrationToken as SR
+import Environment
+import EulerHS.Prelude (whenNothing_, (<|>))
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
+import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffset)
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCE
 import Tools.Error
+import Tools.SMS as Sms hiding (Success)
 
 getDriverOperationGetAllHubs ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -114,7 +132,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
             case drc of
               [] -> throwError (InvalidRequest "No driver exist with this RC")
               (assoc : _) -> do
-                isAssociated <- DDriver.checkDriverOperatorAssociation opHubReq.creatorId assoc.driverId
+                isAssociated <- DDriver.checkDriverOperatorAssociation assoc.driverId opHubReq.creatorId
                 unless isAssociated $ do
                   mbFleetAssoc <- QFDA.findByDriverId (cast assoc.driverId) True
                   case mbFleetAssoc of
@@ -236,3 +254,109 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset reque
             vehicle = (.model) <$> mblinkedVehicle,
             documents = statusRes
           }
+
+---------------------------------------------------------------------
+postDriverOperatorSendJoiningOtp ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.AuthReq ->
+  Flow Common.AuthRes
+postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $
+    throwError AccessDenied
+
+  merchant <- findMerchantByShortId merchantShortId
+  smsCfg <- asks (.smsCfg)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  mobileNumberHash <- getDbHash req.mobileNumber
+  mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER
+  case mbPerson of
+    Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
+    Just person -> do
+      withLogTag ("personId_" <> getId person.id) $ do
+        let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+            phoneNumber = req.mobileCountryCode <> req.mobileNumber
+        otpCode <- maybe generateOTPCode return useFakeOtpM
+        whenNothing_ useFakeOtpM $ do
+          let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+          (mbSender, message) <-
+            MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
+              MessageBuilder.BuildOperatorJoiningMessageReq
+                { otp = otpCode,
+                  operatorName = operatorName
+                }
+          let sender = fromMaybe smsCfg.sender mbSender
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        let key = makeOperatorDriverOtpKey phoneNumber
+        Redis.setExp key otpCode 3600
+      pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
+
+---------------------------------------------------------------------
+postDriverOperatorVerifyJoiningOtp ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Text ->
+  API.Types.ProviderPlatform.Operator.Driver.VerifyOperatorJoiningOtpReq ->
+  Flow APISuccess
+postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId req = do
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $
+    throwError AccessDenied
+
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  mobileNumberHash <- getDbHash req.mobileNumber
+  person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
+  case mbAuthId of
+    Just authId -> do
+      smsCfg <- asks (.smsCfg)
+
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId person
+
+      deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
+      let regId = Id authId :: Id SR.RegistrationToken
+      res <-
+        DReg.verify
+          regId
+          DReg.AuthVerifyReq
+            { otp = req.otp,
+              deviceToken = deviceToken,
+              whatsappNotificationEnroll = Nothing
+            }
+
+      checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId res.person.id operator.id True
+      when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
+
+      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId res.person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      QDOA.create assoc
+
+      DOR.makeDriverReferredByOperator merchantOpCityId person.id operator.id
+
+      let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+      withLogTag ("personId_" <> getId person.id) $ do
+        (mbSender, message) <-
+          MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
+            MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
+              { operatorName = operator.firstName
+              }
+        let sender = fromMaybe smsCfg.sender mbSender
+        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+          >>= Sms.checkSmsResult
+    Nothing -> do
+      let key = makeOperatorDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
+      otp <- Redis.get key >>= fromMaybeM OtpNotFound
+      when (otp /= req.otp) $ throwError InvalidOtp
+      checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId person.id operator.id True
+      when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
+
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId person
+
+      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      QDOA.create assoc
+  pure Success
+
+makeOperatorDriverOtpKey :: Text -> Text
+makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
