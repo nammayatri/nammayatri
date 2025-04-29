@@ -28,13 +28,14 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 getFare ::
   JL.GetFareFlow m r =>
+  Maybe UTCTime ->
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
   m (Maybe JL.GetFareResponse)
-getFare riderId merchantId merchantOperatingCityId leg = \case
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq

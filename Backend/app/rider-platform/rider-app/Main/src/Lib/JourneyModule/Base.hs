@@ -125,7 +125,7 @@ init journeyReq = do
     mapWithIndex
       ( \idx leg -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) (distanceToMeters leg.distance) journeyReq.maximumWalkDistance journeyReq.straightLineThreshold
-          mbTotalLegFare <- measureLatency (JLI.getFare journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode) "multimodal getFare"
+          mbTotalLegFare <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode) "multimodal getFare"
           if riderConfig.multimodalTesting
             then do
               journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare
@@ -1192,8 +1192,9 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
               distanceUnit = Meter
             }
       let distance = convertMetersToDistance Meter distResp.distance
+      now <- getCurrentTime
       let multiModalLeg = mkMultiModalLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
-      estimatedFare <- JLI.getFare journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
+      estimatedFare <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
       return $
         APITypes.ExtendLegGetFareResp
           { totalFare = estimatedFare,

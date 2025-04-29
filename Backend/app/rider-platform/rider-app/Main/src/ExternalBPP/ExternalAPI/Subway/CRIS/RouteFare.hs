@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.MerchantOperatingCity
-import EulerHS.Prelude hiding (find, readMaybe, whenJust)
+import EulerHS.Prelude hiding (concatMap, find, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -151,46 +151,49 @@ getRouteFare config merchantOperatingCityId request = do
             Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
             Right fareResponse -> pure fareResponse
 
-  let firstRouteFareDetails = listToMaybe decryptedResponse.routeFareDetailsList
+  let routeFareDetails = decryptedResponse.routeFareDetailsList
 
-  logInfo $ "FRFS Subway Fare: " <> show firstRouteFareDetails
-  let fares = maybe [] (.fareDtlsList) firstRouteFareDetails
-  let routeId = maybe 0 (.routeId) firstRouteFareDetails
-  fares `forM` \fare -> do
-    let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
-    fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.adultFare)
-    classCode <- pure fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
-    serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
-    serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)
-    return $
-      FRFSUtils.FRFSFare
-        { price =
-            Price
-              { amountInt = round fareAmount,
-                amount = fareAmount,
-                currency = INR
-              },
-          discounts = [],
-          fareDetails =
-            Just
-              Quote.FRFSFareDetails
-                { providerRouteId = show routeId,
-                  distance = Meters fare.distance,
-                  via = fare.via,
-                  ticketTypeCode = fare.ticketTypeCode,
-                  trainTypeCode = fare.trainTypeCode,
-                  sdkToken = decryptedResponse.sdkData,
-                  appSession = request.appSession
-                },
-          vehicleServiceTier =
-            FRFSUtils.FRFSVehicleServiceTier
-              { serviceTierType = serviceTier._type,
-                serviceTierProviderCode = serviceTier.providerCode,
-                serviceTierShortName = serviceTier.shortName,
-                serviceTierDescription = serviceTier.description,
-                serviceTierLongName = serviceTier.longName
-              }
-        }
+  logInfo $ "FRFS Subway Fare: " <> show routeFareDetails
+  frfsDetails <-
+    routeFareDetails `forM` \routeFareDetail -> do
+      let fares = routeFareDetail.fareDtlsList
+      let routeId = routeFareDetail.routeId
+      fares `forM` \fare -> do
+        let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
+        fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.adultFare)
+        classCode <- pure fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
+        serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
+        serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)
+        return $
+          FRFSUtils.FRFSFare
+            { price =
+                Price
+                  { amountInt = round fareAmount,
+                    amount = fareAmount,
+                    currency = INR
+                  },
+              discounts = [],
+              fareDetails =
+                Just
+                  Quote.FRFSFareDetails
+                    { providerRouteId = show routeId,
+                      distance = Meters fare.distance,
+                      via = fare.via,
+                      ticketTypeCode = fare.ticketTypeCode,
+                      trainTypeCode = fare.trainTypeCode,
+                      sdkToken = decryptedResponse.sdkData,
+                      appSession = request.appSession
+                    },
+              vehicleServiceTier =
+                FRFSUtils.FRFSVehicleServiceTier
+                  { serviceTierType = serviceTier._type,
+                    serviceTierProviderCode = serviceTier.providerCode,
+                    serviceTierShortName = serviceTier.shortName,
+                    serviceTierDescription = serviceTier.description,
+                    serviceTierLongName = serviceTier.longName
+                  }
+            }
+  return $ concat frfsDetails
   where
     eulerClientFn payload token =
       let client = ET.client routeFareAPI

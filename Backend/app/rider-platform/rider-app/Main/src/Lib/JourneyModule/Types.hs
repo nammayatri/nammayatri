@@ -897,7 +897,9 @@ getServiceTierFromQuote quote = do
         quoteId = quote.id,
         serviceTierName = serviceTier.shortName,
         serviceTierType = serviceTier._type,
-        serviceTierDescription = serviceTier.description
+        serviceTierDescription = serviceTier.description,
+        via = quote.fareDetails <&> (.via),
+        trainTypeCode = quote.fareDetails <&> (.trainTypeCode)
       }
 
 stationToStationAPI :: DTS.Station -> FRFSStationAPI

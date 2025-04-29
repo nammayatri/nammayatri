@@ -104,6 +104,8 @@ data LegServiceTier = LegServiceTier
   { serviceTierName :: Text,
     serviceTierType :: Spec.ServiceTierType,
     serviceTierDescription :: Text,
+    via :: Maybe Text,
+    trainTypeCode :: Maybe Text,
     fare :: PriceAPIEntity,
     quoteId :: Id DFRFSQuote.FRFSQuote
   }
@@ -115,6 +117,8 @@ data AvailableRoutesByTier = AvailableRoutesByTier
   { serviceTier :: Spec.ServiceTierType,
     serviceTierName :: Maybe Text,
     serviceTierDescription :: Maybe Text,
+    via :: Maybe Text,
+    trainTypeCode :: Maybe Text,
     quoteId :: Maybe (Id DFRFSQuote.FRFSQuote),
     availableRoutes :: [Text],
     nextAvailableBuses :: [Seconds],
@@ -243,16 +247,18 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     logDebug $ "routeShortNames: " <> show routeShortNames
 
-    (mbFare, serviceTierName, serviceTierDescription, quoteId) <- do
+    (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
       case mbAvailableServiceTiers of
         Just availableServiceTiers -> do
           let availableServiceTier = find (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
               quoteId = availableServiceTier <&> (.quoteId)
               serviceTierName = availableServiceTier <&> (.serviceTierName)
               serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
+              via = availableServiceTier >>= (.via)
+              trainTypeCode = availableServiceTier >>= (.trainTypeCode)
               mbFare = availableServiceTier <&> (.fare)
-          return (mbFare, serviceTierName, serviceTierDescription, quoteId)
-        Nothing -> return (Nothing, Nothing, Nothing, Nothing)
+          return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
+        Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
     logDebug $ "mbFare: " <> show mbFare
     let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
@@ -264,6 +270,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           serviceTierName = serviceTierName,
           serviceTierDescription = serviceTierDescription,
           quoteId = quoteId,
+          via = via,
+          trainTypeCode = trainTypeCode,
           fare = fare
         }
 
