@@ -167,6 +167,21 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: VehiclePhotosResp
+  - GET:
+      endpoint: /driver/vehiclePhotosB64
+      mandatoryQuery:
+        rcNo: Text
+      query:
+        left: Bool
+        right: Bool
+        front: Bool
+        back: Bool
+        frontInterior: Bool
+        backInterior: Bool
+        odometer: Bool
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehiclePhotosResp
   - POST:
       endpoint: /driver/updateAirCondition
       auth: TokenAuth PROVIDER_TYPE

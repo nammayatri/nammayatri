@@ -164,6 +164,39 @@ getDriverVehiclePhotos (_, merchantId, _) rcNo = do
   where
     getVehicleImages rc imageType = map (.s3Path) <$> runInReplica (ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType)
 
+getDriverVehiclePhotosB64 ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Text ->
+  Environment.Flow API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
+getDriverVehiclePhotosB64 (_, merchantId, _) back_ backInterior_ front_ frontInterior_ left_ odometer_ right_ rcNo = do
+  encryptedRC <- encrypt rcNo
+  rc <- VRCE.findByRC encryptedRC >>= fromMaybeM (RCNotFound rcNo)
+  odometer <- getVehicleImagesB64 rc Domain.Odometer odometer_
+  front <- getVehicleImagesB64 rc Domain.VehicleFront front_
+  back <- getVehicleImagesB64 rc Domain.VehicleBack back_
+  right <- getVehicleImagesB64 rc Domain.VehicleRight right_
+  left <- getVehicleImagesB64 rc Domain.VehicleLeft left_
+  frontInterior <- getVehicleImagesB64 rc Domain.VehicleFrontInterior frontInterior_
+  backInterior <- getVehicleImagesB64 rc Domain.VehicleBackInterior backInterior_
+  return API.Types.UI.DriverOnboardingV2.VehiclePhotosResp {..}
+  where
+    getVehicleImagesB64 rc imageType shouldFetch = do
+      if fromMaybe False shouldFetch
+        then do
+          images <- runInReplica $ ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType
+          mapM (\img -> S3.get $ T.unpack img.s3Path) images
+        else pure []
+
 getDriverRateCard ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
