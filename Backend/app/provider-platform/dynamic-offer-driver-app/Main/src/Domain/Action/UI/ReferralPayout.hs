@@ -2,6 +2,7 @@ module Domain.Action.UI.ReferralPayout where
 
 import qualified API.Types.UI.ReferralPayout
 import Data.Text hiding (elem, filter, map)
+import qualified Data.Text as T
 import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
@@ -14,6 +15,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payout.Interface.Types as Payout
@@ -25,8 +27,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
-import Kernel.Types.Version (versionToText)
 import Kernel.Utils.Common
+import Kernel.Utils.Version (textToVersionDefault)
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -39,6 +41,7 @@ import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified System.Environment as SE
 import Tools.Error
 import qualified Tools.Payout as TP
 
@@ -143,6 +146,7 @@ getPayoutOrderStatus ::
     m Payout.PayoutOrderStatusResp
   )
 getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
@@ -150,10 +154,9 @@ getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
-      serviceName =
-        if (versionToText <$> person.clientSdkVersion) == Just "14.0.0"
-          then DEMSC.PayoutService PT.Juspay
-          else DEMSC.PayoutService PT.Juspay
+      serviceName = case person.clientSdkVersion of
+        Just v | v <= textToVersionDefault aaClientSdkVersion -> DEMSC.PayoutService PT.AAJuspay
+        _ -> DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do

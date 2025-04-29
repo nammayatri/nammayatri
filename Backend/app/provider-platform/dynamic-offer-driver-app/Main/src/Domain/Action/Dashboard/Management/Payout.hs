@@ -31,6 +31,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DR
 import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, sum, whenJust)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -46,8 +47,8 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Version (versionToText)
 import Kernel.Utils.Common
+import Kernel.Utils.Version (textToVersionDefault)
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PO
@@ -65,6 +66,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified System.Environment as SE
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as TPayment
@@ -387,12 +389,12 @@ createReq payoutConfig vpa uid driverId amount = do
 
 getPayoutOrderStatus :: (Id Dashboard.Common.Driver, Id Domain.Types.Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> PO.PayoutOrder -> DPC.PayoutConfig -> Environment.Flow Juspay.PayoutOrderStatusResp
 getPayoutOrderStatus (driverId, merchantId, merchantOpCityId) payoutOrder payoutConfig = do
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
   person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let payoutOrderStatusReq = Juspay.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand, personId = Just $ getId driverId}
-      serviceName =
-        if (versionToText <$> person.clientSdkVersion) == Just "14.0.0"
-          then DEMSC.PayoutService PT.Juspay
-          else DEMSC.PayoutService PT.Juspay
+      serviceName = case person.clientSdkVersion of
+        Just v | v <= textToVersionDefault aaClientSdkVersion -> DEMSC.PayoutService PT.AAJuspay
+        _ -> DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status payoutOrder.orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG, DLP.DAILY_STATS_VIA_DASHBOARD, DLP.RETRY_VIA_DASHBOARD]) payoutOrder.entityName) do
