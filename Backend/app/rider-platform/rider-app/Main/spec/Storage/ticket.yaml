@@ -317,9 +317,30 @@ ServicePeopleCategory:
     findAllByPlaceId:
       kvFunction: findAllWithKV
       where: placeId
-    findById:
-      kvFunction: findOneWithKV
+    findAllById:
+      kvFunction: findAllWithKV
       where: id
+    findByIdAndTimebounds:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, timeBounds]
+    updateByIdAndTimebounds:
+      kvFunction: updateOneWithKV
+      fullObjectAsParam: True
+      params:
+        - name
+        - description
+        - pricePerUnit
+        - cancellationCharges
+        - pricingType
+        - vendorSplitDetails
+        - placeId
+      where:
+        and: [id, timeBounds]
+    deleteByIdAndTimebounds:
+      kvFunction: deleteWithKV
+      where:
+        and: [id, timeBounds]
 
   extraOperations:
   - EXTRA_QUERY_FILE

@@ -4,6 +4,7 @@ import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import qualified AWS.S3 as S3
 import Control.Monad.Extra (concatMapM)
 import Data.List (nubBy)
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Domain.Types.BusinessHour as DBusinessHour
 import qualified Domain.Types.Merchant as Merchant
@@ -122,9 +123,9 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
   let allServiceCategories = nubBy (\h1 h2 -> h1.id == h2.id) $ allServiceCategoriesExceptSpecialOccasions ++ allRemainingServiceCategories
 
   let linkedServicePeopleCategoryIds = concatMap (.peopleCategory) allServiceCategories
-  linkedServicePeopleCategories <- catMaybes <$> mapM QServicePeopleCategory.findById linkedServicePeopleCategoryIds
+  linkedServicePeopleCategories <- concatMapM QServicePeopleCategory.findAllById linkedServicePeopleCategoryIds
   unlinkedServicePeopleCategories <- QServicePeopleCategory.findAllByPlaceId (Just placeId.getId)
-  let allServicePeopleCategories = nubBy (\h1 h2 -> h1.id == h2.id) $ linkedServicePeopleCategories ++ unlinkedServicePeopleCategories
+  let allServicePeopleCategories = nubBy (\h1 h2 -> h1.id == h2.id && h1.timeBounds == h2.timeBounds) $ linkedServicePeopleCategories ++ unlinkedServicePeopleCategories
 
   let serviceDetails = map toTicketServiceDetails services
       businessHourDetails = map toBusinessHourDetails allBusinessHours
@@ -488,15 +489,33 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
         QServiceCategory.create newSC
 
   -- Update or create service people categories
+  let allIncomingSPCIds = concatMap (.peopleCategory) placeDetails.serviceCategories
+  existingSPCs <- concat <$> mapM QServicePeopleCategory.findAllById allIncomingSPCIds
+  let idCountMap = foldl' (\acc spc -> Map.insertWith (+) spc.id 1 acc) Map.empty existingSPCs
+  let spcsToDelete =
+        filter
+          ( \existingSPC ->
+              not $
+                any
+                  ( \incomingSPC ->
+                      incomingSPC.id == existingSPC.id && incomingSPC.timeBounds == existingSPC.timeBounds
+                  )
+                  placeDetails.servicePeopleCategories
+          )
+          existingSPCs
+  let finalIdCountMap = foldl' (\acc spc -> Map.insertWith (+) spc.id (-1) acc) idCountMap spcsToDelete
+  forM_ spcsToDelete $ \spc -> do
+    let currentCount = fromMaybe 0 $ Map.lookup spc.id finalIdCountMap :: Int
+    when (currentCount > 0) $
+      QServicePeopleCategory.deleteByIdAndTimebounds spc.id spc.timeBounds
+
   forM_ placeDetails.servicePeopleCategories $ \spcDetails -> do
-    mbExistingSPC <- QServicePeopleCategory.findById spcDetails.id
+    mbExistingSPC <- QServicePeopleCategory.findByIdAndTimebounds spcDetails.id spcDetails.timeBounds
     case mbExistingSPC of
       Just existingSPC -> do
-        -- Update existing service people category
         let updatedSPC = updateServicePeopleCategory existingSPC spcDetails
-        QServicePeopleCategory.updateByPrimaryKey updatedSPC
+        QServicePeopleCategory.updateByIdAndTimebounds updatedSPC
       Nothing -> do
-        -- Create new service people category
         newSPC <- createServicePeopleCategory (merchantId, merchantOpCityId) spcDetails ticketPlace.id
         QServicePeopleCategory.create newSPC
 
