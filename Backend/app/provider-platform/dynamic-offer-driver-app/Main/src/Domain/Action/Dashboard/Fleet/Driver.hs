@@ -74,6 +74,7 @@ import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
+import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
@@ -419,16 +420,27 @@ getDriverFleetGetAllVehicle ::
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
+  Maybe Bool ->
   Flow Common.ListVehicleRes
-getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
+getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString mbIsActive = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
-  vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
-  vehicles <- traverse convertToVehicleAPIEntity vehicleList
-  return $ Common.ListVehicleRes vehicles
+  case mbIsActive of
+    Just True -> do
+      activeVehicleList <- QRCAssociation.findAllActiveAssociationByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mbRegNumberString mbRegNumberStringHash
+      vehicles <- traverse convertToVehicleAPIEntityFromAssociation activeVehicleList
+      return $ Common.ListVehicleRes vehicles
+    Just False -> do
+      inactiveVehicleList <- QRCAssociation.findAllInactiveAssociationByFleetOwnerId fleetOwnerId limit offset mbRegNumberString mbRegNumberStringHash
+      vehicles <- traverse convertToVehicleAPIEntityFromAssociation inactiveVehicleList
+      return $ Common.ListVehicleRes vehicles
+    Nothing -> do
+      vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
+      vehicles <- traverse convertToVehicleAPIEntity vehicleList
+      return $ Common.ListVehicleRes vehicles
 
 convertToVehicleAPIEntity :: VehicleRegistrationCertificate -> Flow Common.VehicleAPIEntity
 convertToVehicleAPIEntity VehicleRegistrationCertificate {..} = do
@@ -444,6 +456,18 @@ convertToVehicleAPIEntity VehicleRegistrationCertificate {..} = do
         isActive = (Just isActive)
       }
 
+convertToVehicleAPIEntityFromAssociation :: (DriverRCAssociation, VehicleRegistrationCertificate) -> Flow Common.VehicleAPIEntity
+convertToVehicleAPIEntityFromAssociation (association, rc) = do
+  certificateNumber' <- decrypt rc.certificateNumber
+  pure
+    Common.VehicleAPIEntity
+      { variant = DCommon.castVehicleVariantDashboard rc.vehicleVariant,
+        model = rc.vehicleModel,
+        color = rc.vehicleColor,
+        registrationNo = certificateNumber',
+        isActive = (Just association.isRcActive)
+      }
+
 ---------------------------------------------------------------------
 getDriverFleetGetAllDriver ::
   ShortId DM.Merchant ->
@@ -454,8 +478,9 @@ getDriverFleetGetAllDriver ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Flow Common.FleetListDriverRes
-getDriverFleetGetAllDriver merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
+getDriverFleetGetAllDriver merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString mbIsActive = do
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let limit = fromMaybe 10 mbLimit
@@ -465,9 +490,19 @@ getDriverFleetGetAllDriver merchantShortId _opCity fleetOwnerId mbLimit mbOffset
     Nothing -> case mbMobileNumber of
       Just phNo -> Just <$> getDbHash phNo
       Nothing -> pure Nothing
-  pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString (Just True)
-  fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
-  return $ Common.FleetListDriverRes fleetDriversInfos
+  case mbIsActive of
+    Just True -> do
+      pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just True)
+      fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
+      return $ Common.FleetListDriverRes fleetDriversInfos
+    Just False -> do
+      pairs <- FDV.findAllInactiveDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mobileNumberHash mbName mbSearchString
+      fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
+      return $ Common.FleetListDriverRes fleetDriversInfos
+    Nothing -> do
+      pairs <- FDV.findAllDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mobileNumberHash mbName mbSearchString
+      fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
+      return $ Common.FleetListDriverRes fleetDriversInfos
 
 convertToDriverAPIEntity :: (FleetDriverAssociation, DP.Person) -> Flow Common.FleetDriversAPIEntity
 convertToDriverAPIEntity (_, person) = do
@@ -1480,19 +1515,41 @@ castActionSource actionSource = case actionSource of
 
 ---------------------------------------------------------------------
 
-getDriverFleetGetAllBadge :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Flow Common.FleetBadgeRes
-getDriverFleetGetAllBadge merchantShortId opCity fleetOwnerId limit offset mbSearchString = do
+getDriverFleetGetAllBadge :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Flow Common.FleetBadgeRes
+getDriverFleetGetAllBadge merchantShortId opCity fleetOwnerId limit offset mbSearchString mbIsActive = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (toInteger <$> limit) (toInteger <$> offset) merchantOpCity.id fleetOwnerId
-  fleetBadgeInfos <-
-    mapM
-      ( \badge -> do
-          driverBadgeAssociation <- QFBA.findActiveFleetBadgeAssociationById badge.id
-          pure $ Common.FleetBadgesAPIEntity badge.badgeName (isJust driverBadgeAssociation)
-      )
-      fleetBadgesByOwner
-  return $ Common.FleetBadgeRes {..}
+  case mbIsActive of
+    Just True -> do
+      activeBadges <- QFBA.findAllActiveFleetBadgeAssociation limit offset mbSearchString
+      fleetBadgeInfos <-
+        mapM
+          ( \badgeAssociation -> do
+              badge <- QFB.findByPrimaryKey badgeAssociation.badgeId >>= fromMaybeM (FleetBadgeNotFound badgeAssociation.badgeId.getId)
+              pure $ Common.FleetBadgesAPIEntity badge.badgeName True
+          )
+          activeBadges
+      return $ Common.FleetBadgeRes {..}
+    Just False -> do
+      inactiveBadges <- QFBA.findAllInactiveFleetBadgeAssociation limit offset mbSearchString
+      fleetBadgeInfos <-
+        mapM
+          ( \badgeAssociation -> do
+              badge <- QFB.findByPrimaryKey badgeAssociation.badgeId >>= fromMaybeM (FleetBadgeNotFound badgeAssociation.badgeId.getId)
+              pure $ Common.FleetBadgesAPIEntity badge.badgeName False
+          )
+          inactiveBadges
+      return $ Common.FleetBadgeRes {..}
+    Nothing -> do
+      fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (toInteger <$> limit) (toInteger <$> offset) merchantOpCity.id fleetOwnerId
+      fleetBadgeInfos <-
+        mapM
+          ( \badge -> do
+              driverBadgeAssociation <- QFBA.findActiveFleetBadgeAssociationById badge.id
+              pure $ Common.FleetBadgesAPIEntity badge.badgeName (isJust driverBadgeAssociation)
+          )
+          fleetBadgesByOwner
+      return $ Common.FleetBadgeRes {..}
 
 ---------------------------------------------------------------------
 getDriverFleetRoutes ::

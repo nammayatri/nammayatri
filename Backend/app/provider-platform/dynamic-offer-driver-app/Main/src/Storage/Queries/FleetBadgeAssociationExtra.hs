@@ -3,9 +3,13 @@
 
 module Storage.Queries.FleetBadgeAssociationExtra where
 
+import Control.Applicative (liftA2)
+import qualified Data.Text as T
+import qualified Database.Beam as B
 import Domain.Types.FleetBadge
 import Domain.Types.FleetBadgeAssociation
 import Domain.Types.Person
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -13,6 +17,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.FleetBadge as BeamFB
 import qualified Storage.Beam.FleetBadgeAssociation as BeamFBA
 import Storage.Queries.OrphanInstances.FleetBadgeAssociation
 
@@ -60,6 +66,75 @@ findActiveFleetBadgeAssociationById (Id fleetBadge) = do
     (Just 1)
     Nothing
     <&> listToMaybe
+
+findAllActiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Maybe Text -> m [FleetBadgeAssociation]
+findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString = do
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \(fba, badge) ->
+              B.sqlBool_ (fba.associatedTill B.>=. B.val_ (Just now))
+                B.&&?. (fba.isActive B.==?. B.val_ True)
+                B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badge.badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchString
+          )
+          $ do
+            fleetBadgeAssociation <- B.all_ (BeamCommon.fleetBadgeAssociation BeamCommon.atlasDB)
+            badge <- B.join_ (BeamCommon.fleetBadge BeamCommon.atlasDB) (\badge -> BeamFB.id badge B.==. BeamFBA.badgeId fleetBadgeAssociation)
+            pure (fleetBadgeAssociation, badge)
+  case res of
+    Right fleetBadgeList -> catMaybes <$> traverse (fromTType' . fst) fleetBadgeList
+    Left _ -> pure []
+findAllActiveFleetBadgeAssociation mbLimit mbOffset mbSearchString = do
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromIntegral limit) $
+          B.offset_ (fromIntegral offset) $
+            B.filter_'
+              ( \(fba, badge) ->
+                  B.sqlBool_ (fba.associatedTill B.>=. B.val_ (Just now))
+                    B.&&?. (fba.isActive B.==?. B.val_ True)
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badge.badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchString
+              )
+              $ do
+                fleetBadgeAssociation <- B.all_ (BeamCommon.fleetBadgeAssociation BeamCommon.atlasDB)
+                badge <- B.join_ (BeamCommon.fleetBadge BeamCommon.atlasDB) (\badge -> BeamFB.id badge B.==. BeamFBA.badgeId fleetBadgeAssociation)
+                pure (fleetBadgeAssociation, badge)
+  case res of
+    Right fleetBadgeList -> catMaybes <$> traverse (fromTType' . fst) fleetBadgeList
+    Left _ -> pure []
+
+findAllInactiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Maybe Text -> m [FleetBadgeAssociation]
+findAllInactiveFleetBadgeAssociation mbLimit mbOffset mbSearchString = do
+  allActive <- findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString
+  let activeIds = map (getId . badgeId) allActive
+  dbConf <- getReplicaBeamConfig
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromIntegral limit) $
+          B.offset_ (fromIntegral offset) $
+            B.filter_'
+              ( \(fba, badge) ->
+                  B.sqlBool_ (B.not_ (fba.badgeId `B.in_` (B.val_ <$> activeIds)))
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badge.badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchString
+              )
+              $ do
+                fleetBadgeAssociation <- B.all_ (BeamCommon.fleetBadgeAssociation BeamCommon.atlasDB)
+                badge <- B.join_ (BeamCommon.fleetBadge BeamCommon.atlasDB) (\badge -> BeamFB.id badge B.==. BeamFBA.badgeId fleetBadgeAssociation)
+                pure (fleetBadgeAssociation, badge)
+  case res of
+    Right fleetBadgeList -> catMaybes <$> traverse (fromTType' . fst) fleetBadgeList
+    Left _ -> pure []
 
 createBadgeAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetBadgeAssociation -> m ()
 createBadgeAssociationIfNotExists badgeAssociation = do
