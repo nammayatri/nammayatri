@@ -10,12 +10,15 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import qualified Tools.Beam.UtilsTH
 
 data RouteStopTimeTable = RouteStopTimeTable
-  { integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+  { delay :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     routeCode :: Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    source :: Domain.Types.RouteStopTimeTable.SourceType,
     stopCode :: Kernel.Prelude.Text,
     timeOfArrival :: Kernel.Prelude.TimeOfDay,
     timeOfDeparture :: Kernel.Prelude.TimeOfDay,
@@ -26,3 +29,7 @@ data RouteStopTimeTable = RouteStopTimeTable
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SourceType = LIVE | GTFS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SourceType)

@@ -64,7 +64,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RouteStopTimeTable.RouteStopTimeTable {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.routeCode routeCode,
+    [ Se.Set Beam.delay delay,
+      Se.Set Beam.routeCode routeCode,
+      Se.Set Beam.source (Kernel.Prelude.Just source),
       Se.Set Beam.timeOfDeparture timeOfDeparture,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -85,9 +87,11 @@ instance FromTType' Beam.RouteStopTimeTable Domain.Types.RouteStopTimeTable.Rout
     pure $
       Just
         Domain.Types.RouteStopTimeTable.RouteStopTimeTable
-          { integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
+          { delay = delay,
+            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             routeCode = routeCode,
             serviceTierType = serviceTierType,
+            source = Kernel.Prelude.fromMaybe Domain.Types.RouteStopTimeTable.GTFS source,
             stopCode = stopCode,
             timeOfArrival = timeOfArrival,
             timeOfDeparture = timeOfDeparture,
@@ -101,9 +105,11 @@ instance FromTType' Beam.RouteStopTimeTable Domain.Types.RouteStopTimeTable.Rout
 instance ToTType' Beam.RouteStopTimeTable Domain.Types.RouteStopTimeTable.RouteStopTimeTable where
   toTType' (Domain.Types.RouteStopTimeTable.RouteStopTimeTable {..}) = do
     Beam.RouteStopTimeTableT
-      { Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
+      { Beam.delay = delay,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.routeCode = routeCode,
         Beam.serviceTierType = serviceTierType,
+        Beam.source = Kernel.Prelude.Just source,
         Beam.stopCode = stopCode,
         Beam.timeOfArrival = timeOfArrival,
         Beam.timeOfDeparture = timeOfDeparture,

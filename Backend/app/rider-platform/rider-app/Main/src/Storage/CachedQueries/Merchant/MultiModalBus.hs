@@ -12,7 +12,6 @@ where
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
-import qualified Environment
 import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -92,5 +91,5 @@ getRoutesBuses routeId = do
 
   return $ RouteWithBuses routeId buses
 
-getBusesForRoutes :: [Text] -> Environment.Flow [RouteWithBuses]
+getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithBuses]
 getBusesForRoutes = mapM getRoutesBuses

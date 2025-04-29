@@ -25,3 +25,13 @@ ALTER TABLE atlas_app.route_stop_time_table ADD PRIMARY KEY ( integrated_bpp_con
 
 ALTER TABLE atlas_app.route_stop_time_table DROP CONSTRAINT route_stop_time_table_pkey;
 ALTER TABLE atlas_app.route_stop_time_table ADD PRIMARY KEY ( integrated_bpp_config_id, service_tier_type, stop_code, time_of_arrival, trip_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN delay integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN source text ;

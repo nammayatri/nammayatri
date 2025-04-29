@@ -715,14 +715,15 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
+  let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
-  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId (castTravelModeToVehicleCategory journeyLegInfo.mode) DIBC.MULTIMODAL
+  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
       let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
-      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig.id merchantId person.merchantOperatingCityId
+      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig.id merchantId person.merchantOperatingCityId vehicleCategory
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
   where

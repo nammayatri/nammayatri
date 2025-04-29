@@ -5,6 +5,7 @@ import qualified API.Types.UI.FRFSTicketService as API
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative
 import Data.List (sortBy, sortOn)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -34,6 +35,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -352,7 +354,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
           QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
       pure newStatuses
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> m (Maybe JT.GetFareResponse)
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> m (Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFromArrivalTime = do
   let mbRouteDetail = mergeFFRFSRouteDetails routeDetails
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
@@ -388,13 +390,13 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
       logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory
       return Nothing
   where
-    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r) => UTCTime -> Text -> Text -> Id DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => UTCTime -> Text -> Text -> Id DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
     filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfigId fares = do
       case vehicleCategory of
         Spec.BUS -> do
           -- Above getFares function return fares for all types of buses (e.g. AC, Non-AC, Ordinary, etc.) but instead of showing all types of buses to user,
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
-          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfigId merchant.id merchantOperatingCity.id
+          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfigId merchant.id merchantOperatingCity.id Enums.BUS
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
           return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
         _ -> return (Nothing, fares)

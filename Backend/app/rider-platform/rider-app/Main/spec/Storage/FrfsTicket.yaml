@@ -1063,6 +1063,17 @@ RouteStopTimeTable:
     timeOfArrival: TimeOfDay
     serviceTierType: ServiceTierType
     integratedBppConfigId: Id IntegratedBPPConfig
+    delay: Maybe Seconds
+    source: SourceType
+  beamType:
+    source: Maybe SourceType
+  types:
+    SourceType:
+      enum: "LIVE, GTFS"
+  fromTType:
+    source: Kernel.Prelude.fromMaybe Domain.Types.RouteStopTimeTable.GTFS|I
+  toTType:
+    source: Kernel.Prelude.Just|I
 
   constraints:
     tripId: PrimaryKey
