@@ -67,3 +67,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN llm_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN pan_verification_service character varying(30)  default 'HyperVerge';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN gst_verification_service character varying(30) ;

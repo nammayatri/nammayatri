@@ -35,3 +35,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_l
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_license_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_number text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_image_id text ;

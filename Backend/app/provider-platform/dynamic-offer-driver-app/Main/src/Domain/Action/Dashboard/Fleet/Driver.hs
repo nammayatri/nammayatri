@@ -1188,7 +1188,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
   makeFleetOwnerInfoRes panNumber fleetConfig fleetOwnerInfo operatorName operatorContact
   where
     makeFleetOwnerInfoRes :: Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes panNumber mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
+    makeFleetOwnerInfoRes panNumber_ mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
               Common.FleetConfig
@@ -1198,7 +1198,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {panNumber = panNumber, fleetType = show fleetType, ..}
+      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, fleetType = show fleetType, ..}
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo

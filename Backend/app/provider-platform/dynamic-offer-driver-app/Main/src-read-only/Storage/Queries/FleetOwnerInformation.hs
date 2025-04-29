@@ -51,6 +51,13 @@ updateGstImage gstNumber gstImageId fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.gstNumber gstNumber, Se.Set Beam.gstImageId gstImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updatePanImage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePanImage panNumber panImageId fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.panNumber panNumber, Se.Set Beam.panImageId panImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateReferredByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferredByOperatorId referredByOperatorId fleetOwnerPersonId = do
   _now <- getCurrentTime
@@ -71,6 +78,8 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
       Se.Set Beam.gstImageId gstImageId,
       Se.Set Beam.gstNumber gstNumber,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.panImageId panImageId,
+      Se.Set Beam.panNumber panNumber,
       Se.Set Beam.referredByOperatorId referredByOperatorId,
       Se.Set Beam.verified verified,
       Se.Set Beam.createdAt createdAt,
@@ -92,6 +101,8 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             gstImageId = gstImageId,
             gstNumber = gstNumber,
             merchantId = Kernel.Types.Id.Id merchantId,
+            panImageId = panImageId,
+            panNumber = panNumber,
             referredByOperatorId = referredByOperatorId,
             verified = verified,
             createdAt = createdAt,
@@ -110,6 +121,8 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.gstImageId = gstImageId,
         Beam.gstNumber = gstNumber,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.panImageId = panImageId,
+        Beam.panNumber = panNumber,
         Beam.referredByOperatorId = referredByOperatorId,
         Beam.verified = verified,
         Beam.createdAt = createdAt,

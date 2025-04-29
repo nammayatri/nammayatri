@@ -12,8 +12,10 @@ FleetOwnerInformation:
     blocked: Bool
     verified: Bool
     gstNumber: Maybe Text
+    panNumber: Maybe Text
     fleetType: FleetType
     gstImageId : Maybe Text
+    panImageId: Maybe Text
     businessLicenseNumber : Maybe Text
     businessLicenseImageId : Maybe Text
     referredByOperatorId: Maybe Text
@@ -35,6 +37,10 @@ FleetOwnerInformation:
     updateGstImage:
       kvFunction: updateWithKV
       params: [gstNumber, gstImageId, updatedAt]
+      where: fleetOwnerPersonId
+    updatePanImage:
+      kvFunction: updateWithKV
+      params: [panNumber, panImageId, updatedAt]
       where: fleetOwnerPersonId
     updateBusinessLicenseImage:
       kvFunction: updateOneWithKV

@@ -41,6 +41,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,
     getRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
+    gstVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     initiateCall :: B.C f Kernel.External.Call.CallService,
     issueTicketService :: B.C f Kernel.External.Ticket.Types.IssueTicketService,
     llmChatCompletion :: B.C f (Kernel.Prelude.Maybe ChatCompletion.Types.LLMChatCompletionService),

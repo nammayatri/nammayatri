@@ -41,6 +41,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getPlaceName :: Kernel.External.Maps.Types.MapsService,
     getRoutes :: Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: Kernel.External.Maps.Types.MapsService,
+    gstVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     initiateCall :: Kernel.External.Call.CallService,
     issueTicketService :: Kernel.External.Ticket.Types.IssueTicketService,
     llmChatCompletion :: ChatCompletion.Types.LLMChatCompletionService,

@@ -14,13 +14,10 @@
 
 module Domain.Action.Dashboard.Fleet.Registration where
 
-import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
-import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -83,12 +80,8 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     email :: Maybe Text,
     city :: City.City,
     fleetType :: Maybe FOI.FleetType,
-    panNumber :: Maybe Text,
     gstNumber :: Maybe Text,
     businessLicenseNumber :: Maybe Text,
-    panImageId1 :: Maybe Text,
-    panImageId2 :: Maybe Text,
-    gstCertificateImage :: Maybe Text,
     businessLicenseImage :: Maybe Text,
     operatorReferralCode :: Maybe Text
   }
@@ -129,14 +122,6 @@ fleetOwnerRegister mbRequestorId req = do
   when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
     fleetReferral <- QDR.findById person.id
     when (isNothing fleetReferral) $ void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (req.personId, person.merchantId, person.merchantOperatingCityId)
-  whenJust req.panNumber $ \panNumber -> do
-    createPanInfo req.personId person.merchantId person.merchantOperatingCityId req.panImageId1 req.panImageId2 panNumber
-
-  whenJust req.gstCertificateImage $ \gstImage -> do
-    let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
-    image <- Image.validateImage True (req.personId, person.merchantId, person.merchantOperatingCityId) req'
-    void $ DVRC.verifyGstin True (Nothing) (req.personId, person.merchantId, person.merchantOperatingCityId) (DVRC.DriverGstinReq {gstin = fromMaybe "" req.gstNumber, imageId = gstImage, driverId = req.personId.getId})
-    QFOI.updateGstImage req.gstNumber (Just image.imageId.getId) req.personId
   fork "Uploading Business License Image" $ do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
@@ -162,14 +147,6 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled
   pure person
 
-createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Text -> Flow ()
-createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ panNo = do
-  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
-  image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
-  let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
-  void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
-createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
-
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Flow ()
 createFleetOwnerInfo personId merchantId enabled = do
   now <- getCurrentTime
@@ -186,6 +163,8 @@ createFleetOwnerInfo personId merchantId enabled = do
             businessLicenseImageId = Nothing,
             businessLicenseNumber = Nothing,
             referredByOperatorId = Nothing,
+            panImageId = Nothing,
+            panNumber = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -261,8 +240,8 @@ updateFleetOwnerInfo fleetOwnerInfo FleetOwnerRegisterReq {..} = do
   let updFleetOwnerInfo =
         fleetOwnerInfo
           { FOI.fleetType = fromMaybe fleetOwnerInfo.fleetType fleetType,
-            FOI.gstNumber = gstNumber,
-            FOI.gstImageId = gstCertificateImage,
+            FOI.gstNumber = fleetOwnerInfo.gstNumber,
+            FOI.gstImageId = fleetOwnerInfo.gstImageId,
             FOI.businessLicenseImageId = businessLicenseImage
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo
