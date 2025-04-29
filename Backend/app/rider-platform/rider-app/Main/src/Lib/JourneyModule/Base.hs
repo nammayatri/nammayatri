@@ -721,11 +721,12 @@ skipLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
   Int ->
+  Bool ->
   m ()
-skipLeg journeyId legOrder = do
+skipLeg journeyId legOrder skippedDuringConfirmation = do
   allLegs <- getAllLegsInfo journeyId
   skippingLeg <- fromMaybeM (InvalidRequest $ "Leg not found: " <> show legOrder) $ find (\leg -> leg.order == legOrder) allLegs
-  if (skippingLeg.skipBooking)
+  if skippedDuringConfirmation || skippingLeg.skipBooking
     then return ()
     else do
       when (skippingLeg.travelMode == DTrip.Walk) $

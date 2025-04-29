@@ -115,7 +115,7 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
   forM_ confirmElements $ \element -> do
-    when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder
+    when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder True
   void $ JM.startJourney confirmElements forcedBookLegOrder journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
@@ -406,7 +406,7 @@ postMultimodalJourneyLegSkip ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
-  JM.skipLeg journeyId legOrder
+  JM.skipLeg journeyId legOrder False
   pure Kernel.Types.APISuccess.Success
 
 postMultimodalJourneyLegAddSkippedLeg ::
