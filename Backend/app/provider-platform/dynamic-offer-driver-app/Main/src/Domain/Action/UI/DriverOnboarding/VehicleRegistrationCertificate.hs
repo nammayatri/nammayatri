@@ -844,8 +844,6 @@ compareRegistrationDates actualDate providedDate =
 linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = runInMasterDbAndRedis $ do
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError (RCActivationFailedPaymentDue driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Documents.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
