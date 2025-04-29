@@ -37,6 +37,7 @@ import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens(ScreenName(..), getScreen)
+import Foreign.Object (empty)
 
 initData :: ST.BusTrackingScreenState
 initData =
@@ -59,6 +60,7 @@ initData =
         , routePts : {points : []}
         , previousLatLonsOfVehicle: DM.empty
         , nearestStopFromCurrentLoc : Mb.Nothing
+        , logField : empty
         }
     , props:
         { showRouteDetailsTab: true

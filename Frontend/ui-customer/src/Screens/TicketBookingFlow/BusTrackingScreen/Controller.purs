@@ -84,6 +84,13 @@ import Data.Set as DSet
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Screens (getScreen, ScreenName(..))
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Control.Monad.Except.Trans (lift)
+import Foreign (MultipleErrors, unsafeToForeign)
+import Engineering.Helpers.LogEvent (firebaseLogEventWithArrayOfKeyValue)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -245,13 +252,20 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
                     when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
+              if (count == 1) then do
+                let etaToStore =show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
+                    params = [Tuple "Eta" etaToStore]
+                firebaseLogEventWithArrayOfKeyValue "ny_user_Eta_seen" params
+                pure unit
+              else
+                pure unit
+              
               case DT.snd finalMap of
                 Mb.Just pt -> do
                   void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
                 Mb.Nothing -> pure unit
               pure NoAction
           ]
-    
     storePrevLatLonsOfVehicle trackingData =
       DA.foldl
         (\acc item ->
