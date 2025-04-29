@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DriverGstin where
+module Storage.Queries.DriverGstin (module Storage.Queries.DriverGstin, module ReExport) where
 
 import qualified Domain.Types.DriverGstin
 import qualified Domain.Types.Image
@@ -16,6 +16,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverGstin as Beam
+import Storage.Queries.DriverGstinExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverGstin.DriverGstin -> m ())
 create = createWithKV
@@ -59,8 +60,8 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverName driverName,
-      Se.Set Beam.gstinEncrypted (((gstin & unEncrypted . encrypted))),
-      Se.Set Beam.gstinHash ((gstin & hash)),
+      Se.Set Beam.gstinEncrypted (gstin & unEncrypted . encrypted),
+      Se.Set Beam.gstinHash (gstin & hash),
       Se.Set Beam.isProvisional isProvisional,
       Se.Set Beam.legalName legalName,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -75,58 +76,3 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.DriverGstin Domain.Types.DriverGstin.DriverGstin where
-  fromTType' (Beam.DriverGstinT {..}) = do
-    pure $
-      Just
-        Domain.Types.DriverGstin.DriverGstin
-          { address = address,
-            constitutionOfBusiness = constitutionOfBusiness,
-            dateOfLiability = dateOfLiability,
-            documentImageId1 = Kernel.Types.Id.Id documentImageId1,
-            documentImageId2 = Kernel.Types.Id.Id <$> documentImageId2,
-            driverId = Kernel.Types.Id.Id driverId,
-            driverName = driverName,
-            gstin = EncryptedHashed (Encrypted gstinEncrypted) gstinHash,
-            id = Kernel.Types.Id.Id id,
-            isProvisional = isProvisional,
-            legalName = legalName,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            tradeName = tradeName,
-            typeOfRegistration = typeOfRegistration,
-            validFrom = validFrom,
-            validUpto = validUpto,
-            verificationStatus = verificationStatus,
-            verifiedBy = verifiedBy,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.DriverGstin Domain.Types.DriverGstin.DriverGstin where
-  toTType' (Domain.Types.DriverGstin.DriverGstin {..}) = do
-    Beam.DriverGstinT
-      { Beam.address = address,
-        Beam.constitutionOfBusiness = constitutionOfBusiness,
-        Beam.dateOfLiability = dateOfLiability,
-        Beam.documentImageId1 = Kernel.Types.Id.getId documentImageId1,
-        Beam.documentImageId2 = Kernel.Types.Id.getId <$> documentImageId2,
-        Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.driverName = driverName,
-        Beam.gstinEncrypted = ((gstin & unEncrypted . encrypted)),
-        Beam.gstinHash = (gstin & hash),
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.isProvisional = isProvisional,
-        Beam.legalName = legalName,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.tradeName = tradeName,
-        Beam.typeOfRegistration = typeOfRegistration,
-        Beam.validFrom = validFrom,
-        Beam.validUpto = validUpto,
-        Beam.verificationStatus = verificationStatus,
-        Beam.verifiedBy = verifiedBy,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

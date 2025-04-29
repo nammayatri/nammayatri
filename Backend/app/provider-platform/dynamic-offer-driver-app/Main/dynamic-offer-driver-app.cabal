@@ -528,6 +528,7 @@ library
       Storage.Queries.DriverBlockReasonExtra
       Storage.Queries.DriverFeeExtra
       Storage.Queries.DriverGoHomeRequestExtra
+      Storage.Queries.DriverGstinExtra
       Storage.Queries.DriverHomeLocationExtra
       Storage.Queries.DriverInformation.Internal
       Storage.Queries.DriverInformationExtra
@@ -1174,6 +1175,7 @@ library
       Storage.Queries.OrphanInstances.DriverBlockReason
       Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverGoHomeRequest
+      Storage.Queries.OrphanInstances.DriverGstin
       Storage.Queries.OrphanInstances.DriverHomeLocation
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense

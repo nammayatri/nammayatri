@@ -93,6 +93,17 @@ data DriverPanReq = DriverPanReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverGstinReq = DriverGstinReq
+  { imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    gstNumber :: Kernel.Prelude.Text,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
+    verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverVehicleServiceTier = DriverVehicleServiceTier
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,

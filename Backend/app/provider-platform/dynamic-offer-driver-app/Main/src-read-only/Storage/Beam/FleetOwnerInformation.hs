@@ -21,6 +21,8 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
+    panImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

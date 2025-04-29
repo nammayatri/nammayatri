@@ -20,6 +20,8 @@ data FleetOwnerInformation = FleetOwnerInformation
     gstImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    panImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verified :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,

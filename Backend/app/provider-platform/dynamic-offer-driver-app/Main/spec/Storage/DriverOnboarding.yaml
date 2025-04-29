@@ -748,6 +748,8 @@ DriverGstin:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId1
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 DriverBankAccount:
   tableName: driver_bank_account

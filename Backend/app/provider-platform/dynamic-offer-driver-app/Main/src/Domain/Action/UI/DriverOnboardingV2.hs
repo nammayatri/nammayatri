@@ -16,7 +16,8 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverBankAccount as DDBA
-import qualified Domain.Types.DriverPanCard as Domain
+import qualified Domain.Types.DriverGstin as DGST
+import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
@@ -61,6 +62,7 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
@@ -596,7 +598,7 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  let panVerificationService = fromMaybe VI.Idfy merchantServiceUsageConfig.panVerificationService
+  let mbPanVerificationService = merchantServiceUsageConfig.panVerificationService
 
   mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
   whenJust mbPanInfo $ \panInfo -> do
@@ -609,28 +611,12 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
-  verificationStatus <- case panVerificationService of
-    VI.HyperVerge -> do
-      void $ checkIfGenuineReq req
-      pure Documents.VALID
-    VI.Idfy -> do
-      image1 <- getImage req.imageId1
-      resp <-
-        Verification.extractPanImage person.merchantId merchantOpCityId $
-          Verification.ExtractImageReq
-            { image1 = image1,
-              image2 = Nothing,
-              driverId = person.id.getId
-            }
-      logDebug $ show resp
-      case resp.extractedPan of
-        Just extractedPan -> do
-          let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
-          unless (extractedPanNo == Just req.panNumber) $
-            throwError $ InvalidRequest "Inavlid Image, pan number not matching."
-          pure Documents.VALID
-        Nothing -> throwError $ InvalidRequest "Invalid PAN image"
-    _ -> throwError $ InvalidRequest "ServiceConfig not supported"
+  verificationStatus <- case mbPanVerificationService of
+    Just VI.HyperVerge -> do
+      callHyperVerge
+    Just VI.Idfy -> do
+      callIdfy person.id.getId
+    _ -> pure Documents.VALID
 
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   return Success
@@ -662,6 +648,28 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
       where
         formatUTCToDateString :: UTCTime -> String
         formatUTCToDateString utcTime = formatTime defaultTimeLocale "%d-%m-%Y" utcTime
+    callHyperVerge :: Flow Documents.VerificationStatus
+    callHyperVerge = do
+      void $ checkIfGenuineReq req
+      pure Documents.VALID
+    callIdfy :: Text -> Flow Documents.VerificationStatus
+    callIdfy personId = do
+      image1 <- getImage req.imageId1
+      resp <-
+        Verification.extractPanImage merchantId merchantOpCityId $
+          Verification.ExtractImageReq
+            { image1 = image1,
+              image2 = Nothing,
+              driverId = personId
+            }
+      logDebug $ show resp
+      case resp.extractedPan of
+        Just extractedPan -> do
+          let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+          unless (extractedPanNo == Just req.panNumber) $
+            throwError $ InvalidRequest "Invalid Image, PAN number not matching."
+          pure Documents.VALID
+        Nothing -> throwError $ InvalidRequest "Invalid PAN image"
 
 buildPanCard ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
@@ -669,13 +677,13 @@ buildPanCard ::
   API.Types.UI.DriverOnboardingV2.DriverPanReq ->
   Documents.VerificationStatus ->
   Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
-  Environment.Flow Domain.DriverPanCard
+  Environment.Flow DPC.DriverPanCard
 buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..} verificationStatus merchantOperatingCityId = do
   now <- getCurrentTime
   id <- generateGUID
   encryptedPan <- encrypt panNumber
   return
-    Domain.DriverPanCard
+    DPC.DriverPanCard
       { consentTimestamp = fromMaybe now consentTimestamp,
         documentImageId1 = imageId1,
         documentImageId2 = imageId2,
@@ -690,6 +698,104 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         updatedAt = now,
         verificationStatus = verificationStatus,
         driverNameOnGovtDB = nameOnGovtDB,
+        ..
+      }
+
+postDriverRegisterGstin ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.DriverGstinReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let mbGstVerificationService = merchantServiceUsageConfig.gstVerificationService
+
+  mbGstInfo <- QDGTIN.findUnInvalidByGstNumber req.gstNumber
+  whenJust mbGstInfo $ \gstInfo -> do
+    when (gstInfo.driverId /= personId) $ do
+      ImageQuery.deleteById req.imageId1
+      throwError $ DocumentAlreadyLinkedToAnotherDriver "GSTIN"
+    when (gstInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
+      ImageQuery.deleteById req.imageId1
+      throwError $ DocumentUnderManualReview "GSTIN"
+    when (gstInfo.verificationStatus == Documents.VALID) $ do
+      ImageQuery.deleteById req.imageId1
+      throwError $ DocumentAlreadyValidated "GSTIN"
+  verificationStatus <- case mbGstVerificationService of
+    Just VI.Idfy -> do
+      callIdfy person.id.getId
+    _ -> pure Documents.VALID
+
+  QDGTIN.upsertGstinRecord =<< buildGstCard merchantId person req verificationStatus (Just merchantOpCityId)
+  return Success
+  where
+    getImage :: Id Image.Image -> Flow Text
+    getImage imageId = do
+      imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
+      unless (imageMetadata.imageType == DTO.GSTCertificate) $
+        throwError (ImageInvalidType (show DTO.GSTCertificate) (show imageMetadata.imageType))
+      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+        S3.get $ T.unpack imageMetadata.s3Path
+    callIdfy :: Text -> Flow Documents.VerificationStatus
+    callIdfy personId = do
+      image1 <- getImage req.imageId1
+      resp <-
+        Verification.extractGSTImage merchantId merchantOpCityId $
+          Verification.ExtractImageReq
+            { image1 = image1,
+              image2 = Nothing,
+              driverId = personId
+            }
+      logDebug $ show resp
+      case resp.extractedGST of
+        Just extractedGst -> do
+          let extractedGstNo = removeSpaceAndDash <$> extractedGst.gstin
+          unless (extractedGstNo == Just req.gstNumber) $
+            throwError $ InvalidRequest "Inavlid Image, gst number not matching."
+          pure Documents.VALID
+        Nothing -> throwError $ InvalidRequest "Invalid gst image"
+
+buildGstCard ::
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Domain.Types.Person.Person ->
+  API.Types.UI.DriverOnboardingV2.DriverGstinReq ->
+  Documents.VerificationStatus ->
+  Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  Environment.Flow DGST.DriverGstin
+buildGstCard merchantId person API.Types.UI.DriverOnboardingV2.DriverGstinReq {..} verificationStatus merchantOperatingCityId = do
+  now <- getCurrentTime
+  id <- generateGUID
+  encryptedGst <- encrypt gstNumber
+  return
+    DGST.DriverGstin
+      { documentImageId1 = imageId1,
+        documentImageId2 = imageId2,
+        driverId = person.id,
+        driverName = Just person.firstName,
+        address = Nothing,
+        constitutionOfBusiness = Nothing,
+        merchantOperatingCityId = merchantOperatingCityId,
+        legalName = Nothing,
+        tradeName = Nothing,
+        typeOfRegistration = Nothing,
+        dateOfLiability = Nothing,
+        isProvisional = Nothing,
+        validFrom = Nothing,
+        validUpto = Nothing,
+        id = id,
+        gstin = encryptedGst,
+        merchantId = Just merchantId,
+        createdAt = now,
+        updatedAt = now,
+        verificationStatus = verificationStatus,
         ..
       }
 
