@@ -61,7 +61,9 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Confidence
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SW
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -1097,12 +1099,14 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
         referredByPersonStats <- getPersonStats (Id referredByCustomerId)
         personsWithSameDeviceId <- QP.findAllByDeviceId person_.deviceId
         let dailyPayoutCountKey = getDailyPayoutCountKey referredByCustomerId
+            monthlyPayoutCountKey = getMonthlyPayoutKey referredByCustomerId
         dailyPayoutCount_ <- Redis.get dailyPayoutCountKey
+        monthlyPayoutCount <- fromIntegral <$> SWC.getCurrentWindowCount monthlyPayoutCountKey SW.SlidingWindowOptions {period = 1, periodType = SW.Months}
         let dailyPayoutCount = fromMaybe 0 dailyPayoutCount_ -- for referredBy customer
             isDeviceIdValid = (length personsWithSameDeviceId == 1) -- deviceId of new customer should be unique
             deviceIdCheck = fromMaybe False riderConfig.isDeviceIdCheckDisabled || isDeviceIdValid
             isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
-            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
+            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (monthlyPayoutCount < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
         when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
@@ -1188,7 +1192,9 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
     setPayoutCountForReferree personId dailyPayoutCount = do
       expirationPeriodForDay <- getExpirationSeconds riderConfig.timeDiffFromUtc
       let dailyPayoutCountKey = getDailyPayoutCountKey personId
+          monthlyPayoutCountKey = getMonthlyPayoutKey personId
       Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
+      SWC.incrementByValue 1 monthlyPayoutCountKey SW.SlidingWindowOptions {period = 1, periodType = SW.Months}
 
     sendPNToPerson person oldCustomer =
       when (isNothing person.payoutVpa) $ do
@@ -1206,6 +1212,9 @@ payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
 
 getDailyPayoutCountKey :: Text -> Text
 getDailyPayoutCountKey personId = "Payout:Daily:PId" <> personId
+
+getMonthlyPayoutKey :: Text -> Text
+getMonthlyPayoutKey personId = "Payout:Monthly:PId-" <> personId
 
 sendRideBookingDetailsViaWhatsapp ::
   ( CacheFlow m r,
