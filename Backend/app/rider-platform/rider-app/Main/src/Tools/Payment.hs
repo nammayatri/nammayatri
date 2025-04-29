@@ -46,11 +46,13 @@ where
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.List (groupBy, sortBy, sortOn)
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import Domain.Types.TicketPlace
+import qualified EulerHS.Language as L
 import Kernel.External.Payment.Interface as Reexport hiding
   ( autoRefunds,
     cancelPaymentIntent,
@@ -78,9 +80,11 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Kernel.Utils.Version
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
+import System.Environment as SE
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
@@ -145,14 +149,17 @@ runWithServiceConfigAndServiceName ::
   req ->
   m resp
 runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType clientSdkVersion req = do
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
   placeBasedConfig <- case mbPlaceId of
     Just id ->
-      if (versionToText <$> clientSdkVersion) == Just "14.0.0"
-        then CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
-        else CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+      case clientSdkVersion of
+        Just v
+          | v <= textToVersionDefault aaClientSdkVersion ->
+            CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.AAJuspay)
+        _ -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType aaClientSdkVersion paymentServiceType)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> func vsc req
@@ -162,11 +169,11 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
-    getPaymentServiceByType = \case
+    getPaymentServiceByType aaClientSdkVersion = \case
       Normal ->
-        if (versionToText <$> clientSdkVersion) == Just "14.0.0"
-          then DMSC.PaymentService Payment.Juspay
-          else DMSC.PaymentService Payment.Juspay
+        case clientSdkVersion of
+          Just v | v <= textToVersionDefault aaClientSdkVersion -> (DMSC.PaymentService Payment.AAJuspay)
+          _ -> (DMSC.PaymentService Payment.Juspay)
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
