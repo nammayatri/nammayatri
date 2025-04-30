@@ -214,11 +214,21 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void onDestroy() {
         Log.e("onDestroy", "onDestroy");
         DefaultMediaPlayerControl.mediaPlayer.reset();
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-            LocationUpdateService.deRegisterCallback(locationCallback);
+        String s = getKeysInSharedPref("APP_CACHING_CONFIG");
+        boolean isCachingEnabled = false;
+        try {
+            JSONObject config = new JSONObject(s);
+            isCachingEnabled = config.optBoolean(getKeysInSharedPref("DRIVER_LOCATION"),false);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
-            LocationUpdateServiceV2.deRegisterCallback(locationCallbackV2);
+        if (!isCachingEnabled){
+            if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+                LocationUpdateService.deRegisterCallback(locationCallback);
+            }
+            if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+                LocationUpdateServiceV2.deRegisterCallback(locationCallbackV2);
+            }
         }
         // Clearing all static variables
         // Media Utils

@@ -172,7 +172,7 @@ view push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , margin $ MarginTop 20
-          ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (navigateButtonConfig) ]
+          ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (navigateButtonConfig state) ]
         ]
       ]
     ]

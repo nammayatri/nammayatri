@@ -59,3 +59,4 @@
 
  -dontwarn com.finternet.sdk.R$anim
  -dontwarn com.finternet.sdk.R$styleable
+ -dontwarn com.clevertap.android.sdk.pushnotification.PushType

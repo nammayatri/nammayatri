@@ -14,7 +14,7 @@ initData =
         appUpdatedView : {
             primaryText : "App Update",
             secondaryText : "",
-            optionTwoText : getString UPDATE,
+            optionTwoText : "Update",
             coverImageUrl : "",
             popupFlowType : ST.NORMAL
         }

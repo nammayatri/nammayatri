@@ -126,7 +126,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
-    if (isInvalidUrl url) then pure $ Left customError
+    if (isInvalidUrl url) then pure $ Left (customError unit)
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -155,7 +155,7 @@ withAPIResult url f flow = do
 
 
 withAPIResultBT url f errorHandler flow = do
-    if (isInvalidUrl url) then errorHandler customErrorBT
+    if (isInvalidUrl url) then errorHandler (customErrorBT unit)
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -183,7 +183,7 @@ withAPIResultBT url f errorHandler flow = do
                         else pure unit
                 errorHandler (ErrorPayload err)
 
-customErrorBT = ErrorPayload { code : 400
+customErrorBT _ = ErrorPayload { code : 400
   , status : "success"
   , response : {
        error : true
@@ -193,8 +193,8 @@ customErrorBT = ErrorPayload { code : 400
   , responseHeaders : empty
   }
 
-customError :: ErrorResponse
-customError =  { code : 400
+customError :: Unit -> ErrorResponse
+customError _ =  { code : 400
   , status : "success"
   , response : {
        error : true

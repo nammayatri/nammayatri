@@ -285,7 +285,8 @@ public class MobilityCommonBridge extends HyperBridge {
     private int lastFocusedEditText;
     private SpeechRecognizer speechRecognizer;
 
-    private Queue<String> callbackQueue = new LinkedList<>();
+    private final Queue<String> callbackQueue = new LinkedList<>();
+    private final HashMap<String,String> filesCache = new HashMap<>();
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
@@ -707,11 +708,40 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @JavascriptInterface
+    public void loadFileInWebView(String fileName) {
+        String content;
+        if (filesCache.containsKey(fileName)) {
+            content = filesCache.get(fileName);
+        } else {
+            content = bridgeComponents.getFileProviderInterface().readFromFile(bridgeComponents.getContext(),fileName);
+        }
+        JsCallback callback = bridgeComponents.getJsCallback();
+        if (callback != null && content != null) {
+            callback.addJsToWebView(content);
+        };
+    }
+
+    @JavascriptInterface
+    public void storeFileInCache(String fileName){
+        filesCache.put(fileName,bridgeComponents.getFileProviderInterface().readFromFile(bridgeComponents.getContext(),fileName));
+    }
+
     @Override
     public void reset() {
-        if (receivers != null) {
-            receivers.deRegister();
-            receivers = null;
+        String s = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", "{}");
+        boolean isCachingEnabled = false;
+        try {
+            JSONObject config = new JSONObject(s);
+            isCachingEnabled = config.optBoolean(KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "DRIVER_LOCATION", ""),false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (!isCachingEnabled) {
+            if (receivers != null) {
+                receivers.deRegister();
+                receivers = null;
+            }
         }
         polylinesByMapInstance = new Hashtable<>();
         googleMap = null;
@@ -739,7 +769,9 @@ public class MobilityCommonBridge extends HyperBridge {
         userPositionMarker = null;
         storeImageUploadCallBack = null;
         if (mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
-        Utils.deRegisterCallback(callBack);
+        if (!isCachingEnabled){
+            Utils.deRegisterCallback(callBack);
+        }
     }
 
     // region Store and Trigger CallBack

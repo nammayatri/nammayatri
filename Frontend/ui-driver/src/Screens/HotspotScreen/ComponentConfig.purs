@@ -26,8 +26,8 @@ import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orien
 import Screens.Types as ST
 import Styles.Colors as Color
 
-navigateButtonConfig :: PrimaryButton.Config
-navigateButtonConfig = PrimaryButton.config
+navigateButtonConfig :: ST.HotspotScreenState -> PrimaryButton.Config
+navigateButtonConfig _ = PrimaryButton.config
   { textConfig 
     { text = getString NAVIGATE
     }

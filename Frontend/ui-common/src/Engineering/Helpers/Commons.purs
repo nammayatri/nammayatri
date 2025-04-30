@@ -184,23 +184,23 @@ setWindowVariable key value = liftFlow (setWindowVariableImpl key value)
 flowRunner :: ∀ return st. st -> Flow st return -> Aff (Either Error return)
 flowRunner state flow = do
   let
-    freeFlow = S.evalStateT $ run standardRunTime flow
+    freeFlow = S.evalStateT $ run (standardRunTime 1) flow
   attempt $ new (defaultState state) >>= freeFlow
 
-permissionCheckRunner :: PermissionCheckRunner
-permissionCheckRunner = checkIfPermissionsGranted
+permissionCheckRunner :: Int -> PermissionCheckRunner
+permissionCheckRunner _ = checkIfPermissionsGranted
 
-permissionTakeRunner :: PermissionTakeRunner
-permissionTakeRunner = requestPermissions
+permissionTakeRunner :: Int -> PermissionTakeRunner
+permissionTakeRunner _ = requestPermissions
 
-permissionRunner :: PermissionRunner
-permissionRunner = PermissionRunner permissionCheckRunner permissionTakeRunner
+permissionRunner :: Int -> PermissionRunner
+permissionRunner _ = PermissionRunner (permissionCheckRunner 1) (permissionTakeRunner 2)
 
-standardRunTime :: Runtime
-standardRunTime =
+standardRunTime :: Int -> Runtime
+standardRunTime _ =
   Runtime
     pure
-    permissionRunner
+    (permissionRunner 1)
     apiRunner
 
 readFromRef :: forall st. Ref st → FlowBT String st st
