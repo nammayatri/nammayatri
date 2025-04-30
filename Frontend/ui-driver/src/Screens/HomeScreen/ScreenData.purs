@@ -436,3 +436,6 @@ initialParkingData = {
   estimatedCharge : Nothing
 , finalCharge : Nothing
 }
+
+
+data DriverStatusChangeEntry = DriverStatusChangeNormalEntry | DriverStatusChangeMeterRideEntry

@@ -223,7 +223,7 @@ window.onMerchantEvent = function (_event, payload) {
     callInitiateResult();
     setTimeout(() => {
       getPureScript()
-    },0) 
+    },0)
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
@@ -324,6 +324,7 @@ window.onResumeListenersMap = {};
 window.internetListeners = {};
 
 window.onPause = function () {
+  window.onPauseTime = Date.now();
   console.error("onEvent onPause");
   if (JBridge.pauseMediaPlayer) {
     JBridge.pauseMediaPlayer();

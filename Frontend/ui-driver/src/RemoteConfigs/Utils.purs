@@ -254,7 +254,9 @@ defaultLocationUpdateServiceConfig = {
   batchSize : "10",
   maxBatchAge : "10",
   locationRequestInterval : "10",
-  locationRequestIntervalWithFrequentUpdates : "10"
+  locationRequestIntervalWithFrequentUpdates : "10",
+  maxTimeThreshold : "10",
+  priority : "PRIORITY_BALANCED_POWER_ACCURACY"
 }
 
 type TripBasedLocationUpdateServiceConfig = {
