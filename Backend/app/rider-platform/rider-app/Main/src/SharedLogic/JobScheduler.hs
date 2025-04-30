@@ -58,6 +58,7 @@ data RiderJobType
   | QuarterlyUpdateTag
   | PostRideSafetyNotification
   | UpdateCrisUtsData
+  | MetroBusinessHour
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -89,6 +90,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
+  restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -290,3 +292,13 @@ data PostRideSafetyNotificationJobData = PostRideSafetyNotificationJobData
 instance JobInfoProcessor 'PostRideSafetyNotification
 
 type instance JobContent 'PostRideSafetyNotification = PostRideSafetyNotificationJobData
+
+data MetroBusinessHourJobData = MetroBusinessHourJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MetroBusinessHour
+
+type instance JobContent 'MetroBusinessHour = MetroBusinessHourJobData
