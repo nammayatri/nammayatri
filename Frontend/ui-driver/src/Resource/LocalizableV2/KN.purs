@@ -279,6 +279,9 @@ getKn =
     , front_interior : "ಮುಂಭಾಗದ ಒಳಾಂಗಣ"
     , rear_interior : "ಹಿಂಭಾಗದ ಒಳಾಂಗಣ"
     , enter_the_six_digit_code_shared_with_you : "ಆನ್‌ಬೋರ್ಡಿಂಗ್ ಸಮಯದಲ್ಲಿ ಆನ್‌ಬೋರ್ಡಿಂಗ್ ಏಜೆಂಟ್ ನಿಮ್ಮೊಂದಿಗೆ ಹಂಚಿಕೊಂಡ 6-ಅಂಕಿಯ ಕೋಡ್ ಅನ್ನು ನಮೂದಿಸಿ."
+    , register_your_profile : "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಅನ್ನು ನೋಂದಾಯಿಸಿ"
+    , registration_completed : "ನೋಂದಾಯಿಸಿದ ಪೂರ್ಣಗೊಂಡಿದೆ!"
+    , we_will_notify_you_when_we_go_live : "ನಮ್ಮ ಯಾತ್ರಿ ಅನ್ನು ಸಿದ್ಧಗೊಂಡಿರುವ ಸಮಯದಲ್ಲಿ ನೀವು ಸೂಚಿಸಬಹುದು"
     , updated_at: "ಕೊನೆಯ ಸ್ಥಳ ನವೀಕರಣ"
     , date_of_registration: "ನೋಂದಣಿ ದಿನಾಂಕ"
     , date_of_issue: "ವಿತರಣೆಯ ದಿನಾಂಕ"
@@ -613,7 +616,7 @@ getKn =
     , customer_added_a_stop: "ಗ್ರಾಹಕರು ಒಂದು ನಿಲ್ದಾಣವನ್ನು ಸೇರಿಸಿದರು"
     , aadhaar_linking_required_description: (\_ -> "ಯಾತ್ರಿ ಸತಿಗೆ ಚಾಲನೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು, ದಯವಿಟ್ಟು \n ನಿಮ್ಮ ಆಧಾರ್ ಐಡಿಯನ್ನು ಲಿಂಕ್ ಮಾಡಿ")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "ಮುಂದುವರಿಸು ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ &nbsp; <a href=\"\">T&Cs</a>"
-    , by_clicking_this_you_will_be_agreeing_to_our: "ಮುಂದುವರಿಸು ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ "
+    , by_clicking_this_you_will_be_agreeing_to_our: "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C ಗೆ ಸಮ್ಮತಿಸುತ್ತೀರಿ"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "ನಿಮ್ಮ ಆಧಾರ್‌ನೊಂದಿಗೆ ಲಿಂಕ್ ಮಾಡಲಾದ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ OTP ಕಳುಹಿಸಲಾಗಿದೆ"

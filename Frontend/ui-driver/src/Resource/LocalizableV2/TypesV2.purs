@@ -357,6 +357,9 @@ newtype Keymap
   , front_interior :: String
   , rear_interior :: String
   , enter_the_six_digit_code_shared_with_you :: String
+  , register_your_profile :: String
+  , registration_completed :: String
+  , we_will_notify_you_when_we_go_live :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -2866,6 +2869,15 @@ rear_interior = a
 
 enter_the_six_digit_code_shared_with_you :: Proxy "enter_the_six_digit_code_shared_with_you"
 enter_the_six_digit_code_shared_with_you = a
+
+register_your_profile :: Proxy "register_your_profile"
+register_your_profile = a
+
+registration_completed :: Proxy "registration_completed"
+registration_completed = a
+
+we_will_notify_you_when_we_go_live :: Proxy "we_will_notify_you_when_we_go_live"
+we_will_notify_you_when_we_go_live = a
 
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a

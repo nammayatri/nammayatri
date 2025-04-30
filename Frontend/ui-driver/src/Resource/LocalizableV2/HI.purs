@@ -280,6 +280,9 @@ getHi =
     , front_interior : "सामने का आंतरिक भाग"
     , rear_interior : "पीछे का आंतरिक भाग"
     , enter_the_six_digit_code_shared_with_you : "ऑनबोर्डिंग के दौरान ऑनबोर्डिंग एजेंट द्वारा आपके साथ साझा किया गया 6-अंकीय कोड दर्ज करें"
+    , register_your_profile : "अपना प्रोफ़ाइल पंजीकृत करें"
+    , registration_completed : "पंजीकरण पूरा हुआ!"
+    , we_will_notify_you_when_we_go_live : "हम आपको जाने के लिए हमें जाने के लिए सूचित करेंगे"
     , date_of_registration: "पंजीकरण की तिथि"
     , select_date_of_issue: "जारी करने की तिथि चुनें"
     , date_of_issue: "जारी करने की तिथि"
@@ -642,7 +645,7 @@ getHi =
     , customer_added_a_stop: "ग्राहक ने एक स्टॉप जोड़ा"
     , aadhaar_linking_required_description: (\_ -> "यात्री साथी के लिए ड्राइविंग शुरू करने के लिए, कृपया अपना आधार आईडी लिंक करें")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "जारी रखें पर क्लिक करके, आप हमारे &nbsp; से सहमत होते हैं; <a href=\"\">T&Cs</a>"
-    , by_clicking_this_you_will_be_agreeing_to_our: "जारी रखें पर क्लिक करके, आप हमारे से सहमत होते हैं "
+    , by_clicking_this_you_will_be_agreeing_to_our: "जारी रखें पर क्लिक करके," <> "<br><b>आप हमारी" <> "<span style='color:#171C8F'> " <> "नियम और शर्तें" <> "</span> से सहमत होते हैं </b>"
     , terms_and_conditions_short: "नियम एवं शर्तें"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "आपके आधार से जुड़े मोबाइल नंबर पर ओटीपी भेजा गया"

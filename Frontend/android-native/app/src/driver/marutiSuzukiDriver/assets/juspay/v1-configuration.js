@@ -147,6 +147,10 @@ window.getMerchantConfig = function () {
       "quizOptionTextColor" : "#171C8F"
     }
     , "allowAllMobileNumber" : false
+    , "fontConfig" : {
+        "default" : "Roboto"
+      , "type" : "System"
+    }
     , "acExplanation" : true
     , "rcLimit" : 3
     , "rateCardScreen" :{
@@ -845,7 +849,7 @@ window.getMerchantConfig = function () {
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       },
-      "enableHvSdk" : false, // change later
+      "enableHvSdk" : true, //Todo Shikhar: change later
       "purpleRideConfig" : {
         "purpleRideConfigForAuto" : {
           "vehicleVariant" : "Auto",

@@ -278,6 +278,9 @@ getTe =
     , front_interior : "ముందు భాగం లోపలి భాగం"
     , rear_interior : "వెనుక ఇంటీరియర్"
     , enter_the_six_digit_code_shared_with_you : "ఆన్‌బోర్డింగ్ సమయంలో ఆన్‌బోర్డింగ్ ఏజెంట్ మీతో షేర్ చేసిన 6-అంకెల కోడ్‌ను నమోదు చేయండి."
+    , register_your_profile : "మీ ప్రొఫైల్‌ను నమోదు చేసుకోండి"
+    , registration_completed : "నమోదు పూర్తయ్యింది!"
+    , we_will_notify_you_when_we_go_live : "మీరు నమోదు ప్రస్తుతం సిద్ధంగా నివేదికపోతుంది"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "ప్రస్తుతం, మేము కర్ణాటక రిజిస్టర్డ్ నంబర్‌ను మాత్రమే అనుమతిస్తున్నాము")
     , updated_at: "మ్యాప్ అప్‌డేట్ చేయబడిన సమయం"
     , trip_count: "ట్రిప్ కౌంట్"
@@ -645,7 +648,7 @@ getTe =
     , customer_added_a_stop: "కస్టమర్ స్టాప్ జోడించారు"
     , aadhaar_linking_required_description: (\_ -> "యాత్రి సాతి కోసం డ్రైవింగ్ ప్రారంభించడానికి, దయచేసి \n మీ ఆధార్ IDని లింక్ చేయండి")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "కొనసాగించు క్లిక్ చేయడం ద్వారా, మీరు మా &nbsp; <a href=\"\">T&Cs</a>"
-    , by_clicking_this_you_will_be_agreeing_to_our : "కొనసాగించు క్లిక్ చేయడం ద్వారా, మీరు మా "
+    , by_clicking_this_you_will_be_agreeing_to_our : "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "నిబంధనలు & షరతులు"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "మీ ఆధార్‌తో లింక్ చేయబడిన మొబైల్ నంబర్‌కు OTP పంపబడింది"

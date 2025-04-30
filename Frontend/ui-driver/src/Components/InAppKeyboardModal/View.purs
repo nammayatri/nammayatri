@@ -223,7 +223,7 @@ singleTextBox push state =
       , cornerRadius state.inputTextConfig.cornerRadius
       , padding state.inputTextConfig.padding
       , margin state.inputTextConfig.margin
-      , onClick push (const (OnclickTextBox 0))
+      , onClick push (const (OnclickTextBox state.inputTextConfig.focusIndex))
       ] <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle),
     imageView
         [ width $ V 23

@@ -277,6 +277,9 @@ getTa =
     , front_interior : "முன்பக்க உட்புறம்"
     , rear_interior : "பின்புற உட்புறம்"
     , enter_the_six_digit_code_shared_with_you : "ஆன்போர்டிங்கின் போது ஆன்போர்டிங் முகவர் உங்களுடன் பகிர்ந்து கொண்ட 6 இலக்கக் குறியீட்டை உள்ளிடவும்."
+    , register_your_profile : "உங்கள் சுயவிவரத்தை பதிவு செய்யவும்"
+    , registration_completed : "பதிவு முடிந்தது!"
+    , we_will_notify_you_when_we_go_live : "நிங்கள் நம்ம யாத்ரி அனுப்பப்பட்டது"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "தற்போது,   கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்")
     , updated_at: "புதுப்பிக்கப்பட்டது"
     , trip_count: "இன்றைய பயணங்கள்"
@@ -614,7 +617,7 @@ getTa =
     , customer_added_a_stop: "வாடிக்கையாளர் ஒரு நிறுத்தம் சேர்க்கப்பட்டது"
     , aadhaar_linking_required_description: (\_ -> "யாத்ரி சதிக்கு வாகனம் ஓட்டத் தொடங்க, தயவுசெய்து \n உங்கள் ஆதார் ஐடியை இணைக்கவும்")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "தொடரவும் என்பதைக் கிளிக் செய்வதன் மூலம், எங்களின் &nbsp; <a href=\"\">T&C</a> &nbsp; ஐ ஒப்புக்கொள்கிறீர்கள்"
-    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue, you agree to our "
+    , by_clicking_this_you_will_be_agreeing_to_our: "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C"
     , tc_tail: "ஐ ஏற்கிறீர்கள்"
     , otp_sent_to_aadhaar_number: "OTP உங்கள் ஆதாருடன் இணைக்கப்பட்ட மொபைல் எண்ணுக்கு அனுப்பப்பட்டது"

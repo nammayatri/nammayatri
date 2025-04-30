@@ -109,7 +109,7 @@ view push state =
             , orientation VERTICAL
             , visibility $ boolToVisibility (state.props.currentStage == DETECT_LOCATION)
             ] [ currentLocationView state push
-              , currentLanguageView state push  ]
+              , currentLanguageViewV2 state push  ]
           , case state.props.currentStage of
               SELECT_LANG -> languageRadioButtonView state push 
               SELECT_CITY -> cityRadioButtonView state push
@@ -197,6 +197,46 @@ currentLocationView state push =
         , visibility $ boolToVisibility selectCityConfig.enableChangeCity
         ] <> FontStyle.tags TypoGraphy
     ]
+
+currentLanguageViewV2 :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+currentLanguageViewV2 state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin $ MarginHorizontal 16 16
+  ]
+  [ textView $
+    [ text $ getString SELECT_LANGUAGE
+    , width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , color Color.black900  
+    , gravity LEFT
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body3 TypoGraphy
+  , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      , cornerRadius 12.0
+      , stroke $ "1," <> Color.grey900
+      , onClick push $ const $ ChangeStage SELECT_LANG
+      , background Color.white900
+      , padding $ Padding 12 12 12 12
+      , margin $ MarginTop 8
+      ][textView $ 
+          [ text $ getLangFromVal state.props.selectedLanguage
+          , gravity LEFT
+          , color Color.black900
+          , weight 1.0
+          ] <> FontStyle.subHeading1 TypoGraphy
+        , imageView
+          [ width $ V 20
+          , height $ V 20
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_black"
+          ]
+        ]
+  ]
 
 currentLanguageView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLanguageView state push = 

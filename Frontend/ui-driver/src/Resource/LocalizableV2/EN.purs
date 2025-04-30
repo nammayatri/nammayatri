@@ -279,6 +279,9 @@ getEn =
     , front_interior : "Front Interior"
     , rear_interior : "Rear Interior"
     , enter_the_six_digit_code_shared_with_you : "Enter the 6-digit code shared with you by the onboarding agent during onboarding"
+    , register_your_profile : "Register your profile"
+    , registration_completed : "Registration Completed!"
+    , we_will_notify_you_when_we_go_live : "We'll notify you when we go live"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC location is not matching with your location")
     , updated_at: "Map updated at"
     , trip_count: "Trip Count"
@@ -644,7 +647,7 @@ getEn =
     , customer_added_a_stop: "Customer added a stop!"
     , aadhaar_linking_required_description: (\_ -> "To start driving for our app, please \n link your Aadhaar ID")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "By clicking Continue, you agree to our &nbsp; <a href=\"\">T&Cs</a>"
-    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue, you agree to our "
+    , by_clicking_this_you_will_be_agreeing_to_our: "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "OTP sent to mobile number linked with your aadhar"

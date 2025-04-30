@@ -197,8 +197,8 @@ view push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
-                , margin $ Margin 16 0 16 16
-                , visibility $ boolToVisibility (buttonVisibility && isNothing state.props.selectedDocumentCategory)
+                , margin $ Margin 8 0 8 16
+                , visibility $ boolToVisibility (buttonVisibility categoryCompletedStatusCount)
                 ]
                 [ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state) ]
             , linearLayout
@@ -209,20 +209,6 @@ view push state =
                 , visibility $ boolToVisibility $ (state.props.selectedDocumentCategory == Just API.DRIVER) || (state.props.selectedDocumentCategory == Just API.VEHICLE)
                 ]
                 [ PrimaryButton.view (push <<< CategorySpecificContinueButtonAC) (continueCategorySpecificButtonConfig state) ]
-            -- , linearLayout
-            --     [ height WRAP_CONTENT
-            --     , width MATCH_PARENT
-            --     , margin $ Margin 16 0 16 16
-            --     , clickable false
-            --     , visibility $ boolToVisibility $ (state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral) && (state.props.manageVehicle == false)
-            --     ][enterReferralCode push state]
-            -- , linearLayout
-            --     [ height WRAP_CONTENT
-            --     , width MATCH_PARENT
-            --     , margin $ Margin 16 0 16 16
-            --     , clickable false
-            --     , visibility $ boolToVisibility callSupportVisibility
-            --     ][contactSupportView push state]
             ]
             , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
         ]
@@ -239,8 +225,9 @@ view push state =
                       Just ST.AutoCategory -> state.data.registerationStepsAuto
                       Just ST.BusCategory -> state.data.registerationStepsBus
                       _ -> state.data.registerationStepsAuto
-        buttonVisibility = if state.props.manageVehicle then all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ filter(\elem -> elem.isMandatory) documentList
-                            else state.props.driverEnabled
+        buttonVisibility categoryCompletedStatusCount = if state.props.manageVehicle then all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ filter(\elem -> elem.isMandatory) documentList
+                            else if state.props.driverEnabled then state.props.driverEnabled
+                            else isNothing state.props.selectedDocumentCategory && (categoryCompletedStatusCount == (DA.length state.props.categoryToStepProgressMap))  -- Todo: add this if that dummy screen is needed and remove from top. isNothing state.props.selectedDocumentCategory && (categoryCompletedStatusCount == (DA.length state.props.categoryToStepProgressMap))) 
 
 
 headerView :: forall w. ST.RegistrationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -452,7 +439,6 @@ categoryListItem push item state =
         case item.category of
           API.PERMISSION -> not $ state.data.permissionsStatus == ST.COMPLETED
           API.TRAINING -> checkIfTrainingsEnabled state && (not $ state.data.trainingsCompletionStatus == ST.COMPLETED)
-          -- _ -> not $ item.completionStatus == ST.COMPLETED 
           _ -> not $ statusCompOrManual item.completionStatus -- (Todo: Shikhar change to this after testing)
       getStatusImg state item = 
         case item.category of
@@ -858,8 +844,8 @@ getStatus step state =
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
 dependentDocAvailable item state = 
   case item.stage of
-    ST.AADHAAR_CARD -> true -- (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
-    ST.PAN_CARD -> true -- (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    ST.AADHAAR_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    ST.PAN_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
     _ -> all (\docType -> statusCompOrManual (getStatus docType state)) item.dependencyDocumentType
 
 compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean

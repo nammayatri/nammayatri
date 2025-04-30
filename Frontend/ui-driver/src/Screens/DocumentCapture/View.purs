@@ -85,7 +85,7 @@ screen initialState =
       launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
         $ do
             let appName = JB.getAppName unit
-            if appName == "ONDC fleetX" && isJust initialState.data.linkedRc then do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS then do
               (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBT $ fromMaybe "" initialState.data.linkedRc
               lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotos (API.GetVehiclePhotosResp vehiclePhotosResp)
             else pure unit
@@ -458,6 +458,8 @@ sampleImage isRight state =
     ST.VEHICLE_PUC -> if isRight then "ny_ic_puc_clear" else "ny_ic_puc_blur"
     ST.VEHICLE_PHOTOS -> if isRight then "ic_vehicle_image_clear" else "ic_vehicle_image_blur"
     ST.PROFILE_PHOTO -> if isRight then "ny_ic_profile_photo_clear" else "ny_ic_profile_photo_blur"
+    ST.AADHAAR_CARD -> if isRight then "ny_ic_adhar_clear" else "ny_ic_adhar_blur"
+    ST.PAN_CARD -> if isRight then "ny_ic_pan_clear" else "ny_ic_pan_blur"
     _ -> if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
 
 rightWrongItemView :: Boolean -> String -> forall w . PrestoDOM (Effect Unit) w

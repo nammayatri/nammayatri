@@ -278,6 +278,9 @@ getBn =
     , front_interior : "সামনের অভ্যন্তর"
     , rear_interior : "পিছনের অভ্যন্তর"
     , enter_the_six_digit_code_shared_with_you : "অনবোর্ডিং এজেন্টের সাথে অনবোর্ডিং করার সময় শেয়ার করা ৬-সংখ্যার কোডটি লিখুন।"
+    , register_your_profile : "আপনার প্রোফাইল নিবন্ধন করুন"
+    , registration_completed : "নিবন্ধন সম্পন্ন হয়েছে!"
+    , we_will_notify_you_when_we_go_live : "আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি")
     , updated_at: "ম্যাপ শেষ আপডেট"
     , trip_count: "আজকের ট্রিপস"
@@ -636,7 +639,7 @@ getBn =
     , customer_added_a_stop: "গ্রাহক একটি স্টপ যোগ করেছে"
     , aadhaar_linking_required_description: (\_ -> "যাত্রী সাথীর জন্য গাড়ি চালানো শুরু করতে, দয়া করে \n আপনার আধার আইডি লিঙ্ক করুন")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "অবিরত ক্লিক করে, আপনি আমাদের &nbsp; <a href=\"\">T&Cs</a>৷"
-    , by_clicking_this_you_will_be_agreeing_to_our: "অবিরত ক্লিক করে, আপনি আমাদের "
+    , by_clicking_this_you_will_be_agreeing_to_our: "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "আপনার আধারের সাথে লিঙ্ক করা মোবাইল নম্বরে OTP পাঠানো হয়েছে"

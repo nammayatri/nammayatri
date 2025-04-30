@@ -279,6 +279,9 @@ getOd =
     , front_interior : "ସାମ୍ନା ଭିତର ଅଂଶ"
     , rear_interior : "ପଛ ଭିତର"
     , enter_the_six_digit_code_shared_with_you : "ଅନବୋର୍ଡିଂ ସମୟରେ ଅନବୋର୍ଡିଂ ଏଜେଣ୍ଟଙ୍କ ଦ୍ୱାରା ଆପଣଙ୍କ ସହ ସେୟାର କରାଯାଇଥିବା 6-ଅଙ୍କ ବିଶିଷ୍ଟ କୋଡ୍ ଲେଖନ୍ତୁ।"
+    , register_your_profile : "ଆପଣଙ୍କର ପ୍ରୋଫାଇଲ୍ ପଞ୍ଜିକରଣ କରନ୍ତୁ"
+    , registration_completed : "ପଞ୍ଜିକରଣ ସମ୍ପୂର୍ଣ୍ଣ ହୋଇଛି!"
+    , we_will_notify_you_when_we_go_live : "ଆପଣଙ୍କର ପ୍ରତିବାଦିତ ସମୟରେ ଆମେ ଆପଣଙ୍କରେ ନିଜରିଅଛି"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC ସ୍ଥାନ ଆପଣଙ୍କ ସ୍ଥାନ ସହିତ ମେଳ ହେଉ ନାହିଁ")
     , updated_at: "ମାନଚିତ୍ର ଅଦ୍ୟତନ ହୋଇଛି"
     , trip_count: "ରାଇଡ୍ ସଂଖ୍ୟା"
@@ -643,7 +646,7 @@ getOd =
     , customer_added_a_stop: "ଗ୍ରାହକ ଏକ ବିରତି ଯୋଡିଛି!"
     , aadhaar_linking_required_description: (\_ -> "ଆମ ଆପ୍ ପାଇଁ ଚାଲନ କରିବାକୁ, ଦୟାକରି ଆପଣଙ୍କ ଆଧାର ID ଯୋଡନ୍ତୁ")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "ବିଗତି ଉପରେ କ୍ଲିକ୍ କରି, ଆପଣ ଆମର &nbsp; <a href=\"\">T&Cs</a> ସହିତ ସମ୍ମତ ହେବେ"
-    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue, you agree to our "
+    , by_clicking_this_you_will_be_agreeing_to_our: "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "ଆଧାର ସହିତ ସଂଯୋଜିତ ମୋବାଇଲ୍ ସଂଖ୍ୟାରେ OTP ପଠାଯାଇଛି"

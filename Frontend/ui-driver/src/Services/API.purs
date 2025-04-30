@@ -3261,20 +3261,14 @@ newtype OperationHubRequestsResp =  OperationHubRequestsResp {
 }
 
 newtype OperationHubRequests = OperationHubRequests {
-  creatorId :: String,
-  driverId :: String,
-  fulfilledAt :: Maybe String,
-  id :: String,
-  merchantId :: String,
-  merchantOperatingCityId :: String,
-  operationHubId :: String,
-  operatorId :: Maybe String,
-  registrationNo :: String,
-  remarks :: Maybe String,
-  requestStatus :: String, -- Domain.Types.OperationHubRequests.RequestStatus,
-  requestType :: RequestType,
-  createdAt :: String,
-  updatedAt :: String
+    driverPhoneNo :: Maybe String,
+    id :: String,
+    operationHubId :: String,
+    operationHubName :: String,
+    registrationNo :: String,
+    requestStatus :: String,
+    requestTime :: String,
+    requestType :: RequestType
 }
 
 derive instance genericOperationHubRequests :: Generic OperationHubRequests _

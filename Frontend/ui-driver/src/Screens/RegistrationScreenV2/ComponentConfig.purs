@@ -92,7 +92,7 @@ appOnboardingNavBarConfig state =
                 Just API.PERMISSION -> getStringV2 LT2.app_permissions
                 Just API.TRAINING -> getStringV2 LT2.trainings
                 Just API.NONE -> ""
-                _ -> getString REGISTER_YOUR_CAR
+                _ -> getStringV2 LT2.register_your_profile
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
       text = getString HELP_FAQ,
@@ -263,7 +263,8 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
       errorConfig {
         text = if state.props.isValidReferralCode then "" else getStringV2 LT2.invalid_code_please_re_enter,
         visibility = boolToVisibility $ not state.props.isValidReferralCode,
-        width = MATCH_PARENT
+        width = MATCH_PARENT,
+        margin = MarginTop 6
       },
       imageConfig {
         alpha = if(DS.length state.data.referralCode < 6) then 0.3 else 1.0
@@ -280,7 +281,8 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
         textStyle = FontStyle.Body1,
         gravity = CENTER,
         color = Color.green900,
-        width = MATCH_PARENT
+        width = MATCH_PARENT,
+        margin = MarginTop 6
       },
       bodyTextConfig {
         text = getStringV2 LT2.enter_the_six_digit_code_shared_with_you,

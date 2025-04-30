@@ -418,6 +418,9 @@ getProxy str = case str of
   FRONT_INTERIOR -> \a -> a @~ front_interior
   REAR_INTERIOR -> \a -> a @~ rear_interior
   ENTER_THE_SIX_DIGIT_CODE_SHARED_WITH_YOU -> \a -> a @~ enter_the_six_digit_code_shared_with_you
+  REGISTER_YOUR_PROFILE -> \a -> a @~ register_your_profile
+  REGISTRATION_COMPLETED -> \a -> a @~ registration_completed
+  WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE -> \a -> a @~ we_will_notify_you_when_we_go_live
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number

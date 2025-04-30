@@ -151,16 +151,10 @@ underlinedTextView _ _ =
   [ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR
-    , color Color.greyTextColor
+    , textFromHtml $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR
+    , color Color.black900
     , alpha 0.5
     , singleLine false
-    ] <> FontStyle.body3 TypoGraphy
-  , textView $
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , text "Terms & Conditions"
-    , color config.themeColors.highlightedTextColor
     , onClick (\_ -> JB.openUrlInApp $ config.termsLink) (const NonDisclosureAgreementAction)
     ] <> FontStyle.body3 TypoGraphy
  ]

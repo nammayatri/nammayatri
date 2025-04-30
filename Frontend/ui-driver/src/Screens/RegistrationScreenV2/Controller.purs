@@ -166,6 +166,7 @@ data Action = BackPressed
             | RegistrationAction'
             | RegistrationActionV2 ST.CategoryToStepMap
             | CategorySpecificContinueButtonAC PrimaryButtonController.Action
+            | ContinueButtonAC PrimaryButtonController.Action
 
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where

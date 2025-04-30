@@ -2244,7 +2244,8 @@ type AcknowledgementScreenData = {
   description ::Maybe String,
   primaryButtonText :: Maybe String,
   orderId  :: Maybe String,
-  amount :: String
+  amount :: String,
+  primaryButtonVisibility :: Boolean
 }
 
 type AcknowledgementScreenProps = {

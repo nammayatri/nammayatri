@@ -277,6 +277,9 @@ getMl =
     , front_interior : "മുൻവശത്തെ ഇന്റീരിയർ"
     , rear_interior : "പിൻഭാഗത്തെ ഉൾഭാഗം"
     , enter_the_six_digit_code_shared_with_you : "ഓൺബോർഡിംഗ് സമയത്ത് ഓൺബോർഡിംഗ് ഏജന്റ് നിങ്ങളുമായി പങ്കിട്ട 6 അക്ക കോഡ് നൽകുക."
+    , register_your_profile : "നിങ്ങളുടെ പ്രൊഫൈൽ രജിസ്റ്റർ ചെയ്യുക"
+    , registration_completed : "രജിസ്റ്റർ പൂർത്തിയായി!"
+    , we_will_notify_you_when_we_go_live : "നിങ്ങളുടെ പ്രൊഫൈൽ രജിസ്റ്റർ ചെയ്യുക"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "നിലവിൽ, കർണാടകയിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ അനുവദനീയമായുള്ളു")
     , updated_at: "മാപ് അപ്ഡേറ്റ്"
     , trip_count: "ഇന്നത്തെ യാത്രകൾ"
@@ -616,7 +619,7 @@ getMl =
     , customer_added_a_stop: "ഉപഭോക്താവ് ഒരു സ്റ്റോപ്പ് ചേർത്തു"
     , aadhaar_linking_required_description: (\_ -> "യാത്രി സതിക്കായി ഡ്രൈവിംഗ് ആരംഭിക്കാൻ, ദയവായി \n നിങ്ങളുടെ ആധാർ ഐഡി ലിങ്ക് ചെയ്യുക")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "തുടരുക ക്ലിക്കുചെയ്യുന്നതിലൂടെ, നിങ്ങൾ ഞങ്ങളുടെ &nbsp; <a href=\"\">T&Cs</a>"
-    , by_clicking_this_you_will_be_agreeing_to_our : "തുടരുക ക്ലിക്കുചെയ്യുന്നതിലൂടെ, നിങ്ങൾ ഞങ്ങളുടെ "
+    , by_clicking_this_you_will_be_agreeing_to_our : "By Clicking Continue," <> "<br><b>You Agree to Our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C"
     , tc_tail: "അംഗീകരിക്കുന്നു"
     , otp_sent_to_aadhaar_number: "നിങ്ങളുടെ ആധാറുമായി ലിങ്ക് ചെയ്‌തിരിക്കുന്ന മൊബൈൽ നമ്പറിലേക്ക് OTP അയച്ചു"
