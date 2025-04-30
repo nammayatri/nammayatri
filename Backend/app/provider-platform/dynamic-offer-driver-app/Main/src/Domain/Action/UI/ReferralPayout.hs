@@ -155,7 +155,7 @@ getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
       serviceName = case person.clientSdkVersion of
-        Just v | v <= textToVersionDefault aaClientSdkVersion -> DEMSC.PayoutService PT.AAJuspay
+        Just v | v >= textToVersionDefault aaClientSdkVersion -> DEMSC.PayoutService PT.AAJuspay
         _ -> DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)

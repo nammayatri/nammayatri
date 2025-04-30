@@ -123,7 +123,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
       let personId = person.id
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
           serviceName = case person.clientSdkVersion of
-            Just v | v <= textToVersionDefault aaClientSdkVersion -> (DEMSC.PayoutService TPayout.AAJuspay)
+            Just v | v >= textToVersionDefault aaClientSdkVersion -> (DEMSC.PayoutService TPayout.AAJuspay)
             _ -> (DEMSC.PayoutService TPayout.Juspay)
           createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) createPayoutOrderStatusReq createPayoutOrderStatusCall
