@@ -56,6 +56,8 @@ import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
+import in.juspay.mobility.app.overlayMessage.MessagingView;
+import in.juspay.mobility.app.overlayMessage.Service;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public  class MyFirebaseMessagingService {
@@ -151,7 +153,7 @@ public  class MyFirebaseMessagingService {
                 }
                 if (remoteMessage.getData().containsKey("entity_data")) {
                     String notificationType = remoteMessage.getData().get("notification_type");
-                    if (notificationType != null && (notificationType.equals(NotificationTypes.NEW_RIDE_AVAILABLE) || notificationType.equals(NotificationTypes.TRIGGER_FCM))) {
+                    if (notificationType != null && (notificationType.equals(NotificationTypes.NEW_RIDE_AVAILABLE) || notificationType.equals(NotificationTypes.TRIGGER_FCM) || notificationType.equals(NotificationTypes.EKD_LIVE_CALL_FEEDBACK))) {
                         String entityPayload = remoteMessage.getData().get("entity_data");
                         if (entityPayload != null) {
                             entity_payload = new JSONObject(entityPayload);
@@ -246,7 +248,7 @@ public  class MyFirebaseMessagingService {
                                         }
                                     }
                                 }
-                                showOverlayMessage(context, driverNotificationJsonObject);
+                                showOverlayMessage(context, driverNotificationJsonObject, NotificationTypes.DRIVER_NOTIFY_LOCATION_UPDATE);
                                 if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") && driverNotificationJsonObject.getBoolean("showPushNotification")) {
                                     NotificationUtils.showNotification(context, title, body, payload, null);
                                 }
@@ -479,7 +481,7 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.PAYMENT_OVERDUE:
 
                     case NotificationTypes.PAYMENT_PENDING:
-                        showOverlayMessage(context, constructOverlayMessage(notification_payload));
+                        showOverlayMessage(context, constructOverlayMessage(notification_payload), NotificationTypes.PAYMENT_PENDING);
                         break;
 
                     case NotificationTypes.JOIN_NAMMAYATRI:
@@ -515,6 +517,8 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.SAFETY_ALERT:
                         showSafetyAlert(context, title, body, payload, imageUrl);
                         break;
+                    case NotificationTypes.EKD_LIVE_CALL_FEEDBACK:
+                        showOverlayMessage(context, payload, NotificationTypes.EKD_LIVE_CALL_FEEDBACK);
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(context, title, body, payload, imageUrl);
@@ -579,7 +583,7 @@ public  class MyFirebaseMessagingService {
             locationChanged.put("title",driverNotification.getString("title"));
             locationChanged.put("lat", lat);
             locationChanged.put("lon", lon);
-            showOverlayMessage(context,locationChanged);
+            showOverlayMessage(context,locationChanged, NotificationTypes.EDIT_LOCATION);
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
@@ -621,7 +625,7 @@ public  class MyFirebaseMessagingService {
             cancellationNudge.put("title",driverNotification.getString("title"));
             cancellationNudge.put("description", driverNotification.getString("description"));
             cancellationNudge.put("descriptionVisibility", driverNotification.getString("descriptionVisibility"));
-            showOverlayMessage(context, cancellationNudge);
+            showOverlayMessage(context, cancellationNudge, overlayKey);
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("MyFirebaseMessagingService", "Error in " + overlayKey + " : " + e);
@@ -678,7 +682,7 @@ public  class MyFirebaseMessagingService {
             }
             driverPayloadJsonObject.put("editlat", editLat);
             driverPayloadJsonObject.put("editlon", editLon);
-            showOverlayMessage(context,driverPayloadJsonObject);
+            showOverlayMessage(context,driverPayloadJsonObject, NotificationTypes.NEW_STOP_ADDED);
         }catch (Exception e){
             Exception exception = new Exception("Error in addUpdateStop " + e);
             FirebaseCrashlytics.getInstance().recordException(exception);
@@ -686,7 +690,7 @@ public  class MyFirebaseMessagingService {
             NotificationUtils.firebaseLogEventWithParams(context, "exception_in_add_or_edit_stop_fcm", "exception", e.toString());
         }
     }
-    private static void showOverlayMessage(Context context,JSONObject payload) {
+    private static void showOverlayMessage(Context context,JSONObject payload, String notificationType) {
         try {
             int delay = payload.optInt("delay", 0);
             HandlerThread handlerThread = new HandlerThread("OverlayHandlerThread");
@@ -696,8 +700,9 @@ public  class MyFirebaseMessagingService {
 
             handler.postDelayed(() -> {
                 try {
-                    Intent showMessage = new Intent(context, OverlayMessagingService.class);
+                    Intent showMessage = new Intent(context, Service.class);
                     showMessage.putExtra("payload", payload.toString());
+                    showMessage.putExtra("notificationType", notificationType);
                     context.startService(showMessage);
                 } catch (Exception e) {
                     Exception exception = new Exception("Error in showOverlayMessage " + e);
@@ -879,5 +884,6 @@ public  class MyFirebaseMessagingService {
         public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
         public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
         public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
+        public static final String EKD_LIVE_CALL_FEEDBACK = "EKD_LIVE_CALL_FEEDBACK";
     }
 }

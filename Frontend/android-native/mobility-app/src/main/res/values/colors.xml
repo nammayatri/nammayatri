@@ -39,4 +39,5 @@
     <color name="yellow800">#FEEBB9</color>
     <color name="orange">#FFA500</color>
     <color name="colorVoipBackground">#14171F</color>
+    <color name="dark_grayish_blue">#899CAF</color>
 </resources>

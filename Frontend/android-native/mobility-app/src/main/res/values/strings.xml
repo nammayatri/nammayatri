@@ -100,4 +100,8 @@
     <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
     <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
     <string name="points">Points</string>
+    <string name="extra_fare_demanded">📞🚨 Extra Fare Demand Detected! 🚨</string>
+    <string name="extra_fare_demanded_desc">Select the reason(s) for asking extra</string>
+    <string name="submit">Submit</string>
+    <string name="did_not_demand_extra">I did not demand extra</string>
 </resources>

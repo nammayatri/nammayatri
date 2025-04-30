@@ -158,4 +158,9 @@ public class Utils {
         return  notificationPayload;
     }
 
+    // method to convert dp to pixels
+    public static int dpToPx(Context context, float dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
+    }
+
 }
