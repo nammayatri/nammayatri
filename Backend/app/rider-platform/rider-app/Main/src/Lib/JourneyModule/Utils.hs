@@ -126,6 +126,7 @@ data AvailableRoutesByTier = AvailableRoutesByTier
     quoteId :: Maybe (Id DFRFSQuote.FRFSQuote),
     availableRoutes :: [Text],
     nextAvailableBuses :: [Seconds],
+    nextAvailableTimings :: [(TimeOfDay, TimeOfDay)],
     fare :: PriceAPIEntity
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
@@ -372,6 +373,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
             | timing <- timingsForTier
           ]
 
+    let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
+
     logDebug $ "routeShortNames: " <> show routeShortNames
 
     (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
@@ -399,7 +402,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           quoteId = quoteId,
           via = via,
           trainTypeCode = trainTypeCode,
-          fare = fare
+          fare = fare,
+          nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings
         }
 
   -- Only return service tiers that have available routes
