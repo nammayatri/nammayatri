@@ -938,8 +938,8 @@ enterOdometerReadingConfig state = let
       }
       in inAppModalConfig'
 
-driverStatusIndicators :: Array ST.PillButtonState
-driverStatusIndicators = [
+driverStatusIndicators :: ST.HomeScreenState -> Array ST.PillButtonState
+driverStatusIndicators state = [
     {
       status : ST.Offline,
       background : Color.red,
@@ -2265,7 +2265,7 @@ sourceUnserviceableConfig state =
         , buttonConfig
           { text = (getString CHANGE_LOCATION)
           , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
-          , background = state.data.config.primaryBackground
+          , background = state.data.config.primaryButtonBackground
           , color = state.data.config.primaryTextColor
           , visibility = GONE
           }
@@ -2865,8 +2865,8 @@ referNowConfig state =
           { text = getString REFER_NOW
           , width = MATCH_PARENT
           , margin = MarginTop 24
-          , background = Color.black900
-          , color = Color.yellow900
+          , background = state.data.config.primaryButtonBackground
+          , color = state.data.config.primaryTextColor
           }
         , option2
           { text = getString CLOSE

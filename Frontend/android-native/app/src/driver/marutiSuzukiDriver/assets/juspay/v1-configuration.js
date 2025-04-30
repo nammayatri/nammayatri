@@ -23,7 +23,11 @@ window.getMerchantConfig = function () {
     "popupBackground" : "#FFFFFF",
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FFFFFF",
-    "primaryBackground": "#2E3494",
+    "primaryBackground": "#F5F5F5",
+    "primaryButtonBackground" : "#171C8F",
+    "buttonInactiveBackground" : "#D6D6D6",
+    "buttonInactiveTextColor" : "#A1A1A1",
+    "alphaInPrimaryButtonAllowed" : false,
     "showCorporateAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
@@ -100,19 +104,53 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "colors" : {
-        "black800" : "#454545"
-      , "black900" : "#2C2F3A"
+        "black800" : "#3F4143"
+      , "black900" : "#0F1114"
       , "red" : "#E55454"
+      , "black700" : "#545454"
+      , "black650" : "#A1A1A1"
+      , "black600" : "#B2B2B2"
+      , "black500" : "#D6D6D6"
+      , "grey900" : "#E0E0E0"
+      , "grey800" : "#E2E2E3"
+      , "blue900" : "#171C8F"
+      , "blue800" : "#3482E6"
+      , "blue700" : "#A4CEFF"
+      , "blue600" : "#F9FAFC"
+      , "green900" : "#37B200"
+      , "yellow900" : "#F0B529"
+      , "red900" : "#F0373A"
       }
     , "themeColors" : {
       "goOnlineColor" : "#2E3494",
-      "navBarBackground" : "#2E3494",
+      "navBarBackground" : "#FFFFFF",
       "primaryStrokeColor" : "#2E3494",
       "openMapsStrokeColor" : "#A8AEF0",
       "secondaryStrokeColor" : "#A8AEF0",
-      "openMapsTextColor" : "#A8AEF0"
+      "openMapsTextColor" : "#A8AEF0",
+      "onboardingHeaderTextColor" : "#0F1114",
+      "onboardingHeaderStroke" : "#B2171C8F",
+      "radioInactiveBackground" : "#F5F5F5",
+      "radioActiveBackground" : "#1F171C8F",
+      "editTextFocusedStroke" : "#171C8F",
+      "editTextNormalStroke" : "#F5F5F5",
+      "mobileNumberScreenHeaderText" : "WELCOME_LETS_GET_STARTED",
+      "defaultBackButton" : "ny_ic_arrow_left_black",
+      "highlightedTextColor" : "#171C8F",
+      "radioSelectedImage" : "ny_ic_radio_selected_purple",
+      "radioActiveStroke" : "#1F171C8F",
+      "onboardingStepImgBg" : "#0A171C8F",
+      "welcomeScreenBackground" : "#F9FAFC",
+      "quizButtonStrokeAndText" : "#171C8F",
+      "quizOptionStrokeColor" : "#B2171C8F",
+      "quizOptionSelectedBgColor" : "#1F171C8F",
+      "quizOptionTextColor" : "#171C8F"
     }
     , "allowAllMobileNumber" : false
+    , "fontConfig" : {
+        "default" : "Roboto"
+      , "type" : "System"
+    }
     , "acExplanation" : true
     , "rcLimit" : 3
     , "rateCardScreen" :{
@@ -189,12 +227,14 @@ window.getMerchantConfig = function () {
       , "enableGender" : true
       , "enableOtpRide" : false
       , "enableYatriCoins" : false
+      , "showFaqsWhileOnboarding" : true
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
       , "name" : "Namma Yatri"
     }
     , "enableMockLocation" : true
+    , "enableChangeVehicleType" : false
     , "cityConfig" : [
       {
         "cityName" : "Bangalore",
@@ -809,7 +849,7 @@ window.getMerchantConfig = function () {
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       },
-      "enableHvSdk" : true,
+      "enableHvSdk" : true, //Todo Shikhar: change later
       "purpleRideConfig" : {
         "purpleRideConfigForAuto" : {
           "vehicleVariant" : "Auto",

@@ -8,16 +8,24 @@ black :: Color
 black = "#000000"
 
 black500 :: Color
-black500 = "#B9BABE"
+black500 = 
+  let config = getAppConfig appConfig
+  in config.colors.black500
 
 black600 :: Color
-black600 = "#A7A7A7"
+black600 = 
+  let config = getAppConfig appConfig
+  in config.colors.black600
 
 black650 :: Color
-black650 = "#868B98"
+black650 = 
+  let config = getAppConfig appConfig
+  in config.colors.black650
 
 black700 :: Color
-black700 = "#6D7280"
+black700 =
+  let config = getAppConfig appConfig
+  in config.colors.black700 
 
 black712 :: Color
 black712 = "#806D7280"
@@ -28,29 +36,58 @@ black9000 = "#CC2C2F3A"
 blueGrey :: Color
 blueGrey = "#9899a1"
 
+blue500 :: Color
+blue500 = "#F9FAFC"
+
 blue600 :: Color
-blue600 = "#f4F7FF"
+blue600 = 
+  let config = getAppConfig appConfig
+  in config.colors.blue600
 
 blue700 :: Color
-blue700 = "#80B2FF"
+blue700 = 
+  let config = getAppConfig appConfig
+  in config.colors.blue700
 
 blue800 :: Color
-blue800 = "#2194FF"
+blue800 = 
+  let config = getAppConfig appConfig
+  in config.colors.blue800
 
 blue900 :: Color
-blue900 = "#0066FF"
+blue900 = 
+  let config = getAppConfig appConfig
+  in config.colors.blue900
 
 blue9000 :: Color
 blue9000 = "#1A0066FF"
 
+grey100 :: Color 
+grey100 = "#F5F5F5"
+
+grey300 :: Color
+grey300 = "#E0E0E0"
+
+grey600 :: Color
+grey600 = "#A1A1A1"
+
 grey700 :: Color
-grey700 = "#F4F4F6"
+grey700 = 
+  let config = getAppConfig appConfig
+  in config.colors.grey700
 
 grey800 :: Color
-grey800 = "#F1F1F1"
+grey800 = 
+  let config = getAppConfig appConfig
+  in config.colors.grey800
 
 grey900 :: Color
-grey900 = "#E5E7EB"
+grey900 = 
+  let config = getAppConfig appConfig
+  in config.colors.grey900
+
+darkGrey :: Color
+darkGrey = "#B9B8B8"
 
 green400 :: Color
 green400 = "#26A047"
@@ -80,7 +117,9 @@ white200 :: Color
 white200 = "#99FFFFFF"
 
 yellow900 :: Color
-yellow900 = "#FCC32C"
+yellow900 = 
+  let config = getAppConfig appConfig
+  in config.colors.yellow900
 
 yellow600 :: Color
 yellow600 = "#FCF6E7"
@@ -105,7 +144,9 @@ warningRed :: Color
 warningRed  = "#f04c31"
 
 green900 :: Color 
-green900 = "#53BB6F"
+green900 =
+  let config = getAppConfig appConfig
+  in config.colors.green900
 
 greenAlpha :: Color 
 greenAlpha = "#1A53BB6F"
@@ -241,13 +282,18 @@ fadedPurple :: Color
 fadedPurple = "#339747FF"
 
 red900 :: Color
-red900 = "#E55454"
+red900 = 
+  let config = getAppConfig appConfig
+  in config.colors.red900
 
 red900Alpha16 :: Color
 red900Alpha16 = "#29E55454"
 
 yellow200 :: Color
 yellow200 = "#33FCC32C"
+
+yellow300 :: Color
+yellow300 = "#1FFAB105"
 
 black200 :: Color
 black200 = "#1A2C2F3A"
@@ -421,3 +467,6 @@ limeGreen = "#3AA215"
 
 brownishYellow :: Color
 brownishYellow = "#FFCC6E"
+
+purple800 :: Color
+purple800 = "#171C8F"

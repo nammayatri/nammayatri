@@ -21,6 +21,7 @@ import Data.Eq.Generic (genericEq)
 import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
 import ConfigProvider
+import Debug
 
 initData :: PermissionsScreenState
 initData = {
@@ -56,4 +57,5 @@ permissionsList state =
       {permission: Overlay , icon:"" },
       {permission: AutoStart , icon:""},
       {permission: Battery , icon:""}
-    ] <> if state.data.config.permissions.locationPermission then [{permission: LocationPermission , icon:""}] else []
+    ] <> (if state.data.config.permissions.locationPermission then [{permission: LocationPermission , icon:""}] else [])
+      <> (if state.data.config.permissions.notification then [{permission: Notifications , icon:""}] else [])

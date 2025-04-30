@@ -25,7 +25,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((==), (&&), (<>), ($))
 import Screens.Types as ST
-import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..))
+import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..), VehicleImageType(..))
 
 type Language =
     {
@@ -113,7 +113,7 @@ transformDocText stage =
   case stage of
     ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
     ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
-    ST.GRANT_PERMISSION -> getString GRANT_PERMISSIONS
+    ST.GRANT_PERMISSION -> "App Permissions"-- getString GRANT_PERMISSIONS
     ST.SUBSCRIPTION_PLAN -> getString $ SUBSCRIPTION_PLAN_STR "SUBSCRIPTION_PLAN_STR"
     ST.PROFILE_PHOTO -> getString PROFILE_PHOTO_STR
     ST.AADHAAR_CARD -> getString AADHAAR_CARD_STR
@@ -122,7 +122,17 @@ transformDocText stage =
     ST.FITNESS_CERTIFICATE -> getString FITNESS_CERTIFICATE_STR
     ST.VEHICLE_INSURANCE -> getString VEHICLE_INSURANCE_STR
     ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
+    ST.VEHICLE_PHOTOS -> getString VEHICLE_PHOTOS_STR
+    ST.INSPECTION_HUB -> getString OPERATION_HUB_STR
     ST.NO_OPTION -> ""
+
+transformStageNameFromTitle :: String -> String -> String
+transformStageNameFromTitle title doctype = 
+  case title, doctype of
+        _ , "VehicleInspectionForm" -> getString VEHICLE_PHOTOS_STR
+        _ , "InspectionHub" -> getString OPERATION_HUB_STR
+        _ , _ -> title
+
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
 transformToRegisterationStep doctype = 
@@ -138,6 +148,8 @@ transformToRegisterationStep doctype =
         "VehicleFitnessCertificate" -> ST.FITNESS_CERTIFICATE
         "VehicleInsurance" -> ST.VEHICLE_INSURANCE
         "VehiclePUC" -> ST.VEHICLE_PUC
+        "VehicleInspectionForm" -> ST.VEHICLE_PHOTOS
+        "InspectionHub" -> ST.INSPECTION_HUB
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
@@ -154,8 +166,22 @@ transformToDoctype step =
     ST.AADHAAR_CARD -> "AadhaarCard"
     ST.PAN_CARD -> "PanCard"
     ST.GRANT_PERMISSION -> "Permissions"
+    ST.VEHICLE_PHOTOS -> "VehiclePhotos"
+    ST.INSPECTION_HUB -> "InspectionHub"
     ST.NO_OPTION -> ""
 
+transformVehicleImageToDoctype :: Maybe VehicleImageType -> String
+transformVehicleImageToDoctype imageType = 
+        case imageType of 
+          Just VehicleFront -> "VehicleFront"
+          Just VehicleBack -> "VehicleBack"
+          Just VehicleLeft -> "VehicleLeft"
+          Just VehicleRight -> "VehicleRight"
+          Just VehicleFrontInterior -> "VehicleFrontInterior"
+          Just VehicleBackInterior -> "VehicleBackInterior" 
+          Just Odometer_ -> "Odometer"
+          Nothing -> ""
+          
 transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
 transformVehicleType vehicletype =
   case vehicletype of

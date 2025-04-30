@@ -40,6 +40,20 @@ type Colors = {
   black800 :: String
 , black900 :: String
 , red :: String
+, black700 :: String
+, black650 :: String
+, black600 :: String
+, black500 :: String
+, grey900 :: String
+, grey800 :: String
+, grey700 :: String 
+, blue900 :: String 
+, blue800 :: String
+, blue700 :: String
+, blue600 :: String
+, green900 :: String
+, yellow900 :: String 
+, red900 :: String
 }
 
 type PrimaryButtonConfig = {

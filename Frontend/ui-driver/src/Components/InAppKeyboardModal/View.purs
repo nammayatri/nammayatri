@@ -16,10 +16,11 @@
 module Components.InAppKeyboardModal.View where
 
 import Common.Types.App
-import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, SingleElementTextBoxConfig, InputFieldConfig)
+import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, SingleElementTextBoxConfig, InputFieldConfig, primaryButtonConfig)
+import Components.PrimaryButton as PrimaryButton
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
-import Data.Array (mapWithIndex, insertAt)
+import Data.Array (mapWithIndex, insertAt, any)
 import Data.Maybe (fromMaybe)
 import Data.String (take, drop, length)
 import Effect (Effect)
@@ -27,7 +28,7 @@ import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=))
+import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=), (<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, singleLine, letterSpacing, onFocus)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder, layoutGravity)
@@ -124,7 +125,23 @@ view push state =
                     , layoutGravity "right"
                   ] <> FontStyle.body1 TypoGraphy
                 ]
+              , textView $
+                [ height state.bodyTextConfig.height
+                , width state.bodyTextConfig.width
+                , text state.bodyTextConfig.text
+                , gravity state.bodyTextConfig.gravity
+                , visibility state.bodyTextConfig.visibility
+                , margin $ state.bodyTextConfig.margin
+                , padding $ state.bodyTextConfig.padding
+                , color state.bodyTextConfig.color
+                ] <> (FontStyle.getFontStyle state.bodyTextConfig.textStyle LanguageStyle)
               , otpView push state
+              , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , visibility state.primaryButtonConfig.visibility
+                ][ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
+                ]
             ]
         ] <> if not state.enableDeviceKeyboard then [keyboard push state] else []
     ]
@@ -177,7 +194,7 @@ textBoxes push state =
       , text $ if ( take 1 (drop index state.inputTextConfig.text) ) == "-" then "" else ( take 1 (drop index state.inputTextConfig.text) )
       , gravity CENTER
       , cornerRadius 4.0
-      , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
+      , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then state.appConfig.themeColors.highlightedTextColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
       ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
@@ -190,10 +207,11 @@ singleTextBox push state =
   , orientation HORIZONTAL
   , gravity CENTER
   , cornerRadius 4.0
-  , visibility if state.modalType == KeyboardModalType.MOBILE__NUMBER then VISIBLE else GONE
+  , visibility if any (_ == state.modalType) [KeyboardModalType.MOBILE__NUMBER, KeyboardModalType.REFERRAL__CODE] then VISIBLE else GONE
   , clickable false
-  , padding (Padding 16 16 16 16)
-  , stroke ("1," <> if not state.isValidAlternateNumber then Color.textDanger else Color.borderColorLight )
+  , padding (Padding 8 8 8 8)
+  , background state.inputTextConfig.background
+  , stroke $  if not state.isValidAlternateNumber then ("1," <> Color.textDanger) else state.inputTextConfig.strokeColor
   ][textView $
       [ width state.inputTextConfig.width
       , height state.inputTextConfig.height
@@ -205,13 +223,13 @@ singleTextBox push state =
       , cornerRadius state.inputTextConfig.cornerRadius
       , padding state.inputTextConfig.padding
       , margin state.inputTextConfig.margin
-      , onClick push (const (OnclickTextBox 0))
+      , onClick push (const (OnclickTextBox state.inputTextConfig.focusIndex))
       ] <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle),
     imageView
         [ width $ V 23
          , height $ V 23
          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
-         , visibility if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then GONE else VISIBLE
+         , visibility $ boolToVisibility state.inputTextConfig.suffixImageVisibility
          , onClick push (const (OnClickTextCross))
         ]
       ]
@@ -349,6 +367,7 @@ keyboard push state =
         KeyboardModalType.OTP -> length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && not state.otpIncorrect
         KeyboardModalType.ODOMETER -> length state.inputTextConfig.text > 3
         KeyboardModalType.MOBILE__NUMBER -> length state.inputTextConfig.text == 10 && state.isValidAlternateNumber
+        KeyboardModalType.REFERRAL__CODE -> length state.inputTextConfig.text >= 6 && state.isValidAlternateNumber
         _ -> false
 
 appKeyboardOdometerInput :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w

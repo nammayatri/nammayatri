@@ -43,3 +43,10 @@ benefitsScreen = do
     GoToCustomerReferralTrackerScreen openPP updatedState -> do  
       modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ CUSTOMER_REFERRAL_TRACKER_NAV openPP )
+    GoToRegistrationScreen updatedState -> do
+      modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_REGISTRATION_SCREEN updatedState)
+    SelectLang updatedState -> do
+      modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SELECT_LANG_FROM_BENEFITS_SCREEN updatedState)
+    LogoutAccount -> App.BackT $ App.NoBack <$> pure LOGOUT_FROM_BENEFITS_SCREEN

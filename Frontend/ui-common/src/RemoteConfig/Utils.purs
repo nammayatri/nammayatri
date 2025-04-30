@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC, AppCities)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -437,6 +437,13 @@ defaultLanguageConfig =
     }
   ]
 
+defaultAppCities :: AppCities
+defaultAppCities = 
+  {
+    cityNames : ["Bangalore", "Delhi", "Gurugram", "Noida"],
+    enableChangeCity : true   
+  }
+
 stuckRideFilterConfig :: String -> StuckRideFilterConfig
 stuckRideFilterConfig _ =
   let config = fetchRemoteConfigString "stuck_ride_filter"
@@ -452,6 +459,12 @@ appLanguageConfig :: String -> Array AppLanguage
 appLanguageConfig appName = do
   let config = fetchRemoteConfigString "enabled_app_languages"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultLanguageConfig
+  getAppBasedConfig value appName
+
+selectCityConfig :: String -> AppCities
+selectCityConfig appName = do
+  let config = fetchRemoteConfigString "enabled_app_cities"
+      value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultAppCities
   getAppBasedConfig value appName
 
 defaultOfferBannerConfig :: Types.OfferBanner

@@ -17,7 +17,7 @@
 module Components.AppOnboardingNavBar.View where
 
 import Prelude (Unit, const, ($), (<>), (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, clickable, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
 import Effect (Effect)
 import Components.AppOnboardingNavBar.Controller (Action(..), Config)
 import Styles.Colors as Color
@@ -34,32 +34,40 @@ view push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  , padding $ Padding 16 16 16 16
   , orientation VERTICAL
   , background state.appConfig.primaryBackground
-  ][  linearLayout
+  ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      ][  imageView
-          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET state.prefixImageConfig.image
-          , height state.prefixImageConfig.height
-          , width state.prefixImageConfig.width 
-          , layoutGravity "center_vertical"
-          , visibility $ state.prefixImageConfig.visibility
-          , onClick push $ const PrefixImgOnClick
-          ]
-        , linearLayout
-          [weight 1.0
-          ][ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig)]
-        , logoutButtonView push state
+      -- , background if state.navBarOpen then Color.blackLessTrans else Color.transparent
+      , orientation VERTICAL
+      , padding $ Padding 16 16 16 16
       ]
-    , textView $
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text state.headerTextConfig.text
-      , color state.headerTextConfig.color
-      , margin state.headerTextConfig.margin
-      ] <> (FontStyle.getFontStyle state.headerTextConfig.fontStyle TypoGraphy)
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ][  imageView
+              [ imageWithFallback $ HU.fetchImage HU.FF_ASSET state.prefixImageConfig.image
+              , height state.prefixImageConfig.height
+              , width state.prefixImageConfig.width 
+              , layoutGravity "center_vertical"
+              , visibility $ state.prefixImageConfig.visibility
+              , onClick push $ const PrefixImgOnClick
+              , clickable $ state.prefixImageConfig.clickable
+              ]
+            , linearLayout
+              [weight 1.0
+              ][ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig)]
+            , logoutButtonView push state
+          ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , text state.headerTextConfig.text
+        , color state.headerTextConfig.color
+        , margin state.headerTextConfig.margin
+        ] <> (FontStyle.getFontStyle state.headerTextConfig.fontStyle TypoGraphy)
+      ]
     ]
 
 
@@ -71,14 +79,14 @@ logoutButtonView push config =
   , orientation VERTICAL
   , layoutGravity "center_vertical"
   , cornerRadius 12.0
-  , stroke ("1,"<>Color.white900)
+  , stroke ("1,"<> config.appConfig.themeColors.onboardingHeaderStroke)
   , padding $ Padding 4 2 4 4
   , onClick push $ const Logout 
   ][  textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , text config.rightButton.text
-    , color Color.white900
+    , color config.rightButton.color
     , margin $ MarginHorizontal 5 5
     ] <> FontStyle.body3 TypoGraphy
   ]

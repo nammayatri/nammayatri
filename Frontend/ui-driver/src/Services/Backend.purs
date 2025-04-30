@@ -897,9 +897,9 @@ makeValidateImageReq image imageType rcNumber status transactionId category = Va
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
-driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam) = do
+driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam providePrefillDetails) = do
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus queryParam)) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus queryParam providePrefillDetails)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
@@ -911,10 +911,11 @@ referDriver payload = do
     where
         unwrapResponse (x) = x
 
-makeReferDriverReq :: String -> ReferDriverReq
-makeReferDriverReq referralNumber = ReferDriverReq
+makeReferDriverReq :: String -> Maybe String -> ReferDriverReq
+makeReferDriverReq referralNumber role = ReferDriverReq
     {
-      "value" : referralNumber
+      "value" : referralNumber,
+      "role" : role
     }
 
 getDriverProfileStatsBT :: DriverProfileStatsReq -> FlowBT String DriverProfileStatsResp
@@ -1027,6 +1028,49 @@ generateReferralCode payload = do
     where
         unwrapResponse x = x
 
+
+---------------------------------------- getAllHubsBT ---------------------------------------------
+getAllHubsBT :: String -> FlowBT String GetAllHubsResp
+getAllHubsBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getAllHubs "") identity errorHandler (lift $ lift $ callAPI headers (GetAllHubsReq {}))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            BackT $ pure GoBack
+
+------------------------------------------- getOperationHubRequest ----------------------------------------------------------
+
+getOperationHubRequestBT :: String -> String -> FlowBT String OperationHubRequestsResp
+getOperationHubRequestBT rcNo mbFrom = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getOperationHubRequest rcNo mbFrom) identity errorHandler (lift $ lift $ callAPI headers (GetOperationHubReq rcNo mbFrom))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            BackT $ pure GoBack
+
+----------------------------------------------------- getVehiclePhotosBT ----------------------------------------------------------
+
+getVehiclePhotosBT :: String -> FlowBT String GetVehiclePhotosResp
+getVehiclePhotosBT rcNo = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getVehiclePhotos rcNo) identity errorHandler (lift $ lift $ callAPI headers (GetVehiclePhotosReq rcNo))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            BackT $ pure GoBack
+
+----------------------------------- driverOperationCreateRequestBT -----------------------------------
+driverOperationCreateRequestBT :: DriverOperationCreateRequestReq -> FlowBT String ApiSuccessResult
+driverOperationCreateRequestBT payload = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.driverOperationCreateRequest "") identity errorHandler (lift $ lift $ callAPI headers payload)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            setValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS "NOT_STARTED"
+            BackT $ pure GoBack
 ----------------------------------- validateAlternateNumber --------------------------
 
 validateAlternateNumber :: DriverAlternateNumberReq -> Flow GlobalState (Either ErrorResponse DriverAlternateNumberResp)

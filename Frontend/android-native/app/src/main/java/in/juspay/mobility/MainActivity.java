@@ -532,8 +532,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             String merchantId = context.getResources().getString(R.string.merchant_id);
-            JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_city_based_splash_scn"));
-            boolean enableCityBasedSplash = clevertapConfig.getBoolean(merchantId);
+            JSONObject clevertapConfig = new JSONObject();
+            try {
+                clevertapConfig = new JSONObject(remoteConfigs.getString("enable_city_based_splash_scn"));
+            } catch (Exception e) {
+            }
+            boolean enableCityBasedSplash = clevertapConfig.optBoolean(merchantId);
             View splash = findViewById(R.id.splash);
             LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
             if (splashLottie != null) {

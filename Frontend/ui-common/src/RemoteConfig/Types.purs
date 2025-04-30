@@ -216,6 +216,11 @@ type AppLanguage
     subtitle :: String
   }
 
+type AppCities = {
+  cityNames :: Array String,
+  enableChangeCity :: Boolean  
+}
+
 type SubscriptionConfigVariantLevelEntity = {
    noChargesTillDate :: String,
    lowestFeesFromDate :: String,

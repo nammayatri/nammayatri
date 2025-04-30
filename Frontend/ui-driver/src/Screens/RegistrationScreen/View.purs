@@ -145,13 +145,7 @@ view push state =
                 , padding $ Padding 16 16 16 0
                 , weight 1.0
                 ]
-                [ imageView
-                    [ width (V 20)
-                    , height (V 20)
-                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
-                    , visibility GONE
-                    ]
-                , linearLayout
+                [ linearLayout
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , orientation VERTICAL
@@ -171,7 +165,7 @@ view push state =
                         , textView
                             $ [ width WRAP_CONTENT
                               , height WRAP_CONTENT
-                              , text $ getVarString START_EARNING_IN_FOUR_STEPS [ "" ]
+                              , text $ getString COMPLETE_THE_STEPS_TO_START_EARNING
                               , weight 1.0
                               ]
                             <> FontStyle.body2 TypoGraphy
@@ -182,34 +176,6 @@ view push state =
                               ]
                             <> FontStyle.body2 TypoGraphy
                         ]
-                    , linearLayout
-                        [ width MATCH_PARENT
-                        , height WRAP_CONTENT
-                        , margin $ MarginBottom 20
-                        , weight 1.0
-                        , visibility GONE
-                        ]
-                        ( mapWithIndex
-                            ( \index item ->
-                                linearLayout
-                                  [ height $ V 5
-                                  , weight 1.0
-                                  , cornerRadius 2.0
-                                  , visibility case item.stage of
-                                      ST.SUBSCRIPTION_PLAN -> boolToVisibility showSubscriptionsOption
-                                      _ -> VISIBLE
-                                  , background case getStatus item.stage state of
-                                      ST.COMPLETED -> Color.green900
-                                      ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
-                                      ST.IN_PROGRESS -> Color.yellow900
-                                      ST.FAILED -> Color.red
-                                      ST.NOT_STARTED -> Color.grey900
-                                  , margin $ MarginLeft if index == 0 then 0 else 15
-                                  ]
-                                  []
-                            )
-                            (documentList)
-                        )
                     , cardsListView push state
                     ]
                 ]
@@ -273,7 +239,6 @@ menuOptionModal push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 contactSupportView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w

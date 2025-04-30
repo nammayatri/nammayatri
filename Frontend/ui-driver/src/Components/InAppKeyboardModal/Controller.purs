@@ -24,6 +24,9 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
 import Screens.Types(KeyboardModalType(..))
+import Components.PrimaryButton.Controller as PrimaryButton
+import MerchantConfig.Types (AppConfig)
+import ConfigProvider
 
 data Action = OnSelection String Int
             | OnClickDone String
@@ -36,13 +39,16 @@ data Action = OnSelection String Int
             | NoAction
             | OnTextViewClick String 
             | RetakeParcelImage
+            | PrimaryButtonAction PrimaryButton.Action
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {
-      errorConfig :: TextConfig
+      appConfig :: AppConfig
+    , errorConfig :: TextConfig
     , headingConfig :: TextConfig
     , subHeadingConfig :: TextConfig
     , inputTextConfig :: TextConfig
+    , bodyTextConfig :: TextConfig
     , buttonConfig :: ButtonConfig
     , imageConfig :: ImageConfig
     , keyList :: Array Keys
@@ -56,6 +62,7 @@ type InAppKeyboardModalState = {
     , confirmBtnColor :: String
     , isDismissable :: Boolean
     , showRetakeParcelImage :: Boolean
+    , primaryButtonConfig :: PrimaryButton.Config
 }
 
 type TextBoxConfig = {
@@ -78,6 +85,9 @@ type TextConfig =
     , margin :: Margin
     , weight :: Number
     , textStyle :: Style
+    , background :: String
+    , suffixImageVisibility :: Boolean
+    , strokeColor :: String
   }
 
 type ImageConfig =
@@ -126,6 +136,7 @@ type InputFieldConfig =
 
 config :: InAppKeyboardModalState
 config = {
+    appConfig : getAppConfig appConfig,
     errorConfig : {
       text : ""
     , focusIndex : 0
@@ -139,6 +150,9 @@ config = {
     , margin : (Margin 0 0 0 0)
     , weight : 0.0
     , textStyle : Body1
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     headingConfig : {
       text : ""
@@ -153,6 +167,9 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (MarginLeft 16)
     , weight : 0.0
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     subHeadingConfig : {
       text : ""
@@ -167,6 +184,9 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , weight : 500.0
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     inputTextConfig : {
        text : ""
@@ -181,6 +201,26 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , weight : 1.0
+    , background : Color.transparent
+    , suffixImageVisibility : true
+    , strokeColor : "1," <> Color.borderColorLight
+    },
+    bodyTextConfig : {
+       text : ""
+    , focusIndex : 1
+    , textStyle : Body1
+    , gravity : CENTER
+    , visibility : GONE
+    , color : Color.black800
+    , height : WRAP_CONTENT
+    , width : MATCH_PARENT
+    , cornerRadius : 0.0
+    , padding : (Padding 0 0 0 0)
+    , margin : (Margin 0 0 0 0)
+    , weight : 1.0
+    , background : Color.transparent
+    , suffixImageVisibility : false
+    , strokeColor : "1," <> Color.borderColorLight
     },
     buttonConfig : {
       margin : (Margin 0 0 0 0)
@@ -231,4 +271,22 @@ config = {
   , confirmBtnColor : Color.darkMint
   , enableDeviceKeyboard : false
   , showRetakeParcelImage : false
+  , primaryButtonConfig : PrimaryButton.config {visibility = GONE}
   }
+
+
+primaryButtonConfig :: InAppKeyboardModalState -> PrimaryButton.Config
+primaryButtonConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = state.primaryButtonConfig.textConfig.text
+      , color = state.primaryButtonConfig.textConfig.color
+      , buttonInactiveTextColor = state.primaryButtonConfig.textConfig.buttonInactiveTextColor
+      }
+      , background = state.primaryButtonConfig.background
+      , buttonInactiveBackground = state.primaryButtonConfig.buttonInactiveBackground
+      , visibility = state.primaryButtonConfig.visibility
+      , isClickable = state.primaryButtonConfig.isClickable
+      }
+  in primaryButtonConfig'

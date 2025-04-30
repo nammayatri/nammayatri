@@ -65,6 +65,11 @@ import Helpers.Utils as HU
 import Services.API as API
 import Data.String as DS
 import Data.Array as DA
+import Screens.Types as ST
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
+import Components.OptionsMenu as OptionsMenu
+import Components.PopUpModal as PopUpModal
+import Components.BottomDrawerList as BottomDrawerList
 
 screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -76,17 +81,19 @@ screen initialState =
             _ <-
               launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
-                    (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
-                    lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
-                    if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
-                      response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
-                      case response of
-                        Right (GenerateReferralCodeRes referralCode) -> do
-                          lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes referralCode))
-                        Left _ -> pure unit
+                    if not initialState.props.fromRegistrationScreen then do
+                      (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
+                      lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
+                      if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
+                        response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
+                        case response of
+                          Right (GenerateReferralCodeRes referralCode) -> do
+                            lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes referralCode))
+                          Left _ -> pure unit
+                      else pure unit
+                      (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
+                      lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
                     else pure unit
-                    (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
-                    lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
             void $ launchAff $ flowRunner defaultGlobalState do
                 moduleResp <- Remote.getAllLmsModules (HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey))
                 case moduleResp of
@@ -114,14 +121,16 @@ view push state =
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   , background Color.white900
-  ][ PrestoAnim.animationSet [Anim.fadeIn true] $ 
+  ] $ [ PrestoAnim.animationSet [Anim.fadeIn true] $ 
      linearLayout
      [ width $ MATCH_PARENT
      , height $ MATCH_PARENT
      ][ referralScreenBody push state ]
   , if state.props.showDriverReferralQRCode then appQRCodeView push state else dummyView
   , if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then referralInfoPop push state else dummyView
-  ]
+  ] <> if state.props.menuOptions then [menuOptionModal push state] else []
+    <> if state.props.logoutModalView then [ popupModal push state] else []
+    <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
 
 referralScreenBody :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralScreenBody push state =
@@ -137,9 +146,18 @@ referralScreenBody push state =
           [ height $ MATCH_PARENT
           , width MATCH_PARENT
           , scrollBarY false 
-          ][referralScreenInnerBody push state]
+          ]( if state.props.fromRegistrationScreen then [referralScreenInnerBodyV2 push state] else [referralScreenInnerBody push state])
        ]
-    ,  bottomNavBarView push state
+    ,  linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility $ boolToVisibility $ not state.props.fromRegistrationScreen
+        ][bottomNavBarView push state]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility $ boolToVisibility $ state.props.fromRegistrationScreen
+        ][PrimaryButton.view (push <<< ContinueButtonAction) (continueButtonConfig state)]
   ]
 
 separatorView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
@@ -172,6 +190,38 @@ referralScreenInnerBody push state =
     , learnAndEarnShimmerView push state
   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
 
+referralScreenInnerBodyV2 :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+referralScreenInnerBodyV2 push state = 
+  let loadDynamicModule = fromMaybe false $ runFn3 getAnyFromWindow "loadDynamicModule" Nothing Just
+      gullakRemoteConfig = CRC.gullakConfig $ getValueToLocalStore DRIVER_LOCATION
+  in linearLayout
+  [ width $ MATCH_PARENT
+  , height $ WRAP_CONTENT
+  , orientation VERTICAL
+  ]( [ AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
+   , learnAndEarnShimmerView push state
+   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
+
+menuOptionModal :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+menuOptionModal push state = 
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding $ PaddingTop 55
+    ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
+
+popupModal :: forall w . (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+popupModal push state =
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< PopUpModalLogoutAction) (logoutPopUp Language) ] 
+
+
+contactSupportModal :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+contactSupportModal push state = BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state)
+
 referralStatsView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralStatsView push state =
   let referralBonusVideo = RC.getReferralBonusVideo $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION 
@@ -184,7 +234,7 @@ referralStatsView push state =
   , padding $ Padding 16 16 16 16
   , margin $ Margin 16 0 16 16
   , stroke $ "1," <> Color.grey900
-  , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true
+  , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true && (not state.props.fromRegistrationScreen)
   ][ if state.data.payoutAmountPaid > 0 then referralBonusView push state else emptyReferralBonusView push state
    , linearLayout
      [ height WRAP_CONTENT
@@ -328,8 +378,8 @@ tabView push state =
     , margin $ MarginBottom 16
     , gravity CENTER
     ]
-    [ tabItem push (state.props.driverReferralType == CUSTOMER) (getString LT.REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
-    ,  tabItem push (state.props.driverReferralType == DRIVER) (getString LT.REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
+    [ tabItem push (state.props.driverReferralType == ST.CUSTOMER) (getString LT.REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" ST.CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
+    ,  tabItem push (state.props.driverReferralType == ST.DRIVER) (getString LT.REFER_DRIVER) "ny_ic_new_avatar_profile" ST.DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
     ]
   where
   cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -487,21 +537,21 @@ driverReferralCode push state =
       , height $ V 1
       , background config.separatorColor
       , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == ST.DRIVER
       ][]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
-      ][ referralCountView false (getString LT.REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == ST.DRIVER
+      ][ referralCountView false (getString LT.REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == ST.CUSTOMER) push REFERRED_CUSTOMERS_POPUP
        , referralCountView true config.infoText (show activatedCount) true push config.popupType
        ]
     ]
   where
-  activatedCount = if state.props.driverReferralType == DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
+  activatedCount = if state.props.driverReferralType == ST.DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
 
-  config = if state.props.driverReferralType == DRIVER then driverReferralConfig else customerReferralConfig
+  config = if state.props.driverReferralType == ST.DRIVER then driverReferralConfig else customerReferralConfig
 
   driverReferralConfig =
     let appConfigs = getAppConfig appConfig
@@ -649,7 +699,7 @@ appQRCodeView push state =
         ]
     ]
   where
-  qr_img = if state.props.driverReferralType == DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
+  qr_img = if state.props.driverReferralType == ST.DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
 
 referralInfoPop :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralInfoPop push state =
@@ -701,7 +751,7 @@ referralInfoPop push state =
         ]
     ]
   where
-  qr_img = if state.props.driverReferralType == DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
+  qr_img = if state.props.driverReferralType == ST.DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
 
   config = case state.props.referralInfoPopType of
     REFERRED_DRIVERS_POPUP -> { heading: getString LT.REFERRED_DRIVERS, subtext: getString $ LT.REFERRED_DRIVERS_INFO "REFERRED_DRIVERS_INFO" }
@@ -885,6 +935,7 @@ learnAndEarnView push state =
      [ text $ getString LT.LEARN_AND_EARN
      , color $ Color.black800
      , margin $ MarginVertical 12 12
+     , visibility $ boolToVisibility $ not state.props.fromRegistrationScreen
      ] <> FontStyle.h2 TypoGraphy
     , linearLayout
       [ width $ MATCH_PARENT

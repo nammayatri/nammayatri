@@ -17,6 +17,8 @@ module Screens.DocumentCaptureScreen.ScreenData where
 import Screens.Types as ST
 import Data.Maybe(Maybe(..))
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import ConfigProvider
+import Services.API as API
 
 initData :: ST.DocumentCaptureScreenState
 initData =
@@ -28,6 +30,8 @@ initData =
       , docId : ""
       , linkedRc : Nothing
       , cityConfig : defaultCityConfig
+      , config : getAppConfig appConfig
+      , vehiclePhotos : API.GetVehiclePhotosResp { left : [], right : [], front : [], back : [], frontInterior : [], backInterior : [], odometer : [] }
       }
   , props:
       { validateDocModal : false,
@@ -35,6 +39,9 @@ initData =
         validating : false,
         menuOptions : false,
         confirmChangeVehicle : false,
-        contactSupportModal : ST.HIDE
+        contactSupportModal : ST.HIDE,
+        uploadVehiclePhotos : false,
+        vehicleTypeImageToUpload : Nothing,
+        numberOfVehicleImagesUploaded : 0
       }
   }

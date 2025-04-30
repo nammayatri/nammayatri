@@ -13,7 +13,8 @@ initData = {
         description : Maybe.Nothing,
         primaryButtonText : Maybe.Nothing,
         orderId: Maybe.Nothing,
-        amount : ""
+        amount : "",
+        primaryButtonVisibility : true
     },
     props: {
         primaryButtonVisibility : PrestoDOM.VISIBLE,

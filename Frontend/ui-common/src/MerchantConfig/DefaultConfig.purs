@@ -7,6 +7,20 @@ defaultColors = {
     black800 : "#454545"
   , black900 : "#2C2F3A"
   , red : "#E55454"
+  , black700 : "#6D7280"
+  , black650 : "#868B98"
+  , black600 : "#A7A7A7"
+  , black500 : "#B9BABE"
+  , grey900 : "#E5E7EB"
+  , grey800 : "#F1F1F1"
+  , grey700 : "#F4F4F6"
+  , blue900 : "#0066FF"
+  , blue800 : "#2194FF"
+  , blue700 : "#80B2FF"
+  , blue600 : "#f4F7FF"
+  , green900 : "#53BB6F"
+  , yellow900 : "#FCC32C"
+  , red900 : "#E55454"
   }
 
 defaultAppData :: AppDatas

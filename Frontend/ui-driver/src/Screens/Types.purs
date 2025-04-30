@@ -13,10 +13,11 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types 
+module Screens.Types
   ( module Screens.Types
   , module ReExport
-  ) where
+  )
+  where
 
 import Common.Types.Config
 
@@ -289,7 +290,6 @@ type RegistrationScreenState = {
   props :: RegistrationScreenProps
 }
 type RegistrationScreenData = {
-  activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
@@ -300,6 +300,7 @@ type RegistrationScreenData = {
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
+  trainingsCompletionStatus :: StageStatus,
   documentStatusList :: Array DocumentStatus,
   variantList :: Array VehicleCategory,
   lastUpdateTime :: String,
@@ -315,7 +316,8 @@ type RegistrationScreenData = {
   linkedRc :: Maybe String,
   accessToken :: String,
   hvTxnId :: Maybe String,
-  hvFlowId :: Maybe String
+  hvFlowId :: Maybe String,
+  refereeName :: Maybe String
 }
 
 type DocumentStatus = {
@@ -342,7 +344,8 @@ type StepProgress = {
   disableWarning :: String,
   isHidden :: Boolean,
   dependencyDocumentType :: Array RegisterationStep,
-  rcNumberPrefixList :: Array String
+  rcNumberPrefixList :: Array String,
+  documentCategory :: Maybe API.DocumentCategory
 }
 
 type RegistrationScreenProps = {
@@ -362,7 +365,17 @@ type RegistrationScreenProps = {
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
   manageVehicleCategory :: Maybe VehicleCategory,
-  dontAllowHvRelaunch :: Boolean
+  dontAllowHvRelaunch :: Boolean,
+  categoryToStepProgressMap :: Array CategoryToStepMap,
+  selectedDocumentCategory :: Maybe API.DocumentCategory,
+  vehicleImagesUploaded :: Boolean
+}
+
+type CategoryToStepMap = {
+  category :: API.DocumentCategory,
+  registrationSteps :: Array StepProgress,
+  completionStatus :: StageStatus,
+  showContinueButton :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -382,6 +395,8 @@ data RegisterationStep =
   | VEHICLE_INSURANCE
   | VEHICLE_PUC
   | NO_OPTION
+  | VEHICLE_PHOTOS
+  | INSPECTION_HUB
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
@@ -424,7 +439,9 @@ type PrimaryEditTextState = {
   text :: String,
   fontSize :: FontSize,
   letterSpacing :: LetterSpacing,
-  id :: String
+  id :: String,
+  background :: String,
+  stroke :: String 
 }
 
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------
@@ -918,7 +935,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE | REFERRAL__CODE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -2227,7 +2244,8 @@ type AcknowledgementScreenData = {
   description ::Maybe String,
   primaryButtonText :: Maybe String,
   orderId  :: Maybe String,
-  amount :: String
+  amount :: String,
+  primaryButtonVisibility :: Boolean
 }
 
 type AcknowledgementScreenProps = {
@@ -2719,7 +2737,8 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  config :: AppConfig
 }
 ---------------------------------------------------- DriverEarningsScreen ----------------------------------
 
@@ -2907,6 +2926,10 @@ type BenefitsScreenProps = {
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
 , glBannerClickable :: Boolean
+, fromRegistrationScreen :: Boolean
+, menuOptions :: Boolean
+, logoutModalView :: Boolean
+, contactSupportModal :: AnimType
 }
 
 type LmsModuleList =
@@ -3038,7 +3061,9 @@ type DocumentCaptureScreenData = {
   vehicleCategory :: Maybe VehicleCategory,
   docId :: String,
   linkedRc :: Maybe String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  config :: AppConfig, 
+  vehiclePhotos :: API.GetVehiclePhotosResp
 } 
 
 type DocumentCaptureScreenProps = {
@@ -3047,7 +3072,10 @@ type DocumentCaptureScreenProps = {
   validating :: Boolean,
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  uploadVehiclePhotos :: Boolean,
+  vehicleTypeImageToUpload :: Maybe API.VehicleImageType,
+  numberOfVehicleImagesUploaded :: Int
 } 
 
 
@@ -3350,4 +3378,23 @@ type MetroWarriorData = {
   primaryStation :: Maybe API.SpecialLocationWarrior,
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
+}
+
+type OperationHubScreenState = {
+  data :: OperationHubScreenData,
+  props :: OperationHubScreenProps
+}
+
+type OperationHubScreenData = {
+  config :: AppConfig,
+  selectedHub :: Maybe API.OperationHub,
+  operationHubList :: Maybe (Array API.OperationHub),
+  rcNumber :: Maybe String
+}
+
+type OperationHubScreenProps = {
+  menuOptions :: Boolean,
+  contactSupportModal :: AnimType,
+  logoutModalView :: Boolean,
+  showOptions :: Boolean
 }

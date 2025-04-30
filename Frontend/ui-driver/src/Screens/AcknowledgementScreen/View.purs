@@ -18,6 +18,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.AcknowledgementScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Mobility.Prelude (boolToVisibility)
 
 
 screen :: ST.AcknowledgementScreenState -> Screen Action ST.AcknowledgementScreenState ScreenOutput
@@ -50,6 +51,7 @@ view push state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , alignParentBottom "true,-1"
+            , visibility $ boolToVisibility state.data.primaryButtonVisibility
             ][ case state.data.primaryButtonText of
                 Maybe.Nothing -> linearLayout[][]
                 Maybe.Just text -> PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig text)

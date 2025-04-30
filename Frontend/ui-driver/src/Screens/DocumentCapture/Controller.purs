@@ -17,7 +17,7 @@ module Screens.DocumentCaptureScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>))
+import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>), (&&), not, show)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -41,6 +41,13 @@ import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Common.Types.App
 import Engineering.Helpers.Events as EHE
+import Services.API as API
+import Resource.Constants as Const
+import Storage
+import DecodeUtil 
+import Debug
+import Data.Maybe
+import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -61,12 +68,20 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | ChangeVehicleAC PopUpModal.Action
             | BottomDrawerListAC BottomDrawerList.Action
             | WhatsAppClick
+            | VehicleUploadPrimaryButtonAC PrimaryButtonController.Action 
+            | AfterRender
+            | UploadImageWihType (Maybe API.VehicleImageType)
+            | CallUploadVehicleImageAPI
+            | UpdateVehiclePhotos API.GetVehiclePhotosResp
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
                   | LogoutAccount
                   | SelectLang DocumentCaptureScreenState
                   | ChangeVehicle DocumentCaptureScreenState
+                  | UploadVehicleImageAPI DocumentCaptureScreenState
+                  | GoToOnboardingScreen DocumentCaptureScreenState
+                  | GetVehicleImagesStatus DocumentCaptureScreenState
 
 uploadFileConfig :: UploadFileConfig
 uploadFileConfig = UploadFileConfig {
@@ -77,20 +92,36 @@ uploadFileConfig = UploadFileConfig {
 
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
-eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
-  let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
-  _ <- liftEffect $ JB.uploadFile uploadFileConfig true
-  pure NoAction]
+eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
+  if state.data.docType == ST.VEHICLE_PHOTOS && not state.props.uploadVehiclePhotos then do
+    let (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
+        newState = state {props {uploadVehiclePhotos = true, numberOfVehicleImagesUploaded = DA.length uploadedImagesUptoNow}} 
+    exit $ GetVehicleImagesStatus newState 
+  else continueWithCmd state [do
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
+    void $ liftEffect $ JB.uploadFile uploadFileConfig true
+    pure NoAction]
+
+eval (UpdateVehiclePhotos vehiclePhotosResp) state = continue state { data {vehiclePhotos = vehiclePhotosResp}}
+
+eval (VehicleUploadPrimaryButtonAC PrimaryButtonController.OnClick) state = exit $ GoToOnboardingScreen state
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
 
 eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [pure BackPressed]
 
 eval (CallBackImageUpload imageBase64 imageName imagePath) state = do
-  if imageBase64 /= "" then continueWithCmd state { data { imageBase64 = imageBase64 }, props { validateDocModal = true}} [ do
-      void $ runEffectFn4 JB.renderBase64ImageFile imageBase64 (EHC.getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
-      pure $ NoAction]
-  else continue state
+  if imageBase64 /= "" then 
+    case state.data.docType of
+      ST.VEHICLE_PHOTOS -> continueWithCmd state {data { imageBase64 = imageBase64}, props{validating = true}} [do
+                              -- void $ runEffectFn4 JB.renderBase64ImageFile imageBase64 (EHC.getNewIDWithTag $ "vehicle_image00") false "CENTER_CROP"
+                              pure $ CallUploadVehicleImageAPI ]
+      _ -> continueWithCmd state { data { imageBase64 = imageBase64 }, props { validateDocModal = true}} [ do
+              void $ runEffectFn4 JB.renderBase64ImageFile imageBase64 (EHC.getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
+              pure $ NoAction]
+    else continue state
+
+eval CallUploadVehicleImageAPI state = updateAndExit state $ UploadVehicleImageAPI state{props{validating = true}}
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.BackPressed)) state = continueWithCmd state [pure BackPressed]  
 
@@ -114,6 +145,7 @@ eval BackPressed state =
   else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}}
   else if state.props.menuOptions then continue state{props{menuOptions = false}} 
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if state.props.uploadVehiclePhotos then continue state { props { uploadVehiclePhotos = false}}
   else exit $ GoBack
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
@@ -125,6 +157,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}
@@ -155,5 +188,12 @@ eval WhatsAppClick state = continueWithCmd state [do
   void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
   pure NoAction
   ]
+
+eval (UploadImageWihType imageType) state = continueWithCmd state {props{vehicleTypeImageToUpload = imageType}} [do
+    -- let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
+    void $ liftEffect $ JB.uploadFile (UploadFileConfig {showAccordingToAspectRatio : true ,imageAspectHeight : 9, imageAspectWidth : 12}) true
+    pure NoAction]
+
+eval AfterRender state = continue state 
 
 eval _ state = update state

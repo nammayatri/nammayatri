@@ -87,20 +87,26 @@ view push state =
         , background state.data.config.primaryBackground
         , padding $ Padding 16 16 16 16
         ][  imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
+            [ imageWithFallback $ fetchImage FF_ASSET state.data.config.themeColors.defaultBackButton
             , height $ V 25 
             , width $ V 25
             , onClick push $ const BackPressed
             ]
           , textView $ 
-            [ text $ getString LETS_GET_YOU_TRIP_READY
-            , color Color.white900
-            , margin $ MarginVertical 5 22
+            [ text $ getText state.data.config.themeColors.mobileNumberScreenHeaderText
+            , color state.data.config.themeColors.onboardingHeaderTextColor
+            , margin $ MarginVertical 10 10
             , height WRAP_CONTENT
             , width MATCH_PARENT
             ] <> FontStyle.h1 TypoGraphy
 
         ]
+      
+      getText :: String -> String
+      getText text = 
+        case text of 
+          "LETS_GET_YOU_TRIP_READY" -> getString LETS_GET_YOU_TRIP_READY
+          _ -> getString WELCOME_LETS_GET_STARTED
 
 
 --------------------- backArrow ----------------------------
@@ -141,39 +147,17 @@ underlinedTextView _ _ =
   [ height WRAP_CONTENT
   , orientation HORIZONTAL
   , weight 1.0
-  ][ textView $
-    [ weight 1.0
+  ]
+  [ textView $
+    [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , textFromHtml $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC
-    , color Color.black700
-    , onClick (\_ -> JB.openUrlInApp $ config.termsLink) (const NonDisclosureAgreementAction)
+    , textFromHtml $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR
+    , color Color.black900
+    , alpha 0.5
     , singleLine false
+    , onClick (\_ -> JB.openUrlInApp $ config.termsLink) (const NonDisclosureAgreementAction)
     ] <> FontStyle.body3 TypoGraphy
  ]
-
--------------------------------- termsAndConditionsView ------------------
-termsAndConditionsView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-termsAndConditionsView state push =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation HORIZONTAL
-  , margin (Margin 15 10 16 20)
-  ][ linearLayout
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , margin (MarginLeft 10)
-      ][textView (
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text (getString BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR)
-        , color Color.greyTextColor
-        , alpha 0.5
-        ] <> FontStyle.body3 TypoGraphy)
-      , underlinedTextView state push
-      ]
-  ]
 
 enterMobileNumberView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 enterMobileNumberView  state push =

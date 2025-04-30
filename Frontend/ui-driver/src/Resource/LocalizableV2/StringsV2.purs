@@ -384,6 +384,43 @@ getProxy str = case str of
   SOMETHING_WENT_WRONG -> \a -> a @~ something_went_wrong
   PICKUP -> \a -> a @~ pickup
   TRIP -> \a -> a @~ trip
+  OPTIONAL_STR -> \a -> a @~ optional_str
+  MY_VEHICLE -> \a -> a @~ my_vehicle
+  APP_PERMISSIONS -> \a -> a @~ app_permissions
+  TRAININGS -> \a -> a @~ trainings
+  VERIFY -> \a -> a @~ verify
+  INVALID_CODE_PLEASE_RE_ENTER -> \a -> a @~ invalid_code_please_re_enter
+  VERIFIED_LINKED_WITH_NAME arg1 -> \a -> (a @~ verified_linked_with_name) arg1
+  VISIT_YOUR_NEAREST_HUB_TO_COMPLETE_A_SHORT_VEHICLE_INSPECTION_TO_START_EARNING_WITH_US -> \a -> a @~ visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us
+  YOU_WILL_BE_CONTACTED_BY_YOUR_SELECTED_HUB_WITHIN_24_HOURS -> \a -> a @~ you_will_be_contacted_by_your_selected_hub_within_24_hours
+  OPERATOR_REFERRAL_CODE_APPLIED -> \a -> a @~ operator_referral_code_applied
+  GOT_AN_OPERATOR_REFERRAL_CODE -> \a -> a @~ got_an_operator_referral_code
+  LOCATE_ON_MAP_STR -> \a -> a @~ locate_on_map
+  CONTACT_NUMBER -> \a -> a @~ contact_number
+  ADDRESS -> \a -> a @~ address
+  VEHICLE_PHOTOS_STR -> \a -> a @~ vehicle_photos
+  OPERATION_HUB_STR -> \a -> a @~ operation_hub
+  TAKE_A_CLEAR_PICTURE_OF_THE_VEHICLE_FROM_THE_SUGGESTED_ANGLES -> \a -> a @~ take_a_clear_picture_of_the_vehicle_from_the_suggested_angles
+  TAKE_A_CLEAR_SELFIE_WITH_YOUR_FACE_INSIDE_THE_MARKED_AREA -> \a -> a @~ take_a_clear_selfie_with_your_face_inside_the_marked_area
+  ENSURE_ONLY_YOUR_VEHICLE_IS_IN_THE_FRAME_WHEN_UPLOADING -> \a -> a @~ ensure_only_your_vehicle_is_in_the_frame_when_uploading
+  ONLY_YOUR_FACE_SHOULD_BE_IN_THE_FRAME_WHEN_UPLOADING_THE_IMAGE -> \a -> a @~ only_your_face_should_be_in_the_frame_when_uploading_the_image
+  FULL_VIEW -> \a -> a @~ full_view
+  AVOID_PEOPLE -> \a -> a @~ avoid_people
+  CROPPED_AREA -> \a -> a @~ cropped_area
+  INSIDE_MARKED_AREA -> \a -> a @~ inside_marked_area
+  NO_CLOSED_EYES -> \a -> a @~ no_closed_eyes
+  MORE_THAN_ONE_FACE -> \a -> a @~ more_than_one_face
+  OUTSIDE_MARKED_AREA -> \a -> a @~ outside_marked_area
+  FRONT_STR -> \a -> a @~ front_str
+  LEFT_STR -> \a -> a @~ left_str
+  RIGHT_STR -> \a -> a @~ right_str
+  ODOMETER_STR -> \a -> a @~ odometer_str
+  FRONT_INTERIOR -> \a -> a @~ front_interior
+  REAR_INTERIOR -> \a -> a @~ rear_interior
+  ENTER_THE_SIX_DIGIT_CODE_SHARED_WITH_YOU -> \a -> a @~ enter_the_six_digit_code_shared_with_you
+  REGISTER_YOUR_PROFILE -> \a -> a @~ register_your_profile
+  REGISTRATION_COMPLETED -> \a -> a @~ registration_completed
+  WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE -> \a -> a @~ we_will_notify_you_when_we_go_live
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number
@@ -719,6 +756,7 @@ getProxy str = case str of
   CUSTOMER_ADDED_A_STOP -> \a -> a @~ customer_added_a_stop
   AADHAAR_LINKING_REQUIRED_DESCRIPTION arg1 -> \a -> (a @~ aadhaar_linking_required_description) arg1
   BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC -> \a -> a @~ by_clicking_this_you_will_be_agreeing_to_our_tc
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR -> \a -> a @~ by_clicking_this_you_will_be_agreeing_to_our
   TERMS_AND_CONDITIONS_SHORT -> \a -> a @~ terms_and_conditions_short
   OTP_SENT_TO_AADHAAR_NUMBER -> \a -> a @~ otp_sent_to_aadhaar_number
   ENTER_SIX_DIGIT_OTP -> \a -> a @~ enter_six_digit_otp
@@ -1162,6 +1200,7 @@ getProxy str = case str of
   SUBSCRIPTION_PLAN_STR arg1 -> \a -> (a @~ subscription_plan_str) arg1
   COMPLETE_AUTOPAY_LATER -> \a -> a @~ complete_autopay_later
   START_EARNING_IN_FOUR_STEPS -> \a -> a @~ start_earning_in_four_steps
+  COMPLETE_THE_STEPS_TO_START_EARNING -> \a -> a @~ complete_the_steps_to_start_earning
   COMPLETE -> \a -> a @~ complete
   HOW_TO_UPLOAD -> \a -> a @~ how_to_upload
   TAKE_CLEAR_PICTURE_DL -> \a -> a @~ take_clear_picture_dl
@@ -1180,6 +1219,7 @@ getProxy str = case str of
   RETAKE_PHOTO -> \a -> a @~ retake_photo
   CHANGE_CITY -> \a -> a @~ change_city
   LETS_GET_YOU_TRIP_READY -> \a -> a @~ lets_get_you_trip_ready
+  WELCOME_LETS_GET_STARTED -> \a -> a @~ welcome_lets_get_started
   GOT_AN_OTP -> \a -> a @~ got_an_otp
   DRIVING_LICENSE_DETAILS -> \a -> a @~ driving_license_details
   VEHICLE_REGISTRATION_DETAILS -> \a -> a @~ vehicle_registration_details
