@@ -3593,16 +3593,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1745903276,
+        "lastModified": 1746014819,
         "narHash": "sha256-DaomF70xjXlP0fBdK57VD+7uES3L8HK+VG3OHvWMFJI=",
-        "owner": "imviv3kshukla",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "468dfc93c86e2e01e86adce1c8b8eb5f011a288c",
+        "rev": "9e249e3bc1aa12df83be712bc270df1ccf2d8da0",
         "type": "github"
       },
       "original": {
-        "owner": "imviv3kshukla",
-        "ref": "backend/enh/add-new-endpoint-for-aa-juspay",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
         "type": "github"
       }
