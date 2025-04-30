@@ -182,6 +182,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mo
   allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
   routeStopTimes <- mapM processRoute allRouteWithBuses
   let flattenedRouteStopTimes = concat routeStopTimes
+  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes
   if not (null flattenedRouteStopTimes)
     then return flattenedRouteStopTimes
     else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes ("chennai_bus:" <> stopCode)) "fetch route stop timing through graphql"
@@ -189,20 +190,25 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mo
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
           filteredBuses = filter (\(_, eta) -> eta.stopId == stopCode) busEtaData
-      vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, _) ->
-        listToMaybe <$> QVehicleRouteMapping.findByVehicleNo vehicleNumber
-      let validBuses = filter isValidBus $ zip filteredBuses vehicleRouteMappings
-          baseStopTimes = map createStopTime validBuses
+      logDebug $ "filteredBuses: " <> show filteredBuses <> " busEtaData: " <> show busEtaData
+      vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
+        vrMapping <- QVehicleRouteMapping.findByVehicleNo vehicleNumber
+        case listToMaybe vrMapping of
+          Just mapping -> return (Just ((vehicleNumber, etaData), mapping))
+          Nothing -> return Nothing
+      logDebug $ "vehicleRouteMappings: " <> show vehicleRouteMappings
+
+      let validBuses = catMaybes vehicleRouteMappings
+      logDebug $ "validBuses: " <> show validBuses
+      let baseStopTimes = map createStopTime validBuses
+      logDebug $ "baseStopTimes: " <> show baseStopTimes
       return baseStopTimes
       where
-        isValidBus ((_, _), mbMapping) = case mbMapping of
-          Just mapping -> mapping.routeId == routeWithBuses.routeId
-          Nothing -> False
-        createStopTime ((vehicleNumber, eta), _) = createRouteStopTimeTable routeWithBuses vehicleNumber eta
+        createStopTime ((vehicleNumber, eta), mapping) = createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping
 
-    createRouteStopTimeTable routeWithBuses vehicleNumber eta =
+    createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping =
       let timeOfDay = timeToTimeOfDay $ utctDayTime eta.arrivalTime
-          serviceTierType = mapToServiceTierType routeWithBuses.routeId
+          serviceTierType = mapToServiceTierType mapping.typeOfService
        in RouteStopTimeTable
             { integratedBppConfigId = integratedBppConfigId,
               routeCode = routeWithBuses.routeId,
@@ -239,7 +245,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfigId mid
   let routeStopTimes = concatMap processRoute allRouteWithTrains
   if not (null routeStopTimes)
     then return routeStopTimes
-    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
+    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes ("chennai_subway:" <> stopCode)) "fetch route stop timing through graphql"
   where
     processRoute routeWithTrains =
       let filteredTrains = filter (\train -> train.stationCode == stopCode) (routeWithTrains.trains)
@@ -283,7 +289,7 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfigId mid mocid
   routeStopTimings <- case vc of
     Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfigId mid mocid
     Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mocid
-    _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes ("chennai_bus:" <> stopCode)) "fetch route stop timing through graphql"
+    _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
   return routeStopTimings
 
 -- | Find all possible routes from originStop to destinationStop with trips in the next hour
@@ -433,18 +439,15 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
   routeStopTimings <- fetchLiveTimings routeCodes stopCode currentTime integratedBppConfigId mid mocid vc
+  logDebug $ "routeStopTimings: " <> show routeStopTimings
 
   let filteredByService = case mbServiceType of
         Just serviceType -> filter (\rst -> rst.serviceTierType == serviceType) routeStopTimings
         Nothing -> routeStopTimings
 
-  let tripIds = map (.tripId) filteredByService
-
-  -- Check which trips are serviceable today
-  let serviceableTripIds = tripIds
-
   -- Combine stop timings with their calendars and get arrival times
   -- Filter out trips that have already passed the stop
+  logDebug $ "filteredByService before filtering on current time : " <> show filteredByService
   let tripTimingsWithCalendars =
         [ UpcomingBusInfo
             { routeCode = rst.routeCode,
@@ -452,10 +455,9 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
               arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST
             }
           | rst <- filteredByService,
-            rst.tripId `elem` serviceableTripIds,
             (getISTArrivalTime rst.timeOfArrival currentTime) > currentTimeIST -- Only include future arrivals
         ]
-
+  logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithCalendars
   let upcomingBuses = sortBy (\a b -> compare (arrivalTimeInSeconds a) (arrivalTimeInSeconds b)) tripTimingsWithCalendars
 
   let busFrequency =
