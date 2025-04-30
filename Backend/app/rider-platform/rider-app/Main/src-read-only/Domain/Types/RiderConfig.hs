@@ -5,6 +5,7 @@
 module Domain.Types.RiderConfig (module Domain.Types.RiderConfig, module ReExport) where
 
 import Data.Aeson
+import qualified Data.Time
 import Domain.Types.Extra.RiderConfig as ReExport
 import qualified Domain.Types.Extra.RiderConfig
 import qualified Domain.Types.Merchant
@@ -78,6 +79,8 @@ data RiderConfig = RiderConfig
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
+    qrTicketRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
+    qrTicketRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,

@@ -4,6 +4,7 @@
 module Storage.Beam.RiderConfig where
 
 import qualified Data.Aeson
+import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.RiderConfig
@@ -77,6 +78,8 @@ data RiderConfigT f = RiderConfigT
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     postRideSafetyNotificationDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    qrTicketRestrictionEndTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
+    qrTicketRestrictionStartTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
     rentalsConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig]),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,

@@ -217,6 +217,7 @@ let RiderJobType =
       | QuarterlyUpdateTag
       | PostRideSafetyNotification
       | UpdateCrisUtsData
+      | MetroBusinessHour
       >
 
 let jobInfoMapx =

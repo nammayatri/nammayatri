@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
+import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
@@ -220,7 +221,7 @@ getAllLegsInfo journeyId = do
         DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
 
 getAllLegsStatus ::
-  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
+  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
   m [JL.JourneyLegState]
 getAllLegsStatus journey = do
@@ -241,7 +242,7 @@ getAllLegsStatus journey = do
   return allLegsState
   where
     processLeg ::
-      (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
+      (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
       [APITypes.RiderLocationReq] ->
       (Bool, [JL.JourneyLegState]) ->
       DJourneyLeg.JourneyLeg ->
@@ -377,7 +378,9 @@ startJourney confirmElements forcedBookedLegOrder journeyId = do
     allLegs
 
 addAllLegs ::
-  ( JL.SearchRequestFlow m r c
+  ( JL.SearchRequestFlow m r c,
+    JL.GetStateFlow m r c,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
   Id DJourney.Journey ->
   [DJourneyLeg.JourneyLeg] ->
@@ -532,14 +535,36 @@ addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress = do
           }
 
 addMetroLeg ::
-  JL.SearchRequestFlow m r c =>
+  (JL.SearchRequestFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
   m JL.SearchResponse
 addMetroLeg parentSearchReq journeyLeg = do
   merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city
-  JL.search metroSearchReq
+  searchResp <- JL.search metroSearchReq
+
+  now <- getCurrentTime
+  shouldSkip <- case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
+    (Just startTime, Just endTime) -> do
+      let isOutsideRestrictedHours = isOutsideRestrictionTime startTime endTime now riderConfig.timeDiffFromUtc
+      let isMetroBookingAllowed = fromMaybe True riderConfig.metroBookingAllowed
+      return $ not (isOutsideRestrictedHours && isMetroBookingAllowed)
+    _ -> do
+      -- No restriction times set, check only metroBookingAllowed
+      let isMetroBookingAllowed = fromMaybe True riderConfig.metroBookingAllowed
+      return $ not isMetroBookingAllowed
+
+  when shouldSkip $ do
+    let reason =
+          if not (fromMaybe True riderConfig.metroBookingAllowed)
+            then "metro booking not allowed"
+            else "restricted hours"
+    logInfo $ "Marking Metro leg as skipped due to " <> reason <> ". Current time: " <> show now
+    skipLeg journeyLeg.journeyId journeyLeg.sequenceNumber False
+
+  return searchResp
   where
     mkMetroLegReq city = do
       MetroLegRequestSearch $
@@ -593,6 +618,20 @@ addBusLeg parentSearchReq journeyLeg = do
             city,
             journeyLeg
           }
+
+isOutsideRestrictionTime :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
+isOutsideRestrictionTime startTime endTime now timeDiffFromUtc =
+  let tzMinutes = getSeconds timeDiffFromUtc `div` 60
+      tz = Time.minutesToTimeZone tzMinutes
+      nowAsLocal = Time.utcToLocalTime tz now
+      nowTOD = Time.localTimeOfDay nowAsLocal
+
+      --handle midnight wrap
+      inWindow =
+        if startTime <= endTime
+          then nowTOD >= startTime && nowTOD <= endTime
+          else nowTOD >= startTime || nowTOD <= endTime
+   in not inWindow
 
 getRemainingLegs ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
