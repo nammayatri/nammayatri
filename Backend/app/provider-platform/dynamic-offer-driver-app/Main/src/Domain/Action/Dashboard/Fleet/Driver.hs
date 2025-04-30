@@ -162,9 +162,9 @@ postDriverFleetAddVehicle ::
   Common.AddVehicleReq ->
   Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode req = do
-  whenJust mbFleetOwnerId DCommon.checkFleetOwnerVerification
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
@@ -376,9 +376,9 @@ postDriverFleetAddRCWithoutDriver ::
   Common.RegisterRCReq ->
   Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let personId = Id fleetOwnerId :: Id DP.Person
   driver <-
     QPerson.findById personId
@@ -415,10 +415,10 @@ getDriverFleetGetAllVehicle ::
   Maybe Text ->
   Flow Common.ListVehicleRes
 getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
   vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
   vehicles <- traverse convertToVehicleAPIEntity vehicleList
@@ -449,8 +449,9 @@ getDriverFleetGetAllDriver ::
   Maybe Text ->
   Maybe Text ->
   Flow Common.FleetListDriverRes
-getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
+getDriverFleetGetAllDriver merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
+  merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   mobileNumberHash <- case mbSearchString of
@@ -487,8 +488,8 @@ postDriverFleetUnlink ::
   Text ->
   Flow APISuccess
 postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -517,8 +518,9 @@ postDriverFleetRemoveVehicle ::
   Text ->
   Text ->
   Flow APISuccess
-postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId_
+postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo = do
+  merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId_ merchant.fleetOwnerEnabledCheck
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
@@ -547,7 +549,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
-  DCommon.checkFleetOwnerVerification fleetOwnerId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   rcReq <-
     Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route]) req.file $
       parseVehicleInfo merchantOpCity
@@ -645,8 +647,9 @@ postDriverFleetRemoveDriver ::
   Text ->
   Id Common.Driver ->
   Flow APISuccess
-postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
+postDriverFleetRemoveDriver merchantShortId _ fleetOwnerId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let personId = cast @Common.Driver @DP.Person driverId
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
@@ -840,8 +843,8 @@ getDriverFleetDriverVehicleAssociation ::
   Maybe UTCTime ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   (listOfAllDrivers, _, _) <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
@@ -928,9 +931,9 @@ getDriverFleetDriverAssociation ::
   Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbRequestorId = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
@@ -1024,9 +1027,9 @@ getDriverFleetVehicleAssociation ::
   Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbRequestorId = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
@@ -1114,8 +1117,8 @@ postDriverFleetVehicleDriverRcStatus ::
   Common.RCStatusReq ->
   Flow APISuccess
 postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId req = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -1245,10 +1248,10 @@ postDriverFleetSendJoiningOtp ::
   Common.AuthReq ->
   Flow Common.AuthRes
 postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwnerId mbRequestorId req = do
+  merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
-    DCommon.checkFleetOwnerVerification fleetOwnerId
-  merchant <- findMerchantByShortId merchantShortId
+    DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   smsCfg <- asks (.smsCfg)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mobileNumberHash <- getDbHash req.mobileNumber
@@ -1284,8 +1287,8 @@ postDriverFleetVerifyJoiningOtp ::
   Flow APISuccess
 postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbRequestorId req = do
   FleetOwnerInfo {fleetOwner, mbOperator} <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -1336,8 +1339,8 @@ postDriverFleetLinkRCWithDriver ::
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
 postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
-  DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash req.driverMobileNumber
   let mobileCountryCode = fromMaybe DCommon.mobileIndianCode req.driverMobileCountryCode
@@ -1825,6 +1828,10 @@ postDriverFleetAddDrivers ::
 postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fleetOwnerId <- case req.fleetOwnerId of
+    Nothing -> throwError FleetOwnerIdRequired
+    Just id -> pure id
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   driverDetails <- Csv.readCsv @CreateDriversCSVRow @DriverDetails req.file parseDriverInfo
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   let process func =
@@ -1842,13 +1849,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   unprocessedEntities <- case mbRequestorId of
     Nothing -> do
       -- old flow
-      fleetOwnerId <- case req.fleetOwnerId of
-        Nothing -> throwError FleetOwnerIdRequired
-        Just id -> pure id
       fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
       unless (fleetOwner.role == DP.FLEET_OWNER) $
         throwError (InvalidRequest "Invalid fleet owner")
-      DCommon.checkFleetOwnerVerification fleetOwnerId
+      DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
       process (processDriverByFleetOwner merchant merchantOpCity fleetOwner)
     Just requestorId -> do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
@@ -1857,7 +1861,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           -- fleetOwner is in req, should be the same as requestor
           whenJust req.fleetOwnerId \id -> do
             unless (id == requestorId) $ throwError AccessDenied
-            DCommon.checkFleetOwnerVerification id
+            DCommon.checkFleetOwnerVerification id merchant.fleetOwnerEnabledCheck
           process (processDriverByFleetOwner merchant merchantOpCity requestor)
         DP.OPERATOR ->
           -- fleetOwner is in csv row
@@ -1880,7 +1884,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             B.runInReplica $
               QP.findByMobileNumberAndMerchantAndRole DCommon.mobileIndianCode mobileNumberHash merchant.id DP.FLEET_OWNER
                 >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
-          DCommon.checkFleetOwnerVerification fleetOwner.id.getId
+          DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
           association <-
             QFleetOperatorAssociation.findByFleetIdAndOperatorId fleetOwner.id.getId operator.id.getId True
               >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes

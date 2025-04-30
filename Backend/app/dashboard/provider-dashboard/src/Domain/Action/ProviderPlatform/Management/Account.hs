@@ -6,6 +6,7 @@ module Domain.Action.ProviderPlatform.Management.Account
 where
 
 import qualified API.Client.ProviderPlatform.Management
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -35,8 +36,7 @@ import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
-  ( GenericError (InvalidRequest),
-    PersonError (PersonDoesNotExist),
+  ( PersonError (PersonDoesNotExist),
     RoleError (RoleDoesNotExist),
   )
 
@@ -50,10 +50,12 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Common.FleetOwnerStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-  Environment.Flow [Common.PersonAPIEntity]
+  Environment.Flow Common.UnverifiedAccountsResp
 getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset = do
   encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset
-  traverse convertPersonToPersonAPIEntity encryptPersonLs
+  res <- traverse convertPersonToPersonAPIEntity encryptPersonLs
+  let summary = Common.Summary {totalCount = 10000, count = length res}
+  pure $ Common.UnverifiedAccountsResp {listItems = res, summary = summary}
   where
     convertPersonToPersonAPIEntity DP.Person {..} = do
       role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
@@ -107,9 +109,7 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       softDeletePerson personId req.reason
     Common.Approved -> do
       person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      case person.verified of
-        Just True -> throwError (InvalidRequest "FleetOwner already exist!")
-        _ -> updatePersonVerifiedStatus personId True
+      unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $

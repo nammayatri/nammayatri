@@ -660,10 +660,10 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       checks =
         if transporterConfig.rcExpiryChecks == Just True
           then
-            [ ("fitnessUpto", convertTextToUTC rcVerificationResponse.fitnessUpto),
-              ("insuranceValidity", convertTextToUTC rcVerificationResponse.insuranceValidity),
-              ("permitValidityUpto", convertTextToUTC rcVerificationResponse.permitValidityUpto),
-              ("pucValidityUpto", convertTextToUTC rcVerificationResponse.pucValidityUpto)
+            [ ("Fitness Certificate", convertTextToUTC rcVerificationResponse.fitnessUpto),
+              ("Insurance", convertTextToUTC rcVerificationResponse.insuranceValidity),
+              ("Permit", convertTextToUTC rcVerificationResponse.permitValidityUpto),
+              ("PUC", convertTextToUTC rcVerificationResponse.pucValidityUpto)
             ]
           else []
       expiryFailures =
