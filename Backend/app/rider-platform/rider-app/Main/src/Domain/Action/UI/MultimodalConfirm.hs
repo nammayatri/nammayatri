@@ -177,7 +177,7 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
   frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
   frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingsArr
   let flattenedPayments = concat frfsBookingsPaymentArr
-  let mbPaymentOrderId = show . paymentOrderId <$> listToMaybe flattenedPayments
+  let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
   case mbPaymentOrderId of
     Nothing ->
       return $
@@ -186,7 +186,7 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
           }
     Just paymentOrderId -> do
       logDebug $ "paymentOrderId: " <> show paymentOrderId
-      order <- QOrder.findById (cast paymentOrderId) >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
+      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
       let updateReq =
             KT.OrderUpdateReq
               { amount = req.amount,
