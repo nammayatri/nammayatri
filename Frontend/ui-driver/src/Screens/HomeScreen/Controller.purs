@@ -154,6 +154,7 @@ import Engineering.Helpers.RippleCircles as EHR
 import Components.TripStageTopBar.Controller as TripStageTopBar
 import Data.Array as DA
 
+
 instance showAction :: Show Action where
   show (NoAction) = "NoAction"
   show (BackPressed) = "BackPressed"
@@ -190,7 +191,7 @@ instance showAction :: Show Action where
   show (RemoveChat) = "RemoveChat"
   show (UpdateInChat) = "UpdateInChat"
   show (HelpAndSupportScreen) = "HelpAndSupportScreen"
-  show (SwitchDriverStatus _) = "SwitchDriverStatus"
+  show (SwitchDriverStatus _ _) = "SwitchDriverStatus"
   show (PopUpModalSilentAction var1) = "PopUpModalSilentAction_" <> show var1
   show (LinkAadhaarPopupAC var1) = "LinkAadhaarPopupAC_" <> show var1
   show (GoToProfile) = "GoToProfile"
@@ -467,7 +468,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | EndRide ST.HomeScreenState
                     | ArrivedAtStop ST.HomeScreenState
                     | SelectListModal ST.HomeScreenState
-                    | DriverAvailabilityStatus ST.HomeScreenState ST.DriverStatus
+                    | DriverAvailabilityStatus ST.HomeScreenState ST.DriverStatus HSD.DriverStatusChangeEntry
                     | UpdatedState ST.HomeScreenState
                     | UpdateRoute ST.HomeScreenState
                     | FcmNotification String ST.NotificationBody ST.HomeScreenState
@@ -550,7 +551,7 @@ data Action = NoAction
             | RemoveChat
             | UpdateInChat
             | HelpAndSupportScreen
-            | SwitchDriverStatus ST.DriverStatus
+            | SwitchDriverStatus ST.DriverStatus HSD.DriverStatusChangeEntry
             | PopUpModalSilentAction PopUpModal.Action
             | LinkAadhaarPopupAC PopUpModal.Action
             | GoToProfile
@@ -977,7 +978,7 @@ eval (Notification notificationType notificationBody) state = do
 eval CancelGoOffline state = do
   continue state { props = state.props { goOfflineModal = false } }
 
-eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline HSD.DriverStatusChangeNormalEntry)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker true
@@ -1109,7 +1110,7 @@ eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
     _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
     _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
     let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
-    exit (DriverAvailabilityStatus state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}} ST.Online)
+    exit (DriverAvailabilityStatus state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}} ST.Online HSD.DriverStatusChangeNormalEntry)
 
 eval (PaymentPendingPopupAC PopUpModal.OnSecondaryTextClick) state = do
   continueWithCmd state [do
@@ -1314,11 +1315,11 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
         if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
           continueWithCmd state [ do
             push <-  getPushFn Nothing "HomeScreen"
-            void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+            void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack
             void $ pure $ JB.checkAndAskMicrophonePermission unit
             pure NoAction
           ]
-        else 
+        else
           continueWithCmd state [ do
             push <-  getPushFn Nothing "HomeScreen"
             runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
@@ -1444,11 +1445,11 @@ eval (ChatViewActionController (ChatView.Call)) state = do
       if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
         continueWithCmd state [ do
           push <-  getPushFn Nothing "HomeScreen"
-          void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+          void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack
           void $ pure $ JB.checkAndAskMicrophonePermission unit
           pure NoAction
         ]
-      else 
+      else
         continueWithCmd state [ do
           push <-  getPushFn Nothing "HomeScreen"
           runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
@@ -1694,21 +1695,27 @@ eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state
 eval NotifyReachedDestination state = updateAndExit state $ NotifyDriverReachedDestination state
 
 eval (RideActiveAction activeRide mbAdvancedRide) state = do
-  let currActiveRideDetails = activeRideDetail state activeRide
+  let (RidesInfo activeRideInfo) = activeRide
+  let isMeterRide = maybe false (\(API.TripCategory tripCategory) -> tripCategory.contents == Just "MeterRide" ) activeRideInfo.tripCategory
+  if isMeterRide then do
+    exit $ MeterRideScreen state
+  else do
+    let
+      currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
       isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
       updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq}}
       stage = (if currActiveRideDetails.status == NEW then (if (Array.any (\c -> c == ST.ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ST.ChatWithCustomer else ST.RideAccepted) else ST.RideStarted)
-  updateAndExit updatedState $ UpdateStage stage updatedState
+    updateAndExit updatedState $ UpdateStage stage updatedState
   where
     checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
 
 eval RecenterButtonAction state = continue state
 
-eval (SwitchDriverStatus status) state = do
+eval (SwitchDriverStatus status entryPoint) state = do
   if not state.props.rcActive then do
     void $ pure $ toast $ getString LT.PLEASE_ADD_RC
-    exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline)
+    exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline entryPoint)
   else if (state.data.driverBlocked && maybe false (\overchargingTag -> overchargingTag `DA.elem` [API.SuperOverCharging, API.HighOverCharging,API.MediumOverCharging]) state.data.overchargingTag) && status /= ST.Offline then continue state {props {showBlockerPopup = true}}
   else if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
@@ -1731,10 +1738,10 @@ eval (SwitchDriverStatus status) state = do
           checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
       case status of
         ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
-        _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
+        _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status entryPoint)
 
-eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
-eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
+eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline HSD.DriverStatusChangeNormalEntry)
+eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent HSD.DriverStatusChangeNormalEntry)
 
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
@@ -2231,7 +2238,7 @@ activeRideDetail state (RidesInfo ride) =
                          else if isSafetyRide then
                             Just ST.SAFETY
                          else Nothing,
-  coinsRewardedOnGoldTierRide : ride.coinsRewardedOnGoldTierRide,                       
+  coinsRewardedOnGoldTierRide : ride.coinsRewardedOnGoldTierRide,
   tripScheduledAt: ride.tripScheduledAt,
   tripType: tripType,
   tripStartTime: ride.tripStartTime,
