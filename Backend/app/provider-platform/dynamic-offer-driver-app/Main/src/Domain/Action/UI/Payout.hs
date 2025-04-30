@@ -184,7 +184,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand, personId = Just $ getId driverId}
           serviceName = case driver.clientSdkVersion of
-            Just v | v <= textToVersionDefault aaClientSdkVersion -> (DEMSC.PayoutService TPayout.AAJuspay)
+            Just v | v >= textToVersionDefault aaClientSdkVersion -> (DEMSC.PayoutService TPayout.AAJuspay)
             _ -> (DEMSC.PayoutService TPayout.Juspay)
           createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
@@ -198,7 +198,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand, personId = Just $ getId dailyStats.driverId}
           serviceName = case driver.clientSdkVersion of
-            Just v | v <= textToVersionDefault aaClientSdkVersion -> (DEMSC.PayoutService TPayout.AAJuspay)
+            Just v | v >= textToVersionDefault aaClientSdkVersion -> (DEMSC.PayoutService TPayout.AAJuspay)
             _ -> (DEMSC.PayoutService TPayout.Juspay)
           createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchanOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast merchantId) (cast dailyStats.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall

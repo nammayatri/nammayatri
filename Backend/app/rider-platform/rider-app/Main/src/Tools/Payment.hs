@@ -154,7 +154,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just id ->
       case clientSdkVersion of
         Just v
-          | v <= textToVersionDefault aaClientSdkVersion ->
+          | v >= textToVersionDefault aaClientSdkVersion ->
             CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.AAJuspay)
         _ -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
@@ -172,7 +172,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     getPaymentServiceByType aaClientSdkVersion = \case
       Normal ->
         case clientSdkVersion of
-          Just v | v <= textToVersionDefault aaClientSdkVersion -> (DMSC.PaymentService Payment.AAJuspay)
+          Just v | v >= textToVersionDefault aaClientSdkVersion -> (DMSC.PaymentService Payment.AAJuspay)
           _ -> (DMSC.PaymentService Payment.Juspay)
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
