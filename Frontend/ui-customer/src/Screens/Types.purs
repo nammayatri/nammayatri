@@ -841,7 +841,12 @@ type HomeScreenStateData =
   , cancellationRate :: Maybe Number
   , driverArrivalTimeUTC :: Maybe String
   , destinationReachedAtUTC :: Maybe String
+  , enquiryBannerStage :: Maybe EnquiryBannerStage
 }
+
+data EnquiryBannerStage = QuestionStage | FirstBtnClickStage | SecondBtnClickStage
+derive instance genericEnquiryBannerStage :: Generic EnquiryBannerStage _
+instance eqEnquiryBannerStage :: Eq EnquiryBannerStage where eq = genericEq
 
 type UpcomingRideDetails = {
   bookingId :: String,
@@ -1151,6 +1156,7 @@ type HomeScreenStateProps =
   , bookAmbulanceModal :: Boolean
   , firstTimeAmbulanceSearch :: Boolean
   , searchType :: Maybe String
+  , enquiryBannerUndoTimer :: Maybe Int
   }
 
 type EditedLocation = {
