@@ -734,9 +734,19 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @Override
     public void reset() {
-        if (receivers != null) {
-            receivers.deRegister();
-            receivers = null;
+        String s = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", "{}");
+        boolean isCachingEnabled = false;
+        try {
+            JSONObject config = new JSONObject(s);
+            isCachingEnabled = config.optBoolean(KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "DRIVER_LOCATION", ""),false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (!isCachingEnabled) {
+            if (receivers != null) {
+                receivers.deRegister();
+                receivers = null;
+            }
         }
         polylinesByMapInstance = new Hashtable<>();
         googleMap = null;
@@ -764,7 +774,9 @@ public class MobilityCommonBridge extends HyperBridge {
         userPositionMarker = null;
         storeImageUploadCallBack = null;
         if (mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
-        Utils.deRegisterCallback(callBack);
+        if (!isCachingEnabled){
+            Utils.deRegisterCallback(callBack);
+        }
     }
 
     // region Store and Trigger CallBack
