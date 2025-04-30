@@ -580,12 +580,10 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req
-  unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
-      unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do

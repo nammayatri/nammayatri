@@ -150,10 +150,9 @@ castStatus status = case status of -- only PENDING and OVERDUE possible
   ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
   SETTLED -> Common.SETTLED
 
-checkFleetOwnerVerification :: Text -> Flow ()
-checkFleetOwnerVerification personId = do
-  fleetOwnerInfo <-
-    QFI.findByPrimaryKey (Id personId)
-      >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
-  unless (fleetOwnerInfo.verified && fleetOwnerInfo.enabled) $
-    throwError (InvalidRequest "Fleet owner is not verified or is not enabled")
+checkFleetOwnerVerification :: Text -> Maybe Bool -> Flow ()
+checkFleetOwnerVerification personId mbEnabledCheck = do
+  fleetOwnerInfo <- QFI.findByPrimaryKey (Id personId) >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
+  unless (fleetOwnerInfo.verified) $ throwError (InvalidRequest "Fleet owner is not verified or is not enabled")
+  when (mbEnabledCheck == Just True) $ do
+    unless fleetOwnerInfo.enabled $ throwError (InvalidRequest "Fleet owner is not enabled")

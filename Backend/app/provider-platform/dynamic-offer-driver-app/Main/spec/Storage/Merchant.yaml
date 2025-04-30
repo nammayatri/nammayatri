@@ -89,6 +89,7 @@ Merchant:
     registryUrl: BaseUrl
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
   sqlType:
     destinationRestriction: text[]
@@ -114,6 +115,7 @@ Merchant:
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: '''{"NY"}'''
+    fleetOwnerEnabledCheck: "false"
     overwriteAssociation: "false"
 
   excludedFields:

@@ -363,6 +363,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
         Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
+      finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
   VehicleRegistrationCertificate
     { id,
       documentImageId = input.documentImageId,
@@ -384,7 +385,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
       reviewRequired,
       insuranceValidity = input.insuranceValidity,
       mYManufacturing = input.mYManufacturing,
-      verificationStatus,
+      verificationStatus = finalVerificationStatus,
       fleetOwnerId = input.fleetOwnerId,
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,

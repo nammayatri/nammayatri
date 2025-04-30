@@ -64,6 +64,10 @@ data RoleAPIEntity = RoleAPIEntity {id :: Kernel.Types.Id.Id Dashboard.Common.Ro
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data UnverifiedAccountsResp = UnverifiedAccountsResp {listItems :: [PersonAPIEntity], summary :: Dashboard.Common.Summary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data VerifyAccountReq = VerifyAccountReq {status :: FleetOwnerStatus, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, fleetOwnerId :: Kernel.Types.Id.Id Dashboard.Common.Person}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -85,7 +89,7 @@ type GetAccountFetchUnverifiedAccounts =
            Kernel.Prelude.Int
       :> Get
            '[JSON]
-           [PersonAPIEntity]
+           UnverifiedAccountsResp
   )
 
 type PostAccountVerifyAccount = ("verifyAccount" :> ReqBody '[JSON] VerifyAccountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -105,7 +109,7 @@ type PutAccountUpdateRoleHelper =
   )
 
 data AccountAPIs = AccountAPIs
-  { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [PersonAPIEntity],
+  { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient UnverifiedAccountsResp,
     postAccountVerifyAccount :: VerifyAccountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     putAccountUpdateRole :: Kernel.Types.Id.Id Dashboard.Common.Person -> DashboardAccessType -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }

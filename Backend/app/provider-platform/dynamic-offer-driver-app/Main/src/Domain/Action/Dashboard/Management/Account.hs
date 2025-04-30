@@ -33,9 +33,8 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Common.FleetOwnerStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-  Environment.Flow [Common.PersonAPIEntity]
-getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate _mbMobileNumber _mbStatus _mbLimit _mbOffset = do
-  pure []
+  Environment.Flow Common.UnverifiedAccountsResp
+getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate _mbMobileNumber _mbStatus _mbLimit _mbOffset = throwError . InternalError $ "This function should not be called"
 
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

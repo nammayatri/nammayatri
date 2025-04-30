@@ -1,6 +1,7 @@
 imports:
   Person: Dashboard.Common
   Role: Dashboard.Common
+  Summary: Dashboard.Common
 
 
 module: Account
@@ -17,7 +18,7 @@ apis:
         - limit: Int
         - offset: Int
       response:
-        type: "[PersonAPIEntity]"
+        type: UnverifiedAccountsResp
   - POST:
       endpoint: /verifyAccount
       auth: ApiAuthV2
@@ -76,4 +77,6 @@ types:
     - name: Text
     - dashboardAccessType: DashboardAccessType
     - description: Text
-
+  UnverifiedAccountsResp:
+    - listItems: [PersonAPIEntity]
+    - summary: Summary
