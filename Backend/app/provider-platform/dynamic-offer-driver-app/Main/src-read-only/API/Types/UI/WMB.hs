@@ -28,11 +28,15 @@ data AlertRequestResp = AlertRequestResp {status :: Domain.Types.Alert.AlertRequ
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AvailableBadge = AvailableBadge {badgeName :: Data.Text.Text, isActive :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AvailableRoute = AvailableRoute {destination :: StopInfo, roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AvailableRouteReq = AvailableRouteReq {vehicleNumber :: Data.Text.Text}
+data AvailableRouteReq = AvailableRouteReq {vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -62,7 +66,7 @@ data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripQrStartReq = TripQrStartReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
+data TripQrStartReq = TripQrStartReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
