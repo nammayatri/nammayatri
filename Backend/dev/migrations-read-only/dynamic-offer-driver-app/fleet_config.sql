@@ -11,3 +11,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN merchant_operating_ci
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD PRIMARY KEY ( fleet_owner_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN directly_start_first_trip_assignment boolean  default true;

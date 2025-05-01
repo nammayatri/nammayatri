@@ -202,8 +202,18 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
+  mbBadge <-
+    case req.badgeName of
+      Just badgeName -> do
+        badge <- WMB.validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId badgeName
+        WMB.linkFleetBadgeToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId badge
+        return $ Just badge
+      Nothing -> pure Nothing
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True
-  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect
+  tripTransaction <-
+    if fleetConfig.directlyStartFirstTripAssignment
+      then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbBadge <&> (.id)) (mbBadge <&> (.badgeName))
+      else WMB.assignTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber req.location sourceStopInfo destinationStopInfo (mbBadge <&> (.id)) (mbBadge <&> (.badgeName))
   pure $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,

@@ -66,7 +66,12 @@ data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripQrStartReq = TripQrStartReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Kernel.Prelude.Maybe Data.Text.Text}
+data TripQrStartReq = TripQrStartReq
+  { badgeName :: Kernel.Prelude.Maybe Data.Text.Text,
+    location :: Kernel.External.Maps.Types.LatLong,
+    routeCode :: Data.Text.Text,
+    vehicleNumberHash :: Kernel.Prelude.Maybe Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

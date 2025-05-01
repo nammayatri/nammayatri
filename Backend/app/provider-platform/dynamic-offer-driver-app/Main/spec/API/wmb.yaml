@@ -44,6 +44,7 @@ types:
 
   TripQrStartReq:
     vehicleNumberHash: Maybe Text
+    badgeName: Maybe Text
     routeCode: Text
     location: LatLong
 
@@ -99,9 +100,9 @@ apis:
         - mbSearchString: Text
       mandatoryQuery:
         - limit: Int
-        - offset: Int        
+        - offset: Int
       response:
-        type: "[AvailableBadge]"      
+        type: "[AvailableBadge]"
   - POST: # Fetch available routes for a driver of private fleet.
       endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE
