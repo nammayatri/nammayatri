@@ -7440,22 +7440,26 @@ rideSummaryScreenFlow = do
 busTicketBookingFlow :: FlowBT String Unit
 busTicketBookingFlow = do
   (GlobalState currentState) <- getState
-  void $ pure $ removeValueFromCache "MAP_READY"
+
   action <- lift $ lift $ runScreen $ UI.busTicketBookingScreen currentState.busTicketBookingScreen
   case action of
     BusTicketBookingController.GoToHomeScreen state -> do
       void $ pure $ removeValueFromCache "POLLING_ID" 
+      void $ pure $ removeValueFromCache "MAP_READY"
       homeScreenFlow
     BusTicketBookingController.RefreshScreen state -> do
-      void $ pure $ removeValueFromCache "POLLING_ID" 
+      void $ pure $ removeValueFromCache "POLLING_ID"
+      void $ pure $ removeValueFromCache "MAP_READY" 
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> state)
       parcelDeliveryFlow
     BusTicketBookingController.GoToMyTicketsScreen state -> do
-      void $ pure $ removeValueFromCache "POLLING_ID" 
+      void $ pure $ removeValueFromCache "POLLING_ID"
+      void $ pure $ removeValueFromCache "MAP_READY" 
       modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroMyTicketsScreen { props { ticketServiceType = BUS , entryPoint = ST.MetroTicketBookingToMetroMyTickets, fromScreen = Just $ Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN} })
       metroMyTicketsFlow
     BusTicketBookingController.GoToSearchLocationScreenForRoutes state source ->do
      void $ pure $ removeValueFromCache "POLLING_ID" 
+     void $ pure $ removeValueFromCache "MAP_READY"
      let 
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
@@ -7473,7 +7477,8 @@ busTicketBookingFlow = do
      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
-      void $ pure $ removeValueFromCache "POLLING_ID" 
+      void $ pure $ removeValueFromCache "POLLING_ID"
+      void $ pure $ removeValueFromCache "MAP_READY" 
       -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
       ----------------------------
       void $ lift $ lift $ toggleLoader true
@@ -7554,6 +7559,7 @@ busTicketBookingFlow = do
       --------------------------------
     BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
       void $ pure $ removeValueFromCache "POLLING_ID" 
+      void $ pure $ removeValueFromCache "MAP_READY"
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
           routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FRFSRouteAPI)) of
                             Nothing -> ""
@@ -7638,8 +7644,9 @@ busTrackingScreenFlow = do
       case state.props.previousScreen of
         PreStopRouteSelection -> selectBusRouteScreenFlow srcCode destCode
         _ -> busTicketBookingFlow
-    BusTrackingScreen.GoToViewTicket state -> do 
-      (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT state.data.bookingId
+    BusTrackingScreen.GoToViewTicket updatedState -> do 
+      modifyScreenState $ BusTrackingScreenStateType (\state -> updatedState )
+      (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT updatedState.data.bookingId
       let
         (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
       -- if (metroTicketBookingStatus.status == "CONFIRMED") then do --check

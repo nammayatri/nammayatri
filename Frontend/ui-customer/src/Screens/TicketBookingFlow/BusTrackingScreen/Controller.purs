@@ -40,6 +40,7 @@ import Data.Array as DA
 import Data.Int as DI
 import Data.Number as DN
 import Data.Maybe as Mb
+import Data.Ord (comparing)
 import PrestoDOM.List (ListItem)
 import Components.BoxContainer as BoxContainer
 import Components.DropDownWithHeader.Controller as DropDownWithHeader
@@ -65,7 +66,7 @@ import Data.Either
 import Data.Map as DM
 import Data.Newtype (unwrap)
 import Data.Tuple as DT
-import Data.Foldable (foldM, minimum)
+import Data.Foldable (foldM, minimum, minimumBy)
 import Engineering.Helpers.RippleCircles as EHR
 import Effect.Uncurried (runEffectFn1, runEffectFn3)
 import Foreign.Class (encode)
@@ -585,9 +586,16 @@ calculateMinETADistance trackingData =
   minimum $ DA.mapMaybe (\item -> item.etaDistance <#> DI.floor) trackingData
 
 
-calculateMinEtaTimeWithDelay :: Array ST.VehicleData -> Mb.Maybe Int
+calculateMinEtaTimeWithDelay :: Array ST.VehicleData -> Tuple (Mb.Maybe Int) (Mb.Maybe String)
 calculateMinEtaTimeWithDelay trackingData =
-  minimum $ DA.mapMaybe (\item -> item.eta) trackingData
+  let minEta = minimum $ DA.mapMaybe (\item -> item.eta) trackingData
+      timestamp = getMinEtaTimestamp minEta trackingData
+      _ = spy "rahul timestamp" 
+  in Tuple minEta timestamp
+
+getMinEtaTimestamp :: Mb.Maybe Int -> Array ST.VehicleData -> Mb.Maybe String
+getMinEtaTimestamp minEta trackingData =
+  _.timestamp <$> DA.find (\item -> item.eta == minEta) trackingData
 
 isPostBookingTracking :: ST.BusTrackingScreenState -> Boolean
 isPostBookingTracking state = 

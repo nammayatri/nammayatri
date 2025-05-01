@@ -236,7 +236,7 @@ verticalLineView push idTag showOnlyBullet vehicles =
     linearLayout 
       [height MATCH_PARENT
       , width MATCH_PARENT
-      -- , visibility $ boolToVisibility $ showPreBookingTracking "BUS"
+      , visibility $ boolToVisibility $ showPreBookingTracking "BUS"
       ]
       [ imageView
         [ width MATCH_PARENT
@@ -457,7 +457,11 @@ busStopsView push state = do
 
 stopListView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 stopListView push state showOnlyBullet =
-  linearLayout
+  let etaTimeAndTimeStampTuple = calculateMinEtaTimeWithDelay state.data.vehicleData
+      mbEtaTime = DT.fst etaTimeAndTimeStampTuple
+      mbTimestamp = DT.snd etaTimeAndTimeStampTuple
+  in 
+    linearLayout
     ( [ height WRAP_CONTENT
       , orientation VERTICAL
       , id $ EHC.getNewIDWithTag $ "stopListView"  <> if showOnlyBullet then "onlyBullet" else ""
@@ -489,13 +493,12 @@ stopListView push state showOnlyBullet =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance (calculateMinEtaTimeWithDelay state.data.vehicleData) state.props.isMinimumEtaDistanceAvailable) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
+        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance mbEtaTime state.props.isMinimumEtaDistanceAvailable mbTimestamp state.data.vehicleData) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
   where
   stopMarginTop = if state.props.showRouteDetailsTab then 36 else 12
   
   stops = if DA.length state.data.stopsList <= 2 then [] else DA.slice 1 (DA.length state.data.stopsList - 1) state.data.stopsList
-
   -- findNextBusETA index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelTime)) (stops DA.!! (index - 1))
 
   -- findETADistance stop = 
@@ -562,8 +565,8 @@ stopsViewHeader push state showOnlyBullet =
         MP.noView
     ]
 
-stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> Mb.Maybe Int -> Mb.Maybe Boolean -> PrestoDOM (Effect Unit) w
-stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaDistance etaTime isMinimumEtaDistanceAvailable =
+stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> Mb.Maybe Int -> Mb.Maybe Boolean -> Mb.Maybe String -> Array ST.VehicleData -> PrestoDOM (Effect Unit) w
+stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaDistance mbEtaTime isMinimumEtaDistanceAvailable mbTimestamp vehicleData =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -577,7 +580,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
         -- , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId)
         , if (index /=0 && checkPreviousStopIsSource && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId))
-            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance etaTime isMinimumEtaDistanceAvailable
+            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance mbEtaTime isMinimumEtaDistanceAvailable mbTimestamp vehicleData
             else 
               MP.noView
         ]
@@ -655,8 +658,8 @@ busLocationTracking duration id state push count = do
         busLocationTracking duration id state push (count + 1)
 
 
-showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> Mb.Maybe Int -> Mb.Maybe Boolean -> PrestoDOM (Effect Unit) w
-showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADistance mbETATime isMinimumEtaDistanceAvailable =
+showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> Mb.Maybe Int -> Mb.Maybe Boolean -> Mb.Maybe String -> Array ST.VehicleData -> PrestoDOM (Effect Unit) w
+showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADistance mbETATime isMinimumEtaDistanceAvailable mbTimestamp vehicleData =
   PrestoAnim.animationSet [fadeInWithDelay 0 true]
   $ linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
@@ -725,7 +728,13 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
         Mb.Just true, Mb.Just etaTimeInSeconds -> 
           let secondsTohhmm = HU.secondsToHms etaTimeInSeconds
           in "Next bus in " <> (if secondsTohhmm == "--" then "less than 1 min" else secondsTohhmm)
-        Mb.Just true, Mb.Nothing -> "Next bus is " <> (JB.fromMetersToKm $ Mb.fromMaybe 0 mbETADistance) <> " away"
+        Mb.Just true, Mb.Nothing ->
+          let 
+            timestampPart =
+              case mbTimestamp of
+                Mb.Just timeStamp -> " ( Last Updated At: " <> (EHC.convertUTCtoISC timeStamp "hh:mm a") <> ")"
+                Mb.Nothing -> ""
+          in "Next bus is " <> (JB.fromMetersToKm $ Mb.fromMaybe 0 mbETADistance) <> " away." <> timestampPart
         Mb.Just false, Mb.Nothing -> "No bus is coming towards your stop"
         _, _ -> ""
     
