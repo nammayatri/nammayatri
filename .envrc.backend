@@ -7,4 +7,4 @@ watch_file \
     Backend/*.nix \
     Backend/nix/*.nix
 
-use flake .#backend
+use omnix .#backend
