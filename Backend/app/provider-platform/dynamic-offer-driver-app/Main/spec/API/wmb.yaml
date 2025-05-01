@@ -43,7 +43,7 @@ types:
     _type: ServiceTierType
 
   TripQrStartReq:
-    vehicleNumberHash: Text
+    vehicleNumberHash: Maybe Text
     routeCode: Text
     location: LatLong
 
@@ -85,9 +85,23 @@ types:
     status: AlertRequestStatus
 
   AvailableRouteReq:
-    vehicleNumber: Text
+    vehicleNumber: Maybe Text
+
+  AvailableBadge:
+    badgeName: Text
+    isActive: Bool
 
 apis:
+  - GET: # Get all Available Driver Badges of Private Fleet
+      endpoint: /wmb/fleetBadges
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - mbSearchString: Text
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int        
+      response:
+        type: "[AvailableBadge]"      
   - POST: # Fetch available routes for a driver of private fleet.
       endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE
