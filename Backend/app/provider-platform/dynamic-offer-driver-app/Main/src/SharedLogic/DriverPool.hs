@@ -235,7 +235,7 @@ getSearchRequestInfoMap ::
   Id DM.Merchant ->
   Id DP.Driver ->
   m [(Text, (UTCTime, Bool))]
-getSearchRequestInfoMap mId dId = Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
+getSearchRequestInfoMap mId dId = Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
 
 getValidSearchRequestCount ::
   Redis.HedisFlow m r =>
