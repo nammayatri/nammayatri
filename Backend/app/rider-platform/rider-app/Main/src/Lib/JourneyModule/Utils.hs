@@ -90,7 +90,7 @@ whenJourneyUpdateInProgress journeyId actions = do
       whenJourneyUpdateInProgress journeyId actions
     else actions
 
-data UpcomingBusInfo = UpcomingBusInfo
+data UpcomingVehicleInfo = UpcomingVehicleInfo
   { routeCode :: Text,
     serviceType :: Spec.ServiceTierType,
     arrivalTimeInSeconds :: Seconds,
@@ -102,7 +102,9 @@ data UpcomingBusInfo = UpcomingBusInfo
 -- | Data type representing upcoming trip information
 data UpcomingTripInfo = UpcomingTripInfo
   { busFrequency :: Maybe Seconds,
-    upcomingBuses :: [UpcomingBusInfo]
+    vehicleFrequency :: Maybe Seconds,
+    upcomingBuses :: [UpcomingVehicleInfo],
+    upcomingVehicles :: [UpcomingVehicleInfo]
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -451,7 +453,7 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
   -- Filter out trips that have already passed the stop
   logDebug $ "filteredByService before filtering on current time : " <> show filteredByService
   let tripTimingsWithCalendars =
-        [ UpcomingBusInfo
+        [ UpcomingVehicleInfo
             { routeCode = rst.routeCode,
               serviceType = rst.serviceTierType,
               arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
@@ -484,7 +486,9 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
   let upcomingTripInfo =
         UpcomingTripInfo
           { busFrequency = busFrequency,
-            upcomingBuses = upcomingBuses
+            vehicleFrequency = busFrequency,
+            upcomingBuses = [],
+            upcomingVehicles = upcomingBuses
           }
   return upcomingTripInfo
 
