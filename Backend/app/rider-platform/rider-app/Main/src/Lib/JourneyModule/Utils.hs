@@ -93,7 +93,9 @@ whenJourneyUpdateInProgress journeyId actions = do
 data UpcomingBusInfo = UpcomingBusInfo
   { routeCode :: Text,
     serviceType :: Spec.ServiceTierType,
-    arrivalTimeInSeconds :: Seconds
+    arrivalTimeInSeconds :: Seconds,
+    nextAvailableTimings :: (TimeOfDay, TimeOfDay),
+    source :: SourceType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -452,7 +454,9 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
         [ UpcomingBusInfo
             { routeCode = rst.routeCode,
               serviceType = rst.serviceTierType,
-              arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST
+              arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
+              nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
+              source = rst.source
             }
           | rst <- filteredByService,
             (getISTArrivalTime rst.timeOfArrival currentTime) > currentTimeIST -- Only include future arrivals
