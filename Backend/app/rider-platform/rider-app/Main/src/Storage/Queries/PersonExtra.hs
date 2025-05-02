@@ -375,13 +375,3 @@ updateTotalRidesCount personId totalRidesCount = do
         Se.Set BeamP.updatedAt now
       ]
       [Se.Is BeamP.id (Se.Eq (getId personId))]
-
-updateLatestCoordinates :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe Double -> Maybe Double -> m ()
-updateLatestCoordinates personId mbLat mbLon = do
-  now <- getCurrentTime
-  updateWithKV
-    [ Se.Set BeamP.latestLat mbLat,
-      Se.Set BeamP.latestLon mbLon,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq (getId personId))]
