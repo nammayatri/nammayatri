@@ -1,9 +1,7 @@
 module Storage.CachedQueries.Merchant.MultiModalSuburban where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
-import Data.Text.Encoding (encodeUtf8)
 import Data.Time
 import Kernel.Prelude hiding (encodeUtf8, sequence)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -102,18 +100,10 @@ getRoutesTrains routeId = do
   let key = mkRouteKey routeId
 
   -- Get train data from Redis as Text
-  mbTrainDataText <- CQMMB.withCrossAppRedisNew $ Hedis.get key
-  logDebug $ "Got train data for route " <> routeId <> ": " <> show mbTrainDataText
-
-  case mbTrainDataText of
-    Just trainDataText ->
-      case decode $ BSL.fromStrict $ encodeUtf8 trainDataText of
-        Just trainList -> do
-          logDebug $ "Parsed train data for route " <> routeId <> ": " <> show trainList
-          return $ RouteWithTrains routeId trainList
-        Nothing -> do
-          logError $ "Failed to decode train data for route " <> routeId
-          return $ RouteWithTrains routeId []
+  trainDataList :: Maybe [TrainInfo] <- CQMMB.withCrossAppRedisNew $ Hedis.safeGet key
+  logDebug $ "Got train data for route " <> routeId <> ": " <> show trainDataList
+  case trainDataList of
+    Just trainDataList' -> return $ RouteWithTrains routeId trainDataList'
     Nothing -> do
       logDebug $ "No train data found for route " <> routeId
       return $ RouteWithTrains routeId []
