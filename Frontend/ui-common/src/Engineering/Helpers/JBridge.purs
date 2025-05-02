@@ -119,7 +119,7 @@ foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- foreign import removePolyLine   :: String -> Effect Unit
 foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import startGActivity :: String -> Effect Unit
-foreign import startOpenMeterActivity :: forall action. (action -> Effect Unit) -> Effect Unit
+foreign import startOpenMeterActivity :: forall action. EffectFn2 (action -> Effect Unit) String Unit
 foreign import requestLocation  :: Unit -> Effect Unit
 foreign import requestBackgroundLocation  :: Unit -> Effect Unit
 

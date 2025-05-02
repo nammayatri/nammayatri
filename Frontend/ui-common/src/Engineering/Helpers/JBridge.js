@@ -3245,8 +3245,7 @@ export const setupVoiceRecognitionView = function(id) {
   }
 }
 
-export const startOpenMeterActivity = (cb) => {
-  return () => {
+export const startOpenMeterActivity = (cb, vehicleCategory) => {
     const callback = () => {
       const isMeterRideActive = window.JBridge.getFromSharedPrefs('METER_RIDE_ACTIVE');
       console.log("isMeterRideActive", isMeterRideActive);
@@ -3261,8 +3260,7 @@ export const startOpenMeterActivity = (cb) => {
     }
     console.log("startOpenMeterActivity", callback);
     window.onResumeListeners.push(callback);
-    JBridge.startOpenMeterActivity("callback");
-  }
+    JBridge.startOpenMeterActivity(vehicleCategory);
 }
 
 

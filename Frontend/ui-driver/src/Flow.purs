@@ -2352,7 +2352,8 @@ currentRideFlow activeRideResp isActiveRide = do
             if isMeterRide then  do
               void $ liftFlowBT $ JB.requestBackgroundLocation unit
               void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
-              void $ lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity (cb <<< Right) $> nonCanceler
+              let vehicleCategory = show $ fromMaybe ST.CarCategory $ Const.getCategoryFromVariant $ getValueToLocalStore VEHICLE_VARIANT
+              void $ lift $ lift $ doAff $ makeAff \cb -> runEffectFn2 JB.startOpenMeterActivity (cb <<< Right) vehicleCategory $> nonCanceler
               void $ liftFlowBT $  HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
               void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
             else do
@@ -3058,7 +3059,8 @@ homeScreenFlow = do
       (GlobalState globalstate) <- getState
       when (globalstate.homeScreen.props.driverStatusSet == ST.Offline) $ changeDriverStatus ST.Online
       void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
-      void $lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
+      let vehicleCategory = show $ fromMaybe ST.CarCategory $ Const.getCategoryFromVariant $ getValueToLocalStore VEHICLE_VARIANT
+      void $lift $ lift $ doAff $ makeAff \cb -> runEffectFn2 JB.startOpenMeterActivity (cb <<< Right) vehicleCategory $> nonCanceler
       void $ liftFlowBT $HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
       void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
   homeScreenFlow

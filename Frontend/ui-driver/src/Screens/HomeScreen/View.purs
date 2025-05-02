@@ -1023,9 +1023,16 @@ addAadhaarOrOTPView state push =
   ]
   where
     showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
-    showMeterRide = ( fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter )
-      && state.props.currentStage == ST.HomeScreen
-      && state.props.statusOnline
+    showMeterRide =
+      let
+        vehicleVariant = getValueToLocalStore VEHICLE_VARIANT
+        vehicleCategory = show $ fromMaybe ST.CarCategory $ getCategoryFromVariant vehicleVariant
+        nammaMeterEnabledCategories = fromMaybe empty state.data.cityConfig.enableNammaMeter
+        mbEnableNammaMeter = lookup vehicleCategory nammaMeterEnabledCategories
+      in
+        (fromMaybe false mbEnableNammaMeter)
+        && state.props.currentStage == ST.HomeScreen
+        && state.props.statusOnline
 
 meterRideButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 meterRideButtonView state push =
@@ -2491,7 +2498,14 @@ offlineNavigationLinks push state =
                           let hotspotsRemoteConfig = getHotspotsFeatureData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
                           boolToVisibility hotspotsRemoteConfig.enableHotspotsFeature
                         RideRequestsList -> boolToVisibility config.enableScheduledRides
-                        GotoMeterRideScreen ->boolToVisibility $ fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter
+                        GotoMeterRideScreen ->
+                          let
+                            vechicleVariant = getValueToLocalStore VEHICLE_VARIANT
+                            vehicleCategory = show $ fromMaybe ST.CarCategory $ getCategoryFromVariant vechicleVariant
+                            nammaMeterEnabledCategories = fromMaybe empty state.data.cityConfig.enableNammaMeter
+                            mbEnableNammaMeter = lookup vehicleCategory nammaMeterEnabledCategories
+                          in
+                            boolToVisibility $ fromMaybe false $ mbEnableNammaMeter
                         _ -> VISIBLE
       itemAlpha action = case action of
                     RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5
