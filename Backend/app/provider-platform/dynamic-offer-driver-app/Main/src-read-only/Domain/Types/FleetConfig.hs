@@ -16,6 +16,7 @@ data FleetConfig = FleetConfig
   { allowAutomaticRoundTripAssignment :: Kernel.Prelude.Bool,
     allowEndingMidRoute :: Kernel.Prelude.Bool,
     allowStartRideFromQR :: Kernel.Prelude.Bool,
+    directlyStartFirstTripAssignment :: Kernel.Prelude.Bool,
     endRideDistanceThreshold :: Kernel.Types.Common.HighPrecMeters,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rideEndApproval :: Kernel.Prelude.Bool,
