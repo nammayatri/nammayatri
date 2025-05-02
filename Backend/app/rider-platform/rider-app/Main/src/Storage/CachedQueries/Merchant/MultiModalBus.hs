@@ -6,6 +6,7 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     getBusesForRoutes,
     mkRouteKey,
     withCrossAppRedisNew,
+    utcToIST,
   )
 where
 
@@ -16,6 +17,9 @@ import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
+
+utcToIST :: UTCTime -> UTCTime
+utcToIST = addUTCTime 19800
 
 -- Type for bus stop ETA information
 data BusStopETA = BusStopETA
@@ -37,7 +41,7 @@ instance FromJSON BusStopETA where
     stopSeq <- v .: "stop_seq"
     stopName <- v .: "stop_name"
     arrivalTimestamp <- v .: "arrival_time" :: Parser Integer
-    let arrivalTime = posixSecondsToUTCTime $ realToFrac arrivalTimestamp
+    let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimestamp
     return $ BusStopETA {..}
 
 instance ToJSON BusStopETA where

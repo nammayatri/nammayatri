@@ -69,9 +69,6 @@ castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
 castToOnDemandVehicleCategory Spe.METRO = BecknV2.OnDemand.Enums.METRO
 castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
-utcToIST :: UTCTime -> UTCTime
-utcToIST = addUTCTime 19800
-
 getNearbyBuses :: Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
 getNearbyBuses nearbyDriverSearchRadius req = do
   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
@@ -101,7 +98,7 @@ getNearbyBuses nearbyDriverSearchRadius req = do
                   { capacity = Nothing,
                     currentLocation = Maps.LatLong bus.busData.latitude bus.busData.longitude,
                     distance = Nothing,
-                    eta = busEta >>= (\etaD -> Just (utcToIST etaD.arrivalTime)),
+                    eta = busEta >>= (\etaD -> Just (CQMMB.utcToIST etaD.arrivalTime)),
                     nextStop = busEta >>= (\etaD -> Just etaD.stopName),
                     occupancy = Nothing,
                     routeCode = busData.routeId,
