@@ -8,6 +8,7 @@ import Data.Time
 import Kernel.Prelude hiding (encodeUtf8, sequence)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 
 -- Data type to represent train information from Redis
 data TrainInfo = TrainInfo
@@ -101,7 +102,7 @@ getRoutesTrains routeId = do
   let key = mkRouteKey routeId
 
   -- Get train data from Redis as Text
-  mbTrainDataText <- Hedis.withMasterRedis $ Hedis.get key
+  mbTrainDataText <- CQMMB.withCrossAppRedisNew $ Hedis.get key
   logDebug $ "Got train data for route " <> routeId <> ": " <> show mbTrainDataText
 
   case mbTrainDataText of
