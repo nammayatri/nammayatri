@@ -5144,6 +5144,8 @@ metroTicketDetailsFlow = do
       metroTicketDetailsFlow
     GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_DETAILS_SCREEN -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
+      void $ pure $ runFn2 setInCache "MAP_READY" "true"
+      void $ pure $ JB.removeAllMarkers ""
       busTicketBookingFlow
     GO_TO_BUS_TRACKING -> busTrackingScreenFlow
     _ -> metroTicketDetailsFlow
@@ -5234,7 +5236,10 @@ metroMyTicketsFlow = do
                     }
               )
       metroTicketBookingFlow
-    GO_BUS_BOOKING_FROM_METRO_MY_TICKETS -> busTicketBookingFlow
+    GO_BUS_BOOKING_FROM_METRO_MY_TICKETS -> do 
+      void $ pure $ runFn2 setInCache "MAP_READY" "true"
+      void $ pure $ JB.removeAllMarkers ""
+      busTicketBookingFlow
     _ -> metroMyTicketsFlow
 
 viewTicketDetialsFlow :: Maybe String -> FlowBT String Unit
@@ -5340,7 +5345,10 @@ metroTicketStatusFlow = do
       metroTicketBookingFlow
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> homeScreenFlow
     GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> metroMyTicketsFlow
-    GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> busTicketBookingFlow
+    GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> do 
+      void $ pure $ runFn2 setInCache "MAP_READY" "true"
+      void $ pure $ JB.removeAllMarkers ""
+      busTicketBookingFlow
 
 searchLocationFlow :: FlowBT String Unit
 searchLocationFlow = do
@@ -5441,6 +5449,8 @@ searchLocationFlow = do
       fcmHandler notificationType globalState.homeScreen notificationBody
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  homeScreenFlow)
     SearchLocationController.BusTicketBookingScreen state -> do
+      void $ pure $ runFn2 setInCache "MAP_READY" "true"
+      void $ pure $ JB.removeAllMarkers ""
       modifyScreenState $ BusTicketBookingScreenStateType (\bookingState -> bookingState{ data{ ticketServiceType = state.data.ticketServiceType } })
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  busTicketBookingFlow)
     SearchLocationController.BusRouteStopSearchScreen state -> do
@@ -7440,7 +7450,6 @@ rideSummaryScreenFlow = do
 busTicketBookingFlow :: FlowBT String Unit
 busTicketBookingFlow = do
   (GlobalState currentState) <- getState
-
   action <- lift $ lift $ runScreen $ UI.busTicketBookingScreen currentState.busTicketBookingScreen
   case action of
     BusTicketBookingController.GoToHomeScreen state -> do
@@ -7452,14 +7461,16 @@ busTicketBookingFlow = do
       void $ pure $ removeValueFromCache "MAP_READY" 
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> state)
       parcelDeliveryFlow
-    BusTicketBookingController.GoToMyTicketsScreen state -> do
+    BusTicketBookingController.GoToMyTicketsScreen updatedState -> do
       void $ pure $ removeValueFromCache "POLLING_ID"
-      void $ pure $ removeValueFromCache "MAP_READY" 
+      void $ pure $ removeValueFromCache "MAP_READY"
+      modifyScreenState $ BusTicketBookingScreenStateType (\state -> updatedState ) 
       modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroMyTicketsScreen { props { ticketServiceType = BUS , entryPoint = ST.MetroTicketBookingToMetroMyTickets, fromScreen = Just $ Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN} })
       metroMyTicketsFlow
-    BusTicketBookingController.GoToSearchLocationScreenForRoutes state source ->do
+    BusTicketBookingController.GoToSearchLocationScreenForRoutes updatedState source ->do
      void $ pure $ removeValueFromCache "POLLING_ID" 
      void $ pure $ removeValueFromCache "MAP_READY"
+     modifyScreenState $ BusTicketBookingScreenStateType (\state -> updatedState ) 
      let 
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
@@ -7474,7 +7485,7 @@ busTicketBookingFlow = do
             else STOP
          sortedStops = getSortedStops routeStopresponse.stops
      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
+     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = updatedState.props.srcLat , srcLong = updatedState.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
       void $ pure $ removeValueFromCache "POLLING_ID"
@@ -7643,7 +7654,10 @@ busTrackingScreenFlow = do
           destCode = maybe "" (\item-> item.stationCode) state.data.destinationStation
       case state.props.previousScreen of
         PreStopRouteSelection -> selectBusRouteScreenFlow srcCode destCode
-        _ -> busTicketBookingFlow
+        _ -> do
+          void $ pure $ runFn2 setInCache "MAP_READY" "true"
+          void $ pure $ JB.removeAllMarkers ""
+          busTicketBookingFlow
     BusTrackingScreen.GoToViewTicket updatedState -> do 
       modifyScreenState $ BusTrackingScreenStateType (\state -> updatedState )
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT updatedState.data.bookingId
@@ -7678,7 +7692,10 @@ busTrackingScreenFlow = do
       modifyScreenState $ BusTrackingScreenStateType (\_ -> BusTrackingScreenData.initData)
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLon }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
       searchLocationFlow
-    BusTrackingScreen.GoToBusTicketBookingScreen state -> busTicketBookingFlow
+    BusTrackingScreen.GoToBusTicketBookingScreen state -> do
+      void $ pure $ runFn2 setInCache "MAP_READY" "true"
+      void $ pure $ JB.removeAllMarkers ""
+      busTicketBookingFlow
     BusTrackingScreen.GoBackToMetroMyTicketsScreen state -> metroMyTicketsFlow
     _ -> busTrackingScreenFlow
 
