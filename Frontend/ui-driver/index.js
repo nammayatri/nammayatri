@@ -1,9 +1,207 @@
 /* eslint-disable no-loop-func */
+
+window.timeStamps = window.timeStamps || {}
+
+let date = Date.now();
+const JBridge = window.JBridge;
+
+window.atob = require("atob");
+
+window.btoa = require("btoa");
+
+window.unescape = require("html-escaper").unescape
+window.escape = require("html-escaper").escape
+window.timeStamps['assetDownloaderEval'] = window.timeStamps['assetDownloaderEval'] || {}
+window.timeStamps['assetDownloaderEval']['start'] = date;
+window.timeStamps['onCreateToAssetDownloader'] = window.timeStamps['onCreateToAssetDownloader'] || {}
+window.timeStamps['onCreateToAssetDownloader']['end'] = date;
+window.timeStamps['initiateToAssetDownloader'] = window.timeStamps['initiateToAssetDownloader'] || {}
+window.timeStamps['initiateToAssetDownloader']['end'] = date;
+window.timeStamps['assetDownloaderToIndexBundle'] = window.timeStamps['assetDownloaderToIndexBundle'] || {}
+window.timeStamps['assetDownloaderToIndexBundle']['start'] = date;
+
+window.version = window.version || {};
+window.version["assets_downloader"] = __VERSION__;
+
+window.parent = window;
+window.top = window;
+
+window.events = window.events || {};
+window.JOS = {};
+let isCUGUser;
+window.JOS.getJOSflags = () => {
+  if (isCUGUser === undefined) {
+    isCUGUser = isCug();
+  }
+  return {
+    "isCUGUser": isCUGUser
+  }
+}
+
+
+
+window.JOS.self = "in.mobility.core"
+
+window.JOS.emitEvent = (_, _event, payload) => {
+  const isLatest = window.version.app && window.version.app.localeCompare('3.0.118', undefined, {
+    numeric: true,
+    sensitivity: 'base'
+  }) >= 0
+  if (isLatest) {
+    return () => {
+      window.JBridge.runInJuspayBrowser(_event, payload, null)
+    }
+  } else {
+    return (_event) => {
+      return (payload) => {
+        return () => {
+          return () => {
+            window.JBridge.runInJuspayBrowser(_event, payload, null)
+          }
+        }
+      }
+    }
+  }
+}
+window.JOS.addEventListener = () => {
+  return () => {
+
+  }
+}
+
+function isInTestMode(testFlag, checks) {
+  var flag = false;
+  try {
+    if (window.__OS == "ANDROID") {
+      for (var i = 0; i < checks.apps.length; i++) {
+        var app = checks.apps[i].app;
+        var pkg = checks.apps[i].package;
+        if (typeof JBridge.findApps == "function" && JBridge.findApps(app).indexOf(pkg) != -1) {
+          JBridge.setInSharedPrefs(testFlag, "true");
+          flag = true;
+        }
+      }
+    } else {
+      flag = JBridge.canOpenApp(btoa("devtools://test")) == "1";
+    }
+  } catch (e) {}
+  return flag;
+}
+
+const isCug = () => {
+  const checks = {
+    payloadEntry: "cug",
+    apps: [{
+      app: "juspay://pay/cug",
+      package: "in.juspay.cug"
+    }],
+    CUG_DEVICE_NAME: "Whale999"
+  };
+  return isInTestMode("isCUGUser", checks);
+}
+
+// try {
+//   // Combining module specific JBridge methods
+//   if (window.BridgeList && window.BridgeList.getBridgeKeys) {
+//     JSON.parse(window.BridgeList.getBridgeKeys()).forEach(function (bridge) {
+//       const jb = window[bridge];
+//       for (const f in jb) {
+//         if (!window.JBridge[f]) {
+//           window.JBridge[f] = jb[f].bind(jb);
+//         }
+//       }
+//     });
+//   }
+// } catch (err) {
+//   console.error(err);
+// }
+
+window.session_id = JBridge.getSessionId();
+window.juspayAssetConfig = window.juspayAssetConfig || {};
+window.juspayAssetConfig = JSON.parse(JBridge.loadFileInDUI("juspay_assets.json"))
+
+try {
+  if (window.__OS !== "IOS") {
+    const files = JSON.parse(JBridge.getKeysInSharedPref("asset_metadata.json"))
+    Object.keys(files).forEach((key) => {
+      if (files[key].zipHashInDisk[0] !== "\"" && files[key].zipHashInDisk[files[key].zipHashInDisk.length - 1] !== "\"") {
+        files[key].zipHashInDisk = `"${files[key].zipHashInDisk}"`
+      }
+    })
+    JBridge.setInSharedPrefs("asset_metadata.json", JSON.stringify(files))
+  }
+} catch (e) {
+  console.error("Error ", e)
+}
+
+let sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
+if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || isCUGUser) {
+  window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
+} else {
+  window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
+}
+
+window.callUICallback = function () {
+  const getCurrTime = () => (new Date()).getTime()
+  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null,
+    arguments));
+  const fName = args[0]
+  const functionArgs = args.slice(1)
+  let currTime;
+  let timeDiff;
+  if (fName) {
+    if (window.__THROTTELED_ACTIONS && window.__THROTTELED_ACTIONS.indexOf(fName) == -1) {
+      window.__PROXY_FN[fName].apply(null, functionArgs);
+    } else if (window.__LAST_FN_CALLED && (fName == window.__LAST_FN_CALLED.fName)) {
+      currTime = getCurrTime();
+      timeDiff = currTime - window.__LAST_FN_CALLED.timeStamp;
+
+      if (timeDiff >= 100) {
+        window.__PROXY_FN[fName].apply(null, functionArgs);
+        window.__LAST_FN_CALLED.timeStamp = currTime;
+      } else {
+        console.warn("function throtteled", fName);
+        console.warn("time diff", timeDiff);
+      }
+    } else {
+      window.__PROXY_FN[fName].apply(null, functionArgs);
+      window.__LAST_FN_CALLED = {
+        timeStamp: (new Date()).getTime(),
+        fName: fName
+      }
+    }
+  } else {
+    console.error("got empty callback", fName, functionArgs)
+  }
+};
+
+window.__FN_INDEX = window.__FN_INDEX || 0;
+window.__PROXY_FN = window.__PROXY_FN || {};
+window.JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+  event: "onJOSReady"
+}), "");
+
+window.eventQueue = []
+
+// if (!window.JOS.tracker) {
+//   eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
+//   window.JOS.tracker = window.getTrackerModule.Main.initTracker()
+//   window.tracker =  window.JOS.tracker
+
+// }
+window.onMerchantEvent = (event, payload) => {
+  window.__payload = JSON.parse(payload);
+  window.eventQueue.push([event, payload])
+}
+
+window.timeStamps['assetDownloaderEval'] = window.timeStamps['assetDownloaderEval'] || {}
+window.timeStamps['assetDownloaderEval']['end'] = Date.now()
 console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
 
 window.timeStamps = window.timeStamps || {}
 
-const date = Date.now();
+date = Date.now();
 window.timeStamps["indexBundleEval"] = window.timeStamps["indexBundleEval"] || {}
 window.timeStamps["indexBundleEval"]["start"] = date;
 window.timeStamps["onCreateToIndexBundle"] = window.timeStamps["onCreateToIndexBundle"] || {}
@@ -16,12 +214,16 @@ window.timeStamps["assetDownloaderToIndexBundle"]["end"] = date;
 window.version = window.version || {};
 window.version["app"] = __VERSION__;
 let previousDateObject = new Date();
-var innerPayload;
 const refreshThreshold = 300;
 console.warn("Hello World");
-const JBridge = window.JBridge;
 const JOS = window.JOS;
 window.session_id = JBridge.getSessionId();
+
+window.screen = {
+  width : sessionInfo.screen_width,
+  height : sessionInfo.screen_height
+}
+
 
 console.log("APP_PERF ON JOS READY  END: ", new Date().getTime());
 
@@ -35,7 +237,7 @@ window.fetchCachedSessionInfo = (key) => {
     return window.cacheMap.sessionInfo[key];
   }
   if (window.JBridge.getSessionInfo) {
-    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo());
+    sessionInfo = JSON.parse(window.JBridge.getSessionInfo());
     window.cacheMap["sessionInfo"] = sessionInfo;
     return sessionInfo[key];
   }
@@ -92,6 +294,9 @@ function getPureScript() {
   }
   return purescript;
 }
+
+
+// getPureScript();
 
 function callInitiateResult() {
   const payload = {
@@ -223,9 +428,9 @@ window.onMerchantEvent = function (_event, payload) {
     }
     JBridge.enableWebViewRecreate("true");
     callInitiateResult();
-    setTimeout(() => {
-      getPureScript()
-    }, 0)
+    // setTimeout(() => {
+    //   getPureScript()
+    // },0) 
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
@@ -301,6 +506,7 @@ window.onMerchantEvent = function (_event, payload) {
   } else {
     console.error("unknown event: ", event);
   }
+  console.log("window.timeStamps -> ", window.timeStamps)
 }
 console.log("APP_PERF INDEX_BUNDLE_END_ON_MERCHANT : ", new Date().getTime());
 
@@ -478,17 +684,17 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
   }
 }
 
-const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
+// const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+// const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 
-const JOSFlags = window.JOS.getJOSflags()
-if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser) {
-  logger.enableLogger();
-  window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
-} else {
-  logger.disableLogger();
-  window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
-}
+// const JOSFlags = window.JOS.getJOSflags()
+// if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser) {
+//   logger.enableLogger();
+//   window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
+// } else {
+//   logger.disableLogger();
+//   window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
+// }
 
 JOS.emitEvent("java", "onEvent", JSON.stringify({
   action: "DUI_READY",
@@ -496,12 +702,12 @@ JOS.emitEvent("java", "onEvent", JSON.stringify({
   service: JOS.self
 }))();
 
-if (!window.JOS.tracker) {
-  eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
-  window.JOS.tracker = window.getTrackerModule.Main.initTracker()
-  window.tracker = window.JOS.tracker
+// if (!window.JOS.tracker) {
+//   eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
+//   window.JOS.tracker = window.getTrackerModule.Main.initTracker()
+//   window.tracker =  window.JOS.tracker
 
-}
+// }
 
 
 if (window.eventQueue) {

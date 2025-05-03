@@ -16,7 +16,8 @@
     "start": "npm-run-all -p dev webpack-dev",
     "clean": "sh cleanSpago.sh",
     "fast:purs": "spago build -w --purs-args '--purs=fastpurs'",
-    "fast:start": "npm-run-all -p fast:purs webpack-dev"
+    "fast:start": "npm-run-all -p fast:purs webpack-dev",
+    "makesnapshot": "mksnapshot /Users/vignesh.s/Documents/Desktop/release/newfolder/nammayatri/Frontend/ui-driver/dist/android/index_bundle.js"
   },
   "author": "juspay",
   "license": "ISC",
@@ -39,6 +40,7 @@
     "commitlint-config-jira": "^1.6.4",
     "commitlint-plugin-jira-rules": "^1.6.4",
     "cz-conventional-changelog": "^3.3.0",
+    "electron-mksnapshot": "^33.4.1",
     "husky": "^8.0.1",
     "hyper-purescript": "^0.0.25",
     "imports-loader": "1.2.0",
@@ -52,13 +54,18 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
+    "atob": "^2.1.2",
     "axios": ">=1.6.0",
+    "btoa": "^1.2.1",
     "core-js": "^2.6.11",
-    "presto-ui": "git+https://github.com/Vignesh-772/presto-ui.git#nammayatri",
+    "html-escaper": "^3.0.3",
+    "presto-ui": "/Users/vignesh.s/Documents/presto/presto-ui",
     "purty": "^7.0.0",
     "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5",
-    "spago": "^0.21.0"
+    "spago": "^0.21.0",
+    "uglify-js": "^3.19.3",
+    "url-polyfill": "^1.1.13"
   },
   "config": {
     "commitizen": {
