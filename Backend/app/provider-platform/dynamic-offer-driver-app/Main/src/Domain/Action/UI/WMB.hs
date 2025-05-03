@@ -205,7 +205,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
         destination = destinationStopInfo,
-        status = IN_PROGRESS,
+        status = tripTransaction.status,
         routeInfo = buildRouteInfo route
       }
 
