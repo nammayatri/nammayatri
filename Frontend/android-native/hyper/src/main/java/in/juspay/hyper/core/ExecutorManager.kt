@@ -7,6 +7,7 @@ import java.util.concurrent.Executors
 object ExecutorManager {
     private val logsPool = Executors.newSingleThreadExecutor()
     private val remoteAssetsPool = Executors.newSingleThreadExecutor()
+    private val jsThread = Executors.newSingleThreadExecutor();
     private val sharedPool = Executors.newFixedThreadPool(4) // Should this be configurable
     private val sdkTrackerPool = Executors.newSingleThreadExecutor()
     private val logSessioniserPool = Executors.newSingleThreadExecutor()
@@ -38,6 +39,11 @@ object ExecutorManager {
         } else {
             task.run()
         }
+    }
+
+    @JvmStatic
+    fun runOnJSThread(task: Runnable) {
+        jsThread.execute(task);
     }
 
     @JvmStatic
