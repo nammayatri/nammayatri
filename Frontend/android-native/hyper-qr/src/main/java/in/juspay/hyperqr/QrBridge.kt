@@ -67,7 +67,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
 //                .startActivityForResult(photoPickerIntent, SELECT_PHOTO, null)
 //        }
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun scanQRFromGallery(callback: String?) {
         listenerMap[GALLERY] =
             ResultAwaitingDuiHook { requestCode: Int, _: Int, data: Intent? ->
@@ -167,7 +167,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun shareImage(viewId: Int, subject: String?, text: String?, intentHeading: String?) {
         val activity = bridgeComponents.activity
         if (activity != null) {
@@ -196,7 +196,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun saveImage(viewId: Int, imageName: String?, imageDescription: String?, callback: String?) {
         val activity = bridgeComponents.activity
         if (activity != null) {
@@ -331,7 +331,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
             Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun startQRScanner(parentId: String?, callback: String?) {
         if (parentId == null) {
             onNullParam("parentId", callback)
@@ -359,7 +359,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun stopScanning() {
         firebaseScanner?.releaseCameraResources()
         imageScanner?.releaseResources()
@@ -372,7 +372,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun generateQRCode(data: String?, parent: String?, qrSize: Int, margin: Int, callback: String?) {
         if (data == null) {
             onNullParam("data", callback)
@@ -410,7 +410,7 @@ class QrBridge(bridgeComponents: BridgeComponents) : HyperBridge(bridgeComponent
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface 
     fun checkQRScannerLibrary(): Boolean {
         return try {
             Class.forName("in.juspay.widget.qrscanner.com.google.zxing.BarcodeFormat")

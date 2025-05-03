@@ -12,6 +12,7 @@ import in.juspay.hyper.constants.LogCategory;
 import in.juspay.hyper.constants.LogSubCategory;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.utils.Utils;
+import com.caoccao.javet.annotations.V8Function;
 
 /**
  * Class that adds {@code JBridge} methods that are related to Hyper SDK.
@@ -27,26 +28,26 @@ public class HyperJsInterface extends JsInterface {
         super(juspayServices);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setClickFeedback(String id) {
         JuspayLogger.e(LOG_TAG, "Method setClickFeedback(String) has empty body");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void exitApp(int requestCode, String reason) {
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void hideKeyboard() {
         JuspayLogger.e(LOG_TAG, "Method hideKeyboard() has empty body");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void downloadApps(String location) {
         JuspayLogger.e(LOG_TAG, "Method downloadApps() has empty body");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String checkPermission(String[] permissions) {
         final JSONObject result = new JSONObject();
         final SdkTracker tracker = juspayServices.getSdkTracker();
@@ -62,12 +63,12 @@ public class HyperJsInterface extends JsInterface {
         return result.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestPermission(String[] permissions, String permissionId) {
         juspayServices.requestPermission(permissions, Integer.parseInt(permissionId));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         JuspayLogger.e(LOG_TAG, "Please override onRequestPermissionsResult");
     }

@@ -25,10 +25,7 @@ module.exports = function(env, argv){
         test: /\.m?js$/,
         exclude: /(node_modules|bower_components)/,
         use: {
-        loader: 'babel-loader',
-        options: {
-          presets: ['@babel/preset-env']
-        }
+        loader: path.resolve('./FunctionifyImportLoader.js'),
         }
       }
     ]
@@ -49,6 +46,7 @@ module.exports = function(env, argv){
   optimization: {
 
    usedExports: true,
+   minimize : false
 
   }
   }

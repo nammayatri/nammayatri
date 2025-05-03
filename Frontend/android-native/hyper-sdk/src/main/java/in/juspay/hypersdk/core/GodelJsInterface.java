@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.caoccao.javet.annotations.V8Function;
 import in.juspay.hyper.constants.Labels;
 import in.juspay.hyper.constants.LogCategory;
 import in.juspay.hyper.constants.LogSubCategory;
@@ -29,7 +30,7 @@ public class GodelJsInterface {
         this.juspayServices = juspayServices;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void sendMessage(String message) {
         if (juspayServices.getHyperCallback() == null) {
             return;

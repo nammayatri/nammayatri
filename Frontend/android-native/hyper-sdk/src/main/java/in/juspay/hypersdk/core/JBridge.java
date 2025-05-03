@@ -14,6 +14,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import com.caoccao.javet.annotations.V8Function;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -161,14 +162,14 @@ public class JBridge extends DuiInterface {
         unRegisterReceiver();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     @Override
     public void exitApp(int i, String s) {
         SwypeLayout.clear();
         super.exitApp(i, s);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void registerReceiver(@NonNull String action) {
         if (broadcastReceiver != null) return;
         broadcastReceiver = new BroadcastReceiver() {
@@ -180,14 +181,14 @@ public class JBridge extends DuiInterface {
         LocalBroadcastManager.getInstance(juspayServices.getContext()).registerReceiver(broadcastReceiver, new IntentFilter(action));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void unRegisterReceiver() {
         if (broadcastReceiver == null) return;
         LocalBroadcastManager.getInstance(juspayServices.getContext()).unregisterReceiver(broadcastReceiver);
         broadcastReceiver = null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showJuspayLoader(final String loaderConfig) {
         ExecutorManager.runOnMainThread(() -> {
             if (activity == null) return;
@@ -263,7 +264,7 @@ public class JBridge extends DuiInterface {
 
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void hideJuspayLoader(final String loaderConfig) {
         ExecutorManager.runOnMainThread(() -> {
             if (activity == null) return;
@@ -292,7 +293,7 @@ public class JBridge extends DuiInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isShimmerPossible() {
         try {
             Class.forName("com.facebook.shimmer.ShimmerFrameLayout");
@@ -303,7 +304,7 @@ public class JBridge extends DuiInterface {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean checkCustomTabs() {
         try {
             Class.forName("androidx.browser.customtabs.CustomTabsIntent");
@@ -313,7 +314,7 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean checkPhonePeSdk() {
         try {
             Class.forName("com.phonepe.android.sdk.api.PhonePe");
@@ -327,12 +328,12 @@ public class JBridge extends DuiInterface {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void checkPhonePeSdk(final String cb) {
         invokeCallbackInDUIWebview(cb, String.valueOf(checkPhonePeSdk()));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void checkAmazonNonTokenSdk(final String cb) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -383,7 +384,7 @@ public class JBridge extends DuiInterface {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void getPackageName(final String cb) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -397,7 +398,7 @@ public class JBridge extends DuiInterface {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getBuildInfo() {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -448,13 +449,13 @@ public class JBridge extends DuiInterface {
 
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void amazonNonTokenPay(String url, final String cb) {
         launchCustomTab(url, cb);
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void launchCustomTab(String url, final String cb) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -480,7 +481,7 @@ public class JBridge extends DuiInterface {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isCCTSupportedChromeAvailable(final String testUrl) {
         try {
             ArrayList<ResolveInfo> appInfo = CustomtabActivity.getCustomTabsPackages(juspayServices.getContext(), testUrl);
@@ -525,7 +526,7 @@ public class JBridge extends DuiInterface {
         return Integer.signum(vals1.length - vals2.length);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startPaytmRequest(String sdkParams, String version, String cb) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
         try {
@@ -564,7 +565,7 @@ public class JBridge extends DuiInterface {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startPhonepeRequest(String base64Body, String checksum, String apiEndPoint, final String cb) {
         invokeCallbackInDUIWebview(cb, "Function deprecated");
     }
@@ -572,7 +573,7 @@ public class JBridge extends DuiInterface {
     /**
      * @return true if supported phonepe app is present
      */
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean doesPhonePeAppExist(final String packageName) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -597,7 +598,7 @@ public class JBridge extends DuiInterface {
      * @return return phonepe versioncode if phonepe app is installed on
      * user device
      */
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public long getPhonePeVersionCode(final String packageName) {
         PackageManager packageManager = juspayServices.getContext().getPackageManager();
 
@@ -618,7 +619,7 @@ public class JBridge extends DuiInterface {
      * @param url Intent upi url to be launched by phonepe app
      *            onActivityResult is captured internally in js.
      */
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startPhonepeRequest(final String url, final String packageName) {
         Intent i = new Intent(Intent.ACTION_VIEW);
         i.setData(Uri.parse(url));
@@ -630,13 +631,13 @@ public class JBridge extends DuiInterface {
 
     // EC UPI BASED JS Interface functions
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void handlePhonepayActivityResult(String response) {
         String phonepeTxnCallback = "";
         invokeCallbackInDUIWebview(phonepeTxnCallback, response);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String findApps(String payload) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
         Context context = juspayServices.getContext();
@@ -668,7 +669,7 @@ public class JBridge extends DuiInterface {
         return apps.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void drawAppIcon(String array) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -706,12 +707,12 @@ public class JBridge extends DuiInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String callAPI(final String method, final String url, final String data, final String headers, final boolean shouldEncodeToFormData, final boolean isSSLPinned, final String callback) {
         return callAPIWithOptions(method, url, data, headers, shouldEncodeToFormData, isSSLPinned, (new JSONObject()).toString(), callback);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String callAPIWithOptions(final String method, final String url, final String data, final String headers, final boolean shouldEncodeToFormData, final boolean isSSLPinned, String options, final String callback) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
         final DynamicUI dynamicUI = juspayServices.getDynamicUI();
@@ -933,18 +934,18 @@ public class JBridge extends DuiInterface {
         return tag;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void cancelAPI(String tag) {
         NetUtils.cancelAPICall(tag, juspayServices.getSdkTracker());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void writeFileToDisk(String data, String fileName, final String callback) {
         String response = juspayServices.getFileProviderService().writeFileToDisk(juspayServices.getContext(), data, fileName);
         invokeCallbackInDUIWebview(callback, response);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void openApp(String packageName, String payload, String action, int flag, int requestCode) {
         Intent i = new Intent();
         i.setPackage(packageName);
@@ -997,7 +998,7 @@ public class JBridge extends DuiInterface {
         return dpd;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startDatePicker(final String callback, final String minDate, final String maxDate) {
         ExecutorManager.runOnMainThread(() -> {
             DatePickerDialog dpd = newDialogWithoutDateField(callback);
@@ -1016,7 +1017,7 @@ public class JBridge extends DuiInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String encryptRSA(String publicKey, String content) {
         byte[] encrypted = encryptRSAHelper(publicKey, content);
         return encrypted == null ? "" : Base64.encodeToString(encrypted, Base64.NO_WRAP);
@@ -1048,7 +1049,7 @@ public class JBridge extends DuiInterface {
         return null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void hideSoftInput() {
         if (activity != null && activity.getCurrentFocus() != null) {
             InputMethodManager inputMethodManager = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -1058,7 +1059,7 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public int cursorPosition(int id) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
         try {
@@ -1074,7 +1075,7 @@ public class JBridge extends DuiInterface {
         return 0;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getResourceByName(String name, String type, String packagename) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1090,7 +1091,7 @@ public class JBridge extends DuiInterface {
         return result;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getStatusBarHeight(String name, String type, String packagename) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1106,13 +1107,13 @@ public class JBridge extends DuiInterface {
         return result;
     }
 
-    @JavascriptInterface
-    public float getDensity() {
-        return (float) juspayServices.getContext().getResources().getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT;
+    @JavascriptInterface @V8Function
+    public double getDensity() {
+        return (double) juspayServices.getContext().getResources().getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT;
     }
 
-    @JavascriptInterface
-    public void startLottieAnimation(final int id, final String animation, final boolean loop, final float min, final float max) {
+    @JavascriptInterface @V8Function
+    public void startLottieAnimation(final int id, final String animation, final boolean loop, final double min, final double max) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
         ExecutorManager.runOnMainThread(() -> {
@@ -1123,7 +1124,8 @@ public class JBridge extends DuiInterface {
                 animationView.enableMergePathsForKitKatAndAbove(true);
                 animationView.setAnimation(animation);
                 animationView.setRepeatCount(loop ? ValueAnimator.INFINITE : 0);
-                animationView.setMinAndMaxProgress(min, max);
+                animationView.setMinAndMaxProgress(
+                        (float)min, (float)max);
 
                 animationView.playAnimation();
             } catch (Exception e) {
@@ -1132,7 +1134,7 @@ public class JBridge extends DuiInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSHA256Hash(@Nullable String data) {
         if (data == null) return null;
 
@@ -1155,7 +1157,7 @@ public class JBridge extends DuiInterface {
         return null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getDeviceInfo() {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1169,7 +1171,7 @@ public class JBridge extends DuiInterface {
         return session.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addCertificates(String json) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1183,7 +1185,7 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String jweEncrypt(String data, String headers, String wrappingKey) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1195,7 +1197,7 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String jwsSign(String data, String headers, String alias) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1208,7 +1210,7 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String jweDecrypt(String cipher, String alias) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1225,7 +1227,7 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean jwsVerify(String signed, String publicKey) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1238,7 +1240,7 @@ public class JBridge extends DuiInterface {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String rsaEncryption(String plainText, String algo, String pubKey) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
 
@@ -1257,12 +1259,12 @@ public class JBridge extends DuiInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void blurBackground(String viewId, String targetViewId, final int blurRadius) {
 
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public static String hmacDigest(String msg, String keyString, String algo) {
         String digest = null;
         try {
@@ -1284,7 +1286,7 @@ public class JBridge extends DuiInterface {
         return digest;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isNoLimitsActivity() {
         if (activity == null) {
             return false;
@@ -1293,7 +1295,7 @@ public class JBridge extends DuiInterface {
         return (flg & WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS) == WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String get3DS2SdkList() {
         JSONArray arr = new JSONArray();
         for (Map.Entry<String, HyperBridge> bridge : juspayServices.getJBridgeList().entrySet()) {
@@ -1305,7 +1307,7 @@ public class JBridge extends DuiInterface {
         return arr.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void shareLink(String textTobeShared, String title, String cb) {
         Intent myIntent = new Intent(Intent.ACTION_SEND);
         myIntent.setType("text/plain");
@@ -1314,7 +1316,7 @@ public class JBridge extends DuiInterface {
         invokeCallbackInDUIWebview(cb, "true");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void copyLink(String textTobeCopied, String label, String cb) {
         ClipboardManager clipboard = (ClipboardManager) juspayServices.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText(label, textTobeCopied);
@@ -1322,7 +1324,7 @@ public class JBridge extends DuiInterface {
         invokeCallbackInDUIWebview(cb, "true");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void attachBase64ImageToId(final String base64Data, final String id) {
         try {
             ImageView imgView = activity.findViewById(Integer.parseInt(id));

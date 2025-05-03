@@ -22,6 +22,7 @@ import static in.juspay.mobility.common.utils.Utils.captureImage;
 import static in.juspay.mobility.common.utils.Utils.drawableToBitmap;
 import static in.juspay.mobility.common.utils.Utils.encodeImageToBase64;
 import static in.juspay.mobility.common.utils.Utils.getCircleOptionsFromJSON;
+import com.caoccao.javet.annotations.V8Function;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -698,7 +699,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void emptyCallbackQueue() {
         while (!callbackQueue.isEmpty()) {
             if (bridgeComponents.getJsCallback() != null) {
@@ -743,32 +744,32 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     // region Store and Trigger CallBack
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackInternetAction(String callback) {
         receivers.storeInternetActionCallBack = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackDriverLocationPermission(String callback) {
         receivers.storeLocationCallBack = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackLocateOnMap(String callback) {
         storeLocateOnMapCallBack = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallbackHotspotMap(String callback) {
         storeHotspotMapCallback = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallbackCircleOnClick(String callback) {
         storeCircleOnClickCallback = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackImageUpload(String callback) {
         storeImageUploadCallBack = callback;
     }
@@ -779,7 +780,7 @@ public class MobilityCommonBridge extends HyperBridge {
         bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackUploadMultiPartData(String callback) {
         storeUploadMultiPartCallBack = callback;
     }
@@ -792,13 +793,13 @@ public class MobilityCommonBridge extends HyperBridge {
     // endregion
 
     // region Location
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void currentPosition(final String zoomType) {
         Log.i(LOCATION, "Fetching Current Position");
         showLocationOnMap(zoomType);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestBackgroundLocation() {
         Activity activity = bridgeComponents.getActivity();
         if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -806,7 +807,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestLocation() {
         if (!isLocationPermissionEnabled()) {
             requestPermission();
@@ -824,7 +825,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestNotificationPermission() {
         if (bridgeComponents.getActivity() != null && Build.VERSION.SDK_INT >= 33) {
             if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -833,13 +834,13 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isLocationEnabled() {
         LocationManager locationManager = (LocationManager) bridgeComponents.getContext().getSystemService(Context.LOCATION_SERVICE);
         return locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getLocationPermissionStatus() {
         if (bridgeComponents.getActivity() != null && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(bridgeComponents.getActivity(), ACCESS_FINE_LOCATION)) {
@@ -852,17 +853,17 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isLocationPermissionEnabled() {
         return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }
     
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isMicrophonePermissionEnabled() {
         return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void checkAndAskMicrophonePermission() {
         if(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED){
             try {
@@ -875,7 +876,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isNotificationPermissionEnabled() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED);
@@ -884,7 +885,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void checkAndAskNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)) {
             try {
@@ -904,7 +905,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getCurrentLatLong() throws JSONException { // TODO:: TO BE DEPRECATED AS FUNCTION IS NOT IN USE
         JSONObject location = new JSONObject();
         location.put("lat", lastLatitudeValue);
@@ -1017,7 +1018,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void drawCircleOnMap(String _payload) {
         try {
             JSONObject payload = new JSONObject(_payload);
@@ -1045,7 +1046,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, float zoomLevel, JSONObject circleConfig) {
         try {
             System.out.println("Inside locateOnMap" + zoomLevel);
@@ -1168,7 +1169,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void locateOnMapV2(String _payload) {
         if (googleMap != null) {
             try {
@@ -1506,7 +1507,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void drawPolygon(String geoJson, JSONArray zonePoints, JSONObject specialZoneMarkerConfig) {
 
         ExecutorManager.runOnMainThread(() -> {
@@ -1721,7 +1722,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 .put("distance", minDist);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void exitLocateOnMap(String str) {
         try {
             locateOnMapManager = null;
@@ -1785,7 +1786,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void initiateLocationServiceClient() {
         setKeyboardVisibilityListener();
         if (!isLocationPermissionEnabled()) return;
@@ -1874,19 +1875,19 @@ public class MobilityCommonBridge extends HyperBridge {
                 .build();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void getCurrentPosition(String callback) {
         getCurrentPosition(callback, true);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void getCurrentPosition(String callback, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
         updateLastKnownLocation(callback, false, ZoomType.ZOOM, shouldFallBack);
     }
 
     @SuppressLint("MissingPermission")
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void isMockLocation(String callback) {
         Activity activity = bridgeComponents.getActivity();
         if (!isLocationPermissionEnabled()) return;
@@ -1920,7 +1921,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region Maps
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeMarker(final String title) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -1937,7 +1938,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeAllMarkers() {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -1955,7 +1956,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void animateCamera(final double lat, final double lng, final float zoom, final String zoomType) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -1979,7 +1980,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint("PotentialBehaviorOverride")
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void upsertMarkerLabel(String configString) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2046,7 +2047,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showMarker(final String configString) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2140,7 +2141,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return AnimationType.NONE;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void fadeInFadeOutMarker(final AnimationType animationType, final String markerId, int anmDuration) {
         ExecutorManager.runOnMainThread(() -> {
             Marker marker = markers.get(markerId);
@@ -2177,7 +2178,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2219,13 +2220,13 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getLocationNameSDK(double latitude, double longitude) {
         GeoCoderHelper geoCoderHelper = new GeoCoderHelper(bridgeComponents.getContext());
         return geoCoderHelper.getLocName(latitude, longitude);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getCoordinateFromAddress(String address) {
         GeoCoderHelper geoCoderHelper = new GeoCoderHelper(bridgeComponents.getContext());
         GeoCoderHelper.GeoCoordinate coordinate = geoCoderHelper.getGeoCoordinateFromAddress(address);
@@ -2275,7 +2276,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return Bitmap.createScaledBitmap(b, markerWidth, markerHeight, false);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
         try {
             setKeysInSharedPrefs("MAPS_OPENED", "true");
@@ -2291,7 +2292,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void openNavigationWithQuery(double lat, double lon, String query, String packageName) {
         try {
             setKeysInSharedPrefs("MAPS_OPENED", "true");
@@ -2309,7 +2310,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void getLocationName(String latitude, String longitude, String defaultText, String callback) {
         if (!isLocationPermissionEnabled()) return;
 
@@ -2349,7 +2350,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setMapPadding(final int left, final int top, final int right, final int bottom) {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
@@ -2422,7 +2423,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     @SuppressLint("MissingPermission")
     public void enableMyLocation(boolean isEnableCurrentLocation) {
         try {
@@ -2436,7 +2437,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void reallocateMapFragment(final String pureScriptId) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2459,7 +2460,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addRippleCircle(String config) {
         ExecutorManager.runOnBackgroundThread(() -> {
             int count = 1;
@@ -2492,7 +2493,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void animateRippleCircle(String config) {
 //        HandlerThread handler = new HandlerThread("CircleAnimation");
 //        handler.start();
@@ -2514,7 +2515,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeRippleCircle(String config) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -2535,7 +2536,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateRippleCirclePosition(String config) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -2561,7 +2562,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addGroundOverlay(String config) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -2598,17 +2599,17 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isOverlayPresent(String id) {
         return groundOverlays.containsKey(id);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isCirclePresent(String id) {
         return circleRipples.containsKey(id);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeGroundOverlay(String config) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -2625,7 +2626,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateGroundOverlay(String config) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -2650,7 +2651,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void clearMap() {
         ExecutorManager.runOnMainThread(() -> googleMap.clear());
         circleRipples.clear();
@@ -2773,7 +2774,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void drawRouteV2(final String drawRouteConfig) {
         onMapUpdate(null, null);
         ExecutorManager.runOnMainThread(() -> {
@@ -3026,7 +3027,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, final String mapRouteConfig) {
         onMapUpdate(null, null);
         ExecutorManager.runOnMainThread(() -> {
@@ -3130,7 +3131,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateMarker(final String markerConfigString) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -3161,7 +3162,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateMarkerV2(final String markerConfigString) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -3245,7 +3246,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint("JavascriptInterface")
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onMapUpdate(String isIdleCallback, String isMovedCallback) {
         try {
             MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
@@ -3296,7 +3297,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeOnMapUpdate() {
         try {
             if (googleMap != null) {
@@ -3502,7 +3503,7 @@ public class MobilityCommonBridge extends HyperBridge {
         background.setBackground(drawable);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeAllPolylines(String removePolyLineConfig) {
         ExecutorManager.runOnMainThread(() -> {
             System.out.println("Inside remove all polylines" + removePolyLineConfig);
@@ -3611,7 +3612,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void moveCamera(final double source_latitude, final double source_longitude, final double destination_latitude, final double destination_longitude, final JSONArray json_coordinates) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -3795,14 +3796,14 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getDeviceID() {
         DeviceIdentifier androidIdentifier = new DeviceIdentifier();
         String deviceId = androidIdentifier.getDeviceId(bridgeComponents.getContext());
         return deviceId;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getAndroidId() {
         String androidId = DeviceIdentifier.getAndroidId(bridgeComponents.getContext());
         if (DeviceIdentifier.isValid(androidId)) {
@@ -3812,7 +3813,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
             System.out.println("Inside showMap 123");
@@ -3842,7 +3843,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String isCoordOnPath(String json, double currLat, double currLng, int speed) throws JSONException {
         LatLng currPoint = new LatLng(currLat, currLng);
         ArrayList<LatLng> path = new ArrayList<>();
@@ -3906,7 +3907,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return result.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateRoute(String _payload) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -4071,7 +4072,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return (float) brng;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getExtendedPath(String json) throws JSONException {
         ArrayList<LatLng> path = new ArrayList<>();
         ArrayList<LatLng> extendedPath = new ArrayList<>();
@@ -4125,7 +4126,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     // region Shared Preference Utils
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setKeysInSharedPrefs(String key, String value) {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
@@ -4134,18 +4135,18 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getKeysInSharedPref(String key) {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         return sharedPref.getString(key, "__failed");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getKeyInNativeSharedPrefKeys(String key) {
         return getKeysInSharedPref(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setEnvInNativeSharedPrefKeys(String key, String value) {
         setKeysInSharedPrefs(key, value);
     }
@@ -4154,12 +4155,12 @@ public class MobilityCommonBridge extends HyperBridge {
 
     // region DATE / TIME UTILS
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void timePicker(final String callback, String label) {
         timePicker(callback, label, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void timePicker(final String callback, String label, String defaultDate) {
         ExecutorManager.runOnMainThread(() -> {
@@ -4254,17 +4255,17 @@ public class MobilityCommonBridge extends HyperBridge {
         input.setImeOptions(imeOption);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void datePicker(final String callback, String label) {
         datePicker(callback, label, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void datePicker(final String callback, String label, String defaultDate) {
         datePicker(callback, label, defaultDate, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void datePicker(final String callback, String label, String defaultDate, String maxDate) {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
@@ -4429,7 +4430,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isNetworkTimeEnabled() {
         try {
             String timeSettings = android.provider.Settings.Global.getString(
@@ -4447,7 +4448,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region OTHER UTILS
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getVersionName() {
         PackageManager manager = bridgeComponents.getContext().getPackageManager();
         PackageInfo info = new PackageInfo();
@@ -4459,7 +4460,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return info.versionName;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getLayoutBounds(String id) throws JSONException {
         Activity activity = bridgeComponents.getActivity();
         int height = 0;
@@ -4483,7 +4484,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
     //endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public int getVersionCode() {
         PackageManager manager = bridgeComponents.getContext().getPackageManager();
         PackageInfo info = new PackageInfo();
@@ -4496,7 +4497,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void toggleLoader(final boolean visible) {
         ExecutorManager.runOnMainThread(() -> {
             if (bridgeComponents.getActivity() != null) {
@@ -4515,7 +4516,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void loaderText(final String mainMsg, final String subMsg) {
         ExecutorManager.runOnMainThread(() -> {
             @SuppressLint("InflateParams") View loader = LayoutInflater.from(bridgeComponents.getContext()).inflate(R.layout.loader, null, false);
@@ -4526,7 +4527,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void hideKeyboardOnNavigation(boolean permission) {
         if (bridgeComponents.getActivity() != null) {
             View view = bridgeComponents.getActivity().getCurrentFocus();
@@ -4539,7 +4540,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint("MissingPermission")
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) bridgeComponents.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = null;
@@ -4550,12 +4551,12 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint("MissingPermission")
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isInternetAvailable() {
         return ((ConnectivityManager) bridgeComponents.getContext().getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo() != null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showDialer(String phoneNum, boolean call) {
         Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -4568,7 +4569,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void openUrlInApp(String url) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -4587,7 +4588,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestKeyboardShow(final String id) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -4616,7 +4617,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showKeyboard(final String id) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -4650,7 +4651,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void goBackPrevWebPage(String id) {
         if (bridgeComponents.getActivity() != null) {
             WebView webView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
@@ -4669,7 +4670,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startLottieProcess(String configObj) {
         if (bridgeComponents.getActivity() != null) {
             ExecutorManager.runOnMainThread(() -> {
@@ -4761,7 +4762,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return writer.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     @SuppressLint("DiscouragedApi")
     public boolean isFilePresentDeep(String fileName) {
         Context context = bridgeComponents.getContext();
@@ -4788,7 +4789,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void shareTextMessage(String title, String message) {
         ExecutorManager.runOnMainThread(() -> {
             Intent sendIntent = new Intent();
@@ -4821,7 +4822,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void shareImageMessage(String message, String image, String config) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -4891,7 +4892,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void downloadLayoutAsImage(String qr) {
         downloadLayout = qr;
         if (bridgeComponents.getActivity() != null && checkAndAskStoragePermission()) {
@@ -4957,7 +4958,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void adjustViewWithKeyboard(String flag) {
         ExecutorManager.runOnMainThread(() -> {
             if (bridgeComponents.getActivity() != null) {
@@ -4969,7 +4970,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void copyToClipboard(String inputText) {
         if (bridgeComponents.getActivity() != null) {
             ClipboardManager clipboard = (ClipboardManager) bridgeComponents.getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
@@ -4978,7 +4979,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void initialWebViewSetUp(String callback, String id) {
         storeDashboardCallBack = callback;
         Context context = bridgeComponents.getContext();
@@ -5041,7 +5042,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void minimizeApp() {
         Intent startMain = new Intent(Intent.ACTION_MAIN);
         startMain.addCategory(Intent.CATEGORY_HOME);
@@ -5049,19 +5050,19 @@ public class MobilityCommonBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(startMain);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void closeApp() {
         if (bridgeComponents.getActivity() != null) {
             bridgeComponents.getActivity().finish();
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void toast(String msg) {
         Toast.makeText(bridgeComponents.getContext(), msg, Toast.LENGTH_SHORT).show();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void scrollToEnd(final String id, final boolean isBottom) {
         try {
             if (bridgeComponents.getActivity() != null) {
@@ -5151,7 +5152,7 @@ public class MobilityCommonBridge extends HyperBridge {
         STOP_ICON_MARKER,
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void performHapticFeedback() {
         Vibrator vibrator = (Vibrator) bridgeComponents.getContext().getSystemService(Context.VIBRATOR_SERVICE);
 
@@ -5164,7 +5165,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void horizontalScrollToPos(final String id, final String childId, final int focus) {
         if (bridgeComponents.getActivity() != null) {
             Activity activity = bridgeComponents.getActivity();
@@ -5186,13 +5187,13 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void clearStorageFile(String fileName) {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(fileName, MODE_PRIVATE);
         sharedPref.edit().clear().apply();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isServiceRunning(String serviceClassName) {
         final ActivityManager activityManager = (ActivityManager) bridgeComponents.getContext().getSystemService(Context.ACTIVITY_SERVICE);
         final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
@@ -5218,7 +5219,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startServiceForClass(String serviceClassName) {
         try {
             Log.i("SERVICE", "starting the service for class - " + serviceClassName);
@@ -5229,7 +5230,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void stopServiceForClass(String serviceClassName) {
         try {
             Log.i("SERVICE", "stopping the service for class - " + serviceClassName);
@@ -5240,7 +5241,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void clearFocus(String id) {
         if (bridgeComponents.getActivity() != null) {
             ExecutorManager.runOnMainThread(() -> {
@@ -5252,7 +5253,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void uploadMultiPartData(String filePath, String uploadUrl, String fileType, String outputField, String formDataField) {
         try {
             String boundary = UUID.randomUUID().toString();
@@ -5334,13 +5335,13 @@ public class MobilityCommonBridge extends HyperBridge {
 
     // region PP - Utils
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void initiatePP(String bootData) {
         paymentPage = new PaymentPage(bridgeComponents);
         paymentPage.initiate(bootData);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void processPP(String payload) {
         if (paymentPage != null) {
             try {
@@ -5351,12 +5352,12 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean onBackPressedPP() {
         return paymentPage != null && paymentPage.onBackPressed();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void terminatePP() {
         if (paymentPage != null) {
             paymentPage.terminate();
@@ -5364,7 +5365,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean ppInitiateStatus() {
         if (paymentPage != null) {
             return paymentPage.initiateStatus();
@@ -5472,15 +5473,15 @@ public class MobilityCommonBridge extends HyperBridge {
     // Deprecated on 5-Jan-2024
     // Remove once it is not used
     // Use displayBase64Image instead
-    @JavascriptInterface
-    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
+    @JavascriptInterface @V8Function
+    public void  renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
         renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
     }
 
     // Deprecated on 5-Jan-2024
     // Remove once it is not used
     // Use displayBase64Image instead
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -5506,7 +5507,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String convertAudioToBase64(String filePath) throws IOException {
         File file = new File(filePath);
         try (FileInputStream fileInputStream = new FileInputStream(file)) {
@@ -5516,7 +5517,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void encodeToBase64(String url, String callback) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -5536,7 +5537,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void displayBase64Image(String configJSONString) {
         try {
             JSONObject configObj = new JSONObject(configJSONString);
@@ -5591,7 +5592,7 @@ public class MobilityCommonBridge extends HyperBridge {
         addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID, false);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, boolean autoPlay) {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID, autoPlay);
@@ -5602,43 +5603,43 @@ public class MobilityCommonBridge extends HyperBridge {
         addMediaPlayer(viewID, source, false);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addMediaPlayer(String viewID, String source, boolean autoPlay) {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         mediaPlayer.addMediaPlayer(viewID, source, autoPlay);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void pauseMediaPlayer() {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         mediaPlayer.pauseMediaPlayer();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeMediaPlayer() {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         mediaPlayer.removeMediaPlayer();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean startAudioRecording(String fileName) {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         return mediaPlayer.startAudioRecording(fileName);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String stopAudioRecording() {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         return mediaPlayer.stopAudioRecording();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String saveAudioFile(String source) throws IOException {
         if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         return mediaPlayer.saveAudioFile(source);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void uploadFile(String ratio, boolean canChooseFromFile) {
         try {
             if (mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
@@ -5652,7 +5653,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startAudioPlayer(String file, String callback) {
         int id = bridgeComponents.getContext().getResources().getIdentifier(file, "raw", bridgeComponents.getContext().getPackageName());
         if (audioPlayer != null) {
@@ -5682,14 +5683,14 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void pauseAudioPlayer() {
         if (audioPlayer != null) {
             audioPlayer.pause();
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void clearAudioPlayer() {
         if (audioPlayer != null) {
             audioPlayer.stop();
@@ -5743,7 +5744,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return super.onActivityResult(requestCode, resultCode, data);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String fetchPackageName() {
         return bridgeComponents.getContext().getPackageName();
     }
@@ -5801,7 +5802,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     //region Store and Trigger CallBack
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void contactPermission() {
         if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             if (bridgeComponents.getActivity() != null) {
@@ -5860,12 +5861,12 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackContacts(String callback) {
         storeContactsCallBack = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void initialiseShakeListener(String callback, String config) {
         try {
             JSONObject shakeListenerConfig = new JSONObject(config);
@@ -5889,17 +5890,17 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void unregisterShakeListener() {
         sensorManager.unregisterListener(shakeDetector);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void registerShakeListener() {
         sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String fetchFilesFromFolderPath(String path) {
         File[] files = FileUtils.getFilesInFolderPath(path);
         String[] filePaths = files != null ? new String[files.length] : new String[0];
@@ -5935,20 +5936,20 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean checkIfPointInsidePolygon(String geoJson, double latitude, double longitude) {
         List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
         Boolean res = pointInsidePolygon(polygonCoordinates, latitude, longitude);
         return res;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String rsEncryption(String phoneNumber) {
         return CipherUtil.getInstance().encryptData(phoneNumber);
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackPickContact(String callback) {
         storePickContactCallBack = callback;
     }
@@ -5959,7 +5960,7 @@ public class MobilityCommonBridge extends HyperBridge {
         bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void pickContact() {
         if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             if (bridgeComponents.getActivity() != null) {
@@ -5977,7 +5978,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void voiceToText(String callback) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (speechRecognition == null) {
@@ -5990,7 +5991,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void stopVoiceRecognition() {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (speechRecognition != null) {
@@ -6000,7 +6001,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startVoiceRecognition() {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (speechRecognition != null) {
@@ -6011,7 +6012,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setupVoiceRecognitionView(String viewId) {
         Log.i(LOG_TAG, "setupVoiceRecognitionView is getting called");
         ExecutorManager.runOnMainThread(() -> {

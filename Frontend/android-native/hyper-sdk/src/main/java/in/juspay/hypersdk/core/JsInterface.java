@@ -21,6 +21,7 @@ import in.juspay.hypersdk.analytics.LogConstants;
 import in.juspay.hypersdk.analytics.LogPusher;
 import in.juspay.hypersdk.analytics.LogPusherExp;
 import in.juspay.hypersdk.analytics.LogSessioniser;
+import com.caoccao.javet.annotations.V8Function;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.data.SessionInfo;
 import in.juspay.hypersdk.security.EncryptionHelper;
@@ -65,109 +66,109 @@ public class JsInterface {
         fileProviderService = juspayServices.getFileProviderService();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getResourceByName(String resName) {
         return getResourceById(context.getResources().getIdentifier(resName, "string", context.getPackageName()));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getResourceById(int resId) {
         return context.getResources().getString(resId);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setInSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getFromSharedPrefs(String key) {
         return KeyValueStore.read(juspayServices, key, "__failed");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeFromSharedPrefs(String key) {
         KeyValueStore.remove(juspayServices.getContext(), juspayServices.getSdkInfo().getSdkName(), key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renewFile(String location) {
         renewFile(location, null, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renewFile(String location, String fileName) {
         renewFile(location, fileName, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renewFile(String location, String fileName, String callback) {
         remoteAssetService.renewFile(context, location, callback, fileName, System.currentTimeMillis());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String loadFileInDUI(String fileName, int maxSecondsToLoad) {
         return fileProviderService.readFromFile(context, fileName);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String loadFileInDUI(String fileName) {
         return fileProviderService.readFromFile(context, fileName);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionInfo() {
         sessionInfo.createSessionDataMap();
         return sessionInfo.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setSessionAttribute(String key, String value) {
         sessionInfo.set(key, value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionAttribute(String key, String defaultValue) {
         return sessionInfo.get(key, defaultValue);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeDataFromSharedPrefs(String key) {
         KeyValueStore.remove(juspayServices, key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeAttribute(String key) {
         sessionInfo.removeAttribute(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getMd5(String val) {
         return EncryptionHelper.md5(val.getBytes());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setSessionId(String sessionId) {
         JuspayLogger.d(LOG_TAG, "JBridge.setSessionId() is intended for changing the Session ID of the SDK. Not to be called by each micro-app");
         JuspayLogger.d(LOG_TAG, "Attempted Session ID: " + sessionId);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionId() {
         return sessionInfo.getSessionId();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void toast(String msg) {
         Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isNetworkAvailable() {
         return sessionInfo.isNetworkAvailable();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addToLogList(String logLine) {
         if (sessionInfo.getSessionId() != null) {
             try {
@@ -181,7 +182,7 @@ public class JsInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void submitAllLogs() {
     }
 
@@ -191,7 +192,7 @@ public class JsInterface {
      *
      * @return A JSON string with the logs.
      */
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getLogList() {
         JuspayLogger.e(LOG_TAG, "No one should call JBridge.getLogList() method. It will be removed in future.");
         return "[]";
@@ -202,22 +203,22 @@ public class JsInterface {
      *
      * @param logs The logs in the stringified JSON array format.
      */
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateLogList(String logs) {
         JuspayLogger.e(LOG_TAG, "No one should call JBridge.updateLogList() method. It will be removed in future.");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void postLogs(final String endPoint, final String logs) {
         JuspayLogger.e(LOG_TAG, "No one should call JBridge.postLogs() method. It will be removed in future.");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setAnalyticsEndPoint(String newEndPoint) {
         JuspayLogger.e(LOG_TAG, "No one should call JBridge.setAnalyticsEndPoint() method. It will be removed in future.");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean setAnalyticsHeader(String headers) {
         JSONObject json;
         try {
@@ -237,7 +238,7 @@ public class JsInterface {
         return true;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addLogProperties(String properties) {
         ExecutorManager.runOnSdkTrackerPool(() -> {
             try {
@@ -248,14 +249,14 @@ public class JsInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startPushingLogs() {
         if (juspayServices.getLogSessioniserExp() != null) {
             juspayServices.getLogSessioniserExp().startPushing();
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean addChannel(String jsonObj, String channelName) {
         if (Objects.equals(juspayServices.getWorkingLogger(), "json-array") || Objects.equals(juspayServices.getWorkingLogger(), "both")) {
             return LogPusher.addChannelFromJS(jsonObj, channelName);
@@ -263,7 +264,7 @@ public class JsInterface {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean addChannelExp(String jsonObj, String channelName) {
         if (juspayServices.getLogSessioniserExp() != null) {
             return LogPusherExp.addChannelFromJS(jsonObj, channelName);
@@ -271,7 +272,7 @@ public class JsInterface {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getChannelNames() {
         if (Objects.equals(juspayServices.getWorkingLogger(), "json-array") || Objects.equals(juspayServices.getWorkingLogger(), "both")) {
             return Arrays.toString(LogPusher.getChannelNames());
@@ -279,7 +280,7 @@ public class JsInterface {
         return "[]";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getChannelNamesExp() {
         if (juspayServices.getLogSessioniserExp() != null) {
             return Arrays.toString(LogPusherExp.getChannelNames());
@@ -287,7 +288,7 @@ public class JsInterface {
         return "[]";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean setAnalyticsHeader(String headers, String channelName) {
         JSONObject json;
         try {
@@ -307,23 +308,23 @@ public class JsInterface {
         return true;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isFilePresent(String path) {
         return fileProviderService.isFilePresent(context, path);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getFilePath(String fileName) {
         return fileProviderService.appendSdkNameAndVersion(fileName);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renewSdkConfig() {
         //Add renewal methods for sdk config, here when expanded
         juspayServices.getSdkConfigService().renewConfig(context);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getRootFragmentSize() {
         JSONObject sizeJSONObject = new JSONObject();
 
@@ -350,7 +351,7 @@ public class JsInterface {
         return sizeJSONObject.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String requestPendingLogs(String request) {
         try {
             if (Objects.equals(juspayServices.getWorkingLogger(), "json-array") || Objects.equals(juspayServices.getWorkingLogger(), "both")) {
@@ -361,7 +362,7 @@ public class JsInterface {
         return "{}";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestPendingLogs(String request, String callback) {
         ExecutorManager.runOnLogsPool(() -> {
             String result = "{}";
@@ -376,7 +377,7 @@ public class JsInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void sessioniseLogs(String request) {
         try {
             if (Objects.equals(juspayServices.getWorkingLogger(), "json-array") || Objects.equals(juspayServices.getWorkingLogger(), "both")) {
@@ -387,7 +388,7 @@ public class JsInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getFileDownloadTimes() {
         return remoteAssetService.getFileDownloadTimes().toString();
     }

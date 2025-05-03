@@ -19,6 +19,7 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Context;
+import com.caoccao.javet.annotations.V8Function;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -135,7 +136,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         app = AppType.PROVIDER;
     }
  
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackForAddRideStop(String callback) {
         storeAddRideStopCallBack = callback;
     }
@@ -149,21 +150,21 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void deleteTranslatorModel(String model) {
         ExecutorManager.runOnBackgroundThread(() -> {
             if(translator!=null) translator.deleteDownloadedModel(model);
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void listDownloadedTranslationModels(String callback) {
         ExecutorManager.runOnBackgroundThread(() -> {
             if(translator!=null) translator.listDownloadedModels(callback, bridgeComponents);
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void triggerDownloadForML(String language) {
         ExecutorManager.runOnBackgroundThread(() -> {
             if(translator!=null) translator.triggerDownloadForLang(language);
@@ -171,7 +172,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void translateString(String callback, String toTranslate)
     {
         ExecutorManager.runOnBackgroundThread(() -> {
@@ -181,7 +182,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackTime(String callback) {
         storeUpdateTimeCallBack = callback;
     }
@@ -231,7 +232,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //endregion
 
     //region Location
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startLocationPollingAPI() {
         ExecutorManager.runOnBackgroundThread(() -> {
             if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
@@ -274,7 +275,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void stopLocationPollingAPI() {
         Intent locationUpdateService;
         if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
@@ -290,7 +291,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     //endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void previewImage(String base64Image) {
         Activity activity = bridgeComponents.getActivity();
         if (activity != null) {
@@ -335,7 +336,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     //region Permission Utils
     @SuppressLint("BatteryLife")
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestBatteryPermission() {
         try {
             Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
@@ -360,13 +361,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isBatteryPermissionEnabled() {
         PowerManager powerManager = (PowerManager) bridgeComponents.getContext().getSystemService(Context.POWER_SERVICE);
         return (powerManager.isIgnoringBatteryOptimizations(bridgeComponents.getContext().getPackageName()));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isOverlayPermissionEnabled() {
         if (NotificationUtils.overlayFeatureNotAvailable(bridgeComponents.getContext())) {
             return true;
@@ -374,12 +375,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         return Settings.canDrawOverlays(bridgeComponents.getContext());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isNonOverlayDevice(){
         return NotificationUtils.overlayFeatureNotAvailable(bridgeComponents.getContext());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void checkOverlayPermission() {
         System.out.println("CommonJsInterface checkOverlayPermission()");
         if (!Settings.canDrawOverlays(bridgeComponents.getContext())) {
@@ -388,12 +389,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestAutoStartPermission() {
         CheckPermissionAutoStart.getInstance().getAutoStartPermission(bridgeComponents.getContext());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestOverlayPermission() {
         try {
             Intent intent = new Intent(bridgeComponents.getContext(), CheckPermissionOverlay.class);
@@ -407,7 +408,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //endregion
 
     // region Maps
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback, final String key) {
         try {
             if (bridgeComponents.getActivity() != null) {
@@ -471,7 +472,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String key, String gmapKey) {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
@@ -562,7 +563,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //endregion
 
     //region Others
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void launchAppSettings() {
         Context context = bridgeComponents.getContext();
         Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
@@ -571,7 +572,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         context.startActivity(appSettingsIntent);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void launchDateSettings() {
         try {
             bridgeComponents.getContext().startActivity(new Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
@@ -580,7 +581,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void disableActionEditText(final String id) {
         if (bridgeComponents.getActivity() != null) {
             EditText editText = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
@@ -611,7 +612,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setScaleType(String id, String imageUrl, String scaleType) {
         Activity activity = bridgeComponents.getActivity();
         if (activity == null) return;
@@ -643,7 +644,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         return dm.widthPixels;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public int methodArgumentCount(String functionName) {
         try {
             methods = methods == null ? this.getClass().getMethods() : methods;
@@ -738,7 +739,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renderCameraProfilePicture(String id) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
@@ -800,7 +801,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
     //endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isBackgroundLocationEnabled() {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED

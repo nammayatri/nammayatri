@@ -1,5 +1,7 @@
 [versions]
 agp = "8.0.2"
+javenode = "0.8.0"
+javetV8Android = "4.1.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
@@ -10,6 +12,8 @@ constraintlayout = "2.1.4"
 
 [libraries]
 firebase-analytics = { module = "com.google.firebase:firebase-analytics"}
+javenode = { module = "com.caoccao.javet:javenode", version.ref = "javenode" }
+javet-v8-android = { module = "com.caoccao.javet:javet-v8-android", version.ref = "javetV8Android" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

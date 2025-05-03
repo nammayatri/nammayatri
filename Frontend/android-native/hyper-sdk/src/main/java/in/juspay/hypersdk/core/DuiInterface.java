@@ -11,6 +11,7 @@ import static in.juspay.hypersdk.core.PaymentConstants.SMS_RETRIEVER;
 import android.Manifest;
 import android.app.Activity;
 import android.app.KeyguardManager;
+import com.caoccao.javet.annotations.V8Function;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -192,27 +193,27 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
     }
 
     @JavascriptInterface
-    public float getPixels() {
+    public double getPixels() {
         return context.getResources().getDisplayMetrics().density;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setSessionDetails(String key, String value) {
         juspayServices.getPaymentSessionInfo().addToSessionDetails(key, value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionDetails() {
         return juspayServices.getPaymentSessionInfo().getSessionDetails().toString();
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void closeBrowser(String reason) {
         reset();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String checkReadSMSPermission() {
         JSONObject result = new JSONObject();
         try {
@@ -224,7 +225,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return result.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String checkPermission(String[] permissions) {
         JSONObject result = new JSONObject();
         try {
@@ -238,12 +239,12 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return result.toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestSMSPermission(String callbackFunctionName) {
         requestPermission(new String[]{Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS}, String.valueOf(PaymentConstants.REQUEST_SMS_PERMISSION), callbackFunctionName);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void revokePermissions(String[] permissions) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -258,7 +259,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestPermission(String[] permissions, String permissionId, String callbackFunctionName) {
         juspayServices.requestPermission(permissions, parseInt(permissionId));
         listenerMap.put(PaymentConstants.REQUEST_PERMISSION_PREFIX + permissionId, callbackFunctionName);
@@ -293,7 +294,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
     }
 
     // Can return `"true"`, `"false"` or `null`. Make the `null` case is handled
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     @Nullable
     public String shouldShowRequestPermissionRationale(String permission) {
         try {
@@ -337,7 +338,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isHookSupported(String hookId) {
         switch (hookId) {
             case SMS_RECEIVE:
@@ -353,7 +354,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void attach(String id, String argumentsJson, String callbackFunctionName) {
         if (!isHookSupported(id)) {
             JuspayLogger.e(LOG_TAG, "Unsupported hook: " + id);
@@ -404,7 +405,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String execute(String id, String operation, String argumentsJson, String callbackFunctionName) {
         try {
             JSONObject jsonObject = new JSONObject(argumentsJson);
@@ -428,7 +429,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return "";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void detach(String[] ids) {
         for (String id : ids) {
             if (listenerMap.containsKey(id) && activity != null) {
@@ -458,7 +459,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void attachMerchantView(final int containerId, final String viewType) {
         if (juspayServices.getHyperCallback() != null) {
             ExecutorManager.runOnMainThread(() -> {
@@ -486,7 +487,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onDuiReady() {
         ExecutorManager.runOnMainThread(() -> {
             if (godelManager != null) return;
@@ -496,7 +497,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onWebViewReady(String parentId, String url, String content, String contentType) {
         if (contentType.equalsIgnoreCase("base64")) {
             byte[] htmlContent;
@@ -515,7 +516,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onWebViewReady(String parentId, String url) {
         if (URLUtil.isValidUrl(url)) {
             onWebViewReady(parentId, url, null);
@@ -524,14 +525,14 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onWebViewReady(String parentId, String url, String postData) {
         if (godelManager != null) {
             godelManager.onBrowserReady(activity, url, postData, parentId);
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void onWebViewReleased() {
         if (godelManager != null) {
             godelManager.onDuiReleased();
@@ -539,7 +540,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String findViewType(String id) {
         try {
             View view = null;
@@ -558,13 +559,13 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
     }
 
     @Override
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionInfo() {
         juspayServices.getPaymentSessionInfo().createSessionDataMap();
         return sessionInfo.getSessionData().toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setConfig(String config) {
         if (godelManager == null) {
             return;
@@ -577,7 +578,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeInACSWebview(String methodName, String argumentsJson, String callbackFunctionName) {
         if (godelManager == null) return;
         final String encoded = Base64.encodeToString(argumentsJson.getBytes(), Base64.NO_WRAP);
@@ -586,7 +587,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         juspayWebView.addJsToWebView(command);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeInACSWebview(String methodName, String argumentsJson) {
         if (godelManager == null) return;
         final String encoded = Base64.encodeToString(argumentsJson.getBytes(), Base64.NO_WRAP);
@@ -596,7 +597,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
     }
 
     @Override
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeCallbackInDUIWebview(@Nullable String methodName, @Nullable String argumentsJson) {
         if (methodName == null) {
             return;
@@ -609,7 +610,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         juspayServices.getDynamicUI().addJsToWebView(command);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeCallbackInACSWebview(String callbackId, String argumentsJson) {
         if (godelManager == null) return;
         final String encoded = Base64.encodeToString(argumentsJson.getBytes(), Base64.NO_WRAP);
@@ -618,62 +619,62 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         juspayWebView.addJsToWebView(command);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeFnInDUIWebview(String methodName, String argumentsJson, String callback) {
         if (godelManager != null) {
             godelManager.getAcsInterface().invoke(methodName, argumentsJson, callback);
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeFnInDUIWebview(String methodName, String argumentsJson) {
         String encoded = Base64.encodeToString(argumentsJson.getBytes(), Base64.NO_WRAP);
         String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", methodName, encoded);
         juspayServices.getDynamicUI().addJsToWebView(command);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeCustomFnInDUIWebview(String command) {
         juspayServices.getDynamicUI().addJsToWebView(command);
     }
 
     @Override
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invokeFnInDUIWebview(@NonNull String cmd) {
         invokeCustomFnInDUIWebview(cmd);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setCardBrand(String brand) {
         juspayServices.getPaymentSessionInfo().setPaymentDetails("card_brand", brand);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionAttribute(String key) {
         return getSessionAttribute(key, "");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getPaymentDetails() {
         return juspayServices.getPaymentSessionInfo().getPaymentDetails().toString();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setSessionInfo() {
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String fetchFromInbox(String query) {
         return juspayServices.getSmsServices().fetchSms(query, "inbox", null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void fetchSMS(String query, String smsContentUri, String additionalQuery, String callback) {
         String result = juspayServices.getSmsServices().fetchSms(query, smsContentUri, additionalQuery);
         invokeCallbackInDUIWebview(callback, result);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getClipboardItems() {
         // Removed ClipboardListener class as it is flagged by google as violation
         return "[]";
@@ -698,7 +699,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isOnline() {
         ConnectivityManager connMgr = null;
         if (activity != null) {
@@ -711,17 +712,17 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return false;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addDataToSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getDataFromSharedPrefs(String key, String defaultValue) {
         return KeyValueStore.read(juspayServices, key, defaultValue);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getKeysInSharedPrefs() {
         try {
             JSONArray array = new JSONArray();
@@ -735,12 +736,12 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getNetworkType() {
         return sessionInfo.getNetworkInfo();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateLoaded(String args, String status) {
 
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
@@ -783,22 +784,22 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         );
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeActivityData(String key, String value) {
         juspayServices.getDynamicUI().storeActivityData(key, value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getActivityData(String key) {
         return juspayServices.getDynamicUI().getActivityData(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void enableWebViewRecreate(String bool) {
         juspayServices.getDynamicUI().setWebViewRecreate(bool.equals("true"));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runInJuspayBrowser(final String method, final String args, final String cb) {
         final SdkTracker sdkTracker = juspayServices.getSdkTracker();
         switch (method) {
@@ -972,7 +973,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runInJuspayWebView(final String methodName) {
         if (godelManager == null) return;
         final JuspayWebView juspayWebView = godelManager.getJuspayWebView();
@@ -1008,11 +1009,11 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runInJuspayWebView(final String methodName, final String callbackName) {
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String isDeviceSecure() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1028,7 +1029,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return "UNKNOWN";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void loadUrl(final String url, @Nullable final String postData) {
         if (godelManager == null || url == null) return;
         final JuspayWebView juspayWebView = godelManager.getJuspayWebView();
@@ -1041,20 +1042,20 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setIsRupaySupportedAdded(boolean isRupaySupportedAdded) {
         if (godelManager != null) {
             godelManager.setIsRupaySupportedAdded(isRupaySupportedAdded);
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void refreshPage() {
         if (godelManager == null) return;
         PaymentUtils.refreshPage(godelManager.getJuspayWebView());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestKeyboardShow() {
         if (godelManager == null) return;
         final JuspayWebView juspayWebView = godelManager.getJuspayWebView();
@@ -1066,7 +1067,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestKeyboardShow(final String id) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -1096,7 +1097,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void suppressKeyboard() {
         ExecutorManager.runOnMainThread(() -> {
             if (activity != null) {
@@ -1105,7 +1106,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void requestKeyboardHide() {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -1131,7 +1132,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getConfigVariables() {
         try {
             return PaymentUtils.getConfigVariableDeclarations(juspayServices.getContext(), juspayServices.getSessionInfo());
@@ -1141,7 +1142,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getIndexBundleHash(String location) {
         String sourceHash = null;
         location = location.replace(".zip", ".jsa");
@@ -1157,7 +1158,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return sourceHash;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public int getResourceIdentifier(String name, String defType) {
         try {
             return context.getResources().getIdentifier(name, defType, context.getPackageName());
@@ -1166,7 +1167,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void openAppWithExplicitIntent(String packageName, String className, String payload, int requestCode, int flag) {
         try {
             Bundle bundle = new Bundle();
@@ -1186,7 +1187,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String isAppInstalled(String packageName) {
         PackageManager pm = juspayServices.getContext().getPackageManager();
         try {
@@ -1197,7 +1198,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         return "true";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getPackageInfo(String packagName) {
         try {
             PackageManager pm = juspayServices.getContext().getPackageManager();
@@ -1216,7 +1217,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void doHandShake(String inputParams, String callbackId) {
         try {
             sdkTracker.trackAction(LogSubCategory.Action.SYSTEM, LogLevel.INFO, Labels.System.JBRIDGE, "dui_interface_do_handshake", "Doing handshake with following parameters: " + inputParams);
@@ -1243,7 +1244,7 @@ public class DuiInterface extends HyperJsInterface implements CallbackInvoker {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCookies() {
         CookieSyncManager.getInstance().sync();
     }

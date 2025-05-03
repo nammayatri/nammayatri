@@ -29,6 +29,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Base64;
+import android.view.Choreographer;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
@@ -77,13 +78,16 @@ final class DynamicUI implements JsCallback {
     private boolean isForeGround = true;
     private boolean isInitiated = false;
     @Nullable
-    private WebView browser;
+    private JSEngine browser;
     @NonNull
     private final DuiLogger mLogger;
     @Nullable
     private Activity activity;
     @NonNull
     private Context appContext;
+
+    @NonNull
+    Choreographer choreographer;
 
     @NonNull
     private int totalWebViewFailure = 0;
@@ -128,6 +132,7 @@ final class DynamicUI implements JsCallback {
         this.mLogger = duiLogger;
         this.callback = errCallback;
         this.bridgeComponents = bridgeComponents;
+//        this.choreographer = Choreographer.getInstance();
         this.webViewState = new AtomicReference<>(WebViewState.Null);
         this.storedFunctions = new HashMap<>();
         if (context instanceof Activity) {
@@ -143,7 +148,7 @@ final class DynamicUI implements JsCallback {
         this.baseContent = baseContent == null ? Base.BASE_HTML_CONTENT : baseContent;
         this.jsInterfaces.put("Android", androidInterface);
         this.jsInterfaces.putAll(javaScriptInterfaces);
-        ExecutorManager.runOnMainThread(this::createWebView);
+        ExecutorManager.runOnJSThread(this::createWebView);
     }
 
     public void storeActivityData(String key, String value) {
@@ -195,31 +200,33 @@ final class DynamicUI implements JsCallback {
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     private void createWebView() {
         try {
-            browser = new WebView(appContext);
+            browser = new QuickJSEngine(appContext);
             webViewState.set(WebViewState.Created);
-            setupWebView();
-            browser.getSettings().setJavaScriptEnabled(true);
+//            setupWebView();
+//            browser.getSettings().setJavaScriptEnabled(true);
             for (Map.Entry<String, Object> interfaceEntry : jsInterfaces.entrySet()) {
                 browser.addJavascriptInterface(interfaceEntry.getValue(), interfaceEntry.getKey());
             }
-            this.loadBaseHtml();
+//            this.loadBaseHtml();
+            browser.loadDataWithBaseURL(null, this.baseContent, "text/html", "utf-8", null);
             // Inform juspay services that there was no crash
             callback.webViewLoaded(null);
             totalWebViewFailure = 0;
         } catch (Exception e) {
-            totalWebViewFailure++;
-            if (isWebViewBroken()) {
-                webViewState.set(WebViewState.Broken);
-                webViewCrashException = e;
-                callback.webViewLoaded(e);
-                mLogger.logLifeCycleException(Labels.Android.WEBVIEW, "WebView creation failed " + totalWebViewFailure, e);
-
-            } else {
-                browser = null;
-                webViewState.set(WebViewState.Recreating);
-                mLogger.logLifeCycleException(Labels.Android.WEBVIEW, "Webview crashed, recreating " + totalWebViewFailure, e);
-                ExecutorManager.postOnMainThread(50 * (totalWebViewFailure + 1), this::createWebView);
-            }
+            e.printStackTrace();
+//            totalWebViewFailure++;
+//            if (isWebViewBroken()) {
+//                webViewState.set(WebViewState.Broken);
+//                webViewCrashException = e;
+//                callback.webViewLoaded(e);
+//                mLogger.logLifeCycleException(Labels.Android.WEBVIEW, "WebView creation failed " + totalWebViewFailure, e);
+//
+//            } else {
+//                browser = null;
+//                webViewState.set(WebViewState.Recreating);
+//                mLogger.logLifeCycleException(Labels.Android.WEBVIEW, "Webview crashed, recreating " + totalWebViewFailure, e);
+//                ExecutorManager.runOnJSThread( this::createWebView);
+//            }
 
         }
     }
@@ -254,9 +261,9 @@ final class DynamicUI implements JsCallback {
             case Broken:
                 return false;
             case Crashed:
-                ExecutorManager.runOnMainThread(this::createWebView);
+//                ExecutorManager.runOnJSThread(this::createWebView);
             case Null:
-                ExecutorManager.runOnMainThread(this::createWebView);
+//                ExecutorManager.runOnJSThread(this::createWebView);
             case Created:
                 return true;
             case Active:
@@ -331,7 +338,7 @@ final class DynamicUI implements JsCallback {
             browser = null;
             webViewState.set(WebViewState.Null);
             if (isForeGround) {
-                ExecutorManager.runOnMainThread(this::createWebView);
+//                ExecutorManager.runOnJSThread(this::createWebView);
             } else {
                 webViewState.set(WebViewState.Crashed);
             }
@@ -340,37 +347,37 @@ final class DynamicUI implements JsCallback {
     }
 
     private void setupWebView() {
-        if (browser != null) {
-            boolean isDebuggable = appContext.getResources().getBoolean(R.bool.godel_debuggable);
-            if (isDebuggable) {
-                browser.setWebChromeClient(new WebChromeClient());
-            } else {
-                browser.setWebChromeClient(new WebChromeClient() {
-                    @Override
-                    public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                        return true;
-                    }
-
-                });
-            }
-            WebViewClient webViewClient = new DUIWebViewClient((view) -> {
-                if (view == browser) {
-                    recreateWebView();
-                }
-
-            });
-            browser.setWebViewClient(webViewClient);
-        }
+//        if (browser != null) {
+//            boolean isDebuggable = appContext.getResources().getBoolean(R.bool.godel_debuggable);
+//            if (isDebuggable) {
+//                browser.setWebChromeClient(new WebChromeClient());
+//            } else {
+//                browser.setWebChromeClient(new WebChromeClient() {
+//                    @Override
+//                    public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+//                        return true;
+//                    }
+//
+//                });
+//            }
+//            WebViewClient webViewClient = new DUIWebViewClient((view) -> {
+//                if (view == browser) {
+//                    recreateWebView();
+//                }
+//
+//            });
+//            browser.setWebViewClient(webViewClient);
+//        }
     }
 
     public void terminate() {
         if (browser != null) {
             isInitiated = false;
             webViewState.set(WebViewState.Null);
-            browser.loadDataWithBaseURL("http://juspay.in", "<html></html>", "text/html", "utf-8", null);
-            browser.stopLoading();
-            browser.destroy();
-            browser = null;
+//            browser.loadDataWithBaseURL("http://juspay.in", "<html></html>", "text/html", "utf-8", null);
+//            browser.stopLoading();
+//            browser.destroy();
+//            browser = null;
         } else {
             logError("Browser is not present");
         }
@@ -378,10 +385,10 @@ final class DynamicUI implements JsCallback {
 
     @Override
     public void addJsToWebView(@NonNull final String js) {
-        ExecutorManager.runOnMainThread(() -> {
+        ExecutorManager.runOnJSThread(() -> {
             try {
                 if (browser != null) {
-                    browser.evaluateJavascript(js, null);
+                    browser.evaluateJavascript(js);
                 } else {
                     logError("browser null, call start first");
                 }
@@ -405,14 +412,14 @@ final class DynamicUI implements JsCallback {
     }
 
     private void loadBaseHtml() {
-        ExecutorManager.runOnMainThread(this::loadData);
+//        ExecutorManager.runOnMainThread(this::loadData);
     }
 
     private void loadData() {
-        if (browser != null) {
-            browser.loadDataWithBaseURL(null, this.baseContent, "text/html", "utf-8", null);
-            mLogger.logLifeCycleInfo("url_loaded", "base.html");
-        }
+//        if (browser != null) {
+//            browser.loadDataWithBaseURL(null, this.baseContent, "text/html", "utf-8", null);
+//            mLogger.logLifeCycleInfo("url_loaded", "base.html");
+//        }
     }
 
     @NonNull
@@ -483,7 +490,7 @@ final class DynamicUI implements JsCallback {
     public void onResumeCallback() {
         isForeGround = true;
         if (webViewState.get() == WebViewState.Crashed) {
-            ExecutorManager.runOnMainThread(this::createWebView);
+//            ExecutorManager.runOnJSThread(this::createWebView);
         }
     }
 }

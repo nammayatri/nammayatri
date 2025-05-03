@@ -18,19 +18,19 @@ public class ResourceHandler {
 
     @NonNull
     private final Context context;
-    @NonNull
-    private final JuspayServices juspayServices;
+//    @NonNull
+//    private final JuspayServices juspayServices;
 
     private final String LOG_TAG = this.getClass().getSimpleName();
 
     public ResourceHandler(@NonNull Context context) {
         this.context = context;
-        this.juspayServices = new JuspayServices(context,null);
+//        this.juspayServices = new JuspayServices(context,null);
     }
 
-    protected String getFromAssets (String fileName) {
-        return juspayServices.getFileProviderService().readFromFile(context,fileName);
-    }
+//    protected String getFromAssets (String fileName) {
+//        return juspayServices.getFileProviderService().readFromFile(context,fileName);
+//    }
 
     @SuppressLint("DiscouragedApi")
     protected boolean isResourcePresent (String type, String fileName) {
@@ -53,7 +53,7 @@ public class ResourceHandler {
             readFromInputStream(byteArrayOutputStream,inputStream);
             return byteArrayOutputStream.toString();
         } catch (Exception e) {
-            juspayServices.getSdkTracker().trackAndLogException(LOG_TAG, LogCategory.ACTION, LogSubCategory.Action.SYSTEM, "GET_JSON_RESOURCE", "Exception while reading " + fileName + " from raw", e);
+//            juspayServices.getSdkTracker().trackAndLogException(LOG_TAG, LogCategory.ACTION, LogSubCategory.Action.SYSTEM, "GET_JSON_RESOURCE", "Exception while reading " + fileName + " from raw", e);
         }
         return null;
     }
@@ -65,7 +65,7 @@ public class ResourceHandler {
         try {
             return context.getResources().openRawResource(id);
         } catch (Exception e) {
-            juspayServices.getSdkTracker().trackAndLogException(LOG_TAG, LogCategory.ACTION, LogSubCategory.Action.SYSTEM, "GET_JSON_RESOURCE", "Exception while reading " + fileName + " from raw" , e);
+//            juspayServices.getSdkTracker().trackAndLogException(LOG_TAG, LogCategory.ACTION, LogSubCategory.Action.SYSTEM, "GET_JSON_RESOURCE", "Exception while reading " + fileName + " from raw" , e);
         }
         return null;
     }
@@ -85,7 +85,6 @@ public class ResourceHandler {
      * close should be called after the resource operations are done.
      */
     public void close () {
-        this.juspayServices.terminate();
     }
 
 }

@@ -7,7 +7,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        minSdk 23
+        minSdk 24
         targetSdk 34
         versionName "1.2.1"
 
@@ -53,6 +53,7 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:$cameraxVersion"
     // CameraX View class
     implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation libs.javet.v8.android
     implementation 'com.google.guava:guava:30.1-android'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

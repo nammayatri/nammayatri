@@ -664,7 +664,7 @@ public class JuspayServices implements FragmentHooks {
 
     private Map<String, Object> getJavaScriptInterfaces() {
         Map<String, Object> bridges = new HashMap<>();
-        bridges.put("JBridge", jBridge);
+        bridges.put("JBridgeActual", jBridge);
         bridges.put(bridgeList.getInterfaceName(), bridgeList);
 
         // Mobility

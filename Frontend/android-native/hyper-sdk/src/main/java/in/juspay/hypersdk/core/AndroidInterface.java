@@ -32,6 +32,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import com.caoccao.javet.annotations.V8Function;
 import android.os.Build;
 import android.util.Base64;
 import android.util.DisplayMetrics;
@@ -85,30 +86,30 @@ final class AndroidInterface {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void Render(final String ui, final String callbackName) {
         Log.d("DynamicUI", "Method Android.Render is deprecated. Use Android.render() instead");
         render(ui, callbackName, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void render(final String ui, final String callbackName) {
         render(ui, callbackName, "true", null);
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void Render(final String ui, final String callbackName, final String shouldFlush) {
         Log.d("DynamicUI", "Method Android.Render is deprecated. Use Android.render() instead");
         render(ui, callbackName, shouldFlush, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void render(final String ui, final String callbackName, final String shouldFlush) {
         render(ui, callbackName, shouldFlush, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void render(final String ui, final String callbackName, final String shouldFlush, final String namespace) {
         try {
             final JSONObject jsonUI = new JSONObject(ui);
@@ -139,22 +140,22 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void dismissPopUp() {
         dynamicUI.getRenderer().dismissPopUp();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void throwError(String error) {
         dynamicUI.getLogger().e("throwError", error);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addViewToParent(final String parentId, final String ui, final int index, final String callbackName, final boolean replaceChild) {
         addViewToParent(parentId, ui, index, callbackName, replaceChild, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addViewToParent(final String parentId, final String ui, final int index, final String callbackName, final boolean replaceChild, final String namespace) {
         try {
             final JSONObject uiObj = new JSONObject(ui);
@@ -185,7 +186,7 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void prepareAndStoreView(final String screenName, final String ui, final String callbackName) {
         // TODO :: Change to accept as namespace
         try {
@@ -214,12 +215,12 @@ final class AndroidInterface {
 
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addStoredViewToParent(final String parentId, final String screenName, final int index, final String callbackName, final boolean replaceChild, final String runInUIprop) {
         addStoredViewToParent(parentId, screenName, index, callbackName, replaceChild, runInUIprop, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addStoredViewToParent(final String parentId, final String screenName, final int index, final String callbackName, final boolean replaceChild, final String runInUIprop, final String namespace) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -245,12 +246,12 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addViewToParent(final String parentId, final String ui, final int index, final String callbackName) {
         addViewToParent(parentId, ui, index, callbackName, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addViewToParent(final String parentId, final String ui, final int index, final String callbackName, final String namespace) {
         addViewToParent(parentId, ui, index, callbackName, false, namespace);
     }
@@ -278,12 +279,12 @@ final class AndroidInterface {
         return success;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void replaceView(final String viewToReplaceWithStr, final int viewId) {
         replaceView(viewToReplaceWithStr, viewId, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void replaceView(final String viewToReplaceWithStr, final int viewId, final String namespace) {
         try {
             final JSONObject viewToReplaceWithJSON = new JSONObject(viewToReplaceWithStr);
@@ -324,12 +325,12 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void moveView(final String id, final String idx) {
         moveView(id, idx, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void moveView(final String id, final String idx, final String namespace) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -348,12 +349,12 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeView(final int id) {
         removeView(id, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeView(final int id, final String namespace) {
         ExecutorManager.runOnMainThread(() -> {
             ViewGroup container = dynamicUI.getContainer(namespace);
@@ -370,7 +371,7 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runInUI(final String toRun, final String callbackName, final String lineNo, final String fileName) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -398,7 +399,7 @@ final class AndroidInterface {
     }
 
     // backward compat
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runInUI(final String toRun, final String callbackName) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -425,7 +426,7 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateProperties(final String json) {
         updateProperties(json, null);
     }
@@ -442,7 +443,7 @@ final class AndroidInterface {
         return "_null_";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runCmdsInBg(final String json, final String callback) {
         ExecutorManager.runOnBackgroundThread(() -> runJSONWithCallback(json, callback));
     }
@@ -464,12 +465,12 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void runCmdsInUI(final String json, final String callback) {
         ExecutorManager.runOnMainThread(() -> runJSONWithCallback(json, callback));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     @NonNull
     public String runCmds(final String json) {
         try {
@@ -481,7 +482,7 @@ final class AndroidInterface {
         return "__failure__";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateProperties(final String json, final String namespace) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -505,7 +506,7 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void run(final String toRun, final String callbackName) {
         try {
             InflateView inflateView = new InflateJSON(dynamicUI);
@@ -529,12 +530,12 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void saveState(String state) {
         this.state = state;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getState() {
         if (this.state != null) {
             return this.state;
@@ -543,12 +544,12 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setState(String state) {
         this.state = state;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setImage(final int id, final String base64ImageString, final String namespace) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -569,17 +570,17 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String fetchData(String key) {
         return dynamicUI.getAppContext().getSharedPreferences("DUI", Context.MODE_PRIVATE).getString(key, "null");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void saveData(String key, String value) {
         dynamicUI.getAppContext().getSharedPreferences("DUI", Context.MODE_PRIVATE).edit().putString(key, value).apply();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getScreenDimensions() {
         JSONObject response = new JSONObject();
         JSONObject viewportDimensions = new JSONObject();
@@ -617,7 +618,7 @@ final class AndroidInterface {
         return response.toString();
   }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void toggleKeyboard(final int id, final String type, final String namespace) {
         if (dynamicUI.getActivity() != null) {
             ExecutorManager.runOnMainThread(() -> {
@@ -640,12 +641,12 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void generateUIElement(final String type, final int id, final String[] elements, final String callbackName) {
         generateUIElement(type, id, elements, callbackName, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void generateUIElement(final String type, final int id, final String[] elements, final String callbackName, final String namespace) {
         ExecutorManager.runOnMainThread(() -> {
             ViewGroup container = dynamicUI.getContainer(namespace);
@@ -679,34 +680,34 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getInternalStorageBaseFilePath() {
         return dynamicUI.getAppContext().getDir("juspay", Context.MODE_PRIVATE).getAbsolutePath();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isFilePresent(String filePath) {
         File file = new File(filePath);
         return file.exists();
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void showLoading() {
         Log.d("DynamicUI", "Android.showLoading() method is deprecated. This method does nothing.");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getNewID() {
         return String.valueOf(ViewCompat.generateViewId());
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startAnim(final String animId) {
         startAnim(animId, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startAnim(final String animId, final String callbackName) {
         final Pair<String, ObjectAnimator> animState = dynamicUI.getRenderer().getInflateView().findAnimationById(animId);
         ExecutorManager.runOnMainThread(() -> {
@@ -745,7 +746,7 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void cancelAnim(final String animId, final String callbackName) {
         final Pair<String, ObjectAnimator> animState = dynamicUI.getRenderer().getInflateView().getStateValFromKey("M_anim_" + animId);
         final ObjectAnimator objAnim = animState.second;
@@ -760,12 +761,12 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateAnim(final int viewId, final String animationStr) {
         updateAnim(viewId, animationStr, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateAnim(final int viewId, final String animationStr, final String namespace) {
         try {
             final JSONObject animObj = new JSONObject(animationStr);
@@ -789,7 +790,7 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public int dpToPx(int dp) {
         if (dp > 0) {
             DisplayMetrics displayMetrics = dynamicUI.getAppContext().getResources().getDisplayMetrics();
@@ -799,7 +800,7 @@ final class AndroidInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String setFragmentContainer(int id, String namespace) {
         ViewGroup container = dynamicUI.getContainer(namespace);
         if (container != null) {
@@ -849,7 +850,7 @@ final class AndroidInterface {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String addToContainerList(int id, String namespace) {
         ViewGroup container = dynamicUI.getContainer(namespace);
         if (container != null) {

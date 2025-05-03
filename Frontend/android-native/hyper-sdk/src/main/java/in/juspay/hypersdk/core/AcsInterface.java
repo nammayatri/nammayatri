@@ -4,6 +4,7 @@ import android.util.Base64;
 import android.webkit.JavascriptInterface;
 
 import androidx.annotation.NonNull;
+import com.caoccao.javet.annotations.V8Function;
 import androidx.annotation.Nullable;
 
 /**
@@ -22,7 +23,7 @@ public class AcsInterface {
         this.duiInterface = juspayServices.getJBridge();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invoke(String methodName, String argumentsJson, String callbackFunctionName) {
         if (isFunctionAllowedToInvoke(methodName)) {
             String encoded = Base64.encodeToString(argumentsJson.getBytes(), Base64.NO_WRAP);
@@ -32,7 +33,7 @@ public class AcsInterface {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void invoke(String methodName, String argumentsJson) {
         if (isFunctionAllowedToInvoke(methodName)) {
             String encoded = Base64.encodeToString(argumentsJson.getBytes(), Base64.NO_WRAP);
@@ -45,7 +46,7 @@ public class AcsInterface {
         return functionName.matches("^[a-zA-Z0-9]*$");
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isOnline() {
         if (duiInterface != null) {
             return duiInterface.isOnline();
@@ -53,7 +54,7 @@ public class AcsInterface {
         return true;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getDataFromSharedPrefs(String key) {
         if (duiInterface != null) {
             return duiInterface.getDataFromSharedPrefs(key, "");
@@ -61,7 +62,7 @@ public class AcsInterface {
         return "__failed";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionAttribute(String key) {
         if (duiInterface != null) {
             return duiInterface.getSessionAttribute(key, "");
@@ -69,7 +70,7 @@ public class AcsInterface {
         return "__failed";
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getSessionInfo() {
         String result = "";
         if (duiInterface != null) {
@@ -78,7 +79,7 @@ public class AcsInterface {
         return result.equals("") ? "__failed" : result;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String getResourceByName(String key) {
         if (duiInterface != null) {
             return duiInterface.getResourceByName(key);

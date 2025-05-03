@@ -7,7 +7,7 @@ android {
     namespace "in.juspay.mobility.common"
 
     defaultConfig {
-        minSdk 21
+        minSdk 24
         targetSdkVersion 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -40,6 +40,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
 
     implementation project(':hyper')
+    implementation libs.javet.v8.android
     compileOnly 'in.juspay:hypersdk:2.1.33-nammayatri.07'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'

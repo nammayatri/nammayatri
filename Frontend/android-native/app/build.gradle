@@ -42,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 34
     versionCode 192
     versionName "3.0.39"
@@ -92,6 +92,7 @@ android {
         release {
             resValue "bool", "debuggable", "false"
             minifyEnabled true
+            applicationIdSuffix '.debug'
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (keystorePropertiesFile.exists()) {
@@ -319,6 +320,17 @@ android {
 //            keyPassword keystoreProperties['keyPassword']
 //        }
 //    }
+    packagingOptions {
+        resources {
+            pickFirst "**/libc++_shared.so"
+            pickFirst "**/libfbjni.so"
+            pickFirst "**/libjsi.so"
+            pickFirst "**/libhermes.so"
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/io.netty.versions.properties"
+        }
+    }
 }
 
 ext {
@@ -459,10 +471,6 @@ def shouldMinify = false
 tasks.register("prepareKotlinBuildScriptModel") {
     // This task is run when Gradle Sync is running.
     // We create it here so we can let it depend on preBuild inside the android{}
-}
-
-tasks.named("prepareKotlinBuildScriptModel") {
-    dependsOn(":hermes-engine:downloadHermesSource")
 }
 
 

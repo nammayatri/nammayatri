@@ -52,6 +52,7 @@ import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
 import com.bumptech.glide.Glide;
+import com.caoccao.javet.annotations.V8Function;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsLogger;
 import com.google.android.gms.auth.api.credentials.Credential;
@@ -288,7 +289,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void restartApp() {
         if (bridgeComponents.getActivity() != null) {
             final PackageManager pm = bridgeComponents.getActivity().getPackageManager();
@@ -340,7 +341,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @Deprecated
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void factoryResetApp() {
         if (bridgeComponents.getActivity() != null) {
             final PackageManager pm = bridgeComponents.getActivity().getPackageManager();
@@ -360,7 +361,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     // region Store And Trigger CallBack
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackMessageUpdated(final String channelId, final String uuid, final String callback) {
         storeChatMessageCallBack = callback;
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "CHAT_CHANNEL_ID", channelId); // Update the Local Storage Value
@@ -375,7 +376,7 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackCustomer(String callback) {
         storeCustomerCallBack = callback;
     }
@@ -388,28 +389,28 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeChatMessageCallback() {
         storeChatMessageCallBack = null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void voipDialer(String config, String phoneNum, String callback) {
         cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         cleverTapSignedCall.voipDialer(config, phoneNum, callback, bridgeComponents);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void initSignedCall(String config){
         cleverTapSignedCall.initSignedCall(config);
     }
     
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isSignedCallInitialized(){
         return cleverTapSignedCall.isSignedCallInitialized();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void destroySignedCall(){
         cleverTapSignedCall.destroySignedCall();
     }
@@ -419,7 +420,7 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackForNotification(String callback) {
         storeDriverCallBack = callback;
     }
@@ -431,7 +432,7 @@ public class MobilityAppBridge extends HyperBridge {
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackForAddRideStop(String callback) {
         storeAddRideStopCallBack = callback;
     }
@@ -447,7 +448,7 @@ public class MobilityAppBridge extends HyperBridge {
 
 
     // region Firebase and PlayStore Utils
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void extractReferrerUrl(){
         InstallReferrerClient referrerClient;
         referrerClient = InstallReferrerClient.newBuilder(bridgeComponents.getContext()).build();
@@ -490,51 +491,51 @@ public class MobilityAppBridge extends HyperBridge {
     }
     // endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addCrashlyticsCustomKey(String key, String value) {
         FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
         crashlytics.setCustomKey(key,value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean fetchRemoteConfigBool(String key){
         return remoteConfigs.getBoolean(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String fetchRemoteConfigString(String key){
         return remoteConfigs.getString(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public double fetchRemoteConfigDouble(String key){
         return remoteConfigs.getDouble(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public long fetchRemoteConfigLong(String key){
         return remoteConfigs.getLong(key);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void fetchAndUpdateRemoteConfig(){
         remoteConfigs = new MobilityRemoteConfigs(true, false);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startTracingPerf(String attribute){
         Trace myTrace = FirebasePerformance.getInstance().newTrace(attribute);
         myTrace.start();
         traceElements.put(attribute, myTrace);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void stopTracingPerf(String attribute){
         if(traceElements.containsKey(attribute)) {
             Trace myTrace = traceElements.get(attribute);
@@ -543,14 +544,14 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void firebaseLogEventWithParams(String event, String paramKey, String paramValue) {
         Bundle params = new Bundle();
         params.putString(paramKey, paramValue);
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void firebaseLogEventWithTwoParams(String event, String paramKey1, String paramValue1, String paramKey2, String paramValue2) {
         Bundle params = new Bundle();
         params.putString(paramKey1, paramValue1);
@@ -558,12 +559,12 @@ public class MobilityAppBridge extends HyperBridge {
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void firebaseUserID(String id) {
         mFirebaseAnalytics.setUserId(id);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setFCMToken(final String callback) {
         ExecutorManager.runOnMainThread(() -> FirebaseMessaging.getInstance().getToken()
                 .addOnCompleteListener(task -> {
@@ -580,7 +581,7 @@ public class MobilityAppBridge extends HyperBridge {
                 }));
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void metaLogEvent(String event) {
         try {
             AppEventsLogger logger = AppEventsLogger.newLogger(bridgeComponents.getContext());
@@ -590,7 +591,7 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void metaLogEventWithParams(String event, String paramKey, String paramValue) {
         try {
             Bundle params = new Bundle();
@@ -602,7 +603,7 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void metaLogEventWithTwoParams(String event, String paramKey1, String paramValue1, String paramKey2, String paramValue2) {
         try {
             Bundle params = new Bundle();
@@ -615,7 +616,7 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void launchInAppRatingPopup() {
         ReviewManager manager = ReviewManagerFactory.create(bridgeComponents.getContext());
         Task<ReviewInfo> request = manager.requestReviewFlow();
@@ -635,24 +636,24 @@ public class MobilityAppBridge extends HyperBridge {
     // endregion
 
     //region Chat Utiils
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void sendMessage(final String message) {
         for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
             sendMessageCallBack.sendMessage(message);
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void storeCallBackOpenChatScreen(final String callback) {
         storeCallBackOpenChatScreen = callback;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeCallBackOpenChatScreen() {
         storeCallBackOpenChatScreen = null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void startChatListenerService() {
         try {
             Context context = bridgeComponents.getContext();
@@ -674,7 +675,7 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void stopChatListenerService() {
         try {
             Intent chatListenerService = new Intent(bridgeComponents.getContext(), ChatService.class);
@@ -699,7 +700,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
     // endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addReels(String stringifyArray, int index, String id, final String callback) {
 
         Activity activity = bridgeComponents.getActivity();
@@ -763,7 +764,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addCarouselWithVideo(String stringifyArray, String id) {
             viewPagerItemArrayList.clear();
             Activity activity = bridgeComponents.getActivity();
@@ -864,7 +865,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     // Deprecated on 30 OCT 2023.
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void addCarousel(String stringifyArray, String id) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
@@ -954,7 +955,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus, String callback) {
         if (bridgeComponents.getActivity() != null) {
             videoDuration = 0;
@@ -1055,14 +1056,14 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void switchYoutubeVideo (String videoId){
         if(youtubePlayer != null)
             youtubePlayer.loadVideo(videoId, 0);
     }
 
                 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void pauseYoutubeVideo() {
         if(vpAdapter != null)
             vpAdapter.pauseYoutubeVideo();
@@ -1073,14 +1074,14 @@ public class MobilityAppBridge extends HyperBridge {
         youTubePlayerView = null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void releaseYoutubeView() {
         youtubeVideoStatus = "PAUSE";
         ExecutorManager.runOnMainThread(youTubePlayerView::release);
         youTubePlayerView = null;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void detectPhoneNumbers(final String callback) {
         try {
         storeDetectPhoneNumbersCallBack = callback;
@@ -1096,7 +1097,7 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void cleverTapEvent(String event, String params) {
         ExecutorManager.runOnBackgroundThread(() -> {
         if (clevertapDefaultInstance != null) {
@@ -1119,12 +1120,12 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setCleverTapProfileData(String key, String value){
         clevertapProfileData.put(key, value);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void loginCleverTapUser(){
         ExecutorManager.runOnBackgroundThread(() -> {
             if (clevertapDefaultInstance != null) {
@@ -1136,7 +1137,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setCleverTapUserData(String key, String value) {
         ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> profileUpdate = new HashMap<>();
@@ -1155,7 +1156,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setCleverTapUserProp(String key, String value) {
         ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> propertiesUpdate = new HashMap<>();
@@ -1169,7 +1170,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setCleverTapUserMultipleProp(String arr) {
         ExecutorManager.runOnBackgroundThread(() -> {
             if (clevertapDefaultInstance == null)
@@ -1193,7 +1194,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void cleverTapCustomEvent(String event) {
         ExecutorManager.runOnBackgroundThread(() -> {
         if (clevertapDefaultInstance != null)
@@ -1201,7 +1202,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue) {
         ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> mapCustomEvent = new HashMap<>();
@@ -1211,7 +1212,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void cleverTapSetLocation() {
         ExecutorManager.runOnBackgroundThread(() -> {
             if (clevertapDefaultInstance != null) {
@@ -1221,7 +1222,7 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void openWhatsAppSupport(String contactNumber) {
         String url = "https://api.whatsapp.com/send?phone=" + contactNumber;
         Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -1230,12 +1231,12 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void askRequestedPermissions(String[] requests) {
         PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void askRequestedPermissionsWithCallback(String[] requests, final String callback) {
         PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, new PermissionUtils.PermissionCallback() {
             @Override
@@ -1256,30 +1257,30 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setExoPhoneNumber(String phoneNum) {
         cleverTapSignedCall.setExoPhoneNumber(phoneNum);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void setupCamera(String previewViewId, boolean isBackCamera) {
         cameraUtils = new CameraUtils();
         cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void recordVideo(final String callback) {
         if(cameraUtils != null)
             cameraUtils.recordVideo(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void stopRecord() {
         if(cameraUtils != null)
             cameraUtils.stopRecord();
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public String decodeAndStoreImage(String base64ImageString) {
         try {
             byte[] imageBytes = Base64.decode(base64ImageString, Base64.DEFAULT);
@@ -1314,7 +1315,7 @@ public class MobilityAppBridge extends HyperBridge {
         return super.onActivityResult(requestCode, resultCode, data);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void updateSliderValue(String config){
         ExecutorManager.runOnMainThread(() -> {
             try{
@@ -1333,7 +1334,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void renderSlider(String config) {
         ExecutorManager.runOnMainThread(() -> {
             try {

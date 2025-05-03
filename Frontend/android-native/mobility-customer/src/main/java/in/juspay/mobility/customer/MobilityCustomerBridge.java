@@ -14,6 +14,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import com.caoccao.javet.annotations.V8Function;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -85,7 +86,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
 
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void removeLabelFromMarker(float zoomLevel) {
         ExecutorManager.runOnMainThread(() -> {
             try {
@@ -105,12 +106,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     //endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void fetchAndUpdateCurrentLocation(String callback) {
         fetchAndUpdateCurrentLocation(callback,true);
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void fetchAndUpdateCurrentLocation(String callback, boolean shouldFallback) {
         if (!isLocationPermissionEnabled()) return;
         updateLastKnownLocation(callback, true, ZoomType.ZOOM,shouldFallback);
@@ -118,7 +119,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     //region Others
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public void generatePDF(String str, String format) throws JSONException {
         invoice = str;
         if (checkAndAskStoragePermission()){
@@ -270,7 +271,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return invoiceLayout;
     }
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public int methodArgumentCount(String functionName) {
         try {
             methods = methods == null ? this.getClass().getMethods() : methods;
@@ -339,7 +340,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
     //endregion
 
-    @JavascriptInterface
+    @JavascriptInterface @V8Function
     public boolean isAccessibilityEnabled() {
         AccessibilityManager accessibilityManager = (AccessibilityManager) bridgeComponents.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
         return accessibilityManager.isEnabled();
