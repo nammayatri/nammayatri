@@ -600,10 +600,11 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
         logError $ "Error in parsing sortedPoolData - " <> show err
         pure onlyNewDriversWithCustomerInfo
   sortedPool <-
-    filterM
+    takeMWith
+      batchSize
       ( \driverPoolResult -> do
           parallelCount <- Redis.withCrossAppRedis $ Redis.incr (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId)
-          Redis.expire (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId) 3
+          Redis.withCrossAppRedis $ Redis.expire (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId) 3
           if parallelCount <= toInteger driverPoolCfg.maxParallelSearchRequests
             then do
               now <- getCurrentTime
@@ -613,8 +614,24 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
               pure False
       )
       sortedPool'
-  return (mbVersion, take batchSize sortedPool)
+  return (mbVersion, sortedPool)
   where
+    takeMWith 0 _ _ = pure []
+    takeMWith _ f [x] = do
+      res <- f x
+      if res
+        then do
+          pure [x]
+        else do
+          pure []
+    takeMWith n f (x : xs) = do
+      res <- f x
+      if res
+        then do
+          xs' <- takeMWith (n - 1) f xs
+          pure $ x : xs'
+        else do
+          takeMWith n f xs
     parallelSortingLockKey dId = "parallelSortingLockKey" <> dId.getId
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
