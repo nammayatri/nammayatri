@@ -362,7 +362,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion
+            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion driverPoolCfg
             Intelligent -> do
               pool <- makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
               return $ (Nothing, pool)
@@ -515,7 +515,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
               Tagged -> do
-                (_, taggedPool) <- makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags (mbVersion <|> searchReq.poolingLogicVersion) -- TODO: Fix isOnRidePool flag
+                (_, taggedPool) <- makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags (mbVersion <|> searchReq.poolingLogicVersion) driverPoolCfg -- TODO: Fix isOnRidePool flag
                 return taggedPool
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
@@ -584,22 +584,56 @@ makeTaggedDriverPool ::
   Bool ->
   Maybe [Text] ->
   Maybe Int ->
+  DriverPoolConfig ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
-makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion = do
+makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion driverPoolCfg = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool}
   resp <- LYTU.runLogics allLogics taggedDriverPoolInput
-  sortedPool <-
+  sortedPool' <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
       A.Success sortedPoolData -> pure sortedPoolData.drivers
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
         pure onlyNewDriversWithCustomerInfo
-  return (mbVersion, take batchSize sortedPool)
+  sortedPool <-
+    takeMWith
+      batchSize
+      ( \driverPoolResult -> do
+          parallelCount <- Redis.withCrossAppRedis $ Redis.incr (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId)
+          Redis.withCrossAppRedis $ Redis.expire (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId) 3
+          if parallelCount <= toInteger driverPoolCfg.maxParallelSearchRequests
+            then do
+              now <- getCurrentTime
+              reqCount <- getValidSearchRequestCount driverPoolCfg.merchantId (cast driverPoolResult.driverPoolResult.driverId) now
+              pure $ reqCount < driverPoolCfg.maxParallelSearchRequests
+            else do
+              pure False
+      )
+      sortedPool'
+  return (mbVersion, sortedPool)
   where
+    takeMWith 0 _f _ = pure []
+    takeMWith _ _ [] = pure []
+    takeMWith _ f [x] = do
+      res <- f x
+      if res
+        then do
+          pure [x]
+        else do
+          pure []
+    takeMWith n f (x : xs) = do
+      res <- f x
+      if res
+        then do
+          xs' <- takeMWith (n - 1) f xs
+          pure $ x : xs'
+        else do
+          takeMWith n f xs
+    parallelSortingLockKey dId = "parallelSortingLockKey" <> dId.getId
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
