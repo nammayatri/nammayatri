@@ -90,17 +90,16 @@ getStepsAndUpdate onboardingId = do
           )
           Map.empty
           steps
-
   let updatedSteps = map (updateStepStatus' stepStatusMap) steps
-
   let stepsToUpdate =
         filter (\(original, updated) -> original.status /= updated.status) $
           zip steps updatedSteps
-
   forM_ stepsToUpdate $ \(_, updatedStep) ->
     QMOS.updateStepStatus updatedStep.status updatedStep.id
-
-  return $ if null stepsToUpdate then steps else updatedSteps
+  let finalSteps = if null stepsToUpdate then steps else updatedSteps
+  when (all (\step -> step.status == DMOS.COMPLETED) finalSteps) $
+    QMO.updateOnboardingStatus DMO.COMPLETED onboardingId
+  return finalSteps
   where
     updateStepStatus' statusMap step =
       case step.status of
