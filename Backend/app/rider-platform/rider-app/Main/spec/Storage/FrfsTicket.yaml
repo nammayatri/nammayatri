@@ -498,6 +498,11 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
+    updateQuantity:
+      kvFunction: updateWithKV
+      params: [quantity, updatedAt]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket

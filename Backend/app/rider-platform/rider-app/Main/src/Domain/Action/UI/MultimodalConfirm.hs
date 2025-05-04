@@ -50,7 +50,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
-import Kernel.Prelude
+import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -178,6 +178,32 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
   frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingsArr
   let flattenedPayments = concat frfsBookingsPaymentArr
   let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
+
+  -- Update all FRFS bookings with quantity, final price and price
+  forM_ frfsBookingsArr $ \booking -> do
+    let quantity = req.quantity
+    let quantityRational = fromIntegral quantity :: Rational
+    let totalPrice =
+          Price
+            { amount = HighPrecMoney $ getHighPrecMoney booking.price.amount * quantityRational,
+              amountInt = Money $ booking.price.amountInt.getMoney * quantity,
+              currency = booking.price.currency
+            }
+    void $ QFRFSTicketBooking.updateQuantity req.quantity booking.id
+    void $ QFRFSTicketBooking.updateFinalPriceById (Just totalPrice) booking.id
+    void $ QFRFSTicketBooking.updatePriceById totalPrice booking.id
+
+  -- Calculate total fare across all bookings
+  let totalFare =
+        foldl'
+          ( \acc booking ->
+              let quantity = fromIntegral req.quantity :: Rational
+                  bookingTotal = HighPrecMoney $ getHighPrecMoney booking.price.amount * quantity
+               in acc + bookingTotal
+          )
+          (HighPrecMoney 0)
+          frfsBookingsArr
+
   case mbPaymentOrderId of
     Nothing ->
       return $
@@ -189,11 +215,11 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
       order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
       let updateReq =
             KT.OrderUpdateReq
-              { amount = req.amount,
-                orderShortId = show order.shortId
+              { amount = totalFare,
+                orderShortId = order.shortId.getShortId
               }
       _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking person.clientSdkVersion updateReq
-      mbUpdatedOrder <- QOrder.updateAmount order.id req.amount
+      mbUpdatedOrder <- QOrder.updateAmount order.id totalFare
       logDebug $ "mbUpdatedOrder: " <> show mbUpdatedOrder
       case mbUpdatedOrder of
         Nothing ->
@@ -202,7 +228,7 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
               { sdkPayload = Nothing
               }
         Just updatedOrder -> do
-          sdkPayload <- buildUpdateOrderSDKPayload req.amount updatedOrder
+          sdkPayload <- buildUpdateOrderSDKPayload totalFare updatedOrder
           return $
             ApiTypes.UpdatePaymentOrderResp
               { sdkPayload = sdkPayload
