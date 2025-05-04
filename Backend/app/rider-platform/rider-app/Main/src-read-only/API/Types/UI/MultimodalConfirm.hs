@@ -194,7 +194,7 @@ data TransportStation = TransportStation
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdatePaymentOrderReq = UpdatePaymentOrderReq {amount :: Kernel.Types.Common.HighPrecMoney}
+data UpdatePaymentOrderReq = UpdatePaymentOrderReq {quantity :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -170,7 +170,7 @@ types:
     ptcv: Text
 
   UpdatePaymentOrderReq:
-    amount: HighPrecMoney
+    quantity: Int
 
   UpdatePaymentOrderResp:
     sdkPayload: Maybe SDKPayloadDetails
