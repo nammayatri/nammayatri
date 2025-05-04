@@ -101,7 +101,7 @@ eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTic
 eval GoBack state = exit $ GoToHomeScreen state
 
 eval SearchButtonClick state = do
-  void $ pure $ JB.firebaseLogEvent "ny_user_clicked_search_Location_bus"
+  void $ pure $ JB.firebaseLogEvent "ny_bus_user_clicked_search_Location_bus"
   updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 
 eval (BusTicketBookingListRespAC bookingList) state =

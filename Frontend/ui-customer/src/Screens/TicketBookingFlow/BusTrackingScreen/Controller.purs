@@ -18,6 +18,7 @@ import PrestoDOM.Core (getPushFn)
 import Engineering.Helpers.Commons as EHC
 import Data.Traversable (traverse, for_, for)
 import JBridge as JB
+import JBridge (firebaseLogEvent)
 import Data.Time.Duration (Milliseconds(..))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import Debug
@@ -173,7 +174,9 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
           pure NoAction
       ]
 
-eval (BookTicketButtonAction PrimaryButton.OnClick) state = exit $ GoToSearchLocation state
+eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
+  void $ pure $ firebaseLogEvent "ny_bus_user_book_ticket_initiated"
+  exit $ GoToSearchLocation state
 
 eval BackPressed state =
     case state.props.fromScreen of
@@ -255,7 +258,11 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
               if (count == 1) then do
                 let etaToStore =show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
                     params = [Tuple "Eta" etaToStore]
-                firebaseLogEventWithArrayOfKeyValue "ny_user_Eta_seen" params
+                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_user_Eta_seen" params
+                let vehicleTrackingDataSize = DA.length trackingData
+                let paramsTracking = [Tuple "busTrackingResponseCount" (show $ vehicleTrackingDataSize)]
+                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_tracking_count" paramsTracking
+                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_minimum_eta_distance" [Tuple "minimum_eta_distance" (show $ state.props.minimumEtaDistance)]
                 pure unit
               else
                 pure unit

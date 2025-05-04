@@ -5871,7 +5871,7 @@ predictionClickedFlow prediction state = do
                 _ = spy "searchRideType = " state.data.searchRideType
                 -- srcLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : state.props.stopCodeSelected }, address =  state.props.stopNameSelected, stationCode = state.props.stopCodeSelected }
                 -- destLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : "" }, address = "", stationCode = "" }
-              void $ pure $ firebaseLogEvent "ys_user_route_based_flow"
+              void $ pure $ firebaseLogEvent "ny_bus_user_route_based_flow"
 
               (GetMetroStationResponse getBusStopResp) <- Remote.getMetroStationBT (show state.data.ticketServiceType) currentCity state.props.routeSelected "" (show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong)
               pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""
@@ -5903,10 +5903,10 @@ predictionClickedFlow prediction state = do
                     , fromScreen = Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN
                     }
                   })
-                void $ pure $ JB.firebaseLogEvent "ny_user_clicked_routeBasedFlow"
+                void $ pure $ JB.firebaseLogEvent "ny_bus_user_clicked_routeBasedFlow"
                 busTrackingScreenFlow
               else if rideType == Just STOP then do
-                void $ pure $ JB.firebaseLogEvent "ny_user_clicked_stopsBasedFlow"
+                void $ pure $ JB.firebaseLogEvent "ny_bus_user_clicked_stopsBasedFlow"
                 metroTicketBookingFlow
               else searchLocationFlow
 
@@ -7496,7 +7496,6 @@ busTicketBookingFlow = do
       void $ pure $ removeValueFromCache "POLLING_ID"
       void $ pure $ removeValueFromCache "MAP_READY" 
       -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
-      void $ pure $ JB.firebaseLogEvent "ys_user_entered_tracking_screen"
       ----------------------------
       void $ lift $ lift $ toggleLoader true
       res <- lift $ lift $ Remote.getMetroStatus bookingId
