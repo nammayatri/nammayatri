@@ -6,6 +6,7 @@ import Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Person)
+import qualified Domain.Types.VehicleRegistrationCertificate as DReg
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -36,6 +37,23 @@ findRecentByPersonIdAndImageType personId imgType = do
   findAllWithOptionsKV
     [ Se.And
         [Se.Is BeamI.personId $ Se.Eq $ getId personId, Se.Is BeamI.imageType $ Se.Eq imgType, Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours' now)]
+    ]
+    (Se.Desc BeamI.createdAt)
+    Nothing
+    Nothing
+  where
+    hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
+
+findRecentByPersonRCAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id DReg.VehicleRegistrationCertificate -> DocumentType -> m [DImage.Image]
+findRecentByPersonRCAndImageType personId rcId imgType = do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
+      onBoardingRetryTimeInHours' = intToNominalDiffTime onboardingRetryTimeInHours
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [ Se.And
+        [Se.Is BeamI.rcId $ Se.Eq $ Just rcId.getId, Se.Is BeamI.imageType $ Se.Eq imgType, Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours' now)]
     ]
     (Se.Desc BeamI.createdAt)
     Nothing
