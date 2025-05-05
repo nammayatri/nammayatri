@@ -64,6 +64,8 @@ data PersonT f = PersonT
     isValidRating :: B.C f Kernel.Prelude.Bool,
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     lastName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    latestLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    latestLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     middleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

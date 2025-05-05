@@ -141,3 +141,10 @@ ALTER TABLE atlas_app.person ADD COLUMN frequent_loc_geohashes text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN latest_lon double precision ;
+ALTER TABLE atlas_app.person ADD COLUMN latest_lat double precision ;
