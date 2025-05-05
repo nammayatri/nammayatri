@@ -55,7 +55,7 @@ where
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed
 import qualified Data.Geohash as DG
-import Data.List (find, partition)
+import Data.List (find, length, partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
@@ -78,7 +78,7 @@ import Domain.Types.SearchTry
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
-import EulerHS.Prelude hiding (find, id)
+import EulerHS.Prelude hiding (find, id, length)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
 import Kernel.Prelude (NominalDiffTime, head, listToMaybe)
@@ -106,6 +106,7 @@ import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
+import qualified Storage.Queries.SearchTry as QDST
 import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
@@ -718,7 +719,7 @@ calculateDriverPool ::
     HasShortDurationRetryCfg r c
   ) =>
   CalculateDriverPoolReq a ->
-  m [DriverPoolResult]
+  m ([DriverPoolResult], [QP.NearestDriversResult])
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
@@ -737,7 +738,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
   logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
-  pure driverPoolResult
+  pure (driverPoolResult, approxDriverPool)
   where
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
     getRadius mRadiusStep_ = do
@@ -771,7 +772,8 @@ calculateDriverPoolWithActualDist ::
   DST.CurrentSearchInfo ->
   m [DriverPoolWithActualDistResult]
 calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType currentSearchInfo = do
-  driverPool <- calculateDriverPool calculateReq
+  (driverPool, approxDriverPool) <- calculateDriverPool calculateReq
+  QDST.updateDriverPoolCount (Just $ length driverPool) (Just $ length approxDriverPool) Nothing currentSearchInfo.searchTry.id
   case driverPool of
     [] -> return []
     (a : pprox) -> do
@@ -786,6 +788,7 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
       logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist'
       filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
       logDebug $ "thirdly scheduled filtered driver pool" <> show filtDriverPoolWithActualDist
+      QDST.updateDriverPoolCount (Just $ length driverPool) (Just $ length approxDriverPool) (Just $ length filtDriverPoolWithActualDist) currentSearchInfo.searchTry.id
       return filtDriverPoolWithActualDist
   where
     mkSpecialZoneQueueActualDistanceResult dpr = do

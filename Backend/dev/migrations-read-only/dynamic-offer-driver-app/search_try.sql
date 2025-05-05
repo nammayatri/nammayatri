@@ -40,3 +40,14 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN service_tier_array text
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN driver_pool_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN approx_driver_pool_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN filtered_driver_pool_count integer ;
