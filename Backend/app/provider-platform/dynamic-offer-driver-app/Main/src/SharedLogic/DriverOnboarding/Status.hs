@@ -303,8 +303,8 @@ fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig languag
       associations <- DRAQuery.findAllLinkedByDriverId personId
       if null associations
         then return []
-        else (associations `forM` (\assoc -> RCQuery.findById assoc.rcId >>= (\rc -> return $ (assoc.isRcActive,) <$> rc))) >>= (return . catMaybes)
-    processedVehicles `forM` \(isActive, processedVehicle) -> do
+        else (associations `forM` (\assoc -> RCQuery.findById assoc.rcId >>= (\rc -> return $ (assoc.isRcActive,cast assoc.rcId,) <$> rc))) >>= (return . catMaybes)
+    processedVehicles `forM` \(isActive, rcId, processedVehicle) -> do
       registrationNo <- decrypt processedVehicle.certificateNumber
       let dateOfUpload = processedVehicle.createdAt
       documents <-
@@ -315,7 +315,7 @@ fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig languag
               message <- documentStatusMessage status Nothing docType mbProcessedUrl language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
             Nothing -> do
-              (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
+              (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId (Just rcId)
               message <- documentStatusMessage status mbReason docType mbUrl language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
       return $
@@ -379,15 +379,17 @@ fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig langua
         Right registrationNo -> do
           rcNoEnc <- encrypt registrationNo
           rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
-          isUnlinked <- case rc of
-            Just rc_ -> DRAQuery.findUnlinkedRC personId rc_.id
-            Nothing -> pure []
+          (isUnlinked, mbRcId) <- case rc of
+            Just rc_ -> do
+              iu <- DRAQuery.findUnlinkedRC personId rc_.id
+              pure (iu, Just rc_.id)
+            Nothing -> pure ([], Nothing)
           if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
             then return []
             else do
               documents <-
                 vehicleDocumentTypes `forM` \docType -> do
-                  (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
+                  (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId mbRcId
                   message <- documentStatusMessage status mbReason docType mbUrl language
                   return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
               return
@@ -597,8 +599,8 @@ getInProgressDriverDocuments docType driverId onboardingTryLimit merchantId merc
     DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated DDVC.UploadProfile driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
-getInProgressVehicleDocuments :: DVC.DocumentType -> Id DP.Person -> Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-getInProgressVehicleDocuments docType driverId onboardingTryLimit _merchantId _merchantOpCityId =
+getInProgressVehicleDocuments :: DVC.DocumentType -> Id DP.Person -> Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id RC.VehicleRegistrationCertificate) -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+getInProgressVehicleDocuments docType driverId onboardingTryLimit _merchantId _merchantOpCityId mbRcId =
   case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress DVC.VehicleRegistrationCertificate driverId onboardingTryLimit
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
@@ -607,7 +609,27 @@ getInProgressVehicleDocuments docType driverId onboardingTryLimit _merchantId _m
     DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated DVC.VehicleInsurance driverId
     DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated DVC.VehiclePUC driverId
     DVC.VehicleInspectionForm -> checkIfImageUploadedOrInvalidated DVC.VehicleInspectionForm driverId
+    DVC.VehicleLeft -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.VehicleLeft (cast <$> mbRcId)
+    DVC.VehicleRight -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.VehicleRight (cast <$> mbRcId)
+    DVC.VehicleFrontInterior -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.VehicleFrontInterior (cast <$> mbRcId)
+    DVC.VehicleBackInterior -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.VehicleBackInterior (cast <$> mbRcId)
+    DVC.VehicleFront -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.VehicleFront (cast <$> mbRcId)
+    DVC.VehicleBack -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.VehicleBack (cast <$> mbRcId)
+    DVC.Odometer -> checkIfImageUploadedOrInvalidatedByRC driverId DVC.Odometer (cast <$> mbRcId)
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
+
+checkIfImageUploadedOrInvalidatedByRC :: Id DP.Person -> DDVC.DocumentType -> Maybe (Id RC.VehicleRegistrationCertificate) -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidatedByRC driverId docType mbRcId = do
+  images <- case mbRcId of
+    Just rcId -> IQuery.findRecentByPersonRCAndImageType driverId (cast rcId) docType
+    _ -> pure []
+  case images of
+    [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
+    _ -> do
+      let latestImage = head images
+      if latestImage.verificationStatus == Just Documents.INVALID
+        then return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
+        else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
 checkIfImageUploadedOrInvalidated :: DDVC.DocumentType -> Id DP.Person -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfImageUploadedOrInvalidated docType driverId = do
