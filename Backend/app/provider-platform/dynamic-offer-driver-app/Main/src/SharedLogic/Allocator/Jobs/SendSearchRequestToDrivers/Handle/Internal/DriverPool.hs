@@ -105,7 +105,8 @@ prepareDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -765,7 +766,8 @@ getNextDriverPoolBatch ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

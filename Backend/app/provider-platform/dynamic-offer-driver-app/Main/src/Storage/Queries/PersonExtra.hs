@@ -177,7 +177,7 @@ data FullDriver = FullDriver
   deriving (Generic)
 
 findAllDriversByIdsFirstNameAsc ::
-  (Functor m, MonadFlow m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (Functor m, MonadFlow m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]

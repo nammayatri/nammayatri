@@ -76,7 +76,8 @@ linkReferee ::
     EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   Id Merchant ->
   Maybe Text ->

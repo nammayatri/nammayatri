@@ -147,7 +147,8 @@ type GetStateFlow m r c =
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c
   )
 
 type SearchJourneyLeg leg m = leg -> m SearchResponse

@@ -507,7 +507,8 @@ calculateGoHomeDriverPool ::
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
@@ -555,7 +556,8 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c
   ) =>
   [QP.NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -713,7 +715,8 @@ calculateDriverPool ::
     CoreMetrics m,
     MonadFlow m,
     HasCoordinates a,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   CalculateDriverPoolReq a ->
   m [DriverPoolResult]
@@ -761,7 +764,8 @@ calculateDriverPoolWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -899,7 +903,8 @@ calculateDriverPoolCurrentlyOnRide ::
     MonadFlow m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c
   ) =>
   CalculateDriverPoolReq a ->
   Maybe Integer ->
@@ -956,7 +961,8 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -1025,7 +1031,8 @@ computeActualDistanceOneToOne ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasShortDurationRetryCfg r c
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1042,7 +1049,8 @@ computeActualDistance ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasShortDurationRetryCfg r c
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1055,14 +1063,15 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
   let pickupLatLong = getCoordinates pickup
   transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
-      Maps.GetDistancesReq
-        { origins = driverPoolResults,
-          destinations = pickupLatLong :| [],
-          travelMode = Just Maps.CAR,
-          sourceDestinationMapping = Nothing,
-          distanceUnit
-        }
+    withShortRetry $
+      Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+        Maps.GetDistancesReq
+          { origins = driverPoolResults,
+            destinations = pickupLatLong :| [],
+            travelMode = Just Maps.CAR,
+            sourceDestinationMapping = Nothing,
+            distanceUnit
+          }
   logDebug $ "get distance results" <> show getDistanceResults
   prevRideDropGeoHash <- case prevRideDropLatLn of
     Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
@@ -1090,7 +1099,8 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
 computeActualDistanceOneToOneSrcAndDestMapping ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1102,14 +1112,15 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
 computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults = do
   transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
-      Maps.GetDistancesReq
-        { origins = driverPoolResults,
-          destinations = destinationLatLons,
-          travelMode = Just Maps.CAR,
-          sourceDestinationMapping = Just Maps.OneToOne,
-          distanceUnit
-        }
+    withShortRetry $
+      Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+        Maps.GetDistancesReq
+          { origins = driverPoolResults,
+            destinations = destinationLatLons,
+            travelMode = Just Maps.CAR,
+            sourceDestinationMapping = Just Maps.OneToOne,
+            distanceUnit
+          }
   logDebug $ "get distance results one to one mapping" <> show getDistanceResults
   let distanceAndDropPointsZipped = zip previousDropPoints (NE.toList getDistanceResults)
   driverPoolEntities <-
