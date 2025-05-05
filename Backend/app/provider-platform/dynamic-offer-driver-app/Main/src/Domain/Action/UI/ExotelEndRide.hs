@@ -43,7 +43,8 @@ callBasedEndRide ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EncFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->
