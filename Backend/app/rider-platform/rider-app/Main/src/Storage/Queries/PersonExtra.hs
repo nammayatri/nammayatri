@@ -108,10 +108,14 @@ updatePersonalInfo ::
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Double ->
   Person ->
   Maybe Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel person mbLiveActivityToken = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -141,6 +145,10 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.dateOfBirth mbDateOfBirth | isJust mbDateOfBirth]
         <> [Se.Set BeamP.profilePicture mbProfilePicture | isJust mbProfilePicture]
         <> [Se.Set BeamP.verificationChannel mbVerificationChannel | isJust mbVerificationChannel]
+        <> [Se.Set BeamP.registrationLat mbRegLat | isJust mbRegLat]
+        <> [Se.Set BeamP.registrationLon mbRegLon | isJust mbRegLon]
+        <> [Se.Set BeamP.latestLat mbLatestLat | isJust mbLatestLat]
+        <> [Se.Set BeamP.latestLon mbLatestLon | isJust mbLatestLon]
         <> [Se.Set BeamP.liveActivityToken mbLiveActivityToken | isJust mbLiveActivityToken]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
