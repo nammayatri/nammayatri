@@ -70,6 +70,8 @@ data PersonT f = PersonT
     juspayCustomerPaymentID :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     lastName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    latestLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    latestLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     liveActivityToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
