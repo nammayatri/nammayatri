@@ -97,7 +97,8 @@ cancelRideImpl ::
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasShortDurationRetryCfg r c
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -146,7 +147,8 @@ cancelRideTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   SRB.Booking ->
   DRide.Ride ->

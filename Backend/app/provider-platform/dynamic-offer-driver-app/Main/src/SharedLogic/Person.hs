@@ -38,7 +38,7 @@ findPerson personId = do
   QP.findById personId
     >>= fromMaybeM (PersonNotFound personId.getId)
 
-blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text -> Int -> BlockReasonFlag -> m ()
+blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text -> Int -> BlockReasonFlag -> m ()
 blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason blockTimeInHours blockReasonFlag = do
   now <- getCurrentTime
   logInfo $ "Temporarily blocking driver, driverId: " <> driverId.getId

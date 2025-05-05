@@ -50,7 +50,7 @@ data DTrackRes = TrackRes
   deriving (Generic, Show)
 
 track ::
-  (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) =>
+  (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) =>
   Id DM.Merchant ->
   DTrackReq ->
   m DTrackRes
