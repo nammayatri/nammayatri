@@ -124,7 +124,7 @@ getCancellationRateData mocId driverId = do
     findMinimumRides merchantConfig = toInteger $ fromMaybe 5 merchantConfig.cancellationRateCalculationThreshold
 
 nudgeOrBlockDriver ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c) =>
   TransporterConfig ->
   DP.Person ->
   DI.DriverInformation ->

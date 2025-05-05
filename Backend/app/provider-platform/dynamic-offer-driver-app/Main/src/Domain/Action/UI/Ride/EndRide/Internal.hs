@@ -142,7 +142,8 @@ endRideTransaction ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   Id DP.Driver ->
   SRB.Booking ->

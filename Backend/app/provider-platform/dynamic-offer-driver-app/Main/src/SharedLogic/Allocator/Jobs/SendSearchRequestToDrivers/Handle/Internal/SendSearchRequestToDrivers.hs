@@ -87,7 +87,8 @@ sendSearchRequestToDrivers ::
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
     LT.HasLocationService m r,
-    JobCreator r m
+    JobCreator r m,
+    HasShortDurationRetryCfg r c
   ) =>
   Bool ->
   [SDP.TripQuoteDetail] ->

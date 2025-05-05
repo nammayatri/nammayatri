@@ -45,7 +45,8 @@ getNextDriverPoolBatch ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -84,7 +85,8 @@ prepareDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -435,7 +437,8 @@ assignDriverGoHomeTags ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   [DriverPoolWithActualDistResult] ->
   DSR.SearchRequest ->

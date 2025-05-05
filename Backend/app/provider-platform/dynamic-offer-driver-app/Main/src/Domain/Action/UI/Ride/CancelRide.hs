@@ -173,7 +173,8 @@ cancelRideImpl ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
-    DC.EventFlow m r
+    DC.EventFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   ServiceHandle m ->
   RequestorId ->

@@ -72,7 +72,7 @@ data NearestDriversReq = NearestDriversReq
   }
 
 getNearestDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversReq ->
   m [NearestDriversResult]
 getNearestDrivers NearestDriversReq {..} = do
