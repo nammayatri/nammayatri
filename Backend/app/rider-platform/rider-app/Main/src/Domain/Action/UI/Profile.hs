@@ -158,7 +158,11 @@ data UpdateProfileReq = UpdateProfileReq
     liveActivityToken :: Maybe Text,
     dateOfBirth :: Maybe UTCTime,
     profilePicture :: Maybe Text,
-    verificationChannel :: Maybe Text
+    verificationChannel :: Maybe Text,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double,
+    latestLat :: Maybe Double,
+    latestLon :: Maybe Double
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -338,6 +342,10 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.dateOfBirth
       req.profilePicture
       req.verificationChannel
+      req.registrationLat
+      req.registrationLon
+      req.latestLat
+      req.latestLon
       person
       req.liveActivityToken
   updateDisability req.hasDisability req.disability personId
