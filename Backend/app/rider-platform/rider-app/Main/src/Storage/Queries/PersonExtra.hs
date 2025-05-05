@@ -102,9 +102,13 @@ updatePersonalInfo ::
   Maybe Bool ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Double ->
   Person ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbRegLat mbRegLon mbLatestLat mbLatestLon person = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -131,6 +135,10 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
         <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
         <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
+        <> [Se.Set BeamP.registrationLat mbRegLat | isJust mbRegLat]
+        <> [Se.Set BeamP.registrationLon mbRegLon | isJust mbRegLon]
+        <> [Se.Set BeamP.latestLat mbLatestLat | isJust mbLatestLat]
+        <> [Se.Set BeamP.latestLon mbLatestLon | isJust mbLatestLon]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 

@@ -149,7 +149,11 @@ data UpdateProfileReq = UpdateProfileReq
     hasDisability :: Maybe Bool,
     enableOtpLessRide :: Maybe Bool,
     deviceId :: Maybe Text,
-    androidId :: Maybe Text
+    androidId :: Maybe Text,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double,
+    latestLat :: Maybe Double,
+    latestLon :: Maybe Double
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -317,6 +321,10 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.enableOtpLessRide
       (if isJust person.deviceId then Nothing else req.deviceId)
       (if isJust person.androidId then Nothing else req.androidId)
+      req.registrationLat
+      req.registrationLon
+      req.latestLat
+      req.latestLon
       person
   updateDisability req.hasDisability req.disability personId
 

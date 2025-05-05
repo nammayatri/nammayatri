@@ -80,6 +80,8 @@ Person:
     hasCompletedSafetySetup : Bool
     registrationLat : Maybe Double
     registrationLon : Maybe Double
+    latestLat : Maybe Double
+    latestLon : Maybe Double
     useFakeOtp : Maybe Text
     followsRide : Bool
     falseSafetyAlarmCount : Int
