@@ -185,7 +185,7 @@ eval _ state = continue state
 showMarkerOnMap :: String -> Number -> Number -> Effect Unit
 showMarkerOnMap markerName lat lng = do
   let markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName, zIndex = 0.0}
-  void $ JB.showMarker markerConfig lat lng 160 0.5 0.9 (EHC.getNewIDWithTag "CustomerHomeScreenMap")
+  void $ JB.showMarker markerConfig lat lng 160 0.5 0.9 (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
 
 recenterCurrentLocation :: ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTicketBookingState
 recenterCurrentLocation state = continueWithCmd state [ do
