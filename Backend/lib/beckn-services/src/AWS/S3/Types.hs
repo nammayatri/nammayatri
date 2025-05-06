@@ -87,7 +87,8 @@ data S3AuthParams = S3AuthParams
 data S3Env m = S3Env
   { pathPrefix :: Text,
     getH :: String -> m Text,
-    putH :: String -> Text -> m ()
+    putH :: String -> Text -> m (),
+    deleteH :: String -> m ()
   }
 
 createFilePath ::
@@ -112,6 +113,26 @@ createFilePath domain identifier fileType validatedFileExtention = do
         <> validatedFileExtention
     )
 
+createFilePublicPath ::
+  ( MonadTime m,
+    MonadReader r m,
+    HasField "s3EnvPublic" r (S3Env m)
+  ) =>
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  m Text
+createFilePublicPath domain identifier filename validatedFileExtention = do
+  pathPrefix <- asks (.s3EnvPublic.pathPrefix)
+  return
+    ( pathPrefix <> "/" <> domain <> "/"
+        <> identifier
+        <> "/"
+        <> filename
+        <> validatedFileExtention
+    )
+
 get :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m Text
 get path = do
   s3env <- asks (.s3Env)
@@ -131,3 +152,8 @@ putPublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> 
 putPublic path file_ = do
   s3EnvPublic <- asks (.s3EnvPublic)
   putH s3EnvPublic path file_
+
+deletePublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> m ()
+deletePublic path = do
+  s3EnvPublic <- asks (.s3EnvPublic)
+  deleteH s3EnvPublic path

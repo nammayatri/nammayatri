@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut) where
+module AWS.S3.Flow (get', put', get'', put'', delete', delete'', mockGet, mockPut, mockDelete) where
 
 import AWS.S3.Error
 import AWS.S3.Types
@@ -40,11 +40,16 @@ type S3PutAPI =
   ReqBody '[S3ImageData] Text
     :> Put '[S3OctetStream] Text
 
+type S3DeleteAPI = Delete '[S3OctetStream] Text
+
 s3GetAPI :: Proxy S3GetAPI
 s3GetAPI = Proxy
 
 s3PutAPI :: Proxy S3PutAPI
 s3PutAPI = Proxy
+
+s3DeleteAPI :: Proxy S3DeleteAPI
+s3DeleteAPI = Proxy
 
 url :: String -> String -> BaseUrl
 url path host =
@@ -91,6 +96,22 @@ put' bucketName path img = do
       "PutS3"
       s3PutAPI
 
+delete' ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  m Text
+delete' bucketName path = do
+  withLogTag "S3" $ do
+    let host = s3Host bucketName
+    callS3API
+      (url path host)
+      (ET.client s3DeleteAPI)
+      "DeleteS3"
+      s3DeleteAPI
+
 callS3API :: CallAPI env api a
 callS3API =
   callApiUnwrappingApiError
@@ -134,6 +155,17 @@ put'' bucketName path img = withLogTag "S3" $ do
       _ <- Posix.fdWrite fd (T.unpack img_)
       Posix.closeFd fd
 
+delete'' ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  m ()
+delete'' bucketName path = withLogTag "S3" $ do
+  let cmd = "aws s3api delete-object --bucket " <> T.unpack bucketName <> " --key " <> path
+  liftIO $ callCommand cmd
+
 getTmpPath :: String -> String
 getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
 
@@ -163,6 +195,18 @@ mockGet baseDirectory bucketName path =
     liftIO $ do
       let fullPath'Name = getFullPathMock baseDirectory bucketName path
       T.readFile fullPath'Name
+
+mockDelete ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  m ()
+mockDelete baseDirectory bucketName path =
+  withLogTag "S3" $
+    liftIO $ do
+      let fullPath'Name = getFullPathMock baseDirectory bucketName path
+      liftIO $ removeFile fullPath'Name
 
 getFullPathMock :: String -> Text -> String -> String
 getFullPathMock baseDirectory bucketName path = baseDirectory <> "/" <> cs bucketName <> "/" <> path

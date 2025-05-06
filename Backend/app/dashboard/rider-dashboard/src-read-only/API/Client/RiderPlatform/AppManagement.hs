@@ -6,6 +6,7 @@ module API.Client.RiderPlatform.AppManagement where
 import qualified "rider-app" API.Dashboard
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Customer
 import qualified "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboarding
+import qualified "rider-app" API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
@@ -18,6 +19,7 @@ import qualified "lib-dashboard" Tools.Client
 data AppManagementAPIs = AppManagementAPIs
   { customerDSL :: API.Types.Dashboard.AppManagement.Customer.CustomerAPIs,
     merchantOnboardingDSL :: API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingAPIs,
+    ticketDashboardDSL :: API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardAPIs,
     ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs
   }
 
@@ -25,10 +27,11 @@ mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant
 mkAppManagementAPIs merchantId city token = do
   let customerDSL = API.Types.Dashboard.AppManagement.Customer.mkCustomerAPIs customerClientDSL
   let merchantOnboardingDSL = API.Types.Dashboard.AppManagement.MerchantOnboarding.mkMerchantOnboardingAPIs merchantOnboardingClientDSL
+  let ticketDashboardDSL = API.Types.Dashboard.AppManagement.TicketDashboard.mkTicketDashboardAPIs ticketDashboardClientDSL
   let ticketsDSL = API.Types.Dashboard.AppManagement.Tickets.mkTicketsAPIs ticketsClientDSL
   (AppManagementAPIs {..})
   where
-    customerClientDSL :<|> merchantOnboardingClientDSL :<|> ticketsClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    customerClientDSL :<|> merchantOnboardingClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.
