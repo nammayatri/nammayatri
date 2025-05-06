@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="beta_assets">true</string>
-    <bool name="godel_debuggable">true</bool>
-    <bool name="use_local_assets">false</bool>
-</resources>

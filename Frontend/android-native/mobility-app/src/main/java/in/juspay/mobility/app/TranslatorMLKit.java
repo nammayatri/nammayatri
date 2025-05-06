@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
 
 
 public class TranslatorMLKit {

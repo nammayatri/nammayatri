@@ -10,10 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import in.juspay.hyper.constants.LogCategory;
-import in.juspay.hyper.constants.LogSubCategory;
-import in.juspay.hypersdk.core.JuspayServices;
-
 public class ResourceHandler {
 
     @NonNull

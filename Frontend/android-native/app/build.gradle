@@ -92,6 +92,7 @@ android {
         release {
             resValue "bool", "debuggable", "false"
             minifyEnabled true
+            applicationIdSuffix '.debug'
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (keystorePropertiesFile.exists()) {
@@ -415,7 +416,7 @@ dependencies {
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+//    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
     compileOnly ("co.hyperverge:hyperkyc:0.26.0") {
         transitive = true
         exclude group: 'co.hyperverge', module: 'hyperdocdetect'
@@ -475,16 +476,6 @@ def tmpSource = "/tmp/juspay"
 def jsSource = "${projectDir}/src"
 def assetSource = "${projectDir}/src"
 def shouldMinify = false
-
-tasks.register("prepareKotlinBuildScriptModel") {
-    // This task is run when Gradle Sync is running.
-    // We create it here so we can let it depend on preBuild inside the android{}
-}
-
-tasks.named("prepareKotlinBuildScriptModel") {
-    dependsOn(":hermes-engine:downloadHermesSource")
-}
-
 
 tasks.create(name: 'minifyJsFiles') {
     def jsFiles = []

@@ -41,7 +41,7 @@ android {
         jvmTarget = '1.8'
     }
 
-    namespace 'in.juspay.hyperlottie'
+    namespace 'in.juspay.mobility.sdk.hyperlottie'
 }
 
 dependencies {

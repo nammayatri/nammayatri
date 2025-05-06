@@ -80,7 +80,7 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.dataModel.VariantConfig;
 import in.juspay.mobility.common.services.TLSSocketFactory;

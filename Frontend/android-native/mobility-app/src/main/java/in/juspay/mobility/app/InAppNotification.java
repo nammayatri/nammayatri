@@ -27,7 +27,7 @@ import org.json.JSONObject;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class InAppNotification extends AppCompatActivity {

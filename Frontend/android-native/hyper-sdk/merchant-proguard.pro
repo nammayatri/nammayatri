@@ -39,7 +39,7 @@
 -dontwarn in.juspay.hypernfc.NfcBridge
 -dontwarn in.juspay.hyperpaypal.PaypalBridge
 -dontwarn in.juspay.hyperpayu.PayUBridge
--dontwarn in.juspay.hyperqr.QrBridge
+-dontwarn in.juspay.mobility.sdk.hyperqr.QrBridge
 -dontwarn in.juspay.hypersimpl.SimplBridge
 -dontwarn in.juspay.hyperupi.UPIBridge
 

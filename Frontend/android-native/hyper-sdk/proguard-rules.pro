@@ -106,11 +106,7 @@
     @androidx.annotation.Keep <init>(...);
 }
 
--keepclassmembers public class in.juspay.hypersdk.core.AcsInterface {
-    public *;
-}
-
--keepclassmembers public class in.juspay.hypersdk.core.DuiInterface {
+-keepclassmembers public class in.juspay.mobility.sdk.core.DuiInterface {
     public *;
 }
 

@@ -21,7 +21,7 @@ import androidx.core.graphics.drawable.DrawableCompat;
 
 import java.util.Locale;
 
-import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
 
 public class SliderComponent {
     private SeekBar seekBar;

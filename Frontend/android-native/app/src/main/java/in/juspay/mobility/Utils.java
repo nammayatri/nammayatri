@@ -3,7 +3,7 @@ package in.juspay.mobility;
 import static android.app.Activity.RESULT_OK;
 
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
-import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
+
 import in.juspay.mobility.app.CleverTapSignedCall;
 
 import android.app.Activity;
@@ -36,10 +36,10 @@ import org.json.JSONObject;
 
 import java.util.UUID;
 
-import in.juspay.hypersdk.core.PaymentConstants;
-import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.BuildConfig;
+import in.juspay.mobility.sdk.core.PaymentConstants;
+import in.juspay.mobility.sdk.data.KeyValueStore;
 import in.juspay.mobility.app.MissedCallActionsHandler;
-import in.juspay.services.HyperServices;
 
 public class Utils {
 
@@ -104,7 +104,7 @@ public class Utils {
 
     public static JSONObject getInnerPayload(JSONObject payload, String action, Context context) throws JSONException{
         String appName = "";
-        boolean loadDynamicModule = BuildConfig.includeDynamicFeature;
+        boolean loadDynamicModule = in.juspay.mobility.BuildConfig.includeDynamicFeature;
         try{
             appName = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();
         }catch (Exception e){

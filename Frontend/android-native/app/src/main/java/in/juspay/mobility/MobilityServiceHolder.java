@@ -24,12 +24,12 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.UUID;
 
-import in.juspay.hypersdk.core.MerchantViewType;
-import in.juspay.hypersdk.core.PaymentConstants;
-import in.juspay.hypersdk.data.JuspayResponseHandler;
-import in.juspay.hypersdk.data.KeyValueStore;
-import in.juspay.hypersdk.ui.HyperPaymentsCallback;
-import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
+import in.juspay.mobility.sdk.core.MerchantViewType;
+import in.juspay.mobility.sdk.core.PaymentConstants;
+import in.juspay.mobility.sdk.data.JuspayResponseHandler;
+import in.juspay.mobility.sdk.data.KeyValueStore;
+import in.juspay.mobility.sdk.ui.HyperPaymentsCallback;
+import in.juspay.mobility.sdk.ui.HyperPaymentsCallbackAdapter;
 
 public class MobilityServiceHolder {
     private static MobilityServiceHolder instance;

@@ -17,14 +17,12 @@ import static in.juspay.mobility.Utils.initCTSignedCall;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
-import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -62,9 +60,6 @@ import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
-import com.clevertap.android.signedcall.fcm.SignedCallNotificationHandler;
-import com.clevertap.android.signedcall.init.SignedCallAPI;
-import com.clevertap.android.signedcall.interfaces.SCNetworkQualityHandler;
 import com.facebook.soloader.SoLoader;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
@@ -95,27 +90,23 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.Vector;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import in.juspay.hypersdk.core.PaymentConstants;
-import in.juspay.hypersdk.data.JuspayResponseHandler;
-import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
+import in.juspay.mobility.BuildConfig;
+import in.juspay.mobility.sdk.core.PaymentConstants;
+import in.juspay.mobility.sdk.data.JuspayResponseHandler;
+import in.juspay.mobility.sdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.CleverTapSignedCall;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateServiceV2;
-import in.juspay.mobility.app.MissedCallActionsHandler;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
@@ -126,7 +117,6 @@ import in.juspay.mobility.common.utils.CipherUtil;
 import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
-import in.juspay.services.HyperServices;
 
 import java.util.Iterator;
 
@@ -624,7 +614,7 @@ public class MainActivity extends AppCompatActivity {
         }
         registerCallBack();
 
-        if (BuildConfig.DEBUG) {
+        if (in.juspay.mobility.BuildConfig.DEBUG) {
             FirebaseMessaging.getInstance().subscribeToTopic("test");
         }
         Window window = this.getWindow();
@@ -636,10 +626,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initiateRSIntegration() {
-        String algo = BuildConfig.RS_ALGO;
-        String algoPadding = BuildConfig.RS_ALGO_PADDING;
-        String instanceType = BuildConfig.RS_INSTANCE_TYPE;
-        String encKey = BuildConfig.RS_ENC_KEY;
+        String algo = in.juspay.mobility.BuildConfig.RS_ALGO;
+        String algoPadding = in.juspay.mobility.BuildConfig.RS_ALGO_PADDING;
+        String instanceType = in.juspay.mobility.BuildConfig.RS_INSTANCE_TYPE;
+        String encKey = in.juspay.mobility.BuildConfig.RS_ENC_KEY;
 
         CipherUtil cipherUtil = CipherUtil.getInstance();
         cipherUtil.setParams(algo, algoPadding, instanceType, encKey);
@@ -823,7 +813,7 @@ public class MainActivity extends AppCompatActivity {
         editor.putString("MERCHANT_ID", merchantId);
         editor.putString("BASE_URL", baseUrl);
         editor.putString("CUSTOMER_BASE_URL", in.juspay.mobility.BuildConfig.CONFIG_URL_USER);
-        editor.putString("CUSTOMER_REG_TOKEN", BuildConfig.CUSTOMER_REG_TOKEN);
+        editor.putString("CUSTOMER_REG_TOKEN", in.juspay.mobility.BuildConfig.CUSTOMER_REG_TOKEN);
         editor.apply();
     }
 

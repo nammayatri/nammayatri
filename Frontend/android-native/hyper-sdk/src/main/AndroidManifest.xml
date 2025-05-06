@@ -6,11 +6,11 @@
 
     <application android:hardwareAccelerated="true">
         <activity
-            android:name="in.juspay.hypersdk.core.CustomtabActivity"
+            android:name="in.juspay.hypersdk.in.juspay.mobility.core.CustomtabActivity"
             android:exported="false"
             android:launchMode="singleTask" />
         <activity
-            android:name="in.juspay.hypersdk.core.CustomtabResult"
+            android:name="in.juspay.hypersdk.in.juspay.mobility.core.CustomtabResult"
             android:exported="true"
             android:launchMode="singleTask">
             <intent-filter>

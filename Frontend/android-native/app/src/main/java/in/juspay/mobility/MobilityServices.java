@@ -1,20 +1,15 @@
 package in.juspay.mobility;
 
-import android.app.Activity;
 import android.content.Context;
-import android.view.View;
-import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.FragmentActivity;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import in.juspay.hyper.bridge.HyperBridge;
-import in.juspay.services.HyperServices;
-import in.juspay.services.TenantParams;
+import in.juspay.mobility.sdk.hyper.bridge.HyperBridge;
+import in.juspay.mobility.sdk.services.HyperServices;
+import in.juspay.mobility.sdk.services.TenantParams;
 
 public class MobilityServices extends HyperServices {
 

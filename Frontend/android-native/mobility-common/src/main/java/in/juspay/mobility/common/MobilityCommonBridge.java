@@ -203,18 +203,18 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 
-import in.juspay.hyper.bridge.HyperBridge;
-import in.juspay.hyper.constants.LogCategory;
-import in.juspay.hyper.constants.LogSubCategory;
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
-import in.juspay.hyper.core.JsCallback;
-import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.sdk.hyper.bridge.HyperBridge;
+import in.juspay.mobility.sdk.hyper.constants.LogCategory;
+import in.juspay.mobility.sdk.hyper.constants.LogSubCategory;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.JsCallback;
+import in.juspay.mobility.sdk.hyper.core.JuspayLogger;
 import in.juspay.mobility.common.cropImage.CropImage;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.mobility.common.utils.CipherUtil;
 import in.juspay.mobility.common.utils.Utils;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -1083,7 +1083,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, float zoomLevel, JSONObject circleConfig) {
+    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, double zoomLevel, JSONObject circleConfig) {
         try {
             System.out.println("Inside locateOnMap" + zoomLevel);
             ExecutorManager.runOnMainThread(() -> {
@@ -1099,9 +1099,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
                 if (moveToCurrentPosition) {
                     LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, (float) zoomLevel));
                 } else {
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position,(float) zoomLevel));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
                 if (editLocation && googleMap != null) {
@@ -1146,10 +1146,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     if (googleMap != null)
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoomLevel));
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, (float)zoomLevel));
                 } else {
                     if (googleMap != null) {
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, (float)zoomLevel));
                         googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                     }
                 }
@@ -1993,7 +1993,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void animateCamera(final double lat, final double lng, final float zoom, final String zoomType) {
+    public void animateCamera(final double lat, final double lng, final double zoom, final String zoomType) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 if (googleMap != null) {
@@ -2005,7 +2005,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 .build();
                         googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), animationDuration, null);
                     } else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom), animationDuration, null);
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, (float)zoom), animationDuration, null);
                     }
                     Log.i(MAPS, "Animated Camera");
                 }
@@ -2060,7 +2060,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    public void animateCameraV2(final double lat, final double lng, final float zoom, final String zoomType, final String pureScriptID) {
+    public void animateCameraV2(final double lat, final double lng, final double zoom, final String zoomType, final String pureScriptID) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 GoogleMap gMap = (googleMapInstance.get(pureScriptID) != null) ? googleMapInstance.get(pureScriptID) : googleMap;
@@ -2073,7 +2073,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 .build();
                         gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), animationDuration, null);
                     } else {
-                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom), animationDuration, null);
+                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, (float)zoom), animationDuration, null);
                     }
                     Log.i(MAPS, "Animated Camera v2");
                 }
@@ -2113,7 +2113,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    public void upsertMarkerV2(MarkerConfig markerConfig, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1, final String pureScripID) {
+    public void upsertMarkerV2(MarkerConfig markerConfig, final String lat, final String lng, final int markerSize, final double anchorV, final double anchorV1, final String pureScripID) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 GoogleMap gMap = googleMapInstance.get(pureScripID);
@@ -2137,7 +2137,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerObject.setAlpha(alpha);
                         Log.i(MAPS, "Marker position updated for " + title);
                     } else {
-                        MarkerOptions markerOptionsObj = makeMarkerObject(imageName, latitude, longitude, markerSize, anchorV, anchorV1);
+                        MarkerOptions markerOptionsObj = makeMarkerObject(imageName, latitude, longitude, markerSize, (float)anchorV, (float)anchorV1);
                         if (markerOptionsObj != null && gMap != null) {
                             markerObject = gMap.addMarker(markerOptionsObj);
                             markers.put(title, markerObject);
@@ -2215,7 +2215,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
+    public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final double anchorV, final double anchorV1) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 if (lat != null && lng != null) {
@@ -2232,7 +2232,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerObject.getPosition();
                         Log.i(MAPS, "Marker position updated for " + title);
                     } else {
-                        MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
+                        MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, (float)anchorV, (float)anchorV1);
                         if (markerOptionsObj != null && googleMap != null) {
                             markerObject = googleMap.addMarker(markerOptionsObj);
                             markers.put(title, markerObject);
@@ -2397,7 +2397,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
 
     @SuppressLint({"MissingPermission", "PotentialBehaviorOverride"})
-    private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
+    private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final double zoom) {
         if (bridgeComponents.getActivity() != null) {
             mapFragment.getMapAsync(googleMap -> {
                 this.googleMap = googleMap;
@@ -2424,7 +2424,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     setMapCustomTheme();
                     if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
                         LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
+                        this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, (float)zoom));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -3850,7 +3850,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
+    public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final double zoom, final String callback, final String mapConfig) {
         try {
             System.out.println("Inside showMap 123");
             ExecutorManager.runOnMainThread(() -> {

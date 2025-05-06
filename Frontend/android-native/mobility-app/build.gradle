@@ -9,7 +9,7 @@ android {
     namespace "in.juspay.mobility.app"
 
     defaultConfig {
-        minSdk 24
+        minSdk 21
         targetSdk 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -73,6 +73,7 @@ protobuf {
 
 dependencies {
     implementation project(':mobility-common')
+    implementation project(':hyper')
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
     implementation 'com.google.android.play:app-update:2.1.0'
@@ -91,7 +92,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'androidx.browser:browser:1.2.0'
-    compileOnly 'in.juspay:hypersdk:2.1.33-nammayatri.17'
+    implementation 'in.juspay:hypersdk:2.1.33-nammayatri.17'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
@@ -103,7 +104,6 @@ dependencies {
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     implementation 'com.github.bumptech.glide:glide:4.12.0'
     implementation 'com.google.android.gms:play-services-auth:20.5.0'
-    implementation libs.javet.v8.android
     implementation 'com.clevertap.android:clevertap-android-sdk:6.0.0'
     implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.9.0"
     implementation('io.socket:socket.io-client:2.1.0') {

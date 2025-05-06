@@ -20,10 +20,6 @@ android {
         debug {
             minifyEnabled false
         }
-        qa {
-            initWith release
-            debuggable true
-        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -69,10 +65,7 @@ android {
         }
     }
 
-    // This is required for local testing, otherwise, instrumented tests will not
-    // be recognized by android studio. The default for this value is 'debug'.
-    testBuildType "qa"
-    namespace 'in.juspay.hypersdk'
+    namespace 'in.juspay.mobility.sdk'
 }
 
 dependencies {
@@ -80,9 +73,10 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
 
+    implementation 'wang.harlon.quickjs:wrapper-android:3.1.0'
+
     implementation project(":hyper")
     implementation project(":hyper-sms-handler")
-    implementation project(":hermes-engine")
     implementation 'androidx.core:core-ktx:1.1.0'
     compileOnly project(':hyper-lottie')
     compileOnly project(':hyper-qr')
