@@ -330,7 +330,7 @@ android {
 }
 
 ext {
-    jpSDKversion = '2.1.33-nammayatri.07'
+    jpSDKversion = '2.1.33-nammayatri.17'
 }
 
 def cameraxVersion = "1.1.0-alpha05"

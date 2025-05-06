@@ -90,6 +90,7 @@ import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.services.HyperServices;
 
 /**
  * A foreground service for managing location updates for a driver app.
@@ -179,7 +180,7 @@ public class LocationUpdateServiceV2 extends Service {
     private float locationMinDisplacement = 25.0f; // meters
     private int locationBatchSize = 20; // How many locations to batch before sending
     // State tracking
-    private boolean isLocationUpdating = false;
+    public  static boolean isLocationUpdating = false;
     private double lastLatitudeValue;
     private double lastLongitudeValue;
     private Context context;
@@ -207,6 +208,8 @@ public class LocationUpdateServiceV2 extends Service {
     private boolean useWakeLock = false;  // Default to false until config is loaded
     private long wakeLockTimeoutMs = 30000;  // Default 30 seconds timeout
     private long rateLimitTimeInSeconds = 2; // Default rate limiting time in seconds
+    @Nullable
+    private Object hyperServices;
 
     /**
      * Registers a callback to receive location update notifications.
@@ -1139,6 +1142,8 @@ public class LocationUpdateServiceV2 extends Service {
         if (sharedPrefs != null) {
             sharedPrefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener);
         }
+
+        isLocationUpdating = false;
 
         // Stop location updates
         stopLocationUpdates();
@@ -2479,5 +2484,13 @@ public class LocationUpdateServiceV2 extends Service {
         if(locationEmitter != null){
             locationEmitter.emitter(payload);
         }
+    }
+
+    public void storeHyperService(Object holder) {
+        hyperServices = holder;
+    }
+
+    public Object getHyperService() {
+        return hyperServices;
     }
 }

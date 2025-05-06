@@ -465,7 +465,8 @@ checkAndStartChatService push retry rideId state =
 
 view :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  frameLayout
+  Anim.screenAnimation
+  $ frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT] $
   [ relativeLayout

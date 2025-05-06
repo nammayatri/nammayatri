@@ -357,7 +357,7 @@ public class MobilityAppBridge extends HyperBridge {
         boolean isCachingEnabled = false;
         try {
             JSONObject config = new JSONObject(s);
-            isCachingEnabled = config.optBoolean(KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "DRIVER_LOCATION", ""),false);
+            isCachingEnabled = config.optBoolean(KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "DRIVER_LOCATION", "").toLowerCase(),false);
         } catch (Exception e) {
             e.printStackTrace();
         }

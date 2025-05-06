@@ -76,7 +76,8 @@ const logger = function () {
 console.log("APP_PERF INDEX_LOGGER_END : ", new Date().getTime());
 
 window.__FN_INDEX = window.__FN_INDEX || 0;
-window.__PROXY_FN = window.__PROXY_FN || {};
+window.__PROXY_FN = window.__PROXY_FN || new Map();
+window.__PROXY_FN_MAP_TYPE = true;
 console.log("APP_PERF INDEX_BUNDLE_OS_END : ", new Date().getTime());
 
 let purescript
@@ -134,7 +135,7 @@ function refreshFlow() {
     }
     window.JBridge.setKeysInSharedPrefs("CALL_REFRESH", "false");
     // purescript.onConnectivityEvent("REFRESH")();
-    for(const key in window.onResumeListenersMap) {
+    for (const key in window.onResumeListenersMap) {
       window.onResumeListenersMap[key].call()
     }
   }
@@ -220,15 +221,25 @@ window.onMerchantEvent = function (_event, payload) {
     } catch (err) {
       console.log(err)
     }
+    JBridge.enableWebViewRecreate("true");
     callInitiateResult();
     setTimeout(() => {
       getPureScript()
-    },0)
+    }, 0)
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
     window.__payload = parsedPayload;
+    if (window.__payload.payload.initiateStartedTime) {
+      const diff = Date.now() - window.__payload.payload.initiateStartedTime;
+      console.warn("diff", diff);
+      if (diff > 5000) {
+        console.warn("Process called after 5 seconds");
+        window.Profile = undefined;
+        window.RideList = undefined;
+      }
+    }
     try {
       if (
         parsedPayload.payload &&
@@ -240,10 +251,18 @@ window.onMerchantEvent = function (_event, payload) {
           new Date().getTime() - parsedPayload.payload.onCreateTimeStamp;
         window.events.initAppToProcessDuration =
           new Date().getTime() - parsedPayload.payload.initiateTimeStamp;
+        window.timeStamps["initAppToProcessDuration"] = window.timeStamps["initAppToProcessDuration"] || {}
+        window.timeStamps["initAppToProcessDuration"]["start"] = parsedPayload.payload.initiateTimeStamp;
+        window.timeStamps["onCreateToProcessDuration"] = window.timeStamps["onCreateToProcessDuration"] || {}
+        window.timeStamps["onCreateToProcessDuration"]["start"] = parsedPayload.payload.onCreateTimeStamp;
+        window.timeStamps["initAppToProcessDuration"]["start"] = Date.now();
+        window.timeStamps["onCreateToProcessDuration"]["start"] = Date.now();
+
       }
     } catch (err) {
       console.log(err)
     }
+    console.log("TimeStamps", JSON.stringify(window.timeStamps))
     window.__payload = parsedPayload;
     console.log("window Payload: ", window.__payload);
     const jpConsumingBackpress = {
@@ -293,7 +312,7 @@ window.callUICallback = function () {
   const functionArgs = args.slice(1)
   let currTime;
   let timeDiff;
-  if (fName && functionArgs[0] !== "TIMEOUT")  {
+  if (fName && functionArgs[0] !== "TIMEOUT") {
     if (window.__THROTTELED_ACTIONS && window.__THROTTELED_ACTIONS.indexOf(fName) == -1) {
       window.__PROXY_FN[fName].apply(null, functionArgs);
     } else if (window.__LAST_FN_CALLED && (fName == window.__LAST_FN_CALLED.fName)) {
@@ -301,14 +320,24 @@ window.callUICallback = function () {
       timeDiff = currTime - window.__LAST_FN_CALLED.timeStamp;
 
       if (timeDiff >= 100) {
-        window.__PROXY_FN[fName].apply(null, functionArgs);
+        if (window.__PROXY_FN_MAP_TYPE) {
+          console.log("PROXY_FN_MAP_TYPE", window.__PROXY_FN.get(fName));
+          window.__PROXY_FN.get(fName).apply(null, functionArgs);
+        } else {
+          window.__PROXY_FN[fName].apply(null, functionArgs);
+        }
         window.__LAST_FN_CALLED.timeStamp = currTime;
       } else {
         console.warn("function throtteled", fName);
         console.warn("time diff", timeDiff);
       }
     } else {
-      window.__PROXY_FN[fName].apply(null, functionArgs);
+      if (window.__PROXY_FN_MAP_TYPE) {
+        console.log("PROXY_FN_MAP_TYPE", window.__PROXY_FN.get(fName));
+        window.__PROXY_FN.get(fName).apply(null, functionArgs);
+      } else {
+        window.__PROXY_FN[fName].apply(null, functionArgs);
+      }
       window.__LAST_FN_CALLED = {
         timeStamp: (new Date()).getTime(),
         fName: fName
@@ -349,6 +378,19 @@ window.onResume = function () {
 
 window.onActivityResult = function () {
   console.log(arguments)
+}
+
+window.onDestroy = function () {
+  console.log("onDestroy");
+  window.__PROXY_FN = new Map();
+  window.__FN_INDEX = 0;
+
+  window.onResumeListeners = [];
+  window.onResumeListenersMap = {};
+  window.internetListeners = {};
+  window.activityResultListeners = {};
+  window.eventListeners = {};
+  getPureScript().onDestroy("")();
 }
 
 window.onBackPressed = function () {
@@ -397,6 +439,8 @@ window["onEvent'"] = function (_event, args) {
   } else if (_event == "onPause") {
     previousDateObject = new Date();
     window.onPause();
+  } else if (_event == "onDestroy") {
+    window.onDestroy();
   } else if (_event == "onResume") {
     window.onResume();
     refreshFlow();
@@ -446,12 +490,16 @@ if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.incl
   window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
 }
 
-JOS.emitEvent("java","onEvent",JSON.stringify({ action: "DUI_READY", event: "initiate",service : JOS.self }))();
+JOS.emitEvent("java", "onEvent", JSON.stringify({
+  action: "DUI_READY",
+  event: "initiate",
+  service: JOS.self
+}))();
 
 if (!window.JOS.tracker) {
   eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
   window.JOS.tracker = window.getTrackerModule.Main.initTracker()
-  window.tracker =  window.JOS.tracker
+  window.tracker = window.JOS.tracker
 
 }
 
