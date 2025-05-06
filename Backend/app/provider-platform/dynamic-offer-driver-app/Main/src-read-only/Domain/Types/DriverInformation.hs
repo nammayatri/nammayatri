@@ -46,6 +46,7 @@ data DriverInformation = DriverInformation
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
+    drunkAndDriveViolationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

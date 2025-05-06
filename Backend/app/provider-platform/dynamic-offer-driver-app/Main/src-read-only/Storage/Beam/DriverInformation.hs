@@ -44,6 +44,7 @@ data DriverInformationT f = DriverInformationT
     driverId :: B.C f Kernel.Prelude.Text,
     driverTripEndLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverTripEndLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    drunkAndDriveViolationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     enabled :: B.C f Kernel.Prelude.Bool,
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     extraFareMitigationFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

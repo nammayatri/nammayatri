@@ -91,6 +91,7 @@ DriverInformation:
     lastACStatusCheckedAt: Maybe UTCTime
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
+    drunkAndDriveViolationCount: Maybe Int
     extraFareMitigationFlag: Maybe Bool
     forwardBatchingEnabled: Bool
     payoutVpa: Maybe Text
@@ -368,4 +369,7 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [referredByFleetOwnerId]
       where: driverId
-
+    updateDrunkAndDriveViolationCount:
+      kvFunction: updateOneWithKV
+      params: [drunkAndDriveViolationCount]
+      where: driverId

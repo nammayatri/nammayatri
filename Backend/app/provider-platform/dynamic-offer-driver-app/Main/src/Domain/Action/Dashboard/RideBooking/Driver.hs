@@ -68,6 +68,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
@@ -328,8 +329,9 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
   blockHistory <- B.runInReplica $ QDBT.findByDriverId driverId
+  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
 
-  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory
+  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory (fromMaybe 0 driverInfo.drunkAndDriveViolationCount)
 
 buildDriverInfoRes ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
@@ -337,8 +339,9 @@ buildDriverInfoRes ::
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
   [DTDBT.DriverBlockTransactions] ->
+  Int ->
   m Common.DriverInfoRes
-buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory blockHistory = do
+buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory blockHistory drunkAndDriveViolationCount = do
   mobileNumber <- traverse decrypt person.mobileNumber
   let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
@@ -423,7 +426,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         email,
         softBlockStiers = info.softBlockStiers >>= (pure . map show),
         softBlockExpiryTime = info.softBlockExpiryTime,
-        softBlockReasonFlag = info.softBlockReasonFlag
+        softBlockReasonFlag = info.softBlockReasonFlag,
+        drunkAndDriveViolationCount
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
