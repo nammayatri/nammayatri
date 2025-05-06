@@ -5,6 +5,7 @@ module API.Types.Dashboard.AppManagement where
 
 import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
+import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified Data.List
 import Data.OpenApi (ToSchema)
@@ -16,6 +17,7 @@ import qualified Text.Show
 data AppManagementUserActionType
   = CUSTOMER API.Types.Dashboard.AppManagement.Customer.CustomerUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
+  | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -24,6 +26,7 @@ instance Text.Show.Show AppManagementUserActionType where
   show = \case
     CUSTOMER e -> "CUSTOMER/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
+    TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
 
 instance Text.Read.Read AppManagementUserActionType where
@@ -37,6 +40,15 @@ instance Text.Read.Read AppManagementUserActionType where
                  )
                  | r1 <- stripPrefix "MERCHANT_ONBOARDING/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TICKET_DASHBOARD v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TICKET_DASHBOARD/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( TICKETS v1,
                    r2
