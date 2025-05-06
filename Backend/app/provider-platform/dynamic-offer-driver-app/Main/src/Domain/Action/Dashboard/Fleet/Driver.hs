@@ -1910,10 +1910,6 @@ postDriverFleetAddDrivers ::
 postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  fleetOwnerId <- case req.fleetOwnerId of
-    Nothing -> throwError FleetOwnerIdRequired
-    Just id -> pure id
-  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   driverDetails <- Csv.readCsv @CreateDriversCSVRow @DriverDetails req.file parseDriverInfo
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   let process func =
@@ -1931,6 +1927,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   unprocessedEntities <- case mbRequestorId of
     Nothing -> do
       -- old flow
+      fleetOwnerId <- case req.fleetOwnerId of
+        Nothing -> throwError FleetOwnerIdRequired
+        Just id -> pure id
+      DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
       fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
       unless (fleetOwner.role == DP.FLEET_OWNER) $
         throwError (InvalidRequest "Invalid fleet owner")

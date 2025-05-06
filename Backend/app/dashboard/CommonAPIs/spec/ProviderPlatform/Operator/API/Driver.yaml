@@ -152,7 +152,6 @@ types:
     requestTime: UTCTime
   RespondHubRequest:
     status: RequestStatus
-    registrationNo: Text # FIXME hide secrets
     operationHubRequestId: Text
     operatorId: Text
     remarks: Text
