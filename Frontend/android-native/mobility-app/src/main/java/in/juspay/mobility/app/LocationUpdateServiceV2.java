@@ -79,6 +79,7 @@ import java.util.Queue;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -2120,6 +2121,7 @@ public class LocationUpdateServiceV2 extends Service {
     class MessageQueue {
         private final Queue<LocationData> queue = new ConcurrentLinkedQueue<>();
         private final Handler handler;
+        private final ExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
         /**
          * Creates a new MessageQueue with the provided looper.
@@ -2135,7 +2137,9 @@ public class LocationUpdateServiceV2 extends Service {
                         case MSG_LOCATION_UPDATE:
                             LocationData locationData = (LocationData) msg.obj;
                             queue.add(locationData);
-                            saveQueueToCache();
+                            executor.execute(() -> saveQueueToCache());
+
+
 
                             // Emitte the location object to react application
                             if(locationEmitter != null){
@@ -2159,7 +2163,7 @@ public class LocationUpdateServiceV2 extends Service {
                             break;
 
                         case MSG_CACHE_FLUSH:
-                            saveQueueToCache();
+                            executor.execute(() -> saveQueueToCache());
                             break;
                     }
                 }
@@ -2245,7 +2249,7 @@ public class LocationUpdateServiceV2 extends Service {
          */
         void addAll(List<LocationData> locations) {
             queue.addAll(locations);
-            saveQueueToCache();
+            executor.execute(() -> saveQueueToCache());
         }
 
         /**
@@ -2383,14 +2387,6 @@ public class LocationUpdateServiceV2 extends Service {
                     long timeSinceLastCall = currentTime - lastSentTime;
 
                     long rateLimitTimeInMillis = rateLimitTimeInSeconds * 1000; // Convert to milliseconds
-
-                    if (timeSinceLastCall < rateLimitTimeInMillis) {
-                        try {
-                            Thread.sleep(rateLimitTimeInMillis - timeSinceLastCall);
-                        } catch (InterruptedException e) {
-                            Log.e(TAG_ERROR, "Rate limiting sleep interrupted", e);
-                        }
-                    }
 
                     // Check if we need to send regardless of batch size due to time
                     boolean sendDueToTime = shouldSendBatchDueToTime();
