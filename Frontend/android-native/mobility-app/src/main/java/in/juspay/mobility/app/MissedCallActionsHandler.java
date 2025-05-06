@@ -1,7 +1,7 @@
 package in.juspay.mobility.app;
 
 import static android.Manifest.permission.RECORD_AUDIO;
-import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
+import static in.juspay.mobility.sdk.hyper.core.JuspayCoreLib.getApplicationContext;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -28,7 +28,7 @@ import com.clevertap.android.signedcall.models.MissedCallNotificationOpenResult;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
 
 
 public class MissedCallActionsHandler implements MissedCallNotificationOpenedHandler {

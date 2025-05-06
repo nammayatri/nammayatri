@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
 
 public class SpeechRecognition {
     private static final int REQUEST_MIC_PERMISSION = 1;

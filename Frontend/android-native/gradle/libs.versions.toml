@@ -13,7 +13,6 @@ constraintlayout = "2.1.4"
 [libraries]
 firebase-analytics = { module = "com.google.firebase:firebase-analytics"}
 javenode = { module = "com.caoccao.javet:javenode", version.ref = "javenode" }
-javet-v8-android = { module = "com.caoccao.javet:javet-v8-android", version.ref = "javetV8Android" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

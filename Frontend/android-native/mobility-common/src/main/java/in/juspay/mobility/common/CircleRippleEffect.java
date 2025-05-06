@@ -25,8 +25,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 
 public class CircleRippleEffect {
 

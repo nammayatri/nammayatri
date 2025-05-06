@@ -36,8 +36,8 @@ import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 
 public class CameraUtils {
 

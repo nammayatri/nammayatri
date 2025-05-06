@@ -9,7 +9,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        minSdk 24
+        minSdk 21
         targetSdk 34
     }
 
@@ -42,7 +42,7 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    namespace 'in.juspay.hypersmshandler'
+    namespace 'in.juspay.mobility.sdk.hypersmshandler'
 }
 
 dependencies {

@@ -42,7 +42,7 @@ android {
         jvmTarget = '1.8'
     }
 
-    namespace 'in.juspay.hyperqr'
+    namespace 'in.juspay.mobility.sdk.hyperqr'
 }
 
 dependencies {

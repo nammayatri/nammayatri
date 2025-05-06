@@ -23,10 +23,10 @@ import org.json.JSONObject;
 
 import java.util.UUID;
 
-import in.juspay.hyper.constants.LogCategory;
-import in.juspay.hyper.constants.LogSubCategory;
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.constants.LogCategory;
+import in.juspay.mobility.sdk.hyper.constants.LogSubCategory;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.core.MerchantViewType;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;

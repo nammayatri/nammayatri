@@ -53,9 +53,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
-import in.juspay.hyper.core.JuspayLogger;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.JuspayLogger;
 import in.juspay.mobility.common.MapRemoteConfig;
 import in.juspay.mobility.common.MobilityCommonBridge;
 import android.view.accessibility.AccessibilityManager;

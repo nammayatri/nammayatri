@@ -33,7 +33,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.mobility.common.mediaPlayer.MediaPlayerControl;
 import in.juspay.mobility.common.mediaPlayer.MediaPlayerOnCompleteListener;

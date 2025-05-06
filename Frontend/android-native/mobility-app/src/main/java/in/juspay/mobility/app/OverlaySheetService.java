@@ -77,6 +77,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -99,8 +101,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private WindowManager windowManager;
     private SharedPreferences sharedPref;
     private final MediaPlayer[] mediaPlayers = new MediaPlayer[3];
-    private MediaPlayer currentMediaPlayer;
-    private int currentMediaIndex = -1;
+    private AtomicReference<MediaPlayer> currentMediaPlayer;
+    private volatile AtomicInteger currentMediaIndex =  new AtomicInteger(-1);
 
     private int time = 0, retryAddViewCount = 10;;
     private View progressDialog, apiLoader, floatyView;
@@ -562,7 +564,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }
             currentMediaPlayer = null;
-            currentMediaIndex = -1;
+            currentMediaIndex = new AtomicInteger(-1);
             time = 0;
             sheetArrayList.clear();
             NotificationUtils.binder = null;
@@ -723,17 +725,19 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             stops,
                             roundTrip
                     );
-                    if (currentMediaIndex == -1) {
-                        currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
+                    if (currentMediaIndex.get() == -1) {
+                        currentMediaIndex = new AtomicInteger(getRideRequestSoundId(sheetModel.getRideProductType()));
                     }
-                    if (currentMediaPlayer == null || !currentMediaPlayer.isPlaying()) {
-                        currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                        currentMediaPlayer.start();
-                        if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                        if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
-                            increaseVolume(context);
+                    executor.execute(() -> {
+                        if (currentMediaPlayer == null || !currentMediaPlayer.get().isPlaying()) {
+                            currentMediaPlayer = new AtomicReference<>(mediaPlayers[currentMediaIndex.get()]);
+                            if (!currentMediaPlayer.get().isPlaying()) currentMediaPlayer.get().start();
+                            if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                            if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
+                                increaseVolume(context);
+                            }
                         }
-                    }
+                    });
                     if (floatyView == null) {
                         startTimer();
                         showOverLayPopup(rideRequestBundle);
@@ -956,7 +960,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (errorPayload.has(getResources().getString(R.string.ERROR_MESSAGE))) {
                     handler.post(() -> {
                         try {
-                            Toast.makeText(context, errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context,  errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
                         } catch (JSONException e) {
                             Exception exception = new Exception("Error in response respondAPI " + e);
                             FirebaseCrashlytics.getInstance().recordException(exception);
@@ -992,7 +996,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     mediaPlayer.release();
                 }
                 currentMediaPlayer = null;
-                currentMediaIndex = -1;
+                currentMediaIndex = new AtomicInteger(-1);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1009,9 +1013,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     private void startLoader(String id) {
         try {
-            if (currentMediaPlayer != null) {
-                if (currentMediaPlayer.isPlaying()) {
-                    currentMediaPlayer.pause();
+            if (currentMediaPlayer.get() != null) {
+                if (currentMediaPlayer.get().isPlaying()) {
+                    currentMediaPlayer.get().pause();
                 }
             }
             if (floatyView != null) {
@@ -1148,9 +1152,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     private void startApiLoader() {
         try {
-            if (currentMediaPlayer != null) {
-                if (currentMediaPlayer.isPlaying()) {
-                    currentMediaPlayer.pause();
+            if (currentMediaPlayer.get() != null) {
+                if (currentMediaPlayer.get().isPlaying()) {
+                    currentMediaPlayer.get().pause();
                 }
             }
             if (apiLoader != null) {
@@ -1339,17 +1343,23 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     }
 
+
+
     /*
     * To update the audio sound based on notification type when card changes are driver swipes the cards*/
     private void updateMediaPlayer(int position) {
         try {
-            if (position < 0 || position >= sheetArrayList.size()) return;
-            if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
-                currentMediaPlayer.pause();
-            }
-            currentMediaIndex = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
-            currentMediaPlayer = mediaPlayers[currentMediaIndex];
-            currentMediaPlayer.start();
+            executor.execute(() -> {
+                if (position < 0 || position >= sheetArrayList.size()) return;
+                if (currentMediaPlayer.get() != null && currentMediaPlayer.get().isPlaying()) {
+                    currentMediaPlayer.get().pause();
+                }
+                currentMediaIndex = new AtomicInteger(getRideRequestSoundId(sheetArrayList.get(position).getRideProductType()));
+                currentMediaPlayer = new AtomicReference<>(mediaPlayers[currentMediaIndex.get()]);
+                if (!currentMediaPlayer.get().isPlaying()) {
+                    currentMediaPlayer.get().start();
+                }
+            });
 
         } catch (Exception e) {
 

@@ -45,8 +45,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;

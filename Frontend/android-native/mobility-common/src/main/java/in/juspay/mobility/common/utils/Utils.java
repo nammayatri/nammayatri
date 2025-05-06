@@ -1,6 +1,6 @@
 package in.juspay.mobility.common.utils;
 
-import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
+import static in.juspay.mobility.sdk.hyper.core.JuspayCoreLib.getApplicationContext;
 
 import android.app.Activity;
 import android.app.ActivityManager;

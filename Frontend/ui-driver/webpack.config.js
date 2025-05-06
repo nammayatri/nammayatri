@@ -1,7 +1,6 @@
 var path = require('path');
 var webpack = require('webpack');
 var packageJSON = require("./package.json");
-const BuildModulePlugin = require('./BuildModulePlugin');
 
 module.exports = function (env, argv) {
   let plugins = [

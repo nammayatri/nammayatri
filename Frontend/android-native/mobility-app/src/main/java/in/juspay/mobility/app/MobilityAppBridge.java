@@ -93,9 +93,8 @@ import java.util.Locale;
 import java.util.Map;
 
 
-import in.juspay.hyper.bridge.HyperBridge;
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.CleverTapSignedCall;
@@ -103,6 +102,7 @@ import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 import in.juspay.mobility.app.reels.ReelController;
+import in.juspay.mobility.sdk.hyper.bridge.HyperBridge;
 
 public class MobilityAppBridge extends HyperBridge {
     // Clever Tap

@@ -94,10 +94,10 @@ import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.ExecutorManager;
-import in.juspay.hyper.core.JsCallback;
-import in.juspay.hyper.core.JuspayLogger;
+import in.juspay.mobility.sdk.hyper.core.BridgeComponents;
+import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
+import in.juspay.mobility.sdk.hyper.core.JsCallback;
+import in.juspay.mobility.sdk.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateServiceV2;
