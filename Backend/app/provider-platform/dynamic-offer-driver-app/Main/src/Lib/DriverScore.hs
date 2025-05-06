@@ -64,13 +64,13 @@ driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HAND
 
 eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
-  DP.removeSearchReqIdFromMap merchantId driverId searchTryId
+  DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of
     SRD.Accept -> do
       DP.incrementQuoteAcceptedCount merchantOpCityId driverId
       forM_ restDriverIds $ \restDriverId -> do
         DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchTryId
-        DP.removeSearchReqIdFromMap merchantId restDriverId searchTryId
+        DP.removeSearchReqIdFromMap merchantId restDriverId searchReqId
     SRD.Reject -> pure ()
     SRD.Pulled -> pure ()
 eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
