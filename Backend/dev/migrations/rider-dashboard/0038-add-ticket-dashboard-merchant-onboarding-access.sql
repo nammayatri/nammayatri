@@ -67,3 +67,15 @@ INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_acc
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_TICKETPLACE_INFO', now(), now()),
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_TICKETDASHBOARD_TICKETPLACE_UPDATE', now(), now()),
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_TICKETPLACES', now(), now());
+
+-- ASSET MANAGEMENT
+
+-- For TICKET_DASHBOARD_MERCHANT role
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at) VALUES
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4902', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_UPLOAD_ASSET', now(), now()),
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4902', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_DELETE_ASSET', now(), now());
+
+-- For TICKET_DASHBOARD_ADMIN role
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at) VALUES
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_UPLOAD_ASSET', now(), now()),
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_DELETE_ASSET', now(), now());

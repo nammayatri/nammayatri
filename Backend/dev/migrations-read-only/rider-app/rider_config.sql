@@ -257,3 +257,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN straight_line_threshold integer  d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN blocked_until_in_mins int  default 1440;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ticket_asset_domain text ;

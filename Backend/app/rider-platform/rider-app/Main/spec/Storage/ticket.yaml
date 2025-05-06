@@ -90,6 +90,10 @@ TicketPlace:
     getAllTicketPlaces:
       kvFunction: findAllWithKV
       where: status
+    updateGalleryById:
+      kvFunction: updateOneWithKV
+      params: [gallery]
+      where: id
 
 TicketService:
   tableName: ticket_service
