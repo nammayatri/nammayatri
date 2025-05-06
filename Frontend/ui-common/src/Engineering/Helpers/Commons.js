@@ -710,13 +710,13 @@ export const getDateMinusNDays = function (dateStr, days) {
 }
 
 export const addBenchMark  = function(key,isEnded) {
-  window.benchMark = window.benchMark || {};
-  window.benchMark[key] = window.benchMark[key] || {};
-  window.benchMark[key].renders= window.benchMark[key].renders || [];
-  if (window.benchMark[key].startTime && isEnded) {
-    let diff = Date.now() - window.benchMark[key].startTime;
-    window.benchMark[key].renders.push(diff);
-  } else {
-    window.benchMark[key].startTime = Date.now();
-  }
+  // window.benchMark = window.benchMark || {};
+  // window.benchMark[key] = window.benchMark[key] || {};
+  // window.benchMark[key].renders= window.benchMark[key].renders || [];
+  // if (window.benchMark[key].startTime && isEnded) {
+  //   let diff = Date.now() - window.benchMark[key].startTime;
+  //   window.benchMark[key].renders.push(diff);
+  // } else {
+  //   window.benchMark[key].startTime = Date.now();
+  // }
 }

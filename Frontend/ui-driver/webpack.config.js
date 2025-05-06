@@ -1,7 +1,6 @@
 var path = require('path');
 var webpack = require('webpack');
 var packageJSON = require("./package.json");
-const BuildModulePlugin = require('./BuildModulePlugin');
 
 module.exports = function (env, argv) {
   let plugins = [
@@ -9,9 +8,6 @@ module.exports = function (env, argv) {
       __VERSION__: JSON.stringify(packageJSON.version),
       "window.configEnv": JSON.stringify(env)
     }),
-    // new BuildModulePlugin((module) => {
-    //   console.log('Building module:', module.resource);
-    // })
   ]
   let config = {
     mode: "development",
@@ -29,14 +25,12 @@ module.exports = function (env, argv) {
       hints: false
     },
     module: {
-      rules: [
-        {
-          test: /\.js$/,
-          use: {
-            loader: './ps-lazy-loader.js',
-          }
+      rules: [{
+        test: /\.js$/,
+        use: {
+          loader: './ps-lazy-loader.js',
         }
-      ]
+      }]
     },
     devServer: {
       contentBase: path.join(__dirname, 'dist'),

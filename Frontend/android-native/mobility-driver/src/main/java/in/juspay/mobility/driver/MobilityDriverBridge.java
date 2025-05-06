@@ -218,7 +218,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         boolean isCachingEnabled = false;
         try {
             JSONObject config = new JSONObject(s);
-            isCachingEnabled = config.optBoolean(getKeysInSharedPref("DRIVER_LOCATION"),false);
+            isCachingEnabled = config.optBoolean(getKeysInSharedPref("DRIVER_LOCATION").toLowerCase(),false);
         } catch (Exception e) {
             e.printStackTrace();
         }

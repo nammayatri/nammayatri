@@ -317,6 +317,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
 authenticationFlow :: String -> Maybe Event -> FlowBT String Unit
 authenticationFlow _ mbEvent = do
   liftFlowBT $ markPerformance "AUTHENTICATION_FLOW"
+  let config = getAppConfig appConfig
+  if (any (_ == getLanguageLocale languageKey) [ "__failed", "(null)" ]) then void $ pure $ setLanguageLocale config.defaultLanguage else pure unit
   if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then  hideSplashAndCallFlow (loginFlow mbEvent)  else welcomeScreenFlow mbEvent
 
 chooseLanguageFlow :: Maybe Event -> FlowBT String Unit
