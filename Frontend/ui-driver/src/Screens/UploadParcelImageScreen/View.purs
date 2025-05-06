@@ -155,7 +155,7 @@ howToUpload push state =
       , margin $ MarginTop 20
       , stroke $ "1," <> Color.borderGreyColor
       , padding $ Padding 16 16 16 0
-      ]( map rightWrongView uploadParcelInstructionData)
+      ]( map rightWrongView (uploadParcelInstructionData unit))
     ]
   ]
 

@@ -373,7 +373,19 @@ dayLayout state push =
     ( DA.mapWithIndex
         ( \index item -> daypillView state item push index
         )
-        state.data.dayArray
+        [
+              {
+                rideType : Nothing,
+                pillViewText : getString TODAY,
+                isSelected : true,
+                activeColor : Color.black900
+                },{
+                 rideType : Nothing,
+                pillViewText : getString TOMORROW,
+                isSelected : false,
+                activeColor : Color.black900
+              }
+]
     )
 
 loadButtonView :: RideRequestScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w

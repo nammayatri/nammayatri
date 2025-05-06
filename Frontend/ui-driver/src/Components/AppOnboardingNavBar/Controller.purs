@@ -52,7 +52,7 @@ config = {
   },
   genericHeaderConfig : GenericHeader.config,
   rightButton : {
-    text : getString LOGOUT,
+    text : "",
     margin : Margin 5 5 0 22 ,
     color : Color.white900,
     fontStyle : Style.Heading1

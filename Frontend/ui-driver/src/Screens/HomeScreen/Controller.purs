@@ -2310,24 +2310,24 @@ cancellationReasons state = [
         , textBoxRequired : false
         , subtext: Nothing
         }] <>
-        (if state.data.activeRide.tripType == ST.Delivery then deliveryCancellationReasons else customerNotPickingCall)
-        <> otherReasons
+        (if state.data.activeRide.tripType == ST.Delivery then deliveryCancellationReasons unit else customerNotPickingCall unit)
+        <> otherReasons unit
     where
-      customerNotPickingCall = [{
+      customerNotPickingCall unit = [{
           reasonCode: "CUSTOMER_NOT_PICKING_CALL"
         , description: (StringsV2.getStringV2 LT2.customer_not_picking_call)
         , textBoxRequired : false
         , subtext: Nothing
         }]
-      otherReasons = [{
+      otherReasons unit = [{
           reasonCode: "OTHER"
         , description: (getString LT.OTHER)
         , textBoxRequired : true
         , subtext: Nothing
         }]
 
-deliveryCancellationReasons :: Array Common.OptionButtonList
-deliveryCancellationReasons =
+deliveryCancellationReasons :: Unit -> Array Common.OptionButtonList
+deliveryCancellationReasons _ =
   [{
     reasonCode: "CUSTOMER_NOT_PICKING_CALL"
   , description: (StringsV2.getStringV2 LT2.parcel_is_inappropriate)

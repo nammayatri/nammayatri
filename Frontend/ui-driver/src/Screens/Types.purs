@@ -710,7 +710,6 @@ type EnterOTPScreenStateData = {
   timer :: String,
   capturedOtp :: String,
   focusedIndex :: Int,
-  editTextId :: String,
   config :: AppConfig
 }
 

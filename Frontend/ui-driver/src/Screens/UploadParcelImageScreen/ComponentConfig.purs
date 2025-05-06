@@ -76,8 +76,8 @@ primaryButtonConfig state =
             }
     in primaryButtonConfig'
 
-uploadParcelInstructionData :: Array {image :: String, icon :: String, instructions :: Array String}
-uploadParcelInstructionData = 
+uploadParcelInstructionData :: Unit -> Array {image :: String, icon :: String, instructions :: Array String}
+uploadParcelInstructionData _ = 
     [
         {image: "ny_ic_parcel_correct_image", icon: "ny_ic_green_tick", instructions: [getString CLEAR_IMAGE, getString CORRECT_POSITIONING ]}
     ,   {image: "ny_ic_parcel_wrong_image", icon: "ny_ic_payment_failed", instructions: [ getString BLURRY_IMAGE, getString INCORRECT_POSITIONING ]}
