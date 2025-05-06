@@ -41,6 +41,7 @@ Journey:
     isPaymentSuccess : Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
     relevanceScore: Maybe Double
+    hasPreferredServiceTier: Maybe Bool
 
   beamType:
     status: Maybe JourneyStatus
@@ -232,19 +233,23 @@ MultimodalPreferences:
     personId: Id Person
     allowedTransitModes: "[MultimodalTravelMode]"
     journeyOptionsSortingType: JourneyOptionsSortingType
+    busTransitTypes: "Maybe [ServiceTierType]"
+    subwayTransitTypes: "Maybe [ServiceTierType]"
 
   queries:
     findByPersonId:
       kvFunction: findOneWithKV
       where: personId
-    updateAllowedTransitModesAndJourneyOptionsSortingType:
+    updateUserPreferences:
       kvFunction: updateWithKV
-      params: [allowedTransitModes, journeyOptionsSortingType]
+      params: [allowedTransitModes, journeyOptionsSortingType, busTransitTypes, subwayTransitTypes]
       where: personId
 
   sqlType:
     allowedTransitModes: text
     journeyOptionsSortingType: text
+    busTransitTypes: text[]
+    subwayTransitTypes: text[]
 
   constraints:
     personId: PrimaryKey

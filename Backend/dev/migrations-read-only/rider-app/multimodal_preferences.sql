@@ -8,3 +8,10 @@ ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN merchant_operating_city_
 ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.multimodal_preferences ADD PRIMARY KEY ( person_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN subway_transit_types text[] ;
+ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN bus_transit_types text[] ;

@@ -3,6 +3,7 @@
 module API.Types.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.FRFSTicketService
+import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
@@ -127,7 +128,9 @@ data MultimodalTransitOptionsResp = MultimodalTransitOptionsResp {options :: [Mu
 
 data MultimodalUserPreferences = MultimodalUserPreferences
   { allowedTransitModes :: [Domain.Types.Trip.MultimodalTravelMode],
-    journeyOptionsSortingType :: Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType
+    busTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
+    journeyOptionsSortingType :: Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType,
+    subwayTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
