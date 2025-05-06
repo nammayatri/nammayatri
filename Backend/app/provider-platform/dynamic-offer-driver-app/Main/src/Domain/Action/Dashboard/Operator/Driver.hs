@@ -150,8 +150,8 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
         driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language (Just True)
         vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
         vehicleDoc <-
-          find (\doc -> doc.registrationNo == req.registrationNo) vehicleDocumentsUnverified
-            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> req.registrationNo)
+          find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
+            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
         let makeSelfieAadhaarPanMandatory = Nothing
         allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
         allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
