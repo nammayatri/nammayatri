@@ -604,7 +604,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
     filterM
       ( \driverPoolResult -> do
           parallelCount <- Redis.withCrossAppRedis $ Redis.incr (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId)
-          Redis.expire (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId) 3
+          Redis.withCrossAppRedis $ Redis.expire (parallelSortingLockKey driverPoolResult.driverPoolResult.driverId) 3
           if parallelCount <= toInteger driverPoolCfg.maxParallelSearchRequests
             then do
               now <- getCurrentTime
