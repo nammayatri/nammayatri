@@ -104,6 +104,8 @@ data HandlerEnv = HandlerEnv
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
