@@ -1,5 +1,7 @@
 module SharedLogic.DriverFleetOperatorAssociation
-  ( endDriverAssociationsIfAllowed,
+  ( checkForDriverAssociationOverwrite,
+    endDriverAssociationsIfAllowed,
+    checkForFleetAssociationOverwrite,
     endFleetAssociationsIfAllowed,
     makeFleetOperatorAssociation,
     makeDriverOperatorAssociation,
@@ -26,6 +28,20 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QP
 import qualified Tools.Notifications as TN
+
+checkForDriverAssociationOverwrite ::
+  DM.Merchant ->
+  Id DP.Person ->
+  Flow ()
+checkForDriverAssociationOverwrite merchant driverId = do
+  unless (merchant.overwriteAssociation == Just True) $ do
+    existingFDAssociations <- QFDA.findAllByDriverId driverId True
+    unless (null existingFDAssociations) $ do
+      throwError (InvalidRequest "Driver already associated with another fleet")
+
+    existingDOAssociations <- QDOA.findAllByDriverId driverId True
+    unless (null existingDOAssociations) $ do
+      throwError (InvalidRequest "Driver already associated with another operator")
 
 endDriverAssociationsIfAllowed ::
   DM.Merchant ->
@@ -68,6 +84,16 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId driver = do
             let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
             TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) ()
       else throwError (InvalidRequest "Driver already associated with another operator")
+
+checkForFleetAssociationOverwrite ::
+  DM.Merchant ->
+  Id DP.Person ->
+  Flow ()
+checkForFleetAssociationOverwrite merchant fleetOwnerId = do
+  unless (merchant.overwriteAssociation == Just True) $ do
+    existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwnerId True
+    unless (null existingFOAssociations) $ do
+      throwError (InvalidRequest "Fleet already associated with another operator")
 
 endFleetAssociationsIfAllowed ::
   DM.Merchant ->
