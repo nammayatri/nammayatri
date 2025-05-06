@@ -41,6 +41,7 @@ module SharedLogic.MessageBuilder
     BuildFRFSTicketCancelMessageReq (..),
     buildFRFSTicketCancelOTPMessage,
     BuildFRFSTicketCancelOTPMessageReq (..),
+    templateText,
   )
 where
 

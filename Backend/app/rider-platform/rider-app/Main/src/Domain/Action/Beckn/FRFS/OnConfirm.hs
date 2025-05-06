@@ -52,6 +52,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
@@ -305,6 +306,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
           { TC._type = show GWSA.QR_CODE,
             TC.value = ticket.qrData
           }
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId fromStation.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName
   let istTimeText = GWSA.showTimeIst ticket.validTill
   let textModuleTicketNumber = TC.TextModule {TC._header = "Ticket number", TC.body = ticket.ticketNumber, TC.id = "myfield1"}
@@ -321,6 +323,17 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
   let groupingInfo = TC.GroupingInfo {TC.groupingId = "Group." <> booking.id.getId, TC.sortIndex = sortIndex}
   let customCardTitleValue = GWSA.getCustomCardTitleValueByTripType tripType'
   let customCardTitle = TC.Name {TC.defaultValue = TC.LanguageValue {TC.language = "en-US", TC._value = customCardTitleValue}}
+  linkModuleData <-
+    if frfsConfig.isCancellationAllowed
+      then do
+        smsPOCfg <- do
+          pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
+          DPOC.getTicketSMSConfig pOrgCfg.config
+        forM smsPOCfg.publicUrl $
+          \baseUrlTemplate -> do
+            let smsUrl = baseUrlTemplate & T.replace (MessageBuilder.templateText "FRFS_BOOKING_ID") booking.id.getId
+            pure $ TC.LinksModuleData {TC.uris = [TC.URI {TC.uri = Just smsUrl, TC.description = "Cancel Ticket"}]}
+      else pure Nothing
   return
     TC.TransitObject
       { TC.id = serviceAccount.saIssuerId <> "." <> ticket.id.getId,
@@ -341,7 +354,8 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
         TC.barcode = barcode',
         TC.textModulesData = textModules,
         TC.groupingInfo = groupingInfo,
-        TC.validTimeInterval = timeInterval
+        TC.validTimeInterval = timeInterval,
+        TC.linksModuleData = linkModuleData
       }
 
 createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
