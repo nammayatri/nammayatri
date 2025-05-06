@@ -276,6 +276,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
     Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
     Just person -> do
       withLogTag ("personId_" <> getId person.id) $ do
+        SA.checkForDriverAssociationOverwrite merchant person.id
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
             phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpCode <- maybe generateOTPCode return useFakeOtpM

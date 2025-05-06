@@ -1345,6 +1345,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
     Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
     Just person -> do
       withLogTag ("personId_" <> getId person.id) $ do
+        SA.checkForDriverAssociationOverwrite merchant person.id
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
             phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpCode <- maybe generateOTPCode return useFakeOtpM
@@ -1979,11 +1980,11 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToFleetOwner merchant moc fleetOwner mbOperatorId req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
-      WMB.checkFleetDriverAssociation person.id fleetOwner.id
+      (if isNew then pure False else WMB.checkFleetDriverAssociation person.id fleetOwner.id)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
             void $
-              try @_ @SomeException (SA.endDriverAssociationsIfAllowed merchant moc.id person) >>= \case
+              try @_ @SomeException (unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id) >>= \case
                 Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> T.pack (displayException err)
                 Right _ -> do
                   let driverMobile = req_.driverPhoneNumber
@@ -1993,11 +1994,11 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToOperator merchant moc operator req_ = do
-      (person, _isNew) <- fetchOrCreatePerson moc req_
-      QDOA.checkDriverOperatorAssociation person.id operator.id
+      (person, isNew) <- fetchOrCreatePerson moc req_
+      (if isNew then pure False else QDOA.checkDriverOperatorAssociation person.id operator.id)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Operator Consent SMS to Driver" $ do
-            try @_ @SomeException (SA.endDriverAssociationsIfAllowed merchant moc.id person) >>= \case
+            try @_ @SomeException (unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id) >>= \case
               Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Operator: " <> T.pack (displayException err)
               Right _ -> do
                 let driverMobile = req_.driverPhoneNumber
