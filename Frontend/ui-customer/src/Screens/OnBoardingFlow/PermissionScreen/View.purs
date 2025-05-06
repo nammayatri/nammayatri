@@ -52,6 +52,8 @@ screen initialState  =
     else do 
       _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBackCustomer
       _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "PermissionScreen"
+
+      
       pure $ pure unit
   )]
   , eval : (\action state -> do

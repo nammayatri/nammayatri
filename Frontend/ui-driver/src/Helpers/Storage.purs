@@ -176,6 +176,7 @@ data KeyStore = USER_NAME
                 | LOCATION_REQUEST_INTERVAL
                 | LOCATION_MAX_BATCH_AGE
                 | LOCATION_FRESHNESS_THRESHOLD
+                | DEVICE_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

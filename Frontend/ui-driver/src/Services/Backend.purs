@@ -42,7 +42,7 @@ import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig, decodeErrorPayload)
 import Engineering.Helpers.Events as Events
-import JBridge (getLocationNameV2, setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
+import JBridge (getLocationNameV2, setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation, encryptDeviceId)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -225,6 +225,8 @@ makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
 makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
         packageName = getValueToLocalStore PACKAGE_NAME
+        deviceId = getValueToLocalStore DEVICE_ID
+        encryptedDeviceId = encryptDeviceId deviceId
         latitude = mkLatLon lat
         longitude = mkLatLon lng
     in
@@ -235,7 +237,8 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
       "merchantOperatingCity" : mkOperatingCity operatingCity,
       "registrationLat" : latitude,
       "registrationLon" : longitude,
-      "packageName" : packageName
+      "packageName" : packageName,
+      "deviceId" : encryptedDeviceId
     }
     where 
         mkOperatingCity :: String -> Maybe String

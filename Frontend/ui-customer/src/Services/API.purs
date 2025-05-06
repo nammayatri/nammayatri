@@ -89,6 +89,7 @@ newtype TriggerOTPReq = TriggerOTPReq {
   , merchantId :: String
   , otpChannel :: String
   , allowBlockedUserLogin :: Boolean
+  , deviceId :: String
 }
 
 instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq  where

@@ -202,13 +202,17 @@ triggerOTPBT payload = do
 makeTriggerOTPReq :: String -> String -> String -> Boolean -> TriggerOTPReq
 makeTriggerOTPReq mobileNumber countryCode otpChannel allowBlockedUserLogin =
     let merchant = SC.getMerchantId ""
+        deviceId = if (JB.getDeviceID unit) == "" then JB.sdkDeviceId unit else JB.getDeviceID unit
+        _ = spy "deviceId = " deviceId
+        encryptedDeviceId = JB.encryptDeviceId deviceId
     in TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : countryCode,
       "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant,
       "otpChannel" : otpChannel,
-      "allowBlockedUserLogin" : allowBlockedUserLogin
+      "allowBlockedUserLogin" : allowBlockedUserLogin,
+      "deviceId" : encryptedDeviceId
     }
 
 ---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------

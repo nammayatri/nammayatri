@@ -1,4 +1,6 @@
 import { callbackMapper } from "presto-ui";
+const crypto = require('crypto');
+
 
 const btnLoaderState = new Map();
 const {
@@ -661,6 +663,14 @@ export const getDeviceID = function () {
     return window.JBridge.getDeviceID();
   }else {
     return "NO_DEVICE_ID";
+  }
+}
+
+export const sdkDeviceId = function () {
+  if(JSON.parse(window.JBridge.getSessionInfo())["device_id"]){
+    return JSON.parse(window.JBridge.getSessionInfo())["device_id"];
+  }else {
+    return "NO_SDK_DEVICE_ID";
   }
 }
 
@@ -3242,5 +3252,43 @@ export const setupVoiceRecognitionView = function(id) {
         console.log("Error in setupVoiceRecognitionView", err);
       }
     }
+  }
+}
+
+// const encryptedData = encryptDeviceId(getDeviceID());
+
+export const encryptDeviceId = function(deviceId) {
+  try {
+    const data = JSON.stringify({
+      deviceId: deviceId,
+      timestamp: new Date().toISOString()
+    });
+
+    // Replace this with your actual RSA PUBLIC KEY (not private!)
+    const publicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtQRCOo9O/wH080Zebj9q
+8iOjkNtpi1pq/l5Nk2vP5T0OPRqIjFoTua/4RXfPfKGDeiMXe7vtT4AEtVJ41aG8
+CIOJuIpKLG546vKTbdgMPhJTf1oGzZDpqbd4QpOAx6jX2Vv5X3nHexhLIAhFEppA
+gHJpZBKRSpvCHUgXxd4tE3IO9rWVWbBpkA7Z3FlOTouWTpoUwkDUBNY3hZe0xSCV
+NWpTh98uIVths0KrZAeKfsiA/4u/Pjf4ujZPPDesby9EmKyIo/IEiAYjUgsj9e9Q
+TrWvSiq6kePYxadzL+WyLtGr4x/XmZNCHscvAt/MyLHWHAGnXw+qo/dzAJoQklui
+AwIDAQAB
+-----END PUBLIC KEY-----`;
+
+    // Encrypt using RSA public key
+    const encryptedBuffer = crypto.publicEncrypt(
+      {
+        key: publicKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: 'sha256'
+      },
+      Buffer.from(data)
+    );
+
+    // Return just the base64 string
+    return encryptedBuffer.toString('base64');
+  } catch (error) {
+    console.error("Error encrypting device ID:", error);
+    return "";
   }
 }

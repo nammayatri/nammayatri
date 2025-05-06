@@ -230,6 +230,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       let bundle = getVersionByKey "app"
           config = getVersionByKey "configuration"
           driverId = (getValueToLocalStore DRIVER_ID)
+          deviceId = JB.getDeviceID unit
           appSessionCount = getValueToLocalStore APP_SESSION_TRACK_COUNT
           movedToOfflineDate = getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
       versionName <- lift $ lift $ liftFlow $ getVersionName
@@ -240,6 +241,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore PACKAGE_NAME packageName
+      setValueToLocalStore DEVICE_ID deviceId
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
       setValueToLocalStore RIDE_REQUEST_BUFFER "0"

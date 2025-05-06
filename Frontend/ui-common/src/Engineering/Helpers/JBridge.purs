@@ -310,6 +310,7 @@ foreign import getCircleCallback :: forall action. EffectFn2 (action -> Effect U
 foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
+foreign import sdkDeviceId :: Unit -> String
 foreign import getAndroidId :: Unit -> String
 foreign import getAppName :: Unit -> String
 foreign import initialiseShakeListener :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) ShakeListenerConfig Unit
@@ -329,6 +330,7 @@ foreign import voiceToTextImpl :: forall action. EffectFn4 (action -> Effect Uni
 foreign import stopVoiceRecognition :: EffectFn1 String Unit
 foreign import startVoiceRecognition :: EffectFn1 String Unit
 foreign import setupVoiceRecognitionView :: String -> Effect Unit
+foreign import encryptDeviceId :: String -> String
 
 type SliderConfig = {
   id :: String,
