@@ -38,7 +38,8 @@ data TransitObject = TransitObject
     ticketLeg :: TicketLeg,
     barcode :: Barcode,
     textModulesData :: [TextModule],
-    groupingInfo :: GroupingInfo
+    groupingInfo :: GroupingInfo,
+    linksModuleData :: Maybe LinksModuleData
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -110,6 +111,17 @@ data TextModule = TextModule
     id :: Text
   }
   deriving (Show, Generic)
+
+data URI = URI
+  { uri :: Maybe Text,
+    description :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+newtype LinksModuleData = LinksModuleData
+  { uris :: [URI]
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 instance FromJSON TextModule where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
