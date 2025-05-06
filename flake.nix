@@ -3,7 +3,7 @@
     # Workaround https://github.com/nammayatri/nammayatri/pull/9493#issuecomment-2506672419
     max-call-depth = "1000000";
     # Nix cache
-    extra-substituters = "https://ny-ci-nixos.betta-gray.ts.net/";
+    # extra-substituters = "https://ny-ci-nixos.betta-gray.ts.net/";
     extra-trusted-public-keys = "ny-ci-nixos.betta-gray.ts.net:tjYdPZNppaGd6L9m7cMGzib4kkch1zAuR660dYp1DiY=";
   };
 

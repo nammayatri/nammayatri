@@ -15,14 +15,17 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data SearchTryT f = SearchTryT
-  { baseFare :: B.C f Kernel.Types.Common.Money,
+  { approxDriverPoolCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    baseFare :: B.C f Kernel.Types.Common.Money,
     baseFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     customerExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    driverPoolCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimateId :: B.C f Kernel.Prelude.Text,
     estimateIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    filteredDriverPoolCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     id :: B.C f Kernel.Prelude.Text,
     isAdvancedBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

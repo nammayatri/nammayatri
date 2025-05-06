@@ -22,12 +22,15 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
     pure $
       Just
         Domain.Types.SearchTry.SearchTry
-          { baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
+          { approxDriverPoolCount = approxDriverPoolCount,
+            baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerExtraFee = Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
+            driverPoolCount = driverPoolCount,
             estimateId = estimateId,
             estimateIds = fromMaybe [estimateId] estimateIds,
+            filteredDriverPoolCount = filteredDriverPoolCount,
             id = Kernel.Types.Id.Id id,
             isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
             isScheduled = fromMaybe Kernel.Prelude.False isScheduled,
@@ -51,14 +54,17 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
 instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
   toTType' (Domain.Types.SearchTry.SearchTry {..}) = do
     Beam.SearchTryT
-      { Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
+      { Beam.approxDriverPoolCount = approxDriverPoolCount,
+        Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
         Beam.baseFareAmount = Kernel.Prelude.Just baseFare,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.customerExtraFee = Kernel.Prelude.roundToIntegral <$> customerExtraFee,
         Beam.customerExtraFeeAmount = customerExtraFee,
+        Beam.driverPoolCount = driverPoolCount,
         Beam.estimateId = estimateId,
         Beam.estimateIds = Kernel.Prelude.Just estimateIds,
+        Beam.filteredDriverPoolCount = filteredDriverPoolCount,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAdvancedBookingEnabled = Kernel.Prelude.Just isAdvancedBookingEnabled,
         Beam.isScheduled = Kernel.Prelude.Just isScheduled,

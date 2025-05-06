@@ -17,12 +17,15 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data SearchTry = SearchTry
-  { baseFare :: Kernel.Types.Common.HighPrecMoney,
+  { approxDriverPoolCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    baseFare :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverPoolCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Prelude.Text,
     estimateIds :: [Kernel.Prelude.Text],
+    filteredDriverPoolCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,
     isAdvancedBookingEnabled :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
