@@ -89,6 +89,11 @@ import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 
+    private static final String TAG = "OverlaySheetService";
+    private static final String TAG_MEDIA_PLAYER = "OverlaySheetService:MediaPlayer";
+
+
+
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
     private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
     private final Handler mainLooper = new Handler(Looper.getMainLooper());
@@ -128,6 +133,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private final String NON_AC = "Non AC";
     private final String AC_TAXI = "AC Taxi";
     private Context context;
+    private ExecutorService mediaPlayerExecutor = Executors.newSingleThreadExecutor();
 
 
     @Override
@@ -580,13 +586,15 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @Override
     public IBinder onBind(Intent intent) {
         try {
-            for (int i =0; i < 3; i++) {
-                if (mediaPlayers[i] == null) {
-                    mediaPlayers[i] = MediaPlayer.create(context, getRideRequestSound(context,i));
-                    mediaPlayers[i].setLooping(true);
-                    mediaPlayers[i].setOnPreparedListener(mp -> mp.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK));
+            mediaPlayerExecutor.execute(() -> {
+                for (int i =0; i < 3; i++) {
+                    if (mediaPlayers[i] == null) {
+                        mediaPlayers[i] = MediaPlayer.create(context, getRideRequestSound(context,i));
+                        mediaPlayers[i].setLooping(true);
+                        mediaPlayers[i].setOnPreparedListener(mp -> mp.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK));
+                    }
                 }
-            }
+            });
         } catch (Exception e) {
             Exception exception = new Exception("Error in onBind " + e);
             FirebaseCrashlytics.getInstance().recordException(exception);
@@ -723,17 +731,28 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             stops,
                             roundTrip
                     );
-                    if (currentMediaIndex == -1) {
-                        currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
-                    }
-                    if (currentMediaPlayer == null || !currentMediaPlayer.isPlaying()) {
-                        currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                        currentMediaPlayer.start();
-                        if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                        if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
-                            increaseVolume(context);
+
+                    mediaPlayerExecutor.execute(() -> {
+                        try {
+                            if (currentMediaIndex == -1) {
+                                currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
+                            }
+                            if (currentMediaPlayer == null || !currentMediaPlayer.isPlaying()) {
+                                currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                                if(currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                                    currentMediaPlayer.start();
+                                }
+                                if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                                if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
+                                    increaseVolume(context);
+                                }
+                            }
+                        }catch (Exception e){
+                            Log.e(TAG_MEDIA_PLAYER, e.toString());
                         }
-                    }
+
+                    });
+
                     if (floatyView == null) {
                         startTimer();
                         showOverLayPopup(rideRequestBundle);
@@ -998,6 +1017,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             floatyView = null;
         }
+        mediaPlayerExecutor.shutdown();
         super.onDestroy();
     }
 
@@ -1342,18 +1362,21 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     /*
     * To update the audio sound based on notification type when card changes are driver swipes the cards*/
     private void updateMediaPlayer(int position) {
-        try {
-            if (position < 0 || position >= sheetArrayList.size()) return;
-            if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
-                currentMediaPlayer.pause();
+        mediaPlayerExecutor.execute(() -> {
+            try {
+                if (position < 0 || position >= sheetArrayList.size()) return;
+                if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
+                    currentMediaPlayer.pause();
+                }
+                currentMediaIndex = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                if (!currentMediaPlayer.isPlaying()) {
+                    currentMediaPlayer.start();
+                }
+            } catch (Exception e) {
+                Log.e(TAG_MEDIA_PLAYER, e.toString());
             }
-            currentMediaIndex = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
-            currentMediaPlayer = mediaPlayers[currentMediaIndex];
-            currentMediaPlayer.start();
-
-        } catch (Exception e) {
-
-        }
+        });
     }
 
     private void updateProgressBars(boolean animated) {
