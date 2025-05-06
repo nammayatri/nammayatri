@@ -85,7 +85,9 @@ reAllocateBookingIfPossible ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   Bool ->
   Bool ->

@@ -102,7 +102,9 @@ cancelRideHandle ::
     Redis.HedisFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   ServiceHandle m
 cancelRideHandle =

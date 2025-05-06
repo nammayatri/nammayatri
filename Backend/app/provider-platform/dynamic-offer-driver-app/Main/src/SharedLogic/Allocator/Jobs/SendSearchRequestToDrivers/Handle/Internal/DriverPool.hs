@@ -107,7 +107,9 @@ prepareDriverPoolBatch ::
     EsqDBFlow m r,
     CacheFlow m r,
     LT.HasLocationService m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -785,7 +787,9 @@ getNextDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     LT.HasLocationService m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
