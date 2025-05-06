@@ -65,26 +65,45 @@ apis:
               type: FleetOwnerRegisterReq
             response:
               type: APISuccess
+
   - POST:
-      endpoint: fleet/{fleetOwnerId}/link
+      endpoint: /fleet/link/sendOtp
       auth: ApiAuthV2
-      params:
-        fleetOwnerId: Text
+      request:
+        type: FleetOwnerSendOtpReq
+      response:
+        type: FleetOwnerSendOtpRes
+      helperApi:
+        - POST:
+            endpoint: /fleet/link/sendOtp
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerSendOtpReq
+            response:
+              type: FleetOwnerSendOtpRes
+
+  - POST:
+      endpoint: /fleet/link/verifyOtp
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerVerifyOtpReq
       response:
         type: APISuccess
       helperApi:
         - POST:
-            endpoint: fleet/{fleetOwnerId}/link
+            endpoint: /fleet/link/verifyOtp
             auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
             mandatoryQuery:
               - requestorId: Text
+            request:
+              type: FleetOwnerVerifyOtpReq
             response:
               type: APISuccess
 
   - POST:
-      endpoint: fleet/{fleetOwnerId}/unlink
+      endpoint: /fleet/{fleetOwnerId}/unlink
       auth: ApiAuthV2
       params:
         fleetOwnerId: Text
@@ -92,7 +111,7 @@ apis:
         type: APISuccess
       helperApi:
         - POST:
-            endpoint: fleet/{fleetOwnerId}/unlink
+            endpoint: /fleet/{fleetOwnerId}/unlink
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
@@ -139,6 +158,17 @@ types:
   FleetOwnerCreateRes:
     - personId: Id Person
     - recordType: NewType
+    - derive: "'HideSecrets"
+  FleetOwnerSendOtpReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  FleetOwnerSendOtpRes:
+    - fleetOwnerId: Id Person
+    - name: Text
+    - derive: "'HideSecrets"
+  FleetOwnerVerifyOtpReq:
+    - fleetOwnerId: Id Person
+    - otp: Text
     - derive: "'HideSecrets"
 
 extraOperations:

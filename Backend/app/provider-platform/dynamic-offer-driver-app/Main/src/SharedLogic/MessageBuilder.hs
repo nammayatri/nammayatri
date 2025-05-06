@@ -45,6 +45,9 @@ module SharedLogic.MessageBuilder
     buildSendReceiptMessage,
     BuildOperatorDeepLinkAuthMessage (..),
     buildOperatorDeepLinkAuthMessage,
+    BuildFleetLinkUnlinkSuccessMessageReq (..),
+    buildFleetLinkSuccessMessage,
+    buildFleetUnlinkSuccessMessage,
   )
 where
 
@@ -339,3 +342,30 @@ buildOperatorDeepLinkAuthMessage merchantOperatingCityId req = do
         staticMsg
           & T.replace (templateText "operatorName") req.operatorName
   pure (senderHeader, dynamicMsg)
+
+newtype BuildFleetLinkUnlinkSuccessMessageReq = BuildFleetLinkUnlinkSuccessMessageReq
+  { operatorName :: Text
+  }
+
+buildFleetLinkOrUnlinkSuccessMessage ::
+  (EsqDBFlow m r, CacheFlow m r) =>
+  DMM.MessageKey ->
+  Id DMOC.MerchantOperatingCity ->
+  BuildFleetLinkUnlinkSuccessMessageReq ->
+  m (Maybe Text, Text)
+buildFleetLinkOrUnlinkSuccessMessage messageKey merchantOpCityId req = do
+  unless (messageKey `elem` [DMM.FLEET_LINK_SUCCESS_MESSAGE, DMM.FLEET_UNLINK_SUCCESS_MESSAGE])
+    . throwError
+    . InvalidRequest
+    $ "Invalid MessageKey " <> show messageKey
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
+  let msg = merchantMessage.message & T.replace (templateText "operatorName") req.operatorName
+  pure (merchantMessage.senderHeader, msg)
+
+buildFleetLinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, Text)
+buildFleetLinkSuccessMessage = buildFleetLinkOrUnlinkSuccessMessage DMM.FLEET_LINK_SUCCESS_MESSAGE
+
+buildFleetUnlinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, Text)
+buildFleetUnlinkSuccessMessage = buildFleetLinkOrUnlinkSuccessMessage DMM.FLEET_UNLINK_SUCCESS_MESSAGE
