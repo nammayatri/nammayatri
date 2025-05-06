@@ -217,6 +217,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
 multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
 multiModalSearch searchRequest riderConfig initateJourney req' = do
   now <- getCurrentTime
+  userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
@@ -293,7 +294,6 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
             }
         )
     _ -> do
-      userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
       let permissibleModesToUse = if null userPreferences.allowedTransitModes then fromMaybe [] riderConfig.permissibleModes else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
       destination <- extractDest searchRequest.toLocation
@@ -331,7 +331,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               return (null onlySingleModeRoutes, MInterface.MultiModalResponse {routes = if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks})
             _ -> return (False, otpResponse'')
 
-  mbJourneyWithIndex <- JMU.measureLatency (go 0 otpResponse.routes) "Multimodal Init Time" -- process until first journey is found
+  mbJourneyWithIndex <- JMU.measureLatency (go 0 otpResponse.routes userPreferences) "Multimodal Init Time" -- process until first journey is found
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
   journeys <- DQuote.getJourneys searchRequest (Just True)
@@ -342,7 +342,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         case mbJourneyWithIndex of
           Just (idx, firstJourney) -> do
             resp <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
-            fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx]
+            fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences
             return $ Just resp
           Nothing -> return Nothing
       else return Nothing
@@ -357,16 +357,16 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         showMultimodalWarning
       }
   where
-    go :: Int -> [MultiModalTypes.MultiModalRoute] -> Flow (Maybe (Int, Journey.Journey))
-    go _ [] = return Nothing
-    go idx (r : routes) = do
-      mbResult <- processRoute r
+    go :: Int -> [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe (Int, Journey.Journey))
+    go _ [] _ = return Nothing
+    go idx (r : routes) userPreferences = do
+      mbResult <- processRoute r userPreferences
       case mbResult of
-        Nothing -> go (idx + 1) routes
+        Nothing -> go (idx + 1) routes userPreferences
         Just journey -> return $ Just (idx, journey)
 
-    processRoute :: MultiModalTypes.MultiModalRoute -> Flow (Maybe Journey.Journey)
-    processRoute r = do
+    processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe Journey.Journey)
+    processRoute r userPreferences = do
       let initReq =
             JMTypes.JourneyInitData
               { parentSearchId = searchRequest.id,
@@ -382,7 +382,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                 straightLineThreshold = riderConfig.straightLineThreshold,
                 relevanceScore = r.relevanceScore
               }
-      JM.init initReq
+      JM.init initReq userPreferences
 
     eitherWalkOrSingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
     eitherWalkOrSingleMode selectedMode leg = leg.mode `elem` [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode]
@@ -400,9 +400,9 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
             ]
       MultiModalTypes.MultiModalRoute {legs = if null filteredLegs then legs else filteredLegs, ..}
 
-    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> Flow ()
-    processRestOfRoutes routes = do
-      forM_ routes processRoute
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow ()
+    processRestOfRoutes routes userPreferences = do
+      forM_ routes $ \route' -> processRoute route' userPreferences
       QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
 
     extractDest Nothing = throwError $ InvalidRequest "Destination is required for multimodal search"

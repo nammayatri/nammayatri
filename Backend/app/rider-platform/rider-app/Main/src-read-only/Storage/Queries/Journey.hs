@@ -46,6 +46,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.distanceUnit ((.unit) estimatedDistance),
       Se.Set Beam.estimatedDistance ((.value) estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
+      Se.Set Beam.hasPreferredServiceTier hasPreferredServiceTier,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.modes modes,
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),

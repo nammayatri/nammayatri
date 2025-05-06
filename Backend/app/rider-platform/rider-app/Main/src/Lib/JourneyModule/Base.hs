@@ -117,11 +117,12 @@ filterTransitRoutes routes mocid = do
 init ::
   JL.GetFareFlow m r =>
   JL.JourneyInitData ->
+  APITypes.MultimodalUserPreferences ->
   m (Maybe DJourney.Journey)
-init journeyReq = do
+init journeyReq userPreferences = do
   journeyId <- Common.generateGUID
   riderConfig <- QRC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
-  mbTotalFares <-
+  legsAndFares <-
     mapWithIndex
       ( \idx leg -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) (distanceToMeters leg.distance) journeyReq.maximumWalkDistance journeyReq.straightLineThreshold
@@ -130,24 +131,47 @@ init journeyReq = do
             then do
               journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare
               QJourneyLeg.create journeyLeg
-            else do
-              whenJust mbTotalLegFare $ \fare -> do
+              return (mbTotalLegFare, Just journeyLeg)
+            else case mbTotalLegFare of
+              Just fare -> do
                 journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (Just fare)
                 QJourneyLeg.create journeyLeg
-          return mbTotalLegFare
+                return (mbTotalLegFare, Just journeyLeg)
+              Nothing -> return (Nothing, Nothing)
       )
       journeyReq.legs
+
+  let (mbTotalFares, mbJourneyLegs) = unzip legsAndFares
   logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore
+      let journeyLegs = catMaybes mbJourneyLegs
+      hasUserPreferredTransitTypesFlag <- hasUserPreferredTransitTypes journeyLegs userPreferences
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
+    hasUserPreferredTransitTypes legs userPrefs = do
+      let relevantLegs = filter (\leg -> leg.mode == DTrip.Bus || leg.mode == DTrip.Subway) legs
+          checkLeg leg =
+            case leg.mode of
+              DTrip.Bus -> checkTransitType userPrefs.busTransitTypes leg.serviceTypes
+              DTrip.Subway -> checkTransitType userPrefs.subwayTransitTypes leg.serviceTypes
+              _ -> True
+      return (all checkLeg relevantLegs)
+      where
+        checkTransitType :: Maybe [Spec.ServiceTierType] -> Maybe [Spec.ServiceTierType] -> Bool
+        checkTransitType userPreferredServiceTiers availableServiceTiers =
+          case userPreferredServiceTiers of
+            Nothing -> True
+            Just preferred ->
+              case availableServiceTiers of
+                Nothing -> False
+                Just types -> any (`elem` preferred) types
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)

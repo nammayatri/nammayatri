@@ -85,3 +85,8 @@ ALTER TABLE atlas_app.journey ADD COLUMN recent_location_id character varying(36
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey ADD COLUMN relevance_score double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_service_tier boolean ;
