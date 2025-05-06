@@ -1045,7 +1045,7 @@ normalRideInfoView push config =
           ]
       , if config.estimatedTollCharges > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_blue_toll") (getString $ RIDE_TOLL_FARE_INCLUDES $ (getCurrency appConfig) <> (show $ round config.estimatedTollCharges)) else noView 
       , if config.parkingCharge > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue") (getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round config.parkingCharge) ) else noView
-      , if config.isDelivery then collectDeliveryCashView else noView
+      , if config.isDelivery then collectDeliveryCashView config else noView
       ] 
   ]
 
@@ -1414,8 +1414,8 @@ stopImageView  config push =
 isWaitingTimeStarted :: Config -> Boolean
 isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
 
-collectDeliveryCashView :: forall w. PrestoDOM (Effect Unit) w
-collectDeliveryCashView = 
+collectDeliveryCashView :: Config -> forall w. PrestoDOM (Effect Unit) w
+collectDeliveryCashView _ = 
   linearLayout[
     height WRAP_CONTENT
   , width WRAP_CONTENT

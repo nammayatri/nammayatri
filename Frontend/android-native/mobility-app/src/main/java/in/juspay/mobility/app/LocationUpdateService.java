@@ -240,7 +240,6 @@ public class LocationUpdateService extends Service {
     }
 
 
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -799,7 +798,6 @@ public class LocationUpdateService extends Service {
             if (!locationData.has("pt")) return;
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
-
 
 
             Log.d(LOG_TAG, "DriverUpdateLoc Payload Created - " + locationPayload);

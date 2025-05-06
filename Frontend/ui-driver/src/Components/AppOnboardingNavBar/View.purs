@@ -16,7 +16,7 @@
 
 module Components.AppOnboardingNavBar.View where
 
-import Prelude (Unit, const, ($), (<>), (<<<))
+import Prelude (Unit, const, ($), (<>), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
 import Effect (Effect)
 import Components.AppOnboardingNavBar.Controller (Action(..), Config)
@@ -77,7 +77,7 @@ logoutButtonView push config =
   ][  textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , text config.rightButton.text
+    , text if config.rightButton.text == "" then getString LOGOUT else config.rightButton.text
     , color Color.white900
     , margin $ MarginHorizontal 5 5
     ] <> FontStyle.body3 TypoGraphy

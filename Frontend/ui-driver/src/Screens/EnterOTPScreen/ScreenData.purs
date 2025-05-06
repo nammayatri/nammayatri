@@ -29,7 +29,6 @@ initData =  {
     timer: "10s",
     capturedOtp : "",
     focusedIndex : 1,
-    editTextId : (EHC.getNewIDWithTag "EnterOTPNumberEditText"),
     config : getAppConfig appConfig
     },
   props: {

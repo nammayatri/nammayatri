@@ -59,8 +59,8 @@ foreign import getClientIdFromSession :: String -> String
 
 foreign import getJOSFlags :: Fn1 String JOSFlags
 
-getClientID :: String
-getClientID = replaceAll (Pattern "_ios") (Replacement "") (getClientIdFromSession "")
+getClientID :: Unit -> String
+getClientID _ = replaceAll (Pattern "_ios") (Replacement "") (getClientIdFromSession "")
 
 generateBaseUrl :: Fn1 String String
 generateBaseUrl =
@@ -88,7 +88,7 @@ fetchAssets = do
                                   Right dConfig -> pure dConfig
                                   Left _ -> throw "prefetch_failed"
     files <- liftFlow $ runEffectFn1 getDownloadList decodedConfig
-    void $  doAff $ download "config.json" $ generateBaseUrl getClientID
+    void $  doAff $ download "config.json" $ generateBaseUrl (getClientID unit)
     void $ oneOf $ map (\item -> doAff $ download item.path item.location) files
 
 download :: String -> String -> Aff Boolean
@@ -141,7 +141,7 @@ getAssetFiles ∷ Fn3 (Maybe.Maybe AssetsListBlock) (Maybe.Maybe String) String 
 getAssetFiles =
   mkFn3 \assets bundle root -> do
     let
-      assetsList = catMaybes $ getAssetListBlock (Maybe.fromMaybe emptyAssets assets)
+      assetsList = catMaybes $ getAssetListBlock (Maybe.fromMaybe (emptyAssets unit) assets)
     case bundle of
       Maybe.Nothing -> []
       Maybe.Just currentBundle -> do
@@ -241,8 +241,8 @@ instance showAssetsListBlock :: Show AssetsListBlock where
 instance decodeAssetsListBlock :: Decode AssetsListBlock where
   decode = defaultDecode
 
-emptyAssets :: AssetsListBlock
-emptyAssets =
+emptyAssets :: Unit -> AssetsListBlock
+emptyAssets _ =
   AssetsListBlock
     { configuration: Maybe.Nothing
     , config: Maybe.Nothing
