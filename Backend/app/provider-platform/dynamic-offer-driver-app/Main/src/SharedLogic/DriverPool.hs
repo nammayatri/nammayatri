@@ -81,6 +81,7 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
@@ -94,6 +95,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
@@ -110,6 +112,7 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import qualified Storage.Queries.Transformers.DriverInformation as TDI
+import qualified System.Environment as SE
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
@@ -554,7 +557,13 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             isValueAddNP
           }
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
+    DriverSelection ->
+      filterM
+        ( \nearestGoHomeDriversRes ->
+            parallelRequestsFilter nearestGoHomeDriversRes.clientSdkVersion 3 driverPoolCfg.maxParallelSearchRequests
+              =<< getParallelSearchRequestCount now nearestGoHomeDriversRes
+        )
+        approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take goHomeCfg.numDriversForDirCheck <$> Rnd.randomizeList driversWithLessThanNParallelRequests
   logDebug $ "random driver pool" <> show randomDriverPool
@@ -753,14 +762,22 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             ..
           }
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount) approxDriverPool
+    DriverSelection ->
+      filterM
+        ( \nearestDriversRes ->
+            parallelRequestsFilter nearestDriversRes.clientSdkVersion 3 driverPoolCfg.maxParallelSearchRequests
+              =<< getParallelSearchRequestCount nearestDriversRes
+        )
+        approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
   logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
   pure driverPoolResult
   where
+    getParallelSearchRequestCount :: Redis.HedisFlow m r => QP.NearestDriversResult -> m Int
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
+
     getRadius mRadiusStep_ = do
       let maxRadius = driverPoolCfg.maxRadiusOfSearch
       case mRadiusStep_ of
@@ -769,6 +786,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           let radiusStepSize = driverPoolCfg.radiusStepSize
           min (minRadius + radiusStepSize * radiusStep) maxRadius
         Nothing -> maxRadius
+
     makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
@@ -944,7 +962,13 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               ..
             }
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequestsOnRide) . getParallelSearchRequestCount) approxDriverPool
+    DriverSelection ->
+      filterM
+        ( \nearestDriversResultCurrentlyOnRideRes ->
+            parallelRequestsFilter nearestDriversResultCurrentlyOnRideRes.clientSdkVersion 1 driverPoolCfg.maxParallelSearchRequestsOnRide
+              =<< getParallelSearchRequestCount nearestDriversResultCurrentlyOnRideRes
+        )
+        approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   pure (radius, makeDriverPoolResult <$> driversWithLessThanNParallelRequests)
   where
@@ -1171,6 +1195,18 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score
         }
+
+parallelRequestsFilter :: (Redis.HedisFlow m r, MonadFlow m) => Maybe Version -> Int -> Int -> Int -> m Bool
+parallelRequestsFilter clientSdkVersion defaultMaxParallelReq maxParallelSearchRequests getParallelSearchRequestCount = do
+  limParallelSRClientSdkVersion <- L.runIO (T.pack . fromMaybe "" <$> SE.lookupEnv "LIMITED_PARALLEL_SEARCH_REQUEST_CLIENT_SDK_VERSION")
+  let allowedMaxParallelSearchRequests =
+        maybe
+          maxParallelSearchRequests
+          ( \sdkVersion ->
+              bool defaultMaxParallelReq maxParallelSearchRequests (versionToText sdkVersion >= limParallelSRClientSdkVersion)
+          )
+          clientSdkVersion
+  return $ getParallelSearchRequestCount < allowedMaxParallelSearchRequests
 
 refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult)
 refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, driverGoHomePoolWithActualDistance)
