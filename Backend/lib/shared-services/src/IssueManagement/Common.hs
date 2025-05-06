@@ -267,7 +267,7 @@ data MerchantConfig = MerchantConfig
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
 
-data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION
+data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION | DRUNK_AND_DRIVE_VIOLATION
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

@@ -49,6 +49,7 @@ reportIssue rideId issueType apiKey = do
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
     ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
+    ICommon.DRUNK_AND_DRIVE_VIOLATION -> handleDrunkAndDriveViolation ride
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()
@@ -69,3 +70,9 @@ handleExtraFareMitigation ride serviceTierType = do
       QDI.updateExtraFareMitigation (pure True) ride.driverId
       IBM.incrementIssueBreachCounter EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
       IBM.issueBreachMitigation EXTRA_FARE_MITIGATION transporterConfig driverInfo
+
+handleDrunkAndDriveViolation :: Ride -> Flow ()
+handleDrunkAndDriveViolation ride = do
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  let drunkAndDriveViolationCount = fromMaybe 0 driverInfo.drunkAndDriveViolationCount + 1
+  void $ QDI.updateDrunkAndDriveViolationCount (Just drunkAndDriveViolationCount) ride.driverId

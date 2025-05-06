@@ -82,7 +82,8 @@ data DriverInfoRes = DriverInfoRes
     blockedInfo :: [DriverBlockTransactions],
     softBlockStiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    drunkAndDriveViolationCount :: Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

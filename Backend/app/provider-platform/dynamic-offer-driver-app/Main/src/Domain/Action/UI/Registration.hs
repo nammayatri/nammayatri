@@ -285,6 +285,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             lastACStatusCheckedAt = Nothing,
             hasAdvanceBooking = False,
             tollRelatedIssueCount = Nothing,
+            drunkAndDriveViolationCount = Nothing,
             extraFareMitigationFlag = Nothing,
             forwardBatchingEnabled = False,
             payoutVpa = Nothing,

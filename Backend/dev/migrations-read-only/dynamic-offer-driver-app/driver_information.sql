@@ -203,3 +203,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_i
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN referred_by_operator_id text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN referred_by_fleet_owner_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN drunk_and_drive_violation_count integer ;
