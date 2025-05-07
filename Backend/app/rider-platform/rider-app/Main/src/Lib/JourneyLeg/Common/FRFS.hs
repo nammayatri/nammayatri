@@ -211,7 +211,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
           when lastStatusChanged $ QFRFSSearch.updateJourneyLegStatus (Just lastNewStatus) searchReq.id
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InternalError "JourneySearchData not found")
           vehicleTrackingAndPositions <- do
-            let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing) routeStatuses
+            let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing || currstatus == JPT.Finishing) routeStatuses
             case findOngoingMetroOrSubway of
               Just (_, _, currstatus) -> do
                 case journeyLegInfo.pricingId of
@@ -221,8 +221,12 @@ getState mode searchId riderLastPoints isLastCompleted = do
                       Just quote -> do
                         let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
                         getVehiclePosition quote.riderId quote.merchantId quote.merchantOperatingCityId currstatus userPosition quote.vehicleType mbRouteStations
-                      Nothing -> pure []
-                  Nothing -> pure []
+                      Nothing -> do
+                        logDebug $ "mbQuote not found."
+                        pure []
+                  Nothing -> do
+                    logDebug $ "Quote not found."
+                    pure []
               Nothing -> pure []
           let vehiclePositions =
                 map
@@ -313,11 +317,18 @@ getState mode searchId riderLastPoints isLastCompleted = do
               _ -> do
                 case riderPosition of
                   Just riderLocation -> do
+                    logDebug $ "Rider Location: " <> show riderLocation
                     vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL riderPosition
                     pure ((\vehicleTrack -> (vehicleTrack, riderLocation)) <$> vehicleTracking)
-                  Nothing -> pure []
-          Nothing -> pure []
-      Nothing -> pure []
+                  Nothing -> do
+                    logDebug $ "Rider Location not found."
+                    pure []
+          Nothing -> do
+            logDebug $ "Routes Stations not found by listToMaybe."
+            pure []
+      Nothing -> do
+        logDebug $ "Routes Stations not found."
+        pure []
 
     isOngoingJourneyLeg :: JPT.JourneyLegStatus -> Bool
     isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.Ongoing]

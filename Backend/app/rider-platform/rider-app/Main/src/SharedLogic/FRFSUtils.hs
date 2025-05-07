@@ -463,7 +463,9 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       delay = Nothing
                     }
             pure vehicleTracking
-        Nothing -> pure []
+        Nothing -> do
+          logDebug $ "Waypoints for route not found."
+          pure []
   where
     getStopPairsWithWaypointsForMetroAndSubway stopPairs waypoints =
       forM stopPairs $ \(currStop, nextStop) -> do
