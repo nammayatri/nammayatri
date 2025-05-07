@@ -3345,7 +3345,9 @@ type BusTrackingScreenData = {
   vehicleData :: Array VehicleData,
   stationResponse :: Maybe (Array FRFSStationAPI),
   routeShortName :: String,
-  routePts :: Locations
+  routePts :: Locations,
+  previousLatLonsOfVehicle :: DM.Map String ({position :: API.LatLong, index :: Int}),
+  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI
 }
 
 type VehicleData = 
@@ -3359,6 +3361,11 @@ type VehicleData =
   , nextStopSequence :: Int
   , nextStopTravelTime :: Maybe Int
   , nextStopTravelDistance :: Maybe Int
+  , createdAt :: String
+  , updatedAt :: String
+  , timestamp :: String
+  , nearestWaypointConfig :: NearestWaypointConfig
+  , etaDistance :: Maybe Number
   }
 
 type BusTrackingScreenProps = {
@@ -3374,7 +3381,10 @@ type BusTrackingScreenProps = {
   userAndBuslocationMatchCount :: Int,
   vehicleTrackingId :: Maybe String,
   previousScreen :: PreviousScreenForTracking,
-  destinationSequenceNumber :: Maybe Int
+  destinationSequenceNumber :: Maybe Int,
+  currentLat :: Number,
+  currentLon :: Number,
+  minimumEtaDistance :: Maybe Int
 }
 
 data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen
@@ -3418,3 +3428,9 @@ derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 
 type OnboardedBusInfo = Array { bookingId :: String, vehicleId :: String }
+
+type NearestWaypointConfig =
+  { index :: Int
+  , deviationDistance :: Number
+  , vehicleLocationOnRoute :: API.LatLong
+  }
