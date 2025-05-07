@@ -2492,7 +2492,7 @@ offlineNavigationLinks push state =
                           let hotspotsRemoteConfig = getHotspotsFeatureData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
                           boolToVisibility hotspotsRemoteConfig.enableHotspotsFeature
                         RideRequestsList -> boolToVisibility config.enableScheduledRides
-                        GotoMeterRideScreen ->boolToVisibility $ fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter
+                        SwitchDriverStatus _ _ -> boolToVisibility $ fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter
                         _ -> VISIBLE
       itemAlpha action = case action of
                     RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5

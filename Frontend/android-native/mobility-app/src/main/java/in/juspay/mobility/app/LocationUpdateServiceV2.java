@@ -676,7 +676,10 @@ public class LocationUpdateServiceV2 extends Service {
             updateLocationStorage(location);
 
             // Log location data
-            logLocationUpdate(location);
+            new Thread(() -> {
+                logLocationUpdate(location);
+            }).start();
+
 
             // Create location data object and add to queue
             LocationData locationData = new LocationData(location, "fused_location_provider");
@@ -1163,7 +1166,7 @@ public class LocationUpdateServiceV2 extends Service {
         }
 
         // Unregister network monitoring callbacks/receivers
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && connectivityManager != null && networkCallback != null) {
+        if (connectivityManager != null && networkCallback != null) {
             try {
                 connectivityManager.unregisterNetworkCallback(networkCallback);
                 Log.d(TAG, "Unregistered network callback");
@@ -2032,7 +2035,6 @@ public class LocationUpdateServiceV2 extends Service {
      * Includes conversion to/from JSON for storage and transmission.
      */
     static class LocationData {
-        String id;
         double latitude;
         double longitude;
         float accuracy;
@@ -2048,7 +2050,6 @@ public class LocationUpdateServiceV2 extends Service {
          * @param source   The source identifier (e.g., "fused_location_provider")
          */
         LocationData(Location location, String source) {
-            this.id = UUID.randomUUID().toString();
             this.latitude = location.getLatitude();
             this.longitude = location.getLongitude();
             this.accuracy = location.getAccuracy();
@@ -2071,9 +2072,6 @@ public class LocationUpdateServiceV2 extends Service {
          */
         static LocationData fromJsonObject(JSONObject json) throws JSONException {
             LocationData data = new LocationData();
-
-            data.id = json.optString("id", UUID.randomUUID().toString());
-
             JSONObject point = json.getJSONObject("pt");
             data.latitude = point.getDouble("lat");
             data.longitude = point.getDouble("lon");
@@ -2125,7 +2123,6 @@ public class LocationUpdateServiceV2 extends Service {
             locationObject.put("bear", bearing);
             locationObject.put("source", source);
             locationObject.put("v", speed);
-            locationObject.put("id", id);
 
             return locationObject;
         }
@@ -2266,7 +2263,7 @@ public class LocationUpdateServiceV2 extends Service {
          */
         void addAll(List<LocationData> locations) {
             queue.addAll(locations);
-            executor.execute(() -> saveQueueToCache());
+            executor.execute(this::saveQueueToCache);
         }
 
         /**

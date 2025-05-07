@@ -286,7 +286,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private SpeechRecognizer speechRecognizer;
 
     private final Queue<String> callbackQueue = new LinkedList<>();
-    private final HashMap<String,String> filesCache = new HashMap<>();
+    private HashMap<String,String> filesCache = new HashMap<>();
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
@@ -727,6 +727,11 @@ public class MobilityCommonBridge extends HyperBridge {
         filesCache.put(fileName,bridgeComponents.getFileProviderInterface().readFromFile(bridgeComponents.getContext(),fileName));
     }
 
+    @JavascriptInterface
+    public void resetFileCache(){
+        filesCache.clear();
+    }
+
     @Override
     public void reset() {
         String s = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", "{}");
@@ -747,6 +752,7 @@ public class MobilityCommonBridge extends HyperBridge {
         googleMap = null;
         markers = new HashMap<>();
         zoneMarkers = new HashMap<>();
+        filesCache = new HashMap<>();
         layer = null;
         if (mediaPlayer != null) mediaPlayer.audioRecorder = null;
         clearAudioPlayer();

@@ -931,7 +931,7 @@ public class LocationUpdateService extends Service {
     // HELPER FUNCTIONS
     /* creates location request */
     private LocationRequest createLocationRequest(int intervalForLocationUpdate, float minDispDistance) {
-        return new LocationRequest.Builder(intervalForLocationUpdate, getLocationPriority())
+        return new LocationRequest.Builder(getLocationPriority(),intervalForLocationUpdate)
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
                 .build();
