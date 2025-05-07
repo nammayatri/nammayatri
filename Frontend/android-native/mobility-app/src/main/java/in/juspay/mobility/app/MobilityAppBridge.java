@@ -353,21 +353,11 @@ public class MobilityAppBridge extends HyperBridge {
 
     @Override
     public void reset() {
-        String s = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", "{}");
-        boolean isCachingEnabled = false;
-        try {
-            JSONObject config = new JSONObject(s);
-            isCachingEnabled = config.optBoolean(KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "DRIVER_LOCATION", "").toLowerCase(),false);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (!isCachingEnabled) {
-            NotificationUtils.deRegisterCallback(callBack);
-            ChatService.deRegisterCallback(callBack);
-            InAppNotification.deRegisterCallBack(callBack);
-            RemoteAssetsDownloader.deRegisterCallback(callBack);
-            OverlaySheetService.deRegisterCallback(callBack);
-        }
+        NotificationUtils.deRegisterCallback(callBack);
+        ChatService.deRegisterCallback(callBack);
+        InAppNotification.deRegisterCallBack(callBack);
+        RemoteAssetsDownloader.deRegisterCallback(callBack);
+        OverlaySheetService.deRegisterCallback(callBack);
     }
 
     // region Store And Trigger CallBack
