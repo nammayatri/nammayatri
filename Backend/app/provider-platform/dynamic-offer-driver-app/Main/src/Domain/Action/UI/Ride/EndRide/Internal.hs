@@ -77,6 +77,7 @@ import Kernel.Prelude hiding (find, forM_, map, whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
@@ -450,7 +451,8 @@ putDiffMetric merchantId money mtrs = do
 getRouteAndDistanceBetweenPoints ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasKafkaProducer r
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -464,7 +466,7 @@ getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination 
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
   routeResponse <-
-    Maps.getRoutes merchantId merchantOpCityId $
+    Maps.getRoutes merchantId merchantOpCityId Nothing $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,
@@ -548,7 +550,8 @@ createDriverFee ::
     EncFlow m r,
     MonadFlow m,
     JobCreatorEnv r,
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    HasKafkaProducer r
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->

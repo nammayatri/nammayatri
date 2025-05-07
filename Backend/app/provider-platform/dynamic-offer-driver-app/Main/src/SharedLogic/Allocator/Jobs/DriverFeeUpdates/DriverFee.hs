@@ -49,6 +49,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
@@ -81,7 +82,8 @@ calculateDriverFeeForDrivers ::
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->
   m ExecutionResult
@@ -200,7 +202,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
 processDriverFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
@@ -228,7 +230,7 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFee.id
 
 processRestFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
@@ -262,7 +264,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
     }
 
 getFinalOrderAmount ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   HighPrecMoney ->
   Id Merchant ->
   TransporterConfig ->
@@ -336,7 +338,7 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
 driverFeeSplitter ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   Plan ->
   HighPrecMoney ->
@@ -575,7 +577,8 @@ calcFinalOrderAmounts ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id Merchant ->
   TransporterConfig ->
@@ -619,7 +622,8 @@ sendManualPaymentLink ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "smsCfg" r SmsConfig,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasKafkaProducer r
   ) =>
   Job 'SendManualPaymentLink ->
   m ExecutionResult
@@ -640,7 +644,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
   [DPlan.DriverPlan] ->
   SubscriptionConfig ->
   Id Merchant ->

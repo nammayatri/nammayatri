@@ -33,7 +33,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -87,6 +87,7 @@ reAllocateBookingIfPossible ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
+    HasKafkaProducer r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>

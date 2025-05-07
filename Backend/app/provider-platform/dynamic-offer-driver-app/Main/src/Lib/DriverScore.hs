@@ -33,6 +33,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore.Types as DST
@@ -58,11 +59,11 @@ import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of

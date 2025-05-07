@@ -61,6 +61,7 @@ import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess as AP
 import qualified Kernel.Types.Beckn.Context as Context
@@ -207,7 +208,8 @@ auth ::
     DB.EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -318,7 +320,8 @@ signatureAuth ::
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -517,7 +520,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
@@ -544,7 +547,8 @@ verify ::
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -582,7 +586,8 @@ verify tokenId req = do
 callWhatsappOptApi ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Text ->
   Id SP.Person ->
@@ -672,7 +677,8 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

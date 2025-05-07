@@ -23,12 +23,13 @@ where
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.DriverPool
 
-type HandleMonad m = (MonadClock m, Log m)
+type HandleMonad m r = (MonadClock m, Log m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools])
 
 data MetricsHandle m = MetricsHandle
   { incrementTaskCounter :: m (),
@@ -36,7 +37,7 @@ data MetricsHandle m = MetricsHandle
     putTaskDuration :: Milliseconds -> m ()
   }
 
-data Handle m = Handle
+data Handle m r = Handle
   { isBatchNumExceedLimit :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
@@ -51,7 +52,7 @@ data Handle m = Handle
     isScheduledBooking :: Bool
   }
 
-handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
+handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
 handler h@Handle {..} goHomeCfg = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
@@ -69,7 +70,7 @@ handler h@Handle {..} goHomeCfg = do
             return (Complete, NormalPool, Nothing)
           else processRequestSending h goHomeCfg
 
-processRequestSending :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
+processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
 processRequestSending Handle {..} goHomeCfg = do
   isBatchNumExceedLimit' <- isBatchNumExceedLimit
   if isBatchNumExceedLimit'

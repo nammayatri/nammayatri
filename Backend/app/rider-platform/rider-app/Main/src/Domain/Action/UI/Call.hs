@@ -49,6 +49,7 @@ import qualified Kernel.External.Call.Types as CallTypes
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id as ID
@@ -113,7 +114,8 @@ initiateCallToDriver ::
     EsqDBFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasKafkaProducer r
   ) =>
   Id SRide.Ride ->
   m CallRes

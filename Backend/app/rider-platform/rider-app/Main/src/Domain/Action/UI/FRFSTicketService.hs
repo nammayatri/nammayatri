@@ -151,7 +151,7 @@ data StationResult = StationResult
     stationType :: Maybe StationType,
     sequenceNum :: Maybe Int
   }
-  deriving (Show)
+  deriving (Generic, Show, ToJSON)
 
 instance HasCoordinates StationResult where
   getCoordinates stop = LatLong (stop.lat) (stop.lon)
@@ -1129,7 +1129,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
         forM stopBatches $ \batch -> do
           res <-
             try @_ @SomeException $
-              Maps.getFrfsAutocompleteDistances merchantId merchantOpCity.id $
+              Maps.getFrfsAutocompleteDistances merchantId merchantOpCity.id Nothing $
                 GetDistancesReq
                   { origins = NonEmpty.fromList batch,
                     destinations = NonEmpty.fromList [origin],

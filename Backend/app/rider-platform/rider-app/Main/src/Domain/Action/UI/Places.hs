@@ -54,7 +54,7 @@ getMultiModalModes req toLatLong merchantId person merchantOperatingCityId = do
             sortingType = JMU.convertSortingType $ fromMaybe DMP.FASTEST userPref.journeyOptionsSortingType
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
-  MultiModal.getTransitRoutes transitServiceReq transitRoutesReq
+  MultiModal.getTransitRoutes (Just person.id.getId) transitServiceReq transitRoutesReq
 
 mkRecentLocation :: Maybe MultiModal.MultiModalResponse -> DRecntLoc.RecentLocation -> Maybe API.MultiModalLocation
 mkRecentLocation multimodalRoutes recentLoc =

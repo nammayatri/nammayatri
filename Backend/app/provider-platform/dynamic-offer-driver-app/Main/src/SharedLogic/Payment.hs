@@ -35,6 +35,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto as Esq hiding (Value, groupBy, on)
 import Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -69,7 +70,8 @@ createOrder ::
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    MonadFlow m
+    MonadFlow m,
+    HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DMSC.ServiceName ->
@@ -245,7 +247,7 @@ makeOfferListCacheVersionKey :: Text
 makeOfferListCacheVersionKey = "OfferList:Version"
 
 sendLinkTroughChannelProvided ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
   Maybe Payment.PaymentLinks ->
   Id DP.Person ->
   Maybe HighPrecMoney ->

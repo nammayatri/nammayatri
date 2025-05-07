@@ -45,6 +45,7 @@ import qualified Kernel.External.Maps as EMaps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion (..))
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
@@ -86,7 +87,8 @@ sendSearchRequestToDrivers ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
     LT.HasLocationService m r,
     JobCreator r m,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Bool ->
   [SDP.TripQuoteDetail] ->

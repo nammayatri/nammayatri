@@ -132,7 +132,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                  responseArray <- errorCatchAndHandle [req1] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId)
+                  responseArray <- errorCatchAndHandle [req1] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
                   if isAPIError responseArray
                     then do
                       let cReason = "Ride is Reallocated due to getDistance API failure"
@@ -208,7 +208,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                  responseArray <- errorCatchAndHandle [req1, req2] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId)
+                  responseArray <- errorCatchAndHandle [req1, req2] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
                   if isAPIError responseArray
                     then do
                       let cReason = "Ride is Reallocated due to getDistance API failure"

@@ -18,6 +18,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -31,7 +32,8 @@ checkPNAndSendSMS ::
     CacheFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig]
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasKafkaProducer r
   ) =>
   Job 'CheckPNAndSendSMS ->
   m ExecutionResult
@@ -49,7 +51,8 @@ sendSMS ::
     CacheFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig]
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasKafkaProducer r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

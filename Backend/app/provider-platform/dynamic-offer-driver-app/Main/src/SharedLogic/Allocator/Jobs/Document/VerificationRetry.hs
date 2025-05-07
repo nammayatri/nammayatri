@@ -31,6 +31,7 @@ import Kernel.External.Types (VerificationFlow)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -50,7 +51,8 @@ retryDocumentVerificationJob ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    MonadReader r m
+    MonadReader r m,
+    HasKafkaProducer r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult

@@ -185,6 +185,7 @@ import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -1668,7 +1669,8 @@ validate ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig]
+    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+    HasKafkaProducer r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverAlternateNumberReq ->
@@ -1755,7 +1757,8 @@ resendOtp ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverAlternateNumberReq ->
@@ -1887,7 +1890,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       ]
 
 clearDriverDues ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, MonadFlow m) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, MonadFlow m, HasKafkaProducer r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   Maybe ClearManualSelectedDues ->
@@ -2299,7 +2302,8 @@ getDummyRideRequest ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasKafkaProducer r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
@@ -2478,7 +2482,7 @@ acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
   pure Success
 
 clearDriverFeeWithCreate ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney) ->
@@ -2614,7 +2618,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
 
     calcPercentage percentage = (percentage * fee') / 100.0
 
-verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
+verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
 verifyVpaStatus (personId, _, opCityId) = do
   void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound

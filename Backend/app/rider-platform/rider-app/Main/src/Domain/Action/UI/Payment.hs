@@ -38,6 +38,7 @@ import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -113,7 +114,8 @@ getStatus ::
     L.MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
@@ -131,7 +133,8 @@ getOrder ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
@@ -142,7 +145,7 @@ getOrder (personId, _) orderId = do
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 
-mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
+mkOrderAPIEntity :: (EncFlow m r, HasKafkaProducer r) => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
   clientAuthToken_ <- decrypt `mapM` clientAuthToken
   return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}

@@ -39,6 +39,7 @@ import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -71,8 +72,8 @@ data AutoCompleteReq = AutoCompleteReq
 makeAutoCompleteKey :: Text -> Text -> Text
 makeAutoCompleteKey token typeOfSearch = "Analytics-RiderApp-AutoComplete-Data" <> token <> "|" <> typeOfSearch
 
-autoComplete :: (ServiceFlow m r, EventStreamFlow m r, HasShortDurationRetryCfg r c) => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
-autoComplete (personId, merchantId) AutoCompleteReq {..} = do
+autoComplete :: (ServiceFlow m r, EventStreamFlow m r, HasShortDurationRetryCfg r c) => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete (personId, merchantId) entityId AutoCompleteReq {..} = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   merchantOperatingCity <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   fork "Inserting/Updating autocomplete data" $ do
@@ -102,6 +103,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
   Maps.autoComplete
     merchantId
     merchantOperatingCityId
+    entityId
     Maps.AutoCompleteReq
       { country = toInterfaceCountry merchantOperatingCity.country,
         radiusWithUnit = Just $ fromMaybe (convertMetersToDistance merchantOperatingCity.distanceUnit $ fromInteger radius) radiusWithUnit,
@@ -114,10 +116,10 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
       Context.USA -> Maps.USA
       Context.AnyCountry -> Maps.India
 
-getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
-getPlaceDetails (personId, merchantId) req = do
+getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
+getPlaceDetails (personId, merchantId) entityId req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
-  Maps.getPlaceDetails merchantId merchantOperatingCityId req
+  Maps.getPlaceDetails merchantId merchantOperatingCityId entityId req
 
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOperatingCityId = do
@@ -128,8 +130,8 @@ expirePlaceNameCache placeNameCache merchantOperatingCityId = do
     let toBeDeletedPlaceNameCache = filter (\obj -> obj.createdAt < expiryDate) placeNameCache
     mapM_ CM.delete toBeDeletedPlaceNameCache
 
-getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
-getPlaceName (personId, merchantId) req = do
+getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName (personId, merchantId) entityId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   case req.getBy of
@@ -142,21 +144,21 @@ getPlaceName (personId, merchantId) req = do
               source = snd placeNameCache'
           fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
           if null placeNameCache
-            then callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
+            then callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
             else pure $ map (convertToGetPlaceNameResp source) placeNameCache
-        Nothing -> callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
+        Nothing -> callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache' <- CM.findPlaceByPlaceId placeId
       let placeNameCache = fst placeNameCache'
           source = snd placeNameCache'
       fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
       if null placeNameCache
-        then callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
+        then callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
         else pure $ map (convertToGetPlaceNameResp source) placeNameCache
 
-callMapsApi :: (MonadFlow m, ServiceFlow m r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
-callMapsApi merchantId merchantOperatingCityId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId merchantOperatingCityId req
+callMapsApi :: (MonadFlow m, ServiceFlow m r, HasKafkaProducer r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi merchantId merchantOperatingCityId entityId req geoHashPrecisionValue = do
+  res <- Maps.getPlaceName merchantId merchantOperatingCityId entityId req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do

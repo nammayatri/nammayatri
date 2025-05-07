@@ -44,17 +44,17 @@ data GetPickupRoutesReq = GetPickupRoutesReq
   }
   deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 
-getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes (personId, merchantId) req = do
-  Maps.getRoutes Nothing personId merchantId Nothing req
+getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes (personId, merchantId) entityId req = do
+  Maps.getRoutes Nothing personId merchantId Nothing entityId req
 
-getPickupRoutes :: (Id DP.Person, Id Merchant.Merchant) -> GetPickupRoutesReq -> Flow Maps.GetRoutesResp
-getPickupRoutes (personId, merchantId) GetPickupRoutesReq {..} = do
+getPickupRoutes :: (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> GetPickupRoutesReq -> Flow Maps.GetRoutesResp
+getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
   mocId <- Maps.getMerchantOperatingCityId personId Nothing
   merchantConfig <- QMSUC.findByMerchantOperatingCityId mocId >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
   service <- getService merchantConfig
   let req = Maps.GetRoutesReq {..}
-  Maps.getPickupRoutes merchantId mocId service req
+  Maps.getPickupRoutes merchantId mocId service entityId req
   where
     getService merchantConfig = do
       case (rideId, merchantConfig.getFirstPickupRoute) of
@@ -67,6 +67,6 @@ getPickupRoutes (personId, merchantId) GetPickupRoutesReq {..} = do
             else return merchantConfig.getPickupRoutes
         _ -> return merchantConfig.getPickupRoutes
 
-getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getTripRoutes (personId, merchantId) req = do
-  Maps.getTripRoutes personId merchantId Nothing req
+getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getTripRoutes (personId, merchantId) entityId req = do
+  Maps.getTripRoutes personId merchantId Nothing entityId req

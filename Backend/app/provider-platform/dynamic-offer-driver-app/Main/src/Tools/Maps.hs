@@ -58,10 +58,13 @@ import Tools.Error
 getDistance ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
@@ -69,10 +72,13 @@ getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
 getDistanceForCancelRide ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
@@ -80,10 +86,13 @@ getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesF
 getDistances ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
@@ -91,10 +100,13 @@ getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 getEstimatedPickupDistances ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
@@ -102,45 +114,49 @@ getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstima
 getDistanceForScheduledRides ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistancesForScheduledRides)
 
-getRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
-getRoutes merchantId merchantOpCityId req = do
+getRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getRoutes merchantId merchantOpCityId entityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId req
+  runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId entityId req
 
-getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes merchantId merchantOpCityId req = do
+getPickupRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes merchantId merchantOpCityId entityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getPickupRoutes) merchantId merchantOpCityId req
+  runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getPickupRoutes) merchantId merchantOpCityId entityId req
 
-getTripRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
-getTripRoutes merchantId merchantOpCityId req = do
+getTripRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes merchantId merchantOpCityId entityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId req
+  runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId entityId req
 
 snapToRoad ::
   ( ServiceFlow m r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   SnapToRoadReq ->
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
-getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
-getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 
 snapToRoadWithFallback ::
@@ -153,9 +169,10 @@ snapToRoadWithFallback ::
   Maybe MapsServiceConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback rectifyDistantPointsFailureUsing handler
+snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId entityId = Maps.snapToRoadWithFallback entityId rectifyDistantPointsFailureUsing handler
   where
     handler = Maps.SnapToRoadHandler {..}
 
@@ -177,6 +194,9 @@ snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOper
         DOSC.MapsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
 
+callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
+callGetRoutesWrapper isAvoidToll entityId = Maps.getRoutes entityId isAvoidToll
+
 getServiceConfigForRectifyingSnapToRoadDistantPointsFailure ::
   ServiceFlow m r =>
   Id Merchant ->
@@ -193,17 +213,18 @@ getServiceConfigForRectifyingSnapToRoadDistantPointsFailure _merchantId merchant
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (MapsServiceConfig -> req -> m resp) ->
+  (Maybe Text -> MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   req ->
   m resp
-runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
+runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
   orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
     QOMSC.findByServiceAndCity (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
-    DOSC.MapsServiceConfig msc -> func msc req
+    DOSC.MapsServiceConfig msc -> func entityId msc req
     _ -> throwError $ InternalError "Unknown Service Config"

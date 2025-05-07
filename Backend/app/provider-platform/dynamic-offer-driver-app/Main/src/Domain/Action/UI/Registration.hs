@@ -54,6 +54,7 @@ import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
@@ -456,7 +457,8 @@ verify ::
     EncFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -499,7 +501,8 @@ verify tokenId req = do
 callWhatsappOptApi ::
   ( EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   Text ->
   Id SP.Person ->
@@ -524,7 +527,8 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

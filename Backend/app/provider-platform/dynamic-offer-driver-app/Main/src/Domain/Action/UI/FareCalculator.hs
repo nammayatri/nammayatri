@@ -131,7 +131,7 @@ calculateDistanceAndRoutes merchantId merchantOpCityId distanceWeightage latLong
             calcPoints = True,
             mode = Just Utils.CAR
           }
-  routeResponse <- Maps.getRoutes merchantId merchantOpCityId request
+  routeResponse <- Maps.getRoutes merchantId merchantOpCityId Nothing request
   let durationWeightage = 100 - distanceWeightage
       (shortestRouteInfo, shortestRouteIndex) = Utils.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
       longestRouteDistance = (.distance) =<< Utils.getLongestRouteDistance routeResponse

@@ -28,6 +28,7 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -75,7 +76,7 @@ confirm personId quoteId paymentMethodId isAdvanceBookingEnabled = do
   SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
+cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasKafkaProducer r) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason

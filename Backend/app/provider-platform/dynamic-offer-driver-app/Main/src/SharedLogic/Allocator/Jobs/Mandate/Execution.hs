@@ -20,6 +20,7 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
@@ -46,7 +47,8 @@ startMandateExecutionForDriver ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Job 'MandateExecution ->
   m ExecutionResult
@@ -164,7 +166,8 @@ asyncExecutionCall ::
     EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasKafkaProducer r
   ) =>
   ExecutionData ->
   Id Merchant ->

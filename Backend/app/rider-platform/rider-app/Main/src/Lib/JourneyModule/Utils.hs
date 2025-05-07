@@ -22,6 +22,7 @@ import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -173,7 +174,8 @@ fetchLiveBusTimings ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m
+    Monad m,
+    HasKafkaProducer r
   ) =>
   [Text] ->
   Text ->
@@ -235,7 +237,8 @@ fetchLiveSubwayTimings ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m
+    Monad m,
+    HasKafkaProducer r
   ) =>
   [Text] ->
   Text ->
@@ -279,7 +282,8 @@ fetchLiveTimings ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m
+    Monad m,
+    HasKafkaProducer r
   ) =>
   [Text] ->
   Text ->
@@ -304,7 +308,8 @@ findPossibleRoutes ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r
   ) =>
   Maybe [LegServiceTier] ->
   Text ->
@@ -425,7 +430,8 @@ findUpcomingTrips ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r
   ) =>
   [Text] ->
   Text ->
@@ -522,7 +528,8 @@ getSingleModeRouteDetails ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r
   ) =>
   Maybe Text ->
   Maybe Text ->

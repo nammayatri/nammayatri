@@ -44,7 +44,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -272,7 +272,10 @@ driverDistanceToPickup ::
     CacheFlow m r,
     EsqDBFlow m r,
     Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos
+    Maps.HasCoordinates tripEndPos,
+    ToJSON tripStartPos,
+    ToJSON tripEndPos,
+    HasKafkaProducer r
   ) =>
   SRB.Booking ->
   tripStartPos ->
@@ -280,7 +283,7 @@ driverDistanceToPickup ::
   m Meters
 driverDistanceToPickup booking tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide booking.providerId booking.merchantOperatingCityId $
+    Maps.getDistanceForCancelRide booking.providerId booking.merchantOperatingCityId (Just booking.id.getId) $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,
