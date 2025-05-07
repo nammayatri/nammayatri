@@ -45,8 +45,8 @@ findAllByPersonId transporterConfig personId = do
     logWarning $ "Onboarding docs count limit reached. Some docs probably would be skipped: driverId: " <> show personId <> "; count: " <> show imagesCount
   pure images
 
-findRecentByRcId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> Id DReg.VehicleRegistrationCertificate -> m [DImage.Image]
-findRecentByRcId transporterConfig rcId = do
+findRecentByRcIdAndImageTypes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> Id DReg.VehicleRegistrationCertificate -> [DocumentType] -> m [DImage.Image]
+findRecentByRcIdAndImageTypes transporterConfig rcId imageTypes = do
   let onboardingDocsCountLimit = fromMaybe 50 transporterConfig.onboardingDocsCountLimit
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
   now <- getCurrentTime
@@ -54,7 +54,8 @@ findRecentByRcId transporterConfig rcId = do
     findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamI.rcId $ Se.Eq $ Just rcId.getId,
-            Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onboardingRetryTimeInHours now)
+            Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onboardingRetryTimeInHours now),
+            Se.Is BeamI.imageType $ Se.In imageTypes
           ]
       ]
       (Se.Desc BeamI.createdAt)
@@ -201,7 +202,8 @@ filterRecentLatestByPersonIdAndImageType DriverImagesInfo {driverImages} imgType
 
 data RcImagesInfo = RcImagesInfo
   { rcId :: Id DReg.VehicleRegistrationCertificate,
-    rcImages :: [DImage.Image]
+    rcImages :: [DImage.Image],
+    documentTypes :: [DocumentType]
   }
 
 -- filter on haskell level instead of db queries for performance reason: findRecentByPersonRCAndImageType

@@ -344,8 +344,8 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo language mbReqRegistration
         Nothing -> return Nothing
       return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
   processedVehicles `forM` \(isActive, rcId, processedVehicle) -> do
-    rcImages <- IQuery.findRecentByRcId driverImagesInfo.transporterConfig rcId
-    let rcImagesInfo = IQuery.RcImagesInfo {rcId, rcImages}
+    rcImages <- IQuery.findRecentByRcIdAndImageTypes driverImagesInfo.transporterConfig rcId vehicleDocsByRcIdList
+    let rcImagesInfo = IQuery.RcImagesInfo {rcId, rcImages, documentTypes = vehicleDocsByRcIdList}
     registrationNo <- decrypt processedVehicle.certificateNumber
     let dateOfUpload = processedVehicle.createdAt
     documents <-
@@ -436,8 +436,8 @@ fetchInprogressVehicleDocuments driverImagesInfo language processedVehicleDocume
                   pure (iu, Just rc_.id)
                 Nothing -> pure ([], Nothing)
               mbRcImagesInfo <- forM mbRcId $ \rcId -> do
-                rcImages <- IQuery.findRecentByRcId driverImagesInfo.transporterConfig rcId
-                pure IQuery.RcImagesInfo {rcId, rcImages}
+                rcImages <- IQuery.findRecentByRcIdAndImageTypes driverImagesInfo.transporterConfig rcId vehicleDocsByRcIdList
+                pure IQuery.RcImagesInfo {rcId, rcImages, documentTypes = vehicleDocsByRcIdList}
               if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
                 then return []
                 else do
@@ -656,6 +656,17 @@ getInProgressDriverDocuments driverImagesInfo docType = do
     DDVC.UploadProfile -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.UploadProfile
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
+vehicleDocsByRcIdList :: [DVC.DocumentType]
+vehicleDocsByRcIdList =
+  [ DVC.VehicleLeft,
+    DVC.VehicleRight,
+    DVC.VehicleFrontInterior,
+    DVC.VehicleBackInterior,
+    DVC.VehicleFront,
+    DVC.VehicleBack,
+    DVC.Odometer
+  ]
+
 getInProgressVehicleDocuments :: IQuery.DriverImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType =
   case docType of
@@ -666,13 +677,7 @@ getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType =
     DVC.VehicleInsurance -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInsurance
     DVC.VehiclePUC -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePUC
     DVC.VehicleInspectionForm -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInspectionForm
-    DVC.VehicleLeft -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleLeft
-    DVC.VehicleRight -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleRight
-    DVC.VehicleFrontInterior -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleFrontInterior
-    DVC.VehicleBackInterior -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleBackInterior
-    DVC.VehicleFront -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleFront
-    DVC.VehicleBack -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.VehicleBack
-    DVC.Odometer -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo DVC.Odometer
+    _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
 checkIfImageUploadedOrInvalidatedByRC :: Maybe IQuery.RcImagesInfo -> DDVC.DocumentType -> (ResponseStatus, Maybe Text, Maybe BaseUrl)
