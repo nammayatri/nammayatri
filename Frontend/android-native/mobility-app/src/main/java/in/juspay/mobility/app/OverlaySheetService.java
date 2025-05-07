@@ -93,6 +93,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private static final String TAG = "OverlaySheetService";
     private static final String TAG_MEDIA_PLAYER = "OverlaySheetService:MediaPlayer";
 
+    private static final int MAX_RIDE_REQUESTS = 6;
+
 
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
@@ -101,6 +103,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     ExecutorService executor = Executors.newSingleThreadExecutor();
     @Nullable
     private ViewPager2 viewPager;
+
     private Timer countDownTimer;
     private WindowManager windowManager;
     private SharedPreferences sharedPref;
@@ -224,18 +227,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             SheetModel model = sheetArrayList.get(position);
             modelForLogs = model;
             String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
-            switch (x) {
-                case "inc":
-                    updateIndicators();
-                    holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
-                    holder.currency.setText(String.valueOf(model.getCurrency()));
-                    updateIncreaseDecreaseButtons(holder, model);
-                    RideRequestUtils.updateRateView(holder, model);
-                    return;
-                case "time":
-                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
-                    updateProgressBars(true);
-                    return;
+            if (x.equals("inc")) {
+                updateIndicators();
+                holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+                holder.currency.setText(String.valueOf(model.getCurrency()));
+                updateIncreaseDecreaseButtons(holder, model);
+                RideRequestUtils.updateRateView(holder, model);
+                return;
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
@@ -616,11 +614,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 String searchRequestId = rideRequestBundle.getString("searchRequestId");
                 boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(searchRequestId);
                 boolean requestAlreadyPresent = findCardById(searchRequestId);
-                if (sheetArrayList.size() >= 6 || requestAlreadyPresent || isClearedReq ){
+                if (sheetArrayList.size() >= MAX_RIDE_REQUESTS || requestAlreadyPresent || isClearedReq ){
                     if (isClearedReq) MyFirebaseMessagingService.clearedRideRequest.remove(searchRequestId);
                     String event = "ride_ignored_while_adding_to_list";
                     RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null, event, this);
-                    if (sheetArrayList.size() >= 6) event = "ride_ignored_list_full"; else if (requestAlreadyPresent) event = "ride_ignored_already_present"; else if (isClearedReq) event = "ride_ignored_already_cleared";
+                    if (sheetArrayList.size() >= MAX_RIDE_REQUESTS) event = "ride_ignored_list_full"; else if (requestAlreadyPresent) event = "ride_ignored_already_present"; else if (isClearedReq) event = "ride_ignored_already_cleared";
                     firebaseLogEvent(event);
                     return;
                 }
@@ -889,14 +887,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             public void run() {
                 time++;
                 new Handler(Looper.getMainLooper()).post(() -> {
-                    for (SheetModel model : sheetArrayList) {
-                        int index = sheetArrayList.indexOf(model);
+                    for (int index = 0; index < sheetArrayList.size(); index++){
+                        SheetModel model = sheetArrayList.get(index);
                         if (model.getReqExpiryTime() + model.getStartTime() - time < 1) {
                             removeCard(index);
                         } else {
-                            sheetAdapter.notifyItemChanged(index, "time");
+                            SheetAdapter.SheetViewHolder holder = sheetAdapter.getHolder(index);
+                            if (holder != null) {
+                                updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
+                            }
                         }
                     }
+                    updateProgressBars(true);
                 });
             }
         };
@@ -1228,7 +1230,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             shimmerTip5 = floatyView.findViewById(R.id.shimmer_view_container_4);
             shimmerTip6 = floatyView.findViewById(R.id.shimmer_view_container_5);
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3, shimmerTip4, shimmerTip5, shimmerTip6));
-            for (int i = 0; i < 6; i++) {
+            for (int i = 0; i < MAX_RIDE_REQUESTS; i++) {
                 if (i < sheetArrayList.size()) {
                     shimmerTipList.get(i).setVisibility(View.VISIBLE);
                     updateTopBarBackground(i);
@@ -1242,7 +1244,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 } else {
                     indicatorTextList.get(i).setText("--");
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
-                    indicatorTipBannerList.get(i).setText("NoNeed");
+                    indicatorTipBannerList.get(i).setText("Favourite");
                     shimmerTipList.get(i).setVisibility(View.INVISIBLE);
                     progressIndicatorsList.get(i).setVisibility(View.GONE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
@@ -1270,7 +1272,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     break;
             }
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-            shimmerTipList.get(i).stopShimmer();
         } else {
             indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
@@ -1281,34 +1282,38 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTopBar (int i){
         boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
         String rideProductType = sheetArrayList.get(i).getRideProductType();
-
+        int minWidth = indicatorList.get(i).getWidth();
+        if (minWidth > 0) indicatorTipList.get(i).setMinimumWidth((int)(minWidth * 0.8));
+        float cornerRadii = 30.0f;
         switch (rideProductType) {
             case RENTAL:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Rental");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.white));
-                shimmerTipList.get(i).setBackgroundColor(getColor(R.color.turquoise));
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(getColor(R.color.turquoise), cornerRadii));
+
                 break;
             case INTERCITY:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Intercity");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.white));
-                shimmerTipList.get(i).setBackgroundColor(getColor(R.color.blue800));
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(getColor(R.color.blue800), cornerRadii));
+
                 break;
             case DELIVERY:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Delivery");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.Black800));
-                shimmerTipList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(Color.parseColor("#FEEBB9"), cornerRadii));
                 break;
             default:
                 if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                     indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
                     indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
-                    shimmerTipList.get(i).setBackgroundColor(isSpecialZone ? Color.parseColor("#53BB6F") : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : getColor(R.color.blue800)));
+                    shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : getColor(R.color.blue800), cornerRadii));
                 } else {
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
+                    indicatorTipBannerList.get(i).setText("Favourite");
                     shimmerTipList.get(i).setVisibility(View.INVISIBLE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
                 }
@@ -1325,7 +1330,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 floatyView.findViewById(R.id.indicator5),
                 floatyView.findViewById(R.id.indicator6)));
 
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < MAX_RIDE_REQUESTS; i++) {
             int finalI = i;
             indicatorList.get(i).setOnClickListener(view -> mainLooper.post(() -> {
                 if (viewPager == null) return;
@@ -1343,10 +1348,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         mediaPlayerExecutor.execute(() -> {
             try {
                 if (position < 0 || position >= sheetArrayList.size()) return;
+                int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                if (index == currentMediaIndex) return;
                 if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
                     currentMediaPlayer.pause();
                 }
-                currentMediaIndex = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                currentMediaIndex = index;
                 currentMediaPlayer = mediaPlayers[currentMediaIndex];
                 if (!currentMediaPlayer.isPlaying()) {
                     currentMediaPlayer.start();
@@ -1360,13 +1367,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateProgressBars(boolean animated) {
         try {
             if (floatyView == null) return;
-            progressIndicatorsList = new ArrayList<>(Arrays.asList(
-                    floatyView.findViewById(R.id.progress_indicator_1),
-                    floatyView.findViewById(R.id.progress_indicator_2),
-                    floatyView.findViewById(R.id.progress_indicator_3),
-                    floatyView.findViewById(R.id.progress_indicator_4),
-                    floatyView.findViewById(R.id.progress_indicator_5),
-                    floatyView.findViewById(R.id.progress_indicator_6)));
+            if (progressIndicatorsList == null)
+                progressIndicatorsList = new ArrayList<>(Arrays.asList(
+                        floatyView.findViewById(R.id.progress_indicator_1),
+                        floatyView.findViewById(R.id.progress_indicator_2),
+                        floatyView.findViewById(R.id.progress_indicator_3),
+                        floatyView.findViewById(R.id.progress_indicator_4),
+                        floatyView.findViewById(R.id.progress_indicator_5),
+                        floatyView.findViewById(R.id.progress_indicator_6)));
 
             for (int i = 0; i < sheetArrayList.size(); i++) {
                 int progressCompat = sheetArrayList.get(i).getReqExpiryTime() + sheetArrayList.get(i).getStartTime() - time;

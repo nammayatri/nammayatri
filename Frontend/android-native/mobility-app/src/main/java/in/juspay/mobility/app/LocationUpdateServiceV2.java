@@ -34,6 +34,7 @@ import android.net.ConnectivityManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -1509,7 +1510,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param data The data to log
      */
     private void appendToFile(String data) {
-//        appendToFile("location_logs", data, "fusedLocationProvider");
+        appendToFile("location_logs", data, "fusedLocationProvider");
     }
 
     /**
@@ -1519,17 +1520,27 @@ public class LocationUpdateServiceV2 extends Service {
      * @param data     The data to log
      * @param provider The provider identifier to append to the filename
      */
-    private void appendToFile(String file, String data, String provider) {
-        if (context.getApplicationInfo().packageName.contains("debug")) {
+    public void appendToFile(String file, String data, String provider) {
+        // Optional: Check if in debug mode or logging is enabled
+        boolean isDebug = context.getApplicationInfo().packageName.contains("debug");
+        if (isDebug || remoteConfigs.getBoolean("enable_logs")) {
             try {
-                File downloadsDir = context.getDir("logs", MODE_PRIVATE);
-                File logDump = new File(downloadsDir, file + "_" + provider + ".dump");
+                File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File logDir = new File(downloadsDir, ".logs");
 
-                if (!logDump.exists()) {
-                    logDump.createNewFile();
+                if (!logDir.exists() && !logDir.mkdirs()) {
+                    Log.e(TAG_ERROR, "Failed to create .logs directory");
+                    return;
                 }
 
-                try (FileWriter writer = new FileWriter(logDump, true)) {
+                File logFile = new File(logDir, file + "_" + provider + ".dump");
+
+                if (!logFile.exists() && !logFile.createNewFile()) {
+                    Log.e(TAG_ERROR, "Failed to create log file");
+                    return;
+                }
+
+                try (FileWriter writer = new FileWriter(logFile, true)) {
                     writer.write("\n");
                     writer.write("stamp " + System.currentTimeMillis() + " | ");
                     writer.write(data);
@@ -1541,6 +1552,7 @@ public class LocationUpdateServiceV2 extends Service {
             }
         }
     }
+
 
     /**
      * Starts a timer to periodically check and send location updates even when the device hasn't moved.

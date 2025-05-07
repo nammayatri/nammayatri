@@ -63,6 +63,8 @@ import java.util.concurrent.Executors;
 public class RideRequestActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private static RideRequestActivity instance;
+
+    private static final int MAX_RIDE_REQUESTS = 6;
     Context context;
     private final Handler mainLooper = new Handler(Looper.getMainLooper());
     private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
@@ -138,7 +140,7 @@ public class RideRequestActivity extends AppCompatActivity {
     }
 
     public void addToList(Bundle rideRequestBundle) {
-        if (rideRequestBundle == null || sheetArrayList == null || sheetArrayList.size() >= 6 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
+        if (rideRequestBundle == null || sheetArrayList == null || sheetArrayList.size() >= MAX_RIDE_REQUESTS || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
         mainLooper.post(() -> {
             if (findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
                 return;
@@ -318,18 +320,13 @@ public class RideRequestActivity extends AppCompatActivity {
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
             String x = !payloads.isEmpty() ? (String) payloads.get(0) : "";
-            switch (x) {
-                case "inc":
-                    updateIndicators();
-                    holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
-                    holder.currency.setText(String.valueOf(model.getCurrency()));
-                    updateIncreaseDecreaseButtons(holder, model);
-                    RideRequestUtils.updateRateView(holder, model);
-                    return;
-                case "time":
-                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
-                    updateProgressBars(true);
-                    return;
+            if (x.equals("inc")) {
+                updateIndicators();
+                holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+                holder.currency.setText(String.valueOf(model.getCurrency()));
+                updateIncreaseDecreaseButtons(holder, model);
+                RideRequestUtils.updateRateView(holder, model);
+                return;
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
@@ -497,14 +494,18 @@ public class RideRequestActivity extends AppCompatActivity {
             public void run() {
                 time++;
                 mainLooper.post(() -> {
-                    for (SheetModel model : sheetArrayList) {
-                        int index = sheetArrayList.indexOf(model);
+                    for (int index = 0; index < sheetArrayList.size(); index++){
+                        SheetModel model = sheetArrayList.get(index);
                         if (model.getReqExpiryTime() + model.getStartTime() - time < 1) {
                             removeCard(index);
                         } else {
-                            sheetAdapter.notifyItemChanged(index, "time");
+                            SheetAdapter.SheetViewHolder holder = sheetAdapter.getHolder(index);
+                            if (holder != null) {
+                                updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
+                            }
                         }
                     }
+                    updateProgressBars(true);
                 });
             }
         };
@@ -620,7 +621,9 @@ public class RideRequestActivity extends AppCompatActivity {
                 if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
                     currentMediaPlayer.pause();
                 }
-                currentMediaIndex = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                if (index == currentMediaIndex) return;
+                currentMediaIndex = index;
                 currentMediaPlayer = mediaPlayers[currentMediaIndex];
                 if (!currentMediaPlayer.isPlaying()) {
                     currentMediaPlayer.start();
@@ -680,7 +683,7 @@ public class RideRequestActivity extends AppCompatActivity {
             if (shimmerTip5 == null) shimmerTip5 = findViewById(R.id.shimmer_view_container_4);
             if (shimmerTip6 == null) shimmerTip6 = findViewById(R.id.shimmer_view_container_5);
             if (shimmerTipList == null) shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3, shimmerTip4, shimmerTip5, shimmerTip6));
-            for (int i = 0; i < 6; i++) {
+            for (int i = 0; i < MAX_RIDE_REQUESTS; i++) {
                 if (i < sheetArrayList.size()) {
                     shimmerTipList.get(i).setVisibility(View.VISIBLE);
                     updateTopBarBackground(i);
@@ -732,34 +735,38 @@ public class RideRequestActivity extends AppCompatActivity {
     private void updateTopBar (int i){
         boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
         String rideProductType = sheetArrayList.get(i).getRideProductType();
-
+        int minWidth = indicatorList.get(i).getWidth();
+        if (minWidth > 0) indicatorTipList.get(i).setMinimumWidth((int)(minWidth * 0.8));
+        float cornerRadii = 30.0f;
         switch (rideProductType) {
             case RENTAL:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Rental");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.white));
-                shimmerTipList.get(i).setBackgroundColor(getColor(R.color.turquoise));
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(getColor(R.color.turquoise), cornerRadii));
+
                 break;
             case INTERCITY:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Intercity");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.white));
-                shimmerTipList.get(i).setBackgroundColor(getColor(R.color.blue800));
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(getColor(R.color.blue800), cornerRadii));
+
                 break;
             case DELIVERY:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Delivery");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.Black800));
-                shimmerTipList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(Color.parseColor("#FEEBB9"), cornerRadii));
                 break;
             default:
                 if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                     indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
                     indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
-                    shimmerTipList.get(i).setBackgroundColor(isSpecialZone ? Color.parseColor("#53BB6F") : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : getColor(R.color.blue800)));
+                    shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : getColor(R.color.blue800), cornerRadii));
                 } else {
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
+                    indicatorTipBannerList.get(i).setText("Favourite");
                     shimmerTipList.get(i).setVisibility(View.INVISIBLE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
                 }
@@ -768,7 +775,7 @@ public class RideRequestActivity extends AppCompatActivity {
 
     private void setIndicatorClickListener() {
         if (viewPager2 == null) return;
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < MAX_RIDE_REQUESTS; i++) {
             int finalI = i;
             indicatorList.get(i).setOnClickListener(view -> mainLooper.post(() -> {
                 if (viewPager2 == null) return;

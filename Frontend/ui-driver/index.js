@@ -320,7 +320,7 @@ window.callUICallback = function () {
       timeDiff = currTime - window.__LAST_FN_CALLED.timeStamp;
 
       if (timeDiff >= 100) {
-        if (window.__PROXY_FN_MAP_TYPE) {
+        if (window.__PROXY_FN_MAP_TYPE && window.__PROXY_FN.has(fName)) {
           console.log("PROXY_FN_MAP_TYPE", window.__PROXY_FN.get(fName));
           window.__PROXY_FN.get(fName).apply(null, functionArgs);
         } else {
