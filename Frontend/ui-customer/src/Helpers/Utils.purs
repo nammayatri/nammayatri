@@ -122,6 +122,8 @@ import LocalStorage.Cache
 
 foreign import shuffle :: forall a. Array a -> Array a
 
+foreign import launchAppSettings :: Unit -> Effect Unit
+
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 
 foreign import isWeekend :: String -> Boolean
