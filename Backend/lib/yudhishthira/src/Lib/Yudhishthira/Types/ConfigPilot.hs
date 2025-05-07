@@ -26,7 +26,6 @@ data ConfigType
   = DriverPoolConfig
   | TransporterConfig
   | RiderConfig
-  | FRFSConfig
   | PayoutConfig
   | MerchantServiceUsageConfig
   | HotSpotConfig
@@ -60,7 +59,6 @@ instance ConfigTypeEnumerable ConfigType where
     [ DriverPoolConfig,
       TransporterConfig,
       RiderConfig,
-      FRFSConfig,
       PayoutConfig,
       MerchantServiceUsageConfig,
       HotSpotConfig,

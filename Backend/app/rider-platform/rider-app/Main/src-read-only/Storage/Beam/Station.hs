@@ -24,6 +24,7 @@ data StationT f = StationT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    ondcSubscriberIdAndUniqueKeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     possibleTypes :: B.C f (Kernel.Prelude.Maybe [Domain.Types.StationType.StationType]),
     regionalName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),

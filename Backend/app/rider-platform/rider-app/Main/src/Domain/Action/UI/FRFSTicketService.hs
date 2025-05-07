@@ -68,6 +68,7 @@ import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -115,7 +116,9 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
                                 address = Nothing,
                                 distance = Nothing,
                                 color = Nothing,
-                                towards = Nothing
+                                towards = Nothing,
+                                id = Nothing,
+                                ondcId = Nothing
                               }
                         )
                     )
@@ -198,7 +201,9 @@ getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
-                      towards = Nothing
+                      towards = Nothing,
+                      id = Nothing,
+                      ondcId = Nothing
                     }
               )
               stopsSortedBySequenceNumber,
@@ -262,7 +267,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
-                      towards = Nothing
+                      towards = Nothing,
+                      id = Nothing,
+                      ondcId = Nothing
                     }
               )
               possibleStartStops
@@ -287,7 +294,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
-                      towards = Nothing
+                      towards = Nothing,
+                      id = Nothing,
+                      ondcId = Nothing
                     }
               )
               filteredRouteStops
@@ -311,6 +320,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
+                      id = Nothing,
+                      ondcId = Nothing,
                       towards = Nothing
                     }
               )
@@ -346,6 +357,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
+                      id = Nothing,
+                      ondcId = Nothing,
                       towards = Nothing
                     }
               )
@@ -363,6 +376,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
                       sequenceNum = Nothing,
                       stationType = Nothing,
                       towards = Nothing,
+                      ondcId = ondcSubscriberIdAndUniqueKeyId,
+                      id = Just id,
                       ..
                     }
               )
@@ -421,8 +436,12 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType_ ||+ "Platform Type:" +|| platformType ||+ "")
   (fromStation, toStation) <- do
-    fromStationInfo <- QStation.findByStationCode fromStationCode integratedBPPConfig.id >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    toStationInfo <- QStation.findByStationCode toStationCode integratedBPPConfig.id >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+    fromStationInfo <- case fromStationId of
+      Just stationId -> B.runInReplica $ CQStation.findById stationId >>= fromMaybeM (StationNotFound stationId.getId)
+      Nothing -> B.runInReplica $ CQStation.findByStationCodeAndIntegratedBPPConfigId fromStationCode integratedBPPConfig.id >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+    toStationInfo <- case toStationId of
+      Just stationId -> B.runInReplica $ CQStation.findById stationId >>= fromMaybeM (StationNotFound stationId.getId)
+      Nothing -> B.runInReplica $ CQStation.findByStationCodeAndIntegratedBPPConfigId toStationCode integratedBPPConfig.id >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| toStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
     return (fromStationInfo, toStationInfo)
   route <-
     maybe
@@ -435,7 +454,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
 
   searchReqId <- generateGUID
   now <- getCurrentTime
-  let updatedJourneyRouteDetails = map (\JLT.MultiModalJourneyRouteDetails {..} -> JLT.MultiModalJourneyRouteDetails {journeyStatus = Just JLT.InPlan, ..}) mbJourneyRouteDetails
+  let updatedJourneyRouteDetails = map (\multimodalJourneyRouteDetails -> multimodalJourneyRouteDetails {JLT.journeyStatus = Just JLT.InPlan}) mbJourneyRouteDetails
   let searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
@@ -940,6 +959,7 @@ postFrfsBookingCanCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Typ
 postFrfsBookingCanCancel (_, merchantId) bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
+  fromStation <- CQStation.findById ticketBooking.fromStationId >>= fromMaybeM (StationNotFound ticketBooking.fromStationId.getId)
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   platformType' <- case (ticketBooking.integratedBppConfigId) of
@@ -950,7 +970,7 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
     Nothing -> do
       pure DIBC.APPLICATION
   frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
+    CQFRFSConfig.findByCityIdAndSubscriberId ticketBooking.merchantOperatingCityId fromStation.ondcSubscriberIdAndUniqueKeyId
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
   unless (ticketBooking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest "Cancellation during incorrect status")
@@ -973,6 +993,7 @@ postFrfsBookingCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.
 postFrfsBookingCancel (_, merchantId) bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  fromStation <- CQStation.findById ticketBooking.fromStationId >>= fromMaybeM (StationNotFound ticketBooking.fromStationId.getId)
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
   platformType' <- case (ticketBooking.integratedBppConfigId) of
@@ -983,7 +1004,7 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
     Nothing -> do
       pure DIBC.APPLICATION
   frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
+    CQFRFSConfig.findByCityIdAndSubscriberId ticketBooking.merchantOperatingCityId fromStation.ondcSubscriberIdAndUniqueKeyId
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
   void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType'
@@ -1008,7 +1029,7 @@ getAbsoluteValue mbRefundAmount = case mbRefundAmount of
 getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Context.City -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
 getFrfsConfig (pId, mId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
-  Domain.Types.FRFSConfig.FRFSConfig {..} <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOpCity.id [] >>= fromMaybeM (InvalidRequest "FRFS Config not found")
+  Domain.Types.FRFSConfig.FRFSConfig {..} <- B.runInReplica $ CQFRFSConfig.findByCityIdAndSubscriberId merchantOpCity.id Nothing >>= fromMaybeM (InvalidRequest "FRFS Config not found")
   stats <- maybe (pure Nothing) CQP.findPersonStatsById pId
   let isEventOngoing' = fromMaybe False isEventOngoing
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
@@ -1031,7 +1052,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOpCity.id []
+    CQFRFSConfig.findByCityIdAndSubscriberId merchantOpCity.id Nothing
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
   integratedBPPConfig <-
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicle) platformType
@@ -1099,6 +1120,8 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
                 sequenceNum = Nothing,
                 stationType = Nothing,
                 towards = Nothing,
+                id = Just id,
+                ondcId = ondcSubscriberIdAndUniqueKeyId,
                 ..
               }
         )
@@ -1138,7 +1161,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
                     travelMode = Just Maps.CAR
                   }
           case res of
-            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, ..}) batch
+            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, id = Nothing, ondcId = Nothing, ..}) batch
             Right stopsDistanceResp ->
               return $ map (\stop -> mkStopToAPI stop.origin stop.distance) (NonEmpty.toList stopsDistanceResp)
 
@@ -1155,6 +1178,8 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
           sequenceNum = stop.sequenceNum,
           address = Nothing,
           color = Nothing,
+          id = Nothing,
+          ondcId = Nothing,
           towards = Nothing
         }
 

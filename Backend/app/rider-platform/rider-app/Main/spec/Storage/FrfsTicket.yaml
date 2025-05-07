@@ -170,6 +170,7 @@ Station:
     possibleTypes: Maybe [StationType]
     merchantOperatingCityId: Id MerchantOperatingCity
     integratedBppConfigId: Id IntegratedBPPConfig
+    ondcSubscriberIdAndUniqueKeyId: Maybe Text
 
   default:
     timeBounds: "'Unbounded'"
@@ -700,6 +701,7 @@ FRFSConfig:
     providerId: Maybe Text
     providerName: Maybe Text
     validTillSeconds: Seconds
+    ondcSubscriberIdAndUniqueKeyId: Maybe Text
 
   beamType:
     isCancellationAllowed: Maybe Bool
@@ -709,12 +711,14 @@ FRFSConfig:
     validTillSeconds: Maybe Seconds
 
   queries:
-    findByMerchantOperatingCityId:
-      kvFunction: findOneWithKV
-      where: merchantOperatingCityId
+    findByCityIdAndSubscriberId:
+       kvFunction: findOneWithKV
+       where:
+          and: [merchantOperatingCityId, ondcSubscriberIdAndUniqueKeyId]
 
   constraints:
     merchantOperatingCityId: PrimaryKey
+    ondcSubscriberIdAndUniqueKeyId: PrimaryKey
 
   default:
     isEventOngoing: "false"

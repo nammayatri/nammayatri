@@ -24,13 +24,27 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSConfig.FRFSConfig] -> m ())
 createMany = traverse_ create
 
-findByMerchantOperatingCityId ::
+findByCityIdAndSubscriberId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig))
-findByMerchantOperatingCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig))
+findByCityIdAndSubscriberId merchantOperatingCityId ondcSubscriberIdAndUniqueKeyId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.ondcSubscriberIdAndUniqueKeyId $ Se.Eq ondcSubscriberIdAndUniqueKeyId
+        ]
+    ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig))
-findByPrimaryKey merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig))
+findByPrimaryKey merchantOperatingCityId ondcSubscriberIdAndUniqueKeyId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.ondcSubscriberIdAndUniqueKeyId $ Se.Eq ondcSubscriberIdAndUniqueKeyId
+        ]
+    ]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSConfig.FRFSConfig -> m ())
 updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
@@ -59,7 +73,11 @@ updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.ondcSubscriberIdAndUniqueKeyId $ Se.Eq ondcSubscriberIdAndUniqueKeyId
+        ]
+    ]
 
 instance FromTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
   fromTType' (Beam.FRFSConfigT {..}) = do
@@ -80,6 +98,7 @@ instance FromTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             metroStationTtl = metroStationTtl,
+            ondcSubscriberIdAndUniqueKeyId = ondcSubscriberIdAndUniqueKeyId,
             oneWayTicketLimit = oneWayTicketLimit,
             providerId = providerId,
             providerName = providerName,
@@ -108,6 +127,7 @@ instance ToTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.metroStationTtl = metroStationTtl,
+        Beam.ondcSubscriberIdAndUniqueKeyId = ondcSubscriberIdAndUniqueKeyId,
         Beam.oneWayTicketLimit = oneWayTicketLimit,
         Beam.providerId = providerId,
         Beam.providerName = providerName,

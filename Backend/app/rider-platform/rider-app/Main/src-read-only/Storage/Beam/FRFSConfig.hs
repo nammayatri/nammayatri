@@ -27,6 +27,7 @@ data FRFSConfigT f = FRFSConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     metroStationTtl :: B.C f Kernel.Prelude.Int,
+    ondcSubscriberIdAndUniqueKeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     oneWayTicketLimit :: B.C f Kernel.Prelude.Int,
     providerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -40,11 +41,11 @@ data FRFSConfigT f = FRFSConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table FRFSConfigT where
-  data PrimaryKey FRFSConfigT f = FRFSConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = FRFSConfigId . merchantOperatingCityId
+  data PrimaryKey FRFSConfigT f = FRFSConfigId (B.C f Kernel.Prelude.Text) (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)) deriving (Generic, B.Beamable)
+  primaryKey = FRFSConfigId <$> merchantOperatingCityId <*> ondcSubscriberIdAndUniqueKeyId
 
 type FRFSConfig = FRFSConfigT Identity
 
-$(enableKVPG ''FRFSConfigT ['merchantOperatingCityId] [])
+$(enableKVPG ''FRFSConfigT ['merchantOperatingCityId, 'ondcSubscriberIdAndUniqueKeyId] [])
 
 $(mkTableInstances ''FRFSConfigT "frfs_config")

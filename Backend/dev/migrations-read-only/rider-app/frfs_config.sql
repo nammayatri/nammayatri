@@ -45,3 +45,14 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN radius integer  default 3000;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN valid_till_seconds integer  default 300;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_name text ;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN ondc_subscriber_id_and_unique_key_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config DROP CONSTRAINT frfs_config_pkey;
+ALTER TABLE atlas_app.frfs_config ADD PRIMARY KEY ( merchant_operating_city_id, ondc_subscriber_id_and_unique_key_id);

@@ -68,6 +68,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.ondcSubscriberIdAndUniqueKeyId ondcSubscriberIdAndUniqueKeyId,
       Se.Set Beam.possibleTypes possibleTypes,
       Se.Set Beam.regionalName regionalName,
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),

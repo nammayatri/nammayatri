@@ -1,4 +1,5 @@
 imports:
+  Id: Kernel.Types.Id
   Text: Data.Text
   Maybe: Data.Maybe
   Station: Domain.Types.Station
@@ -39,6 +40,8 @@ types:
     quantity: Int
     journeySearchData: Maybe JourneySearchData
     recentLocationId: Maybe (Id RecentLocation)
+    fromStationId: Maybe (Id Station)
+    toStationId: Maybe (Id Station)
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -149,6 +152,8 @@ types:
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text
+    id: Maybe (Id Station)
+    ondcId: Maybe Text
     derive: "Show"
 
   FRFSCanCancelStatus:
