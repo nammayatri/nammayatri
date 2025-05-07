@@ -46,6 +46,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
@@ -82,6 +83,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCrisUtsDataJob)
     }
 
 runRiderAppScheduler ::

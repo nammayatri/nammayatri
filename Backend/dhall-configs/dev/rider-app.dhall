@@ -216,6 +216,7 @@ let RiderJobType =
       | MonthlyUpdateTag
       | QuarterlyUpdateTag
       | PostRideSafetyNotification
+      | UpdateCrisUtsData
       >
 
 let jobInfoMapx =
@@ -246,6 +247,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.MonthlyUpdateTag, mapValue = True }
       , { mapKey = RiderJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = RiderJobType.PostRideSafetyNotification, mapValue = False }
+      , { mapKey = RiderJobType.UpdateCrisUtsData, mapValue = True }
       ]
 
 let cacConfig =

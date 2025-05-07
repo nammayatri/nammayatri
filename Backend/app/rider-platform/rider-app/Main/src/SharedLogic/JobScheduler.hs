@@ -21,6 +21,7 @@ import Data.Singletons.TH
 import Domain.Types.Booking
 import qualified Domain.Types.Extra.Booking as DEB
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
@@ -56,6 +57,7 @@ data RiderJobType
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
   | PostRideSafetyNotification
+  | UpdateCrisUtsData
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -86,6 +88,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
+  restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -175,6 +178,15 @@ data CheckExotelCallStatusAndNotifyBPPJobData = CheckExotelCallStatusAndNotifyBP
 instance JobInfoProcessor 'CheckExotelCallStatusAndNotifyBPP
 
 type instance JobContent 'CheckExotelCallStatusAndNotifyBPP = CheckExotelCallStatusAndNotifyBPPJobData
+
+data UpdateCrisUtsDataJobData = UpdateCrisUtsDataJobData
+  { integratedBPPConfigId :: Id DIntegratedBPPConfig.IntegratedBPPConfig
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UpdateCrisUtsData
+
+type instance JobContent 'UpdateCrisUtsData = UpdateCrisUtsDataJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,
