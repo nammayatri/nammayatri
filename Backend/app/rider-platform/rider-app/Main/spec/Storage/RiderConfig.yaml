@@ -100,6 +100,7 @@ RiderConfig:
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
     fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
     blockedUntilInMins : Maybe Minutes
+    ticketAssetDomain: Maybe Text
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
