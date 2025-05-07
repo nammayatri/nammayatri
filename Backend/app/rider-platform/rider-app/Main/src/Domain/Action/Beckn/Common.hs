@@ -57,6 +57,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Confidence
@@ -364,7 +365,8 @@ rideAssignedReqHandler ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasKafkaProducer r
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -407,7 +409,8 @@ rideAssignedReqHandler req = do
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasBAPMetrics m r,
         EventStreamFlow m r,
-        HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+        HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+        HasKafkaProducer r
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
@@ -607,7 +610,8 @@ rideCompletedReqHandler ::
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -767,7 +771,8 @@ bookingCancelledReqHandler ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     SchedulerFlow r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   ValidatedBookingCancelledReq ->
   m ()
@@ -789,7 +794,8 @@ cancellationTransaction ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     SchedulerFlow r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DRB.Booking ->
   Maybe DRide.Ride ->
@@ -1045,7 +1051,8 @@ sendRideEndMessage ::
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   DRB.Booking ->
   m ()
@@ -1080,7 +1087,8 @@ customerReferralPayout ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   DRide.Ride ->
   Maybe Bool ->
@@ -1221,7 +1229,8 @@ sendRideBookingDetailsViaWhatsapp ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id DPerson.Person ->
   DRide.Ride ->
@@ -1247,7 +1256,8 @@ sendBookingCancelledMessageViaWhatsapp ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id DPerson.Person ->
   DRC.RiderConfig ->

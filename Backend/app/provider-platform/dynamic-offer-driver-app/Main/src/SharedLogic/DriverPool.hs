@@ -92,6 +92,7 @@ import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -532,7 +533,8 @@ calculateGoHomeDriverPool ::
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
@@ -587,7 +589,8 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   [QP.NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -673,7 +676,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       mapM
         ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
             routes <-
-              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) $
+              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) Nothing $
                 Maps.GetRoutesReq
                   { waypoints = getCoordinates driver :| [getCoordinates ghReq],
                     mode = Just Maps.CAR,
@@ -746,7 +749,8 @@ calculateDriverPool ::
     MonadFlow m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
   m [DriverPoolResult]
@@ -804,6 +808,7 @@ calculateDriverPoolWithActualDist ::
     CoreMetrics m,
     HasCoordinates a,
     LT.HasLocationService m r,
+    HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool
@@ -865,7 +870,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
         case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
           (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
             currentDroptoScheduledPickupDistance <-
-              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId $
+              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId Nothing $
                 TMaps.GetDistanceReq
                   { origin = dropLoc,
                     destination = scheduledPickup,
@@ -943,7 +948,8 @@ calculateDriverPoolCurrentlyOnRide ::
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
   Maybe Integer ->
@@ -1007,7 +1013,8 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -1077,7 +1084,8 @@ computeActualDistanceOneToOne ::
     EsqDBFlow m r,
     EncFlow m r,
     HasCoordinates a,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1095,7 +1103,8 @@ computeActualDistance ::
     EsqDBFlow m r,
     EncFlow m r,
     HasCoordinates a,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1109,7 +1118,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
   transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
-      Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+      Maps.getEstimatedPickupDistances orgId merchantOpCityId Nothing $
         Maps.GetDistancesReq
           { origins = driverPoolResults,
             destinations = pickupLatLong :| [],
@@ -1145,7 +1154,8 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1158,7 +1168,7 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
   transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
-      Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+      Maps.getEstimatedPickupDistances orgId merchantOpCityId Nothing $
         Maps.GetDistancesReq
           { origins = driverPoolResults,
             destinations = destinationLatLons,

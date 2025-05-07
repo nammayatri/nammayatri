@@ -188,7 +188,7 @@ getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distanc
   checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) []
 getRouteServiceability merchantId merchantOpCityId distanceUnit fromLocation toLocation _ _ _ _ = do
   response <- ----------------Change the distance api call to directions and pass stops as waypoints ---------Already done by @khuzema in another PR.
-    Maps.getDistance merchantId merchantOpCityId $
+    Maps.getDistance merchantId merchantOpCityId Nothing $
       Maps.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,
@@ -943,7 +943,7 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
 getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do
   pickupRes <-
-    DMaps.getPlaceName merchantId merchantOpCityId $
+    DMaps.getPlaceName merchantId merchantOpCityId Nothing $
       Maps.GetPlaceNameReq
         { getBy = Maps.ByLatLong latLong,
           sessionToken = Just sessionToken,

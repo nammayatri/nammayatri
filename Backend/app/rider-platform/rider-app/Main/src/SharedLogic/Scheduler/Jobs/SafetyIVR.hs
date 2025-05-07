@@ -25,6 +25,7 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -42,7 +43,8 @@ sendSafetyIVR ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasKafkaProducer r
   ) =>
   Job 'SafetyIVR ->
   m ExecutionResult
@@ -63,7 +65,8 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         CacheFlow m r,
         MonadFlow m,
         EsqDBFlow m r,
-        SchedulerFlow r
+        SchedulerFlow r,
+        HasKafkaProducer r
       ) =>
       Id DP.Person ->
       DRide.Ride ->
@@ -79,7 +82,8 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         CacheFlow m r,
         MonadFlow m,
         EsqDBFlow m r,
-        SchedulerFlow r
+        SchedulerFlow r,
+        HasKafkaProducer r
       ) =>
       Id DP.Person ->
       DRide.Ride ->
@@ -97,7 +101,8 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         CacheFlow m r,
         MonadFlow m,
         EsqDBFlow m r,
-        SchedulerFlow r
+        SchedulerFlow r,
+        HasKafkaProducer r
       ) =>
       DP.Person ->
       DRide.Ride ->

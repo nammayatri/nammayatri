@@ -33,6 +33,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..), SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -63,7 +64,7 @@ type ScheduleNotificationFlow m r =
   )
 
 sendScheduledRideNotificationsToDriver ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   Job 'ScheduledRideNotificationsToDriver ->
   m ExecutionResult
 sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -102,7 +103,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
       (formattedTitle, formattedBody)
 
 sendTagActionNotification ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   Job 'ScheduleTagActionNotification ->
   m ExecutionResult
 sendTagActionNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -128,7 +129,7 @@ data SendCommunicationToDriverReq = SendCommunicationToDriverReq
   }
 
 sendCommunicationToDriver ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   SendCommunicationToDriverReq ->
   m ()
 sendCommunicationToDriver SendCommunicationToDriverReq {..} = do

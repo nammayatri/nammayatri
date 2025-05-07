@@ -17,6 +17,7 @@ import qualified Domain.Types.Booking as DTB
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -27,7 +28,8 @@ import Tools.Notifications (notifyAboutScheduledRide)
 sendScheduledRidePopupToRider ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasKafkaProducer r
   ) =>
   Job 'ScheduledRidePopupToRider ->
   m ExecutionResult

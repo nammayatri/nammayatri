@@ -78,7 +78,7 @@ bulkLocUpdate req = do
             currentLatLong = NE.last loc
             dropLatLong = TM.LatLong {lat = toLocation.lat, lon = toLocation.lon}
         routeResponse <-
-          TM.getRoutes merchantId booking.merchantOperatingCityId $
+          TM.getRoutes merchantId booking.merchantOperatingCityId (Just rideId.getId) $
             TM.GetRoutesReq
               { waypoints = NE.fromList [currentLatLong, dropLatLong],
                 mode = Just TM.CAR,

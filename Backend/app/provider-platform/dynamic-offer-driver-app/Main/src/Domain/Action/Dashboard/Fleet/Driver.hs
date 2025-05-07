@@ -1561,7 +1561,7 @@ getRoutesByLocation merchantId merchantOpCityId origin routes_ = do
         forM routeBatches $ \batch -> do
           res <-
             try @_ @SomeException $
-              Maps.getDistances merchantId merchantOpCityId $
+              Maps.getDistances merchantId merchantOpCityId Nothing $
                 Maps.GetDistancesReq
                   { origins = fromList batch,
                     destinations = fromList [origin],

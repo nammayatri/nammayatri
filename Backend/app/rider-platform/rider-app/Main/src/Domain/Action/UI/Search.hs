@@ -622,7 +622,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) request
+  routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
   let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
   when collectMMIData $ do
@@ -630,7 +630,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
       mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
-          routeResp <- MapsRoutes.getRoutes True mapsCfg request
+          routeResp <- MapsRoutes.getRoutes (Just searchRequestId.getId) True mapsCfg request
           logInfo $ "MMI route response: " <> show routeResp
           let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
           triggerRouteDataEvent routeData
@@ -646,8 +646,8 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
             MapsK.NextBillionConfig msc -> do
               let nbFastestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "fastest") Nothing
               let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
-              nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbFastestReq
-              nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbShortestReq
+              nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbFastestReq
+              nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbShortestReq
               logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
               let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
               let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now

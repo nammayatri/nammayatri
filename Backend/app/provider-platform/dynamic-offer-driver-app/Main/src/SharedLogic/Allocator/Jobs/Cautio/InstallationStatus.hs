@@ -5,6 +5,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Plan as Plan
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as KID
 import Kernel.Utils.Common
@@ -27,7 +28,8 @@ installationStatus ::
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasKafkaProducer r
   ) =>
   Job 'CheckDashCamInstallationStatus ->
   m ExecutionResult

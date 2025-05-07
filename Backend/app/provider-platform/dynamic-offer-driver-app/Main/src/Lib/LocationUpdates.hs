@@ -231,7 +231,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize 
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId
+          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId Nothing
           else snapToRoadWithService
       enableNightSafety = not isEndRide
       enableSafetyCheckWrtTripCategory = \case
@@ -275,7 +275,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize 
       )
   where
     snapToRoadWithService req = do
-      resp <- TMaps.snapToRoad merchantId merchantOpCityId req
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId Nothing req
       return ([Google], Right resp)
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()

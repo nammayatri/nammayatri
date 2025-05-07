@@ -25,6 +25,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -40,7 +41,8 @@ sendFleetAlert ::
     CacheFlow m r,
     MonadFlow m,
     SchedulerFlow r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasKafkaProducer r
   ) =>
   Job 'FleetAlert ->
   m ExecutionResult

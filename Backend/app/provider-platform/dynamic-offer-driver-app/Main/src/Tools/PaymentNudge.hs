@@ -34,6 +34,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as Payments
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -77,7 +78,8 @@ sendSwitchPlanNudge ::
   ( EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    HasKafkaProducer r
   ) =>
   TC.TransporterConfig ->
   DI.DriverInformation ->

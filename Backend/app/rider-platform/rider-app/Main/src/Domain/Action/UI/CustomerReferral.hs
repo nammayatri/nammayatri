@@ -16,6 +16,7 @@ import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Types as PT
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -104,7 +105,8 @@ processBacklogReferralPayout ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   Id Person.Person ->
   Text ->

@@ -22,6 +22,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -47,6 +48,7 @@ getNextDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     LT.HasLocationService m r,
+    HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool
@@ -89,6 +91,7 @@ prepareDriverPoolBatch ::
     EsqDBFlow m r,
     CacheFlow m r,
     LT.HasLocationService m r,
+    HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool
@@ -125,7 +128,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         EsqDBReplicaFlow m r,
         EsqDBFlow m r,
         CacheFlow m r,
-        LT.HasLocationService m r
+        LT.HasLocationService m r,
+        HasKafkaProducer r
       ) =>
       Maybe Bool ->
       m [Id Driver]
@@ -443,7 +447,8 @@ assignDriverGoHomeTags ::
     EsqDBFlow m r,
     CacheFlow m r,
     LT.HasLocationService m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   [DriverPoolWithActualDistResult] ->
   DSR.SearchRequest ->

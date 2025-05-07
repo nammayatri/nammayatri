@@ -49,6 +49,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -135,7 +136,8 @@ cancel ::
     Esq.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasKafkaProducer r
   ) =>
   SRB.Booking ->
   Maybe Ride.Ride ->
@@ -280,7 +282,10 @@ driverDistanceToPickup ::
     CacheFlow m r,
     EsqDBFlow m r,
     Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos
+    Maps.HasCoordinates tripEndPos,
+    ToJSON tripStartPos,
+    ToJSON tripEndPos,
+    HasKafkaProducer r
   ) =>
   SRB.Booking ->
   Id DMOC.MerchantOperatingCity ->
@@ -289,7 +294,7 @@ driverDistanceToPickup ::
   m Meters
 driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide booking.merchantId merchantOperatingCityId $
+    Maps.getDistanceForCancelRide booking.merchantId merchantOperatingCityId (Just booking.id.getId) $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

@@ -23,6 +23,7 @@ import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -43,7 +44,8 @@ executePaymentIntentJob ::
     MonadFlow m,
     EsqDBFlow m r,
     SchedulerFlow r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Job 'ExecutePaymentIntent ->
   m ExecutionResult
@@ -89,7 +91,8 @@ cancelExecutePaymentIntentJob ::
     EsqDBFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Job 'CancelExecutePaymentIntent ->
   m ExecutionResult

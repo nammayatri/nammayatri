@@ -297,7 +297,7 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
             sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
-  otpResponse <- KMultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
   logDebug $ "[getMultiModalTransitOptions - OTP Response]" <> show otpResponse
 
   let processedRoutes = map (processRoute riderConfig.maximumWalkDistance) otpResponse.routes
@@ -468,7 +468,7 @@ snapJourneyLegToNearestGate journeyLeg = do
           let destinations = LatLong (destLocation.latitude) (destLocation.longitude) :| []
           let originLocs = fmap (.point) nonEmptyGates
           distanceResponses <-
-            Maps.getMultimodalJourneyDistances merchantId merchantOperatingCityId $
+            Maps.getMultimodalJourneyDistances merchantId merchantOperatingCityId (Just journeyLeg.id.getId) $
               Maps.GetDistancesReq
                 { origins = originLocs,
                   destinations = destinations,
@@ -1209,7 +1209,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
         Nothing -> throwError (InvalidRequest "bookingUpdateRequestId not found")
     (_, _) -> do
       distResp <-
-        Maps.getDistance currentLeg.merchantId currentLeg.merchantOperatingCityId $
+        Maps.getDistance currentLeg.merchantId currentLeg.merchantOperatingCityId (Just journeyId.getId) $
           Maps.GetDistanceReq
             { origin = startLocation,
               destination = getEndLocation endLocation,
@@ -1317,7 +1317,7 @@ switchLeg journeyId req = do
         merchantId <- journeyLeg.merchantId & fromMaybeM (InvalidRequest $ "MerchantId not found for journeyLegId: " <> journeyLeg.id.getId)
         merchantOperatingCityId <- journeyLeg.merchantOperatingCityId & fromMaybeM (InvalidRequest $ "MerchantOperatingCityId not found for journeyLegId: " <> journeyLeg.id.getId)
         newDistanceAndDuration <-
-          Maps.getMultimodalWalkDistance merchantId merchantOperatingCityId $
+          Maps.getMultimodalWalkDistance merchantId merchantOperatingCityId (Just journeyLeg.id.getId) $
             Maps.GetDistanceReq
               { origin = LatLong {lat = startLocation.latitude, lon = startLocation.longitude},
                 destination = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},

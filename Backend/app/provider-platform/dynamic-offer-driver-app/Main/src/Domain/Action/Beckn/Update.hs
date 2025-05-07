@@ -213,7 +213,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 else return (srcPt :| [dropLatLong], Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
-              Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id $
+              Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id (Just ride.id.getId) $
                 Maps.GetRoutesReq
                   { waypoints = pickedWaypoints,
                     mode = Just Maps.CAR,
@@ -325,7 +325,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
   where
     snapToRoad latlongs merchantId merchanOperatingCityId = do
-      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
+      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId (Just rideId.getId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
       case res of
         (_, Left e) -> do
           logTagError "snapToRoadWithFallback failed in edit destination" $ "Error: " <> show e
