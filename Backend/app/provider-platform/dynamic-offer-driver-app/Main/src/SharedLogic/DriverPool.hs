@@ -99,6 +99,7 @@ import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified SharedLogic.Beckn.Common as DST
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -803,7 +804,9 @@ calculateDriverPoolWithActualDist ::
     CoreMetrics m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -814,7 +817,7 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      filtDriverPoolWithActualDist' <-
+      filtDriverPoolWithActualDist' <- withTimeAPI "driverPooling" "computeActualDistance" $ do
         case poolType of
           SpecialZoneQueuePool -> pure $ map mkSpecialZoneQueueActualDistanceResult driverPool
           _ -> do
@@ -822,9 +825,7 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
             pure $ case driverPoolCfg.actualDistanceThreshold of
               Nothing -> NE.toList driverPoolWithActualDist
               Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) driverPoolWithActualDist) (NE.sortOn (.driverId) $ a :| pprox)
-      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist'
-      filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
-      logDebug $ "thirdly scheduled filtered driver pool" <> show filtDriverPoolWithActualDist
+      filtDriverPoolWithActualDist <- withTimeAPI "driverPooling" "filterM scheduledRideFilter" $ filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
       return filtDriverPoolWithActualDist
   where
     mkSpecialZoneQueueActualDistanceResult dpr = do

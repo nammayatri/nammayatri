@@ -77,7 +77,9 @@ sendScheduledRideAssignedOnUpdate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -280,7 +282,9 @@ cancelOrReallocate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   DRide.Ride ->
   Text ->
