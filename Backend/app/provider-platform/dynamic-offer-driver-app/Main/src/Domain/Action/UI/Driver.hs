@@ -1307,7 +1307,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
-            DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
+            DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
           else do
             if not lockEditDestination
@@ -1316,14 +1316,14 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
     Reject -> do
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
-      DP.removeSearchReqIdFromMap merchantId driverId searchTry.id
+      DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
       unlockRedisQuoteKeys
     Pulled -> do
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       throwError UnexpectedResponseValue
   pure Success
   where
-    buildDriverRespondEventPayload searchTryId restActiveDriverSearchReqs =
+    buildDriverRespondEventPayload searchTryId searchReqId restActiveDriverSearchReqs =
       DST.OnDriverAcceptingSearchRequest
         { restDriverIds = map (.driverId) restActiveDriverSearchReqs,
           response = req.response,

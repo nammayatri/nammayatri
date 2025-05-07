@@ -51,8 +51,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.DriverCoins.Types as DCT
-import qualified Lib.DriverScore as DS
-import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
 import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -112,16 +110,16 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   let tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails
-  DS.driverScoreEventHandler
-    searchReq.merchantOperatingCityId
-    DST.OnNewSearchRequestForDrivers
-      { driverPool = driverPool,
-        merchantId = searchReq.providerId,
-        searchReq = searchReq,
-        searchTry = searchTry,
-        validTill = validTill,
-        batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-      }
+  -- DS.driverScoreEventHandler
+  --   searchReq.merchantOperatingCityId
+  --   DST.OnNewSearchRequestForDrivers
+  --     { driverPool = driverPool,
+  --       merchantId = searchReq.providerId,
+  --       searchReq = searchReq,
+  --       searchTry = searchTry,
+  --       validTill = validTill,
+  --       batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+  --     }
 
   -- This is a cache for coin configurations by vehicle category
   coinConfigCache <-
