@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Interface where
 
 import API.Types.UI.MultimodalConfirm
+import Control.Applicative ((<|>))
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -132,8 +133,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
     mkRouteDetails :: EMInterface.MultiModalRouteDetails -> Maybe FRFSRouteDetails
     mkRouteDetails routeDetails =
       let mbRouteCode = gtfsIdtoDomainCode <$> routeDetails.gtfsId
-          mbFromStationCode = gtfsIdtoDomainCode <$> (routeDetails.fromStopDetails >>= (.gtfsId))
-          mbToStationCode = gtfsIdtoDomainCode <$> (routeDetails.toStopDetails >>= (.gtfsId))
+          mbFromStationCode = gtfsIdtoDomainCode <$> ((routeDetails.fromStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetails.fromStopDetails >>= (.gtfsId)))
+          mbToStationCode = gtfsIdtoDomainCode <$> ((routeDetails.toStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetails.toStopDetails >>= (.gtfsId)))
        in case (mbRouteCode, mbFromStationCode, mbToStationCode) of
             (Just routeCode, Just startStationCode, Just endStationCode) ->
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}

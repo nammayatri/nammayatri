@@ -442,8 +442,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData merchantOpCity integratedBPPConfig = do
-      fromStationCode <- ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "From station gtfsId not found")
-      toStationCode <- ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "To station gtfsId not found")
+      fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
+      toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
       _ <- createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude merchantOpCity integratedBPPConfig
       _ <- createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude merchantOpCity integratedBPPConfig
       let routeCode = Nothing
@@ -491,8 +491,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
       where
         transformJourneyRouteDetails :: JT.SearchRequestFlow m r c => EMTypes.MultiModalRouteDetails -> m JPT.MultiModalJourneyRouteDetails
         transformJourneyRouteDetails rd = do
-          fromStationCode <- ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "From station gtfsId not found")
-          toStationCode <- ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "To station gtfsId not found")
+          fromStationCode <- ((rd.fromStopDetails >>= (.stopCode)) <|> ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
+          toStationCode <- ((rd.toStopDetails >>= (.stopCode)) <|> ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
           routeCode <- (rd.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
           fromStation <- createStationIfRequired (rd.fromStopDetails >>= (.name)) fromStationCode rd.startLocation.latLng.latitude rd.startLocation.latLng.longitude merchantOpCity integratedBPPConfig
           toStation <- createStationIfRequired (rd.toStopDetails >>= (.name)) toStationCode rd.endLocation.latLng.latitude rd.endLocation.latLng.longitude merchantOpCity integratedBPPConfig
@@ -516,8 +516,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
     getFrfsRouteDetails routeDetails = do
       mapM
         ( \rd -> do
-            startStationCode <- ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "From station gtfsId not found")
-            endStationCode <- ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "To station gtfsId not found")
+            startStationCode <- ((rd.fromStopDetails >>= (.stopCode)) <|> ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
+            endStationCode <- ((rd.toStopDetails >>= (.stopCode)) <|> ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
             routeCode <- (rd.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
             return $ FRFSRouteDetails {routeCode = Just routeCode, ..}
         )
