@@ -126,6 +126,7 @@ data KeyStore
   | RECENT_BUS_ROUTES
   | MapViewLottie
   | ShowedEnquiryPopup
+  | CUSTOMER_FIRST_SIGNUP
 
 derive instance genericKeyStore :: Generic KeyStore _
 

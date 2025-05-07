@@ -222,6 +222,15 @@ screen initialState =
             else pure unit
           pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer")
       , ( \push -> do
+           let isHomeScreen = initialState.props.currentStage == HomeScreen 
+           idMapVal <-  runEffectFn1 getValueFromIdMap "FirstHomeScreenVisit"
+           if (isHomeScreen && idMapVal.shouldPush) then do
+              void $ getCurrentPosition push UpdateLocationOnSignInSignUp
+              pure unit
+            else pure unit
+           pure (pure unit)
+        )
+      , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
