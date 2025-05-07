@@ -144,13 +144,21 @@ getMultimodalBookingPaymentStatus ::
 getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-  let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
+  frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+  let anyFirstBooking = listToMaybe frfsBookingStatusArr
+      paymentOrder =
+        anyFirstBooking >>= (.payment)
+          <&> ( \p ->
+                  ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
+              )
+      allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
+  journey <- JM.getJourney journeyId
+  when (journey.isPaymentSuccess /= Just True) $ do
+    let mbPaymentStatus = paymentOrder <&> (.status)
+    whenJust mbPaymentStatus $ \pstatus -> when (pstatus == FRFSTicketService.SUCCESS) $ void $ QJourney.updatePaymentStatus (Just True) journeyId
   -- handle if on_init doesn't come for all bookings once ui designs are there
   if allLegsOnInitDone
     then do
-      frfsBookingStatusArr <- FRFSTicketService.frfsBookingStatus (personId, merchantId) `mapM` allJourneyFrfsBookings
-      let anyFirstBooking = listToMaybe frfsBookingStatusArr -- take any first booking as payment is same for all
-          paymentOrder = anyFirstBooking >>= (.payment) <&> (\p -> ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status})
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
@@ -469,15 +477,8 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
                 <&> ( \p ->
                         ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
                     )
-            mbPaymentStatus = paymentOrder <&> (.status)
-        whenJust mbPaymentStatus $ \pstatus -> do
-          when (pstatus == FRFSTicketService.SUCCESS) $ void $ QJourney.updatePaymentStatus (Just True) journeyId
         return $ paymentOrder <&> (.status)
-      else
-        if journey.isPaymentSuccess == Just True
-          then do
-            return (Just FRFSTicketService.SUCCESS)
-          else return Nothing
+      else return (Just FRFSTicketService.SUCCESS)
   return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
   where
     transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
