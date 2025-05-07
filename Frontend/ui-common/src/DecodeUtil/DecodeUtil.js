@@ -1,6 +1,6 @@
 const JBridge = window.JBridge;
 
-const fibers = [];
+let fibers = [];
 const isDebug =  JSON.parse(JBridge.getDeviceInfo()).package_name.includes(".debug") || JSON.parse(JBridge.getDeviceInfo()).package_name.includes(".staging")
 export const getFromWindow = function (key,nothing,just) {
   if (typeof window[key] !== "undefined") {

@@ -12,6 +12,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,6 +21,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 
 import androidx.annotation.NonNull;
@@ -31,12 +34,21 @@ import com.google.android.material.card.MaterialCardView;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHolder> {
     private ArrayList<SheetModel> sheetList;
     private final OnItemClickListener listener;
     private ViewPager2 viewPager;
+
+    @Nullable
+    public SheetViewHolder getHolder(int index) {
+        if (index >= holder.size()) return null;
+        return holder.get(index);
+    }
+
+    private final ArrayList<SheetViewHolder> holder = new ArrayList<>();
 
     public void setViewPager(ViewPager2 viewPager) {
         this.viewPager = viewPager;
@@ -61,12 +73,14 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position) {
+        this.holder.add(position,holder);
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, null);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position, @NonNull List<Object> payloads) {
+        this.holder.add(position,holder);
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, payloads);
     }
