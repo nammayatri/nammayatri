@@ -704,6 +704,10 @@ mkUpdateProfileRequest _ =
         , hasDisability : Nothing
         , deviceId : Nothing
         , androidId : Nothing
+        , registrationLat : Nothing
+        , registrationLon : Nothing
+        , latestLat : Nothing
+        , latestLon : Nothing
     }
 
 editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Boolean -> Maybe Disability -> UpdateProfileReq
@@ -730,6 +734,10 @@ editProfileRequest firstName middleName lastName emailID gender hasDisability di
         , hasDisability : hasDisability
         , deviceId : Nothing
         , androidId : Nothing
+        , registrationLat : Nothing
+        , registrationLon : Nothing
+        , latestLat : Nothing
+        , latestLon : Nothing
     }
 
 mkDisabilityData :: DisabilityT -> String -> Disability

@@ -127,6 +127,7 @@ data KeyStore
   | MapViewLottie
   | LOCATION_MANUALLY_UPDATED
   | ShowedEnquiryPopup
+  | CUSTOMER_FIRST_SIGNUP
 
 derive instance genericKeyStore :: Generic KeyStore _
 
