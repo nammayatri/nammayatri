@@ -1655,6 +1655,10 @@ newtype UpdateProfileReq = UpdateProfileReq
   , hasDisability :: Maybe Boolean
   , deviceId :: Maybe String
   , androidId :: Maybe String
+  , registrationLat :: Maybe Number
+  , registrationLon :: Maybe Number
+  , latestLat :: Maybe Number
+  , latestLon :: Maybe Number
   }
 
 
