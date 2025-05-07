@@ -653,3 +653,9 @@ export const isItSameDay = (date) => {
   const today = new Date();
   return today.getDate() == dateObj.getDate() && (today.getMonth() == dateObj.getMonth()) && (today.getFullYear() == dateObj.getFullYear())
 }
+
+
+export const launchAppSettings = function (unit) {
+  return JBridge.openApp(null,"package:" + JSON.parse(JBridge.getSessionInfo()).package_name,"android.settings.APPLICATION_DETAILS_SETTINGS",268435456,2000);
+};
+
