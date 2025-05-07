@@ -304,6 +304,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
       ExternalBPP.ExternalAPI.Subway.CRIS.Error
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
+      ExternalBPP.ExternalAPI.Subway.CRIS.Uts
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
       Lib.JourneyLeg.Bus
@@ -362,6 +363,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
       Storage.Beam.BecknRequest
