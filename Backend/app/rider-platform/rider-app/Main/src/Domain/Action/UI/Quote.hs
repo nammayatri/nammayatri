@@ -441,8 +441,8 @@ getJourneys searchRequest hasMultimodalSearch = do
     mkRouteDetail routeDetail =
       RouteDetail
         { routeCode = gtfsIdtoDomainCode <$> routeDetail.gtfsId,
-          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
-          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
+          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
+          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
           color = routeDetail.shortName,
           colorCode = routeDetail.shortName,
           alternateShortNames = routeDetail.alternateShortNames,
