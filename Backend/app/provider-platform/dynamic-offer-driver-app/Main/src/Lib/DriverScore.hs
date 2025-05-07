@@ -69,7 +69,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = d
     SRD.Accept -> do
       DP.incrementQuoteAcceptedCount merchantOpCityId driverId
       forM_ restDriverIds $ \restDriverId -> do
-        DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchTryId
+        DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchReqId
         DP.removeSearchReqIdFromMap merchantId restDriverId searchReqId
     SRD.Reject -> pure ()
     SRD.Pulled -> pure ()

@@ -78,7 +78,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
-import Domain.Types.SearchTry
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
@@ -189,12 +188,9 @@ decrementTotalQuotesCount ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
-  Id SearchTry ->
+  Id SearchRequest ->
   m ()
-decrementTotalQuotesCount merchantId merchantOpCityId driverId sreqId = do
-  mbSreqCounted <- find (\(srId, (_, isCounted)) -> srId == sreqId.getId && isCounted) <$> getSearchRequestInfoMap merchantId driverId
-  whenJust mbSreqCounted $
-    const . Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantOpCityId $ SWC.decrementWindowCount (mkTotalQuotesKey driverId.getId)
+decrementTotalQuotesCount merchantId _ driverId sreqId = removeSearchReqIdFromMap merchantId driverId sreqId
 
 incrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
@@ -211,7 +207,7 @@ incrementTotalQuotesCount ::
 incrementTotalQuotesCount merchantId _ driverId searchReq validTill = addSearchRequestInfoToCache searchReq.id merchantId driverId validTill
 
 mkParallelSearchRequestKey :: Id DM.Merchant -> Id DP.Driver -> Text
-mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-" <> mId.getId <> dId.getId
+mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-:" <> mId.getId <> dId.getId
 
 isLessThenNParallelRequests ::
   ( Redis.HedisFlow m r,
@@ -243,11 +239,10 @@ addSearchRequestInfoToCache ::
   UTCTime ->
   Redis.ExpirationTime ->
   m ()
-addSearchRequestInfoToCache searchReqId merchantId driverId valueToPut _ = Redis.withMasterRedis $
+addSearchRequestInfoToCache _ merchantId driverId _ _ = Redis.withMasterRedis $
   Redis.withCrossAppRedis $ do
     let parallelCountKey = mkParallelSearchRequestKey merchantId driverId
     now <- getCurrentTime
-    Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zAdd parallelCountKey [((realToFrac . utcTimeToPOSIXSeconds) valueToPut, searchReqId.getId)]
     void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRemRangeByScore parallelCountKey 0 ((realToFrac . utcTimeToPOSIXSeconds) $ addUTCTime (-2) now)
 
 removeExpiredSearchRequestInfoFromCache ::
@@ -261,13 +256,6 @@ removeExpiredSearchRequestInfoFromCache ::
 removeExpiredSearchRequestInfoFromCache merchantId driverId = do
   now <- getCurrentTime
   void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRemRangeByScore (mkParallelSearchRequestKey merchantId driverId) 0 ((realToFrac . utcTimeToPOSIXSeconds) $ addUTCTime (-2) now)
-
-getSearchRequestInfoMap ::
-  Redis.HedisFlow m r =>
-  Id DM.Merchant ->
-  Id DP.Driver ->
-  m [(Text, (UTCTime, Bool))]
-getSearchRequestInfoMap mId dId = Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
 
 getValidSearchRequestCount ::
   Redis.HedisFlow m r =>
