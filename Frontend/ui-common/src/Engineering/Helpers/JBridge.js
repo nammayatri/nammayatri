@@ -320,6 +320,17 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const isLocationPermissionEnabledWithoutEff = function(unit) {
+    if (window.__OS == "IOS") {
+      if (window.JBridge.isLocationAuthenticationStatusDetermined() == "1") {
+        return true
+      } else {
+        return false
+      }
+    }
+    return window.JBridge.isLocationPermissionEnabled();
+  };
+
 export const isBackgroundLocationEnabled = function(unit) {
   return function () {
     if(window.JBridge.isBackgroundLocationEnabled){
@@ -1273,6 +1284,16 @@ export const isLocationEnabled = function (unit) {
     return window.JBridge.isLocationEnabled();
   };
 };
+
+export const isLocationEnabledWithoutEff = function (unit) {
+  if (window.__OS == "IOS") {
+    if (window.JBridge.isLocationEnabled() == "1")
+      return true;
+    else return false;
+    }
+    return window.JBridge.isLocationEnabled();
+};
+
 
 export const isMockLocation = function (cb) {
   return function (action) {
