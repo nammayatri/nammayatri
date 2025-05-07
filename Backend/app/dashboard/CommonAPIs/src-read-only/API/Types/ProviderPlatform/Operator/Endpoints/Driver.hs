@@ -21,13 +21,6 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
-newtype CreateDriversReq = CreateDriversReq {file :: Kernel.Prelude.FilePath}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets CreateDriversReq where
-  hideSecrets = Kernel.Prelude.identity
-
 data DriverInfo = DriverInfo
   { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     firstName :: Kernel.Prelude.Text,

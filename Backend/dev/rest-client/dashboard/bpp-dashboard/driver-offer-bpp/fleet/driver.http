@@ -33,3 +33,38 @@ GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fle
 ?limit=10
 &offset=0
 token: {{customer_service}}
+
+###
+
+# @name postDriverFleetrSendJoiningOtp
+
+# INSERT INTO atlas_bpp_dashboard.fleet_member_association (fleet_member_id, fleet_owner_id, enabled, is_fleet_owner) VALUES
+#   ('3680f4b5-dce4-4d03-aa8c-5405690e87bd', 'favorit-fleet-owner-0000000000000000', true, true);
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/sendJoiningOtp
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "firstName": "Driver1",
+    "lastName": "Fleet",
+    "mobileNumber": "2211111130",
+    "mobileCountryCode": "+91",
+    "email": "driver111@nammayatri.in"
+}
+
+###
+
+# @name postDriverFleetVerifyJoiningOtp
+
+@authId={{postDriverFleetrSendJoiningOtp.response.body.authId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/verifyJoiningOtp?authId={{authId}}
+token: {{juspay_admin}}
+content-type: application/json
+
+{   "mobileCountryCode": "+91",
+    "mobileNumber": "2211111130",
+    "otp": "7891",
+    "deviceToken": ""
+}

@@ -168,6 +168,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     notificationRetryEligibleErrorCodes :: [Kernel.Prelude.Text],
     notificationRetryTimeGap :: Kernel.Prelude.NominalDiffTime,
     numOfCancellationsAllowed :: Kernel.Prelude.Int,
+    onboardingDocsCountLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onboardingRetryTimeInHours :: Kernel.Prelude.Int,
     onboardingTryLimit :: Kernel.Prelude.Int,
     openMarketUnBlocked :: Kernel.Prelude.Bool,

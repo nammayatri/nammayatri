@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
+import qualified Storage.Queries.Image as IQuery
 import Utils.Common.Cac.KeyNameConstants
 
 data StatusRes = StatusRes
@@ -54,10 +55,13 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   -- multipleRC flag is temporary to support backward compatibility
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language useHVSdkForDL
-  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC merchantOperatingCity.language
+  driverImages <- IQuery.findAllByPersonId transporterConfig personId
+  now <- getCurrentTime
+  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity, driverImages, transporterConfig, now}
+  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo merchantOperatingCity.language useHVSdkForDL
+  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo multipleRC merchantOperatingCity.language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,

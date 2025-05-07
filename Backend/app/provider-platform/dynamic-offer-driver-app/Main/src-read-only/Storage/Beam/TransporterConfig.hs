@@ -164,6 +164,7 @@ data TransporterConfigT f = TransporterConfigT
     notificationRetryEligibleErrorCodes :: B.C f [Kernel.Prelude.Text],
     notificationRetryTimeGap :: B.C f Kernel.Types.Common.Seconds,
     numOfCancellationsAllowed :: B.C f Kernel.Prelude.Int,
+    onboardingDocsCountLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onboardingRetryTimeInHours :: B.C f Kernel.Prelude.Int,
     onboardingTryLimit :: B.C f Kernel.Prelude.Int,
     openMarketUnBlocked :: B.C f Kernel.Prelude.Bool,
