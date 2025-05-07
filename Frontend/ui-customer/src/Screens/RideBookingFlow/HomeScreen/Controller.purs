@@ -2322,6 +2322,23 @@ eval (CurrentLocation lat lng) state = do
     then continue state
     else exit $ UpdatedState state { props { currentLocation { lat =  fromMaybe 0.0 (NUM.fromString lat), lng = fromMaybe 0.0 (NUM.fromString lng) }, sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
+eval (UpdateLocationOnSignInSignUp lat lng) state = do
+  let isFirstSignup = getValueToLocalStore CUSTOMER_FIRST_SIGNUP == "true"
+      latNum = fromMaybe 0.0 (NUM.fromString lat)
+      lngNum = fromMaybe 0.0 (NUM.fromString lng)
+      (API.UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
+      postLocationData = if isFirstSignup
+        then initialData { registrationLat = Just latNum, registrationLon = Just lngNum, latestLat = Just latNum, latestLon = Just lngNum }
+        else initialData { latestLat = Just latNum, latestLon = Just lngNum }
+  let _ = runFn2 updatePushInIdMap "FirstHomeScreenVisit" false
+  continueWithCmd state [ do
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+      void $ lift $ lift $ Remote.updateProfile (API.UpdateProfileReq postLocationData)
+      void $ pure $ setValueToLocalStore CUSTOMER_FIRST_SIGNUP "false"
+      pure unit
+    pure NoAction
+  ]
+
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}
 
 eval (RateCardAction RateCard.BackPressed) state = continue state { props { showRateCard = false } ,data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}

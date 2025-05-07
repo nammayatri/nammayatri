@@ -122,6 +122,7 @@ data KeyStore
   | BOOSTED_SEARCH
   | MapViewLottie
   | ShowedEnquiryPopup
+  | CUSTOMER_FIRST_SIGNUP
 
 derive instance genericKeyStore :: Generic KeyStore _
 
