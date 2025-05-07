@@ -172,7 +172,3 @@ types:
     - otp: Text
     - deviceToken: Maybe FCMRecipientToken
     - derive: "'HideSecrets"
-  CreateDriversReq:
-    - file: FilePath
-    - recordType: NewType
-    - derive: "'HideSecrets"

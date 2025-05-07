@@ -1023,6 +1023,7 @@ TransporterConfig:
     rcExpiryChecks : Maybe Bool
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
+    onboardingDocsCountLimit: Maybe Int
 
   beamType:
     currency: Maybe Currency
@@ -1416,6 +1417,7 @@ TransporterConfig:
     generateReferralCodeForOperator: "false"
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
+    onboardingDocsCountLimit: "50"
 
   excludedDefaultQueries:
     - findByPrimaryKey

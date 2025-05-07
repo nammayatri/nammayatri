@@ -169,3 +169,63 @@ token: {{juspay_admin}}
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/operator/fleet/{{fleetOwnerId}}/link
 token: {{operator}}
 content-type: application/json
+
+###
+
+# @name createHubRequest
+
+# DELETE FROM atlas_driver_offer_bpp.operation_hub_requests
+
+@token2 = {{driver-offer-bpp-auto-token2}}
+@operationHubId = 29d6f629-1f0c-4d17-5546-db7f22f9c433
+
+@rcNo = 4814
+
+POST {{driver-offer-bpp-host}}/ui/operation/createRequest
+content-type: application/json
+token: {{token2}}
+
+{ "requestType": "ONBOARDING_INSPECTION",
+  "operationHubId": "{{operationHubId}}",
+  "registrationNo": "{{rcNo}}",
+  "creatorId": "Text"
+}
+
+###
+
+# @name getHubRequests
+
+@token2 = {{driver-offer-bpp-auto-token2}}
+
+GET {{driver-offer-bpp-host}}/ui/operation/getRequests?rcNo={{rcNo}}
+content-type: application/json
+token: {{token2}}
+
+###
+
+# @name assignAccessLevel5
+
+POST {{bpp-dashboard-host}}/admin/roles/{{operatorRoleId}}/assignAccessLevel
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "apiEntity" : "DSL",
+  "userAccessType" : "USER_FULL_ACCESS",
+  "userActionType" : "PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST"
+}
+
+###
+
+# @name respondHubRequest
+
+@operationHubRequestId = {{getHubRequests.response.body.requests[0].id}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/respond/hubRequest
+token: {{operator}}
+content-type: application/json
+
+{ "status" : "APPROVED",
+  "operationHubRequestId" : "{{operationHubRequestId}}",
+  "operatorId": "operatorId",
+  "remarks": "remarks"
+}

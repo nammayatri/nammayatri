@@ -53,6 +53,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffset)
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
@@ -116,10 +117,10 @@ postDriverOperatorCreateRequest merchantShortId opCity req = do
     castOpsHubReq API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest {..} = DomainT.DriverOperationHubRequest {operationHubId = cast operationHubId, requestType = castReqTypeToDomain requestType, ..}
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
-postDriverOperatorRespondHubRequest merchantShortId opCity req = do
+postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("operationHubRequestId_" <> req.operationHubRequestId) $ do
   now <- getCurrentTime
   Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
-    opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InternalError "Invalid operation hub request id")
+    opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
     unless (opHubReq.requestStatus == PENDING) $ Kernel.Utils.Common.throwError (InvalidRequest "Request already responded")
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
       fork "enable driver after inspection" $ do
@@ -147,8 +148,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
         transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
         person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let language = fromMaybe merchantOpCity.language person.language
-        driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language (Just True)
-        vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
+        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments personId merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
         vehicleDoc <-
           find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
             & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
@@ -217,12 +217,13 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset reque
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
   driverOperatorAssociationLs <-
     findAllByOperatorIdWithLimitOffset requestorId mbIsActive mbLimit mbOffset
-  listItem <- mapM createDriverInfo driverOperatorAssociationLs
+  now <- getCurrentTime
+  listItem <- mapM (createDriverInfo now) driverOperatorAssociationLs
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
-    createDriverInfo drvOpAsn = do
+    createDriverInfo now drvOpAsn = do
       let driverId = drvOpAsn.driverId
       person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       decryptedMobileNumber <-
@@ -239,9 +240,11 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset reque
       merchantOpCity <-
         CQMOC.findById merchantOpCityId
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      driverImages <- IQuery.findAllByPersonId transporterConfig driverId
+      let driverImagesInfo = IQuery.DriverImagesInfo {driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' person.id merchantOpCity transporterConfig Nothing Nothing Nothing Nothing Nothing (Just True) -- FXME: Need to change
+          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) -- FXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,

@@ -23,7 +23,7 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, getCurrentTime)
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -31,6 +31,7 @@ import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverLicense as DLQuery
+import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as PersonQuery
 
 getOnboardingDocumentConfigs ::
@@ -91,7 +92,10 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   mDL <- DLQuery.findByDriverId (Id personId)
   let multipleRC = Nothing
-  castStatusRes <$> SStatus.statusHandler' (Id personId) merchantOpCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True)
+  driverImages <- IQuery.findAllByPersonId transporterConfig (Id personId)
+  now <- getCurrentTime
+  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+  castStatusRes <$> SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True)
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->
