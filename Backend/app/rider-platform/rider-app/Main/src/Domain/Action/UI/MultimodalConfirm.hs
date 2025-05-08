@@ -36,6 +36,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FRFSTicketBooking as DFRFSB
 import Domain.Types.FRFSTicketBookingPayment (FRFSTicketBookingPayment (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
@@ -189,9 +190,14 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
               amountInt = Money $ booking.price.amountInt.getMoney * quantity,
               currency = booking.price.currency
             }
-    void $ QFRFSTicketBooking.updateQuantity req.quantity booking.id
-    void $ QFRFSTicketBooking.updateFinalPriceById (Just totalPrice) booking.id
-    void $ QFRFSTicketBooking.updatePriceById totalPrice booking.id
+    let fRFSTicketBooking =
+          booking
+            { DFRFSB.quantity = req.quantity,
+              DFRFSB.finalPrice = (Just totalPrice),
+              DFRFSB.estimatedPrice = totalPrice,
+              DFRFSB.price = totalPrice
+            }
+    QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
 
   -- Calculate total fare across all bookings
   let totalFare =
