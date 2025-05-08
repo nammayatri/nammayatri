@@ -20,10 +20,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
@@ -34,14 +32,11 @@ import android.net.ConnectivityManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -71,14 +66,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.TimeZone;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -91,7 +84,6 @@ import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
-import in.juspay.services.HyperServices;
 
 /**
  * A foreground service for managing location updates for a driver app.
@@ -170,7 +162,6 @@ public class LocationUpdateServiceV2 extends Service {
     // Location components
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationCallback locationCallback;
-    private HandlerThread locationHandlerThread;
     // Message queue and batch processing
     private MessageQueue messageQueue;
     private ScheduledExecutorService batchScheduler;
@@ -189,8 +180,6 @@ public class LocationUpdateServiceV2 extends Service {
     private String vVariant, merchantID, drMode;
     private String driverId = "empty";
     private boolean isSpecialpickup = false;
-    // Connectivity monitoring
-    private BroadcastReceiver internetBroadcastReceiver;
     // Timers for periodic updates
     private ScheduledExecutorService locationHeartbeatScheduler;
     private int locationFreshnessThresholdMinutes = 5; // Default timeout for considering location stale
@@ -257,6 +246,10 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @Override
     public void onCreate() {
+        Log.d(TAG, "onCreate() called");
+        // Initialize custom Log
+        Log.init(getApplicationContext());
+
         super.onCreate();
         Log.i(TAG, "Service onCreate()");
 
@@ -268,6 +261,10 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Initialize Power Manager first
         powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
+
+        // Load configuration
+        remoteConfigs = new MobilityRemoteConfigs(false, false);
+        updateConfigVariables();
 
         // Check token validity before proceeding
         if (!checkRegistrationTokenExistence()) {
@@ -289,10 +286,6 @@ public class LocationUpdateServiceV2 extends Service {
         // Register preference change listener
         setupPreferenceChangeListener();
 
-        // Load configuration
-        remoteConfigs = new MobilityRemoteConfigs(false, false);
-        updateConfigVariables();
-
         // Initialize internet connectivity receiver
         setupInternetReceiver();
 
@@ -306,6 +299,7 @@ public class LocationUpdateServiceV2 extends Service {
         startLocationHeartbeatTimer();
 
         Log.i(TAG, "Service initialization complete");
+        Log.d(TAG, "onCreate() complete");
     }
 
     /**
@@ -356,65 +350,33 @@ public class LocationUpdateServiceV2 extends Service {
     private void setupInternetReceiver() {
         connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // Modern implementation using NetworkCallback (Android N and above)
-            if (networkCallback == null) {
-                networkCallback = new ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onAvailable(@NonNull android.net.Network network) {
-                        Log.i(TAG, "Network connectivity available");
-
-                        // Execute on main thread to avoid concurrency issues
-                        new Handler(Looper.getMainLooper()).post(() -> {
-                            messageQueue.triggerBatchProcess();
-
-                            // Start GRPC service if not running
-                            if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
-                                Log.i(TAG, "Starting GRPC service");
-                                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
-                                context.startService(grpcServiceIntent);
-                            }
-                        });
-                    }
-                };
-
-                try {
-                    connectivityManager.registerDefaultNetworkCallback(networkCallback);
-                    Log.d(TAG, "Registered network callback for connectivity monitoring");
-                } catch (Exception e) {
-                    Log.e(TAG_ERROR, "Failed to register network callback", e);
-                }
-            }
-        } else {
-            // Legacy implementation using BroadcastReceiver for older Android versions
-            internetBroadcastReceiver = new BroadcastReceiver() {
+        // Modern implementation using NetworkCallback (Android N and above)
+        if (networkCallback == null) {
+            networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
-                public void onReceive(Context context, Intent intent) {
-                    Log.i(TAG, "Network connectivity changed");
-                    if (isNetworkAvailable(context)) {
-                        Log.i(TAG, "Network available - triggering batch process");
+                public void onAvailable(@NonNull android.net.Network network) {
+                    Log.i(TAG, "Network connectivity available");
+
+                    // Execute on main thread to avoid concurrency issues
+                    new Handler(Looper.getMainLooper()).post(() -> {
                         messageQueue.triggerBatchProcess();
 
                         // Start GRPC service if not running
-                        if (isServiceRunning(context, LocationUpdateServiceV2.class.getName()) && !isServiceRunning(context, GRPCNotificationService.class.getName())) {
+                        if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
                             Log.i(TAG, "Starting GRPC service");
                             Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
                             context.startService(grpcServiceIntent);
                         }
-                    }
+                    });
                 }
             };
 
             try {
-                context.unregisterReceiver(internetBroadcastReceiver);
+                connectivityManager.registerDefaultNetworkCallback(networkCallback);
+                Log.d(TAG, "Registered network callback for connectivity monitoring");
             } catch (Exception e) {
-                // Ignore - receiver might not be registered
+                Log.e(TAG_ERROR, "Failed to register network callback", e);
             }
-
-            context.registerReceiver(internetBroadcastReceiver,
-                    new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-
-            Log.d(TAG, "Registered broadcast receiver for connectivity monitoring (legacy)");
         }
     }
 
@@ -445,6 +407,7 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand() called with intent=" + (intent != null ? intent.toString() : "null") + ", flags=" + flags + ", startId=" + startId);
         Log.i(TAG, "Service onStartCommand()");
 
         // Make sure we're a foreground service
@@ -471,9 +434,12 @@ public class LocationUpdateServiceV2 extends Service {
             context.startService(grpcServiceIntent);
         }
 
+        Log.setLogRetentionDays((int)remoteConfigs.getLong("log_retention_days"));
+
         // Log health check event if applicable
         logEventForHealthCheck(intent);
 
+        Log.d(TAG, "onStartCommand() complete");
         return START_STICKY;
     }
 
@@ -482,6 +448,7 @@ public class LocationUpdateServiceV2 extends Service {
      * Reads and applies all configurable parameters such as intervals, thresholds, and batch sizes.
      */
     private void updateConfigVariables() {
+        Log.d(TAG_CONFIG, "updateConfigVariables() called");
         try {
             // Update ride status
             driverRideStatus = sharedPrefs.getString("DRIVER_RIDE_STATUS", "IDLE");
@@ -534,10 +501,12 @@ public class LocationUpdateServiceV2 extends Service {
 
             Log.d(TAG_CONFIG, "Rate limiting time set to " + rateLimitTimeInSeconds + " seconds");
 
+            Log.d(TAG_CONFIG, "Config variables updated: locationUpdateInterval=" + locationUpdateInterval + ", locationBatchInterval=" + locationBatchInterval + ", locationMinDisplacement=" + locationMinDisplacement + ", locationBatchSize=" + locationBatchSize + ", locationFreshnessThresholdMinutes=" + locationFreshnessThresholdMinutes + ", locationMaxBatchAgeSeconds=" + locationMaxBatchAgeSeconds + ", locationRequestInterval=" + locationRequestInterval + ", locationMaxTimeThreshold=" + locationMaxTimeThreshold + ", locationPriority=" + locationPriority + ", rateLimitTimeInSeconds=" + rateLimitTimeInSeconds);
         } catch (Exception e) {
-            Log.e(TAG_ERROR, "Error updating configuration", e);
+            Log.e(TAG_ERROR, "Error updating configuration in updateConfigVariables", e);
             FirebaseCrashlytics.getInstance().recordException(e);
         }
+        Log.d(TAG_CONFIG, "updateConfigVariables() complete");
     }
 
     /**
@@ -547,6 +516,7 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @SuppressLint("MissingPermission")
     private void startLocationUpdates() {
+        Log.d(TAG_LOCATION, "startLocationUpdates() called");
         if (isLocationUpdating) {
             Log.d(TAG_LOCATION, "Location updates already running");
             return;
@@ -592,6 +562,7 @@ public class LocationUpdateServiceV2 extends Service {
             Log.e(TAG_ERROR, "Failed to start location updates", e);
             FirebaseCrashlytics.getInstance().recordException(e);
         }
+        Log.d(TAG_LOCATION, "startLocationUpdates() complete");
     }
 
     /**
@@ -630,11 +601,13 @@ public class LocationUpdateServiceV2 extends Service {
      * Stops location updates by removing the location callback from FusedLocationProvider.
      */
     private void stopLocationUpdates() {
+        Log.d(TAG_LOCATION, "stopLocationUpdates() called");
         if (fusedLocationProviderClient != null && locationCallback != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
             isLocationUpdating = false;
             Log.i(TAG_LOCATION, "Location updates stopped");
         }
+        Log.d(TAG_LOCATION, "stopLocationUpdates() complete");
     }
 
     /**
@@ -644,7 +617,8 @@ public class LocationUpdateServiceV2 extends Service {
      *
      * @param locationResult The location result containing one or more locations
      */
-    private void handleLocationResult(LocationResult locationResult) {
+    private void handleLocationResult(@NonNull LocationResult locationResult) {
+        Log.d(TAG_LOCATION, "handleLocationResult() called with " + locationResult.getLocations().size() + " locations");
         List<Location> locations = locationResult.getLocations();
         if (locations.isEmpty()) {
             Exception e = new Exception("Locations Empty callback");
@@ -657,7 +631,7 @@ public class LocationUpdateServiceV2 extends Service {
 
         if (handleDemoMode()) return;
 
-        Collections.sort(locations, (o1, o2) -> (int) (TimeUnit.NANOSECONDS.toMillis(o1.getElapsedRealtimeNanos()) - TimeUnit.NANOSECONDS.toMillis(o2.getElapsedRealtimeNanos())));
+        locations.sort((o1, o2) -> (int) (TimeUnit.NANOSECONDS.toMillis(o1.getElapsedRealtimeNanos()) - TimeUnit.NANOSECONDS.toMillis(o2.getElapsedRealtimeNanos())));
 
         for (Location location : locations) {
             if (location == null) continue;
@@ -676,9 +650,7 @@ public class LocationUpdateServiceV2 extends Service {
             updateLocationStorage(location);
 
             // Log location data
-            new Thread(() -> {
-                logLocationUpdate(location);
-            }).start();
+            new Thread(() -> logLocationUpdate(location)).start();
 
 
             // Create location data object and add to queue
@@ -688,6 +660,7 @@ public class LocationUpdateServiceV2 extends Service {
             // Check for special pickup zones
             checkNearByPickupZone(location);
         }
+        Log.d(TAG_LOCATION, "handleLocationResult() complete");
     }
 
     /**
@@ -696,6 +669,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @return true if demo mode is handled, false if demo mode is not enabled
      */
     public boolean handleDemoMode() {
+        Log.d(TAG_LOCATION, "handleDemoMode() called");
         // Check if demo mode is enabled
         SharedPreferences sharedPref = context.getSharedPreferences(
                 context.getString(R.string.preference_file_key), MODE_PRIVATE);
@@ -717,6 +691,7 @@ public class LocationUpdateServiceV2 extends Service {
      * Updates the last cached location and adds it to the message queue.
      */
     private void enqueueDemoModeLocations() {
+        Log.d(TAG_LOCATION, "enqueueDemoModeLocations() called");
         // Define predefined demo locations
         Location demoLocation;
         // Add more predefined locations as needed
@@ -749,11 +724,11 @@ public class LocationUpdateServiceV2 extends Service {
                 demoLocation = (createLocation(13.311895563147432, 76.93981481869986));
                 break;
         }
-
         lastCachedLocation = demoLocation;
         // Enqueue each demo location
         messageQueue.enqueueLocation(new LocationData(demoLocation, "demo_mode"));
         Log.d(TAG_LOCATION, "Enqueued demo mode locations");
+        Log.d(TAG_LOCATION, "enqueueDemoModeLocations() complete");
     }
 
     /**
@@ -780,6 +755,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param location The location object containing the data to store
      */
     private void updateLocationStorage(Location location) {
+        Log.d(TAG_LOCATION, "updateLocationStorage() called for lat=" + location.getLatitude() + ", lon=" + location.getLongitude());
         updateStorage("LAST_KNOWN_LAT", String.valueOf(location.getLatitude()));
         updateStorage("LAST_KNOWN_LON", String.valueOf(location.getLongitude()));
 
@@ -787,6 +763,7 @@ public class LocationUpdateServiceV2 extends Service {
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
         String formattedTime = sdf.format(new Date(location.getTime()));
         updateStorage(LAST_LOCATION_TIME, formattedTime);
+        Log.d(TAG_LOCATION, "updateLocationStorage() complete");
     }
 
     /**
@@ -796,13 +773,12 @@ public class LocationUpdateServiceV2 extends Service {
      * @param location The location object to log
      */
     private void logLocationUpdate(Location location) {
-        if (Log.isLoggable(TAG_LOCATION, Log.DEBUG)) {
-            Log.d(TAG_LOCATION, String.format(Locale.US,
-                    "Location: lat=%.6f, lng=%.6f, acc=%.1fm, speed=%.1fm/s, time=%d",
-                    location.getLatitude(), location.getLongitude(),
-                    location.getAccuracy(), location.getSpeed(),
-                    location.getTime()));
-        }
+        Log.d(TAG_LOCATION, "logLocationUpdate() called for lat=" + location.getLatitude() + ", lon=" + location.getLongitude());
+        Log.d(TAG_LOCATION, String.format(Locale.US,
+                "Location: lat=%.6f, lng=%.6f, acc=%.1fm, speed=%.1fm/s, time=%d",
+                location.getLatitude(), location.getLongitude(),
+                location.getAccuracy(), location.getSpeed(),
+                location.getTime()));
 
         // Also log to file for debugging
         String sb = "Location | " +
@@ -812,7 +788,8 @@ public class LocationUpdateServiceV2 extends Service {
                 " Accuracy => " + location.getAccuracy() +
                 " TimeStamp => " + location.getTime();
 
-        appendToFile(sb);
+        Log.i("Location", sb);
+        Log.d(TAG_LOCATION, "logLocationUpdate() complete");
     }
 
     /**
@@ -822,7 +799,8 @@ public class LocationUpdateServiceV2 extends Service {
      *
      * @param batch List of LocationData objects to send to the server
      */
-    private void sendBatchToServer(List<LocationData> batch) {
+    private void sendBatchToServer(@NonNull List<LocationData> batch) {
+        Log.d(TAG_BATCH, "sendBatchToServer() called with batch size=" + batch.size());
         if (batch.isEmpty()) {
             isBatchProcessing.set(false);
             return;
@@ -831,6 +809,7 @@ public class LocationUpdateServiceV2 extends Service {
         // Check driver status before proceeding
         String driverStatus = getValueFromStorage(Utils.DRIVER_STATUS);
         if (driverStatus == null || driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+            isBatchProcessing.set(false);
             Log.i(TAG, "Driver status is Offline, stopping services");
             stopWidgetService();
             stopSelf();
@@ -864,14 +843,14 @@ public class LocationUpdateServiceV2 extends Service {
             setVehicleAndMerchantHeaders(baseHeaders);
 
             // Log API request
-            appendToFile("api_calls_requested", "Batch Location Api | " + batch.size() +
-                    " locations | " + System.currentTimeMillis(), "location_service");
+            Log.i(TAG_API, "Sending batch of "  + batch.size() + " locations to server with body | " + locationPayload);
 
             // Make API call asynchronously
             callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString(),
                     new MobilityCallAPI.APICallback() {
                         @Override
                         public void onResponse(MobilityAPIResponse apiResponse) {
+                            isBatchProcessing.set(false);
                             handleApiResponse(apiResponse, batch);
                         }
 
@@ -894,6 +873,7 @@ public class LocationUpdateServiceV2 extends Service {
             // Release wake lock after operation
             releaseWakeLockIfHeld(wakeLock);
         }
+        Log.d(TAG_BATCH, "sendBatchToServer() complete");
     }
 
     /**
@@ -919,6 +899,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param headers Map of headers to be populated with vehicle and merchant information
      */
     private void setVehicleAndMerchantHeaders(Map<String, String> headers) {
+        Log.d(TAG_API, "setVehicleAndMerchantHeaders() called");
         String merchantId = getValueFromStorage("MERCHANT_ID");
         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
@@ -935,6 +916,7 @@ public class LocationUpdateServiceV2 extends Service {
             // Fetch profile info and set headers
             fetchProfileAndSetHeaders(headers);
         }
+        Log.d(TAG_API, "setVehicleAndMerchantHeaders() complete");
     }
 
     /**
@@ -944,6 +926,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param headers Map of headers to be populated with profile information
      */
     private void fetchProfileAndSetHeaders(Map<String, String> headers) {
+        Log.d(TAG_API, "fetchProfileAndSetHeaders() called");
         try {
             MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
             SharedPreferences sharedPref = context.getSharedPreferences(
@@ -979,6 +962,7 @@ public class LocationUpdateServiceV2 extends Service {
             params.putString("error", e.toString());
             FirebaseAnalytics.getInstance(context).logEvent("LS_ERROR_GETTING_PROFILE", params);
         }
+        Log.d(TAG_API, "fetchProfileAndSetHeaders() complete");
     }
 
     /**
@@ -989,12 +973,10 @@ public class LocationUpdateServiceV2 extends Service {
      * @param apiResponse The response from the server
      * @param sentBatch   The batch of locations that was sent
      */
-    private void handleApiResponse(MobilityAPIResponse apiResponse, List<LocationData> sentBatch) {
+    private void handleApiResponse(@NonNull MobilityAPIResponse apiResponse, List<LocationData> sentBatch) {
+        Log.d(TAG_API, "handleApiResponse() called with response code=" + apiResponse.getStatusCode());
         int respCode = apiResponse.getStatusCode();
         String responseBody = apiResponse.getResponseBody();
-
-        appendToFile("api_calls_responded", "Batch Location Api Response | Code: " +
-                respCode + " | " + System.currentTimeMillis(), "location_service");
 
         Log.d(TAG_API, "API response: code=" + respCode + ", body=" + responseBody);
 
@@ -1014,6 +996,7 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Mark processing as complete
         isBatchProcessing.set(false);
+        Log.d(TAG_API, "handleApiResponse() complete");
     }
 
     /**
@@ -1026,6 +1009,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param sentBatch    The batch of locations that failed to send
      */
     private void handleApiError(int respCode, String responseBody, List<LocationData> sentBatch) {
+        Log.d(TAG_API, "handleApiError() called with respCode=" + respCode);
         try {
             // For client errors (4xx), don't retry
             boolean shouldRetry = respCode < 400 || respCode >= 500;
@@ -1052,6 +1036,7 @@ public class LocationUpdateServiceV2 extends Service {
         Exception exception = new Exception("API Error in batch location update for ID: " +
                 driverId + " $ Resp Code: " + respCode + " $ Error: " + responseBody);
         FirebaseCrashlytics.getInstance().recordException(exception);
+        Log.d(TAG_API, "handleApiError() complete");
     }
 
     /**
@@ -1059,6 +1044,7 @@ public class LocationUpdateServiceV2 extends Service {
      * Updates the stored timestamp and passes current location to all callbacks.
      */
     private void notifyLocationUpdateSuccess() {
+        Log.d(TAG, "notifyLocationUpdateSuccess() called");
         if (updateTimeCallbacks.isEmpty()) {
             return;
         }
@@ -1080,6 +1066,7 @@ public class LocationUpdateServiceV2 extends Service {
                     "SUCCESS"
             );
         }
+        Log.d(TAG, "notifyLocationUpdateSuccess() complete");
     }
 
     /**
@@ -1089,6 +1076,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param errorCode The error code indicating why the driver was blocked
      */
     private void notifyDriverBlocked(String errorCode) {
+        Log.d(TAG, "notifyDriverBlocked() called with errorCode=" + errorCode);
         if (updateTimeCallbacks.isEmpty()) {
             return;
         }
@@ -1107,6 +1095,7 @@ public class LocationUpdateServiceV2 extends Service {
                     errorCode
             );
         }
+        Log.d(TAG, "notifyDriverBlocked() complete");
     }
 
     /**
@@ -1116,6 +1105,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param responseBody The API response body to check
      */
     private void checkForTokenIssues(String responseBody) {
+        Log.d(TAG, "checkForTokenIssues() called");
         try {
             JSONObject resp = new JSONObject(responseBody != null && !responseBody.trim().isEmpty()
                     ? responseBody : "{}");
@@ -1132,6 +1122,7 @@ public class LocationUpdateServiceV2 extends Service {
         } catch (JSONException e) {
             Log.e(TAG_ERROR, "Error checking for token issues", e);
         }
+        Log.d(TAG, "checkForTokenIssues() complete");
     }
 
     /**
@@ -1140,6 +1131,7 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy() called");
         Log.i(TAG, "Service onDestroy()");
 
         // Unregister preference change listener
@@ -1173,13 +1165,6 @@ public class LocationUpdateServiceV2 extends Service {
             } catch (Exception e) {
                 Log.e(TAG_ERROR, "Error unregistering network callback", e);
             }
-        } else if (internetBroadcastReceiver != null) {
-            try {
-                context.unregisterReceiver(internetBroadcastReceiver);
-                Log.d(TAG, "Unregistered broadcast receiver");
-            } catch (Exception e) {
-                // Ignore if not registered
-            }
         }
 
         // Stop GRPC service if running
@@ -1190,6 +1175,7 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Let the base class clean up
         super.onDestroy();
+        Log.d(TAG, "onDestroy() complete");
     }
 
     /**
@@ -1198,6 +1184,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @return true if location is enabled, false otherwise
      */
     private boolean isLocationDisabled() {
+        Log.d(TAG, "isLocationDisabled() called");
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         return locationManager == null || !LocationManagerCompat.isLocationEnabled(locationManager);
     }
@@ -1209,6 +1196,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param status true for online, false for offline
      */
     private void updateDriverStatus(boolean status) {
+        Log.d(TAG, "updateDriverStatus() called with status=" + status);
         Thread thread = new Thread(() -> {
             try {
                 SharedPreferences sharedPref = context.getSharedPreferences(
@@ -1233,12 +1221,14 @@ public class LocationUpdateServiceV2 extends Service {
             }
         });
         thread.start();
+        Log.d(TAG, "updateDriverStatus() complete");
     }
 
     /**
      * Shows a notification informing the driver that they've been set offline due to location being disabled.
      */
     private void showAlertNotification() {
+        Log.d(TAG, "showAlertNotification() called");
         Log.i(TAG, "Showing alert notification for disabled location");
 
         try {
@@ -1269,12 +1259,14 @@ public class LocationUpdateServiceV2 extends Service {
         } catch (Exception e) {
             Log.e(TAG_ERROR, "Error showing alert notification", e);
         }
+        Log.d(TAG, "showAlertNotification() complete");
     }
 
     /**
      * Starts the GPS listening service to monitor for location being enabled again.
      */
     private void startGPSListeningService() {
+        Log.d(TAG, "startGPSListeningService() called");
         try {
             Intent gpsListeningService = new Intent(this, GpsListeningService.class);
             SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(
@@ -1296,6 +1288,7 @@ public class LocationUpdateServiceV2 extends Service {
             Log.e(TAG_ERROR, "Error starting GPS listening service", e);
             FirebaseCrashlytics.getInstance().recordException(e);
         }
+        Log.d(TAG, "startGPSListeningService() complete");
     }
 
     /**
@@ -1303,6 +1296,7 @@ public class LocationUpdateServiceV2 extends Service {
      * Only executed on Android O (API 26) and above.
      */
     private void createNotificationChannel() {
+        Log.d(TAG, "createNotificationChannel() called");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             String description = "Location Update Service";
             NotificationChannel channel = new NotificationChannel(
@@ -1315,6 +1309,7 @@ public class LocationUpdateServiceV2 extends Service {
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
+        Log.d(TAG, "createNotificationChannel() complete");
     }
 
     /**
@@ -1323,6 +1318,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @return A configured Notification object
      */
     private Notification createNotification() {
+        Log.d(TAG, "createNotification() called");
         createNotificationChannel();
 
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
@@ -1348,6 +1344,7 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @AddTrace(name = "checkNearByPickupZoneTrace")
     private void checkNearByPickupZone(Location location) {
+        Log.d(TAG, "checkNearByPickupZone() called for lat=" + (location != null ? location.getLatitude() : "null") + ", lon=" + (location != null ? location.getLongitude() : "null"));
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), MODE_PRIVATE);
@@ -1407,6 +1404,7 @@ public class LocationUpdateServiceV2 extends Service {
             Log.e(TAG_ERROR, "Error checking nearby pickup zone", e);
             FirebaseCrashlytics.getInstance().recordException(e);
         }
+        Log.d(TAG, "checkNearByPickupZone() complete");
     }
 
     /**
@@ -1416,6 +1414,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param isSpecialPickupZone true if near a special zone, false otherwise
      */
     private void showWidget(boolean isSpecialPickupZone) {
+        Log.d(TAG, "showWidget() called with isSpecialPickupZone=" + isSpecialPickupZone);
         try {
             SharedPreferences sharedPreferences = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), MODE_PRIVATE);
@@ -1438,6 +1437,7 @@ public class LocationUpdateServiceV2 extends Service {
             Log.e(TAG_ERROR, "Error showing widget", e);
             FirebaseCrashlytics.getInstance().recordException(e);
         }
+        Log.d(TAG, "showWidget() complete");
     }
 
     /**
@@ -1447,6 +1447,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param intent The intent that started the service
      */
     private void logEventForHealthCheck(Intent intent) {
+        Log.d(TAG, "logEventForHealthCheck() called");
         if (intent != null) {
             String serviceStartingSource = intent.getStringExtra("StartingSource");
             if (serviceStartingSource != null) {
@@ -1457,6 +1458,7 @@ public class LocationUpdateServiceV2 extends Service {
                 }
             }
         }
+        Log.d(TAG, "logEventForHealthCheck() complete");
     }
 
     /**
@@ -1467,6 +1469,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @return true if network is available, false otherwise
      */
     private boolean isNetworkAvailable(Context context) {
+        Log.d(TAG, "isNetworkAvailable() called");
         ConnectivityManager connectivityManager = (ConnectivityManager)
                 context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -1488,11 +1491,13 @@ public class LocationUpdateServiceV2 extends Service {
      * @param value The string value to store
      */
     private void updateStorage(String key, String value) {
+        Log.d(TAG_CONFIG, "updateStorage() called for key=" + key + ", value=" + (key.toLowerCase().contains("token") ? "***MASKED***" : value));
         SharedPreferences sharedPref = context.getSharedPreferences(
                 context.getString(R.string.preference_file_key), MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString(key, value);
         editor.apply();
+        Log.d(TAG_CONFIG, "updateStorage() complete");
     }
 
     /**
@@ -1503,64 +1508,16 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @Nullable
     private String getValueFromStorage(String key) {
+        Log.d(TAG_CONFIG, "getValueFromStorage() called for key=" + key);
         return KeyValueStore.read(getApplicationContext(),
                 getApplicationContext().getString(R.string.preference_file_key), key, null);
     }
 
     /**
-     * Appends log data to a file with the default prefix.
-     *
-     * @param data The data to log
-     */
-    private void appendToFile(String data) {
-        appendToFile("location_logs", data, "fusedLocationProvider");
-    }
-
-    /**
-     * Appends log data to a specified file.
-     *
-     * @param file     The base filename
-     * @param data     The data to log
-     * @param provider The provider identifier to append to the filename
-     */
-    public void appendToFile(String file, String data, String provider) {
-        // Optional: Check if in debug mode or logging is enabled
-        boolean isDebug = context.getApplicationInfo().packageName.contains("debug");
-        if (isDebug || remoteConfigs.getBoolean("enable_logs")) {
-            try {
-                File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                File logDir = new File(downloadsDir, ".logs");
-
-                if (!logDir.exists() && !logDir.mkdirs()) {
-                    Log.e(TAG_ERROR, "Failed to create .logs directory");
-                    return;
-                }
-
-                File logFile = new File(logDir, file + "_" + provider + ".dump");
-
-                if (!logFile.exists() && !logFile.createNewFile()) {
-                    Log.e(TAG_ERROR, "Failed to create log file");
-                    return;
-                }
-
-                try (FileWriter writer = new FileWriter(logFile, true)) {
-                    writer.write("\n");
-                    writer.write("stamp " + System.currentTimeMillis() + " | ");
-                    writer.write(data);
-                } catch (IOException e) {
-                    Log.e(TAG_ERROR, "Error writing to log file", e);
-                }
-            } catch (Exception e) {
-                Log.e(TAG_ERROR, "Error creating log file", e);
-            }
-        }
-    }
-
-
-    /**
      * Starts a timer to periodically check and send location updates even when the device hasn't moved.
      */
     private void startLocationHeartbeatTimer() {
+        Log.d(TAG_TIMER, "startLocationHeartbeatTimer() called");
         if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
             locationHeartbeatScheduler.shutdown();
         }
@@ -1577,26 +1534,31 @@ public class LocationUpdateServiceV2 extends Service {
 
         Log.d(TAG_TIMER, "Started location heartbeat scheduler with interval: " +
                 locationUpdateInterval + "s");
+        Log.d(TAG_TIMER, "startLocationHeartbeatTimer() complete");
     }
 
     /**
      * Restarts the location heartbeat timer with current settings.
      */
     private void restartLocationHeartbeatTimer() {
+        Log.d(TAG_TIMER, "restartLocationHeartbeatTimer() called");
         if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
             locationHeartbeatScheduler.shutdown();
         }
         startLocationHeartbeatTimer();
+        Log.d(TAG_TIMER, "restartLocationHeartbeatTimer() complete");
     }
 
     /**
      * Stops the location heartbeat timer.
      */
     private void stopLocationHeartbeatTimer() {
+        Log.d(TAG_TIMER, "stopLocationHeartbeatTimer() called");
         if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
             locationHeartbeatScheduler.shutdown();
             locationHeartbeatScheduler = null;
         }
+        Log.d(TAG_TIMER, "stopLocationHeartbeatTimer() complete");
     }
 
     /**
@@ -1604,6 +1566,7 @@ public class LocationUpdateServiceV2 extends Service {
      * If location is stale, fetches a fresh location.
      */
     private void checkAndSendLocationHeartbeat() {
+        Log.d(TAG_TIMER, "checkAndSendLocationHeartbeat() called");
         try {
             Log.d(TAG_TIMER, "Location heartbeat triggered");
             if (handleDemoMode()) return;
@@ -1633,6 +1596,7 @@ public class LocationUpdateServiceV2 extends Service {
             Log.e(TAG_ERROR, "Error in location heartbeat", e);
             FirebaseCrashlytics.getInstance().recordException(e);
         }
+        Log.d(TAG_TIMER, "checkAndSendLocationHeartbeat() complete");
     }
 
     /**
@@ -1641,20 +1605,23 @@ public class LocationUpdateServiceV2 extends Service {
      * @return true if location is stale, false if location is still fresh
      */
     private boolean isLocationStale() {
+        Log.d(TAG_TIMER, "isLocationStale() called");
         try {
             // Check when the last location was fetched
+
             String lastFetchTimeStr = getValueFromStorage(LAST_LOCATION_FETCH_TIME);
             if (lastFetchTimeStr == null) {
                 return true; // No record of last fetch time, so consider it stale
             }
 
             long lastFetchTime = Long.parseLong(lastFetchTimeStr);
+
             long currentTime = System.currentTimeMillis();
             long elapsedMinutes = TimeUnit.MILLISECONDS.toMinutes(currentTime - lastFetchTime);
+            long elapsedLastLocationMinutes = TimeUnit.MILLISECONDS.toMinutes(currentTime - lastCachedLocation.getTime());
 
             // If more than the threshold has passed, consider it stale
-            boolean isStale = elapsedMinutes >= locationFreshnessThresholdMinutes;
-
+            boolean isStale = elapsedMinutes <= 0 || elapsedLastLocationMinutes <= 0 || (elapsedMinutes >= locationFreshnessThresholdMinutes) || elapsedLastLocationMinutes  >= locationFreshnessThresholdMinutes;
             Log.d(TAG_TIMER, "Location staleness check: elapsed=" + elapsedMinutes +
                     "m, threshold=" + locationFreshnessThresholdMinutes + "m, isStale=" + isStale);
 
@@ -1671,6 +1638,7 @@ public class LocationUpdateServiceV2 extends Service {
      */
     @SuppressLint("MissingPermission")
     private void fetchFreshLocation() {
+        Log.d(TAG_TIMER, "fetchFreshLocation() called");
         // Check if a request is already in progress - if so, don't start another one
         if (isLocationRequestInProgress.get()) {
             Log.d(TAG_TIMER, "Location request already in progress, skipping new request");
@@ -1757,6 +1725,7 @@ public class LocationUpdateServiceV2 extends Service {
             // Release wake lock after operation
             releaseWakeLockIfHeld(wakeLock);
         }
+        Log.d(TAG_TIMER, "fetchFreshLocation() complete");
     }
 
     /**
@@ -1764,6 +1733,7 @@ public class LocationUpdateServiceV2 extends Service {
      * Updates service configuration when preferences change.
      */
     private void setupPreferenceChangeListener() {
+        Log.d(TAG_CONFIG, "setupPreferenceChangeListener() called");
         prefChangeListener = (prefs, key) -> {
             try {
                 Log.d(TAG_CONFIG, "SharedPreference changed: " + key);
@@ -1917,18 +1887,21 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Also check token validity on startup
         checkRegistrationTokenValidity();
+        Log.d(TAG_CONFIG, "setupPreferenceChangeListener() complete");
     }
 
     /**
      * Validates the registration token and stops service if invalid.
      */
     private void checkRegistrationTokenValidity() {
+        Log.d(TAG, "checkRegistrationTokenValidity() called");
         String token = sharedPrefs.getString(REGISTRATION_TOKEN_KEY, null);
         if (token == null || token.equals("__failed") || token.equals("null")) {
             Log.w(TAG, "Registration token is invalid or missing on service start, stopping location service");
             stopWidgetService();
             stopSelf();
         }
+        Log.d(TAG, "checkRegistrationTokenValidity() complete");
     }
 
     /**
@@ -1937,6 +1910,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @return true if token exists, false otherwise
      */
     private boolean checkRegistrationTokenExistence() {
+        Log.d(TAG, "checkRegistrationTokenExistence() called");
         String token = sharedPrefs.getString(REGISTRATION_TOKEN_KEY, null);
         return !(token == null || token.equals("__failed") || token.equals("null"));
     }
@@ -1945,10 +1919,12 @@ public class LocationUpdateServiceV2 extends Service {
      * Restarts the batch scheduler with current settings.
      */
     private void restartBatchScheduler() {
+        Log.d(TAG_BATCH, "restartBatchScheduler() called");
         if (batchScheduler != null && !batchScheduler.isShutdown()) {
             batchScheduler.shutdown();
         }
         startBatchScheduler();
+        Log.d(TAG_BATCH, "restartBatchScheduler() complete");
     }
 
     /**
@@ -1956,6 +1932,7 @@ public class LocationUpdateServiceV2 extends Service {
      * Determines whether wake locks should be used and their timeout.
      */
     private void loadWakeLockConfig() {
+        Log.d(TAG_CONFIG, "loadWakeLockConfig() called");
         try {
             // Get wake lock config as a string (JSON object)
             String wakeLockConfigJson = remoteConfigs.getString(CONFIG_WAKE_LOCK);
@@ -1977,6 +1954,7 @@ public class LocationUpdateServiceV2 extends Service {
             useWakeLock = false;
             wakeLockTimeoutMs = 30000;
         }
+        Log.d(TAG_CONFIG, "loadWakeLockConfig() complete");
     }
 
     /**
@@ -1987,6 +1965,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @return The acquired wake lock or null if wake locks are disabled
      */
     private PowerManager.WakeLock acquireTemporaryWakeLock(String tag, long timeoutMs) {
+        Log.d(TAG, "acquireTemporaryWakeLock() called with tag=" + tag + ", timeoutMs=" + timeoutMs);
         if (!useWakeLock || powerManager == null) {
             return null;
         }
@@ -2000,6 +1979,7 @@ public class LocationUpdateServiceV2 extends Service {
         wakeLock.acquire(timeoutMs > 0 ? timeoutMs : wakeLockTimeoutMs);
         Log.d(TAG, "Acquired temporary wake lock: " + tag +
                 " for " + (timeoutMs > 0 ? timeoutMs : wakeLockTimeoutMs) + "ms");
+        Log.d(TAG, "acquireTemporaryWakeLock() complete");
         return wakeLock;
     }
 
@@ -2009,10 +1989,12 @@ public class LocationUpdateServiceV2 extends Service {
      * @param wakeLock The wake lock to release
      */
     private void releaseWakeLockIfHeld(PowerManager.WakeLock wakeLock) {
+        Log.d(TAG, "releaseWakeLockIfHeld() called");
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
             Log.d(TAG, "Released temporary wake lock");
         }
+        Log.d(TAG, "releaseWakeLockIfHeld() complete");
     }
 
     /**
@@ -2185,13 +2167,6 @@ public class LocationUpdateServiceV2 extends Service {
         }
 
         private String buildLocationEmitterPayload(LocationData locationData){
-//            JSONObject locationDataJSON = new JSONObject();
-//            locationDataJSON.put("speed", locationData.speed);
-//            locationDataJSON.put("latitude", locationData.latitude);
-//            locationDataJSON.put("longitude", locationData.longitude);
-//            locationDataJSON.put("accuracy", locationData.accuracy);
-//            locationDataJSON.put("source", locationData.source);
-//            locationDataJSON.put("latitude", locationData.);
             try {
                 return locationData.toJsonObject().toString();
             }catch (JSONException e){
@@ -2262,7 +2237,11 @@ public class LocationUpdateServiceV2 extends Service {
          * @param locations List of locations to add
          */
         void addAll(List<LocationData> locations) {
-            queue.addAll(locations);
+            List<LocationData> existingLocations = new ArrayList<>(queue);
+            existingLocations.addAll(locations);
+            existingLocations.sort((o1, o2) -> (int) (o1.timestamp - o2.timestamp));
+            queue.clear();
+            queue.addAll(existingLocations);
             executor.execute(this::saveQueueToCache);
         }
 
@@ -2392,7 +2371,6 @@ public class LocationUpdateServiceV2 extends Service {
 
             if (batchProcessingLock.tryLock()) {
                 try {
-                    isBatchProcessing.set(true);
 
                     // Enforce rate limiting using the local variable
                     long currentTime = System.currentTimeMillis();
@@ -2401,6 +2379,12 @@ public class LocationUpdateServiceV2 extends Service {
                     long timeSinceLastCall = currentTime - lastSentTime;
 
                     long rateLimitTimeInMillis = rateLimitTimeInSeconds * 1000; // Convert to milliseconds
+
+                    if (timeSinceLastCall < rateLimitTimeInMillis) {
+                        return;
+                    }
+
+                    isBatchProcessing.set(true);
 
                     // Check if we need to send regardless of batch size due to time
                     boolean sendDueToTime = shouldSendBatchDueToTime();
@@ -2454,7 +2438,7 @@ public class LocationUpdateServiceV2 extends Service {
             long elapsedSeconds = TimeUnit.MILLISECONDS.toSeconds(currentTime - lastSentTime);
 
             // If more than the max batch age has passed, send the batch
-            boolean shouldSendDueToTime = elapsedSeconds >= locationMaxBatchAgeSeconds;
+            boolean shouldSendDueToTime = elapsedSeconds < 0 || elapsedSeconds >= locationMaxBatchAgeSeconds;
 
             if (shouldSendDueToTime) {
                 Log.d(TAG_BATCH, "Batch age: " + elapsedSeconds + "s exceeds max age: " +
