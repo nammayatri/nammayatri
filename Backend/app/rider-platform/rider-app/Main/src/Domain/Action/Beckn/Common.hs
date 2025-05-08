@@ -1316,6 +1316,7 @@ createRecentLocationForTaxi booking = do
                   DTRL.toStopCode = Nothing,
                   DTRL.fromLatLong = Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon,
                   DTRL.createdAt = now,
-                  DTRL.updatedAt = now
+                  DTRL.updatedAt = now,
+                  DTRL.fare = Just booking.estimatedTotalFare.amount
                 }
         SQRL.create recentLocation

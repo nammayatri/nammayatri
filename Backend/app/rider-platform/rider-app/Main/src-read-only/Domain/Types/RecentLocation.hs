@@ -10,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -17,6 +18,7 @@ data RecentLocation = RecentLocation
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     entityType :: Domain.Types.RecentLocation.EntityType,
+    fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     frequency :: Kernel.Prelude.Int,
     fromLatLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     fromStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

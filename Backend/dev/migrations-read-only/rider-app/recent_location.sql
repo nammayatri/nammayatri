@@ -114,3 +114,9 @@ ALTER TABLE atlas_app.recent_location ADD COLUMN from_stop_code text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.recent_location ADD COLUMN fare double precision ;

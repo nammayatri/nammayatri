@@ -614,6 +614,7 @@ createRecentLocationForMultimodal journey = do
   journeyLegs <- QJourneyLeg.findAllByJourneyId journey.id
   let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] && not (fromMaybe False leg.isDeleted)) journeyLegs
   mbRecentLocationId <- getRecentLocationId onlyPublicTransportLegs
+  let fare = foldl' (\acc leg -> acc + fromMaybe 0 leg.estimatedMinFare) 0 onlyPublicTransportLegs
   case mbRecentLocationId of
     Just recentLocationId -> SQRL.increaceFrequencyById recentLocationId
     Nothing -> do
@@ -635,7 +636,7 @@ createRecentLocationForMultimodal journey = do
                     riderId = journey.riderId,
                     frequency = 1,
                     entityType = if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode,
-                    address = Nothing,
+                    address = journey.toLocationAddress,
                     fromLatLong = Just $ LatLong firstLeg.startLocation.latitude firstLeg.startLocation.longitude,
                     routeCode = if length legs > 1 then Nothing else mbRouteCode,
                     toStopCode = Just lastStopCode,
@@ -643,7 +644,8 @@ createRecentLocationForMultimodal journey = do
                     toLatLong = LatLong endLocation.latitude endLocation.longitude,
                     merchantOperatingCityId = cityId,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    fare = Just fare
                   }
           SQRL.create recentLocation
         _ -> return ()

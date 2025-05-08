@@ -1,6 +1,7 @@
 module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.MultimodalConfirm as APITypes
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
@@ -147,10 +148,12 @@ init journeyReq userPreferences = do
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
+      let fromLocationAddress = UCommon.mkAddress searchReq.fromLocation.address
+      let toLocationAddress = UCommon.mkAddress <$> (Just searchReq >>= (.toLocation) >>= (Just <$> (.address)))
       let journeyLegs = catMaybes mbJourneyLegs
       hasUserPreferredTransitTypesFlag <- hasUserPreferredTransitTypes journeyLegs userPreferences
       hasUserPreferredTransitModesFlag <- hasUserPreferredTransitModes journeyLegs userPreferences
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag fromLocationAddress toLocationAddress
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey

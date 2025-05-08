@@ -9,12 +9,14 @@ import qualified Domain.Types.RecentLocation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RecentLocationT f = RecentLocationT
   { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     entityType :: B.C f Domain.Types.RecentLocation.EntityType,
+    fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     frequency :: B.C f Kernel.Prelude.Int,
     stopLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     stopLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
