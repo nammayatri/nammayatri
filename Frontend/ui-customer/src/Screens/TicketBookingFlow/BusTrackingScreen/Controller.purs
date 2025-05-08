@@ -133,14 +133,14 @@ eval ToggleStops state = do
 
 eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
   let
-    filteredResp = metroResponse
+    filteredResp = -- metroResponse
     -- Right now showing all stops event though user has boooked a ticket from pickup and destination stop
-    -- case state.data.destinationStation, DS.null state.data.bookingId of
-      -- Mb.Just dest, false -> do
-      --   case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
-      --     Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
-      --     Mb.Just index -> DA.take (index + 1) metroResponse
-      -- _, _ -> metroResponse
+      case state.data.destinationStation, DS.null state.data.bookingId, state.props.vehicleTrackingId of
+        Mb.Just dest, false, _ -> do
+          case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
+            Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
+            Mb.Just index -> DA.take (index + 1) metroResponse
+        _, _, _-> metroResponse
     
     destinationStationSeq = Mb.maybe Mb.Nothing (\(API.FRFSStationAPI dest) -> dest.sequenceNum)(DA.last filteredResp)
 
@@ -194,11 +194,13 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
     processTrackingData trackingData = do
       let
         alreadyOnboardedThisBus = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) extractBusOnboardingInfo
+        _ = spy "Bus Onboarding data " $ Tuple state.data.bookingId extractBusOnboardingInfo
+        _ = spy "Already onboarded this bus" $ Tuple state.data.bookingId alreadyOnboardedThisBus
         finalMap =
           DA.foldl
             ( \acc item -> do
                 let alreadyOnboardedThisVehicleInRouteOrPreTracking = Mb.isNothing alreadyOnboardedThisBus || (alreadyOnboardedThisBus <#> _.vehicleId) == Mb.Just item.vehicleId
-                if ((Mb.maybe false (_ < item.nextStopSequence) state.props.destinationSequenceNumber && DS.null state.data.bookingId) || item.vehicleId == "")
+                if (((Mb.maybe false (_ < item.nextStopSequence) state.props.destinationSequenceNumber && DS.null state.data.bookingId) || item.vehicleId == "")) -- && alreadyOnboardedThisVehicleInRouteOrPreTracking
                   then acc
                 else do
                   let
@@ -442,27 +444,33 @@ drawDriverRoute resp state = do
             Right (API.FRFSRouteAPI routeResp) -> Mb.fromMaybe [] routeResp.waypoints
             Left err -> []
     destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) resp
-    sourceStation = DA.find (\(API.FRFSStationAPI item) -> item.code == srcCode) resp
+  filteredRoute <- case destinationStation, DS.null state.data.bookingId of
+    Mb.Just (API.FRFSStationAPI dest), false -> do
+      locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+      pure $ if locationResp.isInPath then { points: DA.reverse locationResp.points } else route
+    _, _ -> pure route
   push <- EHC.liftFlow $ getPushFn Mb.Nothing "BusTrackingScreen"
-  EHC.liftFlow $ push $ SaveRoute route
+  EHC.liftFlow $ push $ SaveRoute filteredRoute
   let
-    routeConfig = transformStationsForMap resp route srcCode destinationCode
+    routeConfig = transformStationsForMap resp filteredRoute srcCode destinationCode
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
-  case destinationStation, sourceStation, DS.null state.data.bookingId of
-    Mb.Just (API.FRFSStationAPI dest), Mb.Just(API.FRFSStationAPI src), false -> do
-      -- Not Showing route till just the stop location
-      -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
-      -- pure $ if locationResp.isInPath then { points: locationResp.points } else route
-      
-      -- Breaking route drawing into 2 parts on top of each other
-      EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10, routeColor = "#919191"} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
 
-      sourceToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
-      pickupToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse sourceToDestinationRoute.points}) (Mb.fromMaybe 0.0 src.lat) (Mb.fromMaybe 0.0 src.lon) 1 
-      EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 8, routeColor = Color.black900, locations = {points : pickupToDestinationRoute.points} }] (EHC.getNewIDWithTag "BusTrackingScreenMap")
-    _, _, _ ->
-      EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  -- case destinationStation, sourceStation, DS.null state.data.bookingId of
+  --   Mb.Just (API.FRFSStationAPI dest), Mb.Just(API.FRFSStationAPI src), false -> do
+  --     -- Not Showing route till just the stop location
+  --     -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+  --     -- pure $ if locationResp.isInPath then { points: locationResp.points } else route
+      
+  --     -- Breaking route drawing into 2 parts on top of each other
+  --     EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10, routeColor = "#919191"} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+
+  --     sourceToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+  --     pickupToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse sourceToDestinationRoute.points}) (Mb.fromMaybe 0.0 src.lat) (Mb.fromMaybe 0.0 src.lon) 1 
+  --     EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 8, routeColor = Color.black900, locations = {points : pickupToDestinationRoute.points} }] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  --   _, _, _ ->
+  --     EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
   void $ foldM processStop 0 state.data.stopsList
