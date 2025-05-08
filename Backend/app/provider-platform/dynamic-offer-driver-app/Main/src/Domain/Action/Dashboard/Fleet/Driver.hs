@@ -53,6 +53,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import Control.Applicative (optional)
 import Data.Csv
 import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
@@ -677,9 +678,9 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = Csv.readMaybeCSVField idx row.airConditioned "Air Conditioned"
           mbRouteCodes :: Maybe [Text] = Csv.readMaybeCSVField idx row.routeCodes "Route Codes"
-          mbFleetPhoneNo :: Maybe Text = Csv.readMaybeCSVField idx row.fleetPhoneNo "Fleet Phone Number"
-          mbDriverPhoneNo :: Maybe Text = Csv.readMaybeCSVField idx row.driverPhoneNo "Driver Phone Number"
-          mbCountryCode :: Maybe Text = Csv.readMaybeCSVField idx row.countryCode "Country Code"
+          mbFleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet Phone Number"
+          mbDriverPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneNo) "Driver Phone Number"
+          mbCountryCode :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.countryCode) "Country Code"
       vehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.vehicleCategory "Vehicle Category"
       vehicleRegistrationCertNumber <- Csv.cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
@@ -708,9 +709,9 @@ data VehicleDetailsCSVRow = VehicleDetailsCSVRow
     airConditioned :: Text,
     routeCodes :: Text,
     vehicleCategory :: Text,
-    fleetPhoneNo :: Text, -- Added new field
-    driverPhoneNo :: Text, -- Added new field
-    countryCode :: Text -- Added new field
+    fleetPhoneNo :: Maybe Text,
+    driverPhoneNo :: Maybe Text,
+    countryCode :: Maybe Text
   }
   deriving (Show)
 
@@ -721,9 +722,9 @@ instance FromNamedRecord VehicleDetailsCSVRow where
       <*> r .: "air_conditioned"
       <*> r .: "route_codes"
       <*> r .: "vehicle_category"
-      <*> r .: "fleet_phone_no" -- Added new field
-      <*> r .: "driver_phone_no" -- Added new field
-      <*> r .: "country_code" -- Added new field
+      <*> optional (r .: "fleet_phone_no")
+      <*> optional (r .: "driver_phone_no")
+      <*> optional (r .: "country_code")
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveDriver ::
@@ -1884,7 +1885,7 @@ data CreateDriversCSVRow = CreateDriversCSVRow
   { driverName :: Text,
     driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Text,
-    fleetPhoneNo :: Text
+    fleetPhoneNo :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
@@ -1900,7 +1901,7 @@ instance FromNamedRecord CreateDriversCSVRow where
       <$> r .: "driver_name"
       <*> r .: "driver_phone_number"
       <*> r .: "driver_onboarding_vehicle_category"
-      <*> r .: "fleet_phone_no"
+      <*> optional (r .: "fleet_phone_no")
 
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
@@ -2038,7 +2039,7 @@ parseDriverInfo idx row = do
   driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
   driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
   driverOnboardingVehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
-  let fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx row.fleetPhoneNo "Fleet number"
+  let fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
   pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
