@@ -92,13 +92,19 @@ import qualified Tools.MultiModal as TMultiModal
 
 -------- Search Flow --------
 
+data MultimodalWarning
+  = NoSingleModeRoutes
+  | NoUserPreferredFirstJourney
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
 data MultimodalSearchResp = MultimodalSearchResp
   { searchId :: Id SearchRequest.SearchRequest,
     searchExpiry :: UTCTime,
     journeys :: [DQuote.JourneyData],
     firstJourney :: Maybe DQuote.JourneyData,
     firstJourneyInfo :: Maybe ApiTypes.JourneyInfoResp,
-    showMultimodalWarning :: Bool
+    showMultimodalWarning :: Bool,
+    multimodalWarning :: Maybe MultimodalWarning
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -223,7 +229,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
   mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig.id searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
-  (showMultimodalWarning, otpResponse) <- case mbSingleModeRouteDetails of
+  (showMultimodalWarningForSingleMode, otpResponse) <- case mbSingleModeRouteDetails of
     Just singleModeRouteDetails -> do
       let fromStopDetails =
             MultiModalTypes.MultiModalStopDetails
@@ -294,7 +300,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
             }
         )
     _ -> do
-      let permissibleModesToUse = if null userPreferences.allowedTransitModes then fromMaybe [] riderConfig.permissibleModes else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
+      let permissibleModesToUse = fromMaybe [] riderConfig.permissibleModes
       let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
       destination <- extractDest searchRequest.toLocation
       let transitRoutesReq =
@@ -331,7 +337,13 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               return (null onlySingleModeRoutes, MInterface.MultiModalResponse {routes = if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks})
             _ -> return (False, otpResponse'')
 
-  mbJourneyWithIndex <- JMU.measureLatency (go 0 otpResponse.routes userPreferences) "Multimodal Init Time" -- process until first journey is found
+  let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
+      hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
+      filteredRoutes = filter hasOnlyUserPreferredTransitModes otpResponse.routes
+      routesToProcess = if null filteredRoutes then otpResponse.routes else filteredRoutes
+      showMultimodalWarningForFirstJourney = null filteredRoutes
+
+  mbJourneyWithIndex <- JMU.measureLatency (go 0 routesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
   journeys <- DQuote.getJourneys searchRequest (Just True)
@@ -354,7 +366,14 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         journeys = fromMaybe [] journeys,
         firstJourney = mbFirstJourney,
         firstJourneyInfo = firstJourneyInfo,
-        showMultimodalWarning
+        showMultimodalWarning = showMultimodalWarningForSingleMode || showMultimodalWarningForFirstJourney,
+        multimodalWarning =
+          if showMultimodalWarningForSingleMode
+            then Just NoSingleModeRoutes
+            else
+              if showMultimodalWarningForFirstJourney
+                then Just NoUserPreferredFirstJourney
+                else Nothing
       }
   where
     go :: Int -> [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe (Int, Journey.Journey))
@@ -385,7 +404,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
       JM.init initReq userPreferences
 
     eitherWalkOrSingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
-    eitherWalkOrSingleMode selectedMode leg = leg.mode `elem` [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode]
+    eitherWalkOrSingleMode selectedMode leg = isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode] leg
 
     onlySingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
     onlySingleMode selectedMode leg = leg.mode == castVehicleCategoryToGeneralVehicleType selectedMode
@@ -396,7 +415,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
       let filteredLegs =
             [ leg
               | (index, leg) <- legsWithIndex,
-                not ((index == 0 || index == length legs - 1) && leg.mode `elem` [MultiModalTypes.Walk, MultiModalTypes.Unspecified])
+                not ((index == 0 || index == length legs - 1) && isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified] leg)
             ]
       MultiModalTypes.MultiModalRoute {legs = if null filteredLegs then legs else filteredLegs, ..}
 
@@ -481,6 +500,9 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                   }
               ]
           }
+
+    isLegModeIn :: [GeneralVehicleType] -> MultiModalTypes.MultiModalLeg -> Bool
+    isLegModeIn modes leg = leg.mode `elem` modes
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

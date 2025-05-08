@@ -90,3 +90,8 @@ ALTER TABLE atlas_app.journey ADD COLUMN relevance_score double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_service_tier boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_transit_modes boolean ;
