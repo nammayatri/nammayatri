@@ -10,3 +10,4 @@ WITH MerchantMessages AS (
   FROM atlas_driver_offer_bpp.merchant_operating_city AS T1
 )
 INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, message, merchant_operating_city_id)
+  (SELECT * FROM MerchantMessages);
