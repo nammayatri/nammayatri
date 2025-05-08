@@ -77,7 +77,7 @@ import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Control.Alt ((<|>))
 import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
-import MapUtils (calculateNearestWaypoint, rotationBetweenLatLons, haversineDistance)
+import MapUtils (calculateNearestWaypoint, rotationBetweenLatLons, haversineDistance, calculateVehicleBearingViaRoute)
 import Data.Tuple (Tuple(..))
 import Common.Resources.Constants (zoomLevel, chatService)
 import Data.Set as DSet
@@ -280,6 +280,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
         _, false -> []
         true, true ->
           let 
+            upcomgingStops = Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
             -- Proper Checking to see if the bus has moved backward in route then not counting that as a valid location
             vehicleLatLong =
               ( case (DM.lookup item.vehicleId state.data.previousLatLonsOfVehicle) of 
@@ -296,30 +297,43 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
             etaTillPickupStop = DA.find (\(API.UpcomingStop upcomingStop) ->
                 let (API.Stop stop) = upcomingStop.stop
                 in (mbPickupStop <#> (\(API.FRFSStationAPI frfsStop) -> frfsStop.code)) == (Mb.Just $ stop.stopCode)
-              ) $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
+              ) upcomgingStops
 
             -- Calculate last reached Stop
-            lastReachedStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Reached") $ DA.reverse $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
+            lastReachedStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Reached") $ DA.reverse upcomgingStops
 
             -- Extract first upcoming stop and next stop details
-            firstUpcomingStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Upcoming") $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
+            firstUpcomingStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Upcoming") upcomgingStops
             upcomingNextStop = firstUpcomingStop <#> (\(API.UpcomingStop upcomingStop) -> upcomingStop.stop)
             nextStopLatLon = Mb.fromMaybe (API.LatLong {lat: 0.0, lon: 0.0}) $ upcomingNextStop <#> (\(API.Stop stop) -> stop.coordinate) -- (API.LatLong nextStopPosition)
-            nextStopSequenceNum = Mb.fromMaybe (0) $ upcomingNextStop <#> (\(API.Stop stop) -> stop.stopIdx + 1) -- nextStop.sequenceNum
+            nextStopIdx = Mb.fromMaybe (0) $ upcomingNextStop <#> (\(API.Stop stop) -> stop.stopIdx) -- nextStop.sequenceNum
+
+            -- Proper ETA Distance Calculation from upComingNextStop
+            calculatedETADistance = DA.foldl
+              (\acc (API.UpcomingStop upcomingStop) ->
+                let (API.Stop stop) = upcomingStop.stop
+                in
+                  if (stop.stopIdx < (Mb.fromMaybe 0 mbSequenceNum) && upcomingStop.status == "Upcoming") then
+                    acc + stop.distanceToUpcomingIntermediateStop
+                  else
+                    acc
+              )
+              0
+              upcomgingStops
 
             -- deltaFinal =  firstUpcomingStop !! lastReachedDelta
           in 
             [ { vehicleId: item.vehicleId
             , timestamp: vehicleInfoForRoute.timestamp
             , nextStop: Mb.fromMaybe "" $ upcomingNextStop <#> (\(API.Stop stop) -> stop.stopCode)
-            , nextStopDistance: haversineDistance vehicleLatLong $ nextStopLatLon
+            , nextStopDistance: Mb.fromMaybe (haversineDistance vehicleLatLong $ nextStopLatLon) $ upcomingNextStop <#> (\(API.Stop stop) -> DI.toNumber stop.distanceToUpcomingIntermediateStop)
             , vehicleLat: vehicleLatLong ^._lat
             , vehicleLon: vehicleLatLong ^._lon
             , nextStopLat: nextStopLatLon ^._lat
             , nextStopLon: nextStopLatLon ^._lon
-            , nextStopSequence: nextStopSequenceNum
+            , nextStopSequence: nextStopIdx
             , nearestWaypointConfig: nearestWaypointConfig
-            , etaDistance: if nextStopSequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
+            , etaDistance: if (calculatedETADistance /= 0 && nextStopIdx < (Mb.fromMaybe 0 mbSequenceNum)) then Mb.Just $ DI.toNumber calculatedETADistance else Mb.Nothing -- if nextStopIdx < (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
             , eta: filterETAForOlderLatLong vehicleInfoForRoute.timestamp $ Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop item.vehicleId) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
             , delta : firstUpcomingStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
             } ]
@@ -333,7 +347,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
 
     calculateETAFromUpcomingStop lastReachedStop (API.UpcomingStop stop) vehicleId = 
       let etaTimeStamp = stop.eta
-          delayInSeconds = DI.floor $ Mb.fromMaybe 0.0 stop.delta
+          delayInSeconds = DI.round $ Mb.fromMaybe 0.0 stop.delta
             --DI.floor $ Mb.fromMaybe 0.0 $ lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
           etaInSeconds = EHC.compareUTCDate etaTimeStamp (EHC.getCurrentUTC "")
           -- _ = spy "UTC TimeStamp of ETA and currentTime " $ Tuple etaTimeStamp (EHC.getCurrentUTC "")
@@ -492,7 +506,10 @@ updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
         let pointerIcon = "ny_ic_bus_nav_on_map"
             markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 70.0, zIndex = 0.1}
             srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 105.0, zIndex = 0.0}
-            vehicleRotationFromPrevLatLon = vehicleRotationCalculation item state
+            vehicleRotationFromPrevLatLon = 
+              case calculateVehicleBearingViaRoute (API.LatLong {lat: item.vehicleLat, lon: item.vehicleLon}) state.data.routePts.points of
+                Mb.Just rotation -> rotation
+                Mb.Nothing -> vehicleRotationCalculation item state
             wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
         locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts item.vehicleLat item.vehicleLon 1
         markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable item.vehicleId
@@ -534,6 +551,7 @@ userBoardedActions state vehicles vehicle = do
     $ \(item) -> do
         if item.vehicleId /= vehicle.vehicleId then do
           let _ = JB.removeMarker item.vehicleId
+              _ = JB.removeMarker $ item.vehicleId <> "arrow_marker"
           pure unit
         else pure unit
   locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points : state.data.routePts.points}) (vehicle.vehicleLat) (vehicle.vehicleLon) 1
@@ -541,7 +559,10 @@ userBoardedActions state vehicles vehicle = do
   let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
   let srcMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" , markerSize = 70.0,  zIndex = 0.1}
       srcHeaderArrowMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId <> "arrow_marker", pointerIcon = "ny_ic_nav_on_map_yellow_arrow" , markerSize = 105.0, zIndex = 0.0}
-      vehicleRotationFromPrevLatLon = vehicleRotationCalculation vehicle state
+      vehicleRotationFromPrevLatLon = 
+        case calculateVehicleBearingViaRoute (API.LatLong {lat: vehicle.vehicleLat, lon: vehicle.vehicleLon}) state.data.routePts.points of
+          Mb.Just rotation -> rotation
+          Mb.Nothing -> vehicleRotationCalculation vehicle state
       srcCode = Mb.maybe "" (_.stationCode) state.data.sourceStation
       destinationCode = Mb.maybe "" (_.stationCode) state.data.destinationStation
       destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) state.data.stopsList
@@ -590,7 +611,6 @@ calculateMinEtaTimeWithDelay :: Array ST.VehicleData -> Tuple (Mb.Maybe Int) (Mb
 calculateMinEtaTimeWithDelay trackingData =
   let minEta = minimum $ DA.mapMaybe (\item -> item.eta) trackingData
       timestamp = getMinEtaTimestamp minEta trackingData
-      _ = spy "rahul timestamp" 
   in Tuple minEta timestamp
 
 getMinEtaTimestamp :: Mb.Maybe Int -> Array ST.VehicleData -> Mb.Maybe String
