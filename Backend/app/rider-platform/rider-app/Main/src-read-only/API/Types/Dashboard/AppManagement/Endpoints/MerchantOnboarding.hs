@@ -38,7 +38,7 @@ newtype UploadFileResponse = UploadFileResponse {fileId :: Kernel.Types.Id.Id Da
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (MerchantOnboardingInfo :<|> MerchantOnboardingStart :<|> MerchantOnboardingList :<|> MerchantOnboardingStepSubmit :<|> MerchantOnboardingStepUpdatePayload :<|> MerchantOnboardingStepReject :<|> MerchantOnboardingStepApprove :<|> MerchantOnboardingStepUploadFile :<|> MerchantOnboardingReject :<|> MerchantOnboadingListAll :<|> MerchantOnboardingStepList :<|> MerchantOnboardingGetFile)
+type API = (MerchantOnboardingInfo :<|> MerchantOnboardingStart :<|> MerchantOnboardingList :<|> MerchantOnboardingStepSubmit :<|> MerchantOnboardingStepUpdatePayload :<|> MerchantOnboardingStepReject :<|> MerchantOnboardingStepApprove :<|> MerchantOnboardingStepUploadFile :<|> MerchantOnboardingReject :<|> MerchantOnboadingListAll :<|> MerchantOnboardingStepList :<|> MerchantOnboardingGetFile :<|> MerchantOnboardingCancel)
 
 type MerchantOnboardingInfo =
   ( "onboarding" :> Capture "onboardingType" Kernel.Prelude.Text :> "info" :> QueryParam "requestorId" Kernel.Prelude.Text
@@ -172,6 +172,14 @@ type MerchantOnboardingGetFile =
            Domain.Types.MerchantOnboarding.GetFileResponse
   )
 
+type MerchantOnboardingCancel =
+  ( "onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "cancel" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam
+           "requestorRole"
+           Domain.Types.MerchantOnboarding.RequestorRole
+      :> Get '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 data MerchantOnboardingAPIs = MerchantOnboardingAPIs
   { merchantOnboardingInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.MerchantOnboarding.MerchantOnboardingAPI,
     merchantOnboardingStart :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.MerchantOnboarding.MerchantOnboardingAPI,
@@ -192,13 +200,14 @@ data MerchantOnboardingAPIs = MerchantOnboardingAPIs
     merchantOnboardingReject :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     merchantOnboadingListAll :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI],
     merchantOnboardingStepList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep],
-    merchantOnboardingGetFile :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.MerchantOnboarding.GetFileResponse
+    merchantOnboardingGetFile :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.MerchantOnboarding.GetFileResponse,
+    merchantOnboardingCancel :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkMerchantOnboardingAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantOnboardingAPIs)
 mkMerchantOnboardingAPIs merchantOnboardingClient = (MerchantOnboardingAPIs {..})
   where
-    merchantOnboardingInfo :<|> merchantOnboardingStart :<|> merchantOnboardingList :<|> merchantOnboardingStepSubmit :<|> merchantOnboardingStepUpdatePayload :<|> merchantOnboardingStepReject :<|> merchantOnboardingStepApprove :<|> merchantOnboardingStepUploadFile :<|> merchantOnboardingReject :<|> merchantOnboadingListAll :<|> merchantOnboardingStepList :<|> merchantOnboardingGetFile = merchantOnboardingClient
+    merchantOnboardingInfo :<|> merchantOnboardingStart :<|> merchantOnboardingList :<|> merchantOnboardingStepSubmit :<|> merchantOnboardingStepUpdatePayload :<|> merchantOnboardingStepReject :<|> merchantOnboardingStepApprove :<|> merchantOnboardingStepUploadFile :<|> merchantOnboardingReject :<|> merchantOnboadingListAll :<|> merchantOnboardingStepList :<|> merchantOnboardingGetFile :<|> merchantOnboardingCancel = merchantOnboardingClient
 
 data MerchantOnboardingUserActionType
   = MERCHANT_ONBOARDING_INFO
@@ -213,6 +222,7 @@ data MerchantOnboardingUserActionType
   | MERCHANT_ONBOADING_LIST_ALL
   | MERCHANT_ONBOARDING_STEP_LIST
   | MERCHANT_ONBOARDING_GET_FILE
+  | MERCHANT_ONBOARDING_CANCEL
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -13,6 +13,7 @@ module Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
     merchantOnboadingListAll,
     merchantOnboardingStepList,
     merchantOnboardingGetFile,
+    merchantOnboardingCancel,
     getDashboardAccessType,
   )
 where
@@ -164,3 +165,10 @@ dashboardSideHandler handler = case handler.handlerName of
   where
     getMetadataValue :: Text -> Maybe Text
     getMetadataValue key = snd <$> find (\(k, _) -> k == key) handler.metadata
+
+merchantOnboardingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingCancel merchantShortId opCity apiTokenInfo onboardingId _requestorId _requestorRole = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  requestorRole <- getDashboardAccessType requestorId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingCancel) onboardingId (Just requestorId) (Just requestorRole)

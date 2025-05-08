@@ -170,6 +170,17 @@ apis:
         fileId: Text
       response:
         type: GetFileResponse
+  - GET:
+      endpoint: /onboarding/{onboardingId}/cancel
+      name: MerchantOnboardingCancel
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingId: Text
+      response:
+        type: "APISuccess"
 
 types:
   ApproveResponse:

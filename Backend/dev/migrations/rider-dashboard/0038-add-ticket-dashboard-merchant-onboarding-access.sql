@@ -79,3 +79,9 @@ INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_acc
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at) VALUES
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_UPLOAD_ASSET', now(), now()),
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_DELETE_ASSET', now(), now());
+
+-- Cancellation
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at) VALUES
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4902', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_CANCEL', now(), now()),
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_CANCEL', now(), now()),
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4901', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_CANCEL', now(), now());

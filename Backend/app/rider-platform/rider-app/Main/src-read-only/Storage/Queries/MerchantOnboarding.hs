@@ -21,6 +21,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOnboarding.MerchantOnboarding] -> m ())
 createMany = traverse_ create
 
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findAllByOnboardingType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
