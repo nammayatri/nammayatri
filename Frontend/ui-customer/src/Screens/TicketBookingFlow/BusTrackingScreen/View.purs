@@ -701,7 +701,7 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
   , textView
     $ [ text etaTextInMinutesOrDistance
       , margin $ MarginLeft 8
-      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && (Mb.isJust isMinimumEtaDistanceAvailable)
+      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && (Mb.isJust isMinimumEtaDistanceAvailable) && etaTextInMinutesOrDistance /= ""
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   -- , linearLayout [weight 1.0] []
