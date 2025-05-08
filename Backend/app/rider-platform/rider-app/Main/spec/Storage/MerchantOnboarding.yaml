@@ -61,6 +61,9 @@ MerchantOnboardingStep:
       kvFunction: updateOneWithKV
       params: [remarks]
       where: id
+    deleteByOnboardingId:
+      kvFunction: deleteWithKV
+      where: merchantOnboardingId
 
 
 MerchantOnboarding:
@@ -140,6 +143,9 @@ MerchantOnboarding:
       where: id
     findById:
       kvFunction: findOneWithKV
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
       where: id
 
 

@@ -14,6 +14,7 @@ module Domain.Action.Dashboard.AppManagement.MerchantOnboarding
     merchantOnboadingListAll,
     merchantOnboardingStepList,
     merchantOnboardingGetFile,
+    merchantOnboardingCancel,
   )
 where
 
@@ -393,6 +394,17 @@ merchantOnboardingGetFile merchantShortId opCity onboardingId fileId requestorId
   filePath <- file.s3FilePath & fromMaybeM (FileDoNotExist fileId)
   base64File <- S3.get $ T.unpack filePath
   return $ Domain.Types.MerchantOnboarding.GetFileResponse {fileBase64 = base64File, fileType = show file._type}
+
+merchantOnboardingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingCancel merchantShortId opCity onboardingId requestorId requestorRole = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this file"
+  QMO.deleteById onboarding.id
+  QMOS.deleteByOnboardingId onboarding.id.getId
+  return Kernel.Types.APISuccess.Success
 
 fromjson :: (FromJSON a) => Data.Aeson.Value -> Environment.Flow a
 fromjson val = case Data.Aeson.fromJSON val of
