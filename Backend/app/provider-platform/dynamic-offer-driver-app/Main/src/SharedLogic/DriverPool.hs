@@ -1202,7 +1202,7 @@ parallelRequestsFilter clientSdkVersion defaultMaxParallelReq maxParallelSearchR
   limParallelSRClientSdkVersion <- L.runIO (T.pack . fromMaybe "" <$> SE.lookupEnv "LIMITED_PARALLEL_SEARCH_REQUEST_CLIENT_SDK_VERSION")
   let allowedMaxParallelSearchRequests =
         maybe
-          maxParallelSearchRequests
+          defaultMaxParallelReq
           ( \sdkVersion ->
               bool defaultMaxParallelReq maxParallelSearchRequests (versionToText sdkVersion >= limParallelSRClientSdkVersion)
           )
