@@ -43,6 +43,8 @@ Journey:
     relevanceScore: Maybe Double
     hasPreferredServiceTier: Maybe Bool
     hasPreferredTransitModes: Maybe Bool
+    fromLocationAddress: Maybe Text
+    toLocationAddress: Maybe Text
 
   beamType:
     status: Maybe JourneyStatus

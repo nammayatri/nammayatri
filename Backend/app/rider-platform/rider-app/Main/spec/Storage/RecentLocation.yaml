@@ -3,6 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   LatLong: Kernel.External.Maps.Types
+  HighPrecMoney: Kernel.Types.Common
 
 RecentLocation:
   tableName: recent_location
@@ -22,6 +23,7 @@ RecentLocation:
     routeCode: Maybe Text
     fromStopCode: Maybe Text
     toStopCode: Maybe Text
+    fare: Maybe HighPrecMoney
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt : UTCTime
     updatedAt : UTCTime

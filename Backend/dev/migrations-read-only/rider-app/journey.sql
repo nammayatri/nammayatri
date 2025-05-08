@@ -95,3 +95,9 @@ ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_service_tier boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_transit_modes boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN to_location_address text ;
+ALTER TABLE atlas_app.journey ADD COLUMN from_location_address text ;

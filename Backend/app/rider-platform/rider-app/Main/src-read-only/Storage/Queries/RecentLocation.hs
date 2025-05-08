@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.RecentLocation.RecentLocation {..}) = do
     [ Se.Set Beam.address address,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.entityType entityType,
+      Se.Set Beam.fare fare,
       Se.Set Beam.frequency frequency,
       Se.Set Beam.stopLat (fromLatLong <&> (.lat)),
       Se.Set Beam.stopLon (fromLatLong <&> (.lon)),
