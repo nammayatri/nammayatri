@@ -76,7 +76,7 @@ import Data.Boolean(otherwise)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2, runEffectFn4)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
@@ -207,7 +207,16 @@ eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval StartBBPS state = 
   continueWithCmd state
     [ do
-        void $ runEffectFn2 startBBPSMicroApp (getNewIDWithTag "BBPSView") ""
+        -- res <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+          let mobileNumber = getValueToLocalStore MOBILE_NUMBER
+              deviceId = JB.getDeviceID unit
+          response <- lift $ lift $ Remote.getBBPSSessionToken (API.GetBBPSSessionTokenReq { deviceId: deviceId, mobileNumber: mobileNumber })
+          case response of
+            Right (API.GetBBPSSessionTokenResponse { token }) -> do 
+              liftFlowBT $ void $ runEffectFn4 startBBPSMicroApp (getNewIDWithTag "BBPSView") deviceId mobileNumber token
+            Left error -> do
+              liftFlowBT $ void $ pure $ toast error.response.userMessage
         pure NoAction
     ]
 

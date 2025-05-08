@@ -4248,3 +4248,34 @@ instance standardEncodeGetDeliveryImageResponse :: StandardEncode GetDeliveryIma
 instance showGetDeliveryImageResponse :: Show GetDeliveryImageResponse where show = genericShow
 instance decodeGetDeliveryImageResponse :: Decode GetDeliveryImageResponse where decode = defaultDecode
 instance encodeGetDeliveryImageResponse :: Encode GetDeliveryImageResponse where encode = defaultEncode
+
+----------------------------- BBPS Session -----------------------------------------------------
+
+-- Request type
+newtype GetBBPSSessionTokenReq = GetBBPSSessionTokenReq { 
+  deviceId :: String,
+  mobileNumber :: String
+}
+
+derive instance genericGetBBPSSessionTokenReq :: Generic GetBBPSSessionTokenReq _
+derive instance newtypeGetBBPSSessionTokenReq :: Newtype GetBBPSSessionTokenReq _
+instance encodeGetBBPSSessionTokenReq :: Encode GetBBPSSessionTokenReq where
+  encode = defaultEncode
+instance standardEncodeGetBBPSSessionTokenReq :: StandardEncode GetBBPSSessionTokenReq where
+  standardEncode (GetBBPSSessionTokenReq req) = standardEncode req
+
+instance makeGetBBPSSessionTokenReq :: RestEndpoint GetBBPSSessionTokenReq where
+  makeRequest reqBody@(GetBBPSSessionTokenReq payload) headers =
+    defaultMakeRequestWithoutLogs POST (EP.getBBPSSessionTokenUrl "/bbps/session") headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+-- Response type
+newtype GetBBPSSessionTokenResponse = GetBBPSSessionTokenResponse { 
+  token :: String
+}
+
+derive instance genericGetBBPSSessionTokenResponse :: Generic GetBBPSSessionTokenResponse _
+derive instance newtypeGetBBPSSessionTokenResponse :: Newtype GetBBPSSessionTokenResponse _
+instance showGetBBPSSessionTokenResponse :: Show GetBBPSSessionTokenResponse where show = genericShow
+instance encodeGetBBPSSessionTokenResponse :: Encode GetBBPSSessionTokenResponse where encode = defaultEncode
+instance decodeGetBBPSSessionTokenResponse :: Decode GetBBPSSessionTokenResponse where decode = defaultDecode

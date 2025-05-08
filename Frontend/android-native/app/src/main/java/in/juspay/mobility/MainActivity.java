@@ -444,7 +444,6 @@ public class MainActivity extends AppCompatActivity {
 
         handleSplashScreen();
         initApp();
-        initBBPSSdk();
 
         WebView.setWebContentsDebuggingEnabled(true);
 
@@ -753,14 +752,11 @@ public class MainActivity extends AppCompatActivity {
         return keyFactory.generatePrivate(keySpec);
     }
 
-    private void initBBPSSdk() { // BBPS SDK Integration
+    private void initBBPSSdk(String deviceId, String authToken) { // BBPS SDK Integration
         try {
             String appId = "1234";
-            String deviceId = "1234";
-            String agentId = "";
-            String privateKeyString = "";
-            PrivateKey privateKey = loadPrivateKey(privateKeyString);
-            String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
+            String agentId = "JP01JP21INB519364396";
+            // String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
             JSONObject initData = new JSONObject();
 
             // initData.put("email", email); // Optional
@@ -934,9 +930,8 @@ public class MainActivity extends AppCompatActivity {
                     case "launchBBPSSdk":
                         try {
                             View view = findViewById(Integer.parseInt(jsonObject.getString("viewId")));
-                            JSONObject bbpsPayload = new JSONObject();
-                            bbpsPayload.put("action", "MAIN");
-                            bbpsPayload.put("mobileNumber", "");
+                            JSONObject bbpsPayload = new JSONObject(jsonObject.getString("bbpsPayload"));
+                            initBBPSSdk(jsonObject.getString("deviceId"),bbpsPayload.getString("token"));
                             bbpsService.process(MainActivity.this, bbpsPayload);
                         } catch (Exception e) {
                             Log.e("Error Occurred in launchBBPSSdk", e.toString());
