@@ -4372,6 +4372,8 @@ newtype Stop = Stop {
   stopIdx :: Int,
   distanceToUpcomingIntermediateStop :: Int,
   durationToUpcomingIntermediateStop :: Int
+  -- distanceFromPreviousIntermediateStop :: Int,
+  -- stopType :: String
 }
 
 newtype UpcomingStop = UpcomingStop {
