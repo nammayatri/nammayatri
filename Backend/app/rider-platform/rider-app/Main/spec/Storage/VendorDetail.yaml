@@ -1,0 +1,25 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+VendorSplitDetails:
+  tableName: vendor_split_details
+  types:
+    SplitType:
+      enum: "FIXED, FLEXIBLE"
+  fields:
+    id : Id VendorSplitDetails
+    integratedBPPConfigId : Id IntegratedBPPConfig
+    vendorId : Text
+    splitType : SplitType
+
+  constraints:
+    id: PrimaryKey
+
+  excludedFields: [merchantId]
+  queries:
+    findAllByIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where: integratedBPPConfigId
