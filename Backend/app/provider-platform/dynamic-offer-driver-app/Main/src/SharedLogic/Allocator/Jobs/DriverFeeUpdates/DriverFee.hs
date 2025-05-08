@@ -260,6 +260,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
       paymentMode = getPaymentModeAndVehicleCategoryKey plan,
       dutyDate,
       numOfRides,
+      personId = Just driver.id.getId,
       offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing
     }
 
@@ -293,7 +294,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
         case waiveOffMode of
           DPlan.WITHOUT_OFFER -> return []
           _ -> do
-            offers <- SPayment.offerListCache merchantId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscountWithWaiveOff driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+            offers <- SPayment.offerListCache merchantId driverFee.driverId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscountWithWaiveOff driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
             return offers.offerResp
       (finalOrderAmount, offerId, offerTitle) <-
         if null offerResp

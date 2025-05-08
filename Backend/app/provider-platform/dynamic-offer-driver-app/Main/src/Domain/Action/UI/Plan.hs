@@ -479,6 +479,7 @@ planSubscribeGeneric ::
   SubscriptionServiceRelatedData ->
   Flow PlanSubscribeRes
 planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, merchantId, merchantOpCityId) _ subscriptionServiceRelatedData = do
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   (autoPayStatus, driverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
@@ -486,7 +487,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
   let deepLinkExpiry = subscriptionConfig.deepLinkExpiryTimeInMinutes
   let allowDeepLink = subscriptionConfig.sendDeepLink
   let mbDeepLinkData = if isDashboard && allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = deepLinkExpiry} else Nothing
-      paymentServiceName = subscriptionConfig.paymentServiceName
+  paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
   when (autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
   plan <- QPD.findByIdAndPaymentModeWithServiceName planId MANUAL serviceName >>= fromMaybeM (PlanNotFound planId.getId)
   let isSamePlan = maybe False (\dp -> dp.planId == planId) driverPlan
@@ -787,7 +788,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   paymentCurrency <- case currency of
     INR -> pure INR
     _ -> throwError $ InvalidRequest "Invalid currency" -- is it correct?
-  offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName =<< makeOfferReq paymentCurrency applicationDate plan.paymentMode transporterConfig_
+  offers <- SPayment.offerListCache merchantId driverId merchantOpCityId plan.serviceName =<< makeOfferReq paymentCurrency applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
@@ -857,6 +858,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = getPaymentModeAndVehicleCategoryKey plan,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
+            personId = Just driverId.getId,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
           }
     mkPlanFareBreakup currency offers now = do

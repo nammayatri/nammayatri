@@ -116,7 +116,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
               _ -> currentTotal
       let mbMandateSetupDate = mbDriverPlan >>= (.mandateSetupDate)
       let mandateSetupDate = maybe now (\date -> if driverInfo.autoPayStatus == Just DI.ACTIVE then date else now) mbMandateSetupDate
-      offersResp <- SPayment.offerListCache transporterConfig.merchantId driver.merchantOperatingCityId plan.serviceName =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
+      offersResp <- SPayment.offerListCache transporterConfig.merchantId driverInfo.driverId driver.merchantOperatingCityId plan.serviceName =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
       if null offersResp.offerResp
         then return (mkOfferedAmountsEntity amount plan.id)
         else do
@@ -142,6 +142,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
+            personId = Just driver.id.getId,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payments.IS_VISIBLE else Nothing
           }
 
