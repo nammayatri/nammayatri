@@ -444,7 +444,6 @@ public class MainActivity extends AppCompatActivity {
 
         handleSplashScreen();
         initApp();
-        initBBPSSdk();
 
         WebView.setWebContentsDebuggingEnabled(true);
 
@@ -753,14 +752,11 @@ public class MainActivity extends AppCompatActivity {
         return keyFactory.generatePrivate(keySpec);
     }
 
-    private void initBBPSSdk() { // BBPS SDK Integration
+    private void initBBPSSdk(String deviceId, String authToken) { // BBPS SDK Integration
         try {
             String appId = "1234";
-            String deviceId = "1234";
-            String agentId = "";
-            String privateKeyString = "";
-            PrivateKey privateKey = loadPrivateKey(privateKeyString);
-            String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
+            String agentId = "JP01JP21INB519364396";
+            // String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
             JSONObject initData = new JSONObject();
 
             // initData.put("email", email); // Optional
@@ -772,7 +768,7 @@ public class MainActivity extends AppCompatActivity {
             // Initializing and Booting up the SDK to make it ready for all the operations
             bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
             // Payment Gateway is service you will call to do transaction.
-            PaymentGateway.setBBPSService(bbpsService);
+            // PaymentGateway.setBBPSService(bbpsService);
 
 //            startMicroForSuccessTxn()
         }
@@ -934,9 +930,9 @@ public class MainActivity extends AppCompatActivity {
                     case "launchBBPSSdk":
                         try {
                             View view = findViewById(Integer.parseInt(jsonObject.getString("viewId")));
-                            JSONObject bbpsPayload = new JSONObject();
-                            bbpsPayload.put("action", "MAIN");
-                            bbpsPayload.put("mobileNumber", "");
+                            JSONObject bbpsPayload = new JSONObject(jsonObject.getString("bbpsPayload"));
+                            // System.out.println("bbpsPayload : " + jsonObject);
+                            initBBPSSdk(jsonObject.getString("deviceId"),jsonObject.getString("token"));
                             bbpsService.process(MainActivity.this, bbpsPayload);
                         } catch (Exception e) {
                             Log.e("Error Occurred in launchBBPSSdk", e.toString());

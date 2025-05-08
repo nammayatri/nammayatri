@@ -1583,3 +1583,10 @@ getDeliveryImageBT rideId = do
     where
     errorHandler errorPayload = do
         BackT $ pure GoBack
+
+getBBPSSessionToken :: GetBBPSSessionTokenReq -> Flow GlobalState (Either ErrorResponse GetBBPSSessionTokenResponse)
+getBBPSSessionToken (GetBBPSSessionTokenReq payload) = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getBBPSSessionTokenUrl "/bbps/session") unwrapResponse $ callAPI headers (GetBBPSSessionTokenReq payload)
+    where
+     unwrapResponse (x) = x 

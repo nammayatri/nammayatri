@@ -333,3 +333,6 @@ removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove
 
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
+
+getBBPSSessionTokenUrl :: String -> String
+getBBPSSessionTokenUrl path = "https://api.sandbox.beckn.juspay.in/dev/app/v2" <> path

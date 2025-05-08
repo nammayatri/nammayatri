@@ -354,7 +354,7 @@ clearFocus :: EffectFn1 String Unit
 clearFocus = mkEffectFn1 $ \id -> pure $ clearFocusFunction id
 
 foreign import initHVSdk :: forall action. EffectFn8 String String String Boolean String String (String -> action) (action -> Effect Unit) Unit
-foreign import startBBPSMicroApp :: forall action. EffectFn2 String String Unit
+foreign import startBBPSMicroApp :: forall action. EffectFn4 String String String String Unit
 foreign import decodeAndStoreImage :: Fn1 String String
 foreign import convertAudioToBase64 :: Fn1 String String
 foreign import encodeToBase64 :: forall action. EffectFn5 String Int (String -> Maybe String) (Maybe String) (action -> Effect Unit) (Effect String)

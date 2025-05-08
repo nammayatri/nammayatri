@@ -3091,14 +3091,16 @@ export const executeJS = (params, codeString) => {
 
 }
 
-export const startBBPSMicroApp = function (viewId, mobileNumber) {
+export const startBBPSMicroApp = function (viewId, deviceId, mobileNumber, token) {
   try {
     const jsonObjectPayload = {
       event : "launchBBPSSdk",
       viewId : viewId,
+      deviceId : deviceId,
+      token: token,
       bbpsPayload : {
         action: "Main",
-        mobileNumber: mobileNumber
+        mobileNumber: mobileNumber,
       }
     };
     window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
