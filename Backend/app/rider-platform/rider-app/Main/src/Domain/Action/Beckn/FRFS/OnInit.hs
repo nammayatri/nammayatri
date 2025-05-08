@@ -15,19 +15,12 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import BecknV2.FRFS.Utils
--- import Data.List (nub, lookup)
-import Data.List (lookup, nub)
-import qualified Data.Map as Map
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
-import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
-import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -42,15 +35,13 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
+import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
-import Tools.Error
 import qualified Tools.Payment as Payment
 
 data DOnInit = DOnInit
@@ -99,42 +90,8 @@ onInit onInitReq merchant booking_ = do
         Redis.withLockRedis (key journeyId) 60 $ do
           (orderId, orderShortId) <- getPaymentIds
           ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
-          let amount = sum $ allJourneyBookings <&> (.price.amount)
-          -- let integratedBPPConfig = QIBP.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) booking.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| booking.merchantOperatingCityId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
-          -- bppConfig <- integratedBPPConfig
-          -- vendorDetailsList <- QVendorSplitDetails.findAllByIntegratedBPPConfigId bppConfig.id
-          -- vendorSplitDetails <- convertVendorDetails vendorDetailsList allJourneyBookings
-          let vehicleTypeList = allJourneyBookings <&> (.vehicleType)
-          -- find unique vehicle types
-          let _uniqueVehicleTypes = nub vehicleTypeList
-          -- -- find integratedBPPConfig for each unique vehicle type
-          -- _integratedBPPConfigList <- mapM (QIBP.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) booking.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| booking.merchantOperatingCityId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")) _uniqueVehicleTypes
-          _integratedBPPConfigList <-
-            mapM
-              ( \vehicleType ->
-                  QIBP.findByDomainAndCityAndVehicleCategory
-                    (show Spec.FRFS)
-                    booking.merchantOperatingCityId
-                    (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
-                    DIBC.MULTIMODAL
-                    >>= fromMaybeM
-                      ( IntegratedBPPConfigNotFound $
-                          "MerchantOperatingCityId:" +|| booking.merchantOperatingCityId
-                            ||+ "Domain:" +|| Spec.FRFS
-                            ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
-                            ||+ "Platform Type:" +|| DIBC.MULTIMODAL
-                            ||+ ""
-                      )
-              )
-              _uniqueVehicleTypes
-          -- -- let integratedBPPConfig = QIBP.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) booking.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| booking.merchantOperatingCityId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
-          -- -- find vendor split details for each integratedBPPConfig
-          _vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) _integratedBPPConfigList
-          -- -- convert vendor split details to payment vendor split details
-
-          _vendorSplitDetails <- convertVendorDetails (concat _vendorSplitDetailsList) allJourneyBookings
-          -- paymentVendorSplitDetailsList <- convertVendorDetails vendorSplitDetailsList allJourneyBookings
           let paymentType = Payment.FRFSMultiModalBooking
+          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings
           mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
           case mCreateOrderRes of
             Just _ -> do
@@ -172,58 +129,6 @@ onInit onInitReq merchant booking_ = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       void $ QFRFSTicketBooking.updateFinalPriceById (Just price) booking.id
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
-    convertVendorDetails ::
-      ( EsqDBReplicaFlow m r,
-        BeamFlow m r,
-        EncFlow m r,
-        ServiceFlow m r,
-        HasField "isMetroTestTransaction" r Bool
-      ) =>
-      [VendorSplitDetails.VendorSplitDetails] ->
-      [FTBooking.FRFSTicketBooking] ->
-      m [Payment.VendorSplitDetails]
-    convertVendorDetails vendorDetails bookings
-      | length vendorDetails /= length bookings = throwError $ InternalError "Number of vendor details does not match number of bookings"
-      | otherwise = return $ zipWith toPaymentVendorDetails vendorDetails bookings
-      where
-        toPaymentVendorDetails vd booking =
-          Payment.VendorSplitDetails
-            { splitAmount = booking.price.amount,
-              splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
-              vendorId = vd.vendorId
-            }
-
-_convertVendorDetailsnew ::
-  ( EsqDBReplicaFlow m r,
-    BeamFlow m r,
-    EncFlow m r,
-    ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
-  ) =>
-  [VendorSplitDetails.VendorSplitDetails] ->
-  [FTBooking.FRFSTicketBooking] ->
-  m [Payment.VendorSplitDetails]
-_convertVendorDetailsnew vendorDetails bookingsArr = do
-  let vendorDetailsMap = Map.fromList $ map (\vd -> (vd.integratedBppConfigId, vd)) vendorDetails
-  return $
-    mapMaybe
-      ( \booking ->
-          case Map.lookup booking.integratedBppConfigId vendorDetailsMap of
-            Just vd ->
-              Just $
-                Payment.VendorSplitDetails
-                  { splitAmount = booking.price.amount,
-                    splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
-                    vendorId = vd.vendorId
-                  }
-            Nothing -> Nothing
-      )
-      bookingsArr
-
-vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> Payment.SplitType
-vendorSplitDetailSplitTypeToPaymentSplitType = \case
-  VendorSplitDetails.FIXED -> Payment.FIXED
-  VendorSplitDetails.FLEXIBLE -> Payment.FLEXIBLE
 
 processPayments ::
   ( EsqDBReplicaFlow m r,
