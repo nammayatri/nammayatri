@@ -732,9 +732,9 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
           let 
             timestampPart =
               case mbTimestamp of
-                Mb.Just timeStamp -> " ( Last Updated At: " <> (EHC.convertUTCtoISC timeStamp "hh:mm a") <> ")"
+                Mb.Just timeStamp -> " (Updated at: " <> (EHC.convertUTCtoISC timeStamp "hh:mm a") <> ")"
                 Mb.Nothing -> ""
-          in "Next bus is " <> (JB.fromMetersToKm $ Mb.fromMaybe 0 mbETADistance) <> " away." <> timestampPart
+          in "Bus is " <> (JB.fromMetersToKm $ Mb.fromMaybe 0 mbETADistance) <> " away." <> timestampPart
         Mb.Just false, Mb.Nothing -> "No bus is coming towards your stop"
         _, _ -> ""
     

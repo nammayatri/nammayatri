@@ -3,20 +3,16 @@ module MapUtils where
 import Prelude
 
 import Common.Types.App as CTA
-import Data.Array (length, index)
-import Data.Foldable (minimum)
-import Data.Maybe (Maybe(..))
-import Data.Number (sqrt, max, min, pi, sin, cos, atan2, pow, log, round)
-import Data.Number as DN
--- import Data.Number (sqrt, pi, sin, cos, asin)
-import Data.Int (floor, toNumber)
-import Data.Tuple (Tuple(..), fst)
+import Data.Array (index, length, range, (!!), zip)
+import Data.Foldable (minimumBy)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (atan2, cos, log, max, min, pi, pow, round, sin, sqrt, floor)
+import Data.Ord (comparing)
+import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
 import JBridge as JB
 import Screens.Types (NearestWaypointConfig)
 import Services.API as API
-import Debug (spy)
-import Data.Int as DI
 
 dummyWaypointConfig :: NearestWaypointConfig
 dummyWaypointConfig = 
@@ -97,7 +93,7 @@ toDegrees :: Number -> Number
 toDegrees rad = rad * 180.0 / pi
 
 modulo :: Number -> Number -> Number
-modulo x y = x - y * DN.floor (x / y)
+modulo x y = x - y * floor (x / y)
 
 rotationBetweenLatLons :: API.LatLong -> API.LatLong -> Number
 rotationBetweenLatLons (API.LatLong latLng1) (API.LatLong latLng2) =
@@ -110,22 +106,6 @@ rotationBetweenLatLons (API.LatLong latLng1) (API.LatLong latLng2) =
       x = cos lat1 * sin lat2 - sin lat1 * cos lat2 * cos dLon
       brng = toDegrees (atan2 y x)
   in modulo (brng + 360.0) 360.0
-
-
--- Deprecated this logic of calculating nearest waypoint using only haversine distance, can be used in some other cases
--- calculateNearestWaypoint :: API.LatLong -> JB.Coordinates -> Number -> Maybe API.LatLong
--- calculateNearestWaypoint currentWaypoint waypoints maxAllowedDeviationInMeters = 
---   maybe Nothing
---     (\minimumDistance -> do
---       let mbNearestWaypoint = head (filter (\waypoint -> haversineDistance currentWaypoint waypoint == minimumDistance) waypoints)
---       case mbNearestWaypoint, (minimumDistance < maxAllowedDeviationInMeters) of
---         Just nearestWaypoint, true -> Just $ API.LatLong {lat : nearestWaypoint.lat, lon : nearestWaypoint.lng}
---         _, _ -> Nothing)
---     (minimum distances)
---   where
---     distances :: Array Number
---     distances = map (\waypoint -> haversineDistance currentWaypoint waypoint) waypoints
-
 
 getZoomLevel :: Number -> Number
 getZoomLevel radius =
@@ -146,3 +126,39 @@ roundTo n num =
   let factor = pow 10.0 n
       rounded = round (num * factor)
   in rounded / factor
+
+calculateNearestIndex :: CTA.Paths -> JB.Coordinates -> Int
+calculateNearestIndex point route =
+  let
+    withIdx = zip route (range 0 (length route - 1))
+    compareIdx (Tuple p1 _) (Tuple p2 _) =
+      comparing (\p -> haversineDistance (convertPathToLatLong point) (API.LatLong { lat: p.lat, lon: p.lng })) p1 p2
+  in
+    fromMaybe 0 (snd <$> minimumBy compareIdx withIdx)
+
+calculateVehicleBearingViaRoute :: API.LatLong -> JB.Coordinates -> Maybe Number
+calculateVehicleBearingViaRoute (API.LatLong vehicle) route =
+  let
+    current = { lat: vehicle.lat, lng: vehicle.lon }
+    idx = calculateNearestIndex current route
+    nextIdx = if idx < length route - 1 then idx + 1 else idx - 1
+    mbStartPoint = convertPathToLatLong <$> route !! idx
+    mbEndPoint = convertPathToLatLong <$> route !! nextIdx
+  in
+    case mbStartPoint, mbEndPoint of
+      Just startPoint, Just endPoint -> Just $ rotationBetweenLatLons startPoint endPoint
+      _, _ -> Nothing
+
+-- Deprecated this logic of calculating nearest waypoint using only haversine distance, can be used in some other cases
+-- calculateNearestWaypoint :: API.LatLong -> JB.Coordinates -> Number -> Maybe API.LatLong
+-- calculateNearestWaypoint currentWaypoint waypoints maxAllowedDeviationInMeters = 
+--   maybe Nothing
+--     (\minimumDistance -> do
+--       let mbNearestWaypoint = head (filter (\waypoint -> haversineDistance currentWaypoint waypoint == minimumDistance) waypoints)
+--       case mbNearestWaypoint, (minimumDistance < maxAllowedDeviationInMeters) of
+--         Just nearestWaypoint, true -> Just $ API.LatLong {lat : nearestWaypoint.lat, lon : nearestWaypoint.lng}
+--         _, _ -> Nothing)
+--     (minimum distances)
+--   where
+--     distances :: Array Number
+--     distances = map (\waypoint -> haversineDistance currentWaypoint waypoint) waypoints
