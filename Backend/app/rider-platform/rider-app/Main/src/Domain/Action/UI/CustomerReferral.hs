@@ -65,7 +65,8 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
         KT.VerifyVPAReq
           { orderId = Nothing,
             customerId = Just personId.getId,
-            vpa = vpa
+            vpa = vpa,
+            personId = Just $ getId personId
           }
       verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal person.clientSdkVersion
   resp <- try @_ @SomeException $ DP.verifyVPAService verifyVPAReq verifyVpaCall

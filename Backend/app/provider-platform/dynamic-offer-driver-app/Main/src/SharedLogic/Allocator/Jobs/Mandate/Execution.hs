@@ -38,6 +38,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -138,6 +139,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
                     notificationId = notification.shortId,
                     mandateId = mandateId.getId,
                     executionDate,
+                    personId = Just driverFee.driverId.getId,
                     splitSettlementDetails = splitSettlementDetails
                   }
           return $
@@ -175,11 +177,12 @@ asyncExecutionCall ::
   m ()
 asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   driverFeeForExecution <- QDF.findById driverFee.id
+  driver <- QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
   let serviceName = invoice.serviceName
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-  let paymentService = subscriptionConfig.paymentServiceName
+  paymentService <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
       exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))

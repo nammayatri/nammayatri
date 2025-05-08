@@ -306,13 +306,15 @@ postPayoutPayoutDriversSetBlockState _merchantShortId _opCity req = do
 postPayoutPayoutUpdateVPA :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateVpaReq -> Environment.Flow APISuccess
 postPayoutPayoutUpdateVPA _merchantShortId _opCity req = do
   person <- QPerson.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+  paymentServiceName <- TPayment.decidePaymentService (DEMSC.PaymentService Payment.Juspay) person.clientSdkVersion
   let verifyVPAReq =
         KT.VerifyVPAReq
           { orderId = Nothing,
             customerId = Just person.id.getId,
-            vpa = req.vpa
+            vpa = req.vpa,
+            personId = Just person.id.getId
           }
-      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId (DEMSC.PaymentService Payment.Juspay)
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId paymentServiceName
   resp <- try @_ @SomeException $ Payout.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e

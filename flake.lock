@@ -3601,7 +3601,8 @@
         "type": "github"
       },
       "original": {
-        "owner": "nammayatri",
+        "owner": "imviv3kshukla",
+        "ref": "backend/enh/driver-app-new-endpoint-for-aa-juspay",
         "repo": "shared-kernel",
         "type": "github"
       }

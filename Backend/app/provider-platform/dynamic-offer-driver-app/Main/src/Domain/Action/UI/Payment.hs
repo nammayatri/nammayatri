@@ -177,7 +177,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
-      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall serviceConfig.paymentServiceName)
+      paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion
+      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall paymentServiceName)
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
@@ -406,7 +407,7 @@ pdnNotificationStatus ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id Notification ->
   m DPayments.NotificationStatusResp
-pdnNotificationStatus (_, merchantId, opCity) notificationId = do
+pdnNotificationStatus (personId, merchantId, opCity) notificationId = do
   pdnNotification <- QNTF.findById notificationId >>= fromMaybeM (InternalError $ "No Notification Sent With Id" <> notificationId.getId)
   let driverFeeId = pdnNotification.driverFeeId
   driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
@@ -414,14 +415,16 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
-  resp <- Payment.mandateNotificationStatus merchantId opCity subscriptionConfig.paymentServiceName (mkNotificationRequest pdnNotification.shortId)
+  paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
+  resp <- Payment.mandateNotificationStatus merchantId opCity paymentServiceName (mkNotificationRequest pdnNotification.shortId)
   let (responseCode, reponseMessage) = Tuple.both (\func -> func =<< resp.providerResponse) ((.responseCode), (.responseMessage))
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False
   return resp
   where
     mkNotificationRequest shortNotificationId =
       DPayments.NotificationStatusReq
-        { notificationId = shortNotificationId
+        { notificationId = shortNotificationId,
+          personId = Just personId.getId
         }
 
 processNotification ::
