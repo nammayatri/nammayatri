@@ -42,6 +42,7 @@ Journey:
     recentLocationId: Maybe (Id RecentLocation)
     relevanceScore: Maybe Double
     hasPreferredServiceTier: Maybe Bool
+    hasPreferredTransitModes: Maybe Bool
 
   beamType:
     status: Maybe JourneyStatus

@@ -20,6 +20,7 @@ data JourneyT f = JourneyT
     estimatedDistance :: B.C f Kernel.Types.Common.HighPrecDistance,
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     hasPreferredServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasPreferredTransitModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],

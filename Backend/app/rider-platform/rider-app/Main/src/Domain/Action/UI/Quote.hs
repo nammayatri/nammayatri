@@ -219,7 +219,9 @@ data JourneyData = JourneyData
     endTime :: Maybe UTCTime,
     journeyId :: Id DJ.Journey,
     journeyLegs :: [JourneyLeg],
-    relevanceScore :: Double
+    relevanceScore :: Double,
+    hasPreferredServiceTier :: Maybe Bool,
+    hasPreferredTransitModes :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -432,7 +434,9 @@ getJourneys searchRequest hasMultimodalSearch = do
                 journeyId = journey.id,
                 duration = journey.estimatedDuration,
                 distance = journey.estimatedDistance,
-                relevanceScore = fromMaybe 1 journey.relevanceScore -- 1 is the max possible score.
+                relevanceScore = fromMaybe 1 journey.relevanceScore, -- 1 is the max possible score.
+                hasPreferredServiceTier = journey.hasPreferredServiceTier,
+                hasPreferredTransitModes = journey.hasPreferredTransitModes
               }
       return . Just $ sortOn (.relevanceScore) journeyData
     _ -> return Nothing
