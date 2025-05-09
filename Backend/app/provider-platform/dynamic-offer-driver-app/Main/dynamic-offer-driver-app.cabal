@@ -266,6 +266,7 @@ library
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
       Domain.Action.UI.VehicleInfo
+      Domain.Action.UI.Voip
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
       Domain.Types.Beckn.Status
@@ -438,6 +439,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.VoipCallStatus
       Storage.Beam.Webhook
       Storage.Beam.Yudhishthira
       Storage.Cac.DriverIntelligentPoolConfig
@@ -737,6 +739,7 @@ library
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
+      API.Action.UI.Voip
       API.Action.UI.WMB
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
@@ -919,6 +922,7 @@ library
       Domain.Types.VehicleServiceTier
       Domain.Types.VendorFee
       Domain.Types.VendorSplitDetails
+      Domain.Types.VoipCallStatus
       Domain.Types.Volunteer
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarCard
