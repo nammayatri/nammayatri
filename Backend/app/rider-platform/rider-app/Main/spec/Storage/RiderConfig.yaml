@@ -14,6 +14,7 @@ imports:
   IntercitySearchLocation: Domain.Types.RentalsIntercityCache
   VehicleVariant: Domain.Types.VehicleVariant
   Minutes: Kernel.Types.Common
+  TimeOfDay: Data.Time
 
 RiderConfig:
   types:
@@ -101,6 +102,8 @@ RiderConfig:
     fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
     blockedUntilInMins : Maybe Minutes
     ticketAssetDomain: Maybe Text
+    qrTicketRestrictionStartTime: Maybe TimeOfDay
+    qrTicketRestrictionEndTime: Maybe TimeOfDay
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
