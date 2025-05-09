@@ -27,6 +27,8 @@ RecentLocation:
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt : UTCTime
     updatedAt : UTCTime
+    toGeohash: Maybe Text
+    fromGeohash: Maybe Text
 
   beamFields:
     toLatLong:

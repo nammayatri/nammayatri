@@ -60,3 +60,7 @@ increaceFrequencyById id = do
       updateOneWithKV
         [Se.Set Beam.frequency ((rl.frequency :: Int) + 1)]
         [Se.Is Beam.id $ Se.Eq (Id.getId id)]
+
+findByRiderIdAndGeohashAndEntityType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Maybe Text -> Maybe Text -> DRecentLocation.EntityType -> m (Maybe RecentLocation)
+findByRiderIdAndGeohashAndEntityType riderId toGeohash fromGeohash entityType = do
+  findOneWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Id.getId riderId), Se.Is Beam.toGeohash $ Se.Eq $ toGeohash, Se.Is Beam.fromGeohash $ Se.Eq $ fromGeohash, Se.Is Beam.entityType $ Se.Eq entityType]]

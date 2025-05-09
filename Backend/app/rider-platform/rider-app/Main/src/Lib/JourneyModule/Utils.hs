@@ -3,13 +3,14 @@ module Lib.JourneyModule.Utils where
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
-import Domain.Types.JourneyLeg
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
@@ -30,7 +31,6 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
-import qualified Storage.Queries.FRFSSearch as QFRFSearch
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
@@ -618,23 +618,25 @@ createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, C
 createRecentLocationForMultimodal journey = do
   journeyLegs <- QJourneyLeg.findAllByJourneyId journey.id
   let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] && not (fromMaybe False leg.isDeleted)) journeyLegs
-  mbRecentLocationId <- getRecentLocationId onlyPublicTransportLegs
   let fare = foldl' (\acc leg -> acc + fromMaybe 0 leg.estimatedMinFare) 0 onlyPublicTransportLegs
-  case mbRecentLocationId of
-    Just recentLocationId -> SQRL.increaceFrequencyById recentLocationId
-    Nothing -> do
-      now <- getCurrentTime
-      let legs = sortBy (comparing (.sequenceNumber)) onlyPublicTransportLegs
-      let mbFirstLeg = listToMaybe legs
-      let mbLastLeg = listToMaybe (reverse legs)
-      let mbFirstStopCode = mbFirstLeg >>= (.fromStopDetails) >>= (.stopCode)
-      let mbLastStopCode = mbLastLeg >>= (.toStopDetails) >>= (.stopCode)
-      let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.gtfsId)
-      let mbEndLocation = mbLastLeg <&> (.endLocation)
-      case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
-        (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do
-          uuid <- generateGUID
-          cityId <- journey.merchantOperatingCityId & fromMaybeM (InternalError $ "Merchant operating city id not found for journey: " <> journey.id.getId)
+  now <- getCurrentTime
+  let legs = sortBy (comparing (.sequenceNumber)) onlyPublicTransportLegs
+  let mbFirstLeg = listToMaybe legs
+  let mbLastLeg = listToMaybe (reverse legs)
+  let mbFirstStopCode = mbFirstLeg >>= (.fromStopDetails) >>= (.stopCode)
+  let mbLastStopCode = mbLastLeg >>= (.toStopDetails) >>= (.stopCode)
+  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.gtfsId)
+  let mbEndLocation = mbLastLeg <&> (.endLocation)
+  case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
+    (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do
+      uuid <- generateGUID
+      cityId <- journey.merchantOperatingCityId & fromMaybeM (InternalError $ "Merchant operating city id not found for journey: " <> journey.id.getId)
+      let fromGeohash = T.pack <$> Geohash.encode 6 (firstLeg.startLocation.latitude, firstLeg.startLocation.longitude)
+      let toGeohash = T.pack <$> Geohash.encode 6 (endLocation.latitude, endLocation.longitude)
+      mbRecentLocation <- SQRL.findByRiderIdAndGeohashAndEntityType journey.riderId toGeohash fromGeohash (if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode)
+      case mbRecentLocation of
+        Just recentLocation -> SQRL.increaceFrequencyById recentLocation.id
+        Nothing -> do
           let recentLocation =
                 DTRL.RecentLocation
                   { id = uuid,
@@ -650,12 +652,9 @@ createRecentLocationForMultimodal journey = do
                     merchantOperatingCityId = cityId,
                     createdAt = now,
                     updatedAt = now,
-                    fare = Just fare
+                    fare = Just fare,
+                    fromGeohash = fromGeohash,
+                    toGeohash = toGeohash
                   }
           SQRL.create recentLocation
-        _ -> return ()
-  where
-    getRecentLocationId :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => [JourneyLeg] -> m (Maybe (Id DTRL.RecentLocation))
-    getRecentLocationId legs = do
-      mbFrfsSearch <- maybe (pure Nothing) (QFRFSearch.findById . Id) ((listToMaybe legs) >>= (.legSearchId))
-      return $ mbFrfsSearch >>= (.recentLocationId)
+    _ -> return ()

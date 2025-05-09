@@ -73,7 +73,8 @@ mkRecentLocation multimodalRoutes recentLoc =
             toStationCode = Nothing,
             fromStationCode = Nothing,
             routeCode = Nothing,
-            recentLocationId = Just recentLoc.id
+            recentLocationId = Just recentLoc.id,
+            fare = recentLoc.fare
           }
     _ -> do
       case (recentLoc.toStopCode, recentLoc.fromStopCode) of
@@ -91,7 +92,8 @@ mkRecentLocation multimodalRoutes recentLoc =
                 toStationCode = Just toStopCode,
                 fromStationCode = Just fromStopCode,
                 routeCode = recentLoc.routeCode,
-                recentLocationId = Just recentLoc.id
+                recentLocationId = Just recentLoc.id,
+                fare = recentLoc.fare
               }
         _ -> Nothing
 
@@ -131,7 +133,8 @@ postPlaces (mbPersonId, merchantId) req = do
                 fromStationCode = Nothing,
                 toStationCode = Nothing,
                 routeCode = Nothing,
-                recentLocationId = Nothing
+                recentLocationId = Nothing,
+                fare = Nothing
               }
       else return []
   pure

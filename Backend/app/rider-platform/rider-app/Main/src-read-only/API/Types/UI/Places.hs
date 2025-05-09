@@ -9,12 +9,14 @@ import qualified Domain.Types.RecentLocation
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.MultiModal.Interface.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
 data MultiModalLocation = MultiModalLocation
   { address :: Data.Text.Text,
+    fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromStationCode :: Kernel.Prelude.Maybe Data.Text.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,

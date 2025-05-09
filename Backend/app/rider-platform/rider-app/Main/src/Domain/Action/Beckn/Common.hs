@@ -21,6 +21,7 @@ where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
@@ -1287,30 +1288,39 @@ driverHasReachedCacheKey rideId = "Ride:GetDriverLoc:DriverHasReached " <> rideI
 createRecentLocationForTaxi :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRB.Booking -> m ()
 createRecentLocationForTaxi booking = do
   now <- getCurrentTime
-  if (isJust booking.recentLocationId)
-    then SQRL.increaceFrequencyById (fromJust booking.recentLocationId)
-    else do
-      let mbToLocation = case booking.bookingDetails of
-            DRB.OneWayDetails details -> Just details.toLocation
-            DRB.RentalDetails _ -> Nothing
-            DRB.DriverOfferDetails details -> Just details.toLocation
-            DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-            DRB.InterCityDetails details -> Just details.toLocation
-            DRB.AmbulanceDetails details -> Just details.toLocation
-            DRB.DeliveryDetails details -> Just details.toLocation
-            DRB.MeterRideDetails details -> details.toLocation
+  let mbToLocation = case booking.bookingDetails of
+        DRB.OneWayDetails details -> Just details.toLocation
+        DRB.RentalDetails _ -> Nothing
+        DRB.DriverOfferDetails details -> Just details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.InterCityDetails details -> Just details.toLocation
+        DRB.AmbulanceDetails details -> Just details.toLocation
+        DRB.DeliveryDetails details -> Just details.toLocation
+        DRB.MeterRideDetails details -> details.toLocation
 
-      whenJust mbToLocation $ \toLocation -> do
-        let address' =
-              Text.intercalate ", " $
-                catMaybes
-                  [ toLocation.address.title,
-                    toLocation.address.building,
-                    toLocation.address.street,
-                    toLocation.address.city,
-                    toLocation.address.state,
-                    toLocation.address.country
-                  ]
+  whenJust mbToLocation $ \toLocation -> do
+    let address' =
+          Text.intercalate ", " $
+            catMaybes
+              [ toLocation.address.title,
+                toLocation.address.building,
+                toLocation.address.street,
+                toLocation.address.city,
+                toLocation.address.state,
+                toLocation.address.country
+              ]
+        -- Generate geohash with precision of ~100 meters (precision level 6)
+        toGeohash = Text.pack <$> Geohash.encode 6 (toLocation.lat, toLocation.lon)
+        fromGeohash = Text.pack <$> Geohash.encode 6 (booking.fromLocation.lat, booking.fromLocation.lon)
+
+    -- Search for existing recent location with same geohash and entity type
+    mbExistingLocation <- SQRL.findByRiderIdAndGeohashAndEntityType booking.riderId toGeohash fromGeohash DTRL.TAXI
+    case mbExistingLocation of
+      Just existingLocation -> do
+        -- If found, increase frequency
+        SQRL.increaceFrequencyById existingLocation.id
+      Nothing -> do
+        -- If not found, create new recent location
         uuid <- generateGUID
         let recentLocation =
               DTRL.RecentLocation
@@ -1327,6 +1337,8 @@ createRecentLocationForTaxi booking = do
                   DTRL.fromLatLong = Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon,
                   DTRL.createdAt = now,
                   DTRL.updatedAt = now,
-                  DTRL.fare = Just booking.estimatedTotalFare.amount
+                  DTRL.fare = Just booking.estimatedTotalFare.amount,
+                  DTRL.toGeohash = toGeohash,
+                  DTRL.fromGeohash = fromGeohash
                 }
         SQRL.create recentLocation
