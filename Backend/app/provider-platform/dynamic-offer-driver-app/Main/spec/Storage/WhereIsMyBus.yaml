@@ -50,9 +50,11 @@ TripTransaction:
     fleetOwnerId: Id Person
     vehicleNumber: Text
     tripCode: Maybe Text
-    fleetBadgeId: Maybe (Id FleetBadge)
-    driverId: Id Person
+    driverFleetBadgeId: Maybe (Id FleetBadge)
+    conductorFleetBadgeId: Maybe (Id FleetBadge)
     driverName: Maybe Text
+    conductorName: Maybe Text
+    driverId: Id Person
     routeCode: Text
     roundRouteCode: Maybe Text
     status: TripStatus
@@ -85,6 +87,8 @@ TripTransaction:
     endLocation:
       endLocationLat: Maybe Double
       endLocationLon: Maybe Double
+    driverFleetBadgeId:
+      fleetBadgeId: Maybe (Id FleetBadge)
 
   toTType:
     startLocationLat: Kernel.Prelude.fmap (.lat)|I
@@ -142,7 +146,8 @@ TripAlertRequest:
     tripTransactionId: Id TripTransaction
     driverId: Id Person
     fleetOwnerId: Id Person
-    fleetBadgeId: Maybe (Id FleetBadge)
+    driverFleetBadgeId: Maybe (Id FleetBadge)
+    conductorFleetBadgeId: Maybe (Id FleetBadge)
     routeCode: Text
     alertRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
     isViolated: Bool
@@ -154,6 +159,10 @@ TripAlertRequest:
   constraints:
     id: "PrimaryKey"
     driverId: "!SecondaryKey"
+
+  beamFields:
+    driverFleetBadgeId:
+      fleetBadgeId: Maybe (Id FleetBadge)
 
   queries:
     updateIsViolated:

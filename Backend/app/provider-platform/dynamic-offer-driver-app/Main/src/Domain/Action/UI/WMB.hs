@@ -33,6 +33,7 @@ import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Extra.TransporterConfig
+import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
@@ -96,18 +97,19 @@ getWmbFleetBadges ::
       Id MerchantOperatingCity
     ) ->
     Maybe Text ->
+    Maybe DFBT.FleetBadgeType ->
     Int ->
     Int ->
     Flow [API.Types.UI.WMB.AvailableBadge]
   )
-getWmbFleetBadges (mbDriverId, _, merchantOperatingCityId) mbSearchString limit offset = do
+getWmbFleetBadges (mbDriverId, _, merchantOperatingCityId) mbSearchString mbBadgeType limit offset = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
-  fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (Just $ toInteger limit) (Just $ toInteger offset) merchantOperatingCityId fleetDriverAssociation.fleetOwnerId
+  fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (Just $ toInteger limit) (Just $ toInteger offset) merchantOperatingCityId fleetDriverAssociation.fleetOwnerId mbBadgeType
   mapM
     ( \badge -> do
-        driverBadgeAssociation <- QFBA.findActiveFleetBadgeAssociationById badge.id
-        pure $ API.Types.UI.WMB.AvailableBadge badge.badgeName (isJust driverBadgeAssociation)
+        driverBadgeAssociation <- QFBA.findActiveFleetBadgeAssociationById badge.id badge.badgeType
+        pure $ API.Types.UI.WMB.AvailableBadge badge.badgeName badge.badgeType (isJust driverBadgeAssociation)
     )
     fleetBadgesByOwner
 
@@ -195,8 +197,25 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True
-  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect
+  mbDriverBadge <-
+    case req.driverBadgeName of
+      Just driverBadgeName -> do
+        driverBadge <- WMB.validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId driverBadgeName DFBT.DRIVER
+        WMB.linkFleetBadge driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId driverBadge DFBT.DRIVER
+        return $ Just driverBadge
+      Nothing -> pure Nothing
+  mbConductorBadge <-
+    case req.conductorBadgeName of
+      Just conductorBadgeName -> do
+        conductorBadge <- WMB.validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId conductorBadgeName DFBT.CONDUCTOR
+        WMB.linkFleetBadge driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId conductorBadge DFBT.CONDUCTOR
+        return $ Just conductorBadge
+      Nothing -> pure Nothing
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True
+  tripTransaction <-
+    if fleetConfig.directlyStartFirstTripAssignment
+      then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
+      else WMB.assignTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber req.location sourceStopInfo destinationStopInfo (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
   pure $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,

@@ -5,6 +5,7 @@ module Storage.Queries.FleetBadgeAssociationExtra where
 
 import Domain.Types.FleetBadge
 import Domain.Types.FleetBadgeAssociation
+import Domain.Types.FleetBadgeType
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -19,21 +20,6 @@ import Storage.Queries.OrphanInstances.FleetBadgeAssociation
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => FleetBadgeAssociation -> m ()
 create = createWithKV
 
-findActiveFleetBadgeByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe FleetBadgeAssociation)
-findActiveFleetBadgeByDriverId (Id driverId) = do
-  now <- getCurrentTime
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamFBA.driverId $ Se.Eq driverId,
-          Se.Is BeamFBA.isActive $ Se.Eq True,
-          Se.Is BeamFBA.associatedTill (Se.GreaterThan $ Just now)
-        ]
-    ]
-    (Se.Desc BeamFBA.associatedTill)
-    (Just 1)
-    Nothing
-    <&> listToMaybe
-
 endAssociationForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 endAssociationForDriver (Id driverId) = do
   now <- getCurrentTime
@@ -46,14 +32,15 @@ endAssociationForDriver (Id driverId) = do
         ]
     ]
 
-findActiveFleetBadgeAssociationById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FleetBadge -> m (Maybe FleetBadgeAssociation)
-findActiveFleetBadgeAssociationById (Id fleetBadge) = do
+findActiveFleetBadgeAssociationById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FleetBadge -> FleetBadgeType -> m (Maybe FleetBadgeAssociation)
+findActiveFleetBadgeAssociationById (Id fleetBadge) badgeType = do
   now <- getCurrentTime
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamFBA.badgeId $ Se.Eq fleetBadge,
           Se.Is BeamFBA.associatedTill (Se.GreaterThan $ Just now),
-          Se.Is BeamFBA.isActive (Se.Eq True)
+          Se.Is BeamFBA.isActive (Se.Eq True),
+          Se.Is BeamFBA.badgeType $ Se.Eq badgeType
         ]
     ]
     (Se.Desc BeamFBA.associatedTill)
@@ -63,7 +50,7 @@ findActiveFleetBadgeAssociationById (Id fleetBadge) = do
 
 createBadgeAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetBadgeAssociation -> m ()
 createBadgeAssociationIfNotExists badgeAssociation = do
-  existingBadgeAssociation <- findActiveFleetBadgeAssociationById badgeAssociation.badgeId
+  existingBadgeAssociation <- findActiveFleetBadgeAssociationById badgeAssociation.badgeId badgeAssociation.badgeType
   case existingBadgeAssociation of
     Just _ -> pure ()
     Nothing -> do

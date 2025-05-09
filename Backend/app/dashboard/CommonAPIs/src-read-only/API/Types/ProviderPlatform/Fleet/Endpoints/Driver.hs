@@ -14,6 +14,7 @@ import qualified Data.Time
 import qualified Domain.Types.Alert
 import qualified Domain.Types.Alert.AlertRequestData
 import qualified Domain.Types.Alert.AlertRequestType
+import qualified Domain.Types.FleetBadgeType
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
@@ -84,6 +85,7 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
   { driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    conductorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.Prelude.Maybe DriverMode,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     completedRides :: Kernel.Prelude.Int,
@@ -103,6 +105,7 @@ data DriveVehicleAssociationListItemT = DriveVehicleAssociationListItemT
   { driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    conductorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.Prelude.Maybe DriverMode,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     completedRides :: Kernel.Prelude.Int,
@@ -207,11 +210,17 @@ newtype FleetBadgeResT = FleetBadgeResT {fleetBadgeInfos :: [FleetBadgesAPIEntit
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetBadgesAPIEntity = FleetBadgesAPIEntity {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool}
+data FleetBadgesAPIEntity = FleetBadgesAPIEntity {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool, badgeType :: Domain.Types.FleetBadgeType.FleetBadgeType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetBadgesAPIEntityT = FleetBadgesAPIEntityT {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool, fleetOwnerId :: Kernel.Prelude.Text, fleetOwnerName :: Kernel.Prelude.Text}
+data FleetBadgesAPIEntityT = FleetBadgesAPIEntityT
+  { badgeName :: Kernel.Prelude.Text,
+    isActive :: Kernel.Prelude.Bool,
+    badgeType :: Domain.Types.FleetBadgeType.FleetBadgeType,
+    fleetOwnerId :: Kernel.Prelude.Text,
+    fleetOwnerName :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -459,7 +468,14 @@ data TripDetails = TripDetails {routeCode :: Kernel.Prelude.Text, roundTrip :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, badgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails]}
+data TripPlannerReq = TripPlannerReq
+  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
+    badgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverBadgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    conductorBadgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Text,
+    trips :: [TripDetails]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -748,7 +764,12 @@ type GetDriverFleetGetAllBadge =
            "mbSearchString"
            Kernel.Prelude.Text
       :> QueryParam "mbFleetOwnerId" Kernel.Prelude.Text
-      :> Get '[JSON] FleetBadgeResT
+      :> QueryParam
+           "mbBadgeType"
+           Domain.Types.FleetBadgeType.FleetBadgeType
+      :> Get
+           '[JSON]
+           FleetBadgeResT
   )
 
 type GetDriverFleetGetAllBadgeHelper =
@@ -757,7 +778,12 @@ type GetDriverFleetGetAllBadgeHelper =
            "offset"
            Kernel.Prelude.Int
       :> QueryParam "mbSearchString" Kernel.Prelude.Text
-      :> Get '[JSON] FleetBadgeRes
+      :> QueryParam
+           "mbBadgeType"
+           Domain.Types.FleetBadgeType.FleetBadgeType
+      :> Get
+           '[JSON]
+           FleetBadgeRes
   )
 
 type PostDriverFleetUnlink =
@@ -1352,7 +1378,7 @@ data DriverAPIs = DriverAPIs
     postDriverFleetAddRCWithoutDriver :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetGetAllVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ListVehicleRes,
     getDriverFleetGetAllDriver :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetListDriverRes,
-    getDriverFleetGetAllBadge :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBadgeRes,
+    getDriverFleetGetAllBadge :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.FleetBadgeType.FleetBadgeType -> EulerHS.Types.EulerClient FleetBadgeRes,
     postDriverFleetUnlink :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetRemoveVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetRemoveDriver :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

@@ -19,9 +19,10 @@ import qualified Tools.Beam.UtilsTH
 data TripAlertRequest = TripAlertRequest
   { alertRequestId :: Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest,
     alertRequestType :: Domain.Types.Alert.AlertRequestType.AlertRequestType,
+    conductorFleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     createdAt :: Kernel.Prelude.UTCTime,
+    driverFleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    fleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripAlertRequest.TripAlertRequest,
     isViolated :: Kernel.Prelude.Bool,

@@ -17,6 +17,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   TimeBound: Kernel.Types.TimeBound
   ActionSource: Dashboard.Common
+  FleetBadgeType: Domain.Types.FleetBadgeType
 module: Driver
 
 apis:
@@ -232,6 +233,7 @@ apis:
         - mboffset: Int
         - mbSearchString: Text
         - mbFleetOwnerId: Text
+        - mbBadgeType: FleetBadgeType
       response:
         type: FleetBadgeResT
       migrate:
@@ -246,6 +248,7 @@ apis:
               - limit: Int
               - offset: Int
               - mbSearchString: Text
+              - mbBadgeType: FleetBadgeType
             response:
               type: FleetBadgeRes
 
@@ -913,7 +916,9 @@ types:
     - roundTrip: Maybe RoundTripDetail
   TripPlannerReq:
     - driverId: Id Driver
-    - badgeName: Maybe Text
+    - badgeName: Maybe Text # TODO :: To be deprecated, and replaced with driverBadgeName
+    - driverBadgeName: Maybe Text
+    - conductorBadgeName: Maybe Text
     - vehicleNumber: Text
     - trips: [TripDetails]
     - derive: "'HideSecrets"
@@ -994,9 +999,11 @@ types:
   FleetBadgesAPIEntity:
     - badgeName: Text
     - isActive: Bool
+    - badgeType: FleetBadgeType
   FleetBadgesAPIEntityT:
     - badgeName: Text
     - isActive: Bool
+    - badgeType: FleetBadgeType
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetListDriverResT:
@@ -1072,6 +1079,7 @@ types:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
     - driverName: Maybe Text
+    - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
     - completedRides: Int # will remove this
@@ -1087,6 +1095,7 @@ types:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
     - driverName: Maybe Text
+    - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
     - completedRides: Int # will remove this

@@ -10,3 +10,19 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ADD COLUMN id text NO
 ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ADD COLUMN is_active boolean NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ADD COLUMN badge_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ALTER COLUMN badge_type SET DEFAULT 'DRIVER';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_badge_association ALTER COLUMN badge_type SET NOT NULL;
