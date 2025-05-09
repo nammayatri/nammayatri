@@ -573,7 +573,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
     , orientation VERTICAL
     ]
     [ linearLayout
-        [ height $ if index /=0 && checkPreviousStopIsSource && DA.length state.data.stopsList /= 2 then WRAP_CONTENT else V 36
+        [ height $ if index /=0 && checkPreviousStopIsSource && (DA.length state.data.stopsList /= 2 || Mb.isNothing state.props.vehicleTrackingId) then WRAP_CONTENT else V 36
         , width MATCH_PARENT
         , visibility $ boolToVisibility $ index /= 0
         ]
