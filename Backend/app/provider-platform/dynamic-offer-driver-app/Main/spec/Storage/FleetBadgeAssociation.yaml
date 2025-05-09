@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   FleetBadge: Domain.Types.FleetBadge
+  FleetBadgeType: Domain.Types.FleetBadgeType
   Person: Domain.Types.Person
 
 FleetBadgeAssociation:
@@ -13,6 +14,7 @@ FleetBadgeAssociation:
     driverId: Id Person
     isActive: Bool
     fleetOwnerId: Text
+    badgeType: FleetBadgeType|NoRelation
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
     createdAt: UTCTime
@@ -23,6 +25,10 @@ FleetBadgeAssociation:
     badgeId: "!SecondaryKey"
     driverId: "!SecondaryKey"
     fleetOwnerId: "!SecondaryKey"
+    badgeType: "!SecondaryKey"
+
+  default:
+    badgeType: "'DRIVER'"
 
   queries:
     deleteByBadgeId:

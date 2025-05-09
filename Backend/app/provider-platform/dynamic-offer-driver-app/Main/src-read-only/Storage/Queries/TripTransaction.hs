@@ -78,15 +78,17 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
+      Se.Set Beam.conductorFleetBadgeId (Kernel.Types.Id.getId <$> conductorFleetBadgeId),
+      Se.Set Beam.conductorName conductorName,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviationCount deviationCount,
+      Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> driverFleetBadgeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverName driverName,
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
       Se.Set Beam.endLocationLon (Kernel.Prelude.fmap (.lon) endLocation),
       Se.Set Beam.endRideApprovalRequestId (Kernel.Types.Id.getId <$> endRideApprovalRequestId),
       Se.Set Beam.endStopCode endStopCode,
-      Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> fleetBadgeId),
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.isCurrentlyDeviated isCurrentlyDeviated,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

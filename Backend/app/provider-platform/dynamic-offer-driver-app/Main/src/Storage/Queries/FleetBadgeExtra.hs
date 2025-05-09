@@ -7,6 +7,7 @@ import Data.Either
 import qualified Data.Text as T
 import qualified Database.Beam as B
 import Domain.Types.FleetBadge
+import Domain.Types.FleetBadgeType
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified EulerHS.Language as L
@@ -20,8 +21,8 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetBadge as BeamFB
 import Storage.Queries.OrphanInstances.FleetBadge
 
-findAllMatchingBadges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> Text -> m [FleetBadge]
-findAllMatchingBadges mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') fleetOwnerId' = do
+findAllMatchingBadges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> Text -> Maybe FleetBadgeType -> m [FleetBadge]
+findAllMatchingBadges mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') fleetOwnerId' mbBadgeType = do
   dbConf <- getReplicaBeamConfig
   fleetBadges <-
     L.runDB dbConf $
@@ -33,11 +34,12 @@ findAllMatchingBadges mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantO
                 ( \BeamFB.FleetBadgeT {..} ->
                     merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId'
                       B.&&?. fleetOwnerId B.==?. B.val_ fleetOwnerId'
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\badgeType' -> badgeType B.==?. B.val_ badgeType') mbBadgeType
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                 )
                 $ B.all_ (BeamCommon.fleetBadge BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] fleetBadges)
-findAllMatchingBadges mbSearchStr _ _ (Id merchantOperatingCityId') fleetOwnerId' = do
+findAllMatchingBadges mbSearchStr _ _ (Id merchantOperatingCityId') fleetOwnerId' mbBadgeType = do
   dbConf <- getReplicaBeamConfig
   fleetBadges <-
     L.runDB dbConf $
@@ -47,6 +49,7 @@ findAllMatchingBadges mbSearchStr _ _ (Id merchantOperatingCityId') fleetOwnerId
             ( \BeamFB.FleetBadgeT {..} ->
                 merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId'
                   B.&&?. fleetOwnerId B.==?. B.val_ fleetOwnerId'
+                  B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\badgeType' -> badgeType B.==?. B.val_ badgeType') mbBadgeType
                   B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
             )
             $ B.all_ (BeamCommon.fleetBadge BeamCommon.atlasDB)

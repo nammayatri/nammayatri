@@ -19,9 +19,10 @@ instance FromTType' Beam.TripAlertRequest Domain.Types.TripAlertRequest.TripAler
         Domain.Types.TripAlertRequest.TripAlertRequest
           { alertRequestId = Kernel.Types.Id.Id alertRequestId,
             alertRequestType = alertRequestType,
+            conductorFleetBadgeId = Kernel.Types.Id.Id <$> conductorFleetBadgeId,
             createdAt = createdAt,
+            driverFleetBadgeId = Kernel.Types.Id.Id <$> fleetBadgeId,
             driverId = Kernel.Types.Id.Id driverId,
-            fleetBadgeId = Kernel.Types.Id.Id <$> fleetBadgeId,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             id = Kernel.Types.Id.Id id,
             isViolated = isViolated,
@@ -37,9 +38,10 @@ instance ToTType' Beam.TripAlertRequest Domain.Types.TripAlertRequest.TripAlertR
     Beam.TripAlertRequestT
       { Beam.alertRequestId = Kernel.Types.Id.getId alertRequestId,
         Beam.alertRequestType = alertRequestType,
+        Beam.conductorFleetBadgeId = Kernel.Types.Id.getId <$> conductorFleetBadgeId,
         Beam.createdAt = createdAt,
+        Beam.fleetBadgeId = Kernel.Types.Id.getId <$> driverFleetBadgeId,
         Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.fleetBadgeId = Kernel.Types.Id.getId <$> fleetBadgeId,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isViolated = isViolated,

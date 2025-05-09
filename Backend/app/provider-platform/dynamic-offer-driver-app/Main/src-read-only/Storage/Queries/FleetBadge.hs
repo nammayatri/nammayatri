@@ -5,6 +5,7 @@
 module Storage.Queries.FleetBadge (module Storage.Queries.FleetBadge, module ReExport) where
 
 import qualified Domain.Types.FleetBadge
+import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -23,10 +24,17 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetBadge.FleetBadge] -> m ())
 createMany = traverse_ create
 
-findOneBadgeByNameAndFleetOwnerId ::
+findOneBadgeByNameAndBadgeTypeAndFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> m (Maybe Domain.Types.FleetBadge.FleetBadge))
-findOneBadgeByNameAndFleetOwnerId fleetOwnerId badgeName = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId), Se.Is Beam.badgeName $ Se.Eq badgeName]]
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Domain.Types.FleetBadgeType.FleetBadgeType -> m (Maybe Domain.Types.FleetBadge.FleetBadge))
+findOneBadgeByNameAndBadgeTypeAndFleetOwnerId fleetOwnerId badgeName badgeType = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId),
+          Se.Is Beam.badgeName $ Se.Eq badgeName,
+          Se.Is Beam.badgeType $ Se.Eq badgeType
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge -> m (Maybe Domain.Types.FleetBadge.FleetBadge))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -36,10 +44,12 @@ updateByPrimaryKey (Domain.Types.FleetBadge.FleetBadge {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.badgeName badgeName,
+      Se.Set Beam.badgeType badgeType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.personId (Kernel.Types.Id.getId <$> personId),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
