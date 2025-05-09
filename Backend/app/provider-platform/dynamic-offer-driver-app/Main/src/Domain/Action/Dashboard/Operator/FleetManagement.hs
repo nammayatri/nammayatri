@@ -196,18 +196,26 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash req.mobileNumber
-  fleetOwner <-
-    B.runInReplica $
-      QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
-        >>= fromMaybeM (FleetOwnerNotFound "Fleet owner with this phone number not found")
+  (fleetOwnerId, name, useFakeOtp) <- do
+    mbFleetOwner <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+    case mbFleetOwner of
+      Just owner -> pure (owner.id, owner.firstName <> " " <> fromMaybe "" owner.lastName, owner.useFakeOtp)
+      Nothing -> do
+        let createReq =
+              Common.FleetOwnerCreateReq
+                { mobileNumber = req.mobileNumber,
+                  mobileCountryCode = req.mobileCountryCode
+                }
+        createRes <- postFleetManagementFleetCreate merchantShortId opCity requestorId createReq
+        pure (cast createRes.personId, "Fleet Owner", Nothing)
 
-  SA.checkForFleetAssociationOverwrite merchant fleetOwner.id
-  checkAssocOperator <- B.runInReplica $ QFOA.findByFleetOwnerIdAndOperatorId fleetOwner.id operator.id True
+  SA.checkForFleetAssociationOverwrite merchant fleetOwnerId
+  checkAssocOperator <- B.runInReplica $ QFOA.findByFleetOwnerIdAndOperatorId fleetOwnerId operator.id True
   when (isJust checkAssocOperator) $ throwError (InvalidRequest "Fleet already associated with operator")
 
   smsCfg <- asks (.smsCfg)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
+  let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> useFakeOtp
       phoneNumber = req.mobileCountryCode <> req.mobileNumber
       key = makeFleetLinkOtpKey phoneNumber
   otpCode <- maybe generateOTPCode return mbUseFakeOtp
@@ -225,8 +233,8 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
   Redis.setExp key otpCode 3600
   pure $
     Common.FleetOwnerSendOtpRes
-      { fleetOwnerId = cast fleetOwner.id,
-        name = fleetOwner.firstName <> " " <> fromMaybe "" fleetOwner.lastName
+      { fleetOwnerId = cast fleetOwnerId,
+        name = name
       }
 
 postFleetManagementFleetLinkVerifyOtp ::
