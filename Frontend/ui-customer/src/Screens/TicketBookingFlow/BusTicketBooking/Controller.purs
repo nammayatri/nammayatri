@@ -106,11 +106,13 @@ eval SearchButtonClick state = do
 
 eval (BusTicketBookingListRespAC bookingList) state =
   let newState = state {data {ticketDetailsState = Just $ metroTicketListApiToMyTicketsTransformer bookingList $ fromMaybe MetroMyTicketsScreenData.initData state.data.ticketDetailsState}}
-      isActiveTicket = DA.find (\(API.FRFSTicketBookingStatusAPIRes list) -> list.status == "ACTIVE") bookingList
+      -- newState = state {data {ticketDetailsState = Just $ metroTicketListApiToMyTicketsTransformer bookingList $ fromMaybe MetroMyTicketsScreenData.initData state.data.ticketDetailsState}}
+      allTicketsList = DA.concatMap (\(API.FRFSTicketBookingStatusAPIRes list) -> list.tickets) bookingList
+      isActiveTicket = DA.find (\(API.FRFSTicketAPI ticket) -> ticket.status == "ACTIVE") allTicketsList
   -- in continue newState
   in if isNothing isActiveTicket then do
       void $ pure $ deleteValueFromLocalStore ONBOARDED_VEHICLE_INFO
-      void $ pure $ deleteValueFromLocalStore CAN_HAVE_ACTIVE_TICKETS
+      -- void $ pure $ deleteValueFromLocalStore CAN_HAVE_ACTIVE_TICKETS
       continue newState
     else continue newState
     -- continue newState

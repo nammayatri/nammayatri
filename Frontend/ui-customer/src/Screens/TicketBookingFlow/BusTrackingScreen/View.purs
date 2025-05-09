@@ -573,7 +573,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
     , orientation VERTICAL
     ]
     [ linearLayout
-        [ height $ if index /=0 && checkPreviousStopIsSource then WRAP_CONTENT else V 36
+        [ height $ if index /=0 && checkPreviousStopIsSource && DA.length state.data.stopsList /= 2 then WRAP_CONTENT else V 36
         , width MATCH_PARENT
         , visibility $ boolToVisibility $ index /= 0
         ]
@@ -650,7 +650,7 @@ busLocationTracking duration id state push count = do
     eitherRespOrError <- Remote.trackRouteVehicles $ API.BusTrackingRouteReq routeCode
     case eitherRespOrError of
       Right (API.BusTrackingRouteResp resp) -> do
-        EHC.liftFlow $ push $ UpdateTracking (API.BusTrackingRouteResp resp) count
+        EHC.liftFlow $ push $ UpdateTracking (API.BusTrackingRouteResp resp) count $ JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
         void $ delay $ Milliseconds $ duration
         busLocationTracking duration id state push (count + 1)
       Left err -> do
@@ -801,7 +801,7 @@ passengerBoardConfirmationPopup state push =
     , layoutWithWeight
     , textView $
       [text $ getString YES
-      , onClick push $ const UserBoarded
+      , onClick push $ const $ UserBoarded Mb.Nothing
       , color Color.yellow800
       ] <> FontStyle.body1 CTA.TypoGraphy
     ]
@@ -813,4 +813,6 @@ showPreBookingTracking _ =
       in busConfig.showPreBookingTracking
 
 checkCurrentBusIsOnboarded :: ST.BusTrackingScreenState -> String -> Boolean
-checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
+checkCurrentBusIsOnboarded state vehicleId = 
+  let cachedBusOnboardingInfo = extractBusOnboardingInfo $ JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
+  in (DA.null cachedBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) cachedBusOnboardingInfo))
