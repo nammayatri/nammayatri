@@ -229,6 +229,7 @@ data FRFSDiscount = FRFSDiscount
     price :: Price,
     eligibility :: Bool
   }
+  deriving stock (Generic, Show)
 
 data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   { serviceTierType :: Spec.ServiceTierType,
@@ -237,6 +238,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     serviceTierDescription :: Text,
     serviceTierLongName :: Text
   }
+  deriving stock (Generic, Show)
 
 data FRFSFare = FRFSFare
   { price :: Price,
@@ -244,6 +246,7 @@ data FRFSFare = FRFSFare
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier
   }
+  deriving stock (Generic, Show)
 
 getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do

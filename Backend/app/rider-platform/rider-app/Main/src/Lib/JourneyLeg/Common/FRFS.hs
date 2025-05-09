@@ -377,7 +377,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
             try @_ @SomeException (Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig routeCode startStationCode endStationCode vehicleCategory)
               >>= \case
                 Right [] -> do
-                  logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory
+                  logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
                   return Nothing
                 Right fares -> do
                   now <- getCurrentTime
@@ -385,20 +385,21 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
                   (possibleServiceTiers, availableFares) <- filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig.id fares
                   let mbMinFarePerRoute = selectMinFare availableFares
                   let mbMaxFarePerRoute = selectMaxFare availableFares
+                  logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
                   case (mbMinFarePerRoute, mbMaxFarePerRoute) of
                     (Just minFare, Just maxFare) -> do
                       return (Just $ JT.GetFareResponse {serviceTypes = possibleServiceTiers, estimatedMinFare = minFare.price.amount, estimatedMaxFare = maxFare.price.amount})
                     _ -> do
-                      logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory
+                      logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
                       return Nothing
                 Left err -> do
                   logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Error : " <> show err
                   return Nothing
           Nothing -> do
-            logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
+            logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
             return Nothing
     _ -> do
-      logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory
+      logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
       return Nothing
   where
     filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => UTCTime -> Text -> Text -> Id DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])

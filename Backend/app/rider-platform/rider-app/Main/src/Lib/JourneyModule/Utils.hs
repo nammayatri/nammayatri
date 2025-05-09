@@ -385,8 +385,6 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
 
-    logDebug $ "routeShortNames: " <> show routeShortNames
-
     (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
       case mbAvailableServiceTiers of
         Just availableServiceTiers -> do
@@ -400,7 +398,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
         Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
-    logDebug $ "mbFare: " <> show mbFare
+    logDebug $ "mbFare: " <> show mbFare <> "serviceTierType: " <> show serviceTierType <> "routeShortNames: " <> show routeShortNames <> "quoteId: " <> show quoteId <> "via: " <> show via <> "trainTypeCode: " <> show trainTypeCode
     let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
     return $
       AvailableRoutesByTier
