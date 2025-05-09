@@ -9,7 +9,7 @@ imports:
   EntityType: Domain.Types.RecentLocation
   RecentLocation: Domain.Types.RecentLocation
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
-
+  HighPrecMoney: Kernel.Types.Common
 module: Places
 
 types:
@@ -26,6 +26,7 @@ types:
     routeCode: Maybe Text
     multimodalRoutes: Maybe MultiModalResponse
     recentLocationId: Maybe (Id RecentLocation)
+    fare: Maybe HighPrecMoney
 
   PlacesRequest:
     userLat: Double
