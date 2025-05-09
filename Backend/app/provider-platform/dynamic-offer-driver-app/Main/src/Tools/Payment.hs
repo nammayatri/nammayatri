@@ -14,18 +14,23 @@
 
 module Tools.Payment where
 
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
+import qualified EulerHS.Language as L
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import System.Environment as SE
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
 createOrder = runWithServiceConfigAndName Payment.createOrder
@@ -64,7 +69,7 @@ runWithServiceConfigAndName ::
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName = do
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity serviceName merchantOperatingCity
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show serviceName))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
     DMSC.RentalPaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
@@ -128,3 +133,11 @@ runWithUnWrap ::
 runWithUnWrap func merchantId merchantOperatingCity serviceName req = do
   (call, _) <- runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName
   call req
+
+decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
+decidePaymentService paymentServiceName clientSdkVersion = do
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
+  return $ case clientSdkVersion of
+    Just v
+      | v >= textToVersionDefault aaClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
+    _ -> paymentServiceName

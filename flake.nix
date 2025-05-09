@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:imviv3kshukla/shared-kernel?ref=backend/enh/driver-app-new-endpoint-for-aa-juspay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
