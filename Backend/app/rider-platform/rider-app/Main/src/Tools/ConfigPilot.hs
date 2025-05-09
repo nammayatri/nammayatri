@@ -2,10 +2,13 @@
 
 module Tools.ConfigPilot where
 
+import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.UiRiderConfig as DTU
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -55,7 +58,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
     (LYTU.UiConfig dt pt) -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      mbUiConfig <- SCU.findBaseUIConfig uiConfigReq (cast merchantOpCityId)
+      (mbUiConfig, _) <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
@@ -142,22 +145,28 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       clearCacheFunc
 
     handleConfigUpdateWithExtraDimensionsUi ::
-      (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) =>
-      (LYTU.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe a)) -> -- Fetch function
+      (MonadFlow m) =>
+      (LYTU.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe DTU.UiRiderConfig)) -> -- Fetch function
       m () -> -- Cache clearing function
-      (a -> m ()) -> -- Update function
+      (DTU.UiRiderConfig -> m ()) -> -- Update function
       Id MerchantOperatingCity ->
       LYTU.UiConfigRequest ->
       m ()
     handleConfigUpdateWithExtraDimensionsUi fetchFunc clearCacheFunc updateFunc merchantOpCityId' uiConfigReq' = do
-      mbUiConfig <- fetchFunc uiConfigReq' merchantOpCityId'
-      let configWrapper = convertToConfigWrapper (maybeToList mbUiConfig)
+      uiConfig :: DTU.UiRiderConfig <- fetchFunc uiConfigReq' merchantOpCityId' >>= fromMaybeM (InvalidRequest "No default found for UiRiderConfig")
+      let configWrapper = convertToConfigWrapper [uiConfig.config]
       patchedConfigs <- applyPatchToConfig configWrapper
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
-      mapM_ updateFunc configsToUpdate
+      let configsToUpdate' :: [DTU.UiRiderConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
+      mapM_ updateFunc configsToUpdate'
       clearCacheFunc
 
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
       result <- fetchFunc merchantOpCityId'
       pure $ maybeToList result
+
+getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m BaseUrl
+getTSServiceUrl = do
+  tsServiceConfig <- asks (.tsServiceConfig)
+  pure tsServiceConfig.url

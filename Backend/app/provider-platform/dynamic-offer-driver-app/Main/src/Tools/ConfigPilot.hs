@@ -2,12 +2,15 @@
 
 module Tools.ConfigPilot where
 
-import qualified Data.Aeson as A
 -- import qualified Storage.Queries.UiDriverConfig as QUiC
 
+import qualified ConfigPilotFrontend.Types as CPT
+import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.UiDriverConfig as DTU
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -55,7 +58,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       return LYT.TableDataResp {configs = map A.toJSON merchantPushNotification}
     (LYT.UiConfig dt pt) -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      mbUiConfig <- SCU.findBaseUIConfig uiConfigReq (cast merchantOpCityId)
+      (mbUiConfig, _) <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
@@ -142,22 +145,28 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       clearCacheFunc
 
     handleConfigUpdateWithExtraDimensionsUi ::
-      (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) =>
-      (LYT.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe a)) -> -- Fetch function
+      (MonadFlow m) =>
+      (LYT.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe DTU.UiDriverConfig)) -> -- Fetch function
       m () -> -- Cache clearing function
-      (a -> m ()) -> -- Update function
+      (DTU.UiDriverConfig -> m ()) -> -- Update function
       Id MerchantOperatingCity ->
       LYT.UiConfigRequest ->
       m ()
     handleConfigUpdateWithExtraDimensionsUi fetchFunc clearCacheFunc updateFunc merchantOpCityId' uiConfigReq' = do
-      mbUiConfig <- fetchFunc uiConfigReq' merchantOpCityId'
-      let configWrapper = convertToConfigWrapper (maybeToList mbUiConfig)
+      uiConfig :: DTU.UiDriverConfig <- fetchFunc uiConfigReq' merchantOpCityId' >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
+      let configWrapper = convertToConfigWrapper [uiConfig.config]
       patchedConfigs <- applyPatchToConfig configWrapper
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
-      mapM_ updateFunc configsToUpdate
+      let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
+      mapM_ updateFunc configsToUpdate'
       clearCacheFunc
 
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
       result <- fetchFunc merchantOpCityId'
       pure $ maybeToList result
+
+getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m BaseUrl
+getTSServiceUrl = do
+  tsServiceConfig <- asks (.tsServiceConfig)
+  pure tsServiceConfig.url

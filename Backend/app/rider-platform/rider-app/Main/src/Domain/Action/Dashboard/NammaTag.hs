@@ -31,6 +31,8 @@ module Domain.Action.Dashboard.NammaTag
   )
 where
 
+import qualified ConfigPilotFrontend.Flow as CPF
+import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
 import Data.Singletons
 import qualified Data.Text as Text
@@ -44,7 +46,6 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.RiderConfig as DTR
 import Domain.Types.UiRiderConfig (UiRiderConfig (..))
 import qualified Domain.Types.UiRiderConfig as DTRC
-import qualified Domain.Types.UiRiderConfig as DTURC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -69,6 +70,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.UiRiderConfig as SQU
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
@@ -106,11 +108,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let merchantOpCityId = merchantOperatingCity.id
   _riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
-    LYTU.RIDER_CONFIG (LYTU.UiConfig _ _) -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "UiRiderConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTURC.UiRiderConfig))
-      let configWrap = LYTU.Config defaultConfig Nothing 1
-      logicData :: (LYTU.Config DTURC.UiRiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTURC.UiRiderConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.RIDER_CONFIG (LYTU.UiConfig dt pt) -> do
+      let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+      defaultConfig <- SQU.getUiConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiRiderConfig")
+      let configWrap = LYTU.Config defaultConfig.config Nothing 1
+      logicData :: (LYTU.Config Value) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      url <- TC.getTSServiceUrl
+      YudhishthiraFlow.verifyAndUpdateUIDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config Value)) _riderConfig.dynamicLogicUpdatePassword req logicData url
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
       def <- fromMaybeM (InvalidRequest "RiderConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig))
       let configWrap = LYTU.Config def Nothing 1
@@ -252,7 +256,7 @@ postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Mercha
 postNammaTagConfigPilotGetVersion _ _ uicr = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
   let merchantOpCityId = merchantOperatingCity.id
-  (_, version) <- UIRC.findUiConfig uicr merchantOpCityId
+  (_, version) <- UIRC.findUiConfig uicr merchantOpCityId False
   case version of
     Just ver -> pure $ (Text.pack . show) ver
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
@@ -261,7 +265,7 @@ postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchan
 postNammaTagConfigPilotGetConfig _ _ uicr = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
   let merchantOpCityId = merchantOperatingCity.id
-  (config, version) <- UIRC.findUiConfig uicr merchantOpCityId
+  (config, version) <- UIRC.findUiConfig uicr merchantOpCityId False
   isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.RIDER_CONFIG $ LYTU.UiConfig uicr.os uicr.platform)
   case config of
     Just cfg -> pure (LYTU.UiConfigResponse cfg.config (Text.pack . show <$> version) isExp)
@@ -269,6 +273,13 @@ postNammaTagConfigPilotGetConfig _ _ uicr = do
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
+  url <- TC.getTSServiceUrl
+  when (ccr.platform == LYTU.TypeScript) $ do
+    configValidateResp <- CPF.configValidate url (ccr.config)
+    case configValidateResp.status of
+      CPT.VALID_CONFIG -> pure ()
+      CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
+      CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id ccr.merchantId) ccr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> ccr.merchantId <> " ,city: " <> show ccr.city)
   let merchantOpCityId = merchantOperatingCity.id
   now <- getCurrentTime

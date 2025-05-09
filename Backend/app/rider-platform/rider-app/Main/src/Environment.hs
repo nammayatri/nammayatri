@@ -29,6 +29,7 @@ where
 import AWS.S3
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -165,7 +166,8 @@ data AppCfg = AppCfg
     locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
-    selfBaseUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl,
+    tsServiceConfig :: CPT.TSServiceConfig
   }
   deriving (Generic, FromDhall)
 
@@ -265,7 +267,8 @@ data AppEnv = AppEnv
     locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
-    selfBaseUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl,
+    tsServiceConfig :: CPT.TSServiceConfig
   }
   deriving (Generic)
 

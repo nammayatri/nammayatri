@@ -1,6 +1,8 @@
 module Lib.Yudhishthira.Flow.Dashboard where
 
 import qualified ConfigPilotFrontend.Common as CPFC
+import qualified ConfigPilotFrontend.Flow as CPF
+import qualified ConfigPilotFrontend.Types as CPT
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
@@ -372,6 +374,30 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
       case (A.fromJSON respResult :: A.Result b) of
         A.Success _ -> []
         A.Error err -> [show err]
+
+verifyAndUpdateUIDynamicLogic ::
+  forall m r a b.
+  (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
+  Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
+  Proxy b ->
+  Text ->
+  Lib.Yudhishthira.Types.AppDynamicLogicReq ->
+  a ->
+  BaseUrl ->
+  m Lib.Yudhishthira.Types.AppDynamicLogicResp
+verifyAndUpdateUIDynamicLogic mbMerchantId proxy referralLinkPassword req logicData url = do
+  resp <- runLogics req.rules logicData
+  validateInputData <-
+    case (fromJSON resp.result :: Result (LYT.Config Value)) of
+      A.Success dpc'' -> pure (dpc''.config)
+      A.Error e -> do
+        throwError $ InvalidRequest $ "Error in applying dynamic logic: " <> show e
+  configValidateResp <- CPF.configValidate url validateInputData
+  case configValidateResp.status of
+    CPT.VALID_CONFIG -> pure ()
+    CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
+    CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
+  verifyAndUpdateDynamicLogic mbMerchantId proxy referralLinkPassword req logicData
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain mbVersion domain = do
