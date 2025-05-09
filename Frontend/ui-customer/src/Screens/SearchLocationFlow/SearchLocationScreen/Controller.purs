@@ -77,6 +77,7 @@ import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
 import Foreign.Class (encode)
 import Data.String as DS
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -234,6 +235,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
       void $ pure $ hideKeyboardOnNavigation true
       updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusStopSelectionAction then do
+          void $ pure $ JB.firebaseLogEvent "ny_bus_user_pick_up_stop_selected"
           let busStopInfo = {stationName : item.title , stationCode : item.tag}
               updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Nothing, busStopInfo : MB.Just busStopInfo , stationCode : item.tag}
               updatedStopsList = if state.props.focussedTextField == MB.Just SearchLocPickup then filterStopsBySequenceInc item.title state.data.stopsSearchedList else  filterStopsBySequenceDec item.title state.data.stopsSearchedList

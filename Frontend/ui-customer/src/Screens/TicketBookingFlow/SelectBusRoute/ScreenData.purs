@@ -19,6 +19,8 @@ import ConfigProvider
 import Screens.Types as ST
 import Data.Maybe (Maybe(..))
 import Services.API (FRFSRouteAPI(..), FrfsQuote(..))
+import Foreign.Object (Object, empty)
+import Foreign (Foreign)
 
 initData :: SelectBusRouteScreenState
 initData = {
@@ -27,6 +29,7 @@ initData = {
     , destLoc : ""
     , quotes : Nothing
     , selectedQuote : Nothing
+    , logField : empty
   },
   props : {
     enableSeeRoute : false
@@ -43,6 +46,7 @@ type SelectBusRouteScreenData = {
   , destLoc :: String
   , quotes :: Maybe (Array FrfsQuote)
   , selectedQuote :: Maybe FrfsQuote
+  , logField :: Object Foreign
 }
 
 type SelectBusRouteScreenProp = {

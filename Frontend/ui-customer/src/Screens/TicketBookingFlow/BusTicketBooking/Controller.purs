@@ -51,6 +51,7 @@ import Effect.Uncurried (runEffectFn4)
 import Data.Lens ((^.))
 import Accessor (_lat, _lon, _routeCode)
 import Data.Foldable (for_)
+import JBridge (firebaseLogEvent)
 import MapUtils as MU
 import Data.String as DS
 
@@ -99,7 +100,9 @@ eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTic
 
 eval GoBack state = exit $ GoToHomeScreen state
 
-eval SearchButtonClick state = updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
+eval SearchButtonClick state = do
+  void $ pure $ JB.firebaseLogEvent "ny_bus_user_clicked_search_Location_bus"
+  updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 
 eval (BusTicketBookingListRespAC bookingList) state =
   let newState = state {data {ticketDetailsState = Just $ metroTicketListApiToMyTicketsTransformer bookingList $ fromMaybe MetroMyTicketsScreenData.initData state.data.ticketDetailsState}}

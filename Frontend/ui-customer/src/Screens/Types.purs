@@ -59,6 +59,8 @@ import Common.Types.App (FeedbackAnswer)
 import Styles.Types
 import Control.Monad.Except (runExcept, except)
 import Data.Either (Either(..))
+import Effect.Unsafe (unsafePerformEffect)
+import Foreign.Object (empty)
 
 type Contacts = {
   name :: String,
@@ -2291,6 +2293,7 @@ type MetroTicketDetailsScreenData = {
 , vehicleType :: String
 , route :: Maybe (Array FRFSRouteAPI)
 , transactionId :: String
+, logField :: Object Foreign
 }
 
 type MetroTicketInfo = {
@@ -2469,7 +2472,8 @@ type SearchLocationScreenData =
     updatedRouteSearchedList :: Array FRFSRouteAPI,
     ticketServiceType :: API.TicketServiceType,
     rideType :: RideType,
-    searchRideType :: API.SearchRideType
+    searchRideType :: API.SearchRideType,
+    logField :: Object Foreign
   }
 
 type RideDetails = {
@@ -2886,6 +2890,7 @@ type MetroTicketBookingScreenData = {
   , searchRideType :: API.SearchRideType
   , discounts :: Array API.FRFSDiscountRes
   , applyDiscounts :: Maybe (Array API.FRFSDiscountReq)
+  , logField :: Object Foreign
 }
 
 type MetroTicketBookingScreenProps = {
@@ -3331,6 +3336,7 @@ type BusTicketBookingData = {
   , ticketDetailsState :: Maybe MetroMyTicketsScreenState
   , busDetailsArray :: Array BusDetails
   , closestBusDistance :: Number
+  , logField :: Object Foreign
 }
 
 type BusTicketBookingProps = {
@@ -3364,7 +3370,8 @@ type BusTrackingScreenData = {
   routeShortName :: String,
   routePts :: Locations,
   previousLatLonsOfVehicle :: DM.Map String ({position :: API.LatLong, index :: Int}),
-  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI
+  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI,
+  logField :: Object Foreign
 }
 
 type VehicleData = 

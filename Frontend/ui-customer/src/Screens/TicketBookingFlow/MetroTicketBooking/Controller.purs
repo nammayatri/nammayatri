@@ -38,6 +38,7 @@ import Data.Int as DI
 import Log(trackAppScreenEvent)
 import Data.Int as INT
 
+
 instance showAction :: Show Action where
   show _ = ""
 

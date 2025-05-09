@@ -47,6 +47,7 @@ import Helpers.Pooling (delay)
 import Helpers.Utils as HU
 import Data.Function.Uncurried (runFn1)
 import Helpers.FrfsUtils (getFirstRoute)
+import Engineering.Helpers.LogEvent (logEvent)
 
 screen :: String -> String -> SD.SelectBusRouteScreenState -> Screen Action SD.SelectBusRouteScreenState ScreenOutput
 screen fromStationCode toStationCode initialState =
@@ -61,9 +62,9 @@ screen fromStationCode toStationCode initialState =
                     ]
   , eval :
     \action state -> do
-        let _ = spy "SelectBusRoute action " action
-        let _ = spy "SelectBusRoute state " state
-        eval action state
+      let _ = spy "SelectBusRoute action " action
+      let _ = spy "SelectBusRoute state " state
+      eval action state
   }
 
 view :: forall w . (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w

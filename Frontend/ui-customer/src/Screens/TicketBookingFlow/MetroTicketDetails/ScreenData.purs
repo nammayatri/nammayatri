@@ -20,6 +20,10 @@ import Common.Types.App as Common
 import ConfigProvider
 import Screens.Types
 import Data.Maybe (Maybe(..))
+import Foreign.Object (empty)
+import Foreign.Object (Object)
+import Foreign (Foreign,unsafeFromForeign)
+import Foreign.Class (class Decode, class Encode)
 
 initData :: MetroTicketDetailsScreenState
 initData = {
@@ -36,6 +40,7 @@ initData = {
   , vehicleType : ""
   , route : Nothing
   , transactionId : ""
+  , logField : empty
   }
 , props :  {
     dummyProps : ""
