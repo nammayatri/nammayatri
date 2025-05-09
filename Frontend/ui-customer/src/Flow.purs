@@ -4702,7 +4702,7 @@ metroTicketBookingFlow = do
     --  modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {routeList =  busRoutesResp , ticketCount = state.data.ticketCount }, props { isButtonActive = true, ticketServiceType =  BUS, routeList = not state.props.routeList , showRouteOptions = true} })
     --  metroTicketBookingFlow
     METRO_FARE_AND_PAYMENT state -> do
-      when (state.props.ticketServiceType == API.BUS) $ setValueToLocalStore CAN_HAVE_ACTIVE_TICKETS "true"
+      -- when (state.props.ticketServiceType == API.BUS) $ setValueToLocalStore CAN_HAVE_ACTIVE_TICKETS "true"
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData)
       if state.props.currentStage == MetroTicketSelection || state.props.currentStage == BusTicketSelection then do
         if state.data.srcCode == state.data.destCode then do
@@ -4712,7 +4712,7 @@ metroTicketBookingFlow = do
           metroTicketBookingFlow
         else do 
           (FrfsSearchResp searchMetroResp) <- Remote.frfsSearchBT (show state.props.ticketServiceType) (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount (if state.props.ticketServiceType == BUS then Just state.props.routeName else Nothing))
-          modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote } })
+          modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote, isButtonActive = false} })
       else if state.props.currentStage == ConfirmMetroQuote then do
         metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {discounts: fromMaybe [] state.data.applyDiscounts}
         updateMetroBookingQuoteInfo metroBookingStatus

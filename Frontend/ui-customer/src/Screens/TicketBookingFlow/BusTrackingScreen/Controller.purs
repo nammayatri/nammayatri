@@ -112,14 +112,14 @@ data Action
   = AfterRender
   | BackPressed
   | CurrentLocationCallBack String String String
-  | UpdateTracking (API.BusTrackingRouteResp) Int
+  | UpdateTracking (API.BusTrackingRouteResp) Int String
   | MapReady String String String
   | NoAction
   | BookTicketButtonAction PrimaryButton.Action
   | ToggleStops
   | UpdateStops API.GetMetroStationResponse
   | ViewTicket
-  | UserBoarded
+  | UserBoarded (Mb.Maybe String)
   | SaveRoute JB.Locations
   | UpdateToExpandView 
 
@@ -186,7 +186,7 @@ eval BackPressed state =
 
 eval ViewTicket state = exit $ GoToViewTicket state
 
-eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
+eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingInfoString) state =
   let trackingData = DA.concatMap extractTrackingInfo resp.vehicleTrackingInfo
   in 
     case state.props.vehicleTrackingId of
@@ -203,8 +203,10 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
   where
     processTrackingData trackingData = do
       let
-        alreadyOnboardedThisBus = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) extractBusOnboardingInfo
-        _ = spy "Bus Onboarding data " $ Tuple state.data.bookingId extractBusOnboardingInfo
+        cachedBusOnboardingInfo = extractBusOnboardingInfo cachedBusOnboardingInfoString
+        alreadyOnboardedThisBus = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) $ cachedBusOnboardingInfo
+        _ = spy "Bus Onboarding Cached data" $ cachedBusOnboardingInfo
+        _ = spy "Bus Onboarding data " $ Tuple state.data.bookingId $ cachedBusOnboardingInfo
         _ = spy "Already onboarded this bus" $ Tuple state.data.bookingId alreadyOnboardedThisBus
         finalMap =
           DA.foldl
@@ -240,7 +242,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
       case alreadyOnboardedThisBus of
         Mb.Just busInfo ->
           continueWithCmd state { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData }, props { individualBusTracking = true, vehicleTrackingId = Mb.Just busInfo.vehicleId } }
-            [ pure UserBoarded ]
+            [ pure $ UserBoarded (Mb.Just busInfo.vehicleId) ]
         Mb.Nothing -> 
           continueWithCmd state
             { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData, previousLatLonsOfVehicle = storePrevLatLonsOfVehicle trackingData}
@@ -269,7 +271,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
               
               case DT.snd finalMap of
                 Mb.Just pt -> do
-                  void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
+                  void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 15.0 "ZOOM"
                 Mb.Nothing -> pure unit
               pure NoAction
           ]
@@ -387,7 +389,9 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count) state =
           timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
       in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec) && checkCurrentBusIsOnboarded state item.vehicleId
 
-    checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
+    checkCurrentBusIsOnboarded state vehicleId = 
+      let cachedBusOnboardingInfo = extractBusOnboardingInfo cachedBusOnboardingInfoString
+      in (DA.null cachedBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) cachedBusOnboardingInfo))
 
     filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) =
       -- Deviation Filter Logic for Bus Vehicles
@@ -416,7 +420,7 @@ eval (CurrentLocationCallBack lat lon _) state = case state.props.busNearSourceD
   where
     parseCoordinate pt = Mb.fromMaybe 0.0 $ DN.fromString pt
 
-eval UserBoarded state = do
+eval (UserBoarded mbVehicleId) state = do
   let filterStopsIndex = DA.findIndex (\(API.FRFSStationAPI item) -> item.code == sourceCode) state.data.stopsList
       sourceCode = Mb.fromMaybe "" $ state.data.sourceStation <#> _.stationCode
       filteredStops = case filterStopsIndex of 
@@ -426,8 +430,11 @@ eval UserBoarded state = do
       vId = (state.props.busNearSourceData <#> _.vehicleId) <|> state.props.vehicleTrackingId
   when (Mb.isJust vId && state.data.bookingId /= "" && Mb.isNothing state.props.vehicleTrackingId) do
     void $ pure $ setValueToCache (show ONBOARDED_VEHICLE_INFO) updatedOnboardingVehicleInfo (DU.stringifyJSON <<< encode)
-  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId, expandStopsView = if (Mb.isNothing state.props.vehicleTrackingId) then false else state.props.expandStopsView}, data{stopsList = filteredStops}} [ do
-    -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state
+  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId, expandStopsView = if (Mb.isNothing mbVehicleId) then true else state.props.expandStopsView}, data{stopsList = filteredStops}} [ do    -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state
+    if (Mb.isNothing mbVehicleId && Mb.isJust vId && state.data.bookingId /= "" && Mb.isNothing state.props.vehicleTrackingId && Mb.isJust nearbyBusVehicleId) 
+      -- then void $ pure $ setValueToLocalStore ONBOARDED_VEHICLE_INFO $ DU.stringifyJSON updatedOnboardingVehicleInfo
+      then void $ pure $ setValueToCache (show ONBOARDED_VEHICLE_INFO) updatedOnboardingVehicleInfo (DU.stringifyJSON <<< encode)
+      else pure unit
     pure NoAction
   ]
   where
@@ -519,14 +526,9 @@ drawDriverRoute resp state = do
 getPoint :: API.GetDriverLocationResp -> CTA.Paths
 getPoint (API.GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }
 
-extractBusOnboardingInfo :: ST.OnboardedBusInfo
-extractBusOnboardingInfo = 
-  Mb.fromMaybe [] decodedOnboardedBusInfo
-  where
-    decodedOnboardedBusInfo :: Mb.Maybe ST.OnboardedBusInfo
-    decodedOnboardedBusInfo = 
-      let cachedOnboardedBusInfo = JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
-      in DU.decodeForeignAny (DU.parseJSON cachedOnboardedBusInfo) Mb.Nothing
+extractBusOnboardingInfo :: String -> ST.OnboardedBusInfo
+extractBusOnboardingInfo cachedBusOnboardingInfoString = 
+  Mb.fromMaybe [] $ DU.decodeForeignAny (DU.parseJSON cachedBusOnboardingInfoString) Mb.Nothing
 
 updateBusLocationOnRoute :: ST.BusTrackingScreenState -> Array ST.VehicleData -> API.BusTrackingRouteResp -> Flow GlobalState Unit
 updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
@@ -617,7 +619,7 @@ userBoardedActions state vehicles vehicle = do
     else do
       void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 70 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
       void $ EHC.liftFlow $ JB.showMarker srcHeaderArrowMarkerConfig {rotation = vehicleRotationFromPrevLatLon} vehicle.vehicleLat vehicle.vehicleLon 105 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  EHC.liftFlow $ JB.animateCamera vehicle.vehicleLat vehicle.vehicleLon 17.0 "ZOOM"
+  EHC.liftFlow $ JB.animateCamera vehicle.vehicleLat vehicle.vehicleLon 15.0 "ZOOM"
   
   
 

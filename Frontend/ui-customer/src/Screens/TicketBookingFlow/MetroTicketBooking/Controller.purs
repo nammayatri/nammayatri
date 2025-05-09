@@ -191,7 +191,10 @@ eval SelectRouteslistView state = do
     
     continue state{props{routeList = not old , showRouteOptions = true}}
   -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
-eval (SelectRoutes route routeName) state = continue state{props{isEmptyRoute = route ,routeName = routeName , routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection}}
+eval (SelectRoutes route routeName) state =
+  continueWithCmd 
+    state{props{isEmptyRoute = route ,routeName = routeName , routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection, isButtonActive = false}}
+    [ do pure UpdatePaymentOption ]
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
 eval _ state = update state
@@ -204,7 +207,7 @@ updateQuotes quotes state = do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (FrfsQuote quoteData) -> do
-      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
+      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote, isButtonActive = true }}
       updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType
