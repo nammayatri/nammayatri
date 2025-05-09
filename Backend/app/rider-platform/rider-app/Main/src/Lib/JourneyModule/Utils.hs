@@ -343,7 +343,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   routeStopTimings <- fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfigId mid mocid vc
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
-      nextHourCutoff = addUTCTime 3600 currentTimeIST
+      nextHourCutoff = addUTCTime 86400 currentTimeIST
 
   -- Get trip ids for calendar checking
   let tripIds = map (.tripId) routeStopTimings
