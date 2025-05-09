@@ -14,6 +14,7 @@ import Domain.Types
 import qualified Domain.Types.Alert.AlertRequestData as DTAAD
 import qualified Domain.Types.Alert.AlertRequestStatus as DTAAS
 import qualified Domain.Types.Alert.AlertRequestType as DTAAT
+import qualified Domain.Types.FleetBadgeType as DFBT
 import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
 import Kernel.Prelude
@@ -33,6 +34,8 @@ $(mkBeamInstancesForEnum ''DTAAS.AlertRequestStatus)
 $(mkFromHttpInstanceForEnum ''DTAAS.AlertRequestStatus)
 $(mkBeamInstancesForEnumAndList ''DTAAD.AlertRequestData)
 $(mkFromHttpInstanceForEnum ''DTAAD.AlertRequestData)
+$(mkBeamInstancesForEnumAndList ''DFBT.FleetBadgeType)
+$(mkHttpInstancesForEnum ''DFBT.FleetBadgeType)
 
 data DriverMode = ONLINE | OFFLINE | SILENT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)

@@ -62,6 +62,7 @@ import Data.Text hiding (elem, filter, find, length, map, null)
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
 import Domain.Types.Alert
+import Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetMemberAssociation as DFMA
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Role as DRole
@@ -442,14 +443,14 @@ getDriverFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId = do
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
-getDriverFleetGetAllBadge :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Flow Common.FleetBadgeResT
-getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset mbSearchString mbFleetOwnerId = do
+getDriverFleetGetAllBadge :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DFBT.FleetBadgeType -> Flow Common.FleetBadgeResT
+getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset mbSearchString mbFleetOwnerId mbBadgeType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId mbFleetOwnerId
   fleetBadgeInfos <-
     concatMapM
       ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.FleetBadgeRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllBadge) fleetOwnerId' mblimit mboffset mbSearchString
+          Common.FleetBadgeRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllBadge) fleetOwnerId' mblimit mboffset mbSearchString mbBadgeType
           return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) fleetBadgeInfos
       )
       fleetOwnerIds
