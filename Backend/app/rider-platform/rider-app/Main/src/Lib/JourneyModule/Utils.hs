@@ -445,11 +445,14 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
   -- Combine stop timings with their calendars and get arrival times
   -- Filter out trips that have already passed the stop
   logDebug $ "filteredByService before filtering on current time : " <> show filteredByService
+  let arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST
+  let estimatedArrivalTimeInSeconds = if (arrivalTimeInSeconds > 0) then arrivalTimeInSeconds else ((-1 * arrivalTimeInSeconds / 86400) + 1) * 86400 + arrivalTimeInSeconds
+
   let tripTimingsWithCalendars =
         [ UpcomingVehicleInfo
             { routeCode = rst.routeCode,
               serviceType = rst.serviceTierType,
-              arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
+              arrivalTimeInSeconds = estimatedArrivalTimeInSeconds,
               nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
               source = rst.source
             }
