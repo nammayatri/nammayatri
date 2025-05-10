@@ -210,15 +210,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mo
       let validBuses = catMaybes vehicleRouteMappings
       logDebug $ "validBuses: " <> show validBuses
       let baseStopTimes = map createStopTime validBuses
-      let (_, currentTimeIST) = getISTTimeInfo currentTime
-      let validTimings =
-            [ timing
-              | timing <- baseStopTimes,
-                let arrivalTime = getISTArrivalTime timing.timeOfArrival currentTime,
-                arrivalTime > currentTimeIST
-            ]
-      logDebug $ "baseStopTimes: " <> show baseStopTimes <> " validTimings: " <> show validTimings
-      return validTimings
+      return baseStopTimes
       where
         createStopTime ((vehicleNumber, eta), mapping) = createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping
 
@@ -353,23 +345,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   routeStopTimings <- fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfigId mid mocid vc
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
-      nextHourCutoff = addUTCTime 86400 currentTimeIST
 
-  -- Get trip ids for calendar checking
-  let tripIds = map (.tripId) routeStopTimings
   let source = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimings
-
-  -- Check which trips are serviceable today
-  let serviceableTripIds = tripIds
-
-  -- Filter timings by serviceable trips and future arrivals within the next hour
-  let validTimings =
-        [ timing
-          | timing <- routeStopTimings,
-            timing.tripId `elem` serviceableTripIds,
-            let arrivalTime = getISTArrivalTime timing.timeOfArrival currentTime,
-            arrivalTime > currentTimeIST && arrivalTime <= nextHourCutoff
-        ]
 
   let sortedTimings =
         sortBy
@@ -378,11 +355,11 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                   bTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime b.timeOfArrival currentTime) currentTimeIST
                in compare aTime bTime
           )
-          validTimings
+          routeStopTimings
 
   -- Group by service tier
-  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) validTimings
-  logDebug $ "groupedByTier: " <> show groupedByTier <> " validTimings: " <> show validTimings <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
+  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) routeStopTimings
+  logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
   -- For each service tier, collect route information
   results <- forM groupedByTier $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
@@ -476,8 +453,7 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
               nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
               source = rst.source
             }
-          | rst <- filteredByService,
-            (getISTArrivalTime rst.timeOfArrival currentTime) > currentTimeIST -- Only include future arrivals
+          | rst <- filteredByService
         ]
   logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithCalendars
   let upcomingBuses = sortBy (\a b -> compare (arrivalTimeInSeconds a) (arrivalTimeInSeconds b)) tripTimingsWithCalendars
@@ -569,20 +545,6 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
               -- Get timing information for this route at the origin stop
               originStopTimings <- fetchLiveTimings [route.code] originStopCode currentTime integratedBppConfigId mid mocid vc
               destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfigId mid mocid vc
-              -- Get trip IDs for calendar checking
-              let serviceableTripIds = map (.tripId) originStopTimings
-
-              -- Get IST time info
-              let (_, currentTimeIST) = getISTTimeInfo currentTime
-
-              -- Find the earliest upcoming departure from origin stop
-              let validOriginTimings =
-                    [ timing
-                      | timing <- originStopTimings,
-                        timing.tripId `elem` serviceableTripIds,
-                        let departureTime = getISTArrivalTime timing.timeOfDeparture currentTime,
-                        departureTime > currentTimeIST
-                    ]
 
               let mbEarliestOriginTiming =
                     listToMaybe $
@@ -592,7 +554,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                               (getISTArrivalTime a.timeOfDeparture currentTime)
                               (getISTArrivalTime b.timeOfDeparture currentTime)
                         )
-                        validOriginTimings
+                        originStopTimings
 
               -- Find the corresponding destination arrival for the same trip
               let mbDestinationTiming = do
