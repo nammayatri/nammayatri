@@ -78,6 +78,7 @@ foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
 foreign import emitJOSEventWithCb :: forall action. Fn4 String JOSEventInnerPayload (action -> Effect Unit) (String -> action) Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
+foreign import isLocationPermissionEnabledWithoutEff :: Unit ->  Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean
 foreign import checkAndAskNotificationPermission :: Boolean -> Effect Unit
 foreign import isMicrophonePermissionEnabled :: Unit -> Boolean
@@ -133,6 +134,7 @@ foreign import showMapImpl :: forall action. String -> Boolean -> String -> Numb
 foreign import mapSnapShot :: forall action. String -> Locations -> String -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Boolean
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
+foreign import isLocationEnabledWithoutEff :: Unit ->  Boolean
 foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
 foreign import getCurrentPositionWithTimeoutImpl  :: forall action. EffectFn4 (action -> Effect Unit) (String -> String -> String -> action) Int Boolean Unit
 

@@ -80,7 +80,6 @@ primaryButtonConfig  state = let
       , background = state.appConfig.primaryBackground
       , margin = (Margin 0 0 0 0)
       , id = "PermissionScreenButton"
-      , enableLoader = (JB.getBtnLoader "PermissionScreenButton")
       , enableRipple = true
       }
   in primaryButtonConfig'
@@ -108,7 +107,7 @@ getLocationBlockerPopUpConfig state = let
   , secondaryText {
       text = getString $ PLEASE_ENABLE_LOCATION_PERMISSION "PLEASE_ENABLE_LOCATION_PERMISSION"
     , margin = MarginTop 0
-    , padding = Padding 0 0 0 0
+    , padding = Padding 0 0 0 10
     }
   , coverImageConfig {
       imageUrl = fetchImage FF_COMMON_ASSET $ if (os == "IOS") then "ny_ic_enable_location_in_settings_ios" else "ny_ic_enable_location_in_settings_android"
@@ -117,9 +116,11 @@ getLocationBlockerPopUpConfig state = let
     , height = V 260
     , margin = Margin 0 0 0 0 
     }
-  , option1 {
-      visibility = false
-    }
+   , option1 {
+           text = "Give Location Access"
+         , background = Color.black900
+         , color = Color.yellow900
+         }
   , option2 {
       visibility = false
     }
