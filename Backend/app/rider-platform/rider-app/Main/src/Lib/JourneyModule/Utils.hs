@@ -372,8 +372,14 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     -- Calculate arrival times in seconds
     let arrivalTimes =
-          [ nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime timing.timeOfArrival currentTime) currentTimeIST
-            | timing <- timingsForTier
+          [ estimatedArrivalTimeInSeconds
+            | timing <- timingsForTier,
+              let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime timing.timeOfArrival currentTime) currentTimeIST,
+              let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
+              let estimatedArrivalTimeInSeconds
+                    | arrivalTimeInSeconds' > 0 = arrivalTimeInSeconds'
+                    | abs secondsValue > 86400 = Seconds $ round $ (7 * 86400) + secondsValue
+                    | otherwise = Seconds $ round $ 86400 + secondsValue
           ]
 
     let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
@@ -445,15 +451,22 @@ findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppCon
   -- Combine stop timings with their calendars and get arrival times
   -- Filter out trips that have already passed the stop
   logDebug $ "filteredByService before filtering on current time : " <> show filteredByService
+
   let tripTimingsWithCalendars =
         [ UpcomingVehicleInfo
             { routeCode = rst.routeCode,
               serviceType = rst.serviceTierType,
-              arrivalTimeInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
+              arrivalTimeInSeconds = estimatedArrivalTimeInSeconds,
               nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
               source = rst.source
             }
-          | rst <- filteredByService
+          | rst <- filteredByService,
+            let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
+            let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
+            let estimatedArrivalTimeInSeconds
+                  | arrivalTimeInSeconds' > 0 = arrivalTimeInSeconds'
+                  | abs secondsValue > 86400 = Seconds $ round $ (7 * 86400) + secondsValue
+                  | otherwise = Seconds $ round $ 86400 + secondsValue
         ]
   logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithCalendars
   let upcomingBuses = sortBy (\a b -> compare (arrivalTimeInSeconds a) (arrivalTimeInSeconds b)) tripTimingsWithCalendars
