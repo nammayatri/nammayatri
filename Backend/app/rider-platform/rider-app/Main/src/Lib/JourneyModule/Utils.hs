@@ -133,7 +133,8 @@ data AvailableRoutesByTier = AvailableRoutesByTier
     availableRoutes :: [Text],
     nextAvailableBuses :: [Seconds],
     nextAvailableTimings :: [(TimeOfDay, TimeOfDay)],
-    fare :: PriceAPIEntity
+    fare :: PriceAPIEntity,
+    source :: SourceType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -356,6 +357,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Get trip ids for calendar checking
   let tripIds = map (.tripId) routeStopTimings
+  let source = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimings
 
   -- Check which trips are serviceable today
   let serviceableTripIds = tripIds
@@ -425,7 +427,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           via = via,
           trainTypeCode = trainTypeCode,
           fare = fare,
-          nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings
+          nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings,
+          source = source
         }
 
   -- Only return service tiers that have available routes

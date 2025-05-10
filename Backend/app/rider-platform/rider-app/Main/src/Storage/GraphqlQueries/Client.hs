@@ -16,7 +16,7 @@ import Data.Aeson (eitherDecode, encode, object)
 import Data.List (isInfixOf)
 import Data.Morpheus.Client
 import Data.Morpheus.Client.CodeGen.Internal
-import Data.Text as Text (splitOn, unpack)
+import qualified Data.Text as Text
 import qualified Data.Time.LocalTime as LocalTime
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
@@ -244,21 +244,48 @@ executeRouteStopTimeTableQuery baseUrl vars = do
 transformToTimeTableEntries :: MonadFlow m => OTPResponse -> m [TimetableEntry]
 transformToTimeTableEntries otpResponse = do
   now <- getCurrentTime
-  return $ map (transformEntry otpResponse.stop now) otpResponse.stop.stoptimesWithoutPatterns
+  return $ concatMap (transformEntry otpResponse.stop now) otpResponse.stop.stoptimesWithoutPatterns
 
-transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> TimetableEntry
-transformEntry stopData timestamp entry =
-  TimetableEntry
-    { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ splitOn ":" entry.trip.route.gtfsId,
-      serviceTierType = mapToServiceTierType entry.trip.gtfsId,
-      stopCode = fromMaybe stopData.gtfsId $ lastMay $ splitOn ":" stopData.gtfsId,
-      -- Convert seconds from midnight to HH:MM:SS
-      timeOfArrival = secondsToTime entry.scheduledArrival,
-      timeOfDeparture = secondsToTime entry.scheduledDeparture,
-      tripId = fromMaybe entry.trip.gtfsId $ lastMay $ splitOn ":" entry.trip.gtfsId,
-      createdAt = timestamp,
-      updatedAt = timestamp
-    }
+transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> [TimetableEntry]
+transformEntry stopData timestamp entry = do
+  case "chennai_subway:" `Text.isInfixOf` stopData.gtfsId of
+    True -> do
+      [ TimetableEntry
+          { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
+            serviceTierType = BecknV2.FRFS.Enums.SECOND_CLASS,
+            stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+            -- Convert seconds from midnight to HH:MM:SS
+            timeOfArrival = secondsToTime entry.scheduledArrival,
+            timeOfDeparture = secondsToTime entry.scheduledDeparture,
+            tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
+            createdAt = timestamp,
+            updatedAt = timestamp
+          },
+        TimetableEntry
+          { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
+            serviceTierType = BecknV2.FRFS.Enums.FIRST_CLASS,
+            stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+            -- Convert seconds from midnight to HH:MM:SS
+            timeOfArrival = secondsToTime entry.scheduledArrival,
+            timeOfDeparture = secondsToTime entry.scheduledDeparture,
+            tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
+            createdAt = timestamp,
+            updatedAt = timestamp
+          }
+        ]
+    False ->
+      [ TimetableEntry
+          { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
+            serviceTierType = mapToServiceTierType entry.trip.gtfsId,
+            stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+            -- Convert seconds from midnight to HH:MM:SS
+            timeOfArrival = secondsToTime entry.scheduledArrival,
+            timeOfDeparture = secondsToTime entry.scheduledDeparture,
+            tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
+            createdAt = timestamp,
+            updatedAt = timestamp
+          }
+      ]
 
 -- Convert seconds from midnight to HH:MM:SS format
 secondsToTime :: Int -> LocalTime.TimeOfDay
@@ -293,4 +320,4 @@ extractServiceCode routeCode = maybe "O" snd (find match patterns)
         ("-X-", "X"),
         ("-O-", "O")
       ]
-    match (pat, _) = pat `isInfixOf` (unpack routeCode)
+    match (pat, _) = pat `isInfixOf` (Text.unpack routeCode)
