@@ -57,6 +57,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RegistrationToken as SR
 import Domain.Types.Station
 import Environment
@@ -241,6 +242,8 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
           >>= maybe (createPersonViaPartner req merchant mbRegCoordinates pOrgId) (return . (,False))
       _ -> throwError . InvalidRequest $ "Unsupported identifier type" +|| identifierType ||+ ""
 
+  _ <- QPStats.findByPersonId person.id >>= maybe (makePersonStats person) return
+
   when (isCreatedNow && person.merchantOperatingCityId /= fromStationMOCId) $ do
     moc <- B.runInReplica $ CQMOC.findById fromStationMOCId >>= fromMaybeM (MerchantOperatingCityNotFound fromStationMOCId.getId)
     CQP.updateCityInfoById person.id moc.city moc.id
@@ -356,6 +359,36 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partner
         info = Nothing,
         createdViaPartnerOrgId = Just partnerOrgId
       }
+
+makePersonStats :: SP.Person -> Flow DPS.PersonStats
+makePersonStats person = do
+  now <- getCurrentTime
+  let personStats =
+        DPS.PersonStats
+          { personId = person.id,
+            userCancelledRides = 0,
+            driverCancelledRides = 0,
+            completedRides = 0,
+            weekendRides = 0,
+            weekdayRides = 0,
+            offPeakRides = 0,
+            eveningPeakRides = 0,
+            morningPeakRides = 0,
+            weekendPeakRides = 0,
+            referralCount = 0,
+            createdAt = now,
+            updatedAt = now,
+            ticketsBookedInEvent = Just 0,
+            referralAmountPaid = 0,
+            referralEarnings = 0,
+            referredByEarnings = 0,
+            validActivations = 0,
+            referredByEarningsPayoutStatus = Nothing,
+            backlogPayoutStatus = Nothing,
+            backlogPayoutAmount = 0,
+            isBackfilled = Just False
+          }
+  QPStats.createPersonStats personStats
 
 getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Flow GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = do
