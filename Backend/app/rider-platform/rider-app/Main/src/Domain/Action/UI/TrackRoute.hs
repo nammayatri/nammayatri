@@ -20,14 +20,15 @@ getTrackVehicles ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe DIBC.PlatformType ->
     Kernel.Prelude.Maybe Spec.VehicleCategory ->
     Environment.Flow TrackRoute.TrackingResp
   )
-getTrackVehicles (mbPersonId, merchantId) routeCode mbVehicleType = do
+getTrackVehicles (mbPersonId, merchantId) routeCode mbPlatformType mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode DIBC.APPLICATION Nothing
+  vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = map mkVehicleTrackingResponse vehicleTracking}
   where
     mkVehicleTrackingResponse VehicleTracking {..} =

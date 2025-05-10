@@ -5,6 +5,7 @@ imports:
   UTCTime: Kernel.Prelude
   Double: Kernel.Prelude
   VehicleCategory: BecknV2.FRFS.Enums
+  PlatformType: Domain.Types.IntegratedBPPConfig
 
 module: TrackRoute
 
@@ -38,6 +39,7 @@ apis:
       endpoint: /track/{routeCode}/vehicles
       query:
         vehicleType: VehicleCategory
+        platformType: PlatformType
       params:
         routeCode: Text
       response:
