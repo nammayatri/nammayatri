@@ -38,6 +38,7 @@ import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
+import qualified System.Environment as Se
 import Tools.Maps (LatLong (..))
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
@@ -188,8 +189,9 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mo
   allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
   routeStopTimes <- mapM processRoute allRouteWithBuses
   let flattenedRouteStopTimes = concat routeStopTimes
-  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes
-  if not (null flattenedRouteStopTimes)
+  disableLiveBuses <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ Se.lookupEnv "DISABLE_LIVE_BUSES")
+  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
+  if not (null flattenedRouteStopTimes) && not disableLiveBuses
     then return flattenedRouteStopTimes
     else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfigId mid mocid routeCodes ("chennai_bus:" <> stopCode)) "fetch route stop timing through graphql"
   where
@@ -207,8 +209,15 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mo
       let validBuses = catMaybes vehicleRouteMappings
       logDebug $ "validBuses: " <> show validBuses
       let baseStopTimes = map createStopTime validBuses
-      logDebug $ "baseStopTimes: " <> show baseStopTimes
-      return baseStopTimes
+      let (_, currentTimeIST) = getISTTimeInfo currentTime
+      let validTimings =
+            [ timing
+              | timing <- baseStopTimes,
+                let arrivalTime = getISTArrivalTime timing.timeOfArrival currentTime,
+                arrivalTime > currentTimeIST
+            ]
+      logDebug $ "baseStopTimes: " <> show baseStopTimes <> " validTimings: " <> show validTimings
+      return validTimings
       where
         createStopTime ((vehicleNumber, eta), mapping) = createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping
 
@@ -371,7 +380,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Group by service tier
   let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) validTimings
-
+  logDebug $ "groupedByTier: " <> show groupedByTier <> " validTimings: " <> show validTimings <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
   -- For each service tier, collect route information
   results <- forM groupedByTier $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
