@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.RouteStopTimeTable
   ( findByRouteCodeAndStopCode,
+    CalledForFare (..),
   )
 where
 
@@ -23,6 +24,8 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopTimeTable
+import qualified EulerHS.Language as L
+import EulerHS.Types (OptionEntity)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
@@ -46,7 +49,8 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
       Just a -> pure a
       Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode
   logDebug $ "Fetched route stop time table cached: " <> show allTrips <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
-  return $ P.filter (\trip -> trip.routeCode `P.elem` routeCodes) allTrips
+  val <- L.getOptionLocal CalledForFare
+  return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes) || (val == Just True)) allTrips
 
 cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> m ()
 cacheRouteStopTimeInfo stopCode routeStopInfo = do
@@ -56,3 +60,9 @@ cacheRouteStopTimeInfo stopCode routeStopInfo = do
 
 routeTimeTableKey :: Text -> Text
 routeTimeTableKey stopCode = "routeStop-time-table:" <> stopCode
+
+data CalledForFare = CalledForFare
+  deriving stock (Generic, Typeable, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance OptionEntity CalledForFare Bool

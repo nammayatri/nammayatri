@@ -26,6 +26,7 @@ import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
 import Domain.Utils (safeHead, safeLast)
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude (comparing, (+||), (||+))
 import ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.Flow as Flow
@@ -54,6 +55,7 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.RouteStopTimeTable as QRSTT
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -383,7 +385,9 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
                 Right fares -> do
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
+                  L.setOptionLocal QRSTT.CalledForFare True
                   (possibleServiceTiers, availableFares) <- filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig.id fares
+                  L.setOptionLocal QRSTT.CalledForFare False
                   let mbMinFarePerRoute = selectMinFare availableFares
                   let mbMaxFarePerRoute = selectMaxFare availableFares
                   logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
