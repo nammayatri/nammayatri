@@ -24,4 +24,4 @@ instance ToMultipart Tmp UploadPublicFileRequest where
   toMultipart uploadFileRequest =
     MultipartData
       [Input "fileType" (show uploadFileRequest.fileType)]
-      [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
+      [FileData "file" (T.pack uploadFileRequest.file) (uploadFileRequest.reqContentType) (uploadFileRequest.file)]

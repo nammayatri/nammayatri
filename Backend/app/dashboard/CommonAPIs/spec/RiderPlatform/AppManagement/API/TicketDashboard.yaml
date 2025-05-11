@@ -47,10 +47,12 @@ apis:
         - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
-  - DELETE:
-      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/deleteAsset/{assetId}
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/deleteAsset
       name: TicketDashboardDeleteAsset
       auth: ApiAuthV2
+      request:
+        type: DeletePublicFileRequest
       response:
         type: APISuccess
       query:
@@ -58,7 +60,6 @@ apis:
         - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
-        assetId: Text
 
 types:
   UploadPublicFileRequest:
@@ -68,6 +69,8 @@ types:
     - derive: "'HideSecrets"
   UploadPublicFileResponse:
     - publicUrl: Text
+  DeletePublicFileRequest:
+    - assetId: Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

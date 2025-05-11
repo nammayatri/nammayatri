@@ -20,6 +20,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data DeletePublicFileRequest = DeletePublicFileRequest {assetId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UploadPublicFileRequest = UploadPublicFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -45,35 +49,36 @@ type TicketDashboardUploadAsset =
            Kernel.ServantMultipart.Tmp
            UploadPublicFileRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            UploadPublicFileResponse
   )
 
 type TicketDashboardDeleteAsset =
   ( "ticketdashboard" :> "ticketplace" :> Capture "ticketPlaceId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "deleteAsset"
-      :> Capture
-           "assetId"
+      :> QueryParam
+           "requestorId"
            Kernel.Prelude.Text
-      :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
            Domain.Types.MerchantOnboarding.RequestorRole
-      :> Delete
-           ('[JSON])
+      :> ReqBody
+           '[JSON]
+           DeletePublicFileRequest
+      :> Post
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data TicketDashboardAPIs = TicketDashboardAPIs
   { ticketDashboardUploadAsset ::
-      ( Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
-        Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
-        Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) ->
-        ( Data.ByteString.Lazy.ByteString,
-          UploadPublicFileRequest
-        ) ->
-        EulerHS.Types.EulerClient UploadPublicFileResponse
-      ),
-    ticketDashboardDeleteAsset :: (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+      Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+      Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+      Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
+      ( Data.ByteString.Lazy.ByteString,
+        UploadPublicFileRequest
+      ) ->
+      EulerHS.Types.EulerClient UploadPublicFileResponse,
+    ticketDashboardDeleteAsset :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> DeletePublicFileRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkTicketDashboardAPIs :: (Client EulerHS.Types.EulerClient API -> TicketDashboardAPIs)
@@ -87,4 +92,4 @@ data TicketDashboardUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''TicketDashboardUserActionType)])
+$(Data.Singletons.TH.genSingletons [''TicketDashboardUserActionType])

@@ -12,11 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module AWS.S3.Flow (get', put', get'', put'', delete', delete'', mockGet, mockPut, mockDelete) where
+module AWS.S3.Flow (get', put', get'', put'', delete', delete'', mockGet, mockPut, mockDelete, putRaw'', mockPutRaw) where
 
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
+import qualified Data.ByteString as BS
 import qualified Data.List as DL (last)
 import Data.String.Conversions
 import qualified Data.Text as T
@@ -155,6 +156,22 @@ put'' bucketName path img = withLogTag "S3" $ do
       _ <- Posix.fdWrite fd (T.unpack img_)
       Posix.closeFd fd
 
+putRaw'' ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  BS.ByteString ->
+  String ->
+  m ()
+putRaw'' bucketName path bs _contentType = withLogTag "S3" $ do
+  let tmpPath = getTmpPath path
+  liftIO $ BS.writeFile tmpPath bs
+  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath <> " --content-type " <> _contentType
+  liftIO $ callCommand cmd
+  liftIO $ removeFile tmpPath
+
 delete'' ::
   ( CoreMetrics m,
     MonadFlow m
@@ -183,6 +200,22 @@ mockPut baseDirectory bucketName path img =
           fullPath = Path.takeDirectory fullPath'Name
       Dir.createDirectoryIfMissing True fullPath
       T.writeFile fullPath'Name img
+
+mockPutRaw ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  ByteString ->
+  String ->
+  m ()
+mockPutRaw baseDirectory bucketName path img _ =
+  withLogTag "S3" $
+    liftIO $ do
+      let fullPath'Name = getFullPathMock baseDirectory bucketName path
+          fullPath = Path.takeDirectory fullPath'Name
+      Dir.createDirectoryIfMissing True fullPath
+      BS.writeFile fullPath'Name img
 
 mockGet ::
   (MonadIO m, Log m) =>

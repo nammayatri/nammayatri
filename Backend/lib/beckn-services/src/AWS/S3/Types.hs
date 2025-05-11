@@ -88,6 +88,7 @@ data S3Env m = S3Env
   { pathPrefix :: Text,
     getH :: String -> m Text,
     putH :: String -> Text -> m (),
+    putRawH :: String -> BS.ByteString -> String -> m (),
     deleteH :: String -> m ()
   }
 
@@ -157,3 +158,8 @@ deletePublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String 
 deletePublic path = do
   s3EnvPublic <- asks (.s3EnvPublic)
   deleteH s3EnvPublic path
+
+putPublicRaw :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> BS.ByteString -> String -> m ()
+putPublicRaw path file_ contentType_ = do
+  s3EnvPublic <- asks (.s3EnvPublic)
+  putRawH s3EnvPublic path file_ contentType_
