@@ -235,6 +235,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //region Location
     @JavascriptInterface
     public void startLocationPollingAPI() {
+        checkAndAskStoragePermission();
         ExecutorManager.runOnBackgroundThread(() -> {
             if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
                 if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
