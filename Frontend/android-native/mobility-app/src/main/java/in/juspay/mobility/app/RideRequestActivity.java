@@ -516,7 +516,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private void startLoader(String id) {
         if(countDownTimer != null) countDownTimer.cancel();
         for (MediaPlayer mediaPlayer : mediaPlayers) {
-            mediaPlayer.release();
+            if(mediaPlayer != null) mediaPlayer.release();
         }
         currentMediaPlayer = null;
         View progressDialog = findViewById(R.id.progress_loader);
@@ -604,7 +604,7 @@ public class RideRequestActivity extends AppCompatActivity {
             updateProgressBars(true);
             if (sheetArrayList.isEmpty()) {
                 for (MediaPlayer mediaPlayer : mediaPlayers) {
-                    mediaPlayer.release();
+                    if(mediaPlayer != null) mediaPlayer.release();
                 }
                 currentMediaPlayer = null;
                 finish();
@@ -625,7 +625,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 if (index == currentMediaIndex) return;
                 currentMediaIndex = index;
                 currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                if (!currentMediaPlayer.isPlaying()) {
+                if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
                     currentMediaPlayer.start();
                 }
             } catch (Exception e) {
@@ -850,7 +850,7 @@ public class RideRequestActivity extends AppCompatActivity {
         sheetArrayList.clear();
         if(countDownTimer != null) countDownTimer.cancel();
         for (MediaPlayer mediaPlayer : mediaPlayers) {
-            mediaPlayer.release();
+            if(mediaPlayer != null) mediaPlayer.release();
         }
         currentMediaPlayer = null;
         NotificationUtils.lastRideReq.clear();

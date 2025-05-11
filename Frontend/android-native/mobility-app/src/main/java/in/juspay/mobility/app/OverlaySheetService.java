@@ -108,6 +108,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private WindowManager windowManager;
     private SharedPreferences sharedPref;
     private final MediaPlayer[] mediaPlayers = new MediaPlayer[3];
+    @Nullable
     private MediaPlayer currentMediaPlayer;
     private int currentMediaIndex = -1;
 
@@ -1355,7 +1356,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
                 currentMediaIndex = index;
                 currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                if (!currentMediaPlayer.isPlaying()) {
+                if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
                     currentMediaPlayer.start();
                 }
             } catch (Exception e) {
