@@ -318,8 +318,10 @@ public class NotificationUtils {
                             listData.add(sheetData);
                         } else {
                             new Handler(Looper.getMainLooper()).post(() -> {
-                                if (binder != null) {
+                                if (binder != null && binder.getService() != null) {
                                     binder.getService().addToList(sheetData);
+                                } else {
+                                    listData.add(sheetData);
                                 }
                             });
                         }

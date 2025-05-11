@@ -95,7 +95,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     private static final int MAX_RIDE_REQUESTS = 6;
 
-
+    private boolean isServiceDestroyed = false;
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
     private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
@@ -109,8 +109,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private SharedPreferences sharedPref;
     private final MediaPlayer[] mediaPlayers = new MediaPlayer[3];
     @Nullable
-    private MediaPlayer currentMediaPlayer;
-    private int currentMediaIndex = -1;
+    private volatile MediaPlayer currentMediaPlayer;
+    private volatile int currentMediaIndex = -1;
 
     private int time = 0, retryAddViewCount = 10;;
     private View progressDialog, apiLoader, floatyView;
@@ -142,8 +142,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @Override
     public void onCreate() {
         super.onCreate();
+        if (mediaPlayerExecutor.isTerminated() || mediaPlayerExecutor.isShutdown()) mediaPlayerExecutor = Executors.newSingleThreadExecutor();
         context = getApplicationContext();
         key = context.getResources().getString(R.string.service);
+        isServiceDestroyed = false;
     }
 
     public static void registerCallback(CallBack notificationCallback) {
@@ -585,15 +587,17 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @Override
     public IBinder onBind(Intent intent) {
         try {
-            mediaPlayerExecutor.execute(() -> {
-                for (int i =0; i < 3; i++) {
-                    if (mediaPlayers[i] == null) {
-                        mediaPlayers[i] = MediaPlayer.create(context, getRideRequestSound(context,i));
-                        mediaPlayers[i].setLooping(true);
-                        mediaPlayers[i].setOnPreparedListener(mp -> mp.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK));
+            if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+                mediaPlayerExecutor.execute(() -> {
+                    for (int i =0; i < 3; i++) {
+                        if (mediaPlayers[i] == null) {
+                            mediaPlayers[i] = MediaPlayer.create(context, getRideRequestSound(context,i));
+                            mediaPlayers[i].setLooping(true);
+                            mediaPlayers[i].setOnPreparedListener(mp -> mp.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK));
+                        }
                     }
-                }
-            });
+                });
+            }
         } catch (Exception e) {
             Exception exception = new Exception("Error in onBind " + e);
             FirebaseCrashlytics.getInstance().recordException(exception);
@@ -605,6 +609,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        isServiceDestroyed = false;
+        if (mediaPlayerExecutor.isTerminated() || mediaPlayerExecutor.isShutdown()) mediaPlayerExecutor = Executors.newSingleThreadExecutor();
         return START_STICKY;
     }
 
@@ -731,26 +737,28 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             roundTrip
                     );
 
-                    mediaPlayerExecutor.execute(() -> {
-                        try {
-                            if (currentMediaIndex == -1) {
-                                currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
-                            }
-                            if (currentMediaPlayer == null || !currentMediaPlayer.isPlaying()) {
-                                currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                                if(currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
-                                    currentMediaPlayer.start();
+                    if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+                        mediaPlayerExecutor.execute(() -> {
+                            try {
+                                if (currentMediaIndex == -1) {
+                                    currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
                                 }
-                                if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
-                                    increaseVolume(context);
+                                if (currentMediaPlayer == null || !currentMediaPlayer.isPlaying()) {
+                                    currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                                    if(currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                                        currentMediaPlayer.start();
+                                    }
+                                    if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                                    if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
+                                        increaseVolume(context);
+                                    }
                                 }
+                            }catch (Exception e){
+                                Log.e(TAG_MEDIA_PLAYER, e.toString());
                             }
-                        }catch (Exception e){
-                            Log.e(TAG_MEDIA_PLAYER, e.toString());
-                        }
 
-                    });
+                        });
+                    }
 
                     if (floatyView == null) {
                         startTimer();
@@ -1006,6 +1014,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     @Override
     public void onDestroy() {
+        isServiceDestroyed = true;
         if (floatyView != null) {
             try {
                 windowManager.removeViewImmediate(floatyView);
@@ -1162,7 +1171,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     lottieAnimationView.setSpeed(1.2f);
                     lottieAnimationView.playAnimation();
                 }
-                rideStatusListener.cancel();
+                if (rideStatusListener != null) rideStatusListener.cancel();
             }
         });
         handler.postDelayed(this::cleanUp, 1700);
@@ -1184,6 +1193,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             firebaseLogEventWithParams("exception_in_start_api_loader", "start_api_loader", String.valueOf(e));
             e.printStackTrace();
         }
+    }
+
+    public boolean getIsServiceDestroyed() {
+        return isServiceDestroyed;
     }
 
     private void updateIndicators() {
@@ -1346,23 +1359,25 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     /*
     * To update the audio sound based on notification type when card changes are driver swipes the cards*/
     private void updateMediaPlayer(int position) {
-        mediaPlayerExecutor.execute(() -> {
-            try {
-                if (position < 0 || position >= sheetArrayList.size()) return;
-                int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
-                if (index == currentMediaIndex) return;
-                if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
-                    currentMediaPlayer.pause();
+        if (!mediaPlayerExecutor.isTerminated() && !mediaPlayerExecutor.isShutdown()) {
+            mediaPlayerExecutor.execute(() -> {
+                try {
+                    if (position < 0 || position >= sheetArrayList.size()) return;
+                    int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                    if (index == currentMediaIndex) return;
+                    if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
+                        currentMediaPlayer.pause();
+                    }
+                    currentMediaIndex = index;
+                    currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                    if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                        currentMediaPlayer.start();
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG_MEDIA_PLAYER, e.toString());
                 }
-                currentMediaIndex = index;
-                currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
-                    currentMediaPlayer.start();
-                }
-            } catch (Exception e) {
-                Log.e(TAG_MEDIA_PLAYER, e.toString());
-            }
-        });
+            });
+        }
     }
 
     private void updateProgressBars(boolean animated) {

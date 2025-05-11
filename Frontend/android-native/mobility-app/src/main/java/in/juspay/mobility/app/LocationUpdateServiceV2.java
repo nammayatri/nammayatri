@@ -122,6 +122,7 @@ public class LocationUpdateServiceV2 extends Service {
     private static final String LOCATION_BATCH_INTERVAL = "LOCATION_BATCH_INTERVAL";
     private static final String DRIVER_MIN_DISPLACEMENT = "DRIVER_MIN_DISPLACEMENT"; // Updated key
     private static final String LOCATION_BATCH_SIZE = "LOCATION_BATCH_SIZE";
+    private static final String LOCATION_MAX_BATCH_SIZE_KEY = "LOCATION_MAX_BATCH_SIZE";
     private static final String LOCATION_SERVICE_VERSION = "LOCATION_SERVICE_VERSION";
     private static final String LOCATION_CACHE_FILE = "location_cache.json";
     private static final String LOCATION_RATE_LIMIT_SECONDS = "LOCATION_RATE_LIMIT_SECONDS"; // New key for rate limiting in seconds
@@ -153,6 +154,7 @@ public class LocationUpdateServiceV2 extends Service {
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
     private final ReentrantLock batchProcessingLock = new ReentrantLock();
     private final AtomicBoolean isBatchProcessing = new AtomicBoolean(false);
+    private final AtomicBoolean isFlushInProgress = new AtomicBoolean(false);
     private final LocalBinder binder = new LocalBinder();
     // Add this class variable to track active location requests
     private final AtomicBoolean isLocationRequestInProgress = new AtomicBoolean(false);
@@ -171,6 +173,7 @@ public class LocationUpdateServiceV2 extends Service {
     private int locationBatchInterval = 10; // seconds
     private float locationMinDisplacement = 25.0f; // meters
     private int locationBatchSize = 20; // How many locations to batch before sending
+    private int locationMaxBatchSize = 100; // How many locations to batch before sending
     // State tracking
     public  static boolean isLocationUpdating = false;
     private double lastLatitudeValue;
@@ -294,6 +297,9 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Restore any cached locations
         messageQueue.restoreFromCache();
+
+        // Restore any cached locations
+        messageQueue.flushToBackend(messageQueue.size());
 
         // Start the heartbeat timer
         startLocationHeartbeatTimer();
@@ -438,6 +444,10 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Log health check event if applicable
         logEventForHealthCheck(intent);
+
+        if (messageQueue.size() > locationMaxBatchSize) {
+            messageQueue.flushToBackend(messageQueue.size() - locationBatchSize);
+        }
 
         Log.d(TAG, "onStartCommand() complete");
         return START_STICKY;
@@ -1773,6 +1783,16 @@ public class LocationUpdateServiceV2 extends Service {
                                 }
                             }
                             break;
+                        case LOCATION_MAX_BATCH_SIZE_KEY:
+                            String maxBatchSize = prefs.getString(key, null);
+                            if (maxBatchSize != null) {
+                                int newBatch = Integer.parseInt(maxBatchSize);
+                                if (newBatch != locationMaxBatchSize) {
+                                    locationMaxBatchSize = newBatch;
+                                    Log.d(TAG_CONFIG, "Location max batch size changed to " + newBatch);
+                                }
+                            }
+                            break;
 
                         case LOCATION_BATCH_INTERVAL:
                             String batchIntervalStr = prefs.getString(key, null);
@@ -2118,6 +2138,7 @@ public class LocationUpdateServiceV2 extends Service {
         private final Queue<LocationData> queue = new ConcurrentLinkedQueue<>();
         private final Handler handler;
         private final ExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        private final ExecutorService flushBatchExecutor = Executors.newSingleThreadScheduledExecutor();
 
         /**
          * Creates a new MessageQueue with the provided looper.
@@ -2292,6 +2313,67 @@ public class LocationUpdateServiceV2 extends Service {
             }
         }
 
+
+        /**
+         * Flushes the given number of location to backend in batches without any delay.
+         *
+         * @param size number of location has to flushed
+         */
+        private void flushToBackend(int size) {
+
+            flushBatchExecutor.execute(() -> {
+                isFlushInProgress.set(true);
+                try {
+                    List<LocationData> flushBatch = messageQueue.drainBatch(size);
+                    while (!flushBatch.isEmpty()) {
+                        try {
+                            int toIndex = Math.min(locationMaxBatchSize,flushBatch.size());
+                            List<LocationData> batch = flushBatch.subList(0, toIndex);
+                            // Convert batch to JSONArray
+                            JSONArray locationPayload = new JSONArray();
+                            for (LocationData data : batch) {
+                                locationPayload.put(data.toJsonObject());
+                            }
+
+                            Log.i(TAG_BATCH, "Sending batch of " + batch.size() + " locations to server");
+
+                            // Get API client and headers
+                            MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
+                            Map<String, String> baseHeaders = MobilityCallAPI.getBaseHeaders(context);
+
+                            // Get API URL
+                            SharedPreferences sharedPref = context.getSharedPreferences(
+                                    context.getString(R.string.preference_file_key), MODE_PRIVATE);
+                            String baseUrl = sharedPref.getString("BASE_URL", "null");
+                            String orderUrl = baseUrl + "/driver/location";
+
+                            // Set headers
+                            baseHeaders.put("source", "batch_location_update");
+                            setVehicleAndMerchantHeaders(baseHeaders);
+
+                            // Log API request
+                            Log.i(TAG_API, "Sending batch of " + batch.size() + " locations to server with body | " + locationPayload);
+
+                            // Make API call synchronously
+                            MobilityAPIResponse response = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
+                            Log.i(TAG_API,"Flush to Backend response code " + response.getStatusCode());
+                            Log.i(TAG_API,"Flush to Backend response body " + response.getResponseBody());
+                        } catch (Exception e) {
+                            Log.e(TAG_ERROR, "Error preparing batch ", e);
+                            FirebaseCrashlytics.getInstance().recordException(e);
+                        } finally {
+                            flushBatch.subList(0, locationMaxBatchSize).clear();
+                        }
+                    }
+                    isFlushInProgress.set(false);
+                } catch (Exception e) {
+                    Log.e(TAG_API, "Error flushing batch " + e);
+                } finally {
+                    isFlushInProgress.set(false);
+                }
+            });
+        }
+
         /**
          * Restores locations from cache (tries SharedPreferences first, then file).
          */
@@ -2365,7 +2447,7 @@ public class LocationUpdateServiceV2 extends Service {
          * Sends to server if batch size threshold is reached or time threshold is exceeded.
          */
         private void processBatch() {
-            if (isBatchProcessing.get() || queue.isEmpty() || !isNetworkAvailable(context)) {
+            if (isFlushInProgress.get() || isBatchProcessing.get() || queue.isEmpty() || !isNetworkAvailable(context)) {
                 return;
             }
 

@@ -85,12 +85,12 @@ public class RideRequestActivity extends AppCompatActivity {
     private SharedPreferences sharedPref;
     private final MediaPlayer[] mediaPlayers = new MediaPlayer[3];
     @Nullable
-    private MediaPlayer currentMediaPlayer;
-    private int currentMediaIndex = -1;
+    private volatile MediaPlayer currentMediaPlayer;
+    private volatile int currentMediaIndex = -1;
     int isMediaPlayerPrepared = 0;
     private String service = "";
     private String DUMMY_FROM_LOCATION = "dummyFromLocation";
-    private ExecutorService mediaPlayerExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService mediaPlayerExecutor = Executors.newSingleThreadExecutor();
 
     public static RideRequestActivity getInstance() {
         return instance;
@@ -100,32 +100,34 @@ public class RideRequestActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = this;
-        mediaPlayerExecutor.execute(() -> {
-            try {
-                for (int i =0; i < 3; i++) {
-                    if (mediaPlayers[i] == null) {
-                        mediaPlayers[i] = MediaPlayer.create(this, getRideRequestSound(this,i));
-                        mediaPlayers[i].setLooping(true);
-                        mediaPlayers[i].setOnPreparedListener(mp -> {
-                            isMediaPlayerPrepared++;
-                            mp.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
-                            if (isMediaPlayerPrepared == 3 && currentMediaIndex != -1 && (currentMediaPlayer == null || !currentMediaPlayer.isPlaying())) {
-                                currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                                currentMediaPlayer.start();
-                                if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
-                                    increaseVolume(context);
+        if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+            mediaPlayerExecutor.execute(() -> {
+                try {
+                    for (int i =0; i < 3; i++) {
+                        if (mediaPlayers[i] == null) {
+                            mediaPlayers[i] = MediaPlayer.create(this, getRideRequestSound(this,i));
+                            mediaPlayers[i].setLooping(true);
+                            mediaPlayers[i].setOnPreparedListener(mp -> {
+                                isMediaPlayerPrepared++;
+                                mp.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
+                                if (isMediaPlayerPrepared == 3 && currentMediaIndex != -1 && (currentMediaPlayer == null || !currentMediaPlayer.isPlaying())) {
+                                    currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                                    if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) currentMediaPlayer.start();
+                                    if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
+                                        increaseVolume(context);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
+                } catch (Exception e) {
+                    Exception exception = new Exception("Error in onBind " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
+                    firebaseLogEventWithParams("exception_in_on_bind", "on_create", String.valueOf(e),this);
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                Exception exception = new Exception("Error in onBind " + e);
-                FirebaseCrashlytics.getInstance().recordException(exception);
-                firebaseLogEventWithParams("exception_in_on_bind", "on_create", String.valueOf(e),this);
-                e.printStackTrace();
-            }
-        });
+            });
+        }
         service = getApplicationContext().getResources().getString(R.string.service);
         instance = this;
         setContentView(R.layout.activity_ride_request);
@@ -224,21 +226,22 @@ public class RideRequestActivity extends AppCompatActivity {
                     stops,
                     roundTrip
                     );
-            mediaPlayerExecutor.execute(() -> {
-                        if (currentMediaIndex == -1) {
-                            currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
+            if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+                mediaPlayerExecutor.execute(() -> {
+                    if (currentMediaIndex == -1) {
+                        currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
+                    }
+                    if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || (!currentMediaPlayer.isPlaying()))) {
+                        currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                        if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                            currentMediaPlayer.start();
                         }
-                        if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || (!currentMediaPlayer.isPlaying()))) {
-                            currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                            if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
-                                currentMediaPlayer.start();
-                            }
-                            if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")) {
-                                increaseVolume(context);
-                            }
+                        if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")) {
+                            increaseVolume(context);
                         }
                     }
-            );
+                });
+            }
 
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -615,23 +618,25 @@ public class RideRequestActivity extends AppCompatActivity {
     /*
      * To update the audio sound based on notification type when card changes are driver swipes the cards*/
     private void updateMediaPlayer(int position) {
-        mediaPlayerExecutor.execute(() -> {
-            try {
-                if (position < 0 || position >= sheetArrayList.size()) return;
-                if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
-                    currentMediaPlayer.pause();
+        if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+            mediaPlayerExecutor.execute(() -> {
+                try {
+                    if (position < 0 || position >= sheetArrayList.size()) return;
+                    if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
+                        currentMediaPlayer.pause();
+                    }
+                    int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                    if (index == currentMediaIndex) return;
+                    currentMediaIndex = index;
+                    currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                    if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                        currentMediaPlayer.start();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
-                if (index == currentMediaIndex) return;
-                currentMediaIndex = index;
-                currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
-                    currentMediaPlayer.start();
-                }
-            } catch (Exception e) {
-
-            }
-        });
+            });
+        }
     }
 
     @SuppressLint("SetTextI18n")
