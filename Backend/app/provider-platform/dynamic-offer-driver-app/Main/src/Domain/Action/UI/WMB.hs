@@ -227,6 +227,8 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
         endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
+        driverName = tripTransaction.driverName,
+        conductorName = tripTransaction.conductorName,
         vehicleNumber = vehicleNumber,
         vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
@@ -245,6 +247,8 @@ getTripTransactionDetails tripTransaction = do
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
         endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
+        driverName = tripTransaction.driverName,
+        conductorName = tripTransaction.conductorName,
         vehicleNumber = tripTransaction.vehicleNumber,
         vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
