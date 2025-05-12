@@ -145,6 +145,7 @@ import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -153,6 +154,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+// import com.google.android.gms.maps.model.RoundCap;
+// import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.PolyUtil;
@@ -393,6 +396,7 @@ public class MobilityCommonBridge extends HyperBridge {
         int labelMaxLines = 1;
         int labelTextSize = 11;
         float rotation = 0;
+        float zIndex = 0;
         int markerIconSize = 160;
         AnimationType animationType = AnimationType.NONE;
         int animationDuration = 0;
@@ -448,6 +452,10 @@ public class MobilityCommonBridge extends HyperBridge {
 
         public void setMarkerId(String markerId) {
             this.markerId = markerId;
+        }
+        
+        public void setZIndex(float zIndex) {
+            this.zIndex = zIndex;
         }
 
         public void setMarkerAnimation(AnimationType animationType, int animationDuration) {
@@ -2082,10 +2090,12 @@ public class MobilityCommonBridge extends HyperBridge {
                 String pointerIcon = mConfig.optString("pointerIcon", "");
                 String rotation = mConfig.optString("rotation", "0");
                 String purescriptId = config.optString("purescriptId", "");
+                float zIndex = (float) mConfig.optDouble("zIndex", 0);
                 MarkerConfig markerConfig = new MarkerConfig();
                 markerConfig.setMarkerId(markerId);
                 markerConfig.setPointer(pointerIcon);
                 markerConfig.setRotation(Float.parseFloat(rotation));
+                markerConfig.setZIndex(zIndex);
                 String lat = config.optString("lat", "9.9");
                 String lng = config.optString("lng", "9.9");
                 int markerSize = config.optInt("markerSize", 160);
@@ -2109,6 +2119,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 String imageName = markerConfig.pointerIcon;
                 float rotation = markerConfig.rotation;
                 float alpha = (markerConfig.animationType == AnimationType.FADE_IN) ? 0 : 1;
+                float zIndex = markerConfig.zIndex;
                 System.out.println("marker ids" + title);
                 if (lat != null && lng != null) {
                     double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
@@ -2123,6 +2134,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerObject.hideInfoWindow();
                         markerObject.getPosition();
                         markerObject.setAlpha(alpha);
+                        markerObject.setZIndex(zIndex);
                         Log.i(MAPS, "Marker position updated for " + title);
                     } else {
                         MarkerOptions markerOptionsObj = makeMarkerObject(imageName, latitude, longitude, markerSize, anchorV, anchorV1);
@@ -2136,6 +2148,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 markerObject.hideInfoWindow();
                                 markerObject.setRotation(rotation);
                                 markerObject.setAlpha(alpha);
+                                markerObject.setZIndex(zIndex);
                             }
                             if (title.equals(CURRENT_LOCATION)) {
                                 userPositionMarker = markerObject;
@@ -2681,7 +2694,6 @@ public class MobilityCommonBridge extends HyperBridge {
         circleRipples.clear();
         groundOverlays.clear();
     }
-
 
     private void checkAndAnimatePolyline(final String polyLineKey, final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, final GoogleMap gMap, String gmapKey) {
         try {
@@ -4080,7 +4092,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
+    protected float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
         double PI = 3.14159;
         double lat1 = latLng1.latitude * PI / 180;
         double long1 = latLng1.longitude * PI / 180;
@@ -6048,5 +6060,105 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @JavascriptInterface
+    public void scrollToChildInScrollView(String config) {
+        try {
+            Activity activity = bridgeComponents.getActivity();
+            if (activity != null) {
+                JSONObject configObj = new JSONObject(config);
+                String scrollViewId = configObj.optString("scrollViewId", "");
+                String childViewId = configObj.optString("childViewId", "");
+                String index = configObj.optString("index", "");
+                // Find the ScrollView and the child view
+                ScrollView scrollView = activity.findViewById(Integer.parseInt(scrollViewId));
+                View childView = activity.findViewById(Integer.parseInt(childViewId));
+
+                if (scrollView != null && childView != null) {
+                    // Calculate the y-coordinate to scroll to
+                    int childDistanceFromTop = childView.getTop();
+                    int scrollY = childDistanceFromTop == 0 ? (200 * Integer.parseInt(index)) - 150 : childDistanceFromTop;
+                    int scrollX = childView.getLeft();
+                    // Scroll to the child view
+                    scrollView.smoothScrollTo(scrollX, scrollY);
+                }
+            }
+        } catch (JSONException err) {
+            Log.e("SCROLL_TO_CHILD_VIEW", "Failed with: " + err);
+        }
+    }
+    
+    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
+    protected Bitmap getMarkerForBusRouteId(String routeId) {
+        Context context = bridgeComponents.getContext();
+        int layoutId = context.getResources().getIdentifier("marker_code_layout", "layout", context.getPackageName());
+        View customMarkerView = LayoutInflater.from(context).inflate(layoutId, null);
+
+        TextView marker_route_id_text = customMarkerView.findViewById(R.id.bus_marker_route_id);
+        if (marker_route_id_text != null) {
+            marker_route_id_text.setText(routeId);
+        }
+
+        customMarkerView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        );
+        customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
+
+        Bitmap returnedBitmap = Bitmap.createBitmap(
+            customMarkerView.getMeasuredWidth(),
+            customMarkerView.getMeasuredHeight(),
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(returnedBitmap);
+        Drawable drawable = customMarkerView.getBackground();
+        if (drawable != null) {
+            drawable.draw(canvas);
+        }
+        customMarkerView.draw(canvas);
+
+        return returnedBitmap;
+    }
+
+
+    @JavascriptInterface
+    public void showDynamicRouteMarker(String _payload) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject config = new JSONObject(_payload);
+                String lat = config.optString("lat", "9.9");
+                String lng = config.optString("lon", "9.9");
+                String purescriptId = config.optString("purescriptId", "");
+
+                GoogleMap gMap = (googleMapInstance.get(purescriptId) != null) ? googleMapInstance.get(purescriptId) : googleMap;
+
+                double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
+                double longitude = lng.equals("9.9") ? lastLongitudeValue : Double.parseDouble(lng);
+                LatLng latLngObj = new LatLng(latitude, longitude);
+
+                String routeId = config.optString("routeId", "");
+
+                Marker marker = (Marker) markers.get(routeId);
+
+                if (marker != null) {
+                    marker.setPosition(latLngObj);
+                }
+                else {
+                    MarkerOptions markerOptions = new MarkerOptions()
+                            .position(latLngObj)
+                            .anchor(0.5f, 0.5f)
+                            .zIndex(2.0f)
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerForBusRouteId(routeId)));
+                    Marker markerObject;
+
+                    if (gMap != null) {
+                        markerObject = gMap.addMarker(markerOptions);
+                        markers.put(routeId, markerObject);
+                    }
+                }
+            } catch (Exception e) {
+                Log.d("Error in showDynamicRouteMarker", e.toString());
+            }
+        });
+    }
 }
 

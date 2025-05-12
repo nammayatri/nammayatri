@@ -3293,3 +3293,40 @@ export const startGActivity = (token) => {
     JBridge.startGActivity(token);
   }
 }
+
+  
+export const updateMarkersOnRoute = (configObj) => {
+  if (window.JBridge.updateMarkersOnRoute) {
+    return window.JBridge.updateMarkersOnRoute(
+      JSON.stringify(configObj)
+    );
+  }
+};
+
+export const checkMarkerAvailable = (markerId) => {
+  if (window.JBridge.checkMarkerAvailable) {
+    const res = window.JBridge.checkMarkerAvailable(
+      JSON.stringify({ markerId })
+    );
+    // Normalize Android bridge booleans ("true"/"false") to real booleans
+    return typeof res === "boolean" ? res : res === "false";
+  }
+};
+
+export const getMarkerPosition = (markerId) => {
+  if (window.JBridge.getMarkerPosition) {
+    return JSON.parse(window.JBridge.getMarkerPosition(JSON.stringify({markerId : markerId})));
+  }
+}
+
+export const scrollToChildInScrollView = (scrollViewId, childViewId, index) => {
+  if (window.JBridge.scrollToChildInScrollView) {
+    return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId, index : index}));
+  }
+} 
+
+export const showDynamicRouteMarker = (lat, lon, routeId, purescriptId) => {
+  if (window.JBridge.showDynamicRouteMarker) {
+    return window.JBridge.showDynamicRouteMarker(JSON.stringify({lat: lat, lon : lon, routeId : routeId, purescriptId: purescriptId}));
+  }
+}

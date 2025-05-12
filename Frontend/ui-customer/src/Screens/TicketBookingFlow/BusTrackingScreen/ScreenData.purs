@@ -36,6 +36,8 @@ import Data.Maybe (Maybe(..))
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import Screens(ScreenName(..), getScreen)
+import Foreign.Object (empty)
 
 initData :: ST.BusTrackingScreenState
 initData =
@@ -56,6 +58,8 @@ initData =
         , stationResponse : Mb.Nothing
         , routeShortName : ""
         , routePts : {points : []}
+        , previousLatLonsOfVehicle: DM.empty
+        , nearestStopFromCurrentLoc : Mb.Nothing
         }
     , props:
         { showRouteDetailsTab: true
@@ -71,6 +75,11 @@ initData =
         , userAndBuslocationMatchCount : 0
         , previousScreen : ST.BusHomeScreen
         , destinationSequenceNumber : Mb.Nothing
+        , currentLat : 0.0
+        , currentLon : 0.0
+        , minimumEtaDistance : Nothing
+        , isMinimumEtaDistanceAvailable : Nothing
+        , fromScreen : getScreen BUS_ROUTE_STOPS_SEARCH_SCREEN
         }
     }
 

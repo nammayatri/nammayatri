@@ -249,6 +249,7 @@
       "ny_ic_bus_icon_light_blue" : true,
       "ny_ic_bus_marker" : true,
       "ny_ic_bus_marker_with_arrow" : true,
+      "ny_ic_yellow_bus_marker_with_arrow" : true,
       "ny_ic_bus_ticket_illustration" : true,
       "ny_ic_bus_white" : true,
       "ny_ic_busview" : true,
@@ -734,6 +735,7 @@
       "ny_ic_start_test_drill" : true,
       "ny_ic_static_record" : true,
       "ny_ic_stop_black" : true,
+      "ny_ic_stop_grey" : true,
       "ny_ic_stop_circle_yellow" : true,
       "ny_ic_stop_record" : true,
       "ny_ic_streamline_fragile_solid" : true,
@@ -845,6 +847,21 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_delivery_instructions" : true,
+      "ny_ic_backpack" : true,
+      "ny_ic_prohibited" : true,
+      "ny_ic_streamline_fragile_solid" : true,
+      "ny_ic_dest_dot": true,
+      "ny_ic_id_filled": true,
+      "ny_ic_bike_delivery_nav_on_map": true,
+      "ny_ic_wallet_outline": true,
+      "ny_ic_refresh" : true,
+      "ny_ic_qr_code_expired" : true,
+      "ny_ic_delivery_truck_nav_on_map": true,
+      "ny_ic_route_start": true,
+      "ny_ic_route_end": true,
+      "ny_ic_route_start_pointer": true,
+      "ny_ic_route_end_pointer":true
    }
 }

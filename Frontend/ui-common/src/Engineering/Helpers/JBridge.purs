@@ -711,6 +711,7 @@ type MarkerConfig = {
   , anchorV :: Number
   , anchorU :: Number
   , actionImage :: ActionImageConfig
+  , zIndex :: Number
 }
 
 dummyMarkerEdgeInsets :: EdgeInsets
@@ -752,6 +753,7 @@ defaultMarkerConfig = {
   , useDestPoints : true
   , usePosition : false
   , actionImage : defaultActionImageConfig
+  , zIndex : 0.0
 }
 
 type CircleConfig = {
@@ -1128,3 +1130,38 @@ voiceToText :: forall action. (action -> Effect Unit) -> (Maybe String -> Boolea
 voiceToText = runEffectFn4 voiceToTextImpl
 
 
+foreign import updateMarkersOnRoute :: EffectFn1 UpdateMarkerOnRouteConfig Unit
+
+updateMarkerOnRouteConfig :: UpdateMarkerOnRouteConfig
+updateMarkerOnRouteConfig = {
+    eta : ""
+  , currentVehicleLocation : {lat : 0.0, lng : 0.0}
+  , pureScriptID : ""
+  , locationName : ""
+  , srcMarker : defaultMarkerConfig
+  , vehicleRotationFromPrevLatLon : 0.0
+  , srcHeaderArrowMarker : defaultMarkerConfig
+}
+
+type UpdateMarkerOnRouteConfig = {
+    eta :: String
+  , currentVehicleLocation :: {lat :: Number, lng :: Number}
+  , pureScriptID :: String
+  , locationName :: String
+  , srcMarker :: MarkerConfig
+  , vehicleRotationFromPrevLatLon :: Number
+  , srcHeaderArrowMarker :: MarkerConfig 
+}
+
+foreign import checkMarkerAvailable :: EffectFn1 String Boolean
+
+foreign import getMarkerPosition :: EffectFn1 String MarkerPositionConfig
+
+type MarkerPositionConfig = 
+  { latitude :: Number
+  , longitude :: Number
+  }
+
+foreign import scrollToChildInScrollView :: EffectFn3 String String String Unit
+
+foreign import showDynamicRouteMarker :: EffectFn4 String String String String Unit

@@ -353,6 +353,7 @@ data HOME_SCREEN_OUTPUT = HybridAppExit
                         | PARCEL ParcelAction
                         | GO_TO_BUS_TICKET_BOOKING_SCREEN HomeScreenState
                         | ADD_VPA_OUT Int HomeScreenState
+                        | GO_TO_SEARCH_LOCATION_FOR_BUS_ROUTES HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

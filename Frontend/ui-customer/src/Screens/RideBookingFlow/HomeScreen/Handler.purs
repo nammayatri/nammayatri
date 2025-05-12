@@ -309,3 +309,6 @@ homeScreen' = do
     AddVPAOut earnings state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
       App.BackT $ App.NoBack <$> (pure $ ADD_VPA_OUT earnings state) 
+    GoToSearchLocationScreenForBusRoutes state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_FOR_BUS_ROUTES state)

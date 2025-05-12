@@ -380,3 +380,9 @@ payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"
 
 deletePerson :: String -> String
 deletePerson _ = (getBaseUrl "62") <> "/deleted/person"
+
+postNearbyDrivers :: String -> String
+postNearbyDrivers _ = (getBaseUrl "62") <> "/nearbyDrivers"
+
+trackRouteVehicles :: String -> String
+trackRouteVehicles routeCode = (getBaseUrl "") <> "/track/" <> routeCode <> "/vehicles"

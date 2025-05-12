@@ -4389,41 +4389,57 @@ instance makeAutoCompleteReq :: RestEndpoint BusAutoCompleteReq where
 data BusTrackingRouteReq = BusTrackingRouteReq String 
 
 newtype BusTrackingRouteResp = BusTrackingRouteResp {
-    vehicleTrackingInfo :: Array VehicleInfo
+  vehicleTrackingInfo :: Array VehicleInfo
 }
 
 newtype VehicleInfo = VehicleInfo {
-  -- location:: LatLong,
-  nextStop:: RouteStopMapping,
-  vehicleId:: String,
-  vehicleInfo:: VehicleInfoForRoute,
-  nextStopTravelTime :: Maybe Int
+  -- nextStop :: Maybe RouteStopMapping,
+  vehicleId :: String,
+  vehicleInfo :: VehicleInfoForRoute
+  -- nextStopTravelTime :: Maybe Int,
+  -- nextStopTravelDistance :: Maybe Int
 }
 
 newtype VehicleInfoForRoute = VehicleInfoForRoute {
-    startTime :: Maybe String,
-    startDate :: Maybe String,
-    scheduleRelationship :: Maybe String,
-    tripId :: Maybe String,
-    latitude :: Maybe Number,
-    longitude :: Maybe Number,
-    speed :: Maybe Number,
-    timestamp :: Maybe String
+  startTime :: Maybe String,
+  startDate :: Maybe String,
+  scheduleRelationship :: Maybe String,
+  tripId :: Maybe String,
+  latitude :: Maybe Number,
+  longitude :: Maybe Number,
+  speed :: Maybe Number,
+  timestamp :: String,
+  upcomingStops :: Maybe (Array UpcomingStop)
+}
+
+newtype Stop = Stop {
+  name :: String,
+  coordinate :: LatLong,
+  stopCode :: String,
+  stopIdx :: Int,
+  distanceToUpcomingIntermediateStop :: Int,
+  durationToUpcomingIntermediateStop :: Int
+  -- distanceFromPreviousIntermediateStop :: Int,
+  -- stopType :: String
+}
+
+newtype UpcomingStop = UpcomingStop {
+  stop :: Stop,
+  eta :: String,
+  status :: String,
+  delta :: Maybe Number
 }
 
 newtype RouteStopMapping = RouteStopMapping { 
-    routeCode :: String,
-    sequenceNum :: Int,
-    stopCode :: String,
-    stopPoint :: LatLong,
-    stopName :: String,
-    -- timeBounds :: Kernel.Types.TimeBound.TimeBound,
-    vehicleType :: String--,
-    -- merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    -- merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
-    -- createdAt :: Kernel.Prelude.UTCTime,
-    -- updatedAt :: Kernel.Prelude.UTCTime
-  }
+  routeCode :: String,
+  sequenceNum :: Int,
+  stopCode :: String,
+  stopPoint :: LatLong,
+  stopName :: String,
+  vehicleType :: String,
+  createdAt :: String,
+  updatedAt :: String
+}
 
 derive instance genericBusTrackingRouteReq :: Generic BusTrackingRouteReq _
 instance showBusTrackingRouteReq    :: Show BusTrackingRouteReq where show     = genericShow
@@ -4445,6 +4461,20 @@ instance showVehicleInfo :: Show VehicleInfo where show = genericShow
 instance decodeVehicleInfo :: Decode VehicleInfo where decode = defaultDecode
 instance encodeVehicleInfo :: Encode VehicleInfo where encode = defaultEncode
 
+derive instance genericStop :: Generic Stop _
+instance standardStop :: StandardEncode Stop where
+    standardEncode (Stop body) = standardEncode body
+instance showStop :: Show Stop where show = genericShow
+instance decodeStop :: Decode Stop where decode = defaultDecode
+instance encodeStop :: Encode Stop where encode = defaultEncode
+
+derive instance genericUpcomingStop :: Generic UpcomingStop _
+instance standardUpcomingStop :: StandardEncode UpcomingStop where
+    standardEncode (UpcomingStop body) = standardEncode body
+instance showUpcomingStop :: Show UpcomingStop where show = genericShow
+instance decodeUpcomingStop :: Decode UpcomingStop where decode = defaultDecode
+instance encodeUpcomingStop :: Encode UpcomingStop where encode = defaultEncode
+
 derive instance genericRouteStopMapping :: Generic RouteStopMapping _
 instance standardRouteStopMapping :: StandardEncode RouteStopMapping where
     standardEncode (RouteStopMapping body) = standardEncode body
@@ -4453,7 +4483,7 @@ instance decodeRouteStopMapping :: Decode RouteStopMapping where decode = defaul
 instance encodeRouteStopMapping :: Encode RouteStopMapping where encode = defaultEncode
 
 instance makeBusTrackingRouteReq :: RestEndpoint BusTrackingRouteReq where
-    makeRequest reqBody@(BusTrackingRouteReq code) headers = defaultMakeRequestWithoutLogs GET (EP.trackRouteBus code) headers reqBody Nothing
+    makeRequest reqBody@(BusTrackingRouteReq routeCode) headers = defaultMakeRequestWithoutLogs GET (EP.trackRouteBus routeCode) headers reqBody Nothing
     encodeRequest = standardEncode
     
 ------------------------------------------------- Aadhaar Verification API Types --------------------------------------------
@@ -4631,7 +4661,6 @@ instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
 instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
 instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
 
-
 ----------------------------------------------- Verify VPA  --------------------------------------------
 
 newtype VerifyVPAReq = VerifyVPAReq String
@@ -4732,3 +4761,129 @@ instance decodePayoutStatus :: Decode PayoutStatus
               "ManualReview" -> except $ Right ManualReview
               _              -> fail $ ForeignError "Unknown response"
 instance encodePayoutStatus :: Encode PayoutStatus where encode = defaultEncode
+
+ --------------------------------------------------- getNearbyDrivers in Customer for Global Bus Tracking ----------------------------------------------------
+
+newtype NearbyDriverReq = NearbyDriverReq {
+  location :: LatLong,
+  radius :: Number,
+  vehicleVariants :: Maybe (Array String)
+}
+
+newtype NearbyDriverRes = NearbyDriverRes {
+  -- serviceTierTypeToVehicleVariant :: String,
+  -- variantLevelDriverCount :: String,
+  buckets :: Array NearByDriversBucket
+}
+
+newtype NearByDriversBucket = NearByDriversBucket {
+  -- radius :: Number,
+  -- variant :: String,
+  driverInfo :: Array DriverInfo
+}
+
+newtype DriverInfo = DriverInfo 
+  { lat :: Number,
+    lon :: Number,
+    -- applicableServiceTierTypes :: Array String,
+    -- distance :: Number,
+    -- driverId :: String,
+    -- bearing :: Maybe Int,
+    rideDetails :: Maybe RideDetails
+  }
+
+newtype RideDetails = RideDetails {
+  rideId :: String,
+  rideInfo :: Maybe RideInfo
+}
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo
+
+
+newtype BusRideInfo = BusRideInfo {
+  contents :: BusContentType
+}
+
+newtype BusContentType = BusContentType {
+  routeCode :: String
+  -- busNumber :: String
+  -- destination :: LatLong,
+  -- routeLongName :: Maybe String,
+  -- driverName :: Maybe String
+}
+
+newtype CarRideInfo = CarRideInfo {
+  pickupLocation :: LatLong
+}
+
+instance makeNearbyDriverReq :: RestEndpoint NearbyDriverReq where
+ makeRequest reqBody@(NearbyDriverReq rqBody) headers = defaultMakeRequestWithoutLogs POST (EP.postNearbyDrivers "") headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericNearbyDriverReq :: Generic NearbyDriverReq _
+instance standardNearbyDriverReq :: StandardEncode NearbyDriverReq where
+    standardEncode (NearbyDriverReq body) = standardEncode body
+instance showNearbyDriverReq :: Show NearbyDriverReq where show = genericShow
+instance decodeNearbyDriverReq :: Decode NearbyDriverReq where decode = defaultDecode
+instance encodeNearbyDriverReq :: Encode NearbyDriverReq where encode = defaultEncode
+
+derive instance genericNearbyDriverRes :: Generic NearbyDriverRes _
+instance standardNearbyDriverRes :: StandardEncode NearbyDriverRes where
+    standardEncode (NearbyDriverRes body) = standardEncode body
+instance showNearbyDriverRes :: Show NearbyDriverRes where show = genericShow
+instance decodeNearbyDriverRes :: Decode NearbyDriverRes where decode = defaultDecode
+instance encodeNearbyDriverRes :: Encode NearbyDriverRes where encode = defaultEncode
+
+derive instance genericNearByDriversBucket :: Generic NearByDriversBucket _
+instance standardNearByDriversBucket :: StandardEncode NearByDriversBucket where
+    standardEncode (NearByDriversBucket body) = standardEncode body
+instance showNearByDriversBucket :: Show NearByDriversBucket where show = genericShow
+instance decodeNearByDriversBucket :: Decode NearByDriversBucket where decode = defaultDecode
+instance encodeNearByDriversBucket :: Encode NearByDriversBucket where encode = defaultEncode
+
+derive instance genericDriverInfo :: Generic DriverInfo _
+instance standardDriverInfo :: StandardEncode DriverInfo where
+    standardEncode (DriverInfo body) = standardEncode body
+instance showDriverInfo :: Show DriverInfo where show = genericShow
+instance decodeDriverInfo :: Decode DriverInfo where decode = defaultDecode
+instance encodeDriverInfo :: Encode DriverInfo where encode = defaultEncode
+
+derive instance genericRideDetails :: Generic RideDetails _
+instance standardRideDetails :: StandardEncode RideDetails where
+    standardEncode (RideDetails body) = standardEncode body
+instance showRideDetails :: Show RideDetails where show = genericShow
+instance decodeRideDetails :: Decode RideDetails where decode = defaultDecode
+instance encodeRideDetails :: Encode RideDetails where encode = defaultEncode
+
+derive instance genericBusRideInfo :: Generic BusRideInfo _
+instance standardBusRideInfo :: StandardEncode BusRideInfo where
+    standardEncode (BusRideInfo body) = standardEncode body
+instance showBusRideInfo :: Show BusRideInfo where show = genericShow
+instance decodeBusRideInfo :: Decode BusRideInfo where decode = defaultDecode
+instance encodeBusRideInfo :: Encode BusRideInfo where encode = defaultEncode
+
+derive instance genericCarRideInfo :: Generic CarRideInfo _
+instance standardCarRideInfo :: StandardEncode CarRideInfo where
+    standardEncode (CarRideInfo body) = standardEncode body
+instance showCarRideInfo :: Show CarRideInfo where show = genericShow
+instance decodeCarRideInfo :: Decode CarRideInfo where decode = defaultDecode
+instance encodeCarRideInfo :: Encode CarRideInfo where encode = defaultEncode
+
+derive instance genericBusContentType :: Generic BusContentType _
+instance standardBusContentType :: StandardEncode BusContentType where
+    standardEncode (BusContentType body) = standardEncode body
+instance showBusContentType :: Show BusContentType where show = genericShow
+instance decodeBusContentType :: Decode BusContentType where decode = defaultDecode
+instance encodeBusContentType :: Encode BusContentType where encode = defaultEncode
+
+derive instance genericRideInfo :: Generic RideInfo _
+instance standardEncodeRideInfo :: StandardEncode RideInfo where
+  standardEncode (Bus body) = standardEncode body
+  standardEncode (Car body) = standardEncode body
+instance showRideInfo :: Show RideInfo where show = genericShow
+instance decodeRideInfo :: Decode RideInfo
+  where
+    decode body = (Bus <$> decode body) <|> (Car <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeRideInfo  :: Encode RideInfo where
+  encode (Bus body) = encode body
+  encode (Car body) = encode body

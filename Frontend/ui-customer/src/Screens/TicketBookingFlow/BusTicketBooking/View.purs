@@ -7,6 +7,7 @@ module Screens.TicketBookingFlow.BusTicketBooking.View
 import Prelude
 
 import Animation as Anim
+import Animation.Config (translateYAnimHomeConfig, Direction(..))
 import Common.Types.App (LazyCheck(..))
 import Common.Resources.Constants (zoomLevel)
 import Components.ChooseVehicle.View as ChooseVehicle
@@ -21,13 +22,13 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried as DFU
+import Data.Foldable (maximum, minimum)
 import Data.Maybe (maybe, fromMaybe, Maybe(..), isNothing, isJust)
 import Data.String as DS
-import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff_, launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
@@ -40,11 +41,12 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Locale.Utils (getLanguageLocale)
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), Shadow(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, shadow)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), Shadow(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, shadow, Gradient(..), gradient, peakHeight, enableShift)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
-import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
-import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
+import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth, sheetState, nestedScrollView, scrollBarY)
+import PrestoDOM.Types.DomAttributes (Corners(..), BottomSheetState(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Screens.TicketBookingFlow.BusTicketBooking.Controller (Action(..), ScreenOutput, eval)
 import Screens.TicketBookingFlow.BusTicketBooking.ComponentConfig (genericHeaderConfig, sourceToDestinationConfig)
@@ -61,13 +63,32 @@ import Data.Time.Duration (Milliseconds(..))
 import Helpers.FrfsUtils
 import RemoteConfig.Utils as RCU
 import Storage (getValueToLocalStore, KeyStore(..))
+import Services.API as API
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Data.Function.Uncurried (runFn2, runFn3)
+import LocalStorage.Cache
+import MapUtils as MU
+import Data.Int as DI
+import Common.RemoteConfig.Utils as CRU
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
   { initialState
   , view
   , name: "BusTicketBookingScreen"
-  , globalEvents: [getTicketBookingListEvent]
+  , globalEvents: [(\push -> do
+      void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
+        -- Calling TicketBookingList API to show all previous tickets being booked
+        getTicketBookingListEvent push
+     
+      let getNearbyDriversEventPollingConfig = CRU.pollingConfig "getNearbyDriversEvent"
+      when (not getNearbyDriversEventPollingConfig.disable) do
+        let pollingId = EHC.getCurrentUTC ""
+            _ = runFn2 setInCache "POLLING_ID" pollingId
+            wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig initialState push wmbFlowConfig.defaultRadiusForFindingBus false 
+      pure $ pure unit
+  )]
   , eval:
       \action state -> do
         let _ = spy "BusTicketBookingScreen action " action
@@ -77,15 +98,58 @@ busTicketBookingScreen initialState =
   where
     getTicketBookingListEvent push =
       if (isNothing initialState.data.ticketDetailsState) then do
-        void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          resp <- lift $ lift $ Remote.getMetroBookingStatusList (show initialState.data.ticketServiceType) (Just "5") (Just "0")
-          let bookingList = 
-                case resp of
-                  Right (GetMetroBookingListResp res) -> res
-                  Left _ -> []
-          lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC bookingList
-        pure $ pure unit
-      else pure $ pure unit
+        (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType) (Just "5") (Just "0")
+        lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
+      else pure unit
+
+    getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus = do
+      let busLocationTrackingPollingId = runFn3 getFromCache "POLLING_ID" Nothing Just
+          isMapReady = (runFn3 getFromCache "MAP_READY" Nothing Just) == Just "true"
+      case (busLocationTrackingPollingId == Just pollingId), isMapReady of
+        true, false -> do
+          void $ delay $ Milliseconds 1000.0 -- Delay for 1 second in the case when polling is started but map is not yet ready
+          getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus
+        true, _ -> do
+          eitherRespOrError <- Remote.postNearbyDrivers $ 
+            API.NearbyDriverReq 
+              { location: API.LatLong 
+                  { lat: state.props.srcLat
+                  , lon: state.props.srcLong
+                  }
+              , vehicleVariants: Just ["BUS_AC", "BUS_NON_AC"]
+              , radius: radius
+              }
+          case eitherRespOrError of
+            Right (API.NearbyDriverRes resp) -> do
+              if (DA.null resp.buckets && radius < wmbFlowConfig.maxRadiusCanBeSearched) then do
+                void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+                getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push (DI.toNumber $ DI.floor $ radius * wmbFlowConfig.radiusMultiplier) gotClosestBus
+              else do
+                if gotClosestBus
+                  then do
+                    doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
+                    void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+                    getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus
+                  else do
+                    doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
+                    let closestBusBeforeMultiplier = fromMaybe wmbFlowConfig.minimumRadiusForFindingBus $ minimum $ map (\(API.NearByDriversBucket item) -> getClosestDistance item.driverInfo (API.LatLong {lat: state.props.srcLat, lon: state.props.srcLong})) resp.buckets
+                        closestBusDistance = closestBusBeforeMultiplier * wmbFlowConfig.radiusMultiplier
+                    doAff do liftEffect $ push $ UpdateClosestBusZoomLevel closestBusDistance
+                    EHC.liftFlow $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel closestBusDistance) "ZOOM"
+                    if (wmbFlowConfig.updatePollingRadiusToClosestBus)
+                      then getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push (DI.toNumber $ DI.floor $ closestBusDistance) true
+                      else getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius true
+            Left err -> do
+              void $ delay $ Milliseconds $ DI.toNumber $ getNearbyDriversEventPollingConfig.pollingIntervalInMilliSecond
+              getNearbyDriversEvent pollingId wmbFlowConfig getNearbyDriversEventPollingConfig state push radius gotClosestBus
+        _, _ -> pure unit
+    
+    getClosestDistance driverInfo currLoc =
+      fromMaybe 1000.0 $ minimum $ map 
+        (\(API.DriverInfo item) -> 
+          MU.haversineDistance currLoc (API.LatLong {lat: item.lat, lon: item.lon})
+        ) driverInfo
+
 
 view :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -98,24 +162,12 @@ view push state =
     , background Color.white900
     ] $
     [ headerView push state 
-    , dummyIllustrationView push state
-    , scrollView 
+    , linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , visibility $ boolToVisibility $ (not $ DA.null $ getAllBusTickets state) || (isNothing state.data.ticketDetailsState)
       ]
-      [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , padding $ PaddingBottom 28
-        ]
-        [ shimmerView state
-        , recentTicketsView push state
-        -- , recentSearchesView push state -- To be done in v2
-        , viewMoreButton push state
-        ]
+      [ mapIllustrationView push state
       ]
     ]
 
@@ -146,154 +198,183 @@ shimmerView state =
 
 headerView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 headerView push state =
-  relativeLayout
-  [ height $ V $ 220 + EHC.safeMarginTop
+  linearLayout
+  [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL
-  , background Color.black900
-  , gravity CENTER
-  , cornerRadii $ Corners 24.0 false false true true
-  , padding $ PaddingTop EHC.safeMarginTop
+  , orientation HORIZONTAL
+  , gravity CENTER_VERTICAL
+  , padding $ Padding 18 12 18 12
   ]
-  [ linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , gravity RIGHT
+  [ imageView
+    [ width $ V 40
+    , height $ V 40
+    , onClick push $ const GoBack
+    , padding $ Padding 4 4 4 4
+    , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_left"
+    , rippleColor Color.rippleShade
+    , margin $ MarginRight 10
+    ]
+  , textView $
+    [ text "Bus"
+    , color Color.black900
+    , gravity CENTER_VERTICAL
+    , singleLine true
+    , maxLines 1
+    , textSize $ FontSize.a_18
+    , padding $ PaddingBottom 4
+    ] <> FontStyle.subHeading3 TypoGraphy
+  , linearLayout [weight 1.0] [] 
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
     , orientation HORIZONTAL
+    , onClick push $ const TicketIconClicked
+    , padding $ Padding 10 6 10 6
+    , gravity CENTER_VERTICAL
+    , cornerRadius 12.0
+    , background Color.blue600
+    , rippleColor Color.rippleShade
     ]
     [ imageView
-      [ width $ V $ 220
-      , height MATCH_PARENT
+      [ width $ V 20
+      , height $ V 20
       , gravity RIGHT
-      , alignParentBottom "true,-1"
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_clip_background"
+      , margin $ MarginRight 8
+      , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_ticket_icon_blue"
+      ]
+    , textView
+      [ text $ getString TICKETS
+      , color Color.blue800
+      , gravity RIGHT
+      , singleLine true
+      , maxLines 1
       ]
     ]
-  , linearLayout
-    [ height MATCH_PARENT
+  ]
+
+mapIllustrationView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
+mapIllustrationView push state =
+  linearLayout
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     ]
-    [ linearLayout
+    [ relativeLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , padding $ Padding 12 12 12 12
-      , gravity CENTER_VERTICAL
+      , orientation VERTICAL
+      , gravity CENTER
       ]
-      [ imageView
-        [ width $ V 32
-        , height $ V 32
-        , padding $ Padding 4 4 4 4
-        , onClick push $ const GoBack
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_white"
-        , rippleColor Color.rippleShade
+      [ 
+        mapView' push state
+      , relativeLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
         ]
-      , linearLayout
-        [ weight 1.0
-        ] []
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation HORIZONTAL
-        , onClick push $ const TicketIconClicked
-        , gravity CENTER_VERTICAL
-        ]
-        [ imageView
-          [ width $ V 32
-          , height $ V 32
-          , gravity RIGHT
-          , padding $ Padding 4 4 4 4
-          , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_ticket_icon_yellow"
-          , rippleColor Color.rippleShade
-          ]
-        , textView $
-          [ text $ getString TICKETS
-          , color Color.yellow900
-          , gravity RIGHT
-          , singleLine true
-          , maxLines 1
-          , rippleColor Color.rippleShade
-          ]
-        ]
+        [ bottomSheetView push state
+        ] 
       ]
-    , linearLayout
+    ]
+
+bottomSheetView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
+bottomSheetView push state =      
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , alignParentBottom "true,-1"
+    , orientation VERTICAL
+    ]
+    [ coordinatorLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , margin $ Margin 16 16 0 0
+      , cornerRadii $ Corners 24.0 true true false false
       ]
-      [ imageView
-        [ width $ V 42
-        , height $ V 42
-        , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_bus_icon_light_blue"
-        , margin $ MarginRight 16
-        ]
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation VERTICAL
-        ]
-        [ textView $
-          [ text $ getString BOOK_BUS_TICKET
-          , color Color.white900
-          , singleLine true
-          , maxLines 1
-          ] <> FontStyle.body25 TypoGraphy
-        , textView $
-          [ text $ getString BOOK_A_ONE_WAY_INSTANT_BUS_TICKET
-          , color Color.black500
-          , singleLine true
-          , maxLines 1
-          , margin $ MarginTop 2
-          ] <> FontStyle.tags TypoGraphy
-        ]
-      ]
-    , searchRouteButton push state
+      [ bottomSheetLayout
+          ( [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , peakHeight $ 450
+            , enableShift false
+            ]
+              <> if state.props.expandTicketsView then  [ sheetState EXPANDED ] else []
+          ) 
+          [ relativeLayout 
+               [ height WRAP_CONTENT
+               , width MATCH_PARENT
+               , orientation VERTICAL
+               ][ linearLayout
+                   [ height $ V 40
+                   , width MATCH_PARENT
+                   , gradient (Linear 0.0 [Color.white900, Color.transparent])
+                   ][]
+               ]
+            , linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , background Color.transparent
+              ]
+              [recenterButtonView push state]
+            , linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , background Color.white900
+              , margin $ MarginTop 40
+              ]
+              [ linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  ]
+                  [
+                   searchRouteButton push state
+                   , textView $
+                     [ text $ getString RECENT_TICKETS
+                     , color Color.black800
+                     , singleLine true
+                     , maxLines 1
+                     , padding $ Padding 16 0 16 0
+                     , margin $ MarginBottom 4
+                     , textSize $ FontSize.a_14
+                     ] <> FontStyle.body6 TypoGraphy
+                   , linearLayout
+                     [ height WRAP_CONTENT
+                     , width MATCH_PARENT
+                     , orientation VERTICAL
+                     , gravity CENTER
+                     , visibility $ boolToVisibility $ (DA.null $ getAllBusTickets state) && (isJust state.data.ticketDetailsState)
+                     , margin $ Margin 16 16 16 0
+                     ][ imageView
+                         [ height $ V 350
+                         , width MATCH_PARENT
+                         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_ticket_illustration"
+                         ]
+                     ]
+                  ]
+              , scrollView
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , nestedScrollView true
+                , scrollBarY false
+                ]
+                [ linearLayout
+                  [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , padding $ PaddingBottom 28
+                , visibility $ boolToVisibility $ (not $ DA.null $ getAllBusTickets state) || (isNothing state.data.ticketDetailsState)
+                ]
+                [ shimmerView state
+                , recentTicketsView push state
+                --, recentSearchesView push state -- To be done in v2                  
+                , viewMoreButton push state
+                ]
+              ]
+            ]
+          ]
+       ]
     ]
-  ]
-
-dummyIllustrationView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
-dummyIllustrationView push state =
-  let busConfig = RCU.getBusFlowConfigs (getValueToLocalStore CUSTOMER_LOCATION)
-  in
-  linearLayout
-  [ height WRAP_CONTENT
-  , weight 1.0
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER_HORIZONTAL
-  , margin $ Margin 24 48 24 0
-  , visibility $ boolToVisibility $ (DA.null $ getAllBusTickets state) && (isJust state.data.ticketDetailsState)
-  ]
-  [ imageView $
-    [ width $ V $ 280
-    , height $ V 280
-    , gravity CENTER_HORIZONTAL
-    , layoutGravity "center_horizontal"
-    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_ticket_illustration"
-    ]
-  , textView $
-    [ text $ getString $ EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES (show busConfig.liveRoutes)
-    , color Color.black800
-    , gravity CENTER_HORIZONTAL
-    , visibility $ boolToVisibility $ busConfig.liveRoutes > 0
-    , width MATCH_PARENT
-    , height WRAP_CONTENT
-    ] <> FontStyle.subHeading3 TypoGraphy
-  , textView $
-    [ text $ getString $ NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR busConfig.ticketValidity
-    , color Color.black800
-    , margin $ MarginTop 12
-    , gravity CENTER_HORIZONTAL
-    , width MATCH_PARENT
-    , height WRAP_CONTENT
-    , visibility $ boolToVisibility $ not $ DS.null busConfig.ticketValidity
-    ] <> FontStyle.body3 TypoGraphy
-  ]
-  where
-    appName = fromMaybe "Namma Yatri" $ DFU.runFn3 DU.getAnyFromWindow "appName" Nothing Just
-
 searchRouteButton :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 searchRouteButton push state =
   let buttonPadding = if EHC.os == "IOS" then Padding 16 16 16 12 else Padding 16 16 16 16
@@ -301,8 +382,8 @@ searchRouteButton push state =
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ Margin 16 24 16 20
-    , background Color.white900
+    , margin $ Margin 16 16 16 16
+    , background Color.black900
     , padding buttonPadding
     , onClick push $ const SearchButtonClick
     , cornerRadius 12.0
@@ -311,17 +392,18 @@ searchRouteButton push state =
     , accessibilityHint "Enter Bus No/Destination : Button"
     ]
     [ imageView
-      [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_search_grey"
+      [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_search_yellow"
       , height $ V 16
       , width $ V 16
       , gravity CENTER_VERTICAL
       , margin $ MarginRight 12
       ]
     , textView $ 
-      [ text "Enter Bus No/Destination"
-      , color Color.black900
+      [ text "Enter Bus No./Destination"
+      , color Color.yellow900
       , singleLine false
       , gravity CENTER_VERTICAL
+      , textSize $ FontSize.a_18
       ] <> FontStyle.subHeading3 TypoGraphy
     ]
 
@@ -330,17 +412,11 @@ recentTicketsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ Margin 16 24 16 16
+  , margin $ Margin 16 0 16 16
   , orientation VERTICAL
   , visibility $ boolToVisibility $ isJust state.data.ticketDetailsState
   ]
-  [ textView $
-    [ text $ getString RECENT_TICKETS
-    , color Color.black800
-    , singleLine true
-    , maxLines 1
-    ] <> FontStyle.body6 TypoGraphy
-  , linearLayout
+  [ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -368,7 +444,6 @@ ticketCardView push ticketData =
   , background Color.white900
   , onClick push $ const $ TicketPressed ticketData.metroTicketStatusApiResp
   , rippleColor Color.rippleShade
-  -- , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5 -- Shadow is not having cornerRadius
   , cornerRadius 24.0
   ]
   [ linearLayout 
@@ -511,3 +586,85 @@ viewMoreButton push state =
 getAllBusTickets :: ST.BusTicketBookingState -> Array ST.MetroTicketCardData
 getAllBusTickets state =
   maybe [] (\ticketDetailsState -> ticketDetailsState.data.activeTickets <> ticketDetailsState.data.pastTickets) state.data.ticketDetailsState
+
+
+mapView' :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
+mapView' push state =
+    Keyed.relativeLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    ]
+    [ Tuple "MapContainer" $ PrestoAnim.animationSet
+        [ Anim.fadeIn true
+        ]
+        $ linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , id $ EHC.getNewIDWithTag "BusTicketBookingScreenMap"
+            , padding $ PaddingBottom 400
+            , onAnimationEnd
+                ( \action -> do
+                    let wmbFlowConfig = CRU.fetchWmbFlowConfig FunctionCall
+                        _ = runFn2 setInCache "MAP_READY" "true"
+                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" wmbFlowConfig.defaultZoomLevelOnMap state.props.srcLat state.props.srcLong push MapReady
+                    push action
+                )
+                (const NoAction)
+            ]
+            []
+    , Tuple "BottomGradient" $ relativeLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , alignParentBottom "true,-1"
+        , gravity RIGHT
+        , orientation VERTICAL
+        ][ linearLayout
+          [ height $ V 60
+          , width MATCH_PARENT
+          , alignParentBottom "true,-1"
+          , gradient (Linear 0.0 [Color.white900, Color.transparent])
+          ][]
+       ]
+    , Tuple "TopGradient" $ relativeLayout 
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ][ linearLayout
+          [ height $ V 30
+          , width MATCH_PARENT
+          , gradient (Linear 180.0 [Color.white900, Color.transparent])
+          ][]
+      ]
+    ]
+
+
+recenterButtonView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
+recenterButtonView push state =
+  PrestoAnim.animationSet [ Anim.translateYAnimFromTop $ translateYAnimHomeConfig BOTTOM_TOP ]
+    $ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.transparent
+        , gravity RIGHT
+        , alignParentBottom "true,-1"
+        , padding $ Padding 0 0 16 14
+        , accessibility DISABLE
+        ]
+        [ imageView
+            [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_recenter_btn"
+            , accessibility DISABLE
+            , onClick
+                ( \action -> do
+                    _ <- push action
+                    _ <- JB.getCurrentPosition push UpdateCurrentLocation
+                    void $ JB.animateCamera state.props.srcLat state.props.srcLong (MU.getZoomLevel state.data.closestBusDistance) "ZOOM"
+                    -- _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
+                    pure unit
+                )
+               (const $ RecenterCurrentLocation)
+            , height $ V 40
+            , width $ V 40
+            ]
+        ]

@@ -354,3 +354,28 @@ type Conditions = {
   variant :: Maybe String,
   ratio :: Number
 }
+
+type WmbFlowConfig = {
+  maxDeviatedDistanceInMeters :: Number,
+  showAllDeviatedBus :: Boolean,
+  maxAllowedTimeDiffInLTSinSec :: Int,
+  maxSnappingOnRouteDistance :: Number,
+  defaultRadiusForFindingBus :: Number,
+  minimumRadiusForFindingBus :: Number,
+  defaultZoomLevelOnMap :: Number,
+  maxRadiusCanBeSearched :: Number,
+  radiusMultiplier :: Number,
+  updatePollingRadiusToClosestBus :: Boolean
+}
+
+type PollingConfigList = {
+  pollingConfigList :: Array PollingConfig
+}
+
+type PollingConfig = {
+  functionName :: String,
+  disable :: Boolean,
+  pollingIntervalInMilliSecond :: Int,
+  pollingIntervalDelayMultiplier :: Int,
+  pollingRetryCount :: Int
+}

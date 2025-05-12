@@ -16,7 +16,7 @@ import Data.Array (length, (!!), catMaybes)
 import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Engineering.Helpers.Utils(compareDate)
-import JBridge (shareImageMessage, copyToClipboard)
+import JBridge (shareImageMessage, copyToClipboard, toast, firebaseLogEvent)
 import Common.Types.App as Common
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -51,7 +51,8 @@ eval EditStops state = continueWithCmd state [do pure BackPressed]
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval (SeeRouteButtonAction (PrimaryButton.OnClick)) state =
+eval (SeeRouteButtonAction (PrimaryButton.OnClick)) state = do
+  void $ pure $ firebaseLogEvent "ny_bus_user_stop_search_completed"
   exit $ TrackBus state 
   
 eval (SelectQuote quote) state =

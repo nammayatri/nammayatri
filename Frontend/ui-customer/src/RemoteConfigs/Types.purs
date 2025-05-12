@@ -102,7 +102,7 @@ type MapLottieConfig = {
   visibility :: Boolean
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE | TICKETING
 
 type SwitchCityConfigs = {
   cities :: Array UserCity
@@ -174,7 +174,8 @@ type BusFlowConfig = {
   showBusTracking :: Boolean,
   showPostBookingTracking :: Boolean,
   liveRoutes :: Int,
-  ticketValidity :: String
+  ticketValidity :: String,
+  showPreBookingTracking :: Boolean
 }
 
 type AppInfoConfig = {

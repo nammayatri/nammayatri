@@ -128,6 +128,8 @@ data KeyStore
   | LOCATION_MANUALLY_UPDATED
   | ShowedEnquiryPopup
   | CUSTOMER_FIRST_SIGNUP
+  | ONBOARDED_VEHICLE_INFO
+  | CAN_HAVE_ACTIVE_TICKETS
 
 derive instance genericKeyStore :: Generic KeyStore _
 
