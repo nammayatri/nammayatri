@@ -138,7 +138,7 @@ getPreferredOrderInBookAny city = do
 getBusFlowConfigs :: String -> BusFlowConfig
 getBusFlowConfigs city = do
     let config = fetchRemoteConfigString "bus_flow_config"
-        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig {showBusTracking : false, showPostBookingTracking : false, liveRoutes : 0, ticketValidity : ""}
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig {showBusTracking : false, showPostBookingTracking : false, liveRoutes : 0, ticketValidity : "", showPreBookingTracking : false}
     getCityBasedConfig value $ DS.toLower city
 
 defaultTipConfig :: TipsConfigRC
@@ -550,8 +550,6 @@ getCancellationBannerThresholdConfig city =
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCancellationBannerThresholdConfig
     in getCityBasedConfig value $ DS.toLower city
 
-
-
 defaultGetEnquiryBannerConfig :: EnquiryBannerConfigs
 defaultGetEnquiryBannerConfig = {
     question : Nothing,
@@ -561,7 +559,6 @@ defaultGetEnquiryBannerConfig = {
     optionId: Nothing
 }
 
-
 defaultGetVehicleEnquiryBannerConfig :: VehicleEnquiryBannerConfigs
 defaultGetVehicleEnquiryBannerConfig = {
   auto : Nothing
@@ -569,7 +566,6 @@ defaultGetVehicleEnquiryBannerConfig = {
 , ambulance : Nothing
 , bike : Nothing
 }
-
 
 data VehicleCategory = AutoCategory | BikeCategory | AmbulanceCategory | CarCategory
 
@@ -579,7 +575,6 @@ getCategoryFromVariant variant = case variant of
   "BIKE" -> BikeCategory
   _ | variant `DA.elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> AmbulanceCategory
   _ -> CarCategory
-
 
 getEnquiryBannerConfig :: String -> VehicleCategory -> Maybe EnquiryBannerConfigs
 getEnquiryBannerConfig city mbVehicleCat =
@@ -601,10 +596,6 @@ getEnquiryBannerConfig city mbVehicleCat =
             BikeCategory -> finalValue.bike
             AmbulanceCategory -> finalValue.ambulance
             CarCategory -> finalValue.car
-
-
-
-
 
 getCustomerVoipConfig :: String -> CT.VoipConfig
 getCustomerVoipConfig city = do

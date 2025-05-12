@@ -40,7 +40,6 @@ import Resources.LocalizableV2.Strings (getStringV2)
 import Resources.LocalizableV2.Types
 import Helpers.Utils (isParentView,emitTerminateApp)
 import Effect.Aff (launchAff)
-import Types.App (defaultGlobalState)
 import Services.Backend as Remote
 import Services.API as API
 import Services.Backend as Remote

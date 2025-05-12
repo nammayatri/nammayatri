@@ -26,10 +26,15 @@ initData =
     , isEmptyRoute : ""
     , ticketServiceType : API.METRO
     , ticketDetailsState : Nothing
+    , busDetailsArray : []
+    , closestBusDistance : 0.0
     }
   , props: {
-    srcLat :  0.0000,
-    srcLong :  0.0000,
-    showAllTickets : false
-  }
+    srcLat :  0.0,
+    srcLong :  0.0,
+    showAllTickets : false,
+    locateOnMap : false,
+    expandTicketsView : false,
+    gotMapReady : false
+    } 
   }

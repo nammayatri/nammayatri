@@ -1362,4 +1362,26 @@ public class MobilityAppBridge extends HyperBridge {
         });
 
     }
+
+    @JavascriptInterface
+    public void firebaseLogEventWithArrayOfKeyValue (String _payload) {
+        Bundle params = new Bundle();
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String event = payload.optString("event");
+            String jsonString = payload.optString("object");
+            JSONArray jsonArray = new JSONArray(jsonString);
+            if (jsonArray.length() > 0) {
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String key = jsonObject.getString("key");
+                    String value = jsonObject.getString("value");
+                    params.putString(key, value);
+                }
+                mFirebaseAnalytics.logEvent(event, params);
+            }
+        } catch (JSONException e) {
+            Log.e("JSON_EXCEPTION", "Error in firebaseLogEventWithArrayOfKeyValue: ", e);
+        }
+    }
 }

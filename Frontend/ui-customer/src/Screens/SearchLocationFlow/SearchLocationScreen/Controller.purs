@@ -282,13 +282,11 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
       void $ pure $ hideKeyboardOnNavigation true
       updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusStopSelectionAction then do
+          void $ pure $ JB.firebaseLogEvent "ny_bus_user_pick_up_stop_selected"
           let busStopInfo = {stationName : item.title , stationCode : item.tag}
               updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Nothing, busStopInfo : MB.Just busStopInfo , stationCode : item.tag}
               updatedStopsList = if state.props.focussedTextField == MB.Just SearchLocPickup then filterStopsBySequenceInc item.title state.data.stopsSearchedList else  filterStopsBySequenceDec item.title state.data.stopsSearchedList
-              _ = spy "Printing for check updatedStopsList" updatedStopsList
-              newState = if (spy "focussedTextField is : " $ state.props.focussedTextField) == MB.Just SearchLocPickup then do
-                          let _ = spy "Printing for check srcLoc" state.data.srcLoc 
-                              _ = spy "Printing for check destLoc" state.data.destLoc
+              newState = if (state.props.focussedTextField) == MB.Just SearchLocPickup then do
                           state { data { srcLoc = MB.Just updatedLoc , updatedStopsSearchedList = if not (DS.null state.props.routeSelected) then updatedStopsList else state.data.updatedStopsSearchedList}, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
                           else state { data { destLoc = MB.Just updatedLoc , updatedStopsSearchedList = if not (DS.null state.props.routeSelected) then updatedStopsList else state.data.updatedStopsSearchedList}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocPickup} }
           void $ pure $ hideKeyboardOnNavigation true
@@ -305,7 +303,6 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
               if state.data.rideType == ROUTES then do 
                   let busRouteSelected = item.tagName
                       busRouteName = item.title
-                      _ = spy "Printing for check " busRouteSelected
                       newState = state {props {routeName = busRouteName , routeSelected = busRouteSelected , isAutoComplete = false}, data {searchRideType = BUS_ROUTE}}
                   void $ pure $ hideKeyboardOnNavigation true
                   updateAndExit newState $ PredictionClicked item newState
@@ -318,7 +315,6 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
           else if DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList == 0 then do
                 let busRouteSelected = item.tagName
                     busRouteName = item.title
-                    _ = spy "Printing for check " busRouteSelected
                     newState = state {props {routeName = busRouteName ,routeSelected = busRouteSelected , isAutoComplete = false} , data {searchRideType = BUS_ROUTE}}
                 void $ pure $ hideKeyboardOnNavigation true
                 updateAndExit newState $ PredictionClicked item newState

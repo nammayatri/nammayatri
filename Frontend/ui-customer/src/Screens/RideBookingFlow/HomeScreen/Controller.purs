@@ -79,7 +79,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2, runEffectFn6)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams, firebaseLogEventWithArrayOfKeyValue)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
@@ -3082,11 +3082,12 @@ eval (HideIntercityBusView _) state = continue state { data { intercityBus { sho
 
 eval (RentalBannerClick) state = maybe (exit $ GoToScheduledRides state Nothing) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit $ GoToScheduledRides state (Just rentalsInfo.bookingId)) state.data.rentalsInfo
 eval (BottomNavBarAction id) state = do
-  let newState = state {props {focussedBottomIcon = id}}
+  let newState = state {props {focussedBottomIcon = id, busClicked = true}}
   case id of
-    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    TICKETING_ -> updateAndExit newState $ GoToTicketBookingFlow newState
     MOBILITY -> continue newState
     BUS_ -> do
+      void $ pure $ firebaseLogEventWithArrayOfKeyValue (HU.getLogEventPrefix <> "bus_ticketing_clicked") [(Tuple "bus_ticketing_clicked" "true")]
       let updatedState = newState { props { ticketServiceType = API.BUS } }
       updateAndExit updatedState $ GoToBusTicketBookingFlow state
     _ -> update state
@@ -3554,6 +3555,10 @@ eval (ServicesOnClick service) state = do
       exit $ GoToParcelInstructions state
     RC.BUS -> do
       let newState = updatedState { props { ticketServiceType = API.BUS } }
+      -- if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
+      --   then updateAndExit newState $ GoToBusTicketBookingFlow state
+      --   else updateAndExit newState $ GoToSearchLocationScreenForBusRoutes state
+      void $ pure $ firebaseLogEventWithArrayOfKeyValue (HU.getLogEventPrefix <> "bus_ticketing_clicked") [(Tuple "bus_ticketing_clicked" "true")]
       updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO -> exit $ GoToMetroTicketBookingFlow state
     RC.METRO_OFFER -> exit $ GoToMetroTicketBookingFlow state

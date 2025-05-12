@@ -1178,7 +1178,7 @@ type EditedLocation = {
   gps :: LatLong ,
   address :: Address
 }
-data BottomNavBarIcon = TICKETING | MOBILITY | BUS_
+data BottomNavBarIcon = TICKETING_ | MOBILITY | BUS_
 
 type BookingTime = {
   rideStartTime :: String,
@@ -3267,18 +3267,29 @@ type BusTicketBookingState = {
   props :: BusTicketBookingProps
 }
 
+type BusDetails = {
+  lat :: Number
+  , lon :: Number
+  , routeCode :: Maybe String
+}
+
 type BusTicketBookingData = {
     routeList :: Boolean
   , showRouteOptions :: Boolean
   , isEmptyRoute :: String
   , ticketServiceType :: API.TicketServiceType
   , ticketDetailsState :: Maybe MetroMyTicketsScreenState
+  , busDetailsArray :: Array BusDetails
+  , closestBusDistance :: Number
 }
 
 type BusTicketBookingProps = {
    srcLat :: Number
  , srcLong :: Number
  , showAllTickets :: Boolean
+ , locateOnMap :: Boolean
+ , expandTicketsView :: Boolean
+ , gotMapReady :: Boolean
 }
 
 -- ######################################### MultiModalFlow ####################################################
@@ -3301,20 +3312,26 @@ type BusTrackingScreenData = {
   vehicleData :: Array VehicleData,
   stationResponse :: Maybe (Array FRFSStationAPI),
   routeShortName :: String,
-  routePts :: Locations
+  routePts :: Locations,
+  previousLatLonsOfVehicle :: DM.Map String ({position :: API.LatLong, index :: Int}),
+  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI
 }
 
-type VehicleData
-  = { vehicleId :: String
-    , nextStop :: String
-    , nextStopDistance :: Number
-    , vehicleLat :: Number
-    , vehicleLon :: Number
-    , nextStopLat ::Number
-    , nextStopLon ::Number
-    , nextStopSequence :: Int
-    , nextStopTravelTime :: Maybe Int
-    }
+type VehicleData = 
+  { vehicleId :: String
+  , nextStop :: String
+  , nextStopDistance :: Number
+  , vehicleLat :: Number
+  , vehicleLon :: Number
+  , nextStopLat ::Number
+  , nextStopLon ::Number
+  , nextStopSequence :: Int
+  , timestamp :: String
+  , nearestWaypointConfig :: NearestWaypointConfig
+  , etaDistance :: Maybe Number
+  , eta ::  Maybe Int
+  , delta :: Maybe Number
+  }
 
 type BusTrackingScreenProps = {
   showRouteDetailsTab :: Boolean,
@@ -3329,7 +3346,12 @@ type BusTrackingScreenProps = {
   userAndBuslocationMatchCount :: Int,
   vehicleTrackingId :: Maybe String,
   previousScreen :: PreviousScreenForTracking,
-  destinationSequenceNumber :: Maybe Int
+  destinationSequenceNumber :: Maybe Int,
+  currentLat :: Number,
+  currentLon :: Number,
+  minimumEtaDistance :: Maybe Int,
+  isMinimumEtaDistanceAvailable :: Maybe Boolean,
+  fromScreen :: String
 }
 
 data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen
@@ -3378,3 +3400,10 @@ derive instance genericFavourites :: Generic Favourites _
 instance eqFavourites :: Eq Favourites where eq = genericEq
 
 
+type OnboardedBusInfo = Array { bookingId :: String, vehicleId :: String }
+
+type NearestWaypointConfig =
+  { index :: Int
+  , deviationDistance :: Number
+  , vehicleLocationOnRoute :: API.LatLong
+  }

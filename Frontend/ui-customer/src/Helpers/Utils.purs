@@ -44,7 +44,7 @@ import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..), toLower)
 import Data.String as DS
-import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Data.String.CodeUnits (fromCharArray, toCharArray, singleton)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
@@ -458,6 +458,7 @@ differenceOfLocationLists arr1 arr2 = filter ( \item1 -> length (filter( \ (item
 filterRecentSearches :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 filterRecentSearches arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId /= item1.placeId)) arr2) /= (length arr2)) arr1
 
+-- Haversine Distance Calculation
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
   let latPoint1 = toRad (lat1)
@@ -1079,7 +1080,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
                 ( if vehicleType == "BUS"
                   then
                     [ "Cancellation of tickets is not applicable"
-                    , "The ticket is valid for only 30 minutes from the time of booking"
+                    , "The ticket is valid for only 12 hours from the time of booking"
                     , "Fare is commission-free and determined by the WBTC"
                     ]
                   else
@@ -1102,7 +1103,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
         Kolkata ->
           mkCityBasedConfig
             (getString TICKETS_FOR_KOLKATA_BUS)
-            [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC]
+            ["This ticket is non-transferrable and non-refundable" , "The ticket is valid for 24 hours from the time of booking"] 
             ""
             config{ logoImage = "ny_ic_kolkata_bus" }
         _ ->
@@ -1574,3 +1575,20 @@ foreign import isHybridApp :: Effect Boolean
 
 foreign import decodeErrorMessage :: String -> String
 
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE"]
+
+getLogEventPrefix :: String
+getLogEventPrefix =
+  let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in if DS.null appName then "app_" else abbreviate appName
+  where
+    abbreviate :: String -> String
+    abbreviate appName =
+      let initials = map (fromMaybe "" <<< DA.head <<< map singleton <<< toCharArray) $ DS.split (DS.Pattern " ") appName
+      in DS.toLower (DS.joinWith "" initials) <> "_"
