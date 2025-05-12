@@ -131,6 +131,7 @@ data ScreenOutput = LogoutUser
   | GoToTripSelectionScreen HomeScreenState
   | RideSummary HomeScreenState
   | AddVPAOut Int HomeScreenState
+  | UpdateLocationOnSignInSignUpOutput HomeScreenState String String
 
 data Action = NoAction
   | BackPressed

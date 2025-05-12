@@ -239,6 +239,7 @@ import DecodeUtil (decodeForeignAny,parseJSON)
 import Screens.ReferralPayoutScreen.Controller as ReferralPayoutScreen
 import Screens.ReferralPayoutScreen.ScreenData as ST
 import ScopedScreen.UpiVerificationScreen as UpiScreenData
+import Data.Number as NUM
 
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
@@ -2623,6 +2624,21 @@ homeScreenFlow = do
       out <- UI.upiNotVerificationScreen UpiScreenData.initialState{isSkipable = true, title = getString $ STR.YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE (show earnings), subTitle = getString STR.VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS, coverImage  = fetchImage GLOBAL_COMMON_ASSET "ny_ic_green_tick"}
       let _ = setValueToCache "COLLECT_EARNINGS" (show $ HU.getTime unit) identity
       homeScreenFlow
+    UPDATE_LOCATION_ON_SIGN_IN_SIGN_UP latStr lonStr -> do 
+      let 
+        isFirstSignup = getValueToLocalStore CUSTOMER_FIRST_SIGNUP == "true"
+        latNum = fromMaybe 0.0 (NUM.fromString latStr)
+        lngNum = fromMaybe 0.0 (NUM.fromString lonStr)
+        (API.UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
+        postLocationData = if isFirstSignup
+          then initialData { registrationLat = Just latNum, registrationLon = Just lngNum, latestLat = Just latNum, latestLon = Just lngNum }
+          else initialData { latestLat = Just latNum, latestLon = Just lngNum }
+        _ = runFn2 EHC.updatePushInIdMap "FirstHomeScreenVisit" false
+      void $ lift $ lift $ fork do 
+          void $ Remote.updateProfile (API.UpdateProfileReq postLocationData)
+          void $ pure $ setValueToLocalStore CUSTOMER_FIRST_SIGNUP "false"
+          pure unit 
+      homeScreenFlow 
     _ -> homeScreenFlow
   
 referralPayoutScreenFlow :: FlowBT String Unit
