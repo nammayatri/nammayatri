@@ -175,6 +175,7 @@ data KeyStore = USER_NAME
                 | TRACKING_ID
                 | RECENT_BUS_TRIPS
                 | DESTINATION_WAITING_TIME_VAL
+                | IS_PRIVATE_BUS_FLEET
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

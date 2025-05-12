@@ -95,7 +95,7 @@ import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
-import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode, _stopLat, _stopLong, _routeInfo, _source, _destination, _allowStartRideFromQR)
+import Services.Accessor (_lat, _lon, _stopName, _stopCode, _stopLat, _stopLong, _routeInfo, _allowStartRideFromQR, _routeInfo, _source, _destination, _routeCode, _stopName )
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -132,6 +132,9 @@ import LocalStorage.Cache (getValueFromCache)
 import Resource.Localizable.StringsV2 as StringsV2
 import Resource.Localizable.TypesV2 as LT2
 import Services.API as API
+import Screens.HomeScreen.Transformer (getFleetBadgeDriver)
+import Components.SelectableItems as SelectableItems
+import Components.SelectableItem as SelectableItem
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -385,8 +388,8 @@ screen initialState (GlobalState globalState) =
                                   void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
                                 pure unit
 
-                                when (HU.specialVariantsForTracking FunctionCall && (not $ initialState.props.whereIsMyBusConfig.showSelectAvailableBusRoutes) && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) do
-                                    void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRecentBusView push 
+                                when (HU.specialVariantsForTracking FunctionCall && (not $ initialState.props.whereIsMyBusConfig.linkTripPopup) && isNothing initialState.data.whereIsMyBusData.trip && HU.checkIfPrivateFleet initialState) do
+                                  void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateLinkBusView push
 
           runEffectFn1 consumeBP unit
           pure $ pure unit
@@ -419,9 +422,19 @@ screen initialState (GlobalState globalState) =
       let tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
           (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
       whenJust recentTrip \tripDetails -> do
-        availableRoutes <- Remote.getAvailableRoutes $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
+        availableRoutes <- Remote.getAvailableRoutes $ (Just $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH)
         whenRight availableRoutes \routes ->
           doAff do liftEffect $ push $ UpdateSuggestedRoute routes tripDetails
+    updateLinkBusView push = do
+        availableRoutes <- Remote.getAvailableRoutes Nothing
+        fleetDriverBadges <- Remote.getWmbFleetBadges 10 0 "DRIVER" Nothing
+        fleetConductorBadges <- Remote.getWmbFleetBadges 10 0 "CONDUCTOR" Nothing
+        let conductorBadges = case fleetConductorBadges of
+              Right conductors -> getFleetBadgeDriver conductors
+              _ -> []
+        whenRight availableRoutes \routes ->
+          whenRight fleetDriverBadges \badges ->
+            doAff do liftEffect $ push $ ShowLinkPopup routes (getFleetBadgeDriver badges) conductorBadges
 
 getActiveRideDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit
 getActiveRideDetails push delayTime retryCount = do
@@ -588,7 +601,7 @@ view push state =
         -- , if state.data.activeRide.bookingFromOtherPlatform then RideActionModal.bottomPlatformInfoBar VISIBLE else dummyTextView
         ]
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
-      , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
+      , if state.props.whereIsMyBusConfig.linkTripPopup then linkBusToDriverModal push state else dummyTextView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
@@ -642,6 +655,10 @@ view push state =
         else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
       , if (state.props.endRidePopUp) then endRidePopView push state else dummyTextView
+      , if (state.props.whereIsMyBusConfig.selectBusRouteDropdown) then selectBusRoutePopup push state
+        else if (state.props.whereIsMyBusConfig.selectBusDriverDropdown) then selectBusDriverPopup push state
+        else if (state.props.whereIsMyBusConfig.selectBusConductorDropdown) then selectBusConductorPopup push state 
+        else dummyTextView
   ]
   where
     currentDate = HU.getCurrentUTC ""
@@ -815,7 +832,7 @@ driverMapsHeaderView push state =
               , orientation VERTICAL
               , background $ Color.white900
               , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking]) then "0," else "1,") <> "#E5E7EB"
-              , PP.cornerRadii $ PTD.Corners 40.0 false false true true -- @TODO: @arnab Check if need for all or just bus
+              , PP.cornerRadii $ if state.props.whereIsMyBusConfig.linkTripPopup then  PTD.Corners 40.0 false false false false else  PTD.Corners 40.0 false false true true
               ][  driverDetail push state
                 , relativeLayout 
                   [ width MATCH_PARENT
@@ -833,7 +850,7 @@ driverMapsHeaderView push state =
                 onRideScreenBannerView state push 
                 ]
             <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes && state.props.currentStage `DA.elem` [HomeScreen, TripAssigned] then [ recentBusRideView push state ] else []
+            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.linkTripPopup && state.props.currentStage `DA.elem` [HomeScreen, TripAssigned] then [ recentBusRideView push state ] else []
         , linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
@@ -1373,6 +1390,7 @@ driverDetail push state =
   , gravity CENTER_VERTICAL
   , background Color.white900
   , clickable true
+  , PP.zIndex 1.0
   , margin (MarginTop 5)
   , PP.cornerRadii $ PTD.Corners 40.0 false false true true
   ] 
@@ -3656,14 +3674,138 @@ busOnline push state =
     ]
   ]
   
-chooseBusRouteModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-chooseBusRouteModal push state =
+linkBusView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+linkBusView push state = 
+  linearLayout
+  [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , visibility VISIBLE
+  ]
+  [
+    labelConfig (StringsV2.getStringV2 LT2.route_number),
+    SelectRouteButton.view (push <<< OnSelectBusRoute) (mkRouteButtonConfig state),
+    linearLayout [
+        width MATCH_PARENT,
+        height (V 24)
+    ][],
+    labelConfig (StringsV2.getStringV2 LT2.bus_driver),
+    PrimaryButton.view (push <<< OnSelectBusDriver) (primaryButtonConfig "selectBusDriverButton" (fromMaybe (StringsV2.getStringV2 LT2.select_bus_driver) state.props.whereIsMyBusConfig.selectedFleetDriverBadge ) (if isJust state.props.whereIsMyBusConfig.selectedFleetDriverBadge then Color.black900 else Color.grey900)),
+    linearLayout [
+        width MATCH_PARENT,
+        height (V 24)
+    ][],
+    labelConfig (StringsV2.getStringV2 LT2.bus_conductor),
+    PrimaryButton.view (push <<< OnSelectBusConductor) (primaryButtonConfig "selectBusConductorButton" (fromMaybe (StringsV2.getStringV2 LT2.select_bus_conductor) state.props.whereIsMyBusConfig.selectedFleetConductor ) (if isJust state.props.whereIsMyBusConfig.selectedFleetConductor then Color.black900 else Color.grey900))
+  ]
+  where 
+    labelConfig text' = 
+      textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text text'
+        , color Color.black800
+        , gravity LEFT
+        , lineHeight "28"
+        , singleLine true
+        , margin (Margin 0 0 0 10)
+        , visibility VISIBLE
+        ] <> (FontStyle.getFontStyle FontStyle.Body3 LanguageStyle)
+    mkRouteButtonConfig state = 
+      let selectedRoutes = state.props.whereIsMyBusConfig.selectedRoutes
+          availableRoutes = fromMaybe [] state.data.whereIsMyBusData.availableRoutes
+      in case selectedRoutes of
+          Just selectedRoute -> 
+            let (API.AvailableRoutes route) = fromMaybe dummyAvailableRoutes $  (((\( routes) -> DA.filter (\(API.AvailableRoutes route) -> selectedRoute == route.routeInfo ^. _routeCode) routes ) availableRoutes) DA.!! 0)
+            in
+            SelectRouteButton.defaultConfig {
+                routeNumber =  (\(API.RouteInfo routeInfo) -> routeInfo.code) route.routeInfo 
+              , sourceName =  (\(API.StopInfo routeInfo) -> routeInfo.name) route.source 
+              , destinationName = (\(API.StopInfo routeInfo) -> routeInfo.name) route.destination 
+              , onClick = SelectRouteButton.Click
+              , showChevron = false
+              , cornerRadius = 12.0
+              , margin = Margin 0 0 0 0
+              , padding = Padding 16 12 16 12
+              , fontSize = FontStyle.Body20
+              , showDot = true
+            } 
+          Nothing ->
+            SelectRouteButton.defaultConfig {
+                routeNumber = StringsV2.getStringV2 LT2.select_bus_route
+              , routeNumberColor = Color.grey900
+              , sourceName = ""
+              , destinationName = ""
+              , onClick = SelectRouteButton.Click
+              , showChevron = true
+              , cornerRadius = 12.0
+              , margin = Margin 0 0 0 0
+              , padding = Padding 16 12 16 12
+              , fontSize = FontStyle.Body20
+              , showDot = false
+              , showRouteDetails = false
+            } 
+    primaryButtonConfig id text color = 
+      let config = PrimaryButton.config
+      in config {
+        id = id,
+        stroke = "1,"<>Color.grey900,
+        background = Color.transparent,
+        textConfig {
+          text = text,
+          gravity = CENTER_VERTICAL,
+          width = V 350,
+          color = color
+        },
+        margin = Margin 0 0 0 0,
+        padding = Padding 20 0 0 0,
+        gravity = CENTER_VERTICAL,
+        isSuffixImage = true,
+        suffixImageConfig {
+          imageUrl = HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_arrow_down"
+        }
+      }
+
+linkBusToDriverModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+linkBusToDriverModal push state =
   linearLayout
   [
     width MATCH_PARENT
   , height MATCH_PARENT
+  , margin $ MarginTop 80
   ][
-    PopUpModal.view (push <<< ChooseBusRoute) (chooseBusRouteModalPopup state)
+    PopUpModal.view (push <<< LinkBusRouteToDriver) ((linkTripModalPopup state) {layout = Just $ \_ -> linkBusView push state})
+  ]
+
+selectBusRoutePopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+selectBusRoutePopup push state =
+  linearLayout
+  [
+    width MATCH_PARENT,
+    height MATCH_PARENT
+  ][
+    PopUpModal.view (push <<< SelectBusRoute) (selectBusRoutePopupConfig state)
+  ]
+
+selectBusDriverPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+selectBusDriverPopup push state =
+  linearLayout
+  [
+    width MATCH_PARENT,
+    height MATCH_PARENT
+  ][
+    PopUpModal.view (push <<< SelectBusDriver) (selectBusDriverPopupConfig state)
+  ]
+
+selectBusConductorPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+selectBusConductorPopup push state =
+  linearLayout
+  [
+    width MATCH_PARENT,
+    height MATCH_PARENT
+  ][
+    PopUpModal.view (push <<< SelectBusConductor) (selectBusConductorPopupConfig state)
   ]
 
 qrScannerView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -3672,7 +3814,8 @@ qrScannerView push state =
                         (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || 
                         (not state.data.isVehicleSupported) ||
                         state.data.plansState.cityOrVehicleChanged
-      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig) && isNothing state.data.whereIsMyBusData.trip
+      isScanQrFlowEnabled = false
+      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig) && isNothing state.data.whereIsMyBusData.trip && isScanQrFlowEnabled
   in
     linearLayout
     [ width MATCH_PARENT
@@ -3809,6 +3952,7 @@ recentBusRideView push state =
               , height WRAP_CONTENT
               , orientation VERTICAL
               , margin $ Margin 0 0 64 0
+              , visibility $ boolToVisibility $ not $ HU.checkIfPrivateFleet state
               ][
                 textView $
                 [ text $ StringsV2.getStringV2 LT2.bus_type
@@ -3819,6 +3963,23 @@ recentBusRideView push state =
                 [ text $ if busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac
                 , color Color.black800
                 ] <> FontStyle.subHeading3 TypoGraphy
+              ],
+              linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , margin $ Margin 0 0 64 0
+              , visibility $ boolToVisibility $ HU.checkIfPrivateFleet state
+              ][
+                textView $
+                [ text $ StringsV2.getStringV2 LT2.bus_driver
+                , color Color.black800
+                , margin $ MarginBottom 8
+                ] <> FontStyle.body3 TypoGraphy,
+                textView $
+                [ text $ fromMaybe "--" tripDetails.driverName
+                , color Color.black800
+                ] <> FontStyle.subHeading3 TypoGraphy
               ]
             ],
             textView $
@@ -3826,7 +3987,7 @@ recentBusRideView push state =
             , color Color.black800
             , margin $ Margin 10 0 10 8
             ] <> FontStyle.body3 TypoGraphy,
-            SelectRouteButton.view (push <<< SelectBusRoute) (mkRouteButtonConfig routeNumber sourceName destinationName isAssigned),
+            SelectRouteButton.view (push <<< LinkBus) (mkRouteButtonConfig routeNumber sourceName destinationName isAssigned),
             PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
           ]
     mkRouteButtonConfig routeNumber sourceName destinationName isAssigned = SelectRouteButton.defaultConfig {

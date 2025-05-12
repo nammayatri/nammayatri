@@ -1872,4 +1872,11 @@ getMl =
     , poor_cancellation_score : "നിങ്ങളുടെ റദ്ദുചെയ്യുന്ന സ്കോർ ഖാരാബിസ്തു"
     , good : "ഉത്തമ"
     , poor : "ഖാരാബിസ്തു"
+    , bus_driver: "ബസ് ഡ്രൈവർ"
+    , bus_conductor: "ബസ് കണ്ടക്ടർ"
+    , select_bus_driver: "ബസ് ഡ്രൈവറെ തിരഞ്ഞെടുക്കുക"
+    , select_bus_conductor: "ബസ് കണ്ടക്ടറെ തിരഞ്ഞെടുക്കുക"
+    , select_bus_route: "ബസ് റൂട്ട് തിരഞ്ഞെടുക്കുക"
+    , link_trip: "യാത്ര ലിങ്ക് ചെയ്യുക"
+    , driver_name: "ഡ്രൈവറിന്റെ പേര്"
     }

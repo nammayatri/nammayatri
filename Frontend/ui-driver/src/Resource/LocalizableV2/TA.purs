@@ -1872,4 +1872,11 @@ getTa =
     , poor_cancellation_score: "மோசமான ரத்து\nமதிப்பெண்"
     , good: "நல்லது"
     , poor: "மோசமானது"
+    , bus_driver: "பஸ் டிரைவர்"
+    , bus_conductor: "பஸ் கண்டக்டர்"
+    , select_bus_driver: "பஸ் டிரைவரைத் தேர்ந்தெடுக்கவும்"
+    , select_bus_conductor: "பஸ் கண்டக்டரைத் தேர்ந்தெடுக்கவும்"
+    , select_bus_route: "பஸ் வழித்தடத்தைத் தேர்ந்தெடுக்கவும்"
+    , link_trip: "பயணத்தை இணைக்கவும்"
+    , driver_name: "டிரைவர் பெயர்"
     }

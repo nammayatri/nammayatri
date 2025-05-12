@@ -198,6 +198,9 @@ getHi =
     , have_a_referral: "एक रेफरल है?"
     , add_here: "यहां जोड़ें"
     , referral_applied: "रेफ़रल लागू!"
+    , select_bus_driver: "बस ड्राइवर चुनें"
+    , select_bus_conductor: "बस कंडक्टर चुनें"
+    , select_bus_route: "बस मार्ग चुनें"
     , smalledit: "संपादन करें"
     , add_driving_license: "ड्राइविंग लाइसेंस जोड़ें"
     , help: "सहायता?"
@@ -1872,4 +1875,8 @@ getHi =
     , poor_cancellation_score : "आपका रद्दीकरण स्कोर खराब है"
     , good : "अच्छा"
     , poor : "खराब"
+    , bus_driver: "बस चालक"
+    , bus_conductor: "बस कंडक्टर"
+    , link_trip: "यात्रा लिंक करें"
+    , driver_name: "चालक का नाम"
     }

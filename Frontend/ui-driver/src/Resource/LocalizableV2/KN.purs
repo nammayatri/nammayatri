@@ -1872,4 +1872,11 @@ getKn =
     , poor_cancellation_score : "ನಿಮ್ಮ ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್ ಖಾರಾಬಿಸ್ತು"
     , good : "ಉತ್ತಮ"
     , poor : "ಖಾರಾಬಿಸ್ತು"
+    , bus_driver: "ಬಸ್ ಡ್ರೈವರ್"
+    , bus_conductor: "ಬಸ್ ಕಂಡಕ್ಟರ್"
+    , select_bus_driver: "ಬಸ್ ಚಾಲಕರನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , select_bus_conductor: "ಬಸ್ ನಿರ್ವಾಹಕರನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , select_bus_route: "ಬಸ್ ಮಾರ್ಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , link_trip: "ಪ್ರಯಾಣವನ್ನು ಲಿಂಕ್ ಮಾಡಿ"
+    , driver_name: "ಡ್ರೈವರ್ ಹೆಸರು"
     }

@@ -1872,4 +1872,11 @@ getOd =
     , poor_cancellation_score : "ଆପଣଙ୍କର ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର ଖାରାପ ହୋଇଛି"
     , good : "ଭାଲୋ"
     , poor : "ଖାରାପ"
+    , bus_driver: "ବସ୍ ଚାଳକ"
+    , bus_conductor: "ବସ୍ କଣ୍ଡକ୍ଟର୍"
+    , select_bus_driver: "ବସ୍ ଚାଳକ ଚୟନ କରନ୍ତୁ"
+    , select_bus_conductor: "ବସ୍ କଣ୍ଡକ୍ଟର୍ ଚୟନ କରନ୍ତୁ"
+    , select_bus_route: "ବସ୍ ମାର୍ଗ ଚୟନ କରନ୍ତୁ"
+    , link_trip: "ଭ୍ରମଣ ଲିଙ୍କ୍ କରନ୍ତୁ"
+    , driver_name: "ଡ୍ରାଇଭର୍ ନାମ"
   }

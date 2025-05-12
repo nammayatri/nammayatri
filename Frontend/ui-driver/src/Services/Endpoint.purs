@@ -448,3 +448,11 @@ postWmbRequestsCancel approvalRequestId = getBaseUrl "" <> "/wmb/requests/" <> a
 
 getWmbRequestsStatus :: String -> String
 getWmbRequestsStatus approvalRequestId = (getBaseUrl "") <> "/wmb/requests/" <> approvalRequestId <> "/status"
+
+getWmbFleetBadges :: Int -> Int -> String -> Maybe String -> String
+getWmbFleetBadges limit offset badgeType mbSearchString = 
+  case mbSearchString of
+    Just searchString -> (getBaseUrl "") <> "/wmb/fleetBadges?mbBadgeType=" <> (show badgeType) <> "&limit=" <> (show limit) <> "&offset=" <> (show offset) <> "&mbSearchString=" <> searchString
+    Nothing -> (getBaseUrl "") <> "/wmb/fleetBadges?mbBadgeType=" <> (show badgeType) <> "&limit=" <> (show limit) <> "&offset=" <> (show offset)
+
+

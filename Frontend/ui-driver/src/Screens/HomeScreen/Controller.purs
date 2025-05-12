@@ -42,6 +42,8 @@ import Components.RideActionModal as RideActionModal
 import Components.RideTrackingModal as RideTrackingModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
+import Components.SearchableList.Controller as SearchableList
+import Components.DropdownTextField.Controller as DropdownTextField
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
@@ -74,7 +76,7 @@ import Engineering.Helpers.Commons as EHC
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
-import Engineering.Helpers.Utils (saveObject)
+import Engineering.Helpers.Utils (saveObject, whenRight)
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
 import Foreign (unsafeToForeign)
@@ -144,8 +146,10 @@ import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
 import Constants.Configs (getPolylineAnimationConfig)
 import Components.SelectRouteButton as RouteDisplayController
+import Components.SelectableItem as SelectableItem
 import Control.Alt ((<|>))
 import Data.Array as DA
+import Screens.HomeScreen.Transformer (getFleetBadgeDriver)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -510,9 +514,10 @@ data Action = NoAction
             | HideBusOnline
             | BusNumber String
             | RideTrackingModalAction RideTrackingModal.Action
-            | ChooseBusRoute PopUpModal.Action
+            | LinkBusRouteToDriver PopUpModal.Action
+            | ChooseBusBadge (Array ST.FleetBadgeDrivers) Boolean (Array ST.FleetBadgeDrivers) Boolean
             | StartBusTrip PrimaryButtonController.Action
-            | SelectBusRoute RouteDisplayController.Action
+            | LinkBus RouteDisplayController.Action
             | ScanQrCode
             | WMBTripActiveAction API.TripTransactionDetails
             | WMBEndTripModalAC PopUpModal.Action
@@ -520,6 +525,13 @@ data Action = NoAction
             | UpdateSuggestedRoute API.AvailableRoutesList JB.RecentBusTrip
             | DestinationWaitTimerCallback String String Int
             | DriverBlockedPopUp PopUpModal.Action
+            | ShowLinkPopup API.AvailableRoutesList (Array ST.FleetBadgeDrivers) (Array ST.FleetBadgeDrivers)
+            | OnSelectBusRoute RouteDisplayController.Action
+            | OnSelectBusDriver PrimaryButtonController.Action
+            | OnSelectBusConductor PrimaryButtonController.Action
+            | SelectBusRoute PopUpModal.Action
+            | SelectBusDriver PopUpModal.Action
+            | SelectBusConductor PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1885,26 +1897,49 @@ eval (DriverBlockedPopUp PopUpModal.OnButton1Click) state = do
 
 eval (DriverBlockedPopUp PopUpModal.OnButton2Click) state = continue state { props {showBlockerPopup = false}}
 
-eval (ChooseBusRoute action) state = 
+eval (DriverBlockedPopUp PopUpModal.OnButton1Click) state = do
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  update state
+
+eval (DriverBlockedPopUp PopUpModal.OnButton2Click) state = continue state { props {showBlockerPopup = false}}
+
+eval (LinkBusRouteToDriver action) state =  
   case action of
     PopUpModal.SelectRoute (RouteDisplayController.Select index busRouteNumber) ->
-      let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
+      let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(routes) -> routes Array.!! index
           newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
       in continue newState
-    PopUpModal.SelectRouteButton RouteDisplayController.Click -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.SelectRouteButton RouteDisplayController.Click -> continue state { props { whereIsMyBusConfig { selectRouteStage = true, dropdownTextFieldConfig { isOpen = false } } }}
+    PopUpModal.SelectBadgeDropDown RouteDisplayController.Click -> continue state 
     PopUpModal.OnButton1Click -> do
       exit $ LinkAndStartBusRide state
-    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = state.props.whereIsMyBusConfig.selectRouteStage}}}
+    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, linkTripPopup = state.props.whereIsMyBusConfig.selectRouteStage}}}
     PopUpModal.OnButton2Click -> do
       continue state { props { whereIsMyBusConfig { selectRouteStage = false } }}  
+    PopUpModal.OutSideClick -> do 
+      void $ pure $ hideKeyboardOnNavigation true
+      continue state { props { whereIsMyBusConfig { dropdownTextFieldConfig { isOpen = false }}}}
     _ -> update state
+    
+eval (ChooseBusBadge badges hasMoreDriver conductor hasMoreConductor) state = do 
+  continue state {
+      props {
+        whereIsMyBusConfig {
+          searchableListConfig {
+            fleetBadgeDrivers = badges,
+            fleetConductor = conductor
+          },
+          showLoadMoreForDrivers = hasMoreDriver,
+          showLoadMoreForConductors = hasMoreConductor
+        }
+      }}
 
 eval (StartBusTrip PrimaryButtonController.OnClick) state =
       case state.data.whereIsMyBusData.trip of
         Just (ST.ASSIGNED_TRIP _) -> exit $ StartBusRide state
-        _ -> if isJust state.data.whereIsMyBusData.lastCompletedTrip then continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = true}}} else update state
+        _ -> if isJust state.data.whereIsMyBusData.lastCompletedTrip then continue state {props {whereIsMyBusConfig {selectRouteStage = false, linkTripPopup = true}}} else update state
 
-eval (SelectBusRoute RouteDisplayController.Click) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
+eval (LinkBus RouteDisplayController.Click) state = continue state { props { whereIsMyBusConfig { linkTripPopup = true, selectRouteStage = true } }}
 
 eval (ScanQrCode) state = exit $ GoToScanBusQR state
 
@@ -1923,7 +1958,7 @@ eval (UpdateSuggestedRoute (API.AvailableRoutesList availableRoutesList) tripDet
   in continue state 
     { data {
         whereIsMyBusData { 
-          availableRoutes = Just (API.AvailableRoutesList availableRoutesList)
+          availableRoutes = Just availableRoutesList
         , lastCompletedTrip = Just $ HU.recentTripToTripDetails tripDetails
         }
       }
@@ -1933,6 +1968,143 @@ eval (UpdateSuggestedRoute (API.AvailableRoutesList availableRoutesList) tripDet
         }
       }
     }
+
+eval (OnSelectBusRoute action) state = 
+  case action of
+    RouteDisplayController.Click ->  
+      let availableRoutesList = fromMaybe [] state.data.whereIsMyBusData.availableRoutes
+      in continue state { props { whereIsMyBusConfig { selectBusRouteDropdown = true, searchableListConfig { availableRoutes = availableRoutesList }}}}
+    _ -> update state
+eval (OnSelectBusDriver action) state = 
+  case action of
+    PrimaryButtonController.OnClick ->  continue state { props { whereIsMyBusConfig { selectBusDriverDropdown = true, searchableListConfig { fleetBadgeDrivers = fromMaybe [] state.data.whereIsMyBusData.fleetBadgeDrivers }}}}
+    _ -> update state
+eval (OnSelectBusConductor action) state = 
+  case action of
+    PrimaryButtonController.OnClick -> continue state { props { whereIsMyBusConfig { selectBusConductorDropdown = true, searchableListConfig { fleetConductor = fromMaybe [] state.data.whereIsMyBusData.fleetConductor }}}}
+    _ -> update state
+
+eval (SelectBusRoute action) state = 
+  case action of
+    PopUpModal.OnButton2Click -> 
+      continue state { props { whereIsMyBusConfig { selectBusRouteDropdown = false}}}
+    PopUpModal.DismissPopup -> continue state { props { whereIsMyBusConfig { selectBusRouteDropdown = false}}}
+    PopUpModal.SearchableListAction searchListAction -> 
+      case searchListAction of
+         SearchableList.OnOptionClick option -> do
+          continue state { props { whereIsMyBusConfig { selectedRoutes = Just option.value, selectBusRouteDropdown = false } }}
+         SearchableList.LoadMoreOptions -> continue state
+         SearchableList.OnFocus focus -> continue state
+         SearchableList.SelectRoute action' -> case action' of
+            RouteDisplayController.Select _ val -> continue state { props { whereIsMyBusConfig { selectedRoutes = Just val, selectBusRouteDropdown = false } }}
+            _ -> continue state
+         _ -> continue state
+    _ -> continue state
+eval (SelectBusDriver action) state = 
+  case action of
+    PopUpModal.OnButton2Click -> let _ = hideKeyboardOnNavigation true
+      in continue state { props { whereIsMyBusConfig { selectBusDriverDropdown = false}}}
+    PopUpModal.DismissPopup -> let _ = hideKeyboardOnNavigation true
+      in continue state { props { whereIsMyBusConfig { selectBusDriverDropdown = false}}}
+    PopUpModal.SearchableListAction searchListAction -> 
+      case searchListAction of
+         SearchableList.OnTextChange searchString ->
+          continueWithCmd state { props { whereIsMyBusConfig { badgeSarchString = Just searchString }}} [ do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                badgeResp <- Remote.getWmbFleetBadges 10 0 "DRIVER" (Just searchString)
+                push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                liftFlow $ case badgeResp of
+                  Right badges ->
+                    let transformedBadges = (getFleetBadgeDriver badges)
+                    in push $ ChooseBusBadge transformedBadges (10 <= Array.length transformedBadges) (fromMaybe [] state.data.whereIsMyBusData.fleetConductor) state.props.whereIsMyBusConfig.showLoadMoreForConductors
+                  _ -> push NoAction
+              pure NoAction
+            ]
+         SearchableList.OnOptionClick option ->
+            let _ = hideKeyboardOnNavigation true
+            in continue state { props { whereIsMyBusConfig { selectedFleetDriverBadge = Just option.value, selectBusDriverDropdown = false } }}
+         SearchableList.LoadMoreOptions -> continueWithCmd state [ do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                badgeResp <- Remote.getWmbFleetBadges 10 (Array.length state.props.whereIsMyBusConfig.searchableListConfig.fleetBadgeDrivers) "DRIVER" state.props.whereIsMyBusConfig.badgeSarchString
+                push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                liftFlow $ case badgeResp of
+                  Right badges -> 
+                    let transformedBadges = (getFleetBadgeDriver badges)
+                    in push $ ChooseBusBadge (state.props.whereIsMyBusConfig.searchableListConfig.fleetBadgeDrivers <> transformedBadges) (10 <= Array.length transformedBadges) (fromMaybe [] state.data.whereIsMyBusData.fleetConductor) state.props.whereIsMyBusConfig.showLoadMoreForConductors
+                  _ -> push NoAction
+              pure NoAction
+            ]
+         SearchableList.OnFocus focus -> continue state
+         _ -> continue state
+    _ -> continue state
+eval (SelectBusConductor action) state = 
+  case action of
+    PopUpModal.OnButton2Click -> let _ = hideKeyboardOnNavigation true
+      in continue state { props { whereIsMyBusConfig { selectBusConductorDropdown = false}}}
+    PopUpModal.DismissPopup -> let _ = hideKeyboardOnNavigation true
+      in continue state { props { whereIsMyBusConfig { selectBusConductorDropdown = false}}}
+    PopUpModal.SearchableListAction searchListAction -> 
+      case searchListAction of
+         SearchableList.OnTextChange searchString ->
+          continueWithCmd state { props { whereIsMyBusConfig { badgeSarchString = Just searchString }}} [ do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                badgeResp <- Remote.getWmbFleetBadges 10 0 "CONDUCTOR" (Just searchString)
+                push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                liftFlow $ case badgeResp of
+                  Right badges -> 
+                    let transformedBadges = (getFleetBadgeDriver badges)
+                    in push $ ChooseBusBadge (fromMaybe [] state.data.whereIsMyBusData.fleetBadgeDrivers) state.props.whereIsMyBusConfig.showLoadMoreForDrivers transformedBadges (10 <= Array.length transformedBadges)
+                  _ -> push NoAction
+              pure NoAction
+            ]
+         SearchableList.OnOptionClick option ->
+            let _ = hideKeyboardOnNavigation true
+            in continue state { props { whereIsMyBusConfig { selectedFleetConductor = Just option.value, selectBusConductorDropdown = false } }}
+         SearchableList.LoadMoreOptions -> continueWithCmd state [ do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                badgeResp <- Remote.getWmbFleetBadges 10 0 "CONDUCTOR"  state.props.whereIsMyBusConfig.badgeSarchString
+                push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                liftFlow $ case badgeResp of
+                  Right badges -> 
+                    let transformedBadges = getFleetBadgeDriver badges
+                    in push $ ChooseBusBadge (fromMaybe [] state.data.whereIsMyBusData.fleetBadgeDrivers) state.props.whereIsMyBusConfig.showLoadMoreForDrivers (state.props.whereIsMyBusConfig.searchableListConfig.fleetConductor <> transformedBadges) (10 <= Array.length transformedBadges)
+                  _ -> push NoAction
+              pure NoAction
+            ]
+         SearchableList.OnFocus focus -> continue state
+         _ -> continue state
+    _ -> continue state
+
+eval (ShowLinkPopup (API.AvailableRoutesList availableRoutesList) fleetBadgeDrivers fleetConductorBadge) state =
+  if Array.null availableRoutesList || Array.null fleetBadgeDrivers then
+    continue state
+  else
+    continue state 
+      { data {
+          whereIsMyBusData { 
+            availableRoutes = Just availableRoutesList,
+            fleetBadgeDrivers = Just fleetBadgeDrivers,
+            fleetConductor = Just fleetConductorBadge
+          }
+        }
+      , props {
+          whereIsMyBusConfig {
+            linkTripPopup = true,
+            dropdownTextFieldConfig {
+              options = map (\driver -> ({
+                id : driver.badgeName,
+                name : driver.badgeName,
+                description : "",
+                optionEnabled : not driver.isActive,
+                selected : false
+              }::ST.DropdownOption')) fleetBadgeDrivers
+            },
+            showLoadMoreForRoutes = 10 <= Array.length availableRoutesList,
+            showLoadMoreForDrivers = 10 <= Array.length fleetBadgeDrivers,
+            showLoadMoreForConductors = 10 <= Array.length fleetConductorBadge
+          }
+        }
+      }
 
 eval _ state = update state 
 

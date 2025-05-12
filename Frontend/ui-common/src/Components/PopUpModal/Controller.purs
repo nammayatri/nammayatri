@@ -16,7 +16,7 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), PrestoDOM)
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), Orientation(..), PrestoDOM)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
@@ -30,6 +30,11 @@ import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectRouteButton as SelectRouteButton
+import Components.SelectableItems as SelectableItems
+import Components.SelectableItem as SelectableItem
+import Components.DropdownTextField.Controller as DropdownTextField
+import Components.SearchableList.View as SearchableList
+import Components.SearchableList.Controller as SearchableList
 import JBridge
 import Effect (Effect)
 
@@ -53,9 +58,14 @@ data Action = OnButton1Click
             | BusNumber PrimaryEditTextController.Action
             | BusType PrimaryEditTextController.Action
             | SelectRouteButton SelectRouteButton.Action
+            | SelectBadgeDropDown SelectRouteButton.Action
             | SelectRoute SelectRouteButton.Action
             | Dropdown1 DropdownAction
             | Dropdown2 DropdownAction
+            | DropdownTextFieldAction DropdownTextField.Action
+            | SelectableItemsController SelectableItems.Action
+            | SearchableListAction SearchableList.Action
+            | OutSideClick 
 
 type Config = {
     primaryText :: TextConfig,
@@ -66,9 +76,11 @@ type Config = {
     popUpHeaderConfig :: PopUpHeaderConfig,
     option1 :: ButtonConfig,
     option2 :: ButtonConfig,
+    optionsConfig :: OptionsConfig,
     tipButton :: ButtonConfig,
     backgroundClickable :: Boolean,
     customerTipAvailable :: Boolean,
+    outsideClickable :: Boolean, 
     cornerRadius :: PTD.Corners,
     margin :: Margin,
     gravity :: Gravity,
@@ -86,6 +98,7 @@ type Config = {
     contactViewMargin :: Margin,
     dismissPopup :: Boolean,
     padding :: Padding,
+    height :: Length,
     dismissIconVisibility :: Visibility,
     dismissIconMargin :: Margin,
     fareEstimate :: String,
@@ -113,19 +126,33 @@ type Config = {
     parcelDetailsVisibility :: Visibility,
     parcelTypeConfig :: DropdownConfig,
     parcelQuantityConfig :: DropdownConfig,
-    whereIsMyBusConfig :: WhereIsMyBusConfig
+    whereIsMyBusConfig :: WhereIsMyBusConfig,
+    selectableItemsConfig :: forall a. SelectableItems.SelectableItemsConfig a,
+    dropdownTextFieldConfig :: DropdownTextField.Config,
+    searchableListConfig :: SearchableList.Config
+}
+
+type OptionsConfig = {
+  height :: Length
+  , width :: Length
+  , orientation :: Orientation
+  , alignParentBottom :: String
+  , gravity :: Gravity
 }
 
 type WhereIsMyBusConfig = {
   visibility :: Visibility,
   selectRouteStage :: Boolean,
+  selectBadgeStage :: Boolean,
   busNumber :: PrimaryEditTextController.Config,
   routeNumberLabel :: String,
   busType :: PrimaryEditTextController.Config,
   selectRouteButton :: RouteInfo,
   isRouteSelected :: Boolean,
+  badgeSelected :: Mb.Maybe String,
   availableRouteList :: Array RouteInfo
 }
+
 
 type RouteInfo = {
   busRouteNumber :: String,
@@ -334,6 +361,7 @@ config = {
   , activeIndex : 1
   , customerTipAvailable : false
   , backgroundClickable : true
+  , outsideClickable : false
   , customerTipArray : []
   , customerTipArrayWithValues : []
   , cornerRadius : (PTD.Corners 24.0 true true false false)
@@ -345,6 +373,7 @@ config = {
   , tipLayoutMargin : (Margin 0 0 0 0)
   , searchExpired : false
   , padding : (Padding 0 0 0 0)
+  , height : WRAP_CONTENT
   , topTitle : {
       text : ""
     , visibility : GONE
@@ -522,6 +551,13 @@ config = {
     , enableRipple : false
     , rippleColor : Color.rippleShade
     , layoutGravity : Mb.Nothing
+    }
+  , optionsConfig : {
+      height : WRAP_CONTENT
+      , width : MATCH_PARENT
+      , orientation : VERTICAL
+      , alignParentBottom : "false,-1"
+      , gravity : CENTER
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -797,6 +833,7 @@ config = {
   , whereIsMyBusConfig : {
     visibility : GONE,
     selectRouteStage : false,
+    selectBadgeStage : false,
     busNumber : PrimaryEditTextController.config,
     busType : PrimaryEditTextController.config,
     routeNumberLabel : "",
@@ -806,8 +843,12 @@ config = {
         destination : ""
       },
     isRouteSelected : false,
+    badgeSelected : Mb.Nothing,
     availableRouteList : []
   }
+  , selectableItemsConfig : SelectableItems.defaultConfig
+  , dropdownTextFieldConfig : DropdownTextField.config
+  , searchableListConfig : SearchableList.config
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
