@@ -180,6 +180,7 @@ apis:
         - mboffset: Int
         - mbRegNumberString: Text
         - mbFleetOwnerId: Text
+        - mbIsActive: Bool
       response:
         type: ListVehicleResT
       migrate:
@@ -194,6 +195,7 @@ apis:
               - limit: Int
               - offset: Int
               - mbRegNumberString: Text
+              - mbIsActive: Bool
             response:
               type: ListVehicleRes
 
@@ -207,6 +209,7 @@ apis:
         - mbNameString: Text
         - mbSearchString: Text
         - mbFleetOwnerId: Text
+        - mbIsActive: Bool
       response:
         type: FleetListDriverResT
       migrate:
@@ -223,6 +226,7 @@ apis:
               - mobileNumberString: Text
               - nameString: Text
               - mbSearchString: Text
+              - isActive: Bool
             response:
               type: FleetListDriverRes
 
@@ -235,6 +239,7 @@ apis:
         - mbSearchString: Text
         - mbFleetOwnerId: Text
         - mbBadgeType: FleetBadgeType
+        - mbIsActive: Bool
       response:
         type: FleetBadgeResT
       migrate:
@@ -250,6 +255,7 @@ apis:
               - offset: Int
               - mbSearchString: Text
               - mbBadgeType: FleetBadgeType
+              - mbIsActive: Bool
             response:
               type: FleetBadgeRes
 

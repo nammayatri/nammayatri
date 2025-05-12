@@ -213,7 +213,7 @@ issueReportList ::
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListRes
-issueReportList (personId, _merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
+issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
   let validIssueReports = filter (isJust . (.categoryId)) issueReports
@@ -232,7 +232,7 @@ issueReportList (personId, _merchantId, merchantOpCityId) mbLanguage issueHandle
       ServiceHandle m ->
       D.IssueReport ->
       m Common.IssueReportListItem
-    processIssueReport iConfig currTime language _iHandle iReport = do
+    processIssueReport iConfig currTime language _ iReport = do
       let timeDiff = realToFrac (currTime `diffUTCTime` iReport.updatedAt) / 3600
       if iReport.status == RESOLVED && timeDiff > iConfig.autoMarkIssueClosedDuration
         then do
