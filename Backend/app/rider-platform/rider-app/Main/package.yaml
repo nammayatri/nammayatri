@@ -207,3 +207,24 @@ executables:
       - rider-app
       - mobility-core
       - beckn-spec
+
+tests:
+  rider-app-test:
+    main: Main.hs
+    source-dirs: test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - rider-app
+      - mobility-core
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
+      - safe-exceptions
+      - base64-bytestring
+      - cryptonite
+      - time
+      - text
+      - bytestring

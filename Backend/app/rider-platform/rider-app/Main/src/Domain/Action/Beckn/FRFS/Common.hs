@@ -53,8 +53,7 @@ data DTicket = DTicket
   }
 
 data DTicketPayload = DTicketPayload
-  { transactionId :: Text,
-    fromRouteProviderCode :: Text,
+  { fromRouteProviderCode :: Text,
     toRouteProviderCode :: Text,
     adultQuantity :: Int,
     childQuantity :: Int,
