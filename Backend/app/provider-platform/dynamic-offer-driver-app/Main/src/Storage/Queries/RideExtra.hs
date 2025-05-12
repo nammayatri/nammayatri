@@ -5,7 +5,9 @@ module Storage.Queries.RideExtra where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Either
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.HashSet as HS
 import Data.Int
 import Data.List (zip7)
 import Data.List.Extra (notNull)
@@ -503,46 +505,92 @@ findAllRideItems ::
   Maybe UTCTime ->
   m [RideItem]
 findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo = do
-  dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.limit_ (fromIntegral limitVal) $
-          B.offset_ (fromIntegral offsetVal) $
-            B.filter_'
-              ( \(booking, ride, rideDetails, riderDetails) ->
-                  booking.providerId B.==?. B.val_ (getId merchant.id)
-                    B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-              )
-              do
-                booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-                ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
-                rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
-                riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
-                pure (booking', ride', rideDetails', riderDetails')
-  res' <- case res of
-    Right x -> do
-      let bookings = fst' <$> x
-          rides = snd' <$> x
-          rideDetails = thd' <$> x
-          riderDetails = fth' <$> x
-      b <- catMaybes <$> mapM fromTType' bookings
-      r <- catMaybes <$> mapM fromTType' rides
-      rd <- catMaybes <$> mapM fromTType' rideDetails
-      rdr <- catMaybes <$> mapM fromTType' riderDetails
-      -- TODO test
-      let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
-      pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
-    Left err -> do
-      logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
-      pure []
-  pure $ mkRideItem <$> res'
+  case mbRideShortId of
+    Just rideShortId -> do
+      ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
+      booking <- findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId ride.bookingId] >>= fromMaybeM (BookingNotFound $ "for ride id: " <> ride.id.getId)
+      rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
+      riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
+      let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
+      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, mkBookingStatus now ride)]
+    Nothing -> do
+      zippedRides <- case mbTo of
+        Just toDate | roundToMidnightUTCToDate toDate >= now -> do
+          case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
+            (Just driverPhoneDBHash, _) -> do
+              rideDetails <-
+                findAllFromKvRedis
+                  [ Se.And
+                      ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
+                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
+                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                      )
+                  ]
+                  Nothing
+              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] Nothing
+              bookings <- findAllFromKvRedis [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)] Nothing
+              riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
+              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+            (_, Just customerPhoneDBHash) -> do
+              riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
+              bookings <-
+                findAllFromKvRedis
+                  [ Se.And
+                      ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
+                          <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
+                          <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                      )
+                  ]
+                  Nothing
+              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)] Nothing
+              rideDetails <- findAllFromKvRedis [Se.Is BeamRD.id $ Se.In $ getId . Ride.id <$> rides] Nothing
+              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+            _ -> pure []
+        _ -> pure []
+      dbConf <- getReplicaBeamConfig
+      res <- L.runDB dbConf $
+        L.findRows $
+          B.select $
+            B.limit_ (fromIntegral limitVal) $
+              B.offset_ (fromIntegral offsetVal) $
+                B.filter_'
+                  ( \(booking, ride, rideDetails, riderDetails) ->
+                      booking.providerId B.==?. B.val_ (getId merchant.id)
+                        B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
+                  )
+                  do
+                    booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+                    ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+                    rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
+                    riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
+                    pure (booking', ride', rideDetails', riderDetails')
+      res' <- case res of
+        Right x -> do
+          let bookings = fst' <$> x
+              rides = snd' <$> x
+              rideDetails = thd' <$> x
+              riderDetails = fth' <$> x
+          b <- catMaybes <$> mapM fromTType' bookings
+          r <- catMaybes <$> mapM fromTType' rides
+          rd <- catMaybes <$> mapM fromTType' rideDetails
+          rdr <- catMaybes <$> mapM fromTType' riderDetails
+          let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
+          pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
+        Left err -> do
+          logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
+          pure []
+
+      let rideIds = HS.fromList $ map getRideId zippedRides
+          results = mkRideItem <$> res'
+          uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
+
+      pure $ zippedRides <> uniqueResults
   where
     mkBookingStatusVal ride =
       B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
@@ -550,10 +598,13 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
           B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
             B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
               B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
+
     fst' (x, _, _, _) = x
     snd' (_, y, _, _) = y
     thd' (_, _, z, _) = z
     fth' (_, _, _, r) = r
+
+    mkBookingStatus :: UTCTime -> Ride.Ride -> Common.BookingStatus
     mkBookingStatus now' ride
       | ride.status == Ride.COMPLETED = Common.COMPLETED
       | ride.status == Ride.NEW && (ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING
@@ -561,8 +612,39 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
       | ride.status == Ride.INPROGRESS && ride.tripStartTime > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.CANCELLED
       | otherwise = Common.ONGOING_6HRS
+
+    mkRideItemUsingMaps :: [DDR.Ride] -> [RideDetails.RideDetails] -> [Booking.Booking] -> [RiderDetails.RiderDetails] -> [RideItem]
+    mkRideItemUsingMaps rides rideDetails bookings riderDetails =
+      let rideDetailsMap = HMS.fromList [(rideDetail.id, rideDetail) | rideDetail <- rideDetails]
+          bookingsMap = HMS.fromList [(booking.id, booking) | booking <- bookings]
+          riderDetailsMap = HMS.fromList [(riderDetail.id, riderDetail) | riderDetail <- riderDetails]
+       in mapMaybe
+            ( \ride -> do
+                rideDetail <- ride.id `HMS.lookup` rideDetailsMap
+                booking <- ride.bookingId `HMS.lookup` bookingsMap
+                riderDetail <- booking.riderId >>= (`HMS.lookup` riderDetailsMap)
+                let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
+                Just (mkRideItem (ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, mkBookingStatus now ride))
+            )
+            rides
+
+    mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Common.BookingStatus) -> RideItem
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, bookingStatus) =
       RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
+
+    getRideId :: RideItem -> Id Ride.Ride
+    getRideId rideItem = rideItem.rideDetails.id
+
+    mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]
+    mkBookingStatusFilter rides = case mbBookingStatus of
+      Just bookingStatus -> case bookingStatus of
+        Common.COMPLETED -> [ride | ride <- rides, ride.status == Ride.COMPLETED]
+        Common.UPCOMING -> [ride | ride <- rides, ride.status == Ride.NEW && ((ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)]
+        Common.UPCOMING_6HRS -> [ride | ride <- rides, ride.status == Ride.NEW && ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now]
+        Common.ONGOING -> [ride | ride <- rides, ride.status == Ride.INPROGRESS && ((ride.tripStartTime) > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))]
+        Common.CANCELLED -> [ride | ride <- rides, ride.status == Ride.CANCELLED]
+        _ -> rides
+      Nothing -> rides
 
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,
