@@ -29,6 +29,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Base64;
+import android.util.Log;
 import android.view.Choreographer;
 import android.view.View;
 import android.view.ViewGroup;
@@ -71,7 +72,7 @@ final class DynamicUI implements JsCallback {
     private boolean isForeGround = true;
     private boolean isInitiated = false;
     @Nullable
-    private JSEngine browser;
+    private QuickJSEngine browser;
     @NonNull
     private final DuiLogger mLogger;
     @Nullable
@@ -117,7 +118,7 @@ final class DynamicUI implements JsCallback {
      * @param context     This should be the Activity directly rather than the context. But changing it now, affects the backward compatibility. So we must do this later at a point where we are sure to go aggressive on the changes.
      * @param errCallback Logging interface
      */
-    public DynamicUI(@NonNull Context context, @NonNull DuiLogger duiLogger, @NonNull Callback errCallback, @NonNull BridgeComponents bridgeComponents, @Nullable String baseContent, Map<String, Object> javaScriptInterfaces) {
+    public DynamicUI(@NonNull Context context, @NonNull DuiLogger duiLogger, @NonNull Callback errCallback, @NonNull BridgeComponents bridgeComponents, Map<String, Object> javaScriptInterfaces) {
         this.mLogger = duiLogger;
         this.callback = errCallback;
         this.bridgeComponents = bridgeComponents;
@@ -192,11 +193,14 @@ final class DynamicUI implements JsCallback {
             webViewState.set(WebViewState.Created);
 //            setupWebView();
 //            browser.getSettings().setJavaScriptEnabled(true);
+            Log.i("TEST", "Reached QuickJSEngine  " + System.currentTimeMillis());
             for (Map.Entry<String, Object> interfaceEntry : jsInterfaces.entrySet()) {
                 browser.addJavascriptInterface(interfaceEntry.getValue(), interfaceEntry.getKey());
             }
+            Log.i("TEST", "Reached addJavascriptInterface  " + System.currentTimeMillis());
 //            this.loadBaseHtml();
             browser.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
+            Log.i("TEST", "Reached loadDataWithBaseURL  " + System.currentTimeMillis());
             // Inform juspay services that there was no crash
             callback.webViewLoaded(null);
             totalWebViewFailure = 0;
@@ -376,6 +380,22 @@ final class DynamicUI implements JsCallback {
         try {
             if (browser != null) {
                 browser.evaluateJavascript(js);
+            } else {
+                logError("browser null, call start first");
+            }
+        } catch (OutOfMemoryError e) {
+            logError("OutOfMemoryError :" + getStringStackTrace(e));
+            callback.onError("addJsToWebView", "" + getStringStackTrace(e));
+        } catch (Exception e) {
+            logError("Exception :" + getStringStackTrace(e));
+            callback.onError("addJsToWebView", "" + getStringStackTrace(e));
+        }
+    }
+
+    public void invokeFunctionInJS(@NonNull final String fnName, @NonNull final Object... args) {
+        try {
+            if (browser != null) {
+                browser.invokeFnInJs(fnName,args);
             } else {
                 logError("browser null, call start first");
             }

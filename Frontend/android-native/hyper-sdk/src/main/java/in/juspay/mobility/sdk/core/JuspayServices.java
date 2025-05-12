@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.security.keystore.KeyGenParameterSpec.Builder;
 import android.security.keystore.KeyInfo;
 import android.security.keystore.KeyProperties;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -102,8 +103,6 @@ public class JuspayServices implements FragmentHooks {
 
     @NonNull
     private final SessionInfo sessionInfo;
-    @NonNull
-    private final SdkConfigService sdkConfigService;
     private final String LOG_TAG = getClass().getSimpleName();
 
     @NonNull
@@ -249,7 +248,6 @@ public class JuspayServices implements FragmentHooks {
         };
 
         sdkTracker = new SdkTracker(this);
-        sdkConfigService = new SdkConfigService(this);
         sessionInfo = new SessionInfo(this);
         fileProviderService = new FileProviderService(this);
         remoteAssetService = new RemoteAssetService(this);
@@ -257,22 +255,14 @@ public class JuspayServices implements FragmentHooks {
         activityLaunchDelegate = new HyperActivityLaunchDelegate(this);
         intentSenderDelegate = new HyperIntentSenderDelegate(this);
         requestPermissionDelegate = new HyperRequestPermissionDelegate(this);
-        sdkConfigService.renewConfig(context);
         bridgeComponents = createBridgeComponents();
-        String baseContent = tenantParams != null ? tenantParams.getBaseContent() : null;
-        dynamicUI = new DynamicUI(context, duiLogger, errorCallback, bridgeComponents, baseContent, getJavaScriptInterfaces());
+        dynamicUI = new DynamicUI(context, duiLogger, errorCallback, bridgeComponents, getJavaScriptInterfaces());
         logMemoryInfo(sdkTracker, context);
         logEncryptionSupport(sdkTracker, context);
         fragmentEvents = EnumSet.allOf(FragmentEvent.class);
         smsServices = new SmsServices(smsComponents);
-        JSONObject logsConfig = sdkConfigService.getSdkConfig().optJSONObject("logsConfig");
-        if (logsConfig != null) {
-            ExecutorManager.runOnBackgroundThread(() -> sdkTracker.setLabelsToDrop(logsConfig));
-            workingLogger = logsConfig.optString("workingLogger", "json-array");
-            if (Objects.equals(workingLogger, "byte-d-json") || Objects.equals(workingLogger, "both")) {
-                logSessioniserExp = new LogSessioniserExp();
-            }
-        }
+        workingLogger = "json-array";
+        sessionInfo.createSessionDataMap();
     }
 
     private static void deleteFiles(Context context) {
@@ -632,12 +622,6 @@ public class JuspayServices implements FragmentHooks {
                 return sdkInfo.getSdkName();
             }
 
-            @NonNull
-            @Override
-            public JSONObject getSdkConfig() {
-                return sdkConfigService.getSdkConfig();
-            }
-
             @Nullable
             @Override
             public String getClientId() {
@@ -870,15 +854,7 @@ public class JuspayServices implements FragmentHooks {
     }
 
     private boolean useCommit() {
-        if (merchantClientId == null) {
-            return true;
-        }
-
-        JSONObject sdkConfig = sdkConfigService.getSdkConfig();
-
-        JSONObject useCommitNowClientIds = Utils.optJSONObject(sdkConfig, "useCommitNowClientIds");
-        String clientId = merchantClientId.toLowerCase(Locale.getDefault()).split("_")[0];
-        return !useCommitNowClientIds.optString(clientId).equals("true");
+        return true;
     }
 
     private void commitFragmentTransaction(FragmentTransaction transaction) {
@@ -944,11 +920,6 @@ public class JuspayServices implements FragmentHooks {
     @NonNull
     public RemoteAssetService getRemoteAssetService() {
         return remoteAssetService;
-    }
-
-    @NonNull
-    public SdkConfigService getSdkConfigService() {
-        return sdkConfigService;
     }
 
     @SuppressWarnings("unused")

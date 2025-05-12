@@ -72,6 +72,7 @@ public class JsInterface {
 
     @JavascriptInterface
     public String getResourceById(int resId) {
+        if (resId == 0) return "";
         return context.getResources().getString(resId);
     }
 
@@ -159,7 +160,9 @@ public class JsInterface {
 
     @JavascriptInterface
     public void toast(String msg) {
-        Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+        ExecutorManager.runOnMainThread(() -> {
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+        });
     }
 
     @JavascriptInterface
@@ -315,12 +318,6 @@ public class JsInterface {
     @JavascriptInterface
     public String getFilePath(String fileName) {
         return fileProviderService.appendSdkNameAndVersion(fileName);
-    }
-
-    @JavascriptInterface
-    public void renewSdkConfig() {
-        //Add renewal methods for sdk config, here when expanded
-        juspayServices.getSdkConfigService().renewConfig(context);
     }
 
     @JavascriptInterface

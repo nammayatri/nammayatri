@@ -9,7 +9,7 @@ object ExecutorManager {
     private val remoteAssetsPool = Executors.newSingleThreadExecutor()
     private val jsThread = Executors.newSingleThreadExecutor();
     private val sharedPool = Executors.newFixedThreadPool(4) // Should this be configurable
-    private val sharedApiPool = Executors.newFixedThreadPool(5) // Should this be configurable
+    private val sharedApiPool = Executors.newFixedThreadPool(10) // Should this be configurable
     private val sdkTrackerPool = Executors.newSingleThreadExecutor()
     private val logSessioniserPool = Executors.newSingleThreadExecutor()
     private val logPusherPool = Executors.newSingleThreadExecutor()

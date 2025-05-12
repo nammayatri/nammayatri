@@ -45,30 +45,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Eq.Generic (genericEq)
 import Data.Array (head, (!!))
 
--- -- import Control.Monad.Except.Trans (lift)
--- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
--- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import _deleteKeyStoreEntry :: String -> Effect Unit
--- -- foreign import _keyStoreEncrypt :: String -> String -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import _keyStoreDecrypt :: String -> String -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import _keyStoreSign :: String -> String -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import _getKeyStorePublicKey :: String -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import _sendSafetyNetRequest :: String -> String -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import _safefyNetShutdownSafeBrowsing :: (String -> Effect Unit) -> Effect Unit
--- -- foreign import _safefyNetInitSafeBrowsing :: (String -> Effect Unit) -> Effect Unit
--- -- foreign import _jweEncrypt :: String -> String -> String -> (String -> Either String String) -> (String -> Either String String) -> Effect (Either String String)
--- -- foreign import _jweDecrypt :: String -> String -> (String -> Either String String) -> (String -> Either String String) -> Effect (Either String String)
--- -- foreign import _jwsSign :: String -> String -> String -> (String -> Either String String) -> (String -> Either String String) -> Effect (Either String String)
--- -- foreign import _jwsVerify :: String -> String -> Effect Boolean
--- -- foreign import _rsaEncryption :: String -> String -> String -> (String -> Either String String) -> (String -> Either String String) -> Effect (Either String String)
--- foreign import _addCertificates :: String -> Effect Unit
--- foreign import _isPlayStoreInstalled :: Effect Boolean
--- foreign import _isNetworkAvailable :: Effect Boolean
--- foreign import _renewFile :: String -> Effect Unit
--- foreign import readFileImpl      :: String -> Effect String
 foreign import showLoaderImpl      :: String -> Effect Unit
--- foreign import readFile'      :: String -> Effect String
--- foreign import showLoader'      :: String -> Effect Unit
 foreign import locateOnMap :: EffectFn1 LocateOnMapConfig Unit
 foreign import fetchPackageName :: Unit -> Effect String
 foreign import exitLocateOnMap :: String -> Unit
@@ -87,14 +64,9 @@ foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
 foreign import getManufacturerName :: Unit -> String
 foreign import getAndroidVersion :: Effect Int
--- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
--- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (String -> Int -> Int -> Int -> action) -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) Unit
--- foreign import dateTimePicker :: forall action. (action -> Effect Unit) -> (Int -> action) -> Effect Unit
--- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
--- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
 foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
@@ -102,7 +74,6 @@ foreign import showMarkerImpl :: EffectFn1 ShowMarkerConfig Boolean
 foreign import fadeInFadeOutMarker :: Fn3 String String String Unit
 foreign import removeMarker :: String -> Unit
 foreign import removeAllMarkers :: String -> Unit
--- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: UploadFileConfig -> Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
@@ -114,10 +85,6 @@ foreign import copyToClipboard :: String -> Unit
 foreign import updateMarker :: MarkerConfig -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
 foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
--- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
--- -- foreign import showAndDrawRoute :: String -> String -> String -> Locations -> Effect Int
--- foreign import addMarkers :: Markers -> Effect Unit
--- foreign import removePolyLine   :: String -> Effect Unit
 foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import startGActivity :: String -> Effect Unit
 foreign import startOpenMeterActivity :: forall action. (action -> Effect Unit) -> Effect Unit
@@ -153,9 +120,6 @@ foreign import listDownloadedTranslationModels :: forall action. (action -> Effe
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 foreign import askNotificationPermission :: Unit -> Effect Unit
 foreign import checkAndAskMicrophonePermission :: Unit -> Effect Unit
--- foreign import onEvent        :: Foreign -> Effect Unit
--- foreign import _onEventWithCB :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- -- foreign import getSessionInfo :: { android_id_raw :: String, android_id :: String, os_version :: String, package_name :: String, android_api_level :: String }
 foreign import getKeyInSharedPrefKeys :: String -> String
 foreign import getKeyInNativeSharedPrefKeys :: String -> String
 foreign import setKeyInSharedPrefKeysImpl :: String -> String -> Effect Unit
@@ -170,9 +134,7 @@ foreign import requestKeyboardShow :: String -> Effect Unit
 foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit
 foreign import getAAID :: String -> String
--- -- foreign import removePolyLineById :: Int -> Effect Unit
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
--- foreign import removeAllPolylines :: String -> Unit
 foreign import removeAllPolygons :: String -> Unit
 foreign import currentPosition  :: String -> Unit
 foreign import openNavigation  :: Number -> Number -> String -> Unit
@@ -204,11 +166,9 @@ foreign import firebaseLogEventWithParams :: String -> String -> String -> Effec
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit
 foreign import firebaseUserID :: String  -> Effect Unit
--- foreign import closeApp       :: String -> Effect Unit
 foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import deletePopUpCallBack :: String -> Unit
--- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 
 foreign import storeCallBackMicrophonePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
@@ -419,97 +379,15 @@ lottieAnimationConfig = {
   , cacheEnabled : true
 }
 
--- -- keyStoreEntryPresent :: String -> Flow Boolean
--- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
-
--- -- createKeyStoreEntry :: String -> (Either String DateTime) -> Flow (Either String String)
--- -- createKeyStoreEntry alias (Left  s) = pure $ Left s
--- -- createKeyStoreEntry alias (Right expiry) = doAff do
--- --   isoTime <- liftEffect $ toISOString $ fromDateTime expiry
--- --   makeAff \cb -> do
--- --     _createKeyStoreEntry alias isoTime (cb $ Right $ Right "key created") (cb <<< Right <<< Left)
--- --     pure nonCanceler
-
--- -- deleteKeyStoreEntry :: String -> Flow Unit
--- -- deleteKeyStoreEntry keyAlias = liftFlow $ _deleteKeyStoreEntry keyAlias
-
--- -- keyStoreEncrypt :: String -> String -> Flow (Either String String)
--- -- keyStoreEncrypt alias payload = doAff do
--- --   makeAff \cb -> do
--- --     _keyStoreEncrypt alias payload (Right >>> Right >>> cb) (Left >>> Right >>> cb)
--- --     pure nonCanceler
-
--- -- keyStoreDecrypt :: String -> String -> Flow (Either String String)
--- -- keyStoreDecrypt keyAlias cipher = doAff do
--- --   makeAff \cb -> do
--- --     _keyStoreDecrypt keyAlias cipher (Right >>> Right >>> cb) (Left >>> Right >>> cb)
--- --     pure nonCanceler
-
--- -- keyStoreSign :: String -> String -> Flow (Either String String)
--- -- keyStoreSign alias payload = doAff do
--- --   makeAff (\cb -> do
--- --     _keyStoreSign alias payload (Right >>> Right >>> cb) (Left >>> Right >>> cb)
--- --     pure nonCanceler)
-
--- -- getKeyStorePublicKey :: String -> Flow (Either String String)
--- -- getKeyStorePublicKey keyAlias = doAff do
--- --   makeAff \cb -> do
--- --     _getKeyStorePublicKey keyAlias (Right >>> Right >>> cb) (Left >>> Right >>> cb)
--- --     pure nonCanceler
-
--- -- sendSafetyNetRequest :: String -> String -> Flow (Either String String)
--- -- sendSafetyNetRequest key nonce = do
--- --   res <- oneOf [sendSafetyNetRequestImpl key nonce, doAff do (makeAff \cb -> do (registerEvent' "onPause" (\_ -> _safefyNetShutdownSafeBrowsing (Left >>> Right >>> cb)) *> pure nonCanceler)) ]
--- --   case res of
--- --     Left "onPause" -> do
--- --       _ <- doAff do (makeAff \cb -> do (registerEventImpl "onResume" (\_ -> _safefyNetInitSafeBrowsing (Left >>> Right >>> cb)) *> pure nonCanceler))
--- --       sendSafetyNetRequest key nonce
--- --     _ -> pure res
-
--- -- sendSafetyNetRequestImpl :: String -> String -> Flow (Either String String)
--- -- sendSafetyNetRequestImpl key nonce = doAff do
--- --   makeAff \cb -> do
--- --     _sendSafetyNetRequest nonce key (Right >>> Right >>> cb) (Left >>> Right >>> cb)
--- --     pure nonCanceler
-
--- -- jweEncrypt :: String -> String -> String -> Flow String
--- -- jweEncrypt plainTxt headers keyPath = (liftFlow $ _jweEncrypt plainTxt headers keyPath Left Right) >>= either throwErr pure
-
--- -- jweDecrypt :: String -> String -> Flow String
--- -- jweDecrypt cipher alias = (liftFlow $ _jweDecrypt cipher alias Left Right) >>= either throwErr pure
-
--- -- jwsSign :: String -> String -> String -> Flow String
--- -- jwsSign payload headers alias = (liftFlow $ _jwsSign payload headers alias Left Right) >>= either throwErr pure
-
--- -- jwsVerify :: String -> String -> Flow Boolean
--- -- jwsVerify payload key = liftFlow $ _jwsVerify payload key
-
--- -- rsaEncryption :: String -> String -> String -> Flow String
--- -- rsaEncryption plainTxt algo key = (liftFlow $ _rsaEncryption plainTxt algo key Left Right) >>= either throwErr pure
-
 showLoader :: forall st. String -> Flow st Unit
 showLoader str = liftFlow (showLoaderImpl str)
-
--- readFile :: String -> Flow st String
--- readFile = liftFlow <<< readFileImpl
-
--- showQrCode :: String -> String -> Effect Unit
--- showQrCode id str = showQrCodeImpl id str
 
 showMarker :: MarkerConfig -> Number -> Number -> Int -> Number -> Number -> String -> Effect Boolean
 showMarker markerConfig lat lng markerSize anchorV anchorV1 purescriptId = runEffectFn1 showMarkerImpl defaultShowMarkerConfig {markerConfig = markerConfig, lat = lat, lng = lng, markerSize = markerSize, anchorV = anchorV, anchorV1 = anchorV1, isSpecialZone = false, purescriptId = purescriptId}
 
 showMap :: forall action. String -> Boolean -> String -> Number -> Number -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
-showMap = showMapImpl --liftFlow (showMapImpl id mapType)
+showMap = showMapImpl
 
--- loader :: Boolean -> Maybe LoaderMessage -> Flow GlobalState Unit
--- loader flag message = do
---     _ <- pure $ hideKeyboardOnNavigation true
---     case message of
---         Just (LoaderMessage (Title title) (SubTitle subTitle)) -> do
---             _ <- liftFlow (loaderTextImpl (title)  (subTitle))
---             liftFlow (toggleLoaderImpl flag)
---         Nothing -> liftFlow (toggleLoaderImpl flag)
 
 removeAllPolylines :: String -> Unit
 removeAllPolylines str = removeAllPolylinesImpl markersToRemove
@@ -532,12 +410,6 @@ datePickerWithTimeout = runEffectFn5 datePickerImpl
 
 timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Number -> Effect Unit
 timePickerWithTimeout = runEffectFn3 timePickerImpl
-
--- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)
--- onEventWithCB obj = doAff do
---   makeAff (\cb -> do
---     _onEventWithCB obj (Right >>> Right >>> cb) (Left >>> Right >>> cb)
---     pure nonCanceler)
 
 type Locations = {
     points :: Coordinates

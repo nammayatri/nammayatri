@@ -8,7 +8,7 @@ export const setSuggestionsMapInJson = function (map) {
   
 export const getSuggestedDestinationsJsonFromLocal = function (key){
     
-  const stringifiedMap=window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key); //  window.JBridge.getKeysInSharedPrefs(key);
+  const stringifiedMap=window.JBridge.getFromSharedPrefs ? window.JBridge.getFromSharedPrefs(key) : window.JBridge.getKeysInSharedPrefs(key); //  window.JBridge.getKeysInSharedPrefs(key);
   if (stringifiedMap != "__failed" && stringifiedMap != "(null)") {
     const unstring = JSON.parse(stringifiedMap);
     return Array.from(unstring);

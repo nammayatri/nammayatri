@@ -1074,7 +1074,7 @@ public class InflateView {
             if (key.equals("onClick")) {
                 final String js = properties.getString("onClick");
                 Method onClickMethod = instance.getClass().getMethod("setOnClickListener", View.OnClickListener.class);
-                onClickMethod.invoke(instance, (View.OnClickListener) v -> dynamicUI.addJsToWebView("window.callUICallback('" + js + "');"));
+                onClickMethod.invoke(instance, (View.OnClickListener) v -> dynamicUI.invokeFunctionInJS("callUICallback",js));
             }
 
             if (key.equals("onScroll")) {

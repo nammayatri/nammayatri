@@ -122,7 +122,7 @@ window.juspayAssetConfig = JSON.parse(JBridge.loadFileInDUI("juspay_assets.json"
 
 try {
   if (window.__OS !== "IOS") {
-    const files = JSON.parse(JBridge.getKeysInSharedPref("asset_metadata.json"))
+    const files = JSON.parse(JBridge.getFromSharedPrefs("asset_metadata.json"))
     Object.keys(files).forEach((key) => {
       if (files[key].zipHashInDisk[0] !== "\"" && files[key].zipHashInDisk[files[key].zipHashInDisk.length - 1] !== "\"") {
         files[key].zipHashInDisk = `"${files[key].zipHashInDisk}"`
@@ -135,6 +135,7 @@ try {
 }
 
 let sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+console.log("sessionInfo", sessionInfo)
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || isCUGUser) {
   window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
@@ -322,15 +323,15 @@ function callInitiateResult() {
 }
 
 function refreshFlow() {
-  const dontCallRefresh = (window.JBridge.getKeysInSharedPref("DONT_CALL_REFRESH") == "true");
+  const dontCallRefresh = (window.JBridge.getFromSharedPrefs("DONT_CALL_REFRESH") == "true");
   if (dontCallRefresh) {
     window.JBridge.setKeysInSharedPrefs("DONT_CALL_REFRESH", "false");
     return;
   }
   const currentDate = new Date();
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
-  const token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
-  const shouldRefresh = window.JBridge.getKeysInSharedPref("CALL_REFRESH");
+  const token = window.JBridge.getFromSharedPrefs("REGISTERATION_TOKEN");
+  const shouldRefresh = window.JBridge.getFromSharedPrefs("CALL_REFRESH");
   if (((diff > refreshThreshold) && (token != "__failed")) || shouldRefresh == "true") {
     if (window.storeCallBackMessageUpdated) {
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;

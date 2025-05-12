@@ -3,7 +3,7 @@ const JBridge = window.JBridge;
 
 function getLanguageLocale (){
   if (!window.languageKey) {
-    const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    const locale = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
     window.languageKey = locale;
     return locale;
   } 

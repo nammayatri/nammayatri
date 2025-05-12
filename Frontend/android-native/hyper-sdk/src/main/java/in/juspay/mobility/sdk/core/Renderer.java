@@ -78,11 +78,7 @@ public class Renderer {
         this.dynamicUI = dynamicUI;
         this.container = new HashMap<>();
         this.prevView = new HashMap<>();
-        try {
-            this.viewCacheCapacity = SdkConfigService.getCachedSdkConfig().getJSONObject("uiFeatures").getJSONObject("nbListItemCaching").getInt("bgCacheCapacity");
-        } catch (Exception e) {
-            this.viewCacheCapacity = 4;
-        }
+        this.viewCacheCapacity = 4;
         try {
             initCache();
         } catch (Exception e) {

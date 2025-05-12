@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebViewClient;
@@ -95,9 +96,6 @@ public class HyperServices {
 
     private final AtomicReference<SDKState> sdkStateReference;
 
-    @NonNull
-    private final TrackerFallback trackerFallBack;
-
     private final Set<String> onBackPressedCallbackSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
 
@@ -126,7 +124,6 @@ public class HyperServices {
         juspayServices = new JuspayServices(context, tenantParams);
         hyperExceptionHandler = new HyperExceptionHandler(this);
         sdkStateReference = new AtomicReference<>(SDKState.INSTANTIATED);
-        this.trackerFallBack = new TrackerFallback(juspayServices.getSdkConfigService().getSdkConfig());
         onBackPressedCallback = new OnBackPressedCallback(false) {
             @Override
             public void handleOnBackPressed() {
@@ -303,10 +300,8 @@ public class HyperServices {
                 switch (event.optString("event", "default")) {
                     case "process_result":
                         logSafeEvents(LogLevel.INFO, Labels.HyperSdk.PROCESS, "ended", event);
-                        trackerFallBack.log(event, juspayServices, LogType.PROCESS_END);
                         break;
                     case "initiate_result":
-                        trackerFallBack.log(event, juspayServices, LogType.INITIATE_RESULT);
                         logSafeEvents(LogLevel.INFO, Labels.HyperSdk.INITIATE, "ended", event);
                         break;
                     default:
@@ -413,7 +408,6 @@ public class HyperServices {
         }
 
         if (checkAndStartInitiate(params)) {
-            trackerFallBack.log(params, juspayServices, LogType.INITIATE_START);
             juspayServices.getSdkTracker().resetSerialNumber();
             juspayServices.getSessionInfo().setSessionId();
             if (Objects.equals(juspayServices.getWorkingLogger(), "json-array") || Objects.equals(juspayServices.getWorkingLogger(), "both")) {
@@ -550,7 +544,6 @@ public class HyperServices {
                 break;
 
             case INITIATE_STARTED:
-                trackerFallBack.log(payload, juspayServices, LogType.PROCESS_QUEUED);
                 logSafeEvents(LogLevel.INFO, Labels.HyperSdk.PROCESS, "queued", payload);
                 processWaitingQueue.add(() -> process(activity, viewGroup, payload));
                 break;
@@ -694,7 +687,6 @@ public class HyperServices {
         try {
             //this is the container id passed inside the payload.. which can be used by any of service for blur effects
             logSafeEvents(LogLevel.INFO, Labels.HyperSdk.PROCESS, "started", payload);
-            trackerFallBack.log(payload, juspayServices, LogType.PROCESS_START);
             JSONObject innerPayload = payload.getJSONObject("payload");
             innerPayload.put("merchant_root_view", container != null ? String.valueOf(container.getId()) : -1);
             innerPayload.put("merchant_keyboard_mode", activity != null ? activity.getWindow().getAttributes().softInputMode : -1);
@@ -804,17 +796,9 @@ public class HyperServices {
         LogSessioniserExp logSessioniserExp = juspayServices.getLogSessioniserExp();
         if (logSessioniserExp != null) {
             try {
-                JSONObject logsConfig = juspayServices.getSdkConfigService().getSdkConfig().optJSONObject("logsConfig");
-                if (logsConfig != null) {
-                    String bufferLogsTill = logsConfig.optString("bufferLogsTill", event);
-                    if (event.equals(bufferLogsTill) && shouldStopBuffer(logsConfig, payload)) {
-                        logSessioniserExp.startPushing();
-                    }
-                } else {
-                    logSessioniserExp.startPushing();
-                }
-            } catch (Exception exception) {
                 logSessioniserExp.startPushing();
+            } catch (Exception exception) {
+//                logSessioniserExp.startPushing();
             }
         }
     }

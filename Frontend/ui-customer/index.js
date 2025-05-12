@@ -194,8 +194,8 @@ function callInitiateResult () {
 function shouldRefresh() {
   const currentDate = new Date();
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
-  const token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
-  const currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
+  const token = (window.JBridge.getFromSharedPrefs("REGISTERATION_TOKEN"));
+  const currentState = (window.JBridge.getFromSharedPrefs("LOCAL_STAGE"));
   const refreshTh = (currentState == "RideStarted" || currentState == "RideAccepted") ? refreshThreshold : homeScreenRT;
   return ((diff > refreshTh) && 
       (token != "__failed") && 

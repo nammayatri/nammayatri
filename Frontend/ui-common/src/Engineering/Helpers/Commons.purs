@@ -75,7 +75,6 @@ foreign import getDeviceHeight :: Unit -> Int
 foreign import getScreenPpi :: Unit -> Int
 foreign import screenHeight :: Unit -> Int
 foreign import getVersionByKey :: String -> String
-foreign import callSahay ::  String  -> EffectFnAff String
 foreign import safeMarginTopImpl :: Unit -> Int
 foreign import safeMarginBottomImpl :: Unit -> Int
 foreign import getNewIDWithTag :: String -> String
@@ -129,21 +128,6 @@ foreign import addBenchMark :: Fn2 String Boolean Unit
 
 os :: String
 os = getOs unit
-
-sendSdkRequest :: forall a b st. EncodeWithOptions a => DecodeWithOptions (Maybe b) => SDKRequest a  -> Flow st (SDKResponse b)
-sendSdkRequest request@(SDKRequest req) = do
-  result <- doAff do (fromEffectFnAff <<< callSahay $ request')
-  case runExcept $ defaultDecodeJSON result of
-    Right response -> pure response
-    Left err -> do
-     pure $ SDKResponse
-          {
-            success : false,
-            event : req.event,
-            payload: Nothing
-          }
-  where
-      request' = defaultEncodeJSON request
 
 type NativeHeader = { field :: String , value :: String}
 type NativeHeaders = Array NativeHeader

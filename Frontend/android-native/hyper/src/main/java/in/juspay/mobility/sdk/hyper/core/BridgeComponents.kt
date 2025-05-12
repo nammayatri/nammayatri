@@ -13,7 +13,6 @@ interface BridgeComponents {
     val fileProviderInterface: FileProviderInterface
     val jsCallback: JsCallback?
     val sdkName: String
-    val sdkConfig: JSONObject
     val clientId: String?
     val sessionInfoInterface: SessionInfoInterface
 }

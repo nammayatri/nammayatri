@@ -71,8 +71,8 @@ public class SessionInfo implements SessionInfoInterface {
         this.context = juspayServices.getContext().getApplicationContext();
         this.sessionInfo = new JSONObject();
         this.bundleParams = new JSONObject();
-        this.androidId = generateId("juspay_android_id");
-        this.deviceId = generateId("juspay_device_id");
+        this.androidId = "";
+        this.deviceId = "";
     }
 
     private static boolean isRooted() {

@@ -9,7 +9,7 @@ android {
     namespace "in.juspay.mobility.app"
 
     defaultConfig {
-        minSdk 21
+        minSdk 24
         targetSdk 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

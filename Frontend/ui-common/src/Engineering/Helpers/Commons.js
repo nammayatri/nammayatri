@@ -4,7 +4,7 @@ const { JBridge, Android } = window;
 
 function getLanguageLocale() {
   if (!window.languageKey) {
-    const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    const locale = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
     window.languageKey = locale;
     return locale;
   }
@@ -116,27 +116,6 @@ export const setWindowVariableImpl = function (key) {
     }
   }
 }
-
-export const callSahay = function (request) {
-  return function (_error, success) {
-    window.__HANDLERLSP = function (response) {
-      const reqJson = JSON.parse(request);
-      const resJson = JSON.parse(response);
-
-      if (reqJson.event != resJson.event) {
-        console.error("callSahay", "Got response for different event", "Expected", reqJson.event, "Received", resJson.event);
-      }
-
-      console.warn("callSahay", "Got response", response);
-      success(response);
-    }
-
-    console.warn("callSahay", "Sending payload", request);
-    window.JBridge.processWithSdk(request);
-
-    // return function() {};
-  };
-};
 
 export const screenWidth = function () {
   return screen.width;

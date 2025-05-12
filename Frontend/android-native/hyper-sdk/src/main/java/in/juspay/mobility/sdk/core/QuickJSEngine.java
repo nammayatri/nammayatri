@@ -1,12 +1,14 @@
 package in.juspay.mobility.sdk.core;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.whl.quickjs.android.QuickJSLoader;
+import com.whl.quickjs.wrapper.JSFunction;
 import com.whl.quickjs.wrapper.JSObject;
 import com.whl.quickjs.wrapper.QuickJSContext;
 
@@ -19,13 +21,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import in.juspay.mobility.sdk.hyper.bridge.HyperBridge;
 import in.juspay.mobility.sdk.hyper.core.ExecutorManager;
 
 public class QuickJSEngine implements JSEngine {
-    private Context context;
-    private QuickJSContext runtime;
-
-    private String LOG_TAG = "QuickJSEngine";
+    private final Context context;
+    private final QuickJSContext runtime;
 
     static {
         QuickJSLoader.init();
@@ -33,37 +34,8 @@ public class QuickJSEngine implements JSEngine {
 
     public QuickJSEngine(Context context) {
         this.context = context;
-        this.runtime = QuickJSContext.create();
-        this.runtime.setMaxStackSize(1024 * 1024);
-        this.runtime.setEnableStackTrace(true);
-        this.runtime.setProperty(runtime.getGlobalObject(), "window",runtime.getGlobalObject());
-        runtime.setConsole(new QuickJSContext.Console() {
-            @Override
-            public void log(String info) {
-                if (info != null) Log.i(LOG_TAG, info);
-            }
+        this.runtime = QuickJSRuntime.getInstance();
 
-            @Override
-            public void info(String info) {
-                if (info != null) Log.i(LOG_TAG, info);
-
-            }
-
-            @Override
-            public void warn(String info) {
-                if (info != null) Log.w(LOG_TAG, info);
-
-            }
-
-            @Override
-            public void error(String info) {
-                if (info != null) Log.e(LOG_TAG, info);
-            }
-        });
-        TimerPolyfill.addTimerFunctions(runtime);
-//        this.runtime = JSRuntime.makeHermesRuntime();
-//        runtime.enableDebugger();
-//        runtime.evaluateJavaScript(  "var window = this; var top = this;");
     }
 
     @Override
@@ -82,7 +54,14 @@ public class QuickJSEngine implements JSEngine {
             jsObj.setProperty(methodName, args -> {
                 
                 for (Method method : overloads) {
-                    if (method.getParameterCount() == args.length) {
+                    int paramCount = 0;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        paramCount = method.getParameterCount();
+                    } else {
+                        // Fallback: count manually
+                        paramCount = method.getParameterTypes().length;
+                    }
+                    if (paramCount == args.length) {
                         Object[] safeArgs = new Object[args.length];
                         Class<?>[] paramTypes = method.getParameterTypes();
 
@@ -131,7 +110,6 @@ public class QuickJSEngine implements JSEngine {
 
 
     private void updateJbridge(Object value, String key) {
-        System.out.println("hello -> "+ key);
         Object jbridge = runtime.getGlobalObject().getProperty("JBridge");
         if (jbridge == null) {
             JSObject jsObj = runtime.createNewJSObject();
@@ -153,7 +131,14 @@ public class QuickJSEngine implements JSEngine {
             if (jbridgejs.getProperty(methodName) == null) {
                 jbridgejs.setProperty(methodName, args -> {
                     for (Method method : overloads) {
-                        if (method.getParameterCount() == args.length) {
+                        int paramCount = 0;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            paramCount = method.getParameterCount();
+                        } else {
+                            // Fallback: count manually
+                            paramCount = method.getParameterTypes().length;
+                        }
+                        if (paramCount == args.length) {
                             Object[] safeArgs = new Object[args.length];
                             Class<?>[] paramTypes = method.getParameterTypes();
 
@@ -266,11 +251,13 @@ public class QuickJSEngine implements JSEngine {
                 e.printStackTrace();
             }
         });
-
     }
 
+    public void invokeFnInJs(String s, Object... args) {
+        Object js = runtime.getProperty(runtime.getGlobalObject(), s);
+        if (js instanceof JSFunction){
+            ((JSFunction) js).callVoid(args);
+        }
 
-    public void invokeFnInJs(String s, String[] args) {
-//        runtime
     }
 }

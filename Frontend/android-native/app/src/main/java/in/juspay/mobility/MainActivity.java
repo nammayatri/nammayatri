@@ -1223,11 +1223,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public static String getService() {
-        if (MERCHANT_TYPE.equals("USER")) {
-            return "in.yatri.consumer";
-        } else {
             return "in.yatri.provider";
-        }
     }
 
     private boolean migrateLocalStore(Context context) {

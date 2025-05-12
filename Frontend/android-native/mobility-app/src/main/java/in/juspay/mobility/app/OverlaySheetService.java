@@ -78,8 +78,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -569,7 +567,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }
             currentMediaPlayer = null;
-            currentMediaIndex = new AtomicInteger(-1);
+            currentMediaIndex = -1;
             time = 0;
             sheetArrayList.clear();
             NotificationUtils.binder = null;
@@ -980,7 +978,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (errorPayload.has(getResources().getString(R.string.ERROR_MESSAGE))) {
                     handler.post(() -> {
                         try {
-                            Toast.makeText(context,  errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
                         } catch (JSONException e) {
                             Exception exception = new Exception("Error in response respondAPI " + e);
                             FirebaseCrashlytics.getInstance().recordException(exception);
@@ -1015,7 +1013,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     if (mediaPlayer != null) mediaPlayer.release();
                 }
                 currentMediaPlayer = null;
-                currentMediaIndex = new AtomicInteger(-1);
+                currentMediaIndex = -1;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1033,9 +1031,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     private void startLoader(String id) {
         try {
-            if (currentMediaPlayer.get() != null) {
-                if (currentMediaPlayer.get().isPlaying()) {
-                    currentMediaPlayer.get().pause();
+            if (currentMediaPlayer != null) {
+                if (currentMediaPlayer.isPlaying()) {
+                    currentMediaPlayer.pause();
                 }
             }
             if (floatyView != null) {
@@ -1172,9 +1170,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     private void startApiLoader() {
         try {
-            if (currentMediaPlayer.get() != null) {
-                if (currentMediaPlayer.get().isPlaying()) {
-                    currentMediaPlayer.get().pause();
+            if (currentMediaPlayer != null) {
+                if (currentMediaPlayer.isPlaying()) {
+                    currentMediaPlayer.pause();
                 }
             }
             if (apiLoader != null) {
@@ -1344,8 +1342,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }));
         }
     }
-
-
 
     /*
     * To update the audio sound based on notification type when card changes are driver swipes the cards*/

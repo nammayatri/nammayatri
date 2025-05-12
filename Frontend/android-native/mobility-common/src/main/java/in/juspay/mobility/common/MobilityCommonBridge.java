@@ -357,7 +357,7 @@ public class MobilityCommonBridge extends HyperBridge {
         receivers.initReceiver();
         callBack = this::callImageUploadCallBack;
         Utils.registerCallback(callBack);
-        fetchAndUpdateLastKnownLocation();
+        ExecutorManager.runOnBackgroundThread(this::fetchAndUpdateLastKnownLocation);
     }
 
     protected enum AppType {

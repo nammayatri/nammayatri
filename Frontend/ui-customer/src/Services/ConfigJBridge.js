@@ -1,10 +1,10 @@
 const JBridge = window.JBridge;
 export const getKeyInSharedPrefKeysConfig = function (key) {
-  return JBridge.getKeysInSharedPref(key);
+  return JBridge.getFromSharedPrefs(key);
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-  return JBridge.getKeysInSharedPref(key);
+  return JBridge.getFromSharedPrefs(key);
 };
 
 export const getValueToLocalNativeStoreConfig = function (key) {

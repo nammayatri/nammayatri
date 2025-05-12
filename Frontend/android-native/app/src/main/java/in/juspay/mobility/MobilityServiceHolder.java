@@ -34,6 +34,7 @@ import in.juspay.mobility.sdk.ui.HyperPaymentsCallbackAdapter;
 public class MobilityServiceHolder {
     private static MobilityServiceHolder instance;
     private static JSONObject initiatePayload = new JSONObject();
+    private static final Object lock = new Object();
     private static long initiateTime = 0;
     private MobilityServices hyperService;
     private final Queue<Pair<JSONObject, JuspayResponseHandler>> queue = new LinkedList<>();
@@ -44,23 +45,12 @@ public class MobilityServiceHolder {
     }
 
     public static MobilityServiceHolder getInstance(Context context) {
-        if (instance == null) {
-            Log.i("APP_PERF", "ON_CREATE_HYPER_SERVICE : " + System.currentTimeMillis());
-            instance = new MobilityServiceHolder(context);
-            // Backward Compatibility
-            boolean isUpdated = Boolean.parseBoolean(KeyValueStore.read(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"isUpdated","false"));
-            if (!isUpdated) {
-                try {
-                    File deleteFile = new File(context.getDir("juspay",MODE_PRIVATE), "v1-assets_downloader_godel_2.1.33.jsa");
-                    if (deleteFile.exists()) deleteFile.delete();
-                    deleteFile = new File(context.getDir("juspay",MODE_PRIVATE), "v1-index_bundle_godel_2.1.33.jsa");
-                    if (deleteFile.exists()) deleteFile.delete();
-                    KeyValueStore.write(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"isUpdated","true");
-                } catch (Exception e) {
-                    Log.e("MobilityServiceHolder",e.toString());
-                }
+        synchronized (lock) {
+            if (instance == null) {
+                Log.i("APP_PERF", "ON_CREATE_HYPER_SERVICE : " + System.currentTimeMillis());
+                instance = new MobilityServiceHolder(context);
+                Log.i("APP_PERF", "ON_CREATE_HYPER_END : " + System.currentTimeMillis());
             }
-            Log.i("APP_PERF", "ON_CREATE_HYPER_END : " + System.currentTimeMillis());
         }
         return instance;
     }

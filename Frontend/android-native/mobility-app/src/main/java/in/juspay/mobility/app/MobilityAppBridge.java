@@ -168,9 +168,11 @@ public class MobilityAppBridge extends HyperBridge {
         createVPAdapter(bridgeComponents.getContext());
         initNotificationChannel(bridgeComponents.getContext());
         cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
-        String mapConfig = remoteConfigs.getString("map_config");
-        KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
-        KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", remoteConfigs.getString("enable_app_caching"));
+        ExecutorManager.runOnBackgroundThread(() -> {
+            String mapConfig = remoteConfigs.getString("map_config");
+            KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
+            KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", remoteConfigs.getString("enable_app_caching"));
+        });
     }
 
     private void initNotificationChannel(Context context) {

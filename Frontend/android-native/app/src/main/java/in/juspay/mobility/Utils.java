@@ -103,23 +103,15 @@ public class Utils {
     }
 
     public static JSONObject getInnerPayload(JSONObject payload, String action, Context context) throws JSONException{
-        String appName = "";
-        boolean loadDynamicModule = in.juspay.mobility.BuildConfig.includeDynamicFeature;
-        try{
-            appName = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();
-        }catch (Exception e){
-            e.printStackTrace();
-        }
         payload.put("clientId", context.getResources().getString(R.string.client_id));
         payload.put("merchantId", context.getResources().getString(R.string.merchant_id));
-        payload.put("appName", appName);
+        payload.put("appName", context.getResources().getString(R.string.app_name));
         payload.put("action", action);
         payload.put("logLevel",1);
         payload.put("isBootable",true);
         payload.put(PaymentConstants.ENV, "prod");
-        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
-        payload.put("bundleTimeOut",bundleTimeOut);
-        payload.put("loadDynamicModule", loadDynamicModule);
+        payload.put("bundleTimeOut","500");
+        payload.put("loadDynamicModule", false);
         return payload;
     }
 
