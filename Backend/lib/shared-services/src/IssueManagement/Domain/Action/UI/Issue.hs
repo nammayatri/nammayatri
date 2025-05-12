@@ -209,7 +209,7 @@ issueReportList ::
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListRes
-issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
+issueReportList (personId, _merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
   issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
@@ -227,12 +227,11 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
       ServiceHandle m ->
       D.IssueReport ->
       m Common.IssueReportListItem
-    processIssueReport iConfig currTime language iHandle iReport = do
+    processIssueReport iConfig currTime language _iHandle iReport = do
       let timeDiff = realToFrac (currTime `diffUTCTime` iReport.updatedAt) / 3600
       if iReport.status == RESOLVED && timeDiff > iConfig.autoMarkIssueClosedDuration
         then do
           QIR.updateStatusAssignee iReport.id (Just CLOSED) iReport.assignee
-          updateTicketStatus iReport TIT.CL merchantId merchantOpCityId iHandle "Closed by system"
           mbIssueMessages <- mapM (`CQIM.findById` identifier) iConfig.onAutoMarkIssueClsMsgs
           let issueMessages = mapMaybe ((.id) <$>) mbIssueMessages
           let updatedChats =
