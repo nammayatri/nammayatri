@@ -237,7 +237,6 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
       if iReport.status == RESOLVED && timeDiff > iConfig.autoMarkIssueClosedDuration
         then do
           QIR.updateStatusAssignee iReport.id (Just CLOSED) iReport.assignee
-          updateTicketStatus iReport TIT.CL merchantId merchantOpCityId iHandle "Closed by system"
           mbIssueMessages <- mapM (`CQIM.findById` identifier) iConfig.onAutoMarkIssueClsMsgs
           let issueMessages = mapMaybe ((.id) <$>) mbIssueMessages
           let updatedChats =
