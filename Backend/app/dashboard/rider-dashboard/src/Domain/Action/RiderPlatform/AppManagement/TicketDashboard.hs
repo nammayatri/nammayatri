@@ -3,6 +3,8 @@
 module Domain.Action.RiderPlatform.AppManagement.TicketDashboard
   ( ticketDashboardUploadAsset,
     ticketDashboardDeleteAsset,
+    ticketDashboardCurrentSeatStatus,
+    ticketDashboardSeatManagement,
   )
 where
 
@@ -51,3 +53,17 @@ ticketDashboardDeleteAsset merchantShortId opCity apiTokenInfo ticketPlaceId _re
   requestorRole <- getDashboardAccessType requestorId
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketDashboardDSL.ticketDashboardDeleteAsset) ticketPlaceId (Just requestorId) (Just requestorRole) req)
+
+ticketDashboardCurrentSeatStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> API.Types.Dashboard.AppManagement.TicketDashboard.CurrentSeatStatusReq -> Environment.Flow API.Types.Dashboard.AppManagement.TicketDashboard.CurrentSeatStatusResp)
+ticketDashboardCurrentSeatStatus merchantShortId opCity apiTokenInfo ticketPlaceId _requestorId _requestorRole req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  requestorRole <- getDashboardAccessType requestorId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketDashboardDSL.ticketDashboardCurrentSeatStatus) ticketPlaceId (Just requestorId) (Just requestorRole) req
+
+ticketDashboardSeatManagement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> API.Types.Dashboard.AppManagement.TicketDashboard.SeatManagementReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+ticketDashboardSeatManagement merchantShortId opCity apiTokenInfo ticketPlaceId _requestorId _requestorRole req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  requestorRole <- getDashboardAccessType requestorId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketDashboardDSL.ticketDashboardSeatManagement) ticketPlaceId (Just requestorId) (Just requestorRole) req

@@ -80,6 +80,19 @@ updateBookedSeats booked ticketServiceCategoryId date = do
         ]
     ]
 
+updateMaxCapacity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Day -> m ())
+updateMaxCapacity maxCapacity ticketServiceCategoryId date = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.maxCapacity maxCapacity, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq (Kernel.Types.Id.getId ticketServiceCategoryId),
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement -> m (Maybe Domain.Types.SeatManagement.SeatManagement))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -90,6 +103,7 @@ updateByPrimaryKey (Domain.Types.SeatManagement.SeatManagement {..}) = do
     [ Se.Set Beam.blocked blocked,
       Se.Set Beam.booked booked,
       Se.Set Beam.date date,
+      Se.Set Beam.maxCapacity maxCapacity,
       Se.Set Beam.ticketServiceCategoryId (Kernel.Types.Id.getId ticketServiceCategoryId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -107,6 +121,7 @@ instance FromTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManageme
             booked = booked,
             date = date,
             id = Kernel.Types.Id.Id id,
+            maxCapacity = maxCapacity,
             ticketServiceCategoryId = Kernel.Types.Id.Id ticketServiceCategoryId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -121,6 +136,7 @@ instance ToTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManagement
         Beam.booked = booked,
         Beam.date = date,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.maxCapacity = maxCapacity,
         Beam.ticketServiceCategoryId = Kernel.Types.Id.getId ticketServiceCategoryId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

@@ -358,6 +358,7 @@ SeatManagement:
     ticketServiceCategoryId: Id ServiceCategory
     booked: Int
     blocked: Int
+    maxCapacity: Maybe Int
 
   default:
     booked: "0"
@@ -393,6 +394,11 @@ SeatManagement:
     updateBookedAndBlockedSeats:
       kvFunction: updateOneWithKV
       params: [booked, blocked]
+      where:
+        and: [ticketServiceCategoryId, date]
+    updateMaxCapacity:
+      kvFunction: updateOneWithKV
+      params: [maxCapacity]
       where:
         and: [ticketServiceCategoryId, date]
 

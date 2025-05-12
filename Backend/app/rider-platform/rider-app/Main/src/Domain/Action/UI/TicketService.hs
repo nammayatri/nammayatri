@@ -372,6 +372,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
                     date = req.visitDate,
                     blocked = bookedSeats,
                     booked = 0,
+                    maxCapacity = tBookingSC.availableSeats,
                     merchantId = Just merchantId,
                     merchantOperatingCityId = Just merchantOperatingCityId,
                     createdAt = now,
@@ -758,25 +759,28 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
 
 postTicketBookingsUpdateSeats :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postTicketBookingsUpdateSeats _ TicketBookingUpdateSeatsReq {..} = do
+  -- TODO: Here we need to make redis compatible update
   mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId date
-  now <- getCurrentTime
-  if isJust mbSeatM
-    then QTSM.updateBookedSeats updatedBookedSeats categoryId date
-    else do
-      seatId <- generateGUID
-      let seatM =
-            Domain.Types.SeatManagement.SeatManagement
-              { id = seatId,
-                ticketServiceCategoryId = categoryId,
-                date = date,
-                blocked = 0,
-                booked = updatedBookedSeats,
-                merchantId = Nothing,
-                merchantOperatingCityId = Nothing,
-                createdAt = now,
-                updatedAt = now
-              }
-      QTSM.create seatM
+  tBookingSC <- QSC.findById categoryId >>= fromMaybeM (InvalidRequest "TicketBookingServiceCategory not found")
+  when (isNothing mbSeatM) $ do
+    seatId <- generateGUID
+    now <- getCurrentTime
+    let seatM =
+          Domain.Types.SeatManagement.SeatManagement
+            { id = seatId,
+              ticketServiceCategoryId = categoryId,
+              date = date,
+              blocked = 0,
+              booked = 0,
+              maxCapacity = tBookingSC.availableSeats,
+              merchantId = Nothing,
+              merchantOperatingCityId = Nothing,
+              createdAt = now,
+              updatedAt = now
+            }
+    QTSM.create seatM
+  setupBlockMechanismNx categoryId date
+  tryChangeBookedSeats categoryId updatedBookedSeats date
   pure Kernel.Types.APISuccess.Success
 
 postTicketServiceCancel :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.TicketService.TicketServiceCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -1094,6 +1098,70 @@ mkBlockMember personId numOfUnits = "{" <> personId.getId <> "}:" <> show numOfU
 releaseBlock :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)] -> Environment.Flow ()
 releaseBlock personId visitDate = mapM_ (\(categoryId, categoryUnit) -> Redis.zRem (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) ([mkBlockMember personId categoryUnit]))
 
+tryChangeMaxCapacity :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Int -> Data.Time.Calendar.Day -> Environment.Flow ()
+tryChangeMaxCapacity categoryId newMaxCapacity visitDate = do
+  mbAllowedMaxCapacity <- Redis.get (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate)
+  let oldMaxCapacity = fromMaybe 0 mbAllowedMaxCapacity
+  let change = fromIntegral $ newMaxCapacity - oldMaxCapacity
+  if change > 0
+    then do
+      _ <- Redis.incrby (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate) change
+      QTSM.updateMaxCapacity (Just newMaxCapacity) categoryId visitDate
+    else do
+      seatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId visitDate >>= fromMaybeM (InternalError "Seat Management not found during negative change")
+      mbBookedCount <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate)
+      let bookedCount = fromMaybe seatM.booked mbBookedCount
+      blockedCount <- getBlockCountInWindow categoryId visitDate
+      if blockedCount + bookedCount >= newMaxCapacity
+        then do
+          throwError $ InvalidRequest "Cannot decrease max capacity as there might be more blocked + booked seats than the new max capacity"
+        else do
+          res <- Redis.decrby (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate) (abs change)
+          -- fallback if booked + block > newMaxCapacity
+          mbNewBookedSeats <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate)
+          let newBookedSeats = fromMaybe seatM.booked mbNewBookedSeats
+          newBlockedCount <- getBlockCountInWindow categoryId visitDate
+          if newBookedSeats + newBlockedCount > fromIntegral res
+            then do
+              _ <- Redis.incrby (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate) (abs change)
+              throwError $ InvalidRequest "Cannot decrease max capacity as there might be more blocked + booked seats than the new max capacity"
+            else do
+              QTSM.updateMaxCapacity (Just newMaxCapacity) categoryId visitDate
+
+getBlockCountInWindow :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow Int
+getBlockCountInWindow categoryId visitDate = do
+  now <- getCurrentTimestamp
+  blockedSet <- Redis.zRangeByScore (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) (now - 300000) now
+  return $ accumulateCount blockedSet
+  where
+    accumulateCount arr = sum $ map extractCount arr
+
+tryChangeBookedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Int -> Data.Time.Calendar.Day -> Environment.Flow ()
+tryChangeBookedSeats categoryId newBookedSeats visitDate = do
+  mbAllowedMaxCapacity <- Redis.get (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate)
+  seatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId visitDate >>= fromMaybeM (InternalError "Seat Management not found")
+  let maxCapacity = fromMaybe (fromMaybe 0 seatM.maxCapacity) mbAllowedMaxCapacity
+  if maxCapacity == 0
+    then do
+      QTSM.updateBookedSeats newBookedSeats categoryId visitDate
+    else do
+      bookedCount <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate)
+      let change = fromIntegral $ newBookedSeats - fromMaybe seatM.booked bookedCount
+      when (change < 0) $ throwError $ InvalidRequest "Invalid Operation, not allowed to decrease booked seats"
+      blockedCount <- getBlockCountInWindow categoryId visitDate
+      if newBookedSeats + blockedCount > maxCapacity
+        then do
+          throwError $ InvalidRequest "Cannot change max capacity as there might be more blocked + booked seats than the new max capacity"
+        else do
+          -- update and fallback
+          res <- Redis.incrby (mkTicketServiceCategoryBookedCountKey categoryId visitDate) change
+          if res > (fromIntegral maxCapacity)
+            then do
+              _ <- Redis.decrby (mkTicketServiceCategoryBookedCountKey categoryId visitDate) change
+              throwError $ InvalidRequest "Cannot change max capacity as there might be more blocked + booked seats than the new max capacity"
+            else do
+              QTSM.safeUpdateBookedSeats newBookedSeats categoryId visitDate
+
 tryBlockSeat :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int) -> Environment.Flow BlockResult
 tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestCounter tryBlockServiceCategory
   where
@@ -1104,7 +1172,6 @@ tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestC
       return $ BlockSuccess (Just $ now + 300000)
     tryBlockServiceCategory :: Int -> Environment.Flow BlockResult
     tryBlockServiceCategory requestCount = do
-      now <- getCurrentTimestamp
       mbAllowedMaxCapacity :: Maybe Int <- Redis.get (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate)
       case mbAllowedMaxCapacity of
         Just allowedMaxCapacity -> do
@@ -1112,28 +1179,17 @@ tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestC
           if (bookedCount + numberOfUnits > allowedMaxCapacity)
             then return (BlockFailed $ (if (allowedMaxCapacity - bookedCount) > 0 then "Only " <> show (allowedMaxCapacity - bookedCount) else "No") <> " tickets left")
             else do
-              blockedCountInWindow <- getBlockCountInWindow now
+              blockedCountInWindow <- getBlockCountInWindow categoryId visitDate
               bookedCount' :: Int <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate) >>= fromMaybeM (InternalError $ "Booked Count not found for categoryId " <> show categoryId <> "on date " <> show visitDate)
               if (bookedCount' + blockedCountInWindow + requestCount) > allowedMaxCapacity
                 then withConflictResolverCounter $ \resolverCounter -> do
-                  blockedCountInWindow' <- getBlockCountInWindow now
+                  blockedCountInWindow' <- getBlockCountInWindow categoryId visitDate
                   if resolverCounter > (allowedMaxCapacity - bookedCount - blockedCountInWindow')
                     then return $ BlockFailed "All Tickets Blocked for now, try again after some time"
                     else blockSeat
                 else blockSeat
         Nothing -> pure $ BlockSuccess Nothing
-    getBlockCountInWindow :: Double -> Environment.Flow Int
-    getBlockCountInWindow now = do
-      blockedSet <- Redis.zRangeByScore (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) (now - 300000) now
-      return $ accumulateCount blockedSet
-      where
-        accumulateCount arr = sum $ map extractCount arr
-        extractCount :: BS.ByteString -> Int
-        extractCount bs = case BS8.split ':' bs of
-          [_personId, countBS] -> case BS8.readInt countBS of
-            Just (count, _) -> count
-            Nothing -> 0
-          _ -> 0
+
     withActiveRequestCounter :: (Int -> Environment.Flow a) -> Environment.Flow a
     withActiveRequestCounter action = do
       requestCount <- Redis.incrby (mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate) (fromIntegral numberOfUnits)
@@ -1148,6 +1204,13 @@ tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestC
       _ <- Redis.decrby (mkTicketServiceCategoryConflictResolverKey categoryId visitDate) (fromIntegral numberOfUnits)
       return res
 
+extractCount :: BS.ByteString -> Int
+extractCount bs = case BS8.split ':' bs of
+  [_personId, countBS] -> case BS8.readInt countBS of
+    Just (count, _) -> count
+    Nothing -> 0
+  _ -> 0
+
 calculateTotalRequestedUnits :: TicketBookingReq -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)]
 calculateTotalRequestedUnits req = Map.toList $ Map.fromListWith (+) [(c.categoryId, sum (map (.numberOfUnits) c.peopleCategories)) | s <- req.services, c <- s.categories]
 
@@ -1160,9 +1223,10 @@ setupBlockMechanismNx serviceCategoryId visitDate = do
     whenJust serviceCategory.availableSeats $ \maxSeats -> do
       mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCategoryId visitDate
       let alreadyBookedCount = maybe 0 (.booked) mbSeatM
+      let allowedMaxCapacity = fromMaybe maxSeats (mbSeatM >>= (.maxCapacity))
       keyExpiryTime <- expirationTimeInSeconds visitDate
       let keysAndValues =
-            [ (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate, maxSeats),
+            [ (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate, allowedMaxCapacity),
               (mkTicketServiceCategoryConflictResolverKey serviceCategoryId visitDate, 0),
               (mkTicketServiceCategoryActiveBlockRequestKey serviceCategoryId visitDate, 0),
               (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate, alreadyBookedCount)
