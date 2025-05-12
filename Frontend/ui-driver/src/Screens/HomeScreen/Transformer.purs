@@ -18,6 +18,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 import Screens.Types as ST
+import Services.API
 
 getDisabledLocById :: String -> Array ST.GoToLocation -> Array ST.GoToLocation
 getDisabledLocById id gotoArray = (map (\item ->  {   
@@ -28,3 +29,9 @@ getDisabledLocById id gotoArray = (map (\item ->  {
     tag : item.tag,
     disabled : item.id == id || item.disabled
     }) gotoArray)
+
+getFleetBadgeDriver :: GetFleetBadgeListResp -> Array ST.FleetBadgeDrivers
+getFleetBadgeDriver (GetFleetBadgeListResp list) = map (\(FleetBadgeResp driver) -> {
+    badgeName : driver.badgeName,
+    isActive : driver.isActive
+}) list

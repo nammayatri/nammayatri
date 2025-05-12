@@ -5468,9 +5468,11 @@ instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where enc
 --------------------------------------------------------- Where Is My BUS ---------------------------------------------------------
 
 newtype PrivateTripStartReq = PrivateTripStartReq
-  { vehicleNumberHash :: String
+  { vehicleNumberHash :: Maybe String
   , routeCode :: String
   , location :: LatLong
+  , driverBadgeName :: String
+  , conductorBadgeName :: Maybe String
   }
 
 derive instance genericPrivateTripStartReq :: Generic PrivateTripStartReq _
@@ -5508,6 +5510,8 @@ newtype TripTransactionDetails = TripTransactionDetails
   , status :: BusTripStatus
   , routeInfo :: RouteInfo
   , endRideApprovalRequestId :: Maybe String
+  , driverBadgeName :: Maybe String
+  , conductorBadgeName :: Maybe String
   }
 
 derive instance genericTripLinkResp :: Generic TripTransactionDetails _
@@ -5531,6 +5535,21 @@ instance encodeActiveTripTransaction :: Encode ActiveTripTransaction where encod
 
 ----------------------------------------------------------------------------------------------------------------
 
+data GetFleetBadge = GetFleetBadge Int Int String (Maybe String)
+
+
+derive instance genericGetFleetBadge :: Generic GetFleetBadge _
+instance standardEncodeGetFleetBadge :: StandardEncode GetFleetBadge where standardEncode _ = standardEncode {}
+instance showGetFleetBadge :: Show GetFleetBadge where show = genericShow
+instance decodeGetFleetBadge :: Decode GetFleetBadge where decode = defaultDecode
+instance encodeGetFleetBadge :: Encode GetFleetBadge where encode = defaultEncode
+
+instance makeGetFleetBadge :: RestEndpoint GetFleetBadge where
+  makeRequest reqBody@(GetFleetBadge limit offset badgeType mbSearchString) headers = defaultMakeRequestWithoutLogs GET (EP.getWmbFleetBadges limit offset badgeType mbSearchString) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+----------------------------------------------------------------------------------------------------------------
+
 data GetActiveBusTrip = GetActiveBusTrip String
 
 
@@ -5547,7 +5566,7 @@ instance makeGetActiveBusTrip :: RestEndpoint GetActiveBusTrip where
 --------------------------------------------------------------------------------- 
 
 newtype GetAvailableRoutes = GetAvailableRoutes {
-  vehicleNumber :: String
+  vehicleNumber :: Maybe String
 }
 
 derive instance genericGetAvailableRoutes :: Generic GetAvailableRoutes _
@@ -5614,6 +5633,30 @@ instance standardEncodeAvailableRoutesList :: StandardEncode AvailableRoutesList
 instance showAvailableRoutesList :: Show AvailableRoutesList where show = genericShow
 instance decodeAvailableRoutesList :: Decode AvailableRoutesList where decode = defaultDecode
 instance encodeAvailableRoutesList :: Encode AvailableRoutesList where encode = defaultEncode
+
+------------------------------------------------------------------------------
+
+newtype GetFleetBadgeListResp = GetFleetBadgeListResp (Array FleetBadgeResp)
+
+newtype FleetBadgeResp = FleetBadgeResp
+  { 
+    badgeName :: String,
+    isActive :: Boolean
+  }
+
+derive instance genericFleetBadgeResp :: Generic FleetBadgeResp _
+derive instance newtypeFleetBadgeResp :: Newtype FleetBadgeResp _
+instance standardEncodeFleetBadgeResp :: StandardEncode FleetBadgeResp where standardEncode _ = standardEncode {}
+instance showFleetBadgeResp :: Show FleetBadgeResp where show = genericShow
+instance decodeFleetBadgeResp :: Decode FleetBadgeResp where decode = defaultDecode
+instance encodeFleetBadgeResp :: Encode FleetBadgeResp where encode = defaultEncode
+
+derive instance genericGetFleetBadgeListResp :: Generic GetFleetBadgeListResp _
+derive instance newtypeGetFleetBadgeListResp :: Newtype GetFleetBadgeListResp _
+instance standardEncodeGetFleetBadgeListResp :: StandardEncode GetFleetBadgeListResp where standardEncode _ = standardEncode {}
+instance showGetFleetBadgeListResp :: Show GetFleetBadgeListResp where show = genericShow
+instance decodeGetFleetBadgeListResp :: Decode GetFleetBadgeListResp where decode = defaultDecode
+instance encodeGetFleetBadgeListResp :: Encode GetFleetBadgeListResp where encode = defaultEncode
 
 ------------------------------------------------------------------------------ 
 

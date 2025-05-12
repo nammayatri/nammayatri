@@ -16,6 +16,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
+import PrestoDOM (Visibility(..))
 import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..), RouteInfo(..), LatLong(..), AvailableRoutes(..), BusVehicleDetails(..), AvailableRoutesList(..))
 import Data.Maybe
 import Foreign.Object (empty)
@@ -205,6 +206,8 @@ initData =
       , bus_number : "" 
       , whereIsMyBusData : { 
           availableRoutes : Nothing,
+          fleetBadgeDrivers : Just dummyFleetBadgeDrivers,
+          fleetConductor : Just dummyFleetBadgeDrivers,
           trip : Nothing, 
           endTripStatus : Nothing,
           lastCompletedTrip : Nothing,
@@ -313,14 +316,41 @@ initData =
       , bus_input_data : ""
       , showRecentBusTripModal : false
       , whereIsMyBusConfig: {
-          showSelectAvailableBusRoutes : false
+          linkTripPopup : false
         , selectRouteStage : false
         , selectedRoute : Nothing
+        , selectBadge : Nothing 
         , tripTransactionId : Nothing
+        , dropdownTextFieldConfig : dummyDropdownTextField
+        ,  searchableListConfig : {
+            availableRoutes : [],
+            fleetBadgeDrivers : [],
+            fleetConductor : []
+          }
+        , selectedRoutes : Nothing
+        , selectedFleetDriverBadge : Nothing
+        , selectedFleetConductor : Nothing
+        , selectBusRouteDropdown : false
+        , selectBusDriverDropdown : false
+        , selectBusConductorDropdown : false
         , selectedIndex : -1
       }
       }
   }
+
+dummyDropdownTextField = {
+  visibility: GONE,
+  isOpen: false,
+  searchText: "",
+  placeholder: "Search...",
+  options: [],
+  selectedOption: Nothing,
+  isLoading: false,
+  hasMoreOptions: false,
+  offset: 0,
+  limit: 10,
+  listMaxHeight: 150
+}
 
 dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
 
@@ -486,3 +516,6 @@ dummyAvailableRoutes = AvailableRoutes
 
 dummyAvailableRoutesList :: AvailableRoutesList
 dummyAvailableRoutesList = AvailableRoutesList []
+
+dummyFleetBadgeDrivers :: Array FleetBadgeDrivers
+dummyFleetBadgeDrivers = []

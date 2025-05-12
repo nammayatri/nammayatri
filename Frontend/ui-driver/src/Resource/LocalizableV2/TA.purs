@@ -1811,4 +1811,9 @@ getTa =
     , yes_end_ride: "ஆம், பயணத்தை முடிக்கவும்"
     , canceling_this_booking_may_affect_the_emergency_medical : "இந்த முன்பதிவு ரத்து செய்யப்படுவது நோயாளிக்கு அவசர மருத்துவ சேவைகளை"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ஓட்டுனர்கள் தங்களின் மருத்துவ காரணங்கள் அல்லது வாகனம் முறிவுக்கான காரணங்களுக்கே ரத்து செய்ய அனுமதிக்கப்படுகிறார்கள்"
+    , bus_driver: "பஸ் டிரைவர்"
+    , bus_conductor: "பஸ் கண்டக்டர்"
+    , select_bus_driver: "பஸ் டிரைவரைத் தேர்ந்தெடுக்கவும்"
+    , select_bus_conductor: "பஸ் கண்டக்டரைத் தேர்ந்தெடுக்கவும்"
+    , select_bus_route: "பஸ் வழித்தடத்தைத் தேர்ந்தெடுக்கவும்"
     }

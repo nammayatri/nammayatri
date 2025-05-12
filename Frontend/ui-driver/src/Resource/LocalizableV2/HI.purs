@@ -198,6 +198,9 @@ getHi =
     , have_a_referral: "एक रेफरल है?"
     , add_here: "यहां जोड़ें"
     , referral_applied: "रेफ़रल लागू!"
+    , select_bus_driver: "बस ड्राइवर चुनें"
+    , select_bus_conductor: "बस कंडक्टर चुनें"
+    , select_bus_route: "बस मार्ग चुनें"
     , smalledit: "संपादन करें"
     , add_driving_license: "ड्राइविंग लाइसेंस जोड़ें"
     , help: "सहायता?"
@@ -1811,4 +1814,6 @@ getHi =
     , your_duty_has_started_please_start_the_ride : "आपकी ड्यूटी शुरू हो गई है, कृपया राइड शुरू करें"
     , ending_your_ride_will_stop_tracking: "आपकी सवारी समाप्त करने से ट्रैकिंग बंद हो जाएगी। केवल आपात स्थिति में समाप्त करें"
     , yes_end_ride: "हां, सवारी समाप्त करें"
+    , bus_driver: "बस चालक"
+    , bus_conductor: "बस कंडक्टर"
     }

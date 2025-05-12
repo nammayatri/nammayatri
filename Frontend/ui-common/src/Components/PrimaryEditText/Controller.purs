@@ -47,6 +47,7 @@ type Config =
   , showConstantField :: Boolean
   , focusedStroke :: String
   , textImage :: ImageConfig
+  , prefixImage :: ImageConfig
   }
 
 type ConstantFieldConfig = {
@@ -80,6 +81,7 @@ type EditTextConfig =
   , separatorRepeat :: String
   , separator :: String
   , accessibilityHint :: String
+  , enableOnClick :: Boolean
   }
 
 type TextConfig =
@@ -127,6 +129,7 @@ config = {
     , separatorRepeat : ""
     , separator : ""
     , accessibilityHint : ""
+    , enableOnClick : false
     }
   , visibility : VISIBLE
   , background : Color.white900
@@ -182,6 +185,14 @@ config = {
     , imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_id_filled"
     , margin : (Margin 16 0 16 0)
     , padding : (Padding 0 0 0 0)
+    , visibility : GONE
+  }
+  , prefixImage : {
+      height : V 24
+    , width : V 24
+    , imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_id_filled"
+    , margin : (Margin 0 0 0 0)
+    , padding : (Padding 8 0 0 0)
     , visibility : GONE
   }
 }

@@ -182,7 +182,9 @@ busInfoRow push config =
         , infoSeparator true
         , busInfoItem (StringV2.getStringV2 LT2.route_no) config.routeNumber
         , infoSeparator true
-        , busInfoItem (StringV2.getStringV2 LT2.bus_type_) $ if config.busType == "BUS_AC" then StringV2.getStringV2 LT2.ac else StringV2.getStringV2 LT2.non_ac
+        , if not config.isPrivateFlow then 
+            busInfoItem (StringV2.getStringV2 LT2.bus_type_) $ if config.busType == "BUS_AC" then StringV2.getStringV2 LT2.ac else StringV2.getStringV2 LT2.non_ac
+          else busInfoItem "Driver Badge Name" config.driverBadgeName
       ] 
 
 busInfoItem :: forall w . String -> String -> PrestoDOM (Effect Unit) w

@@ -21,7 +21,7 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
+import Data.Array ((!!), any, elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
 import Data.String as DS
@@ -61,7 +61,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<), (>>=), negate)
-import Prelude (class Eq, class Show, (<<<))
+import Prelude (class Eq, class Show, (<<<), (<$>))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
@@ -1365,6 +1365,8 @@ recentTripToTripDetails trip =
         , endPoint: dummyLatLong
         }
     , endRideApprovalRequestId : Nothing
+    , driverBadgeName : Nothing
+    , conductorBadgeName : Nothing
     }
   where
     dummyLatLong :: API.LatLong
@@ -1372,3 +1374,13 @@ recentTripToTripDetails trip =
 
 isAmbulance :: String -> Boolean
 isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+checkIfPrivateFleet :: HomeScreenState -> Boolean
+checkIfPrivateFleet state = 
+  let mbIsPrivateFleet = (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) <$> state.data.whereIsMyBusData.fleetConfig
+  in case mbIsPrivateFleet of
+      Just isPrivateFleet -> 
+        let _ = runFn2 setValueToLocalStore (show IS_PRIVATE_BUS_FLEET) (show isPrivateFleet)
+        in isPrivateFleet
+      Nothing -> let storeIsPrivateBusFleetValue = getValueToLocalStore IS_PRIVATE_BUS_FLEET 
+        in if DA.any (_ == storeIsPrivateBusFleetValue) ["__failed", "(null)", "", ""] then false else storeIsPrivateBusFleetValue == "true"

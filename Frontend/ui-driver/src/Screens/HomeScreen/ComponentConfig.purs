@@ -19,6 +19,8 @@ import Language.Strings
 import Common.Types.Config
 import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
+-- import Components.DropdownTextField.Handler as DropdownTextField
+import Components.DropdownTextField.Controller as DropdownTextField
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
@@ -51,13 +53,13 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle, isAmbulance)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle, isAmbulance, checkIfPrivateFleet)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), Orientation(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
@@ -95,6 +97,8 @@ import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Services.Accessor as Acc
+import Components.SelectableItems as SelectableItems
+import Components.SelectableItem as SelectableItem
 import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
 import Data.Lens ((^.))
 
@@ -3272,14 +3276,18 @@ disableMetroWarriorWarningPopup _ = PopUpModal.config {
     }
   }
 
-chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
-chooseBusRouteModalPopup state = 
+linkTripModalPopup :: ST.HomeScreenState -> PopUpModal.Config
+linkTripModalPopup state = 
   let 
     (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
     vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ state.props.whereIsMyBusConfig.selectedRoute <|> (availableRoutesList DA.!! 0)
     selectedRouteColor = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900
     config' = PopUpModal.config {
-      padding = Padding 16 16 16 0,
+      dismissIconVisibility = GONE,
+      padding = Padding 16 32 16 0,
+      cornerRadius = (PTD.Corners 24.0 false false false false),
+      height = MATCH_PARENT,
+      margin = MarginTop 80,
       primaryText
       {
         visibility = GONE
@@ -3288,7 +3296,9 @@ chooseBusRouteModalPopup state =
       {
         visibility = GONE
       }
+    , backgroundColor = Color.transparent
     , backgroundClickable = false
+    , outsideClickable = true
     , secondaryText
       { 
         text = StringsV2.getStringV2 LT2.route_number,
@@ -3299,44 +3309,44 @@ chooseBusRouteModalPopup state =
         textStyle = FontStyle.Body1,
         visibility = boolToVisibility $ state.props.whereIsMyBusConfig.selectRouteStage
       }
+    , editTextVisibility = VISIBLE
+    , eTextConfig = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number) VISIBLE
     , whereIsMyBusConfig {
-        visibility = VISIBLE,
+        visibility = GONE,
         selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
-        busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number),
-        busType = primaryTextConfig (if vehicleDetails ^. Acc._busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac) (StringsV2.getStringV2 LT2.bus_type),
+        busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number) VISIBLE,
+        busType = primaryTextConfig (if vehicleDetails ^. Acc._busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac) (StringsV2.getStringV2 LT2.bus_type) GONE,
         routeNumberLabel = StringsV2.getStringV2 LT2.route_number,
-        selectRouteButton = selectRouteButtonConfig state.props.whereIsMyBusConfig.selectedRoute,
         isRouteSelected = isJust state.props.whereIsMyBusConfig.selectedRoute,
-        availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
+        badgeSelected = (\badge -> badge.badgeName) <$> state.props.whereIsMyBusConfig.selectBadge
     }
     , option1 {
-      background = Color.green900
-      , strokeColor = Color.green900
-      , color = Color.white900
-      , text = getString START_RIDE
-      , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoute 
-      , enableRipple = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      background = Color.black900
+      , strokeColor = Color.black900
+      , color = Color.yellow900
+      , text = "Link Trip"
+      , layoutGravity = Just "bottom"
+      , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoutes && isJust state.props.whereIsMyBusConfig.selectedFleetDriverBadge
+      , enableRipple = isJust state.props.whereIsMyBusConfig.selectedRoutes && isJust state.props.whereIsMyBusConfig.selectedFleetDriverBadge 
       , width = MATCH_PARENT
-      , visibility = not state.props.whereIsMyBusConfig.selectRouteStage
+      , visibility = true
     }
     , option2 { 
-      background = Color.grey900
-      , strokeColor = Color.white900
-      , color = Color.black700
-      , text = getString CLOSE
-      , isClickable = true
-      , enableRipple = true
+      visibility = false
+    }
+    , optionsConfig {
+      height = MATCH_PARENT
       , width = MATCH_PARENT
-      , margin = Margin 0 0 0 0
-      , padding = Padding 0 0 0 0
-      , visibility = state.props.whereIsMyBusConfig.selectRouteStage
+      , orientation = VERTICAL
+      , alignParentBottom = "true,-1"
+      , gravity = BOTTOM
     }
     , dismissPopup = state.props.whereIsMyBusConfig.selectRouteStage
-    , dismissPopupConfig { visibility = VISIBLE, height = V 20, width = V 20, margin = (Margin 0 16 16 0), padding = (Padding 0 0 0 0) }
+    , dismissPopupConfig { visibility = if state.props.whereIsMyBusConfig.selectRouteStage then VISIBLE else GONE, height = V 20, width = V 20, margin = (Margin 0 16 16 0), padding = (Padding 0 0 0 0) }
     }
   in config'
   where
-    primaryTextConfig text topLabel =
+    primaryTextConfig text topLabel visibility =
       PrimaryEditTextController.config {
           editText 
           {
@@ -3358,26 +3368,208 @@ chooseBusRouteModalPopup state =
           background = Color.grey700,
           cornerRadius = 8.0,
           margin = Margin 0 0 0 24,
+          visibility = visibility,
           id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
       }
-    transformAvailableRouteList (API.AvailableRoutesList availableRoutesList) = 
-          map (\route -> 
-                {
-                  busRouteNumber : route ^. (Acc._routeInfo) ^. (Acc._routeCode),
-                  sourceText : route ^. (Acc._source) ^. (Acc._stopName),
-                  destination : route ^. (Acc._destination) ^. (Acc._stopName)
-                }) availableRoutesList
-    selectRouteButtonConfig (Just selectedRoute) = 
-             {
-                busRouteNumber : selectedRoute ^. Acc._routeInfo ^. Acc._routeCode,
-                sourceText : selectedRoute ^. Acc._source  ^. Acc._stopName,
-                destination : selectedRoute ^. Acc._destination ^. Acc._stopName
-            } 
-    selectRouteButtonConfig Nothing = {
-                busRouteNumber : StringsV2.getStringV2 LT2.select_route_number,
-                sourceText : "",
-                destination : ""
-            } 
+
+selectBusRoutePopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+selectBusRoutePopupConfig state = 
+  let ( availableRoutesList) =  state.props.whereIsMyBusConfig.searchableListConfig.availableRoutes
+  in
+  PopUpModal.config {
+    dismissIconVisibility = GONE,
+    padding = Padding 0 16 0 0,
+    cornerRadius = (PTD.Corners 24.0 true true false false),
+    margin = MarginTop 80,
+    primaryText
+    {
+      visibility = GONE
+    },
+    secondaryText
+    {
+      visibility = GONE
+    },
+    headerInfo
+    {
+      visibility = GONE
+    },
+    backgroundClickable = false,
+    outsideClickable = true,
+    option1 {
+      visibility = false
+    }, 
+    option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = true
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , margin = Margin 16 16 16 16
+      , padding = Padding 0 0 0 0
+      , visibility = true
+    },
+    searchableListConfig {
+      title = "Route/Bus Number",
+      visibility = VISIBLE,
+      isSearchable = false,
+      listContainerMargin = MarginHorizontal 16 16,
+      mainContainerMargin = Margin 0 0 0 0,
+      mainContainerPadding = Padding 0 0 0 0,
+      optionConfig {
+        margin = Margin 0 16 0 8,
+        padding = Padding 20 16 20 16,
+        background = Color.white900,
+        selectedBackground = Color.blue600,
+        disabledAlpha = 0.5,
+        height = 56,
+        cornerRadius = 8.0
+      },
+      optionsList = map (\(API.AvailableRoutes routes) -> {
+          label : routes.routeInfo ^. Acc._routeCode,
+          routeText : Just $ routes.routeInfo ^. Acc._routeCode,
+          sourceText : Just $ routes.source ^. Acc._stopName,
+          destinationText : Just $ routes.destination ^. Acc._stopName,
+          value : routes.routeInfo ^. Acc._routeCode,
+          isDisabled : false,
+          customView : true,
+          isSelected : false
+      }) availableRoutesList
+    }
+  }
+
+selectBusDriverPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+selectBusDriverPopupConfig state =
+  let fleetBadgeDrivers =  state.props.whereIsMyBusConfig.searchableListConfig.fleetBadgeDrivers
+  in
+  PopUpModal.config {
+    dismissIconVisibility = GONE,
+    padding = Padding 0 16 0 0,
+    cornerRadius = (PTD.Corners 24.0 true true false false),
+    margin = MarginTop 80,
+    primaryText
+    {
+      visibility = GONE
+    },
+    secondaryText
+    {
+      visibility = GONE
+    },
+    headerInfo
+    {
+      visibility = GONE
+    },
+    backgroundClickable = false,
+    outsideClickable = true,
+    option1 {
+      visibility = false
+    }, 
+    option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = true
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , margin = Margin 16 16 16 16
+      , padding = Padding 0 0 0 0
+      , visibility = true
+    },
+    searchableListConfig {
+      title = StringsV2.getStringV2 LT2.select_bus_driver,
+      visibility = VISIBLE,
+      listContainerMargin = MarginHorizontal 16 16,
+      mainContainerMargin = Margin 0 0 0 0,
+      mainContainerPadding = Padding 0 0 0 0,
+      optionConfig {
+        margin = Margin 0 16 0 8,
+        padding = Padding 20 16 20 16,
+        background = Color.white900,
+        selectedBackground = Color.blue600,
+        disabledAlpha = 0.5,
+        height = 56,
+        cornerRadius = 8.0
+      },
+      optionsList = map (\badge -> {
+          label : badge.badgeName,
+          routeText : Nothing,
+          sourceText : Nothing,
+          destinationText : Nothing,
+          value : badge.badgeName,
+          isDisabled : badge.isActive,
+          customView : false,
+          isSelected : false
+      }) fleetBadgeDrivers
+    }
+  }
+
+selectBusConductorPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+selectBusConductorPopupConfig state =
+  let fleetBadgeConductor = state.props.whereIsMyBusConfig.searchableListConfig.fleetConductor
+  in
+  PopUpModal.config {
+    dismissIconVisibility = GONE,
+    padding = Padding 0 16 0 0,
+    cornerRadius = (PTD.Corners 24.0 true true false false),
+    margin = MarginTop 80,
+    primaryText
+    {
+      visibility = GONE
+    },
+    secondaryText
+    {
+      visibility = GONE
+    },
+    headerInfo
+    {
+      visibility = GONE
+    },
+    backgroundClickable = false,
+    outsideClickable = true,
+    option1 {
+      visibility = false
+    }, 
+    option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = true
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , margin = Margin 16 16 16 16
+      , padding = Padding 0 0 0 0
+      , visibility = true
+    },
+    searchableListConfig {
+      title = StringsV2.getStringV2 LT2.select_bus_conductor,
+      visibility = VISIBLE,
+      listContainerMargin = MarginHorizontal 16 16,
+      mainContainerMargin = Margin 0 0 0 0,
+      mainContainerPadding = Padding 0 0 0 0,
+      optionConfig {
+        margin = Margin 0 16 0 8,
+        padding = Padding 20 16 20 16,
+        background = Color.white900,
+        selectedBackground = Color.blue600,
+        disabledAlpha = 0.5,
+        height = 56,
+        cornerRadius = 8.0
+      },
+      optionsList = map (\badge -> {
+          label : badge.badgeName,
+          routeText : Nothing,
+          sourceText : Nothing,
+          destinationText : Nothing,
+          value : badge.badgeName,
+          isDisabled : badge.isActive,
+          customView : false,
+          isSelected : false
+      }) fleetBadgeConductor
+    }
+  }
 
 startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 startBusTripButtonConfig state = PrimaryButton.config
@@ -3414,5 +3606,7 @@ rideTrackingModalConfig state =
             destinationStopName = tripDetails.destination ^. Acc._stopName,
             busNumber = tripDetails.vehicleNumber,
             busType = tripDetails.vehicleType,
-            routeNumber = tripDetails.routeInfo ^. Acc._routeCode
+            routeNumber = tripDetails.routeInfo ^. Acc._routeCode,
+            isPrivateFlow = checkIfPrivateFleet state,
+            driverBadgeName = "badge"
           }

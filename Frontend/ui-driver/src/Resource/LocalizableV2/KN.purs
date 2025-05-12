@@ -1811,4 +1811,9 @@ getKn =
     , yes_end_ride: "ಹೌದು, ಪ್ರಯಾಣ ಅಂತ್ಯಗೊಳಿಸಿ"
     , canceling_this_booking_may_affect_the_emergency_medical : " ಈ ಬುಕ್ಕಿಂಗ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ರೋಗಿಗೆ ತುರ್ತು ವೈದ್ಯಕೀಯ ಸೇವೆಗಳ ಮೇಲೆ ಪರಿಣಾಮ ಬೀರುವ ಸಾಧ್ಯತೆಯಿದೆ"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ಡ್ರೈವರರು ತಮ್ಮ ವೈದ್ಯಕೀಯ ಕಾರಣಗಳು ಅಥವಾ ವಾಹನದ ಬೃಹತ್‌ ಕಡಿವಾಣಗಳಿಂದ ಮಾತ್ರ ರದ್ದು ಮಾಡುವುದು ಅನುಮತಿಸಲಾಗಿದೆ"
+    , bus_driver: "ಬಸ್ ಡ್ರೈವರ್"
+    , bus_conductor: "ಬಸ್ ಕಂಡಕ್ಟರ್"
+    , select_bus_driver: "ಬಸ್ ಚಾಲಕರನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , select_bus_conductor: "ಬಸ್ ನಿರ್ವಾಹಕರನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , select_bus_route: "ಬಸ್ ಮಾರ್ಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     }
