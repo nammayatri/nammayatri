@@ -1137,6 +1137,19 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m Common.DriverStatsRes
     findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
       currency <- getCurrencyByMerchantOpCity merchantOpCityId
+      let defaultStats =
+            Common.DriverStatsRes
+              { numDriversOnboarded = 0,
+                numFleetsOnboarded = 0,
+                totalRides = 0,
+                totalEarnings = Money 0,
+                totalDistance = Meters 0,
+                bonusEarnings = Money 0,
+                totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+                totalEarningsPerKm = Money 0,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
+                bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
+              }
       case (maybeFrom, maybeTo) of
         (Nothing, Nothing) -> do
           stats <- B.runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
@@ -1155,19 +1168,6 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
                 bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency
               }
         (Just fromDate, Just toDate) | fromDate == toDate -> do
-          let defaultStats =
-                Common.DriverStatsRes
-                  { numDriversOnboarded = 0,
-                    numFleetsOnboarded = 0,
-                    totalRides = 0,
-                    totalEarnings = Money 0,
-                    totalDistance = Meters 0,
-                    bonusEarnings = Money 0,
-                    totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
-                    totalEarningsPerKm = Money 0,
-                    totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
-                    bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
-                  }
           mbStats <- B.runInReplica $ QDailyStats.findByDriverIdAndDate personId fromDate
           case mbStats of
             Nothing -> return defaultStats
@@ -1186,7 +1186,32 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
                     totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
                     bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
                   }
-        _ -> throwError (InvalidRequest "fromDate and toDate must be either both Nothing or the same date")
+        (Just fromDate, Just toDate) | diffDays toDate fromDate <= 7 -> do
+          statsList <- B.runInReplica $ QDailyStats.findAllInRangeByDriverId_ personId fromDate toDate
+          if null statsList
+            then return defaultStats
+            else do
+              let agg f = sum (map f statsList)
+                  aggMoney f = HighPrecMoney $ sum (map (getHighPrecMoney . f) statsList)
+                  aggMeters f = Meters $ sum (map (getMeters . f) statsList)
+                  totalEarnings = aggMoney (.totalEarnings)
+                  totalDistance = aggMeters (.totalDistance)
+                  bonusEarnings = aggMoney (.bonusEarnings)
+                  totalEarningsPerKm = calculateEarningsPerKm totalDistance totalEarnings
+              return $
+                Common.DriverStatsRes
+                  { numDriversOnboarded = agg (.numDriversOnboarded),
+                    numFleetsOnboarded = agg (.numFleetsOnboarded),
+                    totalRides = agg (.numRides),
+                    totalEarnings = roundToIntegral totalEarnings,
+                    totalDistance = totalDistance,
+                    bonusEarnings = roundToIntegral bonusEarnings,
+                    totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+                    totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                    totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                    bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency
+                  }
+        _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
 
     isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
     isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
