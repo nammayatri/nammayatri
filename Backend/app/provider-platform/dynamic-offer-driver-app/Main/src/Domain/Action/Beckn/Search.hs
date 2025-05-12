@@ -52,8 +52,10 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.ServiceTierType as STT
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import EulerHS.Prelude ((+||), (||+))
@@ -103,6 +105,7 @@ import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
@@ -154,7 +157,8 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     cityDistanceUnit :: DistanceUnit,
     merchant :: DM.Merchant,
     isValueAddNP :: Bool,
-    driverIdForSearch :: Maybe (Id DP.Person)
+    driverIdForSearch :: Maybe (Id DP.Person),
+    isMeterRideSearch :: Maybe Bool
   }
 
 data DSearchRes = DSearchRes
@@ -251,7 +255,8 @@ handler ValidatedDSearchReq {..} sReq = do
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion) `mapM` possibleTripOption.tripCategories)
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed allFarePoliciesProduct.farePolicies
+  mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch
+  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
@@ -345,12 +350,11 @@ handler ValidatedDSearchReq {..} sReq = do
             ..
           }
 
-    selectFarePolicy distance duration mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed =
-      filter isValid
+    selectFarePolicy distance duration mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier =
+      filter (\farePolicy -> isValid farePolicy mbVehicleServiceTier)
       where
-        isValid farePolicy =
-          checkDistanceBounds farePolicy && checkExtendUpto farePolicy
-            && vehicleAllowedOnTollRoute farePolicy
+        isValid farePolicy Nothing = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && vehicleAllowedOnTollRoute farePolicy
+        isValid farePolicy (Just vehicleServiceTier) = farePolicy.vehicleServiceTier == vehicleServiceTier && checkDistanceBounds farePolicy && checkExtendUpto farePolicy && vehicleAllowedOnTollRoute farePolicy
 
         vehicleAllowedOnTollRoute farePolicy = case farePolicy.vehicleServiceTier of
           AUTO_RICKSHAW -> fromMaybe True mbIsAutoRickshawAllowed
@@ -390,6 +394,15 @@ handler ValidatedDSearchReq {..} sReq = do
             createdAt = now,
             updatedAt = now
           }
+
+    getVehicleServiceTierForMeterRideSearch :: Maybe Bool -> Maybe (Id DP.Person) -> Flow (Maybe STT.ServiceTierType)
+    getVehicleServiceTierForMeterRideSearch (Just True) (Just driverId) = do
+      QVehicle.findById driverId >>= \case
+        Just vehicle -> do
+          mbVst <- CQVST.findByServiceTierTypeAndCityId (DVST.castVariantToServiceTier vehicle.variant) merchantOpCityId
+          pure $ mbVst <&> (.serviceTierType)
+        Nothing -> pure Nothing
+    getVehicleServiceTierForMeterRideSearch _ _ = pure Nothing
 
 addNearestDriverInfo ::
   (HasField "vehicleServiceTier" a ServiceTierType) =>
@@ -742,6 +755,7 @@ validateRequest merchant sReq = do
   (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
+  let isMeterRideSearch = sReq.isMeterRideSearch
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
 
