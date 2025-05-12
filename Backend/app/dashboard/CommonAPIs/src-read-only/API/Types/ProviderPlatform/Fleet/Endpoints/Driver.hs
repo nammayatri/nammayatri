@@ -712,7 +712,10 @@ type GetDriverFleetGetAllVehicle =
            "mbRegNumberString"
            Kernel.Prelude.Text
       :> QueryParam "mbFleetOwnerId" Kernel.Prelude.Text
-      :> Get '[JSON] ListVehicleResT
+      :> QueryParam "mbIsActive" Kernel.Prelude.Bool
+      :> Get
+           '[JSON]
+           ListVehicleResT
   )
 
 type GetDriverFleetGetAllVehicleHelper =
@@ -721,7 +724,12 @@ type GetDriverFleetGetAllVehicleHelper =
            "offset"
            Kernel.Prelude.Int
       :> QueryParam "mbRegNumberString" Kernel.Prelude.Text
-      :> Get '[JSON] ListVehicleRes
+      :> QueryParam
+           "mbIsActive"
+           Kernel.Prelude.Bool
+      :> Get
+           '[JSON]
+           ListVehicleRes
   )
 
 type GetDriverFleetGetAllDriver =
@@ -736,6 +744,9 @@ type GetDriverFleetGetAllDriver =
       :> QueryParam
            "mbFleetOwnerId"
            Kernel.Prelude.Text
+      :> QueryParam
+           "mbIsActive"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            FleetListDriverResT
@@ -753,6 +764,9 @@ type GetDriverFleetGetAllDriverHelper =
       :> QueryParam
            "mbSearchString"
            Kernel.Prelude.Text
+      :> QueryParam
+           "isActive"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            FleetListDriverRes
@@ -767,6 +781,9 @@ type GetDriverFleetGetAllBadge =
       :> QueryParam
            "mbBadgeType"
            Domain.Types.FleetBadgeType.FleetBadgeType
+      :> QueryParam
+           "mbIsActive"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            FleetBadgeResT
@@ -781,6 +798,9 @@ type GetDriverFleetGetAllBadgeHelper =
       :> QueryParam
            "mbBadgeType"
            Domain.Types.FleetBadgeType.FleetBadgeType
+      :> QueryParam
+           "mbIsActive"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            FleetBadgeRes
@@ -1376,9 +1396,9 @@ data DriverAPIs = DriverAPIs
     getDriverFleetGetDriverRequests :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient DriverRequestResp,
     postDriverFleetRespondDriverRequest :: Kernel.Prelude.Text -> RequestRespondReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetAddRCWithoutDriver :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverFleetGetAllVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ListVehicleRes,
-    getDriverFleetGetAllDriver :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetListDriverRes,
-    getDriverFleetGetAllBadge :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.FleetBadgeType.FleetBadgeType -> EulerHS.Types.EulerClient FleetBadgeRes,
+    getDriverFleetGetAllVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient ListVehicleRes,
+    getDriverFleetGetAllDriver :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient FleetListDriverRes,
+    getDriverFleetGetAllBadge :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.FleetBadgeType.FleetBadgeType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient FleetBadgeRes,
     postDriverFleetUnlink :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetRemoveVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetRemoveDriver :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

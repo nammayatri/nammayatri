@@ -366,14 +366,14 @@ getDriverFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId = do
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
-getDriverFleetGetAllBadge :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DFBT.FleetBadgeType -> Flow Common.FleetBadgeResT
-getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset mbSearchString mbFleetOwnerId mbBadgeType = do
+getDriverFleetGetAllBadge :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DFBT.FleetBadgeType -> Maybe Bool -> Flow Common.FleetBadgeResT
+getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset mbSearchString mbFleetOwnerId mbBadgeType mbIsActive = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId mbFleetOwnerId
   fleetBadgeInfos <-
     concatMapM
       ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.FleetBadgeRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllBadge) fleetOwnerId' mblimit mboffset mbSearchString mbBadgeType
+          Common.FleetBadgeRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllBadge) fleetOwnerId' mblimit mboffset mbSearchString mbBadgeType mbIsActive
           return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) fleetBadgeInfos
       )
       fleetOwnerIds
@@ -381,14 +381,14 @@ getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset m
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.FleetBadgesAPIEntity {..} = Common.FleetBadgesAPIEntityT {..}
 
-getDriverFleetGetAllVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Flow Common.ListVehicleResT
-getDriverFleetGetAllVehicle merchantShortId opCity apiTokenInfo mbLimit mbOffset mbRegNumberString mbFleetOwnerId = do
+getDriverFleetGetAllVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow Common.ListVehicleResT
+getDriverFleetGetAllVehicle merchantShortId opCity apiTokenInfo mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId mbFleetOwnerId
   vehicles <-
     concatMapM
       ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.ListVehicleRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllVehicle) fleetOwnerId' mbLimit mbOffset mbRegNumberString
+          Common.ListVehicleRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllVehicle) fleetOwnerId' mbLimit mbOffset mbRegNumberString mbIsActive
           return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) vehicles
       )
       fleetOwnerIds
@@ -396,14 +396,14 @@ getDriverFleetGetAllVehicle merchantShortId opCity apiTokenInfo mbLimit mbOffset
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.VehicleAPIEntity {..} = Common.VehicleAPIEntityT {..}
 
-getDriverFleetGetAllDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.FleetListDriverResT
-getDriverFleetGetAllDriver merchantShortId opCity apiTokenInfo mbLimit mbOffset mbMobileNumber mbName mbSearchString mbFleetOwnerId = do
+getDriverFleetGetAllDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow Common.FleetListDriverResT
+getDriverFleetGetAllDriver merchantShortId opCity apiTokenInfo mbLimit mbOffset mbMobileNumber mbName mbSearchString mbFleetOwnerId mbIsActive = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId mbFleetOwnerId
   fleetDriversInfos <-
     concatMapM
       ( \(fleetOwnerId', fleetOwnerName) -> do
-          Common.FleetListDriverRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllDriver) fleetOwnerId' mbLimit mbOffset mbMobileNumber mbName mbSearchString
+          Common.FleetListDriverRes {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllDriver) fleetOwnerId' mbLimit mbOffset mbMobileNumber mbName mbSearchString mbIsActive
           return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) fleetDriversInfos
       )
       fleetOwnerIds
