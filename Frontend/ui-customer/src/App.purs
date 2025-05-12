@@ -327,6 +327,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_TRIP_TYPE_SELECTION HomeScreenState
                         | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
                         | ADD_VPA_OUT Int HomeScreenState
+                        | UPDATE_LOCATION_ON_SIGN_IN_SIGN_UP String String
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
