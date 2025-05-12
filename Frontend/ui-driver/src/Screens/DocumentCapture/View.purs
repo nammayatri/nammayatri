@@ -81,16 +81,64 @@ screen initialState =
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
     let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName initialState.data.docType) { module = HU.getRegisterationStepModule initialState.data.docType, source = HU.getRegisterationStepScreenSource initialState.data.docType }
+    -- _ <-
+    --   launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+    --     $ do
+    --         if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS then do
+    --           (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) true true true true true true true
+    --           lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotos (API.GetVehiclePhotosResp vehiclePhotosResp)
+    --         else pure unit
     _ <-
       launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
         $ do
-            let appName = JB.getAppName unit
-            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS then do
-              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBT $ fromMaybe "" initialState.data.linkedRc
-              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotos (API.GetVehiclePhotosResp vehiclePhotosResp)
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) true false false false false false false
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.VehicleFront
+            else pure unit
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) false true false false false false false
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.VehicleBack
+            else pure unit
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) false false true false false false false
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.VehicleRight
+            else pure unit
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) false false false true false false false
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.VehicleLeft
+            else pure unit
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) false false false false true false false
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.VehicleFrontInterior
+            else pure unit
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) false false false false false true false
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.VehicleBackInterior
+            else pure unit
+    _ <-
+      launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            if isJust initialState.data.linkedRc && initialState.data.docType == ST.VEHICLE_PHOTOS && initialState.props.uploadVehiclePhotos then do
+              (API.GetVehiclePhotosResp vehiclePhotosResp) <- Remote.getVehiclePhotosBase64BT (fromMaybe "" initialState.data.linkedRc) false false false false false false true
+              lift $ lift $ doAff do liftEffect $ push $ UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) API.Odometer_
             else pure unit
     pure $ pure unit
-  )]
+  )] 
   , eval :
       ( \state action -> do
           let _ = spy "DocumentCaptureScreen ----- state" state
@@ -175,9 +223,11 @@ vehicleImageRowView push state index item =
       rightImageBounds = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
       leftText = getText item.leftText
       rightText = getText item.rightText
+      getLeftImage = (getImage item.leftText state.data.vehiclePhotos)
+      getRightImage = getImage item.rightText state.data.vehiclePhotos
   in
-  PrestoAnim.animationSet [Anim.translateInYAnim translateYAnimConfig { duration = 1 , fromY = 0, toY = 0} ] $
-  linearLayout
+  PrestoAnim.animationSet [Anim.translateInYAnim translateYAnimConfig { duration = 1 , fromY = 0, toY = 0} ]
+  $ linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
@@ -202,20 +252,23 @@ vehicleImageRowView push state index item =
         , margin $ Margin 8 8 8 8
         , cornerRadius 8.0
         , background Color.blue500
-        , onClick push $ const $ UploadImageWihType item.leftText
         , orientation VERTICAL
         ]
-        [ imageView 
+        [ linearLayout
+          [ height $ V 117
+          , width $ V 156
+          , id $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
+          ][imageView 
           [ width $ V 156 
           , height $ V 117
           , imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
-          , id $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
           , stroke $ "1," <> (EHU.getColorWithOpacity 70 Color.purple800)
           , dashWidth 4
           , gapWidth 4
           , cornerRadius 8.0
           , gravity CENTER
-          ]
+          , visibility $ boolToVisibility $ DS.null getLeftImage
+          ]]
         , textView 
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -225,11 +278,14 @@ vehicleImageRowView push state index item =
             ]
         ]
       , linearLayout
-        [ height $ V $ HU.getDefaultPixelSize leftImageBounds.height
-        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
+        [ height $ V $ 117-- HU.getDefaultPixelSize leftImageBounds.height
+        , width $ V $ 156 -- HU.getDefaultPixelSize leftImageBounds.width
         , margin $ Margin 8 8 8 8
         , gravity CENTER
         , orientation VERTICAL
+        , visibility $ boolToVisibility $ DS.null getLeftImage
+        , onClick push $ const $ UploadImageWihType item.leftText
+        , clickable $ DS.null getLeftImage
         ]
         [ imageView 
           [ height $ V 40
@@ -239,15 +295,18 @@ vehicleImageRowView push state index item =
         ]
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
+        , width $ V $ 156-- HU.getDefaultPixelSize leftImageBounds.width
         , gravity RIGHT
-        , margin $ MarginLeft 16
+        , margin $ Margin 0 16 12 0
+        , visibility $ boolToVisibility $ not $ DS.null getLeftImage
         ]
         [ imageView
           [ height $ V 20
           , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_cross_circle_white_gray"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_pencil_circle"
           , gravity RIGHT
+          , onClick push $ const $ UploadImageWihType item.leftText
+          , clickable $ not $ DS.null getLeftImage
           ]
         ] 
       ]
@@ -270,19 +329,22 @@ vehicleImageRowView push state index item =
         , gravity CENTER
         , margin $ Margin 8 8 0 8
         , background Color.blue500
-        , onClick push $ const $ UploadImageWihType item.rightText
         , orientation VERTICAL
         ]
-        [ imageView 
+        [ linearLayout
+          [ height $ V 117
+          , width $ V 156
+          , id $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
+          ][imageView 
           [ width $ V 156 
           , height $ V 117
           , imageWithFallback $ fetchImage FF_COMMON_ASSET item.rightImage
-          , id $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
           , stroke $ "1," <> (EHU.getColorWithOpacity 70 Color.purple800)
           , dashWidth 4
           , gapWidth 4
           , cornerRadius 8.0
-          ]
+          , visibility $ boolToVisibility $ DS.null getRightImage
+          ]]
         , textView 
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -292,11 +354,14 @@ vehicleImageRowView push state index item =
             ]
         ]
       , linearLayout
-        [ height $ V $ HU.getDefaultPixelSize rightImageBounds.height
-        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
+        [ height $ V $ 117 -- HU.getDefaultPixelSize rightImageBounds.height
+        , width $ V $ 156-- HU.getDefaultPixelSize rightImageBounds.width
         , margin $ Margin 8 8 8 8
         , gravity CENTER
         , orientation VERTICAL
+        , visibility $ boolToVisibility $ DS.null getRightImage
+        , onClick push $ const $ UploadImageWihType item.rightText
+        , clickable $ DS.null getRightImage
         ]
         [ imageView 
           [ height $ V 40
@@ -306,15 +371,18 @@ vehicleImageRowView push state index item =
         ]
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ V $ HU.getDefaultPixelSize leftImageBounds.width
+        , width $ V $ 156 -- HU.getDefaultPixelSize rightImageBounds.width
         , gravity RIGHT
-        , margin $ MarginLeft 16
+        , margin $ Margin 0 16 12 0
+        , visibility $ boolToVisibility $ not $ DS.null getRightImage
         ]
         [ imageView
           [ height $ V 20
           , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_cross_circle_white_gray"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_pencil_circle"
           , gravity RIGHT
+          , onClick push $ const $ UploadImageWihType item.rightText
+          , clickable $ not $ DS.null getRightImage 
           ]
         ]
       ]
@@ -330,6 +398,16 @@ vehicleImageRowView push state index item =
             Just API.VehicleFrontInterior -> getString FRONT_INTERIOR
             Just API.VehicleBackInterior -> getString REAR_INTERIOR
             Just API.Odometer_ -> getString ODOMETER_STR
+            _ -> ""
+        getImage text (API.GetVehiclePhotosResp photos) = 
+          case text of
+            Just API.VehicleFront -> if DA.length photos.front > 0 then (fromMaybe "" $ DA.head photos.front) else ""
+            Just API.VehicleBack -> if DA.length photos.back > 0 then (fromMaybe "" $ DA.head photos.back) else ""
+            Just API.VehicleLeft -> if DA.length photos.left > 0 then (fromMaybe "" $ DA.head photos.left) else ""
+            Just API.VehicleRight -> if DA.length photos.right > 0 then (fromMaybe "" $ DA.head photos.right) else ""
+            Just API.VehicleFrontInterior -> if DA.length photos.frontInterior > 0 then (fromMaybe "" $ DA.head photos.frontInterior) else ""
+            Just API.VehicleBackInterior -> if DA.length photos.backInterior > 0 then (fromMaybe "" $ DA.head photos.backInterior) else ""
+            Just API.Odometer_ -> if DA.length photos.odometer > 0 then (fromMaybe "" $ DA.head photos.odometer) else ""
             _ -> ""
 
 howToUpload :: (Action -> Effect Unit) ->  ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w

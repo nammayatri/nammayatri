@@ -71,6 +71,8 @@ registrationV2 = do
     GoToTrainingsScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRAININGS_SCREEN updatedState)
-    
+    GoToFaqsScreen updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_FAQS_SCREEN updatedState)
     
     

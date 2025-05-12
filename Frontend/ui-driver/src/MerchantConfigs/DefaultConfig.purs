@@ -1065,7 +1065,6 @@ config =
   }
   , colors : defaultColors
   , themeColors : {
-    goOnlineColor : "#53BB6F",
     navBarBackground : "#FFFFFF",
     primaryStrokeColor : "#E5E7EB",
     openMapsStrokeColor : "#00FFFFFF",

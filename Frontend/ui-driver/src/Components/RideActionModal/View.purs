@@ -637,7 +637,7 @@ startRide push config =
   ]$ linearLayout
   [ width MATCH_PARENT
   , height (V 50)
-  , background config.appConfig.themeColors.goOnlineColor
+  , background Color.green900
   , cornerRadius 8.0
   , gravity CENTER
   , onClick push $ if config.isAdvanced then const NoAction else (const $ StartRide)

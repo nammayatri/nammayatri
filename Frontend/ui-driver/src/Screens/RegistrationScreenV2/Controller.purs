@@ -132,6 +132,7 @@ data ScreenOutput = GoBack
                   | GoToAppUpdatePopUpScreen RegistrationScreenState
                   | GoToOperationHubScreen RegistrationScreenState
                   | GoToTrainingsScreen RegistrationScreenState
+                  | GoToFaqsScreen RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -320,7 +321,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "change_language" -> exit $ SelectLang newState
     "faqs" -> do
       void $ pure $ unsafePerformEffect $ logEvent state.data.logField "dummy_faqs_button_clicked_1"
-      continue newState -- exit $ GoToFaqsScreen newState
+      exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state

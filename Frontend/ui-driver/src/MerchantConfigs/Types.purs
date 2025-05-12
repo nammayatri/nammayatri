@@ -121,7 +121,6 @@ type SubscriptionConfig =  {
  }
 
 type ThemeColors = {
-  goOnlineColor :: String,
   navBarBackground :: String,
   primaryStrokeColor :: String,
   openMapsStrokeColor :: String,

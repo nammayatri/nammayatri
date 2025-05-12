@@ -205,7 +205,7 @@ contentLayout push state =
                   , gravity BOTTOM
                   ]
                 <> (FontStyle.body3 CTA.TypoGraphy)
-            , linearLayout [ height WRAP_CONTENT, width WRAP_CONTENT, visibility INVISIBLE ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+            , linearLayout [ height WRAP_CONTENT, width WRAP_CONTENT, visibility INVISIBLE ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigInvisible state) ]
             ]
         , if state.props.showOptions then dropDownView push state else linearLayout [] []
         ]
@@ -358,5 +358,5 @@ dropDownView push state =
                       )
                   ]
               ]
-          , linearLayout [ height WRAP_CONTENT, width WRAP_CONTENT, visibility INVISIBLE ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+          , linearLayout [ height WRAP_CONTENT, width WRAP_CONTENT, visibility INVISIBLE ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigInvisible state) ]
           ]

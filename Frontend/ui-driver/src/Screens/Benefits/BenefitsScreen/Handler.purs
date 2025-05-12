@@ -50,3 +50,6 @@ benefitsScreen = do
       modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SELECT_LANG_FROM_BENEFITS_SCREEN updatedState)
     LogoutAccount -> App.BackT $ App.NoBack <$> pure LOGOUT_FROM_BENEFITS_SCREEN
+    GoToFaqsScreen updatedState -> do
+      modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)  
+      App.BackT $ App.NoBack <$> pure (GO_TO_FAQS_SCREEN_FROM_BENEFITS_SCREEN)

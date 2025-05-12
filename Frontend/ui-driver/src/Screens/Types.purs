@@ -2721,7 +2721,8 @@ type ChooseCityScreenProps = {
   locationDetectionFailed :: Boolean,
   isMockLocation :: Boolean,
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  goBackToAddVehiclesScreen :: Boolean
 }
 
 data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
@@ -3075,7 +3076,7 @@ type DocumentCaptureScreenProps = {
   contactSupportModal :: AnimType,
   uploadVehiclePhotos :: Boolean,
   vehicleTypeImageToUpload :: Maybe API.VehicleImageType,
-  numberOfVehicleImagesUploaded :: Int
+  allImagesUploaded :: Boolean
 } 
 
 
@@ -3398,3 +3399,11 @@ type OperationHubScreenProps = {
   logoutModalView :: Boolean,
   showOptions :: Boolean
 }
+
+type OnboardingFaqsScreenState = {
+  data :: OnboardingFaqsScreenData,
+  props :: OnboardingFaqsScreenProps
+}
+
+type OnboardingFaqsScreenData = {flag :: Boolean}
+type OnboardingFaqsScreenProps = {flag :: Boolean}

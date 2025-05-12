@@ -115,6 +115,9 @@ getOperationHubRequest rcNo mbFrom = (getBaseUrl "") <> "/operation/getRequests?
 getVehiclePhotos :: String -> String
 getVehiclePhotos rcNo = (getBaseUrl "") <> "/driver/vehiclePhotos?rcNo=" <> rcNo
 
+getVehiclePhotosBase64 :: String -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> String
+getVehiclePhotosBase64 rcNo front back right left frontInterior backInterior odometer = (getBaseUrl "") <> "/driver/vehiclePhotosB64?rcNo=" <> rcNo <> "&back=" <> show back <> "&backInterior=" <> show backInterior <> "&front=" <> show front <> "&frontInterior=" <> show frontInterior <> "&left=" <> show left <> "&odometer=" <> show odometer <> "&right=" <> show right 
+
 getAllHubs :: String -> String
 getAllHubs dummyString = (getBaseUrl "") <> "/operation/getAllHubs"
 

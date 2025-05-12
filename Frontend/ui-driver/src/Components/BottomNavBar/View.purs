@@ -49,7 +49,7 @@ view push state =
     ][ linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , stroke ("1,"<> config.themeColors.primaryStrokeColor)
+       , stroke ("1,"<> Color.grey900)
        , background config.themeColors.navBarBackground
        ](mapWithIndex
          (\index item ->

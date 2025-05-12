@@ -349,15 +349,6 @@ vehicleRegistrationNumber state push =
               , inputTypeI 4097
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
-          , textView $
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , text (getString CHANGE_LOCATION)
-            , color Color.blue800
-            , onClick push $ const ChangeLocation
-            , visibility GONE
-            , margin $ MarginTop 8
-            ] <> FontStyle.body3 TypoGraphy
           , textView $ -- (Error Indication)
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -367,6 +358,15 @@ vehicleRegistrationNumber state push =
             , margin (MarginTop 10)
             , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then VISIBLE else GONE
             ] <> FontStyle.paragraphText TypoGraphy
+          , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text (getString CHANGE_LOCATION)
+            , color state.data.config.themeColors.highlightedTextColor
+            , onClick push $ const ChangeLocation
+            , visibility GONE
+            , margin $ MarginTop 8
+            ] <> FontStyle.tags TypoGraphy
           , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT

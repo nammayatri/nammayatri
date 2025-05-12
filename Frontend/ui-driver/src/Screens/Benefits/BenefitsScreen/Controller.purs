@@ -130,6 +130,7 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToRegistrationScreen BenefitsScreenState
                   | SelectLang BenefitsScreenState
                   | LogoutAccount
+                  | GoToFaqsScreen BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
 
@@ -286,7 +287,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "logout" -> continue newState { props { logoutModalView = true }}
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_language" -> exit $ SelectLang newState
-    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
+    "faqs" -> exit $ GoToFaqsScreen newState
     _ -> continue newState
   
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView = false}})

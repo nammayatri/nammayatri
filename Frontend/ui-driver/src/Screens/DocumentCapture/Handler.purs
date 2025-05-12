@@ -52,3 +52,6 @@ documentCaptureScreen = do
     GetVehicleImagesStatus updatedState -> do
       modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_VEHICLE_PHOTOS_STATUS updatedState)
+    GoToFaqsScreen updatedState -> do
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_FAQS_SCREEN_FROM_DOCUMENT_CAPTURE)

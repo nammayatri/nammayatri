@@ -713,6 +713,7 @@
       "ny_ic_payment_pending_blue" : true,
       "ny_ic_payment_related" : true,
       "ny_ic_paytm" : true,
+      "ny_ic_pencil_circle" : true,
       "ny_ic_pending" : true,
       "ny_ic_permission_autostart" : true,
       "ny_ic_permission_battery" : true,

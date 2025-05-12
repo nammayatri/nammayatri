@@ -54,6 +54,7 @@ data ScreenOutput = WelcomeScreen
                     | SelectLanguageScreen 
                     | RefreshScreen ChooseCityScreenState
                     | DetectCityAPI Number Number ChooseCityScreenState
+                    | GoToAddVehicles ChooseCityScreenState
 
 eval :: Action -> ChooseCityScreenState -> Eval Action ScreenOutput ChooseCityScreenState
 
@@ -62,12 +63,14 @@ eval AfterRender state = if state.props.currentStage == ENABLE_PERMISSION then c
                             pure $ UpdatePermission state{ props { isLocationPermissionGiven = isLocationPermission, currentStage = if isLocationPermission then DETECT_LOCATION else state.props.currentStage}}]
                             else continue state
 eval BackPressed state = do 
-  case state.props.currentStage of
-    _ | state.props.currentStage == DETECT_LOCATION || state.props.currentStage == ENABLE_PERMISSION -> do
-                                                                                                          _ <- pure $ minimizeApp ""
-                                                                                                          continue state --minimizeApp
-    _ | state.props.currentStage == SELECT_CITY || state.props.currentStage == SELECT_LANG -> continue state{props{currentStage = DETECT_LOCATION}}
-    _ -> continue state
+  if state.props.goBackToAddVehiclesScreen then exit $ GoToAddVehicles state {props {goBackToAddVehiclesScreen = false}}
+  else do
+    case state.props.currentStage of
+      _ | state.props.currentStage == DETECT_LOCATION || state.props.currentStage == ENABLE_PERMISSION -> do
+                                                                                                            _ <- pure $ minimizeApp ""
+                                                                                                            continue state --minimizeApp
+      _ | state.props.currentStage == SELECT_CITY || state.props.currentStage == SELECT_LANG -> continue state{props{currentStage = DETECT_LOCATION}}
+      _ -> continue state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   if state.props.currentStage == ENABLE_PERMISSION then do
@@ -82,7 +85,8 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
                   ]
               else continue state
     else if state.props.currentStage == SELECT_CITY then do
-      continue state{props{currentStage = DETECT_LOCATION}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
+      let newState = state {props {currentStage = DETECT_LOCATION}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
+      if state.props.goBackToAddVehiclesScreen then exit $ GoToAddVehicles newState else continue newState
     else if state.props.currentStage == SELECT_LANG then do
       let _ = setLanguageLocale state.props.radioMenuFocusedLang
       continue state {props{currentStage = DETECT_LOCATION, selectedLanguage =  state.props.radioMenuFocusedLang}}
@@ -110,7 +114,7 @@ eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state =
 
 eval (ChangeStage newStage) state = continue state{props{currentStage = newStage}, data {locationSelected = state.data.locationSelected}}
 
-eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = continue state{props{currentStage = DETECT_LOCATION}}
+eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = if state.props.goBackToAddVehiclesScreen then exit $ GoToAddVehicles state else continue state{props{currentStage = DETECT_LOCATION}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
   if isLocationPermissionEnabled then do

@@ -40,3 +40,6 @@ operationHubScreen = do
     DriverOperationCreateRequest updatedState -> do
       modifyScreenState $ OperationHubScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CALL_DRIVER_OPERATION_CREATE_REQUEST_API updatedState)
+    GoToFaqsScreen updatedState -> do
+      modifyScreenState $ OperationHubScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_FAQS_SCREEN_FROM_OPERATION_HUB)

@@ -31,6 +31,7 @@ data Merchant
   | MOBILITY_PM
   | PASSCULTURE
   | MOBILITY_RS
+  -- | FLEETX -- Todo: Shikhar add a merchant for fleetx
 
 derive instance genericMerchant :: Generic Merchant _
 instance showMerchant :: Show Merchant where show = genericShow

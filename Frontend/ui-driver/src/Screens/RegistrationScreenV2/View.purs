@@ -291,7 +291,7 @@ commonTV push text' color' theme gravity' marginTop action visibility' padding' 
 categoryListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 categoryListView push state =
   let registerationSteps = state.data.registerationStepsCabs 
-      categories = filterCategories registerationSteps state.props.categoryToStepProgressMap state.data.documentStatusList
+      categories = filterCategories registerationSteps state.props.categoryToStepProgressMap state.data.documentStatusList state.props.vehicleImagesUploaded
       referralCodeAlreadyApplied = not $ DA.any (_ == (getValueToLocalStore APPLIED_REFERRAL_CODE)) ["__failed", ""]
   in
   scrollView
@@ -552,7 +552,7 @@ listItem push item state =
       showRetry = getStatus item.stage state == ST.FAILED && not checkLimitReached item.stage state.props.limitReachedFor
       docUploadStarted = getStatus item.stage state /= ST.NOT_STARTED
       statusFailed = (getStatus item.stage state) == ST.FAILED
-      retryStr = " " <> "<span style='color:#2194FF'>"<> (getString RETRY_UPLOAD) <>"</span>"
+      retryStr = " " <> "<span style='color:#171C8F'>"<> (getString UPLOAD_AGAIN) <>"</span>"
 
       compImage :: ST.StepProgress -> String
       compImage item = 
@@ -831,10 +831,7 @@ getStatus step state =
             ST.INSPECTION_HUB -> do
                let inspectionHubCreated = (getValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS)
                if (inspectionHubCreated == "COMPLETED") then ST.COMPLETED else if (inspectionHubCreated == "FAILED") then ST.FAILED else ST.NOT_STARTED
-            ST.VEHICLE_PHOTOS -> do
-              let (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
-                  allVehicleImagesUploaded = DA.length uploadedImagesUptoNow == 7
-              if allVehicleImagesUploaded then ST.COMPLETED else ST.NOT_STARTED -- refactor it and get status from backend
+            ST.VEHICLE_PHOTOS -> if state.props.vehicleImagesUploaded then ST.COMPLETED else ST.NOT_STARTED
             _ -> do
                   case findStatus of
                     Nothing -> ST.NOT_STARTED
@@ -865,14 +862,13 @@ runLogTracking push action = do
   else 
     pure unit
 
-filterCategories :: Array ST.StepProgress -> Array ST.CategoryToStepMap -> Array ST.DocumentStatus -> Array ST.CategoryToStepMap -- refactor for vehicle photos (have added a prop have to utilize that)
-filterCategories registrationSteps categoryToStepProgressMap documentList = do
+filterCategories :: Array ST.StepProgress -> Array ST.CategoryToStepMap -> Array ST.DocumentStatus -> Boolean -> Array ST.CategoryToStepMap -- refactor for vehicle photos (have added a prop have to utilize that)
+filterCategories registrationSteps categoryToStepProgressMap documentList vehicleImagesUploaded = do
   map (\item -> do
       let stepsForCategory = (filter (\item' -> item'.documentCategory == Just item.category ) registrationSteps)
           x = getCompletionStatus stepsForCategory documentList
           operationHubCreated = (getValueToLocalNativeStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS)
-          (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
-          allVehicleImagesUploaded = DA.length uploadedImagesUptoNow == 7
+          allVehicleImagesUploaded = vehicleImagesUploaded
           stepStatus = if item.category == API.VEHICLE then {completionStatus: getUpdatedCompletionStatus operationHubCreated x.completionStatus allVehicleImagesUploaded, showContinueButton: x.showContinueButton && (operationHubCreated == "COMPLETED") && allVehicleImagesUploaded} else x
       {
         category : item.category,

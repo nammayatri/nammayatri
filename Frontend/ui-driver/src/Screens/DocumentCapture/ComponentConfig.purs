@@ -21,7 +21,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(.
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), not, (==))
+import Prelude ((<>), not, (==), (>), (&&))
 import Common.Types.App(LazyCheck(..))
 import Font.Style as FontStyle
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
@@ -36,6 +36,7 @@ import Components.OptionsMenu as OptionsMenuConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Components.BottomDrawerList as BottomDrawerList
 import Data.Array as DA
+import Services.API as API
 
 
 primaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
@@ -57,7 +58,7 @@ vehicleUploadButtonConfig state = let
         { text = getString CONTINUE } 
         , margin = Margin 16 16 16 16
         , id = "vehicleUploadButton"
-        , isClickable = (state.props.numberOfVehicleImagesUploaded == 7)
+        , isClickable = state.props.allImagesUploaded
       }
   in primaryButtonConfig'
 
@@ -93,7 +94,7 @@ appOnboardingNavBarConfig state =
   AppOnboardingNavBar.config
   { genericHeaderConfig = genericHeaderConfig state,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{ 
-      text = getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType],
+      text = Constant.transformDocText state.data.docType,
       color = state.data.config.themeColors.onboardingHeaderTextColor
       },
     rightButton = AppOnboardingNavBar.config.rightButton{

@@ -170,9 +170,7 @@ appOnboardingNavBarConfig state =
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
               { color = state.data.config.themeColors.onboardingHeaderTextColor,
-                text = if state.props.openHowToUploadManual 
-                        then getString UPLOAD_DRIVING_LICENSE 
-                        else getString DRIVING_LICENSE_DETAILS
+                text = getString DRIVING_LICENSE
               },
     rightButton = AppOnboardingNavBar.config.rightButton{
       text = getString HELP_FAQ,

@@ -175,6 +175,8 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | ActivateRC AddVehicleDetailsScreenState
                     | ChangeVehicle AddVehicleDetailsScreenState
                     | SelectLang AddVehicleDetailsScreenState
+                    | GoToFaqsScreen AddVehicleDetailsScreenState
+                    | GoToChangeLocation AddVehicleDetailsScreenState
                     
                     
 
@@ -452,7 +454,7 @@ eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
 
 eval RedirectScreen state = exit GoToRegisteration
 
-eval ChangeLocation state = exit $ LogoutAccount
+eval ChangeLocation state = exit $ GoToChangeLocation state
 
 eval (ActivateRCbtn (PrimaryButtonController.OnClick)) state = case state.props.multipleRCstatus of
                                                                 COMPLETED -> exit $ ActivateRC state
@@ -479,7 +481,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
-    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
+    "faqs" -> exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}

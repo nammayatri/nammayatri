@@ -42,3 +42,6 @@ chooseCityScreen = do
     DetectCityAPI lat lon updatedState -> do
       modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ DETECT_CITY lat lon updatedState)
+    GoToAddVehicles updatedState -> do
+      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ BACK_TO_ADD_VEHICLES_SCREEN updatedState)

@@ -27,6 +27,7 @@ import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Common.RemoteConfig.Types as Types
+import Debug
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -157,6 +158,7 @@ getAppBasedConfig config app = case app of
   "Odisha Yatri" -> fromMaybe config.default config.odishaYatri
   "Yatri" -> fromMaybe config.default config.yatri
   "Yatri Sathi" -> fromMaybe config.default config.yatriSathi
+  "ONDC Fleet X" -> fromMaybe config.default config.ondcFleetX
   _ -> config.default
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
@@ -404,6 +406,7 @@ defaultAppRemoteConfig defaultValue =
   , manaYatriPartner: Just defaultValue
   , yatriSathi: Just defaultValue
   , yatriSathiPartner: Just defaultValue
+  , ondcFleetX: Just defaultValue
   , default: defaultValue 
   }
 
@@ -440,7 +443,7 @@ defaultLanguageConfig =
 defaultAppCities :: AppCities
 defaultAppCities = 
   {
-    cityNames : ["Bangalore", "Delhi", "Gurugram", "Noida"],
+    cityNames : ["Delhi", "Gurugram", "Noida"],
     enableChangeCity : true   
   }
 
@@ -459,12 +462,16 @@ appLanguageConfig :: String -> Array AppLanguage
 appLanguageConfig appName = do
   let config = fetchRemoteConfigString "enabled_app_languages"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultLanguageConfig
+      _ = spy "printing appLanguageConfig" value
+      _ = spy "printing appName" appName
   getAppBasedConfig value appName
 
 selectCityConfig :: String -> AppCities
 selectCityConfig appName = do
   let config = fetchRemoteConfigString "enabled_app_cities"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultAppCities
+      _ = spy "printing selectCityConfig" value
+      _ = spy "printing appName" appName
   getAppBasedConfig value appName
 
 defaultOfferBannerConfig :: Types.OfferBanner

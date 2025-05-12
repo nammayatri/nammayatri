@@ -360,6 +360,7 @@ newtype Keymap
   , register_your_profile :: String
   , registration_completed :: String
   , we_will_notify_you_when_we_go_live :: String
+  , upload_again :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -2878,6 +2879,9 @@ registration_completed = a
 
 we_will_notify_you_when_we_go_live :: Proxy "we_will_notify_you_when_we_go_live"
 we_will_notify_you_when_we_go_live = a
+
+upload_again :: Proxy "upload_again"
+upload_again = a
 
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a

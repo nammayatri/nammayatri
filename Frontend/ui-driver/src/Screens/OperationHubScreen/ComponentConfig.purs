@@ -132,7 +132,7 @@ primaryButtonConfigInvisible state = let
       {   textConfig
         { text = getString CONTINUE } 
         , margin = Margin 16 16 16 16
-        , id = "OperationHubButton"
+        , id = "OperationHubButtonInvisible"
         , isClickable = isJust state.data.selectedHub
         , visibility = INVISIBLE
       }

@@ -1061,6 +1061,17 @@ getVehiclePhotosBT rcNo = do
             pure $ toast (getString SOMETHING_WENT_WRONG)
             BackT $ pure GoBack
 
+----------------------------------------------------- getVehiclePhotosBaseBT ----------------------------------------------------------
+
+getVehiclePhotosBase64BT :: String -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> FlowBT String GetVehiclePhotosResp
+getVehiclePhotosBase64BT rcNo front back right left frontInterior backInterior odometer = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getVehiclePhotosBase64 rcNo front back right left frontInterior backInterior odometer) identity errorHandler (lift $ lift $ callAPI headers (GetVehiclePhotosBase64Req rcNo front back right left frontInterior backInterior odometer))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)   
+            BackT $ pure GoBack
+
 ----------------------------------- driverOperationCreateRequestBT -----------------------------------
 driverOperationCreateRequestBT :: DriverOperationCreateRequestReq -> FlowBT String ApiSuccessResult
 driverOperationCreateRequestBT payload = do

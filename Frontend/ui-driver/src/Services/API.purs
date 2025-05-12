@@ -3317,6 +3317,20 @@ instance standardEncodeGetVehiclePhotosResp :: StandardEncode GetVehiclePhotosRe
 instance decodeGetVehiclePhotosResp :: Decode GetVehiclePhotosResp where decode = defaultDecode
 instance encodeGetVehiclePhotosResp :: Encode GetVehiclePhotosResp where encode = defaultEncode
 
+--------------------------------------------------------------- getVehiclePhotosBase64 ---------------------------------------------------------------------------------
+
+data GetVehiclePhotosBase64Req = GetVehiclePhotosBase64Req String Boolean Boolean Boolean Boolean Boolean Boolean Boolean
+
+instance makeGetVehiclePhotosBase64Req :: RestEndpoint GetVehiclePhotosBase64Req where
+    makeRequest reqBody@(GetVehiclePhotosBase64Req rcNo front back right left frontInterior backInterior odometer) headers = defaultMakeRequestWithoutLogs GET (EP.getVehiclePhotosBase64 rcNo front back right left frontInterior backInterior odometer) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetVehiclePhotosBase64Req :: Generic GetVehiclePhotosBase64Req _
+instance showGetVehiclePhotosBase64Req :: Show GetVehiclePhotosBase64Req where show = genericShow
+instance standardEncodeGetVehiclePhotosBase64Req :: StandardEncode GetVehiclePhotosBase64Req where standardEncode _ = standardEncode {}
+instance decodeGetVehiclePhotosBase64Req :: Decode GetVehiclePhotosBase64Req where decode = defaultDecode
+instance encodeGetVehiclePhotosBase64Req :: Encode GetVehiclePhotosBase64Req where encode = defaultEncode
+
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 
 data HistoryEntityV2Req = HistoryEntityV2Req String String String

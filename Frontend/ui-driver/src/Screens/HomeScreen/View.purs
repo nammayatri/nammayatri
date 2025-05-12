@@ -1171,7 +1171,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background if showGoInYellow then Color.yellowText else state.data.config.themeColors.goOnlineColor
+                    , background if showGoInYellow then Color.yellowText else Color.green900
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     , rippleColor Color.rippleShade
                     ][]

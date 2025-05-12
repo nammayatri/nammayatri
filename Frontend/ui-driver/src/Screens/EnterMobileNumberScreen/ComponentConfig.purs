@@ -127,6 +127,6 @@ mobileNumberConfig state = let
     , showErrorLabel = state.props.isValid
     , background = state.data.config.themeColors.radioInactiveBackground
     , focusedStroke = ("1," <> state.data.config.themeColors.editTextFocusedStroke)
-    , stroke = state.data.config.themeColors.radioInactiveBackground
+    , stroke = ("1," <> state.data.config.themeColors.radioInactiveBackground)
     }
   in mobileNumberEditor'

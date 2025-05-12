@@ -468,8 +468,5 @@ amber = "#FF85331A"
 cosmicLatte :: Color 
 cosmicLatte = "#FFF9EA"
 
-darkGrey :: Color
-darkGrey = "#B9B8B8"
-
 verifiedStateColor :: Color
 verifiedStateColor = "#112F4B"

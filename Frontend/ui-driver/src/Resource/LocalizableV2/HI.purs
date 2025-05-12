@@ -283,6 +283,7 @@ getHi =
     , register_your_profile : "अपना प्रोफ़ाइल पंजीकृत करें"
     , registration_completed : "पंजीकरण पूरा हुआ!"
     , we_will_notify_you_when_we_go_live : "हम आपको जाने के लिए हमें जाने के लिए सूचित करेंगे"
+    , upload_again : "फिर से अपलोड करें"
     , date_of_registration: "पंजीकरण की तिथि"
     , select_date_of_issue: "जारी करने की तिथि चुनें"
     , date_of_issue: "जारी करने की तिथि"

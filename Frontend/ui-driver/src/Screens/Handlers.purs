@@ -35,6 +35,7 @@ import Screens.PermissionsScreen.Handler (permissions) as UI
 import Screens.PopUpScreen.Handler (popUpScreen) as UI
 import Screens.RegistrationScreen.Handler (registration) as UI
 import Screens.RegistrationScreenV2.Handler (registrationV2) as UI
+import Screens.OnboardingFaqsScreen.Handler (onboardingFaqsScreen) as UI
 import Screens.OperationHubScreen.Handler (operationHubScreen) as UI
 import Screens.RideHistoryScreen.Handler (rideHistory) as UI
 import Screens.ReferralScreen.Handler (referralScreen) as UI

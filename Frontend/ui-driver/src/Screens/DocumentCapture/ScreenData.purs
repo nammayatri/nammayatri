@@ -42,6 +42,6 @@ initData =
         contactSupportModal : ST.HIDE,
         uploadVehiclePhotos : false,
         vehicleTypeImageToUpload : Nothing,
-        numberOfVehicleImagesUploaded : 0
+        allImagesUploaded : false
       }
   }

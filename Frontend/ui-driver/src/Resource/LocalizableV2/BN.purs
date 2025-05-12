@@ -281,6 +281,7 @@ getBn =
     , register_your_profile : "আপনার প্রোফাইল নিবন্ধন করুন"
     , registration_completed : "নিবন্ধন সম্পন্ন হয়েছে!"
     , we_will_notify_you_when_we_go_live : "আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি"
+    , upload_again : "আবার আপলোড করুন"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি")
     , updated_at: "ম্যাপ শেষ আপডেট"
     , trip_count: "আজকের ট্রিপস"

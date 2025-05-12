@@ -131,6 +131,8 @@ transformStageNameFromTitle title doctype =
   case title, doctype of
         _ , "VehicleInspectionForm" -> getString VEHICLE_PHOTOS_STR
         _ , "InspectionHub" -> getString OPERATION_HUB_STR
+        "Vehicle Registration Certificate" , _ -> getString VEHICLE_REGISTERATON_CERTIFICATE
+        "Driving License" , _ -> getString DRIVING_LICENSE
         _ , _ -> title
 
 
@@ -168,7 +170,10 @@ transformToDoctype step =
     ST.GRANT_PERMISSION -> "Permissions"
     ST.VEHICLE_PHOTOS -> "VehiclePhotos"
     ST.INSPECTION_HUB -> "InspectionHub"
-    ST.NO_OPTION -> ""
+    _ -> ""
+
+vehiclePhotoTypes :: Array String
+vehiclePhotoTypes = ["VehicleFront", "VehicleBack", "VehicleLeft", "VehicleRight", "VehicleFrontInterior", "VehicleBackInterior", "Odometer"]
 
 transformVehicleImageToDoctype :: Maybe VehicleImageType -> String
 transformVehicleImageToDoctype imageType = 

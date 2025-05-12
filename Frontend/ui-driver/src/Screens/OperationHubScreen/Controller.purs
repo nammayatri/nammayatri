@@ -55,6 +55,7 @@ data ScreenOutput = GoBack
                     | SelectLang ST.OperationHubScreenState
                     | LogoutAccount
                     | DriverOperationCreateRequest ST.OperationHubScreenState
+                    | GoToFaqsScreen ST.OperationHubScreenState
 
 eval :: Action -> ST.OperationHubScreenState -> Eval Action ScreenOutput ST.OperationHubScreenState
 
@@ -80,7 +81,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "logout" -> continue newState {props { logoutModalView = true }}
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_language" -> exit $ SelectLang newState
-    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
+    "faqs" -> exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (BottomDrawerListAC BottomDrawerList.Dismiss) state = continue state { props { contactSupportModal = ST.ANIMATING}}
@@ -111,7 +112,7 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (st
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
 
-eval ShowOptions state = continue state { props { showOptions = not $ state.props.showOptions }}
+eval ShowOptions state = continue state {data {selectedHub = Nothing}, props { showOptions = not $ state.props.showOptions }}
 
 eval OpenMaps state = do
   let (API.OperationHub hub) = fromMaybe dummyOperationHub state.data.selectedHub

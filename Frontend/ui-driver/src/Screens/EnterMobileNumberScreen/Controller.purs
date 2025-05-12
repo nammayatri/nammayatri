@@ -95,4 +95,6 @@ eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state
                                         , isValid = not isValidMobileNumber
                                         , mobileNumberEditFocused = length newVal < 10 }
                                         , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
+
+eval (PrimaryEditTextAction (MobileNumberEditor.FocusChanged focusChanged)) state = continue state { props {mobileNumberEditFocused = focusChanged}} 
 eval _ state = update state
