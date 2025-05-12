@@ -7492,7 +7492,7 @@ busTicketBookingFlow = do
      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = updatedState.props.srcLat , srcLong = updatedState.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
-    BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
+    BusTicketBookingController.GoToMetroTicketDetailsFlow updatedState bookingId -> do
       void $ pure $ removeValueFromCache "POLLING_ID"
       void $ pure $ removeValueFromCache "MAP_READY" 
       -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
@@ -7518,6 +7518,7 @@ busTicketBookingFlow = do
               let source = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
               let dest = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
               -- vehicleTrackingId
+              modifyScreenState $ BusTicketBookingScreenStateType (\state -> updatedState)
               modifyScreenState $ BusTrackingScreenStateType (\busScreen -> 
                 BusTrackingScreenData.initData 
                   { data 

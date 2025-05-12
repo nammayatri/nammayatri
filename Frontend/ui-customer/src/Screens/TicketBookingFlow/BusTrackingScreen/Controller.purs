@@ -429,7 +429,7 @@ eval (UserBoarded mbVehicleId) state = do
       -- findBusInfo = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) extractBusOnboardingInfo
       nearbyBusVehicleId = state.props.busNearSourceData <#> _.vehicleId
       vId = nearbyBusVehicleId <|> state.props.vehicleTrackingId
-  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId, expandStopsView = if Mb.isNothing mbVehicleId then true else state.props.expandStopsView}, data{stopsList = filteredStops}} [ do
+  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId, expandStopsView = false }, data{stopsList = filteredStops}} [ do
     -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state
     if (Mb.isNothing mbVehicleId && Mb.isJust vId && state.data.bookingId /= "" && Mb.isNothing state.props.vehicleTrackingId && Mb.isJust nearbyBusVehicleId) 
       -- then void $ pure $ setValueToLocalStore ONBOARDED_VEHICLE_INFO $ DU.stringifyJSON updatedOnboardingVehicleInfo

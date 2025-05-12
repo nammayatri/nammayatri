@@ -491,7 +491,6 @@ stopListView push state showOnlyBullet =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
         (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance mbEtaTime state.props.isMinimumEtaDistanceAvailable mbTimestamp state.data.vehicleData) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
@@ -541,10 +540,10 @@ stopsViewHeader push state showOnlyBullet =
             , margin $ MarginHorizontal 4 4
             , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_dot"
             ]
-        , textView
-            $ [ text "16 min"
-              ]
-            <> FontStyle.tags CTA.TypoGraphy
+        -- , textView
+        --     $ [ text "16 min"
+        --       ]
+        --     <> FontStyle.tags CTA.TypoGraphy
         , layoutWithWeight
         , imageView
             [ imageWithFallback
