@@ -254,7 +254,8 @@ transformEntry stopData timestamp entry = do
           { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
             serviceTierType = BecknV2.FRFS.Enums.SECOND_CLASS,
             stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-            -- Convert seconds from midnight to HH:MM:SS
+            -- Convert seconds from midnight to HH:MM:SS and handle next day cases
+            -- Also converts UTC to IST (UTC+5:30)
             timeOfArrival = secondsToTime entry.scheduledArrival,
             timeOfDeparture = secondsToTime entry.scheduledDeparture,
             tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
@@ -265,7 +266,8 @@ transformEntry stopData timestamp entry = do
           { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
             serviceTierType = BecknV2.FRFS.Enums.FIRST_CLASS,
             stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-            -- Convert seconds from midnight to HH:MM:SS
+            -- Convert seconds from midnight to HH:MM:SS and handle next day cases
+            -- Also converts UTC to IST (UTC+5:30)
             timeOfArrival = secondsToTime entry.scheduledArrival,
             timeOfDeparture = secondsToTime entry.scheduledDeparture,
             tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
@@ -278,7 +280,8 @@ transformEntry stopData timestamp entry = do
           { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
             serviceTierType = mapToServiceTierType entry.trip.gtfsId,
             stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-            -- Convert seconds from midnight to HH:MM:SS
+            -- Convert seconds from midnight to HH:MM:SS and handle next day cases
+            -- Also converts UTC to IST (UTC+5:30)
             timeOfArrival = secondsToTime entry.scheduledArrival,
             timeOfDeparture = secondsToTime entry.scheduledDeparture,
             tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
@@ -287,12 +290,15 @@ transformEntry stopData timestamp entry = do
           }
       ]
 
--- Convert seconds from midnight to HH:MM:SS format
+-- Convert seconds from midnight to HH:MM:SS format and handle next day cases
+-- Also converts UTC to IST (UTC+5:30)
 secondsToTime :: Int -> LocalTime.TimeOfDay
 secondsToTime seconds =
-  let hours :: Int = seconds `div` 3600
-      minutes :: Int = (seconds `mod` 3600) `div` 60
-      secs = fromIntegral $ seconds `mod` 60
+  let istSeconds = seconds + 19800 -- Add 5:30 hours (19800 seconds) for IST conversion
+      normalizedSeconds = istSeconds `mod` 86400 -- Handle next day by taking modulo 24 hours
+      hours :: Int = normalizedSeconds `div` 3600
+      minutes :: Int = (normalizedSeconds `mod` 3600) `div` 60
+      secs = fromIntegral $ normalizedSeconds `mod` 60
    in LocalTime.TimeOfDay hours minutes secs
 
 -- Map route codes to service tier types
