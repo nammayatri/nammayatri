@@ -1811,4 +1811,11 @@ getTe =
     , yes_end_ride: "అవును, ప్రయాణాన్ని ముగించండి"
     , canceling_this_booking_may_affect_the_emergency_medical : "ఈ బుకింగ్‌ను రద్దు చేస్తే, రోగికి అత్యవసర వైద్య సేవలు ప్రభావితం కావచ్చు"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "డ్రైవర్లు తమ వైద్య కారణాలు లేదా వాహన విఫలమై ఉన్న కారణాల వల్ల మాత్రమే రద్దు చేయడానికి అనుమతించబడతారు"
+    , bus_driver: "బస్ డ్రైవర్"
+    , bus_conductor: "బస్ కండక్టర్"
+    , select_bus_driver: "బస్ డ్రైవర్‌ను ఎంచుకోండి"
+    , select_bus_conductor: "బస్ కండక్టర్‌ను ఎంచుకోండి"
+    , select_bus_route: "బస్ మార్గాన్ని ఎంచుకోండి"
+    , link_trip: "ప్రయాణాన్ని లింక్ చేయండి"
+    , driver_name: "డ్రైవర్ పేరు"
     }

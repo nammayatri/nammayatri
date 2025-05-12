@@ -1106,11 +1106,19 @@ type HomeScreenData =  {
 -- | Represents the current state of bus-related data
 type WhereIsMyBusData = {
   availableRoutes :: Maybe API.AvailableRoutesList,
+  fleetBadgeDrivers :: Maybe (Array FleetBadgeDrivers),
+  fleetConductor :: Maybe (Array FleetBadgeDrivers),
   trip :: Maybe BusTrip,
   endTripStatus :: Maybe String,
   lastCompletedTrip :: Maybe API.TripTransactionDetails,
   fleetConfig :: Maybe API.BusFleetConfigResp
 }
+
+type FleetBadgeDrivers = {
+  badgeName :: String,
+  isActive :: Boolean
+}
+
 -- Represents either a current or assigned bus trip
 data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
 
@@ -1442,12 +1450,50 @@ type HomeScreenProps =  {
  }
 
 type WhereIsMyBusConfig = {
-  showSelectAvailableBusRoutes :: Boolean,
+  linkTripPopup :: Boolean,
   selectRouteStage :: Boolean,
   selectedRoute :: Maybe API.AvailableRoutes,
+  selectBadge :: Maybe FleetBadgeDrivers,
   tripTransactionId :: Maybe String,
-  selectedIndex :: Int
+  dropdownTextFieldConfig :: DropdownTextConfig',
+  searchableListConfig :: {
+    availableRoutes :: Array API.AvailableRoutes,
+    fleetBadgeDrivers :: Array FleetBadgeDrivers,
+    fleetConductor :: Array FleetBadgeDrivers
+  },
+  selectedIndex :: Int,
+  selectedRoutes :: Maybe String,
+  selectedFleetDriverBadge :: Maybe String,
+  selectedFleetConductor :: Maybe String,
+  selectBusRouteDropdown :: Boolean,
+  selectBusDriverDropdown :: Boolean,
+  selectBusConductorDropdown :: Boolean
 }
+
+type DropdownOption' = {
+  id :: String,
+  name :: String,
+  description :: String,
+  optionEnabled :: Boolean,
+  selected :: Boolean
+}
+
+-- | Component configuration
+type DropdownTextConfig' = {
+  visibility :: Visibility,
+  isOpen :: Boolean,
+  searchText :: String,
+  placeholder :: String,
+  options :: Array DropdownOption',
+  selectedOption :: Maybe DropdownOption',
+  -- searchFieldConfig :: PrimaryEditTextController.Config,
+  isLoading :: Boolean,
+  hasMoreOptions :: Boolean,
+  offset :: Int,
+  limit :: Int,
+  listMaxHeight :: Int
+}
+
 
 type RideRequestPill = {
   isPillClickable ::  Boolean,

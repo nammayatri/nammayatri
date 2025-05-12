@@ -64,9 +64,15 @@ editTextLayout push config =
     , cornerRadius config.cornerRadius
     , gravity CENTER_VERTICAL
     , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
+    , onClick (\action -> do
+                  if config.editText.enableOnClick then 
+                    push $ action (not config.editText.focused)
+                  else
+                    pure unit 
+                  ) (const (FocusChanged))
     ]((if config.showConstantField then 
           [constantField push config, editTextView push config ] 
-          else [editTextView push config, textImageView push config ])
+          else [prefixImageView push config , editTextView push config, textImageView push config ])
           )
 
 
@@ -107,6 +113,12 @@ editTextView push config =
   , letterSpacing config.editText.letterSpacing
   , alpha config.editText.alpha
   , onFocus push $ FocusChanged
+  , onClick (\action -> do
+                if config.editText.enableOnClick then
+                  push $ action (not config.editText.focused)
+                else
+                  pure unit 
+                ) (const (FocusChanged))
   ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
     <> (case config.editText.pattern of 
         Just _pattern -> case config.type of 
@@ -169,4 +181,16 @@ textImageView push config =
     , margin config.textImage.margin
     , visibility config.textImage.visibility
     , onClick push $ const TextImageClicked
+    ]
+
+prefixImageView :: forall w . (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+prefixImageView push config =
+  imageView
+    [ height config.prefixImage.height
+    , width config.prefixImage.width
+    , imageWithFallback config.prefixImage.imageUrl
+    , gravity RIGHT
+    , padding config.prefixImage.padding
+    , margin config.prefixImage.margin
+    , visibility config.prefixImage.visibility
     ]

@@ -1869,46 +1869,63 @@ makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackRe
 ------------------------------------------ Where is my bus ------------------------------------------
 
 -- Fetch Available Routes
-getAvailableRoutes :: String -> Flow GlobalState (Either ErrorResponse AvailableRoutesList)
+getAvailableRoutes :: Maybe String -> Flow GlobalState (Either ErrorResponse AvailableRoutesList)
 getAvailableRoutes vehicleNumber = do
   headers <- getHeaders "" false
-  withAPIResult (EP.busAvailableRoutes vehicleNumber) unwrapResponse $ callAPI headers $ GetAvailableRoutes {vehicleNumber : vehicleNumber}
+  withAPIResult (EP.busAvailableRoutes "") unwrapResponse $ callAPI headers $ GetAvailableRoutes {vehicleNumber : vehicleNumber}
   where
     unwrapResponse (x) = x
 
-getAvailableRoutesBT :: String -> FlowBT String AvailableRoutesList
+getAvailableRoutesBT :: Maybe String -> FlowBT String AvailableRoutesList
 getAvailableRoutesBT vehicleNumber = do
   headers <- getHeaders' "" false
-  withAPIResultBT (EP.busAvailableRoutes vehicleNumber) identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes {vehicleNumber : vehicleNumber})
+  withAPIResultBT (EP.busAvailableRoutes "") identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes {vehicleNumber : vehicleNumber})
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+-- Fetch Available Drivers
+getWmbFleetBadges :: Int -> Int -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetFleetBadgeListResp)
+getWmbFleetBadges limit offset badgeType mbSearchString = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getWmbFleetBadges limit offset badgeType mbSearchString) unwrapResponse $ callAPI headers $ GetFleetBadge limit offset badgeType mbSearchString
+  where
+    unwrapResponse (x) = x
+
+getWmbFleetBadgesBT :: Int -> Int -> String -> Maybe String -> FlowBT String GetFleetBadgeListResp
+getWmbFleetBadgesBT limit offset badgeType mbSearchString = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.getWmbFleetBadges limit offset badgeType mbSearchString) identity errorHandler (lift $ lift $ callAPI headers $ GetFleetBadge limit offset badgeType mbSearchString)
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
 -- Link Trip
-startPrivateBusTrip :: String -> String -> Number -> Number -> Flow GlobalState (Either ErrorResponse TripTransactionDetails)
-startPrivateBusTrip number code lat lon = do
+startPrivateBusTrip :: Maybe String -> String -> Number -> Number -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse TripTransactionDetails)
+startPrivateBusTrip number code lat lon driverBadgeName conductorBadgeName = do
   headers <- getHeaders "" false
-  let payload = mkPrivateTripStartReq number code lat lon
+  let payload = mkPrivateTripStartReq number code lat lon driverBadgeName conductorBadgeName
   withAPIResult (EP.busTripStart Nothing) unwrapResponse $ callAPI headers payload
   where
     unwrapResponse (x) = x
 
-startPrivateBusTripBT :: String -> String -> Number -> Number -> FlowBT String TripTransactionDetails
-startPrivateBusTripBT number code lat lon = do
+startPrivateBusTripBT :: Maybe String -> String -> Number -> Number -> String -> Maybe String -> FlowBT String TripTransactionDetails
+startPrivateBusTripBT number code lat lon driverBadgeName conductorBadgeName = do
   headers <- getHeaders' "" false
-  let payload = mkPrivateTripStartReq number code lat lon
+  let payload = mkPrivateTripStartReq number code lat lon driverBadgeName conductorBadgeName
   withAPIResultBT (EP.busTripStart Nothing) identity errorHandler (lift $ lift $ callAPI headers payload)
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-mkPrivateTripStartReq :: String -> String -> Number -> Number -> PrivateTripStartReq
-mkPrivateTripStartReq number code lat lon = PrivateTripStartReq
+mkPrivateTripStartReq :: Maybe String -> String -> Number -> Number -> String -> Maybe String -> PrivateTripStartReq
+mkPrivateTripStartReq number code lat lon driverBadgeName conductorBadgeName = PrivateTripStartReq
     {
-      vehicleNumberHash : number
+      vehicleNumberHash : Nothing
     , routeCode : code
     , location : LatLong {
         lat : lat,
         lon : lon
     }
+    , driverBadgeName : driverBadgeName
+    , conductorBadgeName : conductorBadgeName
     }
 
 

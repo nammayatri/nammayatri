@@ -112,7 +112,7 @@ updateStateWithRoutes (AvailableRoutesList availableRoutesList) tripDetails = do
       }
 fetchAvailableRoutes :: JB.RecentBusTrip -> FlowBT String (Either ErrorResponse API.AvailableRoutesList)
 fetchAvailableRoutes tripDetails = do
-  lift $ lift $ Remote.getAvailableRoutes $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
+  lift $ lift $ Remote.getAvailableRoutes $ Just $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
   
 findMatchingRoute :: JB.RecentBusTrip -> Array API.AvailableRoutes -> Maybe AvailableRoutes
 findMatchingRoute tripDetails availableRoutesList = 

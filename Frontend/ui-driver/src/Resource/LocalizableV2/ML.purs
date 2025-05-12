@@ -1811,4 +1811,11 @@ getMl =
     , yes_end_ride: "അവശ്യം, യാത്ര അവസാനിപ്പിക്കുക"
     , canceling_this_booking_may_affect_the_emergency_medical : "ഈ ബുക്കിംഗ്キャンസル ചെയ്യുന്നത് രോഗിക്ക് അടിയന്തര മെഡിക്കൽ സേവനങ്ങൾക്ക് പ്രഭാവം വരുത്താം"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ഡ്രൈവർമാർ അവരുടെ വൈദ്യശാസ്ത്ര കാരണം അല്ലെങ്കിൽ veículo തകരാറുകൾ മൂലം മാത്രമേ റദ്ദുചെയ്യേണ്ടു"
+    , bus_driver: "ബസ് ഡ്രൈവർ"
+    , bus_conductor: "ബസ് കണ്ടക്ടർ"
+    , select_bus_driver: "ബസ് ഡ്രൈവറെ തിരഞ്ഞെടുക്കുക"
+    , select_bus_conductor: "ബസ് കണ്ടക്ടറെ തിരഞ്ഞെടുക്കുക"
+    , select_bus_route: "ബസ് റൂട്ട് തിരഞ്ഞെടുക്കുക"
+    , link_trip: "യാത്ര ലിങ്ക് ചെയ്യുക"
+    , driver_name: "ഡ്രൈവറിന്റെ പേര്"
     }

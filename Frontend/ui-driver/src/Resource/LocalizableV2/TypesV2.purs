@@ -1826,7 +1826,13 @@ newtype Keymap
   , yes_end_ride :: String
   , canceling_this_booking_may_affect_the_emergency_medical :: String
   , drivers_are_permitted_to_cancel_ambulance_bookings :: String
-
+  , bus_driver :: String
+  , bus_conductor :: String
+  , select_bus_driver :: String
+  , select_bus_conductor :: String
+  , select_bus_route :: String
+  , driver_name :: String
+  , link_trip :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7252,3 +7258,24 @@ drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
 
 canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
 canceling_this_booking_may_affect_the_emergency_medical = Proxy
+
+bus_driver :: Proxy "bus_driver"
+bus_driver = Proxy
+
+bus_conductor :: Proxy "bus_conductor"
+bus_conductor = Proxy
+
+select_bus_driver :: Proxy "select_bus_driver"
+select_bus_driver = Proxy
+
+select_bus_conductor :: Proxy "select_bus_conductor"
+select_bus_conductor = Proxy
+
+select_bus_route :: Proxy "select_bus_route"
+select_bus_route = Proxy
+
+driver_name :: Proxy "driver_name"
+driver_name = Proxy
+
+link_trip :: Proxy "link_trip"
+link_trip = Proxy

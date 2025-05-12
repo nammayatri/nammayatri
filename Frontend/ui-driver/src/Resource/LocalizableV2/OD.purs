@@ -1811,4 +1811,11 @@ getOd =
     , yes_end_ride: "ହଁ, ଯାତ୍ରା ଶେଷ କରନ୍ତୁ"
     , canceling_this_booking_may_affect_the_emergency_medical : "ଏହି ବୁକିଂ ରଦ୍ଦ କରିବାରୁ ରୋଗୀଙ୍କର ଆତିକ୍ରମିକ ଚିକିତ୍ସା ସେବାଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରିପାରେ"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ଡ୍ରାଇଭର୍ମାନେ ସେମାନଙ୍କର ଚିକିତ୍ସା କାରଣ କିମ୍ବା ଗାଡ଼ିର ତ୍ରୁଟି ଦ୍ୱାରା ପରିବାହନ ବୁକିଂ ରଦ୍ଦ କରିବାକୁ ଅନୁମତି ଦିଆଯାଇଛି"
+    , bus_driver: "ବସ୍ ଚାଳକ"
+    , bus_conductor: "ବସ୍ କଣ୍ଡକ୍ଟର୍"
+    , select_bus_driver: "ବସ୍ ଚାଳକ ଚୟନ କରନ୍ତୁ"
+    , select_bus_conductor: "ବସ୍ କଣ୍ଡକ୍ଟର୍ ଚୟନ କରନ୍ତୁ"
+    , select_bus_route: "ବସ୍ ମାର୍ଗ ଚୟନ କରନ୍ତୁ"
+    , link_trip: "ଭ୍ରମଣ ଲିଙ୍କ୍ କରନ୍ତୁ"
+    , driver_name: "ଡ୍ରାଇଭର୍ ନାମ"
   }
