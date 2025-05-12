@@ -193,7 +193,7 @@ FleetConfig:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
-  fromTType:
+  fromTType: 
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E

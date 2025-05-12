@@ -219,7 +219,6 @@ library
       Domain.Types.EmptyDynamicParam
       Domain.Types.FareProductType
       Domain.Types.FleetBadgeType
-      Domain.Types.FRFSRouteDetails
       Domain.Types.RefereeLink
       Domain.Types.ServiceTierType
       Domain.Types.StationType

@@ -82,7 +82,9 @@ data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TripTransactionDetails = TripTransactionDetails
-  { destination :: StopInfo,
+  { conductorName :: Kernel.Prelude.Maybe Data.Text.Text,
+    destination :: StopInfo,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     routeInfo :: RouteInfo,
     source :: StopInfo,

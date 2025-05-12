@@ -50,9 +50,11 @@ types:
     routeCode: Text
     location: LatLong
 
-  TripTransactionDetails:
+  TripTransactionDetails: 
     tripTransactionId: Id TripTransaction
     endRideApprovalRequestId: Maybe (Id AlertRequest)
+    driverName: Maybe Text
+    conductorName: Maybe Text
     vehicleNumber: Text
     vehicleType: ServiceTierType
     source: StopInfo
