@@ -245,6 +245,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
 
 data FRFSFare = FRFSFare
   { price :: Price,
+    childPrice :: Maybe Price,
     discounts :: [FRFSDiscount],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier
@@ -289,6 +290,7 @@ getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingC
         return $
           FRFSFare
             { price = price,
+              childPrice = Nothing,
               discounts = map (mkDiscount price) discountsWithEligibility,
               fareDetails = Nothing,
               vehicleServiceTier =

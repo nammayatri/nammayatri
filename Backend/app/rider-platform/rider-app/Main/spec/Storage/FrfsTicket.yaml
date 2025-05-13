@@ -330,6 +330,7 @@ FRFSTicketBooking:
     fromStationId: Id Station
     toStationId: Id Station
     quantity: Int
+    childTicketQuantity: Maybe Int
     vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
