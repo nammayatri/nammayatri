@@ -404,9 +404,12 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
             let busData = bus.busData
             let sortedEtaData = sortBy (comparing (.stopSeq)) (fromMaybe [] busData.eta_data)
             let mbNextStop = listToMaybe sortedEtaData
+            logDebug $ "Got bus data for route " <> routeCode <> ": next stop" <> show mbNextStop
             mbNextStopMapping <-
               case mbNextStop of
-                Just nextStop -> listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode routeCode nextStop.stopId integratedBPPConfig.id
+                Just nextStop -> do
+                  logDebug $ "Got bus data for route " <> routeCode <> ": next stop mapping" <> show nextStop <> " data: " <> show routeCode <> " " <> nextStop.stopId <> " " <> integratedBPPConfig.id.getId
+                  listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode routeCode nextStop.stopId integratedBPPConfig.id
                 Nothing -> pure Nothing
             return $
               VehicleTracking
