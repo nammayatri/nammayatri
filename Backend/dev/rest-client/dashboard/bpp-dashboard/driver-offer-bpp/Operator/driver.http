@@ -5,25 +5,10 @@
 @juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
 @customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
 
-# response operatorVerify.authToken
-@operator = 1a9ff3a4-fcdc-4e9b-899d-c48c33f08c35
-@operatorRoleId = 00000000-0000-0000-000-operator-role
+@operator = favorit-operator-token0-000000000000
 
 # @name healthcheck
 GET {{bpp-dashboard-host}}
-
-###
-
-# @name assignAccessLevel1
-
-POST {{bpp-dashboard-host}}/admin/roles/{{operatorRoleId}}/assignAccessLevel
-content-type: application/json
-token: {{juspay_admin}}
-
-{ "apiEntity" : "DSL",
-  "userAccessType" : "USER_FULL_ACCESS",
-  "userActionType" : "PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_SEND_JOINING_OTP"
-}
 
 ###
 
@@ -43,20 +28,6 @@ content-type: application/json
 
 ###
 
-
-# @name assignAccessLevel2
-
-POST {{bpp-dashboard-host}}/admin/roles/{{operatorRoleId}}/assignAccessLevel
-content-type: application/json
-token: {{juspay_admin}}
-
-{ "apiEntity" : "DSL",
-  "userAccessType" : "USER_FULL_ACCESS",
-  "userActionType" : "PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_VERIFY_JOINING_OTP"
-}
-
-###
-
 # existing person otp
 # @name postDriverOperatorVerifyJoiningOtp1
 
@@ -67,7 +38,7 @@ token: {{operator}}
 content-type: application/json
 
 {   "mobileCountryCode": "+91",
-    "mobileNumber": "2211111121",
+    "mobileNumber": "2211111124",
     "otp": "7891",
     "deviceToken": ""
 }
@@ -87,19 +58,6 @@ content-type: application/json
     "mobileNumber": "2211111124",
     "otp": "7891",
     "deviceToken": ""
-}
-
-###
-
-# @name assignAccessLevel3
-
-POST {{bpp-dashboard-host}}/admin/roles/{{operatorRoleId}}/assignAccessLevel
-content-type: application/json
-token: {{juspay_admin}}
-
-{ "apiEntity" : "DSL",
-  "userAccessType" : "USER_FULL_ACCESS",
-  "userActionType" : "PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_ADD_DRIVERS"
 }
 
 ###
@@ -151,27 +109,6 @@ content-type: application/json
 
 ###
 
-# @name assignAccessLevel4
-
-POST {{bpp-dashboard-host}}/admin/roles/{{operatorRoleId}}/assignAccessLevel
-content-type: application/json
-token: {{juspay_admin}}
-
-{ "apiEntity" : "DSL",
-  "userAccessType" : "USER_FULL_ACCESS",
-  "userActionType" : "PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_LINK"
-}
-
-###
-
-@fleetOwnerId = favorit-fleet-owner-0000000000000000
-
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/operator/fleet/{{fleetOwnerId}}/link
-token: {{operator}}
-content-type: application/json
-
-###
-
 # @name createHubRequest
 
 # DELETE FROM atlas_driver_offer_bpp.operation_hub_requests
@@ -200,19 +137,6 @@ token: {{token2}}
 GET {{driver-offer-bpp-host}}/ui/operation/getRequests?rcNo={{rcNo}}
 content-type: application/json
 token: {{token2}}
-
-###
-
-# @name assignAccessLevel5
-
-POST {{bpp-dashboard-host}}/admin/roles/{{operatorRoleId}}/assignAccessLevel
-content-type: application/json
-token: {{juspay_admin}}
-
-{ "apiEntity" : "DSL",
-  "userAccessType" : "USER_FULL_ACCESS",
-  "userActionType" : "PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST"
-}
 
 ###
 

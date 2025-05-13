@@ -70,5 +70,8 @@ UPDATE atlas_bpp_dashboard.person
 UPDATE atlas_bpp_dashboard.person
     SET role_id = 'e5a69a26-d165-455a-a711-33a41e0d4812'
     WHERE role = 'FLEET_OWNER';
+UPDATE atlas_bpp_dashboard.person
+    SET role_id = '00000000-0000-0000-000-operator-role'
+    WHERE role = 'OPERATOR';
 ALTER TABLE atlas_bpp_dashboard.person
   DROP COLUMN role;
