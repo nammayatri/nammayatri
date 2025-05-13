@@ -113,6 +113,7 @@ parseFulfillments item fulfillments fulfillmentId = do
     Domain.DQuote
       { bppItemId = itemId,
         price,
+        childPrice = Nothing,
         vehicleType,
         routeStations = [],
         stations,

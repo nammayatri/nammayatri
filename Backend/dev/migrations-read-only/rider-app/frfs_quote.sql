@@ -97,3 +97,9 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_route_id text ;
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN distance integer ;
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN app_session integer ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN child_price double precision ;

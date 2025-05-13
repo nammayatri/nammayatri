@@ -556,8 +556,9 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
               (HighPrecMoney 0.0)
               selectedDiscounts
       let ticketQuantity' = fromMaybe quote.quantity ticketQuantity
-      let _childTicketQuantity' = fromMaybe 0 childTicketQuantity
-      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational ticketQuantity')) - totalDiscount -- to see
+      let childTicketQuantity' = fromMaybe 0 childTicketQuantity
+      let childPriceAmount = maybe quote.price.amount (.amount) quote.childPrice
+      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational ticketQuantity')) + (childPriceAmount.getHighPrecMoney * (toRational childTicketQuantity'))) - totalDiscount
       let isFareChanged = isJust oldCacheDump
       let journeyRouteDetails' = maybe [] (.journeyRouteDetails) mbSearch
       let booking =
@@ -603,7 +604,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
                 recentLocationId = mbSearch >>= (.recentLocationId),
                 ..
               }
-      QFRFSTicketBooking.create booking -- to see
+      QFRFSTicketBooking.create booking
       return (rider, booking)
 
     makeBookingStatusAPI booking discounts routeStations stations city =
