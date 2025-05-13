@@ -9,6 +9,7 @@ import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.Person as Person
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -94,6 +95,7 @@ data OneWaySearchReq = OneWaySearchReq
     destination :: Maybe SearchReqLocation,
     stops :: Maybe [SearchReqLocation],
     isSourceManuallyMoved :: Maybe Bool,
+    initialSourceLatLong :: Maybe LatLong, -- We need this for analytics purpose, we are tracking how many user's has moved the source location respect to confirm location
     isDestinationManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,
     startTime :: Maybe UTCTime,
@@ -205,6 +207,16 @@ data SearchReqLocation = SearchReqLocation
     address :: LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data SearchSourceDeviationData = SearchSourceDeviationData
+  { initialSourceLatLong :: Maybe LatLong,
+    sourceLatLong :: LatLong,
+    destinationLatLong :: Maybe LatLong,
+    personId :: Id Person.Person,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 buildSearchReqLoc ::
   MonadFlow m =>
