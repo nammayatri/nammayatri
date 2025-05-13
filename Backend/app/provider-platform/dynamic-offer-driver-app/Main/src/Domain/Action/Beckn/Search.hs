@@ -453,7 +453,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             isInterCity = False,
             ..
           }
-  driverPoolNotOnRide <- calculateDriverPool calculateDriverPoolReq
+  (driverPoolNotOnRide, _) <- calculateDriverPool calculateDriverPoolReq
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
