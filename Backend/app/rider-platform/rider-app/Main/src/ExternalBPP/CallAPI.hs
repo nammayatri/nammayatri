@@ -8,7 +8,7 @@ import qualified Beckn.ACL.FRFS.Search as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
-import Domain.Action.Beckn.FRFS.Common
+import Domain.Action.Beckn.FRFS.Common hiding (status)
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
@@ -165,4 +165,5 @@ verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encrypte
     processOnStatus onStatusReq = do
       let verificationOnStatusReq = DOnStatus.TicketVerification onStatusReq
       (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
+      void $ status merchantId merchantOperatingCity bapConfig booking' platformType -- Doing one status call to sync the Ticket Status & Expiry Before Verifying
       DOnStatus.onStatus merchant' booking' verificationOnStatusReq
