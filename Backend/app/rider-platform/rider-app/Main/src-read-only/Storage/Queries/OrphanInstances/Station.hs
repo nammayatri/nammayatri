@@ -12,6 +12,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Storage.Beam.Station as Beam
 
 instance FromTType' Beam.Station Domain.Types.Station.Station where
@@ -31,6 +32,7 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
             name = name,
             possibleTypes = possibleTypes,
             regionalName = regionalName,
+            suggestedDestinations = Kernel.Utils.Text.decodeFromText =<< suggestedDestinations,
             timeBounds = fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
             vehicleType = vehicleType,
             createdAt = createdAt,
@@ -52,6 +54,7 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.name = name,
         Beam.possibleTypes = possibleTypes,
         Beam.regionalName = regionalName,
+        Beam.suggestedDestinations = Kernel.Utils.Text.encodeToText <$> suggestedDestinations,
         Beam.timeBounds = Kernel.Prelude.Just timeBounds,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,

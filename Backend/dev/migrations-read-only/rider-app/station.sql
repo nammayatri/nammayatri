@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.station ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.station ADD COLUMN regional_name text ;
 ALTER TABLE atlas_app.station ADD COLUMN hindi_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.station ADD COLUMN suggestsed_destinations text ;

@@ -31,6 +31,7 @@ imports:
   Journey: Domain.Types.Journey
   JourneyLegStatus: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
+  SuggestedStations: Domain.Types.StationType
   MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
@@ -168,6 +169,7 @@ Station:
     merchantId: Id Merchant
     timeBounds: TimeBound
     possibleTypes: Maybe [StationType]
+    suggestedDestinations: Maybe [SuggestedStations]
     merchantOperatingCityId: Id MerchantOperatingCity
     integratedBppConfigId: Id IntegratedBPPConfig
 
@@ -176,6 +178,7 @@ Station:
 
   beamType:
     timeBounds: Maybe TimeBound
+    suggestedDestinations: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -183,9 +186,11 @@ Station:
 
   fromTType:
     timeBounds: fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds|E
+    suggestedDestinations: (Kernel.Utils.Text.decodeFromText =<< suggestedDestinations)|E
 
   toTType:
     timeBounds: Kernel.Prelude.Just|I
+    suggestedDestinations: (Kernel.Utils.Text.encodeToText <$> suggestedDestinations)|E
 
   queries:
     findAllByVehicleType:

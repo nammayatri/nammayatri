@@ -334,6 +334,7 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
                 timeBounds = Kernel.Types.TimeBound.Unbounded,
                 merchantOperatingCityId = merchantOpCity.id,
                 integratedBppConfigId = integratedBPPConfig.id,
+                suggestedDestinations = Nothing,
                 createdAt = now,
                 updatedAt = now
               }

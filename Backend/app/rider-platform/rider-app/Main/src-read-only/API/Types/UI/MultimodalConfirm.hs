@@ -12,6 +12,7 @@ import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
+import qualified Domain.Types.StationType
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.MapsClient.Types
@@ -192,6 +193,7 @@ data TransportStation = TransportStation
     lt :: Kernel.Prelude.Double,
     nm :: Kernel.Prelude.Text,
     rgn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sgstdDest :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)

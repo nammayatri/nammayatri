@@ -26,6 +26,8 @@ imports:
   VehiclePosition: Lib.JourneyModule.Types
   SDKPayloadDetails: Kernel.External.Payment.Juspay.Types
   ServiceTierType: BecknV2.FRFS.Enums
+  City: Kernel.Types.Beckn.Context
+  SuggestedStations: Domain.Types.StationType
 
 module: MultimodalConfirm
 
@@ -160,6 +162,7 @@ types:
     ad: Maybe Text
     rgn: Maybe Text
     hin: Maybe Text
+    sgstdDest: Maybe [SuggestedStations]
 
   TransportRouteStopMapping:
     rc: Text
@@ -342,6 +345,7 @@ apis:
       endpoint: /publicTransport/data
       query:
         publicTransportConfigVersion: Text
+        city: City
       response:
         type: PublicTransportData
 

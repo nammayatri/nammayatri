@@ -265,5 +265,5 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN ticket_asset_domain text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ALTER COLUMN qr_ticket_restriction_start_time TYPE time without time zone;
-ALTER TABLE atlas_app.rider_config ALTER COLUMN qr_ticket_restriction_end_time TYPE time without time zone;
+ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_start_time time without time zone;
+ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_end_time time without time zone;

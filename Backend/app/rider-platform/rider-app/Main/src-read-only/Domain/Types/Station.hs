@@ -27,6 +27,7 @@ data Station = Station
     name :: Kernel.Prelude.Text,
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
     regionalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    suggestedDestinations :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,

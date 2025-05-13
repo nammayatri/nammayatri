@@ -17,6 +17,7 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -260,6 +261,9 @@ type API =
       :> "publicTransport"
       :> "data"
       :> QueryParam
+           "city"
+           Kernel.Types.Beckn.Context.City
+      :> QueryParam
            "publicTransportConfigVersion"
            Kernel.Prelude.Text
       :> Get
@@ -480,10 +484,11 @@ getPublicTransportData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPublicTransportData a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalOrderGetLegTierOptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

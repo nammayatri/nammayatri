@@ -496,6 +496,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
               timeBounds = Kernel.Types.TimeBound.Unbounded,
               merchantOperatingCityId = merchantOpCityId,
               integratedBppConfigId = integratedBPPConfig.id,
+              suggestedDestinations = Nothing,
               regionalName = Nothing,
               hindiName = Nothing,
               createdAt = now,

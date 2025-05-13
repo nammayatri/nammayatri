@@ -14,6 +14,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Sequelize as Se
 import qualified Storage.Beam.Station as Beam
 import Storage.Queries.StationExtra as ReExport
@@ -70,6 +71,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.name name,
       Se.Set Beam.possibleTypes possibleTypes,
       Se.Set Beam.regionalName regionalName,
+      Se.Set Beam.suggestedDestinations (Kernel.Utils.Text.encodeToText <$> suggestedDestinations),
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

@@ -54,6 +54,7 @@ import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -662,19 +663,22 @@ getPublicTransportData ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
+getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
+  let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
     catMaybes
       <$> forM
         vehicleTypes
         ( \vType ->
-            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
+            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vType DIBC.MULTIMODAL
         )
 
   let fetchData bppConfig = do
@@ -696,6 +700,7 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
                               ad = s.address,
                               vt = show s.vehicleType,
                               rgn = s.regionalName,
+                              sgstdDest = s.suggestedDestinations,
                               hin = s.hindiName
                             }
                       _ -> Nothing
