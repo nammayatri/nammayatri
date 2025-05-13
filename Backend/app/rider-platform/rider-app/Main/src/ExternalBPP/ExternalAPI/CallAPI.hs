@@ -77,19 +77,26 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
             [ FRFSUtils.FRFSFare
                 { price =
                     Price
-                      { amountInt = 5, -- default fare
-                        amount = 5,
+                      { amountInt = 0, -- default fare
+                        amount = 0,
                         currency = INR
                       },
+                  childPrice =
+                    Just
+                      Price
+                        { amountInt = 0, -- default fare
+                          amount = 0,
+                          currency = INR
+                        },
                   discounts = [],
                   fareDetails = Nothing,
                   vehicleServiceTier =
                     FRFSUtils.FRFSVehicleServiceTier
-                      { serviceTierType = Spec.SECOND_CLASS,
-                        serviceTierProviderCode = "II",
-                        serviceTierShortName = "Second Class",
-                        serviceTierDescription = "Second Class",
-                        serviceTierLongName = "Second Class"
+                      { serviceTierType = Spec.ORDINARY,
+                        serviceTierProviderCode = "ORDINARY",
+                        serviceTierShortName = "ORDINARY",
+                        serviceTierDescription = "ORDINARY",
+                        serviceTierLongName = "ORDINARY"
                       }
                 }
             ]

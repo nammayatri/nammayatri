@@ -134,6 +134,7 @@ types:
     journeyLegOrder: Int
     skipBooking: Bool
     ticketQuantity: Maybe Int
+    childTicketQuantity: Maybe Int
     crisSdkResponse: Maybe CrisSdkResponse
 
   CrisSdkResponse:

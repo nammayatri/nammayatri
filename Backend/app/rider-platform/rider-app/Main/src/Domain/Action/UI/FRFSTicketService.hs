@@ -491,10 +491,10 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 
 postFrfsQuoteV2Confirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
-  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req Nothing DIBC.APPLICATION Nothing
+  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req Nothing Nothing DIBC.APPLICATION Nothing
 
-postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Maybe Int -> DIBC.PlatformType -> Maybe MultimodalConfirm.CrisSdkResponse -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity platformType crisSdkResponse = do
+postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Maybe Int -> Maybe Int -> DIBC.PlatformType -> Maybe MultimodalConfirm.CrisSdkResponse -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity childTicketQuantity platformType crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
   -- handle (errHandler dConfirmRes.booking) $
@@ -556,7 +556,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
               (HighPrecMoney 0.0)
               selectedDiscounts
       let ticketQuantity' = fromMaybe quote.quantity ticketQuantity
-      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational ticketQuantity')) - totalDiscount
+      let _childTicketQuantity' = fromMaybe 0 childTicketQuantity
+      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational ticketQuantity')) - totalDiscount -- to see
       let isFareChanged = isJust oldCacheDump
       let journeyRouteDetails' = maybe [] (.journeyRouteDetails) mbSearch
       let booking =
@@ -595,13 +596,14 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
                 isDeleted = Just False,
                 isSkipped = Just False,
                 quantity = ticketQuantity',
+                childTicketQuantity,
                 bookingAuthCode = crisSdkResponse <&> (.bookAuthCode),
                 osType = crisSdkResponse <&> (.osType),
                 osBuildVersion = crisSdkResponse <&> (.osBuildVersion),
                 recentLocationId = mbSearch >>= (.recentLocationId),
                 ..
               }
-      QFRFSTicketBooking.create booking
+      QFRFSTicketBooking.create booking -- to see
       return (rider, booking)
 
     makeBookingStatusAPI booking discounts routeStations stations city =
@@ -629,9 +631,9 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
 postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []})
 
-postFrfsQuoteConfirmPlatformType :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Int -> DIBC.PlatformType -> Maybe MultimodalConfirm.CrisSdkResponse -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirmPlatformType (mbPersonId, merchantId_) quoteId ticketQuantity platformType crisSdkResponse =
-  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []}) ticketQuantity platformType crisSdkResponse
+postFrfsQuoteConfirmPlatformType :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> DIBC.PlatformType -> Maybe MultimodalConfirm.CrisSdkResponse -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirmPlatformType (mbPersonId, merchantId_) quoteId ticketQuantity childTicketQuantity platformType crisSdkResponse =
+  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []}) ticketQuantity childTicketQuantity platformType crisSdkResponse
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"

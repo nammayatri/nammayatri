@@ -170,6 +170,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
+      Se.Set Beam.childTicketQuantity childTicketQuantity,
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.discountsJson discountsJson,

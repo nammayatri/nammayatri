@@ -369,11 +369,13 @@ startJourney confirmElements forcedBookedLegOrder journeyId = do
   allLegs <- getAllLegsInfo journeyId
   mapM_
     ( \leg -> do
-        let ticketQuantity = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.ticketQuantity)
+        let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
+            ticketQuantity = mElement >>= (.ticketQuantity)
+            childTicketQuantity = mElement >>= (.childTicketQuantity)
         let forcedBooking = if leg.order == 0 then True else Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         when (leg.status /= JL.Skipped) $ do
-          JLI.confirm forcedBooking ticketQuantity leg crisSdkResponse
+          JLI.confirm forcedBooking ticketQuantity childTicketQuantity leg crisSdkResponse
     )
     allLegs
 

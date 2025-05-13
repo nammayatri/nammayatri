@@ -64,7 +64,8 @@ data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [Journe
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyConfirmReqElement = JourneyConfirmReqElement
-  { crisSdkResponse :: Kernel.Prelude.Maybe CrisSdkResponse,
+  { childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    crisSdkResponse :: Kernel.Prelude.Maybe CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
     skipBooking :: Kernel.Prelude.Bool,
     ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int

@@ -163,7 +163,9 @@ getRouteFare config merchantOperatingCityId request = do
       let routeId = routeFareDetail.routeId
       fares `forM` \fare -> do
         let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
+            mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
         fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.adultFare)
+        childFareAmount <- mbChildFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.childFare)
         classCode <- pure fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
         serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
         serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)
@@ -175,6 +177,13 @@ getRouteFare config merchantOperatingCityId request = do
                     amount = fareAmount,
                     currency = INR
                   },
+              childPrice =
+                Just $
+                  Price
+                    { amountInt = round childFareAmount,
+                      amount = childFareAmount,
+                      currency = INR
+                    },
               discounts = [],
               fareDetails =
                 Just

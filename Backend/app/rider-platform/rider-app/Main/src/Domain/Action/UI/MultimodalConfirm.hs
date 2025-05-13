@@ -308,7 +308,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
       cancelPrevSearch legSearchId estimate.id
-      JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
+      JLI.confirm True Nothing Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs
   where

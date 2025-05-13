@@ -541,12 +541,12 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         )
         routeDetails
 
-confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Id FRFSSearch -> Maybe (Id FRFSQuote) -> Maybe Int -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> m ()
-confirm personId merchantId searchId mbQuoteId ticketQuantity skipBooking bookingAllowed crisSdkResponse = do
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Id FRFSSearch -> Maybe (Id FRFSQuote) -> Maybe Int -> Maybe Int -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> m ()
+confirm personId merchantId searchId mbQuoteId ticketQuantity childTicketQuantity skipBooking bookingAllowed crisSdkResponse = do
   mbBooking <- QTBooking.findBySearchId searchId -- if booking already there no need to confirm again
   when (not skipBooking && bookingAllowed && isNothing mbBooking) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
-    void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId ticketQuantity DIBC.MULTIMODAL crisSdkResponse
+    void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId ticketQuantity childTicketQuantity DIBC.MULTIMODAL crisSdkResponse
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
 cancel searchId cancellationType isSkipped = do
