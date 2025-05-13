@@ -3422,7 +3422,6 @@ scanBusQrCode state = do
       let response = EHC.atobImpl qrData
       void $ pure $ setValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH response
       availableRoutes <- Remote.getAvailableRoutesBT (Just response)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props {whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
       homeScreenFlow
     )
 
