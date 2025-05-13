@@ -3593,16 +3593,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1746787767,
-        "narHash": "sha256-eZiJ2laglucoKyAFVPdsf2k9KBh+3TVCwrX0q5cKTHU=",
+        "lastModified": 1747126115,
+        "narHash": "sha256-wqMWlDfmWqWwKNykRnE6+gyxW5P0qoSsGy0F+2n39sM=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "142b092a2971e34108c79dcdd1483bc43730c64a",
+        "rev": "2d6dbb8d889f18b362216255d914186c8019a89b",
         "type": "github"
       },
       "original": {
-        "owner": "imviv3kshukla",
-        "ref": "backend/enh/driver-app-new-endpoint-for-aa-juspay",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
         "type": "github"
       }
