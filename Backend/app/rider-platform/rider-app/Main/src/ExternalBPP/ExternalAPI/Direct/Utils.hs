@@ -3,7 +3,7 @@ module ExternalBPP.ExternalAPI.Direct.Utils where
 import Crypto.Error as Crypto
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteArray as BA
-import Data.ByteString
+import Data.ByteString hiding (length)
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -14,6 +14,17 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Base64
 import Kernel.Utils.Common
 import Tools.Error
+
+qrColorHex :: [Text]
+qrColorHex =
+  [ "#4A148C", -- Deep Purple
+    "#FFFFFF", -- White
+    "#FF6F00", -- Amber
+    "#006064", -- Cyan
+    "#D81B60", -- Pink
+    "#1B5E20", -- Green
+    "#E65100" -- Deep Orange
+  ]
 
 -- | Sign a request given the key
 sign :: Base64 -> Text -> Either Crypto.CryptoError ByteString
@@ -33,7 +44,7 @@ verify (Base64 privateKey) msg signatureBs =
 generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> TicketPayload -> m Text
 generateQR config ticket = do
   let secretKey = config.cipherKey
-      qrData = ticket.ticketNumber <> "," <> ticket.fromRouteProviderCode <> "," <> ticket.toRouteProviderCode <> "," <> show ticket.adultQuantity <> "," <> show ticket.childQuantity <> "," <> ticket.vehicleTypeProviderCode <> "," <> show ticket.ticketAmount.getMoney <> "," <> ticket.expiry <> "," <> maybe "" show ticket.refreshAt
+      qrData = ticket.ticketNumber <> "," <> ticket.fromRouteProviderCode <> "," <> ticket.toRouteProviderCode <> "," <> show ticket.adultQuantity <> "," <> show ticket.childQuantity <> "," <> ticket.vehicleTypeProviderCode <> "," <> show ticket.ticketAmount.getMoney <> "," <> maybe "" show ticket.otpCode <> "," <> maybe "" (\otpCode -> qrColorHex !! (otpCode `mod` length qrColorHex)) ticket.otpCode <> "," <> ticket.expiry <> "," <> maybe "" show ticket.refreshAt
   signature <- sign secretKey qrData & fromEitherM (\err -> InternalError $ "Failed to encrypt: " <> show err)
   return $ (TE.decodeUtf8 $ Base64.encode signature) <> "," <> qrData
 
@@ -44,14 +55,15 @@ decodeQR config signatureAndQrData = do
   let qrData = T.drop 1 $ T.dropWhile (/= ',') signatureAndQrData
   isVerified <- verify secretKey qrData signature & fromEitherM (\err -> InternalError $ "Failed to decrypt: " <> show err)
   unless isVerified $ throwError (InvalidRequest "Invalid QR data")
-  (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', expiry, refreshAt') <-
+  (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', _colorCode, expiry, refreshAt') <-
     case T.strip <$> T.splitOn "," qrData of
-      [ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', expiry, refreshAt'] -> pure (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', expiry, refreshAt')
+      [ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', colorCode, expiry, refreshAt'] -> pure (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', colorCode, expiry, refreshAt')
       _ -> throwError (InvalidRequest "Unable to decode QR data")
   adultQuantity :: Int <- (readMaybe . T.unpack $ adultQuantity') & fromMaybeM (InvalidRequest "Unable to decode adult quantity")
   childQuantity :: Int <- (readMaybe . T.unpack $ childQuantity') & fromMaybeM (InvalidRequest "Unable to decode child quantity")
   ticketAmount :: Money <- (readMaybe . T.unpack $ ticketAmount') & fromMaybeM (InvalidRequest "Unable to decode ticket amount")
   let refreshAt :: Maybe UTCTime = readMaybe . T.unpack $ refreshAt'
+      otpCode :: Maybe Int = readMaybe . T.unpack $ otpCode'
   return $
     TicketPayload
       { ..

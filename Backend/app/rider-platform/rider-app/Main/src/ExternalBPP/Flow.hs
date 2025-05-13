@@ -202,7 +202,12 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
 
 confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
-  order <- CallAPI.createOrder integratedBPPConfig frfsConfig.busStationTtl (mRiderName, mRiderNumber) booking
+  let qrTtl =
+        case booking.vehicleType of
+          Spec.BUS -> frfsConfig.busStationTtl
+          Spec.METRO -> Seconds frfsConfig.metroStationTtl
+          _ -> Seconds frfsConfig.metroStationTtl
+  order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking
   let tickets =
         map
           ( \ticket ->

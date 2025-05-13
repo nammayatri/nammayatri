@@ -10,10 +10,11 @@ data TicketPayload = TicketPayload
     adultQuantity :: Int,
     childQuantity :: Int,
     vehicleTypeProviderCode :: Text,
-    expiry :: Text,
     ticketNumber :: Text,
     ticketAmount :: Money,
-    refreshAt :: Maybe UTCTime
+    expiry :: Text,
+    refreshAt :: Maybe UTCTime,
+    otpCode :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq)
 
