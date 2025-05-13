@@ -2326,8 +2326,8 @@ public class LocationUpdateServiceV2 extends Service {
                 try {
                     List<LocationData> flushBatch = messageQueue.drainBatch(size);
                     while (!flushBatch.isEmpty()) {
+                        int toIndex = Math.min(locationMaxBatchSize,flushBatch.size());
                         try {
-                            int toIndex = Math.min(locationMaxBatchSize,flushBatch.size());
                             List<LocationData> batch = flushBatch.subList(0, toIndex);
                             // Convert batch to JSONArray
                             JSONArray locationPayload = new JSONArray();
@@ -2362,7 +2362,7 @@ public class LocationUpdateServiceV2 extends Service {
                             Log.e(TAG_ERROR, "Error preparing batch ", e);
                             FirebaseCrashlytics.getInstance().recordException(e);
                         } finally {
-                            flushBatch.subList(0, locationMaxBatchSize).clear();
+                            flushBatch.subList(0, toIndex).clear();
                         }
                     }
                     isFlushInProgress.set(false);

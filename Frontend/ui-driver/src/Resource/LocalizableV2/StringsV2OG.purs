@@ -6,6 +6,7 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import Prim.Row (class Cons, class Lacks)
 import Record.Unsafe (unsafeGet)
 import Type.Proxy (Proxy(..))
+import Data.Maybe hiding (optional)
 import Resource.Localizable.BN (getBn)
 import Resource.Localizable.EN (getEn)
 import Resource.Localizable.HI (getHi)
@@ -17,6 +18,8 @@ import Resource.Localizable.OD (getOd)
 import Resource.Localizable.TypesV2
 import Locale.Utils
 import Language.Types
+import MerchantConfig.Utils (getStringFromConfig)
+
 
 stringsMap :: Languages
 stringsMap =
@@ -64,21 +67,24 @@ getStringV2 key =
       _ -> stringsMap @~ english @~ key
 
 getString :: String -> STR -> String
-getString language str =
+getString language str = do
   let
-    proxy = getProxy str
-
-    langMap = case language of
-      "BN_IN" -> stringsMap @~ bengali
-      "HI_IN" -> stringsMap @~ hindi
-      "KN_IN" -> stringsMap @~ kannada
-      "ML_IN" -> stringsMap @~ malayalam
-      "TA_IN" -> stringsMap @~ tamil
-      "TE_IN" -> stringsMap @~ telugu
-      "OD_IN" -> stringsMap @~ odiya
-      _ -> stringsMap @~ english
-  in
-    proxy $ langMap
+    fromConfig = getStringFromConfig str Just Nothing
+  case fromConfig of
+    Just val -> val
+    Nothing -> do
+      let 
+        proxy = getProxy str
+        langMap = case language of
+          "BN_IN" -> stringsMap @~ bengali
+          "HI_IN" -> stringsMap @~ hindi
+          "KN_IN" -> stringsMap @~ kannada
+          "ML_IN" -> stringsMap @~ malayalam
+          "TA_IN" -> stringsMap @~ tamil
+          "TE_IN" -> stringsMap @~ telugu
+          "OD_IN" -> stringsMap @~ odiya
+          _ -> stringsMap @~ english
+      proxy $ langMap
 
 getProxy :: STR -> (Keymap -> String)
 getProxy str = case str of
@@ -864,7 +870,7 @@ getProxy str = case str of
   REFRESH_STR -> \a -> a @~ refresh_str
   TRANSACTION_DETAILS -> \a -> a @~ transaction_details
   RIDE_DETAILS -> \a -> a @~ ride_details
-  MY_PLAN_TITLE -> \a -> a @~ my_plan_title
+  MY_PLAN_TITLE _ -> \a -> a @~ my_plan_title
   SWITCH_TO -> \a -> a @~ switch_to
   YOUR_RENTAL_RIDE_STARTS_IN -> \a -> a @~ your_rental_ride_starts_in
   YOUR_INTERCITY_RIDE_STARTS_IN -> \a -> a @~ your_intercity_ride_starts_in
