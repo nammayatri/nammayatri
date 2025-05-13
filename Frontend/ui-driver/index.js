@@ -77,7 +77,7 @@ console.log("APP_PERF INDEX_LOGGER_END : ", new Date().getTime());
 
 window.__FN_INDEX = window.__FN_INDEX || 0;
 window.__PROXY_FN = window.__PROXY_FN || new Map();
-window.__PROXY_FN_MAP_TYPE = true;
+window.__PROXY_FN_MAP_TYPE = window.__PROXY_FN instanceof Map;
 console.log("APP_PERF INDEX_BUNDLE_OS_END : ", new Date().getTime());
 
 let purescript

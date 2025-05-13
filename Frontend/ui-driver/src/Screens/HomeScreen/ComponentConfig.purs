@@ -684,7 +684,7 @@ offerConfigParams state = PromotionPopupConfig $ {
   description : getString JOIN_THE_UNLIMITED_PLAN,
   imageUrl : fetchImage FF_ASSET "ny_ic_limited_time_offer",
   buttonText : getString JOIN_NOW,
-  heading : getString MY_PLAN_TITLE
+  heading : getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"
 }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
