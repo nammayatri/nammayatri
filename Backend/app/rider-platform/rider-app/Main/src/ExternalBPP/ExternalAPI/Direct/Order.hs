@@ -58,8 +58,7 @@ getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
   qrData <-
     generateQR config $
       TicketPayload
-        { transactionId = booking.searchId.getId,
-          fromRouteProviderCode = fromRoute.providerCode,
+        { fromRouteProviderCode = fromRoute.providerCode,
           toRouteProviderCode = toRoute.providerCode,
           adultQuantity = adultQuantity,
           childQuantity = 0,

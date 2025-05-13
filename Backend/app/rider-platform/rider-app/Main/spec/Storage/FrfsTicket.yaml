@@ -551,6 +551,9 @@ FRFSTicket:
       kvFunction: findOneWithKV
       where:
         and: [frfsTicketBookingId, ticketNumber]
+    findOneByTicketNumber:
+      kvFunction: findOneWithKV
+      where: ticketNumber
     updateStatusByTBookingIdAndTicketNumber:
       kvFunction: updateWithKV
       params: [status, scannedByVehicleNumber, updatedAt]

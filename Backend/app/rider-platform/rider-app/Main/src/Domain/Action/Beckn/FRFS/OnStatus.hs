@@ -50,8 +50,8 @@ validateRequest (Booking DOrder {..}) = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 validateRequest (TicketVerification DTicketPayload {..}) = do
-  _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
-  booking <- runInReplica $ QTBooking.findBySearchId (Id transactionId) >>= fromMaybeM (BookingDoesNotExist transactionId)
+  ticket <- runInReplica $ QTicket.findOneByTicketNumber ticketNumber >>= fromMaybeM (TicketDoesNotExist ticketNumber)
+  booking <- runInReplica $ QTBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingDoesNotExist ticket.frfsTicketBookingId.getId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)

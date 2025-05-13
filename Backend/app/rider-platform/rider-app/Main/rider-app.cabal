@@ -1340,3 +1340,135 @@ executable rider-app-exe
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
+
+test-suite rider-app-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      FRFS.DirectQR
+      Paths_rider_app
+  hs-source-dirs:
+      test
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , amazonka
+    , amazonka-core
+    , amazonka-ses
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , dashboard-helper-api
+    , data-default-class
+    , directory
+    , euler-hs
+    , extra
+    , filepath
+    , geohash ==1.0.1
+    , hashable
+    , http-api-data
+    , http-client
+    , http-client-tls
+    , http-media
+    , http-types
+    , insert-ordered-containers
+    , json-logic-hs
+    , jwt
+    , lens
+    , lens-aeson
+    , memory
+    , mobility-core
+    , morpheus-graphql-client
+    , mtl
+    , openapi3
+    , passetto-client
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , pureMD5
+    , random
+    , raw-strings-qq
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-posix
+    , resource-pool
+    , rider-app
+    , safe-exceptions
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , singletons
+    , singletons-th
+    , split
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , template-haskell
+    , text
+    , text-conversions
+    , text-format
+    , time
+    , transformers
+    , unliftio-core
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , wai-middleware-prometheus
+    , warp
+    , x509
+    , yudhishthira
+  default-language: Haskell2010
