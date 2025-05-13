@@ -105,7 +105,7 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = con
   let _ = unsafePerformEffect $ do
         phonePermissionEnabled <- isLocationEnabled unit
         appPermissionEnabled <- isLocationPermissionEnabled unit
-        if not phonePermissionEnabled && appPermissionEnabled then do
+        if not phonePermissionEnabled && not appPermissionEnabled then do
           askRequestedPermissionsWithCallback ["android.permission.ACCESS_FINE_LOCATION"] push LocationPermissionCallBackCustomer
         else do
           _ <- requestLocation unit
