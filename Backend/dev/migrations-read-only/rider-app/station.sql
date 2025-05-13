@@ -26,4 +26,4 @@ ALTER TABLE atlas_app.station ADD COLUMN hindi_name text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.station ADD COLUMN suggestsed_destinations text ;
+ALTER TABLE atlas_app.station ADD COLUMN suggested_destinations text ;
