@@ -72,4 +72,5 @@ import Screens.ScheduledRideAcceptedScreen.Handler (scheduledRideAcceptedScreen)
 import Screens.UploadParcelImageScreen.Handler (uploadParcelImageScreen) as UI
 import Screens.MetroWarriorsScreen.Handler (metroWarriorsScreen) as UI
 import Screens.EducationScreen.View (educationScreen) as UI
-import Screens.QrCodeScanner.View (qrCodeScanner) as UIimport Screens.ExtraChargeInfoScreen.Handler (extraChargeInfoScreen) as UI
+import Screens.QrCodeScanner.View (qrCodeScanner) as UI
+import Screens.ExtraChargeInfoScreen.Handler (extraChargeInfoScreen) as UI

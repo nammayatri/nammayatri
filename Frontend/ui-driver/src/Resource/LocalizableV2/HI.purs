@@ -1836,11 +1836,12 @@ getHi =
     , bus_type: "बस प्रकार"
     , namma_meter: "नम्मा मीटर"
     , package: "पैकेज"
-<<<<<<< HEAD
     , route_bus_number : "रूट/बस नंबर"
     , route_number : "रूट नंबर"
     , select_route_number : "रूट नंबर चुनें"
     , scan_bus_qr : "बस का QR स्कैन करें"
+    , bus_no : "बस नं"
+    , bus_type_ : "Bus Type"
     , route_no : "रूट नंबर"
     , recent_ride : "हाल की सवारी"
     , assigned_rides : "आवंटित सवारी"
@@ -1858,7 +1859,6 @@ getHi =
     , your_duty_has_started_please_start_the_ride : "आपकी ड्यूटी शुरू हो गई है, कृपया राइड शुरू करें"
     , ending_your_ride_will_stop_tracking: "आपकी सवारी समाप्त करने से ट्रैकिंग बंद हो जाएगी। केवल आपात स्थिति में समाप्त करें"
     , yes_end_ride: "हां, सवारी समाप्त करें"
-=======
     , overcharging_score : "अतिरिक्त शुल्क स्कोर"
     , cancellation_score : "रद्दीकरण स्कोर"
     , safety_score : "सुरक्षा स्कोर"
@@ -1872,5 +1872,4 @@ getHi =
     , poor_cancellation_score : "आपका रद्दीकरण स्कोर खराब है"
     , good : "अच्छा"
     , poor : "खराब"
->>>>>>> 30208110a2 (feat: EKD 2.0)
     }

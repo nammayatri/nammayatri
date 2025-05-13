@@ -1785,8 +1785,6 @@ getTa =
     , bus__ : "பஸ்"
     , driver_unsubscribed : "ஓட்டுநர் தளத்திலிருந்து வெளியிடப்பட்டுள்ளார். திருப்பி சந்தக்கம் செலுத்த பதிவேற்றுக"
     , route_bus_number : "தொடர்/பஸ் எண்"
-    , bus_number : "பஸ் எண்"
-    , bus_type : "பஸ் வகை"
     , route_number : "தொடர் எண்"
     , select_route_number : "தொடர் எண்ணை தேர்வுசெய்க"
     , scan_bus_qr : "பஸ் QR-ஐ ஸ்கேன் செய்யவும்"

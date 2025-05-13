@@ -1785,8 +1785,6 @@ getEn =
     , bus__ : "Bus"
     , driver_unsubscribed : "Driver has been unsubscribed from platform. Pay pending amount to subscribe back"
     , route_bus_number : "Route/Bus Number"
-    , bus_number : "Bus Number"
-    , bus_type : "Bus Type"
     , route_number : "Route Number"
     , select_route_number : "Select Route Number"
     , scan_bus_qr : "Scan Bus QR"

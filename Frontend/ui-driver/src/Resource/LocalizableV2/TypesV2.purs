@@ -1805,8 +1805,6 @@ newtype Keymap = Keymap {
   , bus__ :: String
   , driver_unsubscribed :: String
   , route_bus_number :: String
-  , bus_number :: String
-  , bus_type :: String
   , route_number :: String
   , select_route_number :: String
   , scan_bus_qr :: String
@@ -7237,9 +7235,6 @@ driver_unsubscribed = a
 drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
 drivers_are_permitted_to_cancel_ambulance_bookings = a
 
-canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
-canceling_this_booking_may_affect_the_emergency_medical = a
-
 payment_under_maintenance :: Proxy "payment_under_maintenance"
 payment_under_maintenance = a
 
@@ -7420,12 +7415,6 @@ poor = a
 route_bus_number :: Proxy "route_bus_number"
 route_bus_number = Proxy
 
-bus_number :: Proxy "bus_number"
-bus_number = Proxy
-
-bus_type :: Proxy "bus_type"
-bus_type = Proxy
-
 route_number :: Proxy "route_number"
 route_number = Proxy
 
@@ -7491,8 +7480,6 @@ ending_your_ride_will_stop_tracking = Proxy
 
 yes_end_ride :: Proxy "yes_end_ride"
 yes_end_ride = Proxy
-drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
-drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
 
 canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
 canceling_this_booking_may_affect_the_emergency_medical = Proxy

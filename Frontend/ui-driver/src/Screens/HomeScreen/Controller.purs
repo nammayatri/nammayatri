@@ -1507,7 +1507,7 @@ eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
   if (HU.specialVariantsForTracking Common.FunctionCall) then exit $ DriverAvailabilityStatus state status
-  else if state.data.driverBlocked && maybe false (\overchargingTag -> overchargingTag `DA.elem` [API.SuperOverCharging, API.HighOverCharging,API.MediumOverCharging]) state.data.overchargingTag then continue state {props {showBlockerPopup = true}}
+  else if state.data.driverBlocked && maybe false (\overchargingTag -> overchargingTag `DA.elem` [API.SuperOverCharging, API.HighOverCharging,API.MediumOverCharging]) state.data.overchargingTag && status /= ST.Offline then continue state {props {showBlockerPopup = true}}
   else if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
