@@ -208,7 +208,10 @@ export const storeCallBackForNotification = function (cb) {
                 parsedBody = JSON.parse(notificationBody);
               } catch (error) {
                 console.error("Failed to parse notificationBody:", error);
-                return;
+                parsedBody = {
+                  title : "",
+                  msg : ""
+                };
               }
               const { title, msg } = parsedBody;
               cb(action(notificationType)({title : title, message : msg}))();
