@@ -504,7 +504,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       merchantConfigs <- QMC.findAllByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId searchRequest.configInExperimentVersions
       SMC.updateSearchFraudCounters person.id merchantConfigs
       mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
-      whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id)
+      whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id) (Just DPerson.FRAUD_SYSTEM) Nothing
 
 buildSearchRequest ::
   SearchRequestFlow m r =>

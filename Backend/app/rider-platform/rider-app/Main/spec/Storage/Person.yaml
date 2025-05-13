@@ -37,6 +37,10 @@ Person:
       enum: "ALWAYS_SHARE, SHARE_WITH_TIME_CONSTRAINTS, NEVER_SHARE"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
+    BlockSource:
+      enum: "DASHBOARD, DEVICE_TOKEN, FRAUD_SYSTEM, HIGH_CANCELLATION"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
   fields:
     id : Id Person
     firstName : Maybe Text
@@ -115,6 +119,8 @@ Person:
     profilePicture: Maybe Text
     verificationChannel: Maybe Text
     liveActivityToken : Maybe Text
+    blockSource: Maybe BlockSource
+    blockedReason: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -125,6 +131,8 @@ Person:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Gender>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideShareOptions>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RideShareOptions>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <BlockSource>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BlockSource>
 
   beamFields:
     mobileNumber:

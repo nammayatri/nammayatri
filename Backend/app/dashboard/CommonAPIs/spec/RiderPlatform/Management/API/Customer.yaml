@@ -39,6 +39,8 @@ apis:
       auth: ApiAuthV2
       params:
         customerId: Id Customer
+      query:
+        blockReason: Text
       response:
         type: APISuccess
       migrate:

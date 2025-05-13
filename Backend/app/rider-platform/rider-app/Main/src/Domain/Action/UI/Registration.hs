@@ -480,7 +480,9 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         verificationChannel = Nothing,
         blockedUntil = Nothing,
         authBlocked = Nothing,
-        imeiNumber = Nothing -- TODO: take it from the request
+        imeiNumber = Nothing, -- TODO: take it from the request
+        blockSource = Nothing, -- useFraudDetection && isBlockedBySameDeviceToken => fraud system
+        blockedReason = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -568,7 +570,7 @@ verify tokenId req = do
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
+    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken) (Just SP.DEVICE_TOKEN) Nothing
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken

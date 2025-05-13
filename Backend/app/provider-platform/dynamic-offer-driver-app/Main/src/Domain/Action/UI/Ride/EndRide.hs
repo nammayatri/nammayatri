@@ -649,7 +649,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
   let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + maxUpwardBuffer
   if not pickupDropOutsideOfThreshold
     then
-      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms
+      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms -- why not
         then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig False tripEndPoint
         else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig False tripEndPoint
     else

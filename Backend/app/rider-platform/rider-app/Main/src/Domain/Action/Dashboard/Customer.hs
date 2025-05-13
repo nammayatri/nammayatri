@@ -80,8 +80,8 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
-postCustomerBlock merchantShortId opCity customerId = do
+postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Maybe Text -> Flow APISuccess
+postCustomerBlock merchantShortId opCity customerId mbBlockReason = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -94,7 +94,7 @@ postCustomerBlock merchantShortId opCity customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
-  SMC.blockCustomer personId Nothing
+  SMC.blockCustomer personId Nothing (Just DP.DASHBOARD) mbBlockReason
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
@@ -119,7 +119,7 @@ postCustomerUnblock merchantShortId opCity customerId = do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
     )
     merchantConfigs
-  void $ QP.updatingEnabledAndBlockedState personId Nothing False
+  void $ QP.updatingEnabledAndBlockedStateData personId Nothing False Nothing Nothing
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
 

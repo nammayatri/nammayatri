@@ -27,10 +27,12 @@ data PersonE e = Person
     androidId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     authBlocked :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockSource :: Kernel.Prelude.Maybe Domain.Types.Person.BlockSource,
     blocked :: Kernel.Prelude.Bool,
     blockedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     blockedByRuleId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantConfig.MerchantConfig),
     blockedCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    blockedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockedUntil :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -119,10 +121,12 @@ instance EncryptedItem Person where
           androidId = androidId entity,
           authBlocked = authBlocked entity,
           backendAppVersion = backendAppVersion entity,
+          blockSource = blockSource entity,
           blocked = blocked entity,
           blockedAt = blockedAt entity,
           blockedByRuleId = blockedByRuleId entity,
           blockedCount = blockedCount entity,
+          blockedReason = blockedReason entity,
           blockedUntil = blockedUntil entity,
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
@@ -203,10 +207,12 @@ instance EncryptedItem Person where
             androidId = androidId entity,
             authBlocked = authBlocked entity,
             backendAppVersion = backendAppVersion entity,
+            blockSource = blockSource entity,
             blocked = blocked entity,
             blockedAt = blockedAt entity,
             blockedByRuleId = blockedByRuleId entity,
             blockedCount = blockedCount entity,
+            blockedReason = blockedReason entity,
             blockedUntil = blockedUntil entity,
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
@@ -285,6 +291,8 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
+data BlockSource = DASHBOARD | DEVICE_TOKEN | FRAUD_SYSTEM | HIGH_CANCELLATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -308,3 +316,7 @@ $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Gender)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RideShareOptions)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RideShareOptions)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BlockSource)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''BlockSource)
