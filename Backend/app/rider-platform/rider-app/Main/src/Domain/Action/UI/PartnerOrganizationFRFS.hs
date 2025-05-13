@@ -630,6 +630,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.fromStationId = fromStation'.id,
                 DFRFSQuote.id = quoteId,
                 DFRFSQuote.price = frfsCachedData.price,
+                DFRFSQuote.childPrice = Nothing,
                 DFRFSQuote.providerDescription = Nothing,
                 DFRFSQuote.providerId = fromMaybe "metro_provider_id" frfsConfig'.providerId,
                 DFRFSQuote.providerName = fromMaybe "metro_provider_name" frfsConfig'.providerName,

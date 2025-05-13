@@ -75,6 +75,7 @@ data DVehicleServiceTier = DVehicleServiceTier
 data DQuote = DQuote
   { bppItemId :: Text,
     price :: Price,
+    childPrice :: Maybe Price,
     vehicleType :: Spec.VehicleCategory,
     routeStations :: [DRouteStation],
     stations :: [DStation],
@@ -212,6 +213,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.fromStationId = startStation.id,
         Quote.id = uid,
         Quote.price,
+        Quote.childPrice,
         Quote.providerDescription = dOnSearch.providerDescription,
         Quote.providerId = dOnSearch.providerId,
         Quote.providerName = dOnSearch.providerName,
@@ -311,6 +313,7 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.fromStationId = quotesFromCache.fromStationId,
       Quote.id = quotesFromCache.id,
       Quote.price = quotesFromOnSearch.price,
+      Quote.childPrice = quotesFromOnSearch.childPrice,
       Quote.providerDescription = quotesFromOnSearch.providerDescription,
       Quote.providerId = quotesFromCache.providerId,
       Quote.providerName = quotesFromCache.providerName,

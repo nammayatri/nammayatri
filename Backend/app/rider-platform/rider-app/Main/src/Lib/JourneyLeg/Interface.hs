@@ -184,7 +184,8 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
               personId,
               merchantId,
               merchantOperatingCityId,
-              quantity = ticketQuantity
+              quantity = ticketQuantity,
+              childTicketQuantity
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -214,5 +215,6 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
               personId,
               merchantId,
               merchantOperatingCityId,
-              quantity = ticketQuantity
+              quantity = ticketQuantity,
+              childTicketQuantity
             }

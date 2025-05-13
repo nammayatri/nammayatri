@@ -33,7 +33,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    quantity :: Maybe Int
+    quantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
 
 data BusLegRequestUpdateData = BusLegRequestUpdateData

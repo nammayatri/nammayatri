@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
+      Se.Set Beam.childPrice (Kernel.Prelude.fmap (.amount) childPrice),
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
