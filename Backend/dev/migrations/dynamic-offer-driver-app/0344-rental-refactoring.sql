@@ -88,6 +88,15 @@ INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area , trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('494abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'InterCity_OneWayOnDemandStaticOffer', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area , trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('094abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'OneWay_MeterRide', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 
+-- ONLY FOR LOCAL
+INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shift_end, created_at, updated_at, min_allowed_trip_distance, max_allowed_trip_distance, service_charge, govt_charges, fare_policy_type, description) VALUES ('auto-rickshaw-rental-fare-policy-000', '22:00:00', '06:00:00', now(), now(), 0, 100000, null, null, 'Rental', 'Yatri Sathi AUTO_RICKSHAW Rental');
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area , trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('auto-rickshaw-rental-fare-product-00', 'favorit0-0000-0000-0000-00000favorit', 'auto-rickshaw-rental-fare-policy-000', 'AUTO_RICKSHAW', 'Default', 'Rental_OnDemandStaticOffer', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
+INSERT INTO atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers (fare_policy_id, ride_duration, buffer_kms) VALUES
+('auto-rickshaw-rental-fare-policy-000', 0, 4),
+('auto-rickshaw-rental-fare-policy-000', 5, 8);
+INSERT INTO atlas_driver_offer_bpp.fare_policy_rental_details (fare_policy_id, base_fare, per_hour_charge, per_extra_min_rate, per_extra_km_rate, included_km_per_hr, planned_per_km_rate, max_additional_kms_limit, total_additional_kms_limit, night_shift_charge) VALUES
+('auto-rickshaw-rental-fare-policy-000', 0, 180, 5, 18, 10, 15, 50, 120, '{"contents":250,"tag":"ConstantNightShiftCharge"}' :: json);
+
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
