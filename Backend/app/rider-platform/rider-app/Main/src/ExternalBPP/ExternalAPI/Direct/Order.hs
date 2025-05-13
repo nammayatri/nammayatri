@@ -4,7 +4,6 @@ import API.Types.UI.FRFSTicketService
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time as Time
-import Data.Time.Format
 import qualified Data.UUID as UU
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
