@@ -69,6 +69,7 @@ import Mobility.Prelude(boolToInt)
 import Screens (ScreenName(..)) as Screen
 import Components.ExtraChargeCard as ExtraChargeCard
 import Components.DriverProfileScoreCard as DriverProfileScoreCard
+import Helpers.Utils as HU
 
 instance showAction :: Show Action where
   show _ = ""

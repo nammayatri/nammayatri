@@ -3380,3 +3380,148 @@ rideEndStopsWarningPopup state = PopUpModal.config {
     , height = V 190
     }
   }
+
+chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
+chooseBusRouteModalPopup state = 
+  let 
+    (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
+    vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ state.props.whereIsMyBusConfig.selectedRoute <|> (availableRoutesList DA.!! 0)
+    selectedRouteColor = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900
+    config' = PopUpModal.config {
+      padding = Padding 16 16 16 0,
+      primaryText
+      {
+        visibility = GONE
+      }
+    , headerInfo
+      {
+        visibility = GONE
+      }
+    , backgroundClickable = false
+    , secondaryText
+      { 
+        text = StringsV2.getStringV2 LT2.route_number,
+        color = Color.black800,
+        padding = Padding 0 0 0 0,
+        margin = Margin 0 0 0 12,
+        gravity = LEFT,
+        textStyle = FontStyle.Body1,
+        visibility = boolToVisibility $ state.props.whereIsMyBusConfig.selectRouteStage
+      }
+    , whereIsMyBusConfig {
+        visibility = VISIBLE,
+        selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
+        busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number),
+        busType = primaryTextConfig (if vehicleDetails ^. Acc._busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac) (StringsV2.getStringV2 LT2.bus_type),
+        routeNumberLabel = StringsV2.getStringV2 LT2.route_number,
+        selectRouteButton = selectRouteButtonConfig state.props.whereIsMyBusConfig.selectedRoute,
+        isRouteSelected = isJust state.props.whereIsMyBusConfig.selectedRoute,
+        availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
+    }
+    , option1 {
+      background = Color.green900
+      , strokeColor = Color.green900
+      , color = Color.white900
+      , text = getString START_RIDE
+      , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , enableRipple = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , width = MATCH_PARENT
+      , visibility = not state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = true
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , margin = Margin 0 0 0 0
+      , padding = Padding 0 0 0 0
+      , visibility = state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , dismissPopup = state.props.whereIsMyBusConfig.selectRouteStage
+    , dismissPopupConfig { visibility = VISIBLE, height = V 20, width = V 20, margin = (Margin 0 16 16 0), padding = (Padding 0 0 0 0) }
+    }
+  in config'
+  where
+    primaryTextConfig text topLabel =
+      PrimaryEditTextController.config {
+          editText 
+          {
+            color = Color.black800,
+            singleLine = true,
+            placeholder = "",
+            text = text,
+            padding = Padding 0 16 20 16,
+            enabled = false,
+            textStyle = FontStyle.SubHeading3
+          },
+          stroke = "1," <> Color.grey700,
+          topLabel { 
+            text = topLabel,
+            color = Color.black800,
+            textStyle = FontStyle.Body3
+            }, 
+          width = MATCH_PARENT,
+          background = Color.grey700,
+          cornerRadius = 8.0,
+          margin = Margin 0 0 0 24,
+          id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
+      }
+    transformAvailableRouteList (API.AvailableRoutesList availableRoutesList) = 
+          map (\route -> 
+                {
+                  busRouteNumber : route ^. (Acc._routeInfo) ^. (Acc._routeCode),
+                  sourceText : route ^. (Acc._source) ^. (Acc._stopName),
+                  destination : route ^. (Acc._destination) ^. (Acc._stopName)
+                }) availableRoutesList
+    selectRouteButtonConfig (Just selectedRoute) = 
+             {
+                busRouteNumber : selectedRoute ^. Acc._routeInfo ^. Acc._routeCode,
+                sourceText : selectedRoute ^. Acc._source  ^. Acc._stopName,
+                destination : selectedRoute ^. Acc._destination ^. Acc._stopName
+            } 
+    selectRouteButtonConfig Nothing = {
+                busRouteNumber : StringsV2.getStringV2 LT2.select_route_number,
+                sourceText : "",
+                destination : ""
+            } 
+
+startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+startBusTripButtonConfig state = PrimaryButton.config
+  { textConfig
+    { text = getString START_RIDE
+    , height = WRAP_CONTENT
+    , textStyle = SubHeading3
+    , weight = Just 1.0
+    , color = Color.white900
+    }
+  , height = WRAP_CONTENT
+  , gravity = CENTER
+  , cornerRadius = 8.0
+  , stroke = "1," <> Color.white900
+  , background = Color.green900
+  , margin = Margin 10 0 10 16
+  , padding = Padding 16 14 16 14
+  }
+
+-------------------------- RideTrackingModal --------------------
+
+rideTrackingModalConfig :: ST.HomeScreenState -> RideTrackingModal.Config
+rideTrackingModalConfig state = 
+  case state.data.whereIsMyBusData.trip of
+    Just (ST.CURRENT_TRIP tripDetails) -> mkConfig tripDetails
+    Just (ST.ASSIGNED_TRIP tripDetails) -> mkConfig tripDetails
+    _ -> RideTrackingModal.config
+  where
+    mkConfig (API.TripTransactionDetails tripDetails) =
+        let config = RideTrackingModal.config
+        in
+          config {
+            sourceStopName = tripDetails.source ^. Acc._stopName,
+            destinationStopName = tripDetails.destination ^. Acc._stopName,
+            busNumber = tripDetails.vehicleNumber,
+            busType = tripDetails.vehicleType,
+            routeNumber = tripDetails.routeInfo ^. Acc._routeCode
+          }

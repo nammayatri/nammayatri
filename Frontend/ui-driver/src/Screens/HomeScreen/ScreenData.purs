@@ -314,8 +314,14 @@ initData =
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
-      , showEndRideWithStopPopup : false
-      , triggerGMapsIntent : false
+      , whereIsMyBusConfig : {
+        showSelectAvailableBusRoutes : false,
+        selectRouteStage : false,
+        selectedRoute : Nothing,
+        tripTransactionId : Nothing,
+        selectedIndex : 0
+      }
+      , showBlockerPopup : false
       }
   }
 
@@ -444,3 +450,45 @@ initialParkingData = {
   estimatedCharge : Nothing
 , finalCharge : Nothing
 }
+
+dummyStopInfo :: StopInfo
+dummyStopInfo = StopInfo
+  { name: "Dummy Stop"
+  , code: "DS001"
+  , lat: Just 12.9715987
+  , long: Just 77.594566
+  }
+
+dummyRouteInfo :: RouteInfo
+dummyRouteInfo = RouteInfo
+  { code : "RI001"
+  , shortName : "S-12"
+  , longName : "Bus Name"
+  , startPoint : (LatLong {
+    lat : 0.0,
+    lon : 0.0
+  })
+  , endPoint : (LatLong {
+    lat : 0.0,
+    lon : 0.0
+  })
+  }
+
+dummyBusVehicleDetails :: BusVehicleDetails
+dummyBusVehicleDetails = BusVehicleDetails
+  {
+    number : "S102"
+  , _type : "BUS_AC"
+  }
+
+dummyAvailableRoutes :: AvailableRoutes
+dummyAvailableRoutes = AvailableRoutes
+  { routeInfo : dummyRouteInfo
+  , source : dummyStopInfo
+  , destination : dummyStopInfo
+  , vehicleDetails : dummyBusVehicleDetails
+  , roundRouteCode : Nothing
+  }
+
+dummyAvailableRoutesList :: AvailableRoutesList
+dummyAvailableRoutesList = AvailableRoutesList []

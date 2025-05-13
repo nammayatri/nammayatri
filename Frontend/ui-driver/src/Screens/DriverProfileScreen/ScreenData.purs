@@ -143,7 +143,8 @@ initData =
     isRideActive : false,
     canSwitchToRental : Nothing,
     canSwitchToInterCity : Nothing,
-    showDriverBlockedPopup : false
+    showDriverBlockedPopup : false,
+    skipGlobalEvents : false
    }
 , showDriverDetails : false
 }

@@ -36,6 +36,8 @@ import Resource.Localizable.StringsV2
 import Resource.Localizable.TypesV2
 import Storage
 import RemoteConfig as RC
+import Mobility.Prelude (boolToVisibility)
+import Data.String as DS
 
 screen :: ExtraChargeInfoScreenState -> Screen Action ExtraChargeInfoScreenState ScreenOutput
 screen initialState =
@@ -219,28 +221,29 @@ questionView questionStr ind optionOpened push state =
 
 answer1View :: forall w. (Action  -> Effect Unit) -> ExtraChargeInfoScreenState -> PrestoDOM (Effect Unit) w
 answer1View push state =
-  linearLayout[
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  , margin $ MarginTop 12
-  ][
-    linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , gravity CENTER
-      , id $ getNewIDWithTag "extraChargeVideoView"
-      , afterRender
-          ( \action -> do
-              let
-                city = getValueToLocalStore DRIVER_LOCATION
-                config = RC.getExtraChargeConfig city
-                id = (getNewIDWithTag "extraChargeVideoView")
-                url = getTagBasedVideo config.videos state.driverInfoResp
-              void $ pure $ runFn5 setYoutubePlayer (getYoutubeData{videoType = "PORTRAIT_VIDEO",videoId = getVideoID url}) id (show CTA.PLAY) push YoutubeVideoStatus
-          )
-          (const NoAction)
-      ][]
-  ]
+  let city = getValueToLocalStore DRIVER_LOCATION
+      config = RC.getExtraChargeConfig city
+      id_ = (getNewIDWithTag "extraChargeVideoView")
+      url = getTagBasedVideo config.videos state.driverInfoResp
+  in 
+    linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ MarginTop 12
+    , visibility $ boolToVisibility $ not $ DS.null url
+    ][
+      linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , id $ getNewIDWithTag "extraChargeVideoView"
+        , afterRender
+            ( \action ->
+                void $ pure $ runFn5 setYoutubePlayer (getYoutubeData{videoType = "PORTRAIT_VIDEO",videoId = getVideoID url}) id_ (show CTA.PLAY) push YoutubeVideoStatus
+            )
+            (const NoAction)
+        ][]
+    ]
 
 
 
