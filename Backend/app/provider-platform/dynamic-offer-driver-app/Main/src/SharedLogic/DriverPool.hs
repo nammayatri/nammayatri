@@ -55,7 +55,7 @@ where
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed
 import qualified Data.Geohash as DG
-import Data.List (find, partition)
+import Data.List (find, length, partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
@@ -79,8 +79,9 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (find, id)
+import EulerHS.Prelude hiding (find, id, length)
 import qualified Kernel.Beam.Functions as B
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Types
 import Kernel.Prelude (NominalDiffTime, head, listToMaybe)
 import qualified Kernel.Prelude as KP
@@ -728,7 +729,7 @@ calculateDriverPool ::
     HasShortDurationRetryCfg r c
   ) =>
   CalculateDriverPoolReq a ->
-  m [DriverPoolResult]
+  m ([DriverPoolResult], [QP.NearestDriversResult])
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
@@ -753,7 +754,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
   logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
-  pure driverPoolResult
+  pure (driverPoolResult, approxDriverPool)
   where
     getParallelSearchRequestCount :: Redis.HedisFlow m r => QP.NearestDriversResult -> m Int
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
@@ -775,6 +776,17 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           ..
         }
 
+data FilterStage = NearBy | MaxParallelRequests | ActualDistance
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data SearchTryBatchData = SearchTryBatchData
+  { searchTryId :: Text,
+    driverIds :: [Text],
+    filterStage :: FilterStage,
+    batchNum :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -790,9 +802,10 @@ calculateDriverPoolWithActualDist ::
   CalculateDriverPoolReq a ->
   PoolType ->
   DST.CurrentSearchInfo ->
+  Int ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType currentSearchInfo = do
-  driverPool <- calculateDriverPool calculateReq
+calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType currentSearchInfo batchNum = do
+  (driverPool, approxDriverPool) <- calculateDriverPool calculateReq
   case driverPool of
     [] -> return []
     (a : pprox) -> do
@@ -805,6 +818,39 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
               Nothing -> NE.toList driverPoolWithActualDist
               Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) driverPoolWithActualDist) (NE.sortOn (.driverId) $ a :| pprox)
       filtDriverPoolWithActualDist <- withTimeAPI "driverPooling" "filterM scheduledRideFilter" $ filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
+      fork "Driver Pool Search Try Batch - Analytics" $ do
+        pushToKafka
+          ( SearchTryBatchData
+              { searchTryId = currentSearchInfo.searchTry.id.getId,
+                driverIds = map ((.getId) . (.driverId)) approxDriverPool,
+                filterStage = NearBy,
+                batchNum = batchNum
+              }
+          )
+          "search-try-batch"
+          currentSearchInfo.searchTry.id.getId
+
+        pushToKafka
+          ( SearchTryBatchData
+              { searchTryId = currentSearchInfo.searchTry.id.getId,
+                driverIds = map ((.getId) . (.driverId)) driverPool,
+                filterStage = MaxParallelRequests,
+                batchNum = batchNum
+              }
+          )
+          "search-try-batch"
+          currentSearchInfo.searchTry.id.getId
+
+        pushToKafka
+          ( SearchTryBatchData
+              { searchTryId = currentSearchInfo.searchTry.id.getId,
+                driverIds = map ((.getId) . (.driverId) . (.driverPoolResult)) filtDriverPoolWithActualDist,
+                filterStage = ActualDistance,
+                batchNum = batchNum
+              }
+          )
+          "search-try-batch"
+          currentSearchInfo.searchTry.id.getId
       return filtDriverPoolWithActualDist
   where
     mkSpecialZoneQueueActualDistanceResult dpr = do

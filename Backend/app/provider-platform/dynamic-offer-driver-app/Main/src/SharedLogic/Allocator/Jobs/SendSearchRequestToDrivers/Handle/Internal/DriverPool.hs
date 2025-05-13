@@ -470,7 +470,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     onlinePayment = merchant.onlinePayment,
                     ..
                   }
-          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo
+          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId batchNum' = do
           let merchantId = searchReq.providerId
           now <- getCurrentTime
