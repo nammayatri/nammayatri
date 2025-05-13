@@ -124,7 +124,6 @@ instance FromJSON RouteData where
   parseJSON = withObject "RouteData" $ \obj -> do
     RouteData <$> obj .: "gtfsId"
 
--- Define GraphQL operation using RequestType approach instead of gql quasiquoter
 data RouteStopTimeTableQuery
 
 instance RequestType RouteStopTimeTableQuery where

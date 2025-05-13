@@ -531,6 +531,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
   mbFromStop <- QStation.findByStationCode originStopCode integratedBppConfigId
   mbToStop <- QStation.findByStationCode destinationStopCode integratedBppConfigId
   currentTime <- getCurrentTime
+  let (_, currentTimeIST) = getISTTimeInfo currentTime
 
   case (mbFromStop, mbToStop) of
     (Just fromStop, Just toStop) -> do
@@ -547,7 +548,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
               destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfigId mid mocid vc
 
               let mbEarliestOriginTiming =
-                    listToMaybe $
+                    findEarliestTiming currentTimeIST currentTime $
                       sortBy
                         ( \a b ->
                             compare
@@ -561,7 +562,6 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                     originTiming <- mbEarliestOriginTiming
                     find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
 
-              -- Create stop details
               let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
                   mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
                   fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
@@ -572,6 +572,9 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
         _ -> return Nothing
     _ -> return Nothing
 getSingleModeRouteDetails _ _ _ _ _ _ _ = return Nothing
+
+findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
+findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
 
 convertSortingType :: DMP.JourneyOptionsSortingType -> MultiModal.SortingType
 convertSortingType sortType = case sortType of
