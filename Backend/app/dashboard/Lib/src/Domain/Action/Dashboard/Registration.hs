@@ -316,16 +316,11 @@ registerFleetOwner isOperator req mbPersonId = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
   fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
-  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  let city' = fromMaybe merchant.defaultOperatingCity req.city
-  merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) || isOperator)
-  QP.create fleetOwner {verified = mbBoolVerified}
-  QAccess.create merchantAccess
+  createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId isOperator
   return Success
   where
     getFleetRole mbFleetType = case mbFleetType of
@@ -370,3 +365,22 @@ validateFleetOwner FleetRegisterReq {..} =
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+createFleetOwnerDashboardOnly ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
+  ) =>
+  DRole.Role ->
+  DMerchant.Merchant ->
+  FleetRegisterReq ->
+  Maybe Text ->
+  Bool ->
+  m ()
+createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId isOperator = do
+  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
+  let city' = fromMaybe merchant.defaultOperatingCity req.city
+  merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
+  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) || isOperator)
+  QP.create fleetOwner {verified = mbBoolVerified}
+  QAccess.create merchantAccess

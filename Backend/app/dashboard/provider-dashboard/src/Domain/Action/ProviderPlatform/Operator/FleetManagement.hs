@@ -12,6 +12,7 @@ import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement
 import qualified Domain.Action.Dashboard.Registration as DRegistration
 import qualified "lib-dashboard" Domain.Types.Merchant
+import "lib-dashboard" Domain.Types.Role
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -19,11 +20,14 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+import "lib-dashboard" Tools.Error
 
 getFleetManagementFleets ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -49,16 +53,15 @@ postFleetManagementFleetCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant
 postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
+  let req' = buildFleetOwnerRegisterReq merchantShortId opCity req
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   res <-
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetCreate) apiTokenInfo.personId.getId req
-  case mbPerson of
-    Just _ -> pure Kernel.Types.APISuccess.Success
-    Nothing -> do
-      let req' = buildFleetOwnerRegisterReq merchantShortId opCity req
-      void $ DRegistration.registerFleetOwner True req' $ Just res.personId.getId
-      pure Kernel.Types.APISuccess.Success
+  when (isNothing mbPerson) $ do
+    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+    DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.personId.getId) True
+  pure Kernel.Types.APISuccess.Success
 
 buildFleetOwnerRegisterReq ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -86,9 +89,17 @@ postFleetManagementFleetUnlink merchantShortId opCity apiTokenInfo fleetOwnerId 
 postFleetManagementFleetLinkSendOtp :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpReq -> Environment.Flow API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpRes
 postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-  SharedLogic.Transaction.withResponseTransactionStoring transaction $
-    Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) apiTokenInfo.personId.getId req
+  let createReq = API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerCreateReq req.mobileNumber req.mobileCountryCode
+  let req' = buildFleetOwnerRegisterReq merchantShortId opCity createReq
+  res <-
+    SharedLogic.Transaction.withResponseTransactionStoring transaction $
+      Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) apiTokenInfo.personId.getId req
+  when (isNothing mbPerson) $ do
+    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+    DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.fleetOwnerId.getId) True
+  pure res
 
 postFleetManagementFleetLinkVerifyOtp :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerVerifyOtpReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFleetManagementFleetLinkVerifyOtp merchantShortId opCity apiTokenInfo req = do
