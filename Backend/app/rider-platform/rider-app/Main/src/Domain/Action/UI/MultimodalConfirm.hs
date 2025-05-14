@@ -70,6 +70,7 @@ import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuote as QQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -190,34 +191,43 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
   let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
 
   -- Update all FRFS bookings with quantity, final price and price
-  forM_ frfsBookingsArr $ \booking -> do
-    let quantity = req.quantity
-    let quantityRational = fromIntegral quantity :: Rational
-    let totalPrice =
-          Price
-            { amount = HighPrecMoney $ getHighPrecMoney booking.price.amount * quantityRational,
-              amountInt = Money $ booking.price.amountInt.getMoney * quantity,
-              currency = booking.price.currency
-            }
-    let fRFSTicketBooking =
-          booking
-            { DFRFSB.quantity = req.quantity,
-              DFRFSB.finalPrice = (Just totalPrice),
-              DFRFSB.estimatedPrice = totalPrice,
-              DFRFSB.price = totalPrice
-            }
-    QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
+  totalFare <-
+    foldM
+      ( \acc booking -> do
+          quote <- QQuote.findById booking.quoteId >>= fromMaybeM (FRFSQuoteNotFound $ show booking.quoteId)
+          let quantity = req.quantity
+              quantityRational = fromIntegral quantity :: Rational
+              childTicketQuantity = req.childTicketQuantity
+              childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
 
-  -- Calculate total fare across all bookings
-  let totalFare =
-        foldl'
-          ( \acc booking ->
-              let quantity = fromIntegral req.quantity :: Rational
-                  bookingTotal = HighPrecMoney $ getHighPrecMoney booking.price.amount * quantity
-               in acc + bookingTotal
-          )
-          (HighPrecMoney 0)
-          frfsBookingsArr
+          let childPrice = fromMaybe quote.price quote.childPrice
+              totalPrice =
+                Price
+                  { amount =
+                      HighPrecMoney $
+                        (quote.price.amount.getHighPrecMoney * quantityRational)
+                          + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
+                    amountInt =
+                      Money $
+                        (quote.price.amountInt.getMoney * quantity)
+                          + (childPrice.amountInt.getMoney * childTicketQuantity),
+                    currency = quote.price.currency
+                  }
+
+          let fRFSTicketBooking =
+                booking
+                  { DFRFSB.quantity = quantity,
+                    DFRFSB.childTicketQuantity = Just childTicketQuantity,
+                    DFRFSB.finalPrice = Just totalPrice,
+                    DFRFSB.estimatedPrice = totalPrice,
+                    DFRFSB.price = totalPrice
+                  }
+          QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
+
+          return (acc + totalPrice.amount)
+      )
+      (HighPrecMoney 0)
+      frfsBookingsArr
 
   case mbPaymentOrderId of
     Nothing ->
