@@ -479,7 +479,7 @@ public class LocationUpdateServiceV2 extends Service {
         // Log health check event if applicable
         logEventForHealthCheck(intent);
 
-        if (messageQueue.size() > locationMaxBatchSize) {
+        if (messageQueue != null && messageQueue.size() > locationMaxBatchSize) {
             messageQueue.flushToBackend(messageQueue.size() - locationBatchSize);
         }
 
