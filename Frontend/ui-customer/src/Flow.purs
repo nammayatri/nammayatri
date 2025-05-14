@@ -1239,6 +1239,7 @@ enterMobileNumberScreenFlow = do
                         void $ lift $ lift $ setLogField "customer_id" $ encode (customerId)
                         pure unit
                     setValueToLocalStore CUSTOMER_ID customerId
+                    let _ = runFn2 setInWindow "CUSTOMER_ID" customerId
                     void $ liftFlowBT $ setCleverTapProfileData "Identity" customerId
                     void $ liftFlowBT $ setCleverTapProfileData "Preferred Language" "ENGLISH"
                     setValueToLocalStore REGISTERATION_TOKEN response.token

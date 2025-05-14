@@ -76,6 +76,7 @@ export const getEvents = function () {
         sdkVersion: window.__payload.sdkVersion,
         service: window.__payload.service,
         sessionId: window.session_id,
+        personId: !window["CUSTOMER_ID"] || window["CUSTOMER_ID"] === undefined ? window["DRIVER_ID"] : window["CUSTOMER_ID"],
         "newEvents" : newEvents,
       }, newEvents);
       return JSON.stringify(nestJSON(events));
