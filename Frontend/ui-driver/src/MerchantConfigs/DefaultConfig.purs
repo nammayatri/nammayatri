@@ -1079,7 +1079,7 @@ config =
               enableYatriCoins : true,
               vehicleNSImg : "ny_ic_auto_image",
               registration : {
-                  supportWAN : "918618963188",
+                  supportWAN : "919008021095",
                   callSupport : true,
                   whatsappSupport : true
               },
