@@ -158,16 +158,23 @@ public class LocationUpdateServiceV2 extends Service {
     private final LocalBinder binder = new LocalBinder();
     // Add this class variable to track active location requests
     private final AtomicBoolean isLocationRequestInProgress = new AtomicBoolean(false);
+    @Nullable
     CancellationTokenSource cancellationTokenSource;
     // Remote configuration
+    @Nullable
     MobilityRemoteConfigs remoteConfigs;
     // Location components
+    @Nullable
     private FusedLocationProviderClient fusedLocationProviderClient;
+    @Nullable
     private LocationCallback locationCallback;
     // Message queue and batch processing
+    @Nullable
     private MessageQueue messageQueue;
+    @Nullable
     private ScheduledExecutorService batchScheduler;
     // Optimization variables
+    @Nullable
     private PowerManager powerManager;
     private int locationUpdateInterval = 10; // seconds
     private int locationBatchInterval = 10; // seconds
@@ -313,7 +320,8 @@ public class LocationUpdateServiceV2 extends Service {
      * The message queue is responsible for handling location data storage and processing.
      */
     private void initializeMessageQueue() {
-        messageQueue = new MessageQueue(Looper.getMainLooper());
+        if (messageQueue == null)
+            messageQueue = new MessageQueue(Looper.getMainLooper());
         Log.d(TAG, "Message queue initialized");
     }
 
@@ -322,8 +330,12 @@ public class LocationUpdateServiceV2 extends Service {
      * cancellation token, and dedicated location handler thread.
      */
     private void initializeLocationComponents() {
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        cancellationTokenSource = new CancellationTokenSource();
+        if (fusedLocationProviderClient == null) {
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        }
+        if (cancellationTokenSource == null) {
+            cancellationTokenSource = new CancellationTokenSource();
+        }
 
         Log.d(TAG, "Location components initialized");
     }
@@ -354,8 +366,9 @@ public class LocationUpdateServiceV2 extends Service {
      * When network connectivity is restored, triggers the batch processing and starts the GRPC service.
      */
     private void setupInternetReceiver() {
-        connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-
+        if (connectivityManager == null) {
+            connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        }
         // Modern implementation using NetworkCallback (Android N and above)
         if (networkCallback == null) {
             networkCallback = new ConnectivityManager.NetworkCallback() {
@@ -391,13 +404,17 @@ public class LocationUpdateServiceV2 extends Service {
      * The batch processor will run at regular intervals defined by locationBatchInterval.
      */
     private void startBatchScheduler() {
-        batchScheduler = Executors.newSingleThreadScheduledExecutor();
-        batchScheduler.scheduleWithFixedDelay(
-                () -> messageQueue.triggerBatchProcess(),
-                locationBatchInterval,
-                locationBatchInterval,
-                TimeUnit.SECONDS
-        );
+        if (batchScheduler == null) {
+            batchScheduler = Executors.newSingleThreadScheduledExecutor();
+            if (messageQueue != null) {
+                batchScheduler.scheduleWithFixedDelay(
+                        () -> messageQueue.triggerBatchProcess(),
+                        locationBatchInterval,
+                        locationBatchInterval,
+                        TimeUnit.SECONDS
+                );
+            }
+        }
         Log.d(TAG_BATCH, "Batch scheduler started with interval: " + locationBatchInterval + "s");
     }
 
@@ -418,6 +435,23 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Make sure we're a foreground service
         startAsForegroundService();
+
+        initializeMessageQueue();
+
+        // Initialize location components
+        initializeLocationComponents();
+
+        // Start as foreground service
+        startAsForegroundService();
+
+        // Register preference change listener
+        setupPreferenceChangeListener();
+
+        // Initialize internet connectivity receiver
+        setupInternetReceiver();
+
+        // Start the batch scheduler
+        startBatchScheduler();
 
         // Load driver ID
         SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(
@@ -561,13 +595,17 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Request location updates
         try {
-            fusedLocationProviderClient.requestLocationUpdates(
-                    locationRequest,
-                    locationCallback,
-                    Looper.getMainLooper()
-            );
-            isLocationUpdating = true;
-            Log.i(TAG_LOCATION, "Location updates started successfully");
+            if (fusedLocationProviderClient != null) {
+                fusedLocationProviderClient.requestLocationUpdates(
+                        locationRequest,
+                        locationCallback,
+                        Looper.getMainLooper()
+                );
+                isLocationUpdating = true;
+                Log.i(TAG_LOCATION, "Location updates started successfully");
+            } else {
+                Log.e(TAG_ERROR, "FusedLocationProviderClient is null");
+            }
         } catch (Exception e) {
             Log.e(TAG_ERROR, "Failed to start location updates", e);
             FirebaseCrashlytics.getInstance().recordException(e);
@@ -662,10 +700,13 @@ public class LocationUpdateServiceV2 extends Service {
             // Log location data
             new Thread(() -> logLocationUpdate(location)).start();
 
-
             // Create location data object and add to queue
-            LocationData locationData = new LocationData(location, "fused_location_provider");
-            messageQueue.enqueueLocation(locationData);
+            if (messageQueue != null) {
+                LocationData locationData = new LocationData(location, "fused_location_provider");
+                messageQueue.enqueueLocation(locationData);
+            } else {
+                Log.e(TAG_ERROR, "MessageQueue is null, cannot enqueue location");
+            }
 
             // Check for special pickup zones
             checkNearByPickupZone(location);
@@ -833,19 +874,48 @@ public class LocationUpdateServiceV2 extends Service {
             // Convert batch to JSONArray
             JSONArray locationPayload = new JSONArray();
             for (LocationData data : batch) {
-                locationPayload.put(data.toJsonObject());
+                if (data != null) {
+                    locationPayload.put(data.toJsonObject());
+                }
             }
 
             Log.i(TAG_BATCH, "Sending batch of " + batch.size() + " locations to server");
 
             // Get API client and headers
             MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
+            if (callAPIHandler == null) {
+                Log.e(TAG_ERROR, "MobilityCallAPI instance is null");
+                messageQueue.addAll(batch);
+                isBatchProcessing.set(false);
+                return;
+            }
+
             Map<String, String> baseHeaders = MobilityCallAPI.getBaseHeaders(context);
+            if (baseHeaders == null) {
+                Log.e(TAG_ERROR, "Base headers are null");
+                messageQueue.addAll(batch);
+                isBatchProcessing.set(false);
+                return;
+            }
 
             // Get API URL
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), MODE_PRIVATE);
+            if (sharedPref == null) {
+                Log.e(TAG_ERROR, "SharedPreferences is null");
+                messageQueue.addAll(batch);
+                isBatchProcessing.set(false);
+                return;
+            }
+
             String baseUrl = sharedPref.getString("BASE_URL", "null");
+            if (baseUrl.equals("null")) {
+                Log.e(TAG_ERROR, "Base URL is null");
+                messageQueue.addAll(batch);
+                isBatchProcessing.set(false);
+                return;
+            }
+
             String orderUrl = baseUrl + "/driver/location";
 
             // Set headers
@@ -853,7 +923,7 @@ public class LocationUpdateServiceV2 extends Service {
             setVehicleAndMerchantHeaders(baseHeaders);
 
             // Log API request
-            Log.i(TAG_API, "Sending batch of "  + batch.size() + " locations to server with body | " + locationPayload);
+            Log.i(TAG_API, "Sending batch of " + batch.size() + " locations to server with body | " + locationPayload);
 
             // Make API call asynchronously
             callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString(),
@@ -869,7 +939,9 @@ public class LocationUpdateServiceV2 extends Service {
                             Log.e(TAG_ERROR, "API call failed", error);
                             FirebaseCrashlytics.getInstance().recordException(error);
                             // Add back to queue on failure
-                            messageQueue.addAll(batch);
+                            if (messageQueue != null) {
+                                messageQueue.addAll(batch);
+                            }
                             isBatchProcessing.set(false);
                         }
                     });
@@ -877,7 +949,9 @@ public class LocationUpdateServiceV2 extends Service {
             Log.e(TAG_ERROR, "Error preparing batch", e);
             FirebaseCrashlytics.getInstance().recordException(e);
             // Add back to queue on failure
-            messageQueue.addAll(batch);
+            if (messageQueue != null) {
+                messageQueue.addAll(batch);
+            }
             isBatchProcessing.set(false);
         } finally {
             // Release wake lock after operation
@@ -1069,12 +1143,14 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Notify all callbacks
         for (UpdateTimeCallback callback : updateTimeCallbacks) {
-            callback.triggerUpdateTimeCallBack(
-                    timestamp,
-                    String.valueOf(lastLatitudeValue),
-                    String.valueOf(lastLongitudeValue),
-                    "SUCCESS"
-            );
+            if (callback != null) {
+                callback.triggerUpdateTimeCallBack(
+                        timestamp,
+                        String.valueOf(lastLatitudeValue),
+                        String.valueOf(lastLongitudeValue),
+                        "SUCCESS"
+                );
+            }
         }
         Log.d(TAG, "notifyLocationUpdateSuccess() complete");
     }
@@ -1087,7 +1163,7 @@ public class LocationUpdateServiceV2 extends Service {
      */
     private void notifyDriverBlocked(String errorCode) {
         Log.d(TAG, "notifyDriverBlocked() called with errorCode=" + errorCode);
-        if (updateTimeCallbacks.isEmpty()) {
+        if (updateTimeCallbacks.isEmpty() || errorCode == null) {
             return;
         }
 
@@ -1098,12 +1174,14 @@ public class LocationUpdateServiceV2 extends Service {
 
         // Notify all callbacks about driver being blocked
         for (UpdateTimeCallback callback : updateTimeCallbacks) {
-            callback.triggerUpdateTimeCallBack(
-                    timestamp,
-                    String.valueOf(lastLatitudeValue),
-                    String.valueOf(lastLongitudeValue),
-                    errorCode
-            );
+            if (callback != null) {
+                callback.triggerUpdateTimeCallBack(
+                        timestamp,
+                        String.valueOf(lastLatitudeValue),
+                        String.valueOf(lastLongitudeValue),
+                        errorCode
+                );
+            }
         }
         Log.d(TAG, "notifyDriverBlocked() complete");
     }
@@ -1116,13 +1194,17 @@ public class LocationUpdateServiceV2 extends Service {
      */
     private void checkForTokenIssues(String responseBody) {
         Log.d(TAG, "checkForTokenIssues() called");
+        if (responseBody == null) {
+            Log.e(TAG_ERROR, "Response body is null in checkForTokenIssues");
+            return;
+        }
+
         try {
-            JSONObject resp = new JSONObject(responseBody != null && !responseBody.trim().isEmpty()
-                    ? responseBody : "{}");
+            JSONObject resp = new JSONObject(responseBody.trim().isEmpty() ? "{}" : responseBody);
 
             if (resp.has("errorCode")) {
                 String errorCode = resp.getString("errorCode");
-                if (errorCode.equals("INVALID_TOKEN") || errorCode.equals("TOKEN_EXPIRED")) {
+                if (errorCode != null && (errorCode.equals("INVALID_TOKEN") || errorCode.equals("TOKEN_EXPIRED"))) {
                     Log.w(TAG_API, "Invalid token detected: " + errorCode);
                     updateStorage("REGISTERATION_TOKEN", "__failed");
                     stopWidgetService();
@@ -1595,8 +1677,12 @@ public class LocationUpdateServiceV2 extends Service {
                     // Create location data and add to queue
                     Location newLocation = new Location(lastCachedLocation);
                     newLocation.setTime(System.currentTimeMillis());
-                    LocationData locationData = new LocationData(newLocation, "location_heartbeat");
-                    messageQueue.enqueueLocation(locationData);
+                    if (messageQueue != null) {
+                        LocationData locationData = new LocationData(newLocation, "location_heartbeat");
+                        messageQueue.enqueueLocation(locationData);
+                    } else {
+                        Log.e(TAG_ERROR, "MessageQueue is null, cannot enqueue heartbeat location");
+                    }
                 } else {
                     Log.d(TAG_TIMER, "No cached location available, fetching new location");
                     fetchFreshLocation();
@@ -1683,47 +1769,54 @@ public class LocationUpdateServiceV2 extends Service {
 
             Log.d(TAG_TIMER, "Starting manual location request");
 
-            // Use getCurrentLocation for a one-time location request with timeout
-            fusedLocationProviderClient.getCurrentLocation(
-                            Utils.getLocationPriority("driver_current_location_priority"),
-                            cancellationTokenSource.getToken())
-                    .addOnSuccessListener(location -> {
-                        try {
-                            if (location != null) {
-                                Log.d(TAG_TIMER, "Received fresh location: lat=" +
-                                        location.getLatitude() + ", lng=" + location.getLongitude());
+            if (fusedLocationProviderClient != null && cancellationTokenSource != null) {
+                // Use getCurrentLocation for a one-time location request with timeout
+                fusedLocationProviderClient.getCurrentLocation(
+                                Utils.getLocationPriority("driver_current_location_priority"),
+                                cancellationTokenSource.getToken())
+                        .addOnSuccessListener(location -> {
+                            try {
+                                if (location != null) {
+                                    Log.d(TAG_TIMER, "Received fresh location: lat=" +
+                                            location.getLatitude() + ", lng=" + location.getLongitude());
 
-                                // Update last fetch time
-                                updateStorage(LAST_LOCATION_FETCH_TIME, String.valueOf(System.currentTimeMillis()));
+                                    // Update last fetch time
+                                    updateStorage(LAST_LOCATION_FETCH_TIME, String.valueOf(System.currentTimeMillis()));
 
-                                // Save as cached location
-                                lastCachedLocation = location;
+                                    // Save as cached location
+                                    lastCachedLocation = location;
 
-                                // Update storage
-                                updateLocationStorage(location);
+                                    // Update storage
+                                    updateLocationStorage(location);
 
-                                // Send to queue
-                                LocationData locationData = new LocationData(location, "manual_fetch");
-                                messageQueue.enqueueLocation(locationData);
-                            } else {
-                                Exception e = new Exception("Location Null");
-                                FirebaseCrashlytics.getInstance().recordException(e);
-                                Log.e(TAG_TIMER, "Received null location from manual fetch");
+                                    // Send to queue
+                                    if (messageQueue != null) {
+                                        LocationData locationData = new LocationData(location, "manual_fetch");
+                                        messageQueue.enqueueLocation(locationData);
+                                    }
+                                } else {
+                                    Exception e = new Exception("Location Null");
+                                    FirebaseCrashlytics.getInstance().recordException(e);
+                                    Log.e(TAG_TIMER, "Received null location from manual fetch");
+                                }
+                            } finally {
+                                // Reset the flag when request completes successfully
+                                isLocationRequestInProgress.set(false);
+                                Log.d(TAG_TIMER, "Manual location request completed");
                             }
-                        } finally {
-                            // Reset the flag when request completes successfully
-                            isLocationRequestInProgress.set(false);
-                            Log.d(TAG_TIMER, "Manual location request completed");
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e(TAG_ERROR, "Failed to get current location", e);
-                        FirebaseCrashlytics.getInstance().recordException(e);
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG_ERROR, "Failed to get current location", e);
+                            FirebaseCrashlytics.getInstance().recordException(e);
 
-                        // Reset the flag when request fails
-                        isLocationRequestInProgress.set(false);
-                        Log.d(TAG_TIMER, "Manual location request failed");
-                    });
+                            // Reset the flag when request fails
+                            isLocationRequestInProgress.set(false);
+                            Log.d(TAG_TIMER, "Manual location request failed");
+                        });
+            } else {
+                Log.e(TAG_ERROR, "FusedLocationProviderClient or CancellationTokenSource is null");
+                isLocationRequestInProgress.set(false);
+            }
         } catch (Exception e) {
             Log.e(TAG_ERROR, "Error fetching fresh location", e);
             FirebaseCrashlytics.getInstance().recordException(e);
@@ -1744,166 +1837,168 @@ public class LocationUpdateServiceV2 extends Service {
      */
     private void setupPreferenceChangeListener() {
         Log.d(TAG_CONFIG, "setupPreferenceChangeListener() called");
-        prefChangeListener = (prefs, key) -> {
-            try {
-                Log.d(TAG_CONFIG, "SharedPreference changed: " + key);
+        if (prefChangeListener == null) {
+            prefChangeListener = (prefs, key) -> {
+                try {
+                    Log.d(TAG_CONFIG, "SharedPreference changed: " + key);
 
-                if (key != null) {
-                    switch (key) {
-                        case REGISTRATION_TOKEN_KEY:
-                            // Check if token exists or has been changed to an invalid value
-                            String token = prefs.getString(REGISTRATION_TOKEN_KEY, null);
-                            if (token == null || token.equals("__failed") || token.equals("null")) {
-                                Log.w(TAG, "Registration token is invalid or missing, stopping location service");
-                                stopWidgetService();
-                                stopSelf();
-                                return; // Return early as service is being stopped
-                            }
-                            break;
-                        case LOCATION_SERVICE_VERSION:
-                            String version = prefs.getString(LOCATION_SERVICE_VERSION, null);
-                            if (version != null && version.equals("V1")) {
-                                Log.w(TAG, "Location Service swapped to V1, stopping location service");
-                                stopSelf();
-                                return; // Return early as service is being stopped
-                            }
-                            break;
-                        case LOCATION_UPDATE_INTERVAL:
-                            String updateIntervalStr = prefs.getString(key, null);
-                            if (updateIntervalStr != null) {
-                                int newInterval = Integer.parseInt(updateIntervalStr);
-                                if (newInterval != locationUpdateInterval) {
-                                    locationUpdateInterval = newInterval;
-                                    Log.d(TAG_CONFIG, "Location update interval changed to " + newInterval + "s");
-                                    if (isLocationUpdating) {
-                                        stopLocationUpdates();
-                                        startLocationUpdates();
-                                    }
-                                    restartLocationHeartbeatTimer();
+                    if (key != null) {
+                        switch (key) {
+                            case REGISTRATION_TOKEN_KEY:
+                                // Check if token exists or has been changed to an invalid value
+                                String token = prefs.getString(REGISTRATION_TOKEN_KEY, null);
+                                if (token == null || token.equals("__failed") || token.equals("null")) {
+                                    Log.w(TAG, "Registration token is invalid or missing, stopping location service");
+                                    stopWidgetService();
+                                    stopSelf();
+                                    return; // Return early as service is being stopped
                                 }
-                            }
-                            break;
-                        case LOCATION_MAX_BATCH_SIZE_KEY:
-                            String maxBatchSize = prefs.getString(key, null);
-                            if (maxBatchSize != null) {
-                                int newBatch = Integer.parseInt(maxBatchSize);
-                                if (newBatch != locationMaxBatchSize) {
-                                    locationMaxBatchSize = newBatch;
-                                    Log.d(TAG_CONFIG, "Location max batch size changed to " + newBatch);
+                                break;
+                            case LOCATION_SERVICE_VERSION:
+                                String version = prefs.getString(LOCATION_SERVICE_VERSION, null);
+                                if (version != null && version.equals("V1")) {
+                                    Log.w(TAG, "Location Service swapped to V1, stopping location service");
+                                    stopSelf();
+                                    return; // Return early as service is being stopped
                                 }
-                            }
-                            break;
-
-                        case LOCATION_BATCH_INTERVAL:
-                            String batchIntervalStr = prefs.getString(key, null);
-                            if (batchIntervalStr != null) {
-                                int newBatchInterval = Integer.parseInt(batchIntervalStr);
-                                if (newBatchInterval != locationBatchInterval) {
-                                    locationBatchInterval = newBatchInterval;
-                                    Log.d(TAG_CONFIG, "Batch interval changed to " + newBatchInterval + "s");
-                                    restartBatchScheduler();
-                                }
-                            }
-                            break;
-
-                        case DRIVER_MIN_DISPLACEMENT:
-                            String minDisplacementStr = prefs.getString(key, null);
-                            if (minDisplacementStr != null) {
-                                float newDisplacement = Float.parseFloat(minDisplacementStr);
-                                if (newDisplacement != locationMinDisplacement) {
-                                    locationMinDisplacement = newDisplacement;
-                                    Log.d(TAG_CONFIG, "Min displacement changed to " + newDisplacement + "m");
-                                    if (isLocationUpdating) {
-                                        stopLocationUpdates();
-                                        startLocationUpdates();
+                                break;
+                            case LOCATION_UPDATE_INTERVAL:
+                                String updateIntervalStr = prefs.getString(key, null);
+                                if (updateIntervalStr != null) {
+                                    int newInterval = Integer.parseInt(updateIntervalStr);
+                                    if (newInterval != locationUpdateInterval) {
+                                        locationUpdateInterval = newInterval;
+                                        Log.d(TAG_CONFIG, "Location update interval changed to " + newInterval + "s");
+                                        if (isLocationUpdating) {
+                                            stopLocationUpdates();
+                                            startLocationUpdates();
+                                        }
+                                        restartLocationHeartbeatTimer();
                                     }
                                 }
-                            }
-                            break;
+                                break;
+                            case LOCATION_MAX_BATCH_SIZE_KEY:
+                                String maxBatchSize = prefs.getString(key, null);
+                                if (maxBatchSize != null) {
+                                    int newBatch = Integer.parseInt(maxBatchSize);
+                                    if (newBatch != locationMaxBatchSize) {
+                                        locationMaxBatchSize = newBatch;
+                                        Log.d(TAG_CONFIG, "Location max batch size changed to " + newBatch);
+                                    }
+                                }
+                                break;
 
-                        case LOCATION_BATCH_SIZE:
-                            String batchSizeStr = prefs.getString(key, null);
-                            if (batchSizeStr != null) {
-                                locationBatchSize = Integer.parseInt(batchSizeStr);
-                                Log.d(TAG_CONFIG, "Batch size changed to " + locationBatchSize);
-                            }
-                            break;
+                            case LOCATION_BATCH_INTERVAL:
+                                String batchIntervalStr = prefs.getString(key, null);
+                                if (batchIntervalStr != null) {
+                                    int newBatchInterval = Integer.parseInt(batchIntervalStr);
+                                    if (newBatchInterval != locationBatchInterval) {
+                                        locationBatchInterval = newBatchInterval;
+                                        Log.d(TAG_CONFIG, "Batch interval changed to " + newBatchInterval + "s");
+                                        restartBatchScheduler();
+                                    }
+                                }
+                                break;
 
-                        case LOCATION_FRESHNESS_THRESHOLD:
-                            String freshnessThresholdStr = prefs.getString(key, null);
-                            if (freshnessThresholdStr != null) {
-                                locationFreshnessThresholdMinutes = Integer.parseInt(freshnessThresholdStr);
-                                Log.d(TAG_CONFIG, "Location freshness threshold changed to " +
-                                        locationFreshnessThresholdMinutes + "m");
-                            }
-                            break;
+                            case DRIVER_MIN_DISPLACEMENT:
+                                String minDisplacementStr = prefs.getString(key, null);
+                                if (minDisplacementStr != null) {
+                                    float newDisplacement = Float.parseFloat(minDisplacementStr);
+                                    if (newDisplacement != locationMinDisplacement) {
+                                        locationMinDisplacement = newDisplacement;
+                                        Log.d(TAG_CONFIG, "Min displacement changed to " + newDisplacement + "m");
+                                        if (isLocationUpdating) {
+                                            stopLocationUpdates();
+                                            startLocationUpdates();
+                                        }
+                                    }
+                                }
+                                break;
 
-                        case LOCATION_MAX_BATCH_AGE_KEY:
-                            String maxBatchAgeStr = prefs.getString(key, null);
-                            if (maxBatchAgeStr != null) {
-                                locationMaxBatchAgeSeconds = Integer.parseInt(maxBatchAgeStr);
-                                Log.d(TAG_CONFIG, "Max batch age changed to " + locationMaxBatchAgeSeconds + "s");
-                            }
-                            break;
+                            case LOCATION_BATCH_SIZE:
+                                String batchSizeStr = prefs.getString(key, null);
+                                if (batchSizeStr != null) {
+                                    locationBatchSize = Integer.parseInt(batchSizeStr);
+                                    Log.d(TAG_CONFIG, "Batch size changed to " + locationBatchSize);
+                                }
+                                break;
 
-                        case "DRIVER_RIDE_STATUS":
-                            driverRideStatus = prefs.getString(key, "IDLE");
-                            Log.d(TAG_CONFIG, "Driver ride status changed to " + driverRideStatus);
-                            if (isLocationUpdating) {
-                                stopLocationUpdates();
-                                startLocationUpdates();
-                            }
-                            break;
+                            case LOCATION_FRESHNESS_THRESHOLD:
+                                String freshnessThresholdStr = prefs.getString(key, null);
+                                if (freshnessThresholdStr != null) {
+                                    locationFreshnessThresholdMinutes = Integer.parseInt(freshnessThresholdStr);
+                                    Log.d(TAG_CONFIG, "Location freshness threshold changed to " +
+                                            locationFreshnessThresholdMinutes + "m");
+                                }
+                                break;
 
-                        case LOCATION_RATE_LIMIT_SECONDS:
-                            String rateLimitStr = prefs.getString(key, "2");
-                            rateLimitTimeInSeconds = Long.parseLong(rateLimitStr); // Update local variable
-                            Log.d(TAG_CONFIG, "Rate limiting time updated to " + rateLimitTimeInSeconds + " seconds");
-                            break;
-                        case Utils.DRIVER_STATUS:
-                            String driverStatus = prefs.getString(key, Utils.DRIVER_STATUS_OFFLINE);
-                            if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
-                                stopWidgetService();
-                                stopSelf();
-                            }
-                            break;
-                        case LOCATION_MAX_TIME_THRESHOLD:
-                            int newMaxTimeThreshold= Integer.parseInt(prefs.getString(key, "2"));
-                            Log.i(TAG_CONFIG, "LOCATION_MAX_TIME_THRESHOLD updated " + newMaxTimeThreshold + "sec");
-                            if(newMaxTimeThreshold != locationMaxTimeThreshold && isLocationUpdating){
-                                locationMaxTimeThreshold = newMaxTimeThreshold;
-                                stopLocationUpdates();
-                                startLocationUpdates();
-                            }
-                            break;
-                        case LOCATION_PRIORITY:
-                            String newLocationPriorityStr = prefs.getString("LOCATION_PRIORITY", "PRIORITY_HIGH_ACCURACY");
-                            int newLocationPriority = Utils.getPriority(newLocationPriorityStr);
-                            Log.i(TAG_CONFIG, "LOCATION_PRIORITY updated " + newLocationPriority + ". which is " +newLocationPriorityStr);
-                            if(newLocationPriority != locationPriority && isLocationUpdating){
-                                locationPriority =  newLocationPriority;
-                                stopLocationUpdates();
-                                startLocationUpdates();
-                            }
-                            break;
-                        case LOCATION_REQUEST_INTERVAL:
-                            int newLocationRequestInterval = Integer.parseInt(prefs.getString(key, "10"));
-                            if(newLocationRequestInterval != locationRequestInterval){
-                                locationRequestInterval = newLocationRequestInterval;
-                                stopLocationUpdates();
-                                startLocationUpdates();
-                            }
-                            break;
+                            case LOCATION_MAX_BATCH_AGE_KEY:
+                                String maxBatchAgeStr = prefs.getString(key, null);
+                                if (maxBatchAgeStr != null) {
+                                    locationMaxBatchAgeSeconds = Integer.parseInt(maxBatchAgeStr);
+                                    Log.d(TAG_CONFIG, "Max batch age changed to " + locationMaxBatchAgeSeconds + "s");
+                                }
+                                break;
 
+                            case "DRIVER_RIDE_STATUS":
+                                driverRideStatus = prefs.getString(key, "IDLE");
+                                Log.d(TAG_CONFIG, "Driver ride status changed to " + driverRideStatus);
+                                if (isLocationUpdating) {
+                                    stopLocationUpdates();
+                                    startLocationUpdates();
+                                }
+                                break;
+
+                            case LOCATION_RATE_LIMIT_SECONDS:
+                                String rateLimitStr = prefs.getString(key, "2");
+                                rateLimitTimeInSeconds = Long.parseLong(rateLimitStr); // Update local variable
+                                Log.d(TAG_CONFIG, "Rate limiting time updated to " + rateLimitTimeInSeconds + " seconds");
+                                break;
+                            case Utils.DRIVER_STATUS:
+                                String driverStatus = prefs.getString(key, Utils.DRIVER_STATUS_OFFLINE);
+                                if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+                                    stopWidgetService();
+                                    stopSelf();
+                                }
+                                break;
+                            case LOCATION_MAX_TIME_THRESHOLD:
+                                int newMaxTimeThreshold = Integer.parseInt(prefs.getString(key, "2"));
+                                Log.i(TAG_CONFIG, "LOCATION_MAX_TIME_THRESHOLD updated " + newMaxTimeThreshold + "sec");
+                                if (newMaxTimeThreshold != locationMaxTimeThreshold && isLocationUpdating) {
+                                    locationMaxTimeThreshold = newMaxTimeThreshold;
+                                    stopLocationUpdates();
+                                    startLocationUpdates();
+                                }
+                                break;
+                            case LOCATION_PRIORITY:
+                                String newLocationPriorityStr = prefs.getString("LOCATION_PRIORITY", "PRIORITY_HIGH_ACCURACY");
+                                int newLocationPriority = Utils.getPriority(newLocationPriorityStr);
+                                Log.i(TAG_CONFIG, "LOCATION_PRIORITY updated " + newLocationPriority + ". which is " + newLocationPriorityStr);
+                                if (newLocationPriority != locationPriority && isLocationUpdating) {
+                                    locationPriority = newLocationPriority;
+                                    stopLocationUpdates();
+                                    startLocationUpdates();
+                                }
+                                break;
+                            case LOCATION_REQUEST_INTERVAL:
+                                int newLocationRequestInterval = Integer.parseInt(prefs.getString(key, "10"));
+                                if (newLocationRequestInterval != locationRequestInterval) {
+                                    locationRequestInterval = newLocationRequestInterval;
+                                    stopLocationUpdates();
+                                    startLocationUpdates();
+                                }
+                                break;
+
+                        }
                     }
-                }
-            } catch (Exception e) {
-                Log.e(TAG_ERROR, "Error handling SharedPreferences change for key: " + key, e);
-                FirebaseCrashlytics.getInstance().recordException(e);
-            }
-        };
 
-        sharedPrefs.registerOnSharedPreferenceChangeListener(prefChangeListener);
+                } catch (Exception e) {
+                    Log.e(TAG_ERROR, "Error handling SharedPreferences change for key: " + key, e);
+                    FirebaseCrashlytics.getInstance().recordException(e);
+                }
+            };
+            sharedPrefs.registerOnSharedPreferenceChangeListener(prefChangeListener);
+        }
 
         // Also check token validity on startup
         checkRegistrationTokenValidity();
@@ -1942,6 +2037,7 @@ public class LocationUpdateServiceV2 extends Service {
         Log.d(TAG_BATCH, "restartBatchScheduler() called");
         if (batchScheduler != null && !batchScheduler.isShutdown()) {
             batchScheduler.shutdown();
+            batchScheduler = null;
         }
         startBatchScheduler();
         Log.d(TAG_BATCH, "restartBatchScheduler() complete");
@@ -1954,21 +2050,27 @@ public class LocationUpdateServiceV2 extends Service {
     private void loadWakeLockConfig() {
         Log.d(TAG_CONFIG, "loadWakeLockConfig() called");
         try {
-            // Get wake lock config as a string (JSON object)
-            String wakeLockConfigJson = remoteConfigs.getString(CONFIG_WAKE_LOCK);
-            if (wakeLockConfigJson.isEmpty()) {
-                wakeLockConfigJson = DEFAULT_WAKE_LOCK_CONFIG;
+            if (remoteConfigs != null) {
+                // Get wake lock config as a string (JSON object)
+                String wakeLockConfigJson = remoteConfigs.getString(CONFIG_WAKE_LOCK);
+                if (wakeLockConfigJson.isEmpty()) {
+                    wakeLockConfigJson = DEFAULT_WAKE_LOCK_CONFIG;
+                }
+
+                // Parse the JSON object
+                JSONObject config = new JSONObject(wakeLockConfigJson);
+
+                // Extract values
+                useWakeLock = config.optBoolean("enabled", false);
+                wakeLockTimeoutMs = config.optLong("timeout_ms", 30000);
+
+                Log.d(TAG_CONFIG, "Wake lock config loaded: enabled=" + useWakeLock +
+                        ", timeout=" + wakeLockTimeoutMs + "ms");
+            } else {
+                Log.e(TAG_ERROR, "Remote configs is null, using default wake lock config");
+                useWakeLock = false;
+                wakeLockTimeoutMs = 30000;
             }
-
-            // Parse the JSON object
-            JSONObject config = new JSONObject(wakeLockConfigJson);
-
-            // Extract values
-            useWakeLock = config.optBoolean("enabled", false);
-            wakeLockTimeoutMs = config.optLong("timeout_ms", 30000);
-
-            Log.d(TAG_CONFIG, "Wake lock config loaded: enabled=" + useWakeLock +
-                    ", timeout=" + wakeLockTimeoutMs + "ms");
         } catch (Exception e) {
             Log.e(TAG_ERROR, "Error loading wake lock config, defaulting to disabled", e);
             useWakeLock = false;
@@ -2556,7 +2658,7 @@ public class LocationUpdateServiceV2 extends Service {
     }
 
     public void emitReactEvent(String payload) {
-        if(locationEmitter != null){
+        if (locationEmitter != null) {
             locationEmitter.emitter(payload);
         }
     }
