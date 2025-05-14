@@ -412,8 +412,8 @@ let getAllCityConfig = () => {
         "freeSeconds": 480,
         "perMinCharges": 2.0
       },
-      "deliveryTruck": {
-        "freeMinutes": 3600.0
+      "truck": {
+        "freeSeconds": 3600.0
       , "perMinCharges": 5.0
       }
     },
@@ -435,6 +435,10 @@ let getAllCityConfig = () => {
       "ambulance": {
         "freeSeconds": 480,
         "perMinCharges": 2.0
+      },
+      "truck": {
+        "freeSeconds": 3600.0
+      , "perMinCharges": 5.0
       }
     }
   , "rideStartAudio" : defaultStartAudioConfig
@@ -502,6 +506,10 @@ let getAllCityConfig = () => {
         ambulance: {
           freeSeconds: 480,
           perMinCharges: 2.0
+        },
+        truck: {
+          freeSeconds: 3600.0
+        , perMinCharges: 5.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -520,6 +528,10 @@ let getAllCityConfig = () => {
         ambulance: {
           freeSeconds: 480,
           perMinCharges: 2.0
+        },
+        truck: {
+          freeSeconds: 3600.0
+        , perMinCharges: 5.0
         }
       }
     }),
@@ -548,6 +560,10 @@ let getAllCityConfig = () => {
         ambulance: {
           freeSeconds: 480,
           perMinCharges: 2.0
+        },
+        truck: {
+          freeSeconds: 3600.0
+        , perMinCharges: 5.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -566,6 +582,10 @@ let getAllCityConfig = () => {
         ambulance: {
           freeSeconds: 480,
           perMinCharges: 2.0
+        },
+        truck: {
+          freeSeconds: 3600.0
+        , perMinCharges: 5.0
         }
       },
       variantSubscriptionConfig: {

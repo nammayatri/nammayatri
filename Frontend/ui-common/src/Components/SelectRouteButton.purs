@@ -1,7 +1,7 @@
 module Components.SelectRouteButton where
 
 import Prelude (Unit, const, ($), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, maxLines, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM)
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils as HU
 import Font.Style as FontStyle
@@ -10,9 +10,12 @@ import Mobility.Prelude (boolToVisibility)
 import Effect (Effect)
 import Font.Style (Style)
 import Styles.Types (Color)
+import Data.Maybe (Maybe(..))
+import Components.SelectableItem as SelectableItem
 
 data Action = NoAction | Click | Select Int String
 
+-- Original config maintained for backward compatibility
 type RouteDisplayConfig = {
     routeNumber :: String
   , routeNumberColor :: Color
@@ -47,107 +50,45 @@ defaultConfig = {
   , padding: Padding 16 16 16 16
   , useHtmlFormatting: false
   , fontSize: FontStyle.Body16
-  , routeFontSize : FontStyle.SubHeading3
+  , routeFontSize: FontStyle.SubHeading3
 }
 
+-- Wrapper that maintains the old API but uses the new component
 view :: forall w. (Action -> Effect Unit) -> RouteDisplayConfig -> PrestoDOM (Effect Unit) w
 view push config = 
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , padding config.padding
-    , cornerRadius config.cornerRadius
-    , margin config.margin
-    , stroke $ "1," <> Colors.grey900
-    , gravity CENTER_VERTICAL
-    , background Colors.white900
-    , onClick push $ const config.onClick
-    ][
-      routeNumberView config
-    , dotSeparator config
-    , routeDetailsView config
-    , chevronView config
-    ]
+  SelectableItem.view 
+    (\action -> case action of
+      SelectableItem.Select idx val -> push (Select idx val)
+      SelectableItem.Click -> push Click
+      _ -> push NoAction)
+    (convertConfig config)
 
-routeNumberView :: forall w. RouteDisplayConfig -> PrestoDOM (Effect Unit) w
-routeNumberView config = 
-  if config.useHtmlFormatting 
-    then textView $ [
-          textFromHtml $ "<span><strong>" <> config.routeNumber <> "</strong></span>"
-        , color Colors.black900
-        , height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , maxLines 2
-        , ellipsize true
-        ] <> (FontStyle.getFontStyle config.routeFontSize LanguageStyle)
-    else textView $ [
-          text config.routeNumber
-        , color config.routeNumberColor
-        ] <> (FontStyle.getFontStyle config.routeFontSize LanguageStyle)
-
-dotSeparator :: forall w. RouteDisplayConfig -> PrestoDOM (Effect Unit) w
-dotSeparator config = 
-  linearLayout [
-    color Colors.black600
-  , margin $ Margin 8 0 8 0
-  , background Colors.black600
-  , gravity CENTER
-  , width $ V 6
-  , height $ V 6
-  , cornerRadius 32.0 
-  , visibility $ boolToVisibility config.showDot
-  ] []
-
-routeDetailsView :: forall w. RouteDisplayConfig -> PrestoDOM (Effect Unit) w
-routeDetailsView config =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , orientation HORIZONTAL
-    , gravity CENTER_VERTICAL
-    , weight 1.0
-    , visibility $ boolToVisibility config.showRouteDetails
-    ][
-      locationText config.sourceName config.fontSize
-    , arrowText config.fontSize
-    , locationText config.destinationName config.fontSize
-    ]
-
-locationText :: forall w. String -> Style -> PrestoDOM (Effect Unit) w
-locationText content fontSize =
-  textView $ [
-      text content
-    , color Colors.black700
-    , ellipsize true
-    , singleLine true
-    , weight 1.0
-    ] <> (FontStyle.getFontStyle fontSize LanguageStyle)
-
-arrowText :: forall w. Style -> PrestoDOM (Effect Unit) w
-arrowText fontSize =
-  textView $ [
-      text " → "
-    , color Colors.black700
-    , ellipsize true
-    , singleLine true
-    , weight 1.0
-    ] <> (FontStyle.getFontStyle fontSize LanguageStyle)
-
-chevronView :: forall w. RouteDisplayConfig -> PrestoDOM (Effect Unit) w
-chevronView config =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity CENTER_VERTICAL
-    , visibility $ boolToVisibility config.showChevron
-    ][
-      imageView
-        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
-        , width $ V 8
-        , height $ V 12
-        , gravity CENTER
-        , layoutGravity "left"
-        , margin $ MarginHorizontal 8 0
-        ]
-    ]
+-- Convert the old config to the new SelectableItem config
+convertConfig :: RouteDisplayConfig -> SelectableItem.SelectableItemConfig
+convertConfig config = 
+  { primaryText: config.routeNumber
+  , primaryTextColor: config.routeNumberColor
+  , secondaryText: if config.showRouteDetails then Just config.sourceName else Nothing
+  , destinationText: if config.showRouteDetails then Just config.destinationName else Nothing
+  , onClick: 
+      case config.onClick of
+        Select idx val -> SelectableItem.Select idx val
+        Click -> SelectableItem.Click
+        _ -> SelectableItem.NoAction
+  , showChevron: config.showChevron
+  , isSelectable: config.isSelectable
+  , isSelected: false
+  , cornerRadius: config.cornerRadius
+  , margin: config.margin
+  , padding: config.padding
+  , useHtmlFormatting: config.useHtmlFormatting
+  , fontSize: config.fontSize
+  , primaryFontSize: config.routeFontSize
+  , leadingIcon: Nothing
+  , trailingIcon: Nothing
+  , backgroundColor: Colors.white900
+  , selectedBackgroundColor: Colors.blue600 
+  , borderColor: Colors.grey900
+  , selectedBorderColor: Colors.blue900
+  , showDot: config.showDot
+  }

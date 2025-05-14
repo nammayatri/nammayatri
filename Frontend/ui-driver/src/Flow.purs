@@ -2625,7 +2625,7 @@ homeScreenFlow = do
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
     checkDriverBlockingStatus getDriverInfoResp globalState.homeScreen.data.config.subscriptionConfig.enableBlocking
     when globalHomeScreenState.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-    when (HU.specialVariantsForTracking FunctionCall && (not $ globalHomeScreenState.props.whereIsMyBusConfig.showSelectAvailableBusRoutes)) do
+    when (HU.specialVariantsForTracking FunctionCall && (not $ globalHomeScreenState.props.whereIsMyBusConfig.linkTripPopup)) do
       let _ = spy "updateBusFleetConfig" globalHomeScreenState
       updateBusFleetConfig globalHomeScreenState
       -- updateRecentBusView 
@@ -3426,8 +3426,7 @@ scanBusQrCode state = do
       void $ lift $ lift $ toggleLoader true
       let response = EHC.atobImpl qrData
       void $ pure $ setValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH response
-      availableRoutes <- Remote.getAvailableRoutesBT response
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props {whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
+      availableRoutes <- Remote.getAvailableRoutesBT (Just response)
       homeScreenFlow
     )
 
@@ -5026,21 +5025,19 @@ educationScreenFlow callback = do
 
 startPrivateBusTrip :: HomeScreenState -> FlowBT String Unit
 startPrivateBusTrip state = do
-  case state.props.whereIsMyBusConfig.selectedRoute of
-    Just selectedRoute@(AvailableRoutes route) -> do
-      let BusVehicleDetails vehicle = route.vehicleDetails
-          RouteInfo routeInfo = route.routeInfo
-          vehicleNumberHash = getValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH
+  case state.props.whereIsMyBusConfig.selectedRoutes, state.props.whereIsMyBusConfig.selectedFleetDriverBadge of
+    Just selectedRoute, Just driverBadge -> do
+      let vehicleNumberHash = getValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH
       location <- getBusDriverCurrentLocation
       void $ lift $ lift $ toggleLoader true
-      response <- lift $ lift $ Remote.startPrivateBusTrip vehicleNumberHash routeInfo.code (fromMaybe 0.0 $ Number.fromString location.lat) (fromMaybe 0.0 $ Number.fromString location.lon)
+      response <- lift $ lift $ Remote.startPrivateBusTrip (Just vehicleNumberHash) (selectedRoute) (fromMaybe 0.0 $ Number.fromString location.lat) (fromMaybe 0.0 $ Number.fromString location.lon) driverBadge state.props.whereIsMyBusConfig.selectedFleetConductor 
       case response of
         Right tripDetails -> do
           logBusRideStart
-          updateScreenForBusRideStart
-          currentRideFlow Nothing Nothing (Just tripDetails) Nothing
+          updateScreenForBusRideStart false
+          currentRideFlow Nothing Nothing Nothing Nothing
         Left error -> handleStartRideError error
-    Nothing -> pure unit
+    _,_ -> pure unit
 
 startBusRide :: HomeScreenState -> Maybe API.TripTransactionDetails -> FlowBT String Unit
 startBusRide state (Just (TripTransactionDetails trip)) = do
@@ -5054,25 +5051,25 @@ startBusRide state (Just (TripTransactionDetails trip)) = do
   case response of
     Right _ -> do
       logBusRideStart
-      updateScreenForBusRideStart
+      updateScreenForBusRideStart true
       currentRideFlow Nothing Nothing Nothing Nothing
     Left error -> handleStartRideError error
 startBusRide state _ = homeScreenFlow
 
-updateScreenForBusRideStart :: FlowBT String Unit
-updateScreenForBusRideStart = do
+updateScreenForBusRideStart :: Boolean -> FlowBT String Unit
+updateScreenForBusRideStart isTripStarted = do
   modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
     { props {
         enterOtpModal = false
       , mapRendered = true
       , whereIsMyBusConfig { 
-          showSelectAvailableBusRoutes = false 
+          linkTripPopup = false 
         }
       }
     }
   void $ pure $ hideKeyboardOnNavigation true
   void $ pure $ JB.exitLocateOnMap ""
-  void $ updateStage $ HomeScreenStage RideTracking
+  when isTripStarted $ void $ updateStage $ HomeScreenStage RideTracking
   void $ lift $ lift $ toggleLoader false
 
 

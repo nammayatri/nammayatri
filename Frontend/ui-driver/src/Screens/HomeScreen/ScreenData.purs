@@ -16,6 +16,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
+import PrestoDOM (Visibility(..))
 import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..), RouteInfo(..), LatLong(..), AvailableRoutes(..), BusVehicleDetails(..), AvailableRoutesList(..))
 import Data.Maybe
 import Foreign.Object (empty)
@@ -205,6 +206,8 @@ initData =
       , bus_number : "" 
       , whereIsMyBusData : { 
           availableRoutes : Nothing,
+          fleetBadgeDrivers : Just dummyFleetBadgeDrivers,
+          fleetConductor : Just dummyFleetBadgeDrivers,
           trip : Nothing, 
           endTripStatus : Nothing,
           lastCompletedTrip : Nothing,
@@ -315,15 +318,46 @@ initData =
       , setBusOnline : false
       , bus_input_data : ""
       , whereIsMyBusConfig : {
-        showSelectAvailableBusRoutes : false,
+        linkTripPopup : false,
         selectRouteStage : false,
         selectedRoute : Nothing,
+        selectBadge : Nothing,
         tripTransactionId : Nothing,
-        selectedIndex : 0
+        dropdownTextFieldConfig : dummyDropdownTextField
+        ,  searchableListConfig : {
+            availableRoutes : [],
+            fleetBadgeDrivers : [],
+            fleetConductor : []
+          }
+        , selectedRoutes : Nothing
+        , selectedFleetDriverBadge : Nothing
+        , selectedFleetConductor : Nothing
+        , selectBusRouteDropdown : false
+        , selectBusDriverDropdown : false
+        , selectBusConductorDropdown : false
+        , badgeSarchString : Nothing
+        , selectedIndex : 0
+        , showLoadMoreForRoutes : false
+        , showLoadMoreForDrivers : false
+        , showLoadMoreForConductors : false
       }
       , showBlockerPopup : false
       }
   }
+
+dummyDropdownTextField = {
+  visibility: GONE,
+  isOpen: false,
+  searchText: "",
+  placeholder: "Search...",
+  options: [],
+  selectedOption: Nothing,
+  isLoading: false,
+  hasMoreOptions: false,
+  offset: 0,
+  limit: 10,
+  listMaxHeight: 150
+}
 
 dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
 
@@ -490,5 +524,5 @@ dummyAvailableRoutes = AvailableRoutes
   , roundRouteCode : Nothing
   }
 
-dummyAvailableRoutesList :: AvailableRoutesList
-dummyAvailableRoutesList = AvailableRoutesList []
+dummyFleetBadgeDrivers :: Array FleetBadgeDrivers
+dummyFleetBadgeDrivers = []

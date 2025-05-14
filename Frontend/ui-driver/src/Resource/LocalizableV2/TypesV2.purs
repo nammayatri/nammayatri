@@ -1861,31 +1861,38 @@ newtype Keymap = Keymap {
   , end_ride_with_stops :: String
   , stop :: String -> String
   , rate_changes_as_the_distance_changes :: String
-    , nammanmeter :: String
-    , press_to_cancel :: String
-    , dist :: String
-    , km :: String
-    , updated_at_ :: String
-    , time :: String
-    , enter_destination :: String
-    , stop_meter :: String
-    , upton2km :: String
-    , meter_running :: String
-    , confirm_meter_stop :: String
-    , package :: String
-    , cancellation_score :: String
-    , safety_score :: String
-    , overcharging_score :: String
-    , you_have_been_unsafe :: String
-    , you_have_been_watchlisted :: String
-    , you_are_safe :: String
-    , safe :: String
-    , watchlisted :: String
-    , unsafe :: String
-    , good_cancellation_score :: String
-    , poor_cancellation_score :: String
-    , good :: String
-    , poor :: String
+  , nammanmeter :: String
+  , press_to_cancel :: String
+  , dist :: String
+  , km :: String
+  , updated_at_ :: String
+  , time :: String
+  , enter_destination :: String
+  , stop_meter :: String
+  , upton2km :: String
+  , meter_running :: String
+  , confirm_meter_stop :: String
+  , package :: String
+  , cancellation_score :: String
+  , safety_score :: String
+  , overcharging_score :: String
+  , you_have_been_unsafe :: String
+  , you_have_been_watchlisted :: String
+  , you_are_safe :: String
+  , safe :: String
+  , watchlisted :: String
+  , unsafe :: String
+  , good_cancellation_score :: String
+  , poor_cancellation_score :: String
+  , good :: String
+  , poor :: String  
+  , bus_driver :: String
+  , bus_conductor :: String
+  , select_bus_driver :: String
+  , select_bus_conductor :: String
+  , select_bus_route :: String
+  , driver_name :: String
+  , link_trip :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7483,3 +7490,23 @@ yes_end_ride = Proxy
 
 canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
 canceling_this_booking_may_affect_the_emergency_medical = Proxy
+bus_driver :: Proxy "bus_driver"
+bus_driver = Proxy
+
+bus_conductor :: Proxy "bus_conductor"
+bus_conductor = Proxy
+
+select_bus_driver :: Proxy "select_bus_driver"
+select_bus_driver = Proxy
+
+select_bus_conductor :: Proxy "select_bus_conductor"
+select_bus_conductor = Proxy
+
+select_bus_route :: Proxy "select_bus_route"
+select_bus_route = Proxy
+
+driver_name :: Proxy "driver_name"
+driver_name = Proxy
+
+link_trip :: Proxy "link_trip"
+link_trip = Proxy

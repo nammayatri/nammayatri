@@ -14,7 +14,9 @@ type Config = {
     destinationStopName :: String,
     busNumber :: String,
     busType :: String,
-    routeNumber :: String
+    driverBadgeName :: String,
+    routeNumber :: String,
+    isPrivateFlow :: Boolean
 }
 
 config :: Config
@@ -23,5 +25,7 @@ config = {
     destinationStopName: "",
     busNumber: "",
     busType: "",
-    routeNumber: ""
+    routeNumber: "",
+    isPrivateFlow : true,
+    driverBadgeName : ""
 }

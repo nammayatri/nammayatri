@@ -18,10 +18,9 @@ import Prelude
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView, singleLine)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig, DropdownAction(..), DropdownConfig(..), DropdownItem(..), RouteInfo(..), dummyDeliveryPrimaryText)
-import PrestoDOM.Properties (lineHeight, cornerRadii)
+import PrestoDOM.Properties (lineHeight, cornerRadii, zIndex)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
-import Common.Styles.Colors as Color
 import Components.TipsView as TipsView
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
@@ -31,12 +30,13 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Timers
 import Animation (fadeIn) as Anim
-import Common.Styles.Colors as Color
+import Common.Styles.Colors as Colors
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
 import Engineering.Helpers.Commons as EHC
+import Components.DropdownTextField.View as DropdownTextField
 import Control.Monad.Trans.Class (lift)
 import Data.Function.Uncurried (runFn5)
 import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
@@ -73,6 +73,10 @@ import Common.Animation.Config (estimateExpandingAnimationConfig)
 import Debug (spy)
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectRouteButton as SelectRouteButton
+import Components.SelectableItems as SelectableItems
+import Components.SelectableItem as SelectableItem
+import Components.SearchableList.View as SearchableListView
+import Components.SearchableList.Controller as SearchableList
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -81,6 +85,7 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
+    , zIndex 2.0
     , accessibility DISABLE
     , background state.backgroundColor
     , afterRender
@@ -114,14 +119,15 @@ view push state =
         ]
      , linearLayout
         [ width MATCH_PARENT
-        , height WRAP_CONTENT
+        , height state.height
         , cornerRadii state.cornerRadius
         , orientation VERTICAL
-        , background Color.white900
+        , background Colors.white900
         , margin state.margin
         , padding state.padding
         , accessibility DISABLE
         , clickable true
+        , onClick push $ const if state.outsideClickable then OutSideClick else NoAction
         ]
         [ linearLayout 
         [  width state.popUpHeaderConfig.width
@@ -362,7 +368,7 @@ view push state =
                     [ text state.headerInfo.text
                     , accessibilityHint state.headerInfo.text
                     , accessibility ENABLE
-                    , color Color.black600
+                    , color Colors.black600
                     , gravity CENTER
                     , width  WRAP_CONTENT 
                     , height WRAP_CONTENT
@@ -406,8 +412,11 @@ view push state =
           ]
         , deliveryView push state
         , parcelDetailsView push state
-        , whereIsMyBusView push state
+        , selectItemsView push state
+        , dropdownTextFieldView push state
+        , searchableListView push state
         , upiView push state
+        , linearLayout[][]
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout
@@ -420,7 +429,16 @@ view push state =
         , case state.layout of
             Just layout -> layout { visibility : VISIBLE }
             Nothing -> textView [ visibility GONE]
-        , linearLayout
+        , 
+        linearLayout[
+            height state.optionsConfig.height
+            , width state.optionsConfig.width
+            , orientation state.optionsConfig.orientation
+            , alignParentBottom state.optionsConfig.alignParentBottom
+            , gravity state.optionsConfig.gravity
+        ] $
+        [
+            linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , gravity CENTER
@@ -463,7 +481,7 @@ view push state =
                         ][ linearLayout
                             [ width MATCH_PARENT
                             , height MATCH_PARENT
-                            , background Color.white200
+                            , background Colors.white200
                             , cornerRadius 8.0
                             ][]
                         ]
@@ -537,6 +555,7 @@ view push state =
                     ]
                 ]
             ]
+        ]
         , linearLayout [
             height state.optionWithHtml.height
             , width  state.optionWithHtml.width
@@ -646,7 +665,7 @@ contactView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin state.contactViewMargin
-    , stroke ("1," <> Color.borderColorLight)
+    , stroke ("1," <> Colors.borderColorLight)
     , padding state.contactViewPadding
     , cornerRadius 8.0
     , visibility state.contactViewConfig.visibility
@@ -659,13 +678,13 @@ contactView push state =
         [ linearLayout
             [ height $ V 24
             , width $ V 24
-            , background Color.yellow900
+            , background Colors.yellow900
             , cornerRadius 12.0
             , gravity CENTER
             ]
             [ textView $
                 [ text state.contactViewConfig.nameInitials
-                , color Color.black800
+                , color Colors.black800
                 ] <> FontStyle.body3 TypoGraphy
             ]
         , linearLayout
@@ -675,7 +694,7 @@ contactView push state =
             ]
             [ textView $
                 [ text state.contactViewConfig.fullName
-                , color Color.black800
+                , color Colors.black800
                 ] <> FontStyle.subHeading1 TypoGraphy
             ]
         ]
@@ -717,7 +736,7 @@ upiView push state =
   , width MATCH_PARENT
   , margin $ MarginTop 16
   , cornerRadius 12.0
-  , background Color.grey700
+  , background Colors.grey700
   , padding $ Padding 12 8 12 8
   , gravity CENTER_VERTICAL
   , visibility state.upiDetailConfig.visibility
@@ -735,11 +754,11 @@ upiView push state =
     , padding $ PaddingBottom $ if ((getLanguageLocale languageKey) == "EN_US") then 4 else 0
     ][textView $
       [ text state.upiDetailConfig.upiID
-      , color Color.black800
+      , color Colors.black800
       ] <> FontStyle.subHeading3 TypoGraphy 
     , textView $
       [ text state.upiDetailConfig.accountName
-      , color Color.black700
+      , color Colors.black700
       , visibility $ boolToVisibility $ hasSecondaryText
       ] <> FontStyle.body23 TypoGraphy 
     ]
@@ -789,14 +808,14 @@ pickupAndDrop push state =
         [
         text $ if state.deliveryDetailsConfig.isSource then getString PICKUP else getString DROP
         , gravity LEFT
-        , color Color.black800
+        , color Colors.black800
         ] <> FontStyle.body3 TypoGraphy,
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
         , margin $ MarginTop 8
-        , background Color.blue600
+        , background Colors.blue600
         , cornerRadius 8.0
         , padding $ Padding 8 12 8 12
         ][
@@ -805,12 +824,12 @@ pickupAndDrop push state =
               , maxLines 1
               , ellipsize true
               , gravity LEFT
-              , color Color.black900
+              , color Colors.black900
               , margin $ MarginBottom 2
               ] <> FontStyle.tags TypoGraphy
             , textView $
               [ text $ state.deliveryDetailsConfig.locationDetails
-              , color Color.black700
+              , color Colors.black700
               , maxLines 1
               , ellipsize true
               , gravity LEFT
@@ -841,7 +860,7 @@ personName push state =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , text $ state.deliveryDetailsConfig.checkBoxDetails.text
-                , color Color.black800
+                , color Colors.black800
                 , margin $ MarginLeft 4
                 ] <> FontStyle.body3 TypoGraphy
         ]
@@ -861,7 +880,7 @@ checkBoxView push state =
         ][ linearLayout
             [ height (V 16)
             , width (V 16)
-            , stroke ("1," <> Color.grey800)
+            , stroke ("1," <> Colors.grey800)
             , cornerRadius 2.0
             ][
             imageView
@@ -903,7 +922,7 @@ dropdownView push config =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text config.label
-    , color Color.black800
+    , color Colors.black800
     , margin $ Margin 0 0 0 8
     ] <> FontStyle.body3 TypoGraphy
   , linearLayout
@@ -938,10 +957,10 @@ dropdownHeader config push =
     , padding $ Padding 16 0 16 0
     , orientation HORIZONTAL
     , onClick push $ const Toggle
-    , background Color.white900
+    , background Colors.white900
     , cornerRadius 8.0
     , gravity CENTER_VERTICAL
-    , stroke $ if config.isOpen then ("1," <> Color.blue800) else ("1," <> Color.grey900)
+    , stroke $ if config.isOpen then ("1," <> Colors.blue800) else ("1," <> Colors.grey900)
     ]
     [ textView $
         [ width WRAP_CONTENT
@@ -950,8 +969,8 @@ dropdownHeader config push =
             Just item -> item.title
             Nothing -> config.placeholder
         , color $ case config.selectedItem of
-            Just item -> Color.black800
-            Nothing -> Color.grey900
+            Just item -> Colors.black800
+            Nothing -> Colors.grey900
         , weight 1.0
         ] <> FontStyle.subHeading1 TypoGraphy
     , imageView
@@ -961,7 +980,7 @@ dropdownHeader config push =
         , imageWithFallback $ if config.isOpen 
             then "ny_ic_chevron_up"
             else "ny_ic_chevron_down"
-        , color Color.black800
+        , color Colors.black800
         ]
     ]
 
@@ -971,10 +990,10 @@ dropdownItems config push =
     [ width MATCH_PARENT
     , height $ V 250 
     , visibility $ boolToVisibility config.isOpen
-    , background Color.white900
+    , background Colors.white900
     , cornerRadius 8.0
     , margin $ MarginTop 8
-    , stroke ("1," <> Color.blue800)
+    , stroke ("1," <> Colors.blue800)
     ][
         linearLayout
         [ width MATCH_PARENT
@@ -993,20 +1012,20 @@ dropdownItems config push =
                 , orientation VERTICAL
                 , padding $ Padding 16 12 16 12
                 , onClick push $ const $ (SelectItem item)
-                , rippleColor Color.grey900
+                , rippleColor Colors.grey900
                 ]
                 [ textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text item.title
-                , color Color.black900
+                , color Colors.black900
                 ] <> FontStyle.body6 TypoGraphy
                 , if item.subtitle /= "" then
                     textView $
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , text item.subtitle
-                    , color Color.black700
+                    , color Colors.black700
                     , margin $ MarginTop 2
                     ] <> FontStyle.body3 TypoGraphy
                 else
@@ -1016,7 +1035,7 @@ dropdownItems config push =
                     linearLayout
                     [ width MATCH_PARENT
                     , height (V 1)
-                    , background Color.grey900
+                    , background Colors.grey900
                     , margin (Margin 16 0 16 0)
                     ][]
                 else
@@ -1025,115 +1044,40 @@ dropdownItems config push =
     ]
 
 
-whereIsMyBusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-whereIsMyBusView push state =
+
+selectItemsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+selectItemsView push state = 
     linearLayout
-    [ height WRAP_CONTENT,
-      width MATCH_PARENT,
-      orientation VERTICAL,
-      visibility state.whereIsMyBusConfig.visibility
-    ][
-        busInfo push state,
-        selectAvailableBusRoutes push state
-    ]
-
-busInfo :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-busInfo push state = 
-    linearLayout
-    [ height WRAP_CONTENT,
-    width MATCH_PARENT,
-    orientation VERTICAL,
-    visibility $ boolToVisibility $ not state.whereIsMyBusConfig.selectRouteStage 
-    ][
-        busNumber push state,
-        busType push state,
-        selectRoute push state
-    ]
-
-busNumber :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-busNumber push state = PrimaryEditText.view (push <<< BusNumber) $ state.whereIsMyBusConfig.busNumber
-
-busType :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-busType push state = PrimaryEditText.view (push <<< BusType) $ state.whereIsMyBusConfig.busType
-
-selectRoute :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-selectRoute push state =
-    let isRouteSelected = state.whereIsMyBusConfig.isRouteSelected
-    in
-    linearLayout
-    [ height WRAP_CONTENT,
-    width MATCH_PARENT,
-    orientation VERTICAL,
-    margin $ MarginBottom 24
-    ][
-        textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text $ state.whereIsMyBusConfig.routeNumberLabel
-        , color Color.black800
-        , margin $ MarginBottom 8
-        ] <> FontStyle.body3 TypoGraphy,
-        SelectRouteButton.view (push <<< SelectRouteButton) $ SelectRouteButton.defaultConfig {
-            routeNumber = state.whereIsMyBusConfig.selectRouteButton.busRouteNumber
-            , sourceName = state.whereIsMyBusConfig.selectRouteButton.sourceText
-            , destinationName = state.whereIsMyBusConfig.selectRouteButton.destination
-            , onClick = SelectRouteButton.Click
-            , showChevron = true
-            , routeNumberColor = if isRouteSelected then Color.black900 else Color.grey900
-            , useHtmlFormatting = false
-            , showDot = isRouteSelected
-            , showRouteDetails = isRouteSelected
-            , padding = Padding 20 16 20 16
-            , fontSize = FontStyle.Body16
-            }
-    ]
-
-selectAvailableBusRoutes :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-selectAvailableBusRoutes push state = 
-    linearLayout
-    [ height WRAP_CONTENT,
-    width MATCH_PARENT,
-    orientation VERTICAL,
-    visibility $ boolToVisibility $ state.whereIsMyBusConfig.selectRouteStage 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , visibility $ state.selectableItemsConfig.visibility 
     ][
         scrollView
         [ height $ V (screenHeight unit - 400)
         , width MATCH_PARENT
         ]
         [
-            routeList push state.whereIsMyBusConfig.availableRouteList
+            SelectableItems.view (push <<< SelectableItemsController) state.selectableItemsConfig
         ]
     ]
 
-routeList :: forall w. (Action -> Effect Unit) -> Array RouteInfo -> PrestoDOM (Effect Unit) w
-routeList push routeList =
-    linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , gravity CENTER_HORIZONTAL
-    , margin $ MarginTop 16
-    ] $ ( mapWithIndex (\index item -> routeItem push item index (length routeList)) routeList )
+dropdownTextFieldView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+dropdownTextFieldView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , visibility state.dropdownTextFieldConfig.visibility
+  ][
+    DropdownTextField.view (push <<< DropdownTextFieldAction) state.dropdownTextFieldConfig
+  ]
 
-routeItem :: forall w. (Action -> Effect Unit) -> RouteInfo -> Int -> Int -> PrestoDOM (Effect Unit) w
-routeItem push route index len = 
+searchableListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+searchableListView push state =
     linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , cornerRadius 8.0
-    , margin $ if index == len - 1 then Margin 0 0 0 32 else Margin 0 0 0 16
-    , gravity CENTER
-    ] [ 
-        SelectRouteButton.view (push <<< SelectRoute) $ SelectRouteButton.defaultConfig {
-            routeNumber = route.busRouteNumber
-            , sourceName = route.sourceText
-            , destinationName = route.destination
-            , onClick = SelectRouteButton.Select index route.busRouteNumber
-            , showChevron = false
-            , useHtmlFormatting = false
-            , padding = Padding 20 16 20 16
-            , fontSize = FontStyle.Body16
-            }
+    [
+        height WRAP_CONTENT,
+        width MATCH_PARENT
+    ][
+        SearchableListView.view (push <<< SearchableListAction) state.searchableListConfig 
     ]
-  

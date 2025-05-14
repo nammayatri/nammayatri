@@ -1872,4 +1872,11 @@ getTe =
     , poor_cancellation_score : "మీ రద��దు స్కోర్ ఖారాబిస్తుంది"
     , good : "ఉత్తమంగా"
     , poor : "ఖారాబిస్తుంది"
+    , bus_driver: "బస్ డ్రైవర్"
+    , bus_conductor: "బస్ కండక్టర్"
+    , select_bus_driver: "బస్ డ్రైవర్‌ను ఎంచుకోండి"
+    , select_bus_conductor: "బస్ కండక్టర్‌ను ఎంచుకోండి"
+    , select_bus_route: "బస్ మార్గాన్ని ఎంచుకోండి"
+    , link_trip: "ప్రయాణాన్ని లింక్ చేయండి"
+    , driver_name: "డ్రైవర్ పేరు"
     }

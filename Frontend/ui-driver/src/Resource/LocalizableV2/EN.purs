@@ -1872,4 +1872,11 @@ getEn =
     , poor_cancellation_score : "Your cancellation\nscore is poor"
     , good : "Good"
     , poor : "Poor"
+    , bus_driver: "Bus Driver"
+    , bus_conductor: "Bus Conductor"
+    , select_bus_driver: "Select Bus Driver"
+    , select_bus_conductor: "Select Bus Conductor"
+    , select_bus_route: "Select Bus Route"
+    , link_trip: "Link Trip"
+    , driver_name: "Driver Name"
     }
