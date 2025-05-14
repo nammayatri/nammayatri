@@ -178,6 +178,7 @@ types:
 
   UpdatePaymentOrderReq:
     quantity: Int
+    childTicketQuantity: Int
 
   UpdatePaymentOrderResp:
     sdkPayload: Maybe SDKPayloadDetails
