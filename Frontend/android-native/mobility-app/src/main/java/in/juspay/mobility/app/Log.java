@@ -142,6 +142,7 @@ public class Log {
             StringBuilder sb = new StringBuilder();
             sb.append("[logTime: ").append(logTime).append("] ");
             sb.append("[writeTime: ").append(writeTime).append("] ");
+            sb.append("[packageName: ").append(appContext.getPackageName()).append("] ");
             sb.append(level).append("/").append(tag).append(": ").append(message);
             if (throwable != null) {
                 sb.append("\n").append(android.util.Log.getStackTraceString(throwable));
