@@ -86,6 +86,7 @@ function getNammaYatriConfig() {
       "primaryTextColor": "#FCC32C",
       "primaryBackground": "#2C2F3A",
       "showCorporateAddress" : true,
+      "showRegisteredAddress" : true,
       "imageUploadOptional" : false,
       "BONUS_EARNED" : "true",
       "clientName" : "Namma Yatri",
@@ -321,7 +322,7 @@ function getNammaYatriConfig() {
               "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
               "acAudio" : "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
             },
-  
+
             "auto" : {},
             "bike" : {}
           }
@@ -346,7 +347,7 @@ function getNammaYatriConfig() {
           "enableYatriCoins": false,
           "vehicleNSImg": "ny_ic_auto_image",
           "registration": {
-            "supportWAN": "918618963188",
+            "supportWAN" : "919008021095",
             "callSupport": true,
             "whatsappSupport": false
           },
@@ -1616,7 +1617,7 @@ function getNammaYatriConfig() {
           "enableYatriCoins" : true,
           "vehicleNSImg" : "ny_ic_auto_image",
           "registration" : {
-              "supportWAN" : "918618963188",
+              "supportWAN" : "919008021095",
               "callSupport" : true,
               "whatsappSupport" : true
           },
@@ -2340,7 +2341,7 @@ function getNammaYatriConfig() {
           "enableYatriCoins": false,
           "vehicleNSImg": "ny_ic_auto_image",
           "registration": {
-            "supportWAN": "918618963188",
+            "supportWAN" : "919008021095",
             "callSupport": true,
             "whatsappSupport": false
           },
@@ -2415,7 +2416,7 @@ function getNammaYatriConfig() {
           "enableYatriCoins": false,
           "vehicleNSImg": "ny_ic_auto_image",
           "registration": {
-            "supportWAN": "918618963188",
+            "supportWAN" : "919008021095",
             "callSupport": true,
             "whatsappSupport": false
           },
@@ -3161,7 +3162,7 @@ function getNammaYatriConfig() {
             "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
           }
         },
-  
+
         {
           "cityName" : "Bidar",
           "mapImage" : "ny_ic_location_map",
@@ -3579,12 +3580,13 @@ function getKeralaSavaariConfig() {
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
-    "showCorporateAddress" : true,
+    "showCorporateAddress" : false,
+    "showRegisteredAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
     "clientName" : "Namma Yatri",
     "languageList" : [
-      {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"},
+      {"name":"English","value":"EN_US", "subtitle": "ഇംഗ്ലീഷ്"},
       {"name":"മലയാളം","value": "ML_IN", "subtitle": "Malayalam"},
       {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
     ],
@@ -3620,7 +3622,7 @@ function getKeralaSavaariConfig() {
       "REGISTERED_ADDRESS_DESCRIPTION" : "Office of Labour Commissioner, Government of Kerala Labour Commissionerate, Thozhil Bhavan (Labour Complex),Thiruvananthapuram, Kerala 695033",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "MY_PLAN_TITLE" : "കേരള സവാരി പദ്ധതികൾ",
-      "SHARE_NAMMA_YATRI" : "Share Kerala Savaari", 
+      "SHARE_NAMMA_YATRI" : "Share Kerala Savaari",
       "SHARE_NAMMA_YATRI_MESSAGE" : "Experience Kerala’s first Zero Commission ride-booking app—initiated by the Kerala Government.✅ 100% Open Source | ✅ 100% Open Data"
     },
     "hindiStrings": {
@@ -3637,9 +3639,9 @@ function getKeralaSavaariConfig() {
       "REGISTERED_ADDRESS_DESCRIPTION" : "Office of Labour Commissioner, Government of Kerala Labour Commissionerate, Thozhil Bhavan (Labour Complex),Thiruvananthapuram, Kerala 695033",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "MY_PLAN_TITLE" : "केरल सवारी योजनाएं",
-      "SHARE_NAMMA_YATRI" : "Share Kerala Savaari", 
+      "SHARE_NAMMA_YATRI" : "Share Kerala Savaari",
       "SHARE_NAMMA_YATRI_MESSAGE" : "Experience Kerala’s first Zero Commission ride-booking app—initiated by the Kerala Government.✅ 100% Open Source | ✅ 100% Open Data"
-    },    
+    },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
@@ -3829,7 +3831,7 @@ function getKeralaSavaariConfig() {
         "enableYatriCoins": false,
         "vehicleNSImg": "ny_ic_auto_image",
         "registration": {
-          "supportWAN": "918618963188",
+          "supportWAN" : "919008021095",
           "callSupport": true,
           "whatsappSupport": false
         },
@@ -5099,7 +5101,7 @@ function getKeralaSavaariConfig() {
         "enableYatriCoins" : true,
         "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
-            "supportWAN" : "918618963188",
+            "supportWAN" : "919008021095",
             "callSupport" : true,
             "whatsappSupport" : true
         },
@@ -5823,7 +5825,7 @@ function getKeralaSavaariConfig() {
         "enableYatriCoins": false,
         "vehicleNSImg": "ny_ic_auto_image",
         "registration": {
-          "supportWAN": "918618963188",
+          "supportWAN" : "919008021095",
           "callSupport": true,
           "whatsappSupport": false
         },
@@ -5898,7 +5900,7 @@ function getKeralaSavaariConfig() {
         "enableYatriCoins": false,
         "vehicleNSImg": "ny_ic_auto_image",
         "registration": {
-          "supportWAN": "918618963188",
+          "supportWAN" : "919008021095",
           "callSupport": true,
           "whatsappSupport": false
         },
