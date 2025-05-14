@@ -57,7 +57,7 @@ import Data.String.CodeUnits (fromCharArray, toCharArray, splitAt)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
-import DecodeUtil (stringifyJSON, removeFromWindow)
+import DecodeUtil (stringifyJSON, removeFromWindow, setInWindow)
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
@@ -230,6 +230,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       let bundle = getVersionByKey "app"
           config = getVersionByKey "configuration"
           driverId = (getValueToLocalStore DRIVER_ID)
+          _ = runFn2 setInWindow "DRIVER_ID" driverId
           appSessionCount = getValueToLocalStore APP_SESSION_TRACK_COUNT
           movedToOfflineDate = getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
       versionName <- lift $ lift $ liftFlow $ getVersionName
@@ -456,6 +457,7 @@ enterOTPFlow mbEvent = do
           void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
           pure unit
       setValueToLocalStore DRIVER_ID driverId
+      let _ = runFn2 setInWindow "DRIVER_ID" driverId
       void $ liftFlowBT $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
       if (getValueToLocalStore REFERRER_URL) == "__failed" then
