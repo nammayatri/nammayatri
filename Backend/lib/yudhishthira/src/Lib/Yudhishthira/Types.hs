@@ -68,6 +68,7 @@ module Lib.Yudhishthira.Types
     CreateConfigRequest (..),
     PlatformType (..),
     ConfigHistory (..),
+    UiConfigGetVersionResponse (..),
   )
 where
 
@@ -601,7 +602,14 @@ data UiConfigRequest = UiConfigRequest
 data UiConfigResponse = UiConfigResponse
   { config :: Value,
     version :: Maybe Text,
+    baseVersion :: Maybe Text,
     isExperimentRunning :: Bool
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UiConfigGetVersionResponse = UiConfigGetVersionResponse
+  { version :: Maybe Text,
+    baseVersion :: Maybe Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

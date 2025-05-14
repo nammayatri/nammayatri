@@ -29,6 +29,7 @@ imports:
   ConfigDetailsResp: Lib.Yudhishthira.Types
   TableDataResp: Lib.Yudhishthira.Types
   ActionChangeRequest: Lib.Yudhishthira.Types
+  UiConfigGetVersionResponse: Lib.Yudhishthira.Types
 
 
 module: NammaTag
@@ -208,7 +209,7 @@ apis:
       request:
         type: UiConfigRequest
       response:
-        type: Text
+        type: UiConfigGetVersionResponse
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION
   - POST:
