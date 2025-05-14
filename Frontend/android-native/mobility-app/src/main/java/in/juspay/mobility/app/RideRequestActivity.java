@@ -228,17 +228,21 @@ public class RideRequestActivity extends AppCompatActivity {
                     );
             if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
                 mediaPlayerExecutor.execute(() -> {
-                    if (currentMediaIndex == -1) {
-                        currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
-                    }
-                    if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || (!currentMediaPlayer.isPlaying()))) {
-                        currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                        if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
-                            currentMediaPlayer.start();
+                    try {
+                        if (currentMediaIndex == -1) {
+                            currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
                         }
-                        if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")) {
-                            increaseVolume(context);
+                        if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || (!currentMediaPlayer.isPlaying()))) {
+                            currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                            if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                                currentMediaPlayer.start();
+                            }
+                            if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")) {
+                                increaseVolume(context);
+                            }
                         }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 });
             }
