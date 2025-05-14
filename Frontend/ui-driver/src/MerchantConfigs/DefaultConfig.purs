@@ -1189,6 +1189,7 @@ config =
   , enableInterOperability : true
   }
   , showCorporateAddress : false
+  , showRegisteredAddress : false
   , engilshInNative: "English"
   , allowAllMobileNumber: false
   , vehicle : {

@@ -28,7 +28,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
+import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor)
 import Prim.TypeError (Above)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
@@ -193,7 +193,7 @@ applicationInformationLayout state push =
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
+        , visibility if state.appConfig.showCorporateAddress || state.appConfig.showRegisteredAddress then VISIBLE else GONE
         ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
@@ -251,12 +251,20 @@ horizontalLine marginLeft marginRight =
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state =
-  [ { title: (getString $ CORPORATE_ADDRESS "CORPORATE_ADDRESS")
-    , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
-    , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
-    }
-  , { title: (getString $ REGISTERED_ADDRESS "REGISTERED_ADDRESS")
-    , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
-    , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
-    }
-  ]
+  []
+    <> (if state.appConfig.showCorporateAddress then
+        [ { title: (getString $ CORPORATE_ADDRESS "CORPORATE_ADDRESS")
+          , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+          , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
+          }
+        ]
+      else
+        [])
+    <> (if state.appConfig.showRegisteredAddress then
+        [ { title: (getString $ REGISTERED_ADDRESS "REGISTERED_ADDRESS")
+          , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+          , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
+          }
+        ]
+      else
+        [])

@@ -23,6 +23,7 @@ window.getMerchantConfig = function () {
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : true,
+    "showRegisteredAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
     "clientName" : "Yatri",
@@ -219,8 +220,8 @@ window.getMerchantConfig = function () {
       "subscription" :
         { "isVisible" : true
         },
-        "referral" : 
-        { 
+        "referral" :
+        {
           "showNew" : true
         }
     },
@@ -310,7 +311,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, 
+        "callDriverInfoPost": false,
         "cityLat" : 17.402113,
         "cityLong" : 78.499827,
         "supportNumber" : "+918069724900",
@@ -350,7 +351,7 @@ window.getMerchantConfig = function () {
              },
              "bike" : {
                "freeSeconds" : 300,
-               "perMinCharges" : 1.0 
+               "perMinCharges" : 1.0
              },
              "ambulance" : {
                "freeSeconds" : 480,
@@ -359,12 +360,12 @@ window.getMerchantConfig = function () {
            },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",        
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
           "empty_referral_auto" : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png" 
+          "empty_referral_cab" : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
         },
         "enableHvSdk" : false,
         "purpleRideConfig" : {
@@ -397,7 +398,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, 
+        "callDriverInfoPost": false,
         "cityLat" : 17.967432,
         "cityLong" : 79.588875,
         "supportNumber" : "+918069724900",
@@ -446,7 +447,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -540,7 +541,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -648,7 +649,7 @@ window.getMerchantConfig = function () {
       , "rideStartAudio" : defaultStartAudioConfig
       },
       {
-        "cityName" : "Delhi", 
+        "cityName" : "Delhi",
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
         "showSubscriptions" : false,
@@ -704,7 +705,7 @@ window.getMerchantConfig = function () {
          },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",         
+      "gstPercentage" :  "18",
          "assets" :{
            "auto_image" : "ic_auto_rickshaw",
            "onboarding_auto_image" : "ny_ic_auto_side",
@@ -791,7 +792,7 @@ window.getMerchantConfig = function () {
          },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",         
+      "gstPercentage" :  "18",
          "assets" :{
            "auto_image" :  "ny_ic_black_yellow_auto_side_view",
            "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -861,7 +862,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -931,7 +932,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1071,7 +1072,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1141,7 +1142,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1211,7 +1212,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1281,7 +1282,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" : {
           "auto_image" : "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1332,7 +1333,7 @@ window.getMerchantConfig = function () {
         "enableYatriCoins" : false,
         "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
-            "supportWAN" : "918618963188",
+            "supportWAN" : "919008021095",
             "callSupport" : true,
             "whatsappSupport" : false
         },
@@ -1352,7 +1353,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black",
@@ -1439,7 +1440,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side",
@@ -1526,7 +1527,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",        
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side",
@@ -1576,7 +1577,7 @@ window.getMerchantConfig = function () {
         "enableYatriCoins": false,
         "vehicleNSImg": "ny_ic_auto_image",
         "registration": {
-          "supportWAN": "918618963188",
+          "supportWAN" : "919008021095",
           "callSupport": true,
           "whatsappSupport": false
         },
@@ -1596,7 +1597,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -1646,7 +1647,7 @@ window.getMerchantConfig = function () {
         "enableYatriCoins": false,
         "vehicleNSImg": "ny_ic_auto_image",
         "registration": {
-          "supportWAN": "918618963188",
+          "supportWAN" : "919008021095",
           "callSupport": true,
           "whatsappSupport": false
         },
@@ -1666,7 +1667,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",        
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -1716,7 +1717,7 @@ window.getMerchantConfig = function () {
         "enableYatriCoins": false,
         "vehicleNSImg": "ny_ic_auto_image",
         "registration": {
-          "supportWAN": "918618963188",
+          "supportWAN" : "919008021095",
           "callSupport": true,
           "whatsappSupport": false
         },

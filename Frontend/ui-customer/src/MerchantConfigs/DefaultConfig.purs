@@ -134,6 +134,7 @@ config =
   , merchantLogo : "ic_launcher,https://assets.moving.tech/beckn/common/user/ny_ic_launcher.png"
   , logs: [ "JUSPAY" ]
   , showCorporateAddress : true
+  , showRegisteredAddress : true
   , terminateBtnConfig : {
           visibility: false, 
           title : "",
