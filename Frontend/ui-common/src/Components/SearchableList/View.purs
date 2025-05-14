@@ -12,7 +12,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Mobility.Prelude (boolToVisibility)
 import Font.Style as FontStyle
 import Components.SelectRouteButton as SelectRouteButton
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint, background, weight, clickable, color, cornerRadius, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, maxHeight, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, alpha, editText, hint, hintColor, onChange, onFocus)
 
@@ -85,7 +85,7 @@ optionsListView push state =
   ]
   [
     scrollView
-    [ height $ V (screenHeight unit - 400)
+    [ height $ V $ min (screenHeight unit - 500) ((length state.optionsList) * 85)
     , width MATCH_PARENT
     ]
     [
@@ -151,7 +151,7 @@ defaultOptionItemView push state option index =
       [ text option.label
       , width MATCH_PARENT
       , height WRAP_CONTENT
-      , color $ if option.isSelected then "#FFFFFF" else "#000000"
+      , color $ if option.isSelected then Color.white900 else Color.black
       ] <> FontStyle.body1 TypoGraphy
     ],
     -- Check mark for selected item
@@ -174,7 +174,7 @@ emptyStateView =
   [
     textView $
     [ text "No options available"
-    , color "#757575" -- Gray text
+    , color Color.grey800
     ] <> FontStyle.body2 TypoGraphy
   ]
 
@@ -193,7 +193,7 @@ loadMoreView push state =
     linearLayout
     [ height $ V 40
     , width MATCH_PARENT
-    , background "#EEEEEE"
+    , background Color.grey900
     , cornerRadius 8.0
     , gravity CENTER
     , onClick push $ const LoadMoreOptions
@@ -202,7 +202,7 @@ loadMoreView push state =
     [
       textView $
       [ text $ if state.isLoading then "Loading..." else "Load More"
-      , color "#424242"
+      , color Color.black800
       ] <> FontStyle.body2 TypoGraphy
     ]
   ] 
