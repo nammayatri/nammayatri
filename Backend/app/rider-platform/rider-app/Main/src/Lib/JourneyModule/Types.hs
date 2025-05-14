@@ -380,12 +380,13 @@ data BookingData = BookingData
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
     cmrl :: [BookingData],
-    mtc :: [BookingData]
+    mtc :: [BookingData],
+    cris :: [BookingData]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data Provider = CMRL | MTC | DIRECT
+data Provider = CMRL | MTC | DIRECT | CRIS
   deriving (Eq, Show)
 
 data IsCancellableResponse = IsCancellableResponse

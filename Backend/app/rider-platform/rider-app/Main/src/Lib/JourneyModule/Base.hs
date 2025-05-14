@@ -662,22 +662,25 @@ cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `el
 getUnifiedQR :: [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
 getUnifiedQR legs = do
   let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
-  let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL || provider == providerToText JL.DIRECT]
-  let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC || provider == providerToText JL.DIRECT]
-  if null cmrlBookings && null mtcBookings
+  let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL]
+  let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC]
+  let crisBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CRIS]
+  if null cmrlBookings && null mtcBookings && null crisBookings
     then Nothing
     else
       Just $
         JL.UnifiedTicketQR
           { version = "1.0",
             cmrl = cmrlBookings,
-            mtc = mtcBookings
+            mtc = mtcBookings,
+            cris = crisBookings
           }
 
 providerToText :: JL.Provider -> Text
 providerToText JL.CMRL = "Chennai Metro Rail Limited"
 providerToText JL.MTC = "Buses"
 providerToText JL.DIRECT = "Direct Multimodal Services"
+providerToText JL.CRIS = "CRIS Subway"
 
 getTickets :: JL.LegInfo -> Maybe (Text, JL.BookingData)
 getTickets leg =
@@ -685,6 +688,7 @@ getTickets leg =
     case leg.legExtraInfo of
       JL.Metro info -> processTickets JL.CMRL info.tickets info.providerName
       JL.Bus info -> processTickets JL.MTC info.tickets info.providerName
+      JL.Subway info -> processTickets JL.CRIS info.tickets info.providerName
       _ -> Nothing
   where
     processTickets :: JL.Provider -> Maybe [Text] -> Maybe Text -> Maybe (Text, JL.BookingData)
@@ -694,7 +698,7 @@ getTickets leg =
       if (provider == providerToText expectedProvider || provider == providerToText JL.DIRECT) && not (null tickets)
         then
           Just
-            ( provider,
+            ( providerToText expectedProvider,
               JL.BookingData
                 { ticketData = tickets
                 }
