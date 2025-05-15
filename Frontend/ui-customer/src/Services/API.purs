@@ -501,6 +501,7 @@ newtype OneWaySearchReq = OneWaySearchReq {
   sessionToken :: Maybe String,
   isSpecialLocation :: Maybe Boolean,
   startTime :: Maybe String,
+  initialSourceLatLong :: Maybe LatLong,
   quotesUnifiedFlow :: Maybe Boolean,
   rideRequestAndRideOtpUnifiedFlow :: Maybe Boolean
 }
