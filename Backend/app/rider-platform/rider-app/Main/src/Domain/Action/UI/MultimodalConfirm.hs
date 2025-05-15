@@ -244,20 +244,16 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
                 orderShortId = order.shortId.getShortId
               }
       _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking person.clientSdkVersion updateReq
-      mbUpdatedOrder <- QOrder.updateAmount order.id totalFare
-      logDebug $ "mbUpdatedOrder: " <> show mbUpdatedOrder
-      case mbUpdatedOrder of
-        Nothing ->
-          return $
-            ApiTypes.UpdatePaymentOrderResp
-              { sdkPayload = Nothing
-              }
-        Just updatedOrder -> do
-          sdkPayload <- buildUpdateOrderSDKPayload totalFare updatedOrder
-          return $
-            ApiTypes.UpdatePaymentOrderResp
-              { sdkPayload = sdkPayload
-              }
+      QOrder.updateAmount order.id totalFare
+      let updatedOrder :: DOrder.PaymentOrder
+          updatedOrder = order {DOrder.amount = totalFare}
+      logDebug $ "updatedOrder: " <> show updatedOrder
+      sdkPayload <- buildUpdateOrderSDKPayload totalFare updatedOrder
+      logDebug $ "sdkPayload: " <> show sdkPayload
+      return $
+        ApiTypes.UpdatePaymentOrderResp
+          { sdkPayload = sdkPayload
+          }
 
 buildUpdateOrderSDKPayload :: EncFlow m r => HighPrecMoney -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayloadDetails)
 buildUpdateOrderSDKPayload amount order = do
