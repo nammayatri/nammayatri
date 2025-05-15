@@ -71,6 +71,7 @@ import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import Storage.Queries.IntegratedBPPConfig as IBC
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
 import qualified Storage.Queries.RouteStopMapping as QRSM
@@ -655,6 +656,22 @@ mergeFFRFSRouteDetails routeDetails = do
             endStationCode = lastRouteDetails.endStationCode
           }
     _ -> Nothing
+
+getRouteByStationIdsAndIntegratedBPPConfigId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Id Station.Station -> Id Station.Station -> Maybe (Id DIBC.IntegratedBPPConfig) -> m (Maybe RouteStopInfo)
+getRouteByStationIdsAndIntegratedBPPConfigId fromStationId toStationId integratedBPPConfigId = do
+  fromStation <- CQS.findById fromStationId >>= fromMaybeM (StationNotFound $ "from station not found with id: " +|| fromStationId.getId ||+ "")
+  toStation <- CQS.findById toStationId >>= fromMaybeM (StationNotFound $ "from station not found with id: " +|| toStationId.getId ||+ "")
+  integratedBPPConfig <- case (integratedBPPConfigId) of
+    Just integratedBppConfigId -> do
+      IBC.findById integratedBppConfigId >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+    Nothing -> do
+      QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) fromStation.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory fromStation.vehicleType) DIBC.APPLICATION
+        >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| fromStation.merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory fromStation.vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  routeInfo' <- getPossibleRoutesBetweenTwoStops fromStation.code toStation.code integratedBPPConfig
+  let routeInfo = listToMaybe routeInfo'
+  case routeInfo of
+    Just a -> pure $ Just a
+    Nothing -> pure Nothing
 
 partnerOrgRiderId :: Id DP.Person
 partnerOrgRiderId = Id "partnerOrg_rider_id"

@@ -12,9 +12,11 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.Route as Beam
+import qualified Storage.Queries.Transformers.ProviderDetails
 
 instance FromTType' Beam.Route Domain.Types.Route.Route where
   fromTType' (Beam.RouteT {..}) = do
+    providerDetails' <- Storage.Queries.Transformers.ProviderDetails.getProviderDetailsMaybe configJSON
     pure $
       Just
         Domain.Types.Route.Route
@@ -28,6 +30,7 @@ instance FromTType' Beam.Route Domain.Types.Route.Route where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             polyline = polyline,
+            providerDetails = providerDetails',
             shortName = shortName,
             startPoint = Kernel.External.Maps.Types.LatLong startLat startLon,
             stopCount = stopCount,
@@ -51,6 +54,7 @@ instance ToTType' Beam.Route Domain.Types.Route.Route where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.polyline = polyline,
+        Beam.configJSON = Storage.Queries.Transformers.ProviderDetails.getProviderDetailsJson <$> providerDetails,
         Beam.shortName = shortName,
         Beam.startLat = (.lat) startPoint,
         Beam.startLon = (.lon) startPoint,

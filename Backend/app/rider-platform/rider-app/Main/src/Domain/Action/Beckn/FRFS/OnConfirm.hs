@@ -50,6 +50,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified SharedLogic.FRFSUtils as FUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -306,7 +307,9 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
           { TC._type = show GWSA.QR_CODE,
             TC.value = ticket.qrData
           }
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId fromStation.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  routeInfo <- FUtils.getRouteByStationIdsAndIntegratedBPPConfigId fromStation.id toStation.id booking.integratedBppConfigId
+  let routeId = routeInfo <&> (.route.id)
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId fromStation.merchantOperatingCityId routeId >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName
   let istTimeText = GWSA.showTimeIst ticket.validTill
   let textModuleTicketNumber = TC.TextModule {TC._header = "Ticket number", TC.body = ticket.ticketNumber, TC.id = "myfield1"}
