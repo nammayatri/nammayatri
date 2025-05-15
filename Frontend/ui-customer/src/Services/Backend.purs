@@ -377,13 +377,14 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> Number -> Number -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation locateOnMapLat locateOnMapLng = -- check this for rentals
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq 
         { "contents" : OneWaySearchRequest 
             ( OneWaySearchReq
                 { "startTime" : Just startTime
+                , "initialSourceLatLong" : Just (LatLong {lat : locateOnMapLat, lon : locateOnMapLng})   -- Adding this for analytics purpose,  to check deviations of distance to intial source lat long to pickup lat long (our origin) to check how much the source is moved by pin point 
                 , "destination" : SearchReqLocation 
                     { "gps" : LatLong 
                         { "lat" : dlat 

@@ -2770,7 +2770,7 @@ rideSearchRequestFlow updatedState = do
     isRoundTrip = state.props.searchLocationModelProps.tripType == ROUND_TRIP
     returnTimeUTC = if isRoundTrip then (Just state.data.returnTimeUTC) else Nothing
   let searchReq = if (state.data.fareProductType == FPT.INTER_CITY) then Remote.makeRoundTripReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC returnTimeUTC isRoundTrip
-                  else Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone
+                  else Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
   (SearchRes rideSearchRes) <- Remote.rideSearchBT $ searchReq
   void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig)
@@ -3062,7 +3062,7 @@ rideSearchFlow flowType = do
               ]
         let
           startTimeUTC = if (finalState.data.fareProductType == FPT.INTER_CITY && finalState.data.startTimeUTC /= "") then finalState.data.startTimeUTC else (getCurrentUTC "")
-        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone)
+        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone finalState.props.locateOnMapLocation.sourceLat finalState.props.locateOnMapLocation.sourceLng)
         void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
         void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
         void $ liftFlowBT
