@@ -249,6 +249,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = RiderJobType.PostRideSafetyNotification, mapValue = False }
       , { mapKey = RiderJobType.UpdateCrisUtsData, mapValue = True }
+      , { mapKey = RiderJobType.MetroBusinessHour, mapValue = True }
       ]
 
 let cacConfig =
