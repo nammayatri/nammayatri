@@ -1,3 +1,7 @@
+const {
+  JBridge
+} = window;
+
 const nestJSON = function (original) {
   const nested = {};
 
@@ -46,6 +50,7 @@ export const endMeasuringDuration = function (key) {
 
 export const getEvents = function () {
   try {
+    window.user_id = window.user_id || JBridge.getFromSharedPrefs("CUSTOMER_ID");
     if (typeof window === "object") {
       if (window.Aggregate && !window.Aggregate.pushOnce) {
         window.events.Aggregate = window.Aggregate;
@@ -61,6 +66,7 @@ export const getEvents = function () {
         sdkVersion: window.__payload.sdkVersion,
         service: window.__payload.service,
         sessionId: window.session_id,
+        userId: window.user_id,
       });
       return JSON.stringify(nestJSON(events));
     } else {
@@ -89,3 +95,19 @@ export const addEventData = function (key) {
     };
   };
 };
+
+export const addEventAggregate = function (key) {
+    return function () {
+      try {
+        window.events.Events = window.events.Events || {};
+        if (typeof window.events.Events[key] === "undefined") {
+          window.events.Events[key] = 1;
+        } else {
+          window.events.Events[key] += 1;
+        }
+        console.log("Event aggregate: " + window.events.Events);
+      } catch (error) {
+        console.log("Add event aggregate catch block" + error);
+      }
+  };
+}
