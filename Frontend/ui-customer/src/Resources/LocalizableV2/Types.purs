@@ -1747,6 +1747,7 @@ newtype Keymap = Keymap {
 , helps_smooth_delivery :: String
 , free_loading_unloading_time :: String -> String -> String
 , max_capacity_warning :: String
+, select_route :: String
 }
 
 
@@ -6958,3 +6959,6 @@ free_loading_unloading_time = a
 
 max_capacity_warning :: Proxy "max_capacity_warning"
 max_capacity_warning = a
+
+select_route :: Proxy "select_route"
+select_route = a
