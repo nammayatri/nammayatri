@@ -4,6 +4,7 @@
 module Storage.Beam.Route where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -24,6 +25,7 @@ data RouteT f = RouteT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     polyline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    configJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     shortName :: B.C f Kernel.Prelude.Text,
     startLat :: B.C f Kernel.Prelude.Double,
     startLon :: B.C f Kernel.Prelude.Double,

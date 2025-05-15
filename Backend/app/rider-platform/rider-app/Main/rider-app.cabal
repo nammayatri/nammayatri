@@ -265,6 +265,7 @@ library
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
+      Domain.Types.Extra.ProviderDetails
       Domain.Types.Extra.RecentLocation
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
@@ -496,6 +497,7 @@ library
       Storage.Queries.Transformers.MultiModal
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
+      Storage.Queries.Transformers.ProviderDetails
       Storage.Queries.Transformers.Quote
       Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.RouteDetails

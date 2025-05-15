@@ -109,6 +109,7 @@ postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
                 merchantOperatingCityId = merchantOperatingCity.id,
                 polyline = req.polyline,
                 integratedBppConfigId = integratedBPPConfig.id,
+                providerDetails = Nothing,
                 createdAt = now,
                 updatedAt = now
               }

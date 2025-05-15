@@ -6,6 +6,7 @@ module Domain.Types.FRFSConfig where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Route
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -21,6 +22,7 @@ data FRFSConfig = FRFSConfig
     customEndTime :: Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Int,
     freeTicketInterval :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    id :: Kernel.Types.Id.Id Domain.Types.FRFSConfig.FRFSConfig,
     isCancellationAllowed :: Kernel.Prelude.Bool,
     isEventOngoing :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxFreeTicketCashback :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -32,6 +34,7 @@ data FRFSConfig = FRFSConfig
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     radius :: Kernel.Types.Common.Meters,
     roundTripTicketLimit :: Kernel.Prelude.Int,
+    routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     straightLineDistance :: Kernel.Types.Common.Meters,
     validTillSeconds :: Kernel.Types.Time.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,

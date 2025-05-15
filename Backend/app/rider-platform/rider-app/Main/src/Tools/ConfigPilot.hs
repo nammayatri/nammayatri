@@ -19,14 +19,12 @@ import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.FRFSConfig as SCFRFS
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as SCMC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRN
 import qualified Storage.CachedQueries.UiRiderConfig as SCU
-import qualified Storage.Queries.FRFSConfig as SQFRFS
 import qualified Storage.Queries.MerchantConfig as SQMC
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.PayoutConfig as SQPC
@@ -53,9 +51,6 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.MerchantPushNotification -> do
       merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYTU.TableDataResp {configs = map A.toJSON merchantPushNotification}
-    LYTU.FRFSConfig -> do
-      frfsConfig <- SCFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
-      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
     (LYTU.UiConfig dt pt) -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       (mbUiConfig, _) <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
@@ -75,8 +70,6 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateWithExtraDimensions SQMC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantConfig)) SQMC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
       handleConfigUpdate SQMPN.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPushNotification)) SQMPN.updateByPrimaryKey (cast merchantOpCityId)
-    LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
-      handleConfigUpdate (normalizeMaybeFetch SQFRFS.findByMerchantOperatingCityId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.FRFSConfig)) SQFRFS.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG (LYTU.UiConfig dt pt) -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       handleConfigUpdateWithExtraDimensionsUi SQU.getUiConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq

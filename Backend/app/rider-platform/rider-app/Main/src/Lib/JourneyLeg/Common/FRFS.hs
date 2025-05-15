@@ -567,7 +567,9 @@ isCancellable searchId = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   case mbMetroBooking of
     Just metroBooking -> do
-      frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow metroBooking.merchantOperatingCityId [] >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
+      routeInfo <- getRouteByStationIdsAndIntegratedBPPConfigId metroBooking.fromStationId metroBooking.toStationId metroBooking.integratedBppConfigId
+      let routeId = routeInfo <&> (.route.id)
+      frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId metroBooking.merchantOperatingCityId routeId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
       case metroBooking.journeyLegStatus of
         Just journeyLegStatus -> do
           let isBookingCancellable = journeyLegStatus `elem` JT.cannotCancelStatus
