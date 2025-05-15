@@ -1683,7 +1683,7 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
-, bus__ : "Bus Tickets"
+, bus__ : "Track Bus"
 , tickets_for_chennai_bus : "Tickets for Chennai Bus"
 , buy_bus_tickets : "Buy Bus Tickets"
 , book_and_pay : "Book & Pay"
@@ -1733,4 +1733,5 @@ getEn = Keymap {
 , helps_smooth_delivery : "Helps us provide a smooth delivery"
 , free_loading_unloading_time : (\a b ->"Free combined loading/unloading time of " <> a <> " min is provided. Any extra time will be charged at a rate of " <> b )
 , max_capacity_warning : "Items should not exceed max capacity"
+, select_route : "Select Route"
 }
