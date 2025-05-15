@@ -379,3 +379,7 @@ type PollingConfig = {
   pollingIntervalDelayMultiplier :: Int,
   pollingRetryCount :: Int
 }
+
+type PushEventsConfig = {
+  loggingIntervalInS :: Int
+}
