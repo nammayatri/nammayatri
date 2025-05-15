@@ -63,6 +63,24 @@ apis:
         type: VerifyReq
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /get/referralDetails
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - referralCode: Text
+      response:
+        type: ReferralInfoRes
+      helperApi:
+        - GET:
+            endpoint: /get/referralDetails/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - referralCode: Text
+            response:
+              type: ReferralInfoRes
 types:
   VerifyReq:
     driverId: Text
@@ -121,3 +139,6 @@ types:
     vehicleModel: Maybe Text
     documents: [DocumentStatusItem]
     dateOfUpload: UTCTime
+  ReferralInfoRes:
+    personId: Id Driver
+    name: Text
