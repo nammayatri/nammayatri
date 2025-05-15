@@ -16,7 +16,6 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
-import BecknV2.FRFS.Utils
 import Data.Aeson
 import Data.List (sortBy)
 import Data.Ord (Down (..))
@@ -25,10 +24,9 @@ import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
-import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
-import EulerHS.Prelude (comparing, toStrict, (+||), (||+))
+import EulerHS.Prelude (comparing, toStrict)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -41,11 +39,9 @@ import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
-import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Route as QRoute
@@ -130,12 +126,14 @@ data ValidatedDOnSearch = ValidatedDOnSearch
     mbMaxFreeTicketCashback :: Maybe Int
   }
 
-validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> m ValidatedDOnSearch
+validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> m ValidatedDOnSearch
 validateRequest DOnSearch {..} = do
   search <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow search.merchantOperatingCityId [] >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
+  routeInfo <- SFU.getRouteByStationIdsAndIntegratedBPPConfigId search.fromStationId search.toStationId search.integratedBppConfigId
+  let routeId = routeInfo <&> (.route.id)
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId search.merchantOperatingCityId routeId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
   if frfsConfig.isEventOngoing == Just True && search.riderId /= SFU.partnerOrgRiderId
     then do
       stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
@@ -219,17 +217,8 @@ filterQuotes _ Nothing = return Nothing
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
-  dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
-  dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
-  let merchantOperatingCityId = search.merchantOperatingCityId
-  integratedBPPConfig <- case (search.integratedBppConfigId) of
-    Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
-    Nothing -> do
-      QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-        >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
-  startStation <- QStation.findByStationCode dStartStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  endStation <- QStation.findByStationCode dEndStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  startStation <- QStation.findById search.fromStationId >>= fromMaybeM (StationNotFound search.fromStationId.getId)
+  endStation <- QStation.findById search.toStationId >>= fromMaybeM (StationNotFound search.toStationId.getId)
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
@@ -271,12 +260,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         oldCacheDump = Nothing,
         ..
       }
-
-getStartStation :: [DStation] -> Maybe DStation
-getStartStation = find (\station -> station.stationType == Station.START)
-
-getEndStation :: [DStation] -> Maybe DStation
-getEndStation = find (\station -> station.stationType == Station.END)
 
 castStationToAPI :: DStation -> API.FRFSStationAPI
 castStationToAPI DStation {..} =

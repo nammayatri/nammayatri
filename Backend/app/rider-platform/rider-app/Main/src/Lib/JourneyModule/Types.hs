@@ -46,6 +46,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Price as KTP
+import Kernel.Types.Registry
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
@@ -78,6 +79,7 @@ type SearchRequestFlow m r c =
     EventStreamFlow m r,
     ClickhouseFlow m r,
     HasBAPMetrics m r,
+    Registry m,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
@@ -85,6 +87,7 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["collectRouteData" ::: Bool],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds,
+    HasField "ondcRegistryUrl" r BaseUrl,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

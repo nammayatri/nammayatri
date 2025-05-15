@@ -23,6 +23,7 @@ import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Route as DRoute
 import Environment
 import EulerHS.Prelude ((+||), (||+))
 import qualified ExternalBPP.Flow as Flow
@@ -30,10 +31,14 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry as DReg
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Registry as Registry
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Station as QStation
@@ -46,7 +51,8 @@ type FRFSSearchFlow m r =
     EsqDBReplicaFlow m r,
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "ondcRegistryUrl" r BaseUrl
   )
 
 type FRFSConfirmFlow m r =
@@ -86,19 +92,63 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
         toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
-        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just fromStation) (Just toStation) merchantOperatingCity.city
-        logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
-        Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
-        void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
+        routeInfo' <- FRFSUtils.getRouteByStationIdsAndIntegratedBPPConfigId searchReq.fromStationId searchReq.toStationId (Just integratedBPPConfig.id)
+        let mProviderDetails = routeInfo' >>= \routeInfo -> routeInfo.route.providerDetails >>= \providerDetails -> Just (routeInfo, providerDetails)
+        case mProviderDetails of
+          Just (routeInfo, DRoute.ONDC ondcProviderDetails) -> do
+            stops <- fromMaybeM (InternalError "Stops not found") (routeInfo.stops)
+            let findStop stopCode = fromMaybeM (InternalError $ "Stop with code " <> stopCode <> " not found") $ find (\stop -> stop.stopCode == stopCode) stops
+            fromRoute <- findStop routeInfo.startStopCode
+            toRoute <- findStop routeInfo.endStopCode
+            let lookupRequest =
+                  DReg.SimpleLookupRequest
+                    { unique_key_id = ondcProviderDetails.uniqueKeyId,
+                      subscriber_id = ondcProviderDetails.subscriberId,
+                      merchant_id = merchant.id.getId,
+                      subscriber_type = DReg.BPP,
+                      domain = Context.PUBLIC_TRANSPORT
+                    }
+            ondcRegistryUrl <- asks (.ondcRegistryUrl)
+            Registry.registryLookup ondcRegistryUrl lookupRequest bapConfig.subscriberId >>= \case
+              Just subscriber -> do
+                bknSearchReq <-
+                  ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType
+                    bapConfig
+                    (Just fromStation{code = fromRoute.providerCode})
+                    (Just toStation{code = toRoute.providerCode})
+                    merchantOperatingCity.city
+                logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
+                Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
+                void $ CallFRFSBPP.search subscriber.subscriber_url bknSearchReq merchant.id
+              Nothing -> do
+                logWarning $
+                  "Subscriber with unique_key_id:"
+                    <> ondcProviderDetails.uniqueKeyId
+                    <> "; subscriber type: "
+                    <> show lookupRequest.subscriber_type
+                    <> "; domain: "
+                    <> show lookupRequest.domain
+                    <> " not found."
+                throwError $ LookUpFailed ondcProviderDetails.subscriberId
+          _ -> do
+            bknSearchReq <-
+              ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType
+                bapConfig
+                (Just fromStation)
+                (Just toStation)
+                merchantOperatingCity.city
+            logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
+            Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
+            void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
     _ -> do
       fork "FRFS External SearchReq" $ do
         onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
         processOnSearch onSearchReq
-  where
-    processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()
-    processOnSearch onSearchReq = do
-      validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
-      DOnSearch.onSearch onSearchReq validatedDOnSearch
+      where
+        processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
+        processOnSearch onSearchReq = do
+          validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
+          DOnSearch.onSearch onSearchReq validatedDOnSearch
 
 select ::
   FRFSSelectFlow m r c =>
@@ -149,8 +199,10 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking platfor
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Cancel Req" $ do
+        routeInfo <- FRFSUtils.getRouteByStationIdsAndIntegratedBPPConfigId booking.fromStationId booking.toStationId (Just integratedBPPConfig.id)
+        let routeId = routeInfo <&> (.route.id)
         frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+          CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId merchantOperatingCity.id routeId
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -173,8 +225,10 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
+        routeInfo <- FRFSUtils.getRouteByStationIdsAndIntegratedBPPConfigId booking.fromStationId booking.toStationId (Just integratedBPPConfig.id)
+        let routeId = routeInfo <&> (.route.id)
         frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+          CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId merchantOperatingCity.id routeId
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
         onConfirmHandler onConfirmReq

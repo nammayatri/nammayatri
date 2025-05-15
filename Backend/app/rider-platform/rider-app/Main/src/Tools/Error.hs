@@ -953,3 +953,22 @@ instance IsHTTPError GTFSError where
     GTFSFeedInfoNotFound _ _ -> E404
 
 instance IsAPIError GTFSError
+
+data RegistryLookupError
+  = LookUpFailed Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RegistryLookupError
+
+instance IsBaseError RegistryLookupError where
+  toMessage = \case
+    LookUpFailed subscriberId -> Just $ "Subcriber with SubscriberId :- " <> subscriberId <> " not found in registry."
+
+instance IsHTTPError RegistryLookupError where
+  toErrorCode = \case
+    LookUpFailed _ -> "LOOKUP_FAILED"
+
+  toHttpCode = \case
+    LookUpFailed _ -> E500
+
+instance IsAPIError RegistryLookupError
