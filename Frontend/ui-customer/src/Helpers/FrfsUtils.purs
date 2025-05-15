@@ -18,12 +18,18 @@ module Helpers.FrfsUtils where
 import Prelude
 import Screens.Types (MetroTicketCardData(..))
 import Data.Array as DA
-import Services.API (FRFSTicketBookingStatusAPIRes(..), FRFSTicketAPI(..), FRFSRouteAPI(..), FrfsQuote(..), FRFSBookingPaymentAPI(..), FRFSStationAPI(..))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Services.API (FRFSTicketBookingStatusAPIRes(..), FRFSTicketAPI(..), FRFSRouteAPI(..), FrfsQuote(..), FRFSBookingPaymentAPI(..), FRFSStationAPI(..), VehicleInfoForRoute(..), LatLong(..), BusTrackingRouteResp(..), UpcomingStop(..), Stop(..), VehicleInfo(..))
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Engineering.Helpers.Commons as EHC
+import Data.Int as DI
+import DecodeUtil as DU
+import Common.RemoteConfig.Utils as RU
+import Common.Types.App as CT
+import Debug (spy)
 
 getTicketStatus :: MetroTicketCardData -> TicketStatus
 getTicketStatus ticketData = 
@@ -108,3 +114,46 @@ instance showFRFSTicketStatus :: Show FRFSTicketStatus where
   show FRFS_CANCELLATION_PENDING = "Cancellation Pending"
   show FRFS_CANCELLATION_FAILED = "Cancellation Failed"
 instance eqFRFSTicketStatus :: Eq FRFSTicketStatus where eq = genericEq
+
+
+calculateEtaForBusRoutes :: VehicleInfo -> String -> Array (Maybe Int)
+calculateEtaForBusRoutes (VehicleInfo vehicleData) srcLoc = do
+    let 
+      (VehicleInfoForRoute vehicleInfoForRoute) = vehicleData.vehicleInfo
+      lat = fromMaybe 0.0 vehicleInfoForRoute.latitude
+      lon = fromMaybe 0.0 vehicleInfoForRoute.longitude
+      wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+    case filterVehicleInfoLogic (VehicleInfo vehicleData) wmbFlowConfig of
+      false -> []
+      _ ->
+        let 
+          upcomgingStops = fromMaybe [] vehicleInfoForRoute.upcomingStops
+          etaTillPickupStop = DA.find (\(UpcomingStop upcomingStop) ->
+              let (Stop stop) = upcomingStop.stop
+                  _ = spy "Upcoming Stop" upcomingStop.stop
+              in (srcLoc ==  stop.name)
+            ) upcomgingStops 
+          lastReachedStop = DA.find (\(UpcomingStop upcomingStop) -> upcomingStop.status == "Reached") $ DA.reverse upcomgingStops 
+          firstUpcomingStop = DA.find (\(UpcomingStop upcomingStop) -> upcomingStop.status == "Upcoming") upcomgingStops
+          upcomingNextStop = firstUpcomingStop <#> (\(UpcomingStop upcomingStop) -> upcomingStop.stop)
+          nextStopLatLon = fromMaybe (LatLong {lat: 0.0, lon: 0.0}) $ upcomingNextStop <#> (\(Stop stop) -> stop.coordinate) -- (API.LatLong nextStopPosition)
+          nextStopIdx = fromMaybe (0) $ upcomingNextStop <#> (\(Stop stop) -> stop.stopIdx) -- nextStop.sequenceNu 
+        in 
+          [filterETAForOlderLatLong vehicleInfoForRoute.timestamp $ maybe Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop vehicleData.vehicleId) etaTillPickupStop] -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
+  where
+    filterETAForOlderLatLong timeStamp eta' = 
+      let timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") $ timeStamp
+      in if (timeDiff < 120) then eta' else Nothing
+
+    calculateETAFromUpcomingStop lastReachedStop (UpcomingStop stop) vehicleId = 
+      let etaTimeStamp = stop.eta
+          delayInSeconds = DI.round $ fromMaybe 0.0 stop.delta
+          etaInSeconds = EHC.compareUTCDate etaTimeStamp (EHC.getCurrentUTC "")
+      in if etaInSeconds + delayInSeconds > 0
+        then Just $ etaInSeconds + delayInSeconds
+        else Nothing 
+
+    filterVehicleInfoLogic (VehicleInfo vehicleData) wmbFlowConfig =
+      let (VehicleInfoForRoute m) = vehicleData.vehicleInfo
+          timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
+      in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec)
