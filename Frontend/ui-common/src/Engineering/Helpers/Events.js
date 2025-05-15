@@ -1,3 +1,7 @@
+const {
+  JBridge
+} = window;
+
 const nestJSON = function (original) {
   const nested = {};
 
@@ -61,6 +65,7 @@ const processTimeStamp = () => {
 
 export const getEvents = function () {
   try {
+    window.user_id = window.user_id || JBridge.getFromSharedPrefs("CUSTOMER_ID") || JBridge.getFromSharedPrefs("DRIVER_ID");
     if (typeof window === "object") {
       if (window.Aggregate && !window.Aggregate.pushOnce) {
         window.events.Aggregate = window.Aggregate;
@@ -77,6 +82,7 @@ export const getEvents = function () {
         service: window.__payload.service,
         sessionId: window.session_id,
         personId: !window["CUSTOMER_ID"] || window["CUSTOMER_ID"] === undefined ? window["DRIVER_ID"] : window["CUSTOMER_ID"],
+        userId: window.user_id,
         "newEvents" : newEvents,
       }, newEvents);
       return JSON.stringify(nestJSON(events));
@@ -106,3 +112,19 @@ export const addEventData = function (key) {
     };
   };
 };
+
+export const addEventAggregate = function (key) {
+    return function () {
+      try {
+        window.events.Events = window.events.Events || {};
+        if (typeof window.events.Events[key] === "undefined") {
+          window.events.Events[key] = 1;
+        } else {
+          window.events.Events[key] += 1;
+        }
+        console.log("Event aggregate: " + window.events.Events);
+      } catch (error) {
+        console.log("Add event aggregate catch block" + error);
+      }
+  };
+}

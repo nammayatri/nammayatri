@@ -610,3 +610,14 @@ pollingConfig functionName =
       pollingIntervalDelayMultiplier : 0,
       pollingRetryCount : 0
     }
+
+-- Generic Event Triggering Config via Kafka
+pushEventsConfig :: LazyCheck -> Types.PushEventsConfig
+pushEventsConfig _ =
+  let config = fetchRemoteConfigString "push_events_configs"
+  in decodeForeignObject (parseJSON config) defaultPushEventsConfig
+  where
+    defaultPushEventsConfig :: Types.PushEventsConfig
+    defaultPushEventsConfig = {
+      loggingIntervalInS : 30000
+    }

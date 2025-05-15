@@ -1414,7 +1414,7 @@ homeScreenFlow = do
               }
         )
   flow <- UI.homeScreen
-  void $ lift $ lift $ fork $ Remote.pushSDKEvents
+  callPushSdkEventsAfterCheckingInterval FunctionCall
   case flow of
     HybridAppExit -> pure unit
     STAY_IN_HOME_SCREEN -> do
@@ -8215,3 +8215,15 @@ updateMapReady :: Boolean -> FlowBT String Unit
 updateMapReady isActive = do
   void $ pure $ runFn2 setInCache "MAP_READY" $ show isActive
   void $ pure $ JB.removeAllMarkers ""
+
+callPushSdkEventsAfterCheckingInterval :: LazyCheck -> FlowBT String Unit
+callPushSdkEventsAfterCheckingInterval _ =
+  let pushEventsConfig = RC.pushEventsConfig FunctionCall
+      currentTimeStamp = EHC.getCurrentUTC ""
+      lastAPICallTimeStamp = getValueFromWindow (show PUSH_SDK_TS)
+      intervalConfigCheck = (lastAPICallTimeStamp == "__failed" || (EHC.compareUTCDate currentTimeStamp lastAPICallTimeStamp) > pushEventsConfig.loggingIntervalInS)
+  in
+    if intervalConfigCheck then do
+      void $ lift $ lift $ fork $ Remote.pushSDKEvents
+      void $ pure $ setValueInWindow (show PUSH_SDK_TS) currentTimeStamp
+    else pure unit  
