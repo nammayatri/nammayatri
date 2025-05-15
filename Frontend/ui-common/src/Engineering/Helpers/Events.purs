@@ -150,3 +150,5 @@ mkEventPayload eventArray = map (\event -> (APITypes.EventsPayload
     vehicleType : nullToMaybe event.vehicleType,
     cityId : nullToMaybe event.cityId
     })) eventArray
+
+foreign import addEventAggregate :: String -> Effect Unit

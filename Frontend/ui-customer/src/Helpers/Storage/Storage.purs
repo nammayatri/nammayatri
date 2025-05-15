@@ -127,6 +127,7 @@ data KeyStore
   | MapViewLottie
   | LOCATION_MANUALLY_UPDATED
   | ShowedEnquiryPopup
+  | PUSH_SDK_TS
 
 derive instance genericKeyStore :: Generic KeyStore _
 
