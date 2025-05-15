@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.Fleet.Onboarding
     getOnboardingRegisterStatus,
     castStatusRes,
     postOnboardingVerify,
+    getOnboardingGetReferralDetails,
   )
 where
 
@@ -10,6 +11,8 @@ import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
+import qualified Data.Text as Text
+import Domain.Action.UI.DriverOnboarding.Referral
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.Merchant as DM
@@ -23,7 +26,7 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -75,6 +78,25 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       documentCategory = SDO.castDocumentCategory <$> documentCategory,
       ..
     }
+
+getOnboardingGetReferralDetails ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Text ->
+  Environment.Flow CommonOnboarding.ReferralInfoRes
+getOnboardingGetReferralDetails merchantShortId opCity fleetOwnerId referralCode = do
+  when (Text.length referralCode < 6) $ throwError (InvalidRequest "Referral code should be at least 6 digits long")
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  dr <- validateReferralCodeAndRole transporterConfig (Id fleetOwnerId) referralCode (Just FLEET_OWNER)
+  person <- PersonQuery.findById dr.driverId >>= fromMaybeM (PersonNotFound dr.driverId.getId)
+  return $
+    CommonOnboarding.ReferralInfoRes
+      { personId = cast dr.driverId,
+        name = person.firstName <> " " <> (fromMaybe "" person.middleName) <> " " <> (fromMaybe "" person.lastName)
+      }
 
 getOnboardingRegisterStatus ::
   ShortId DM.Merchant ->

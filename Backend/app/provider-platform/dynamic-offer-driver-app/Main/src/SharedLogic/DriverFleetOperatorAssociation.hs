@@ -41,7 +41,7 @@ checkForDriverAssociationOverwrite merchant driverId = do
 
     existingDOAssociations <- QDOA.findAllByDriverId driverId True
     unless (null existingDOAssociations) $ do
-      throwError (InvalidRequest "Driver already associated with another operator")
+      throwError (InvalidRequest "Driver is already associated with a fleet")
 
 endDriverAssociationsIfAllowed ::
   DM.Merchant ->
@@ -66,7 +66,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId driver = do
             let title = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.title
             let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
             TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_FLEET title body (Id existingAssociation.fleetOwnerId) ()
-      else throwError (InvalidRequest "Driver already associated with another fleet")
+      else throwError (InvalidRequest "Driver is already associated with a fleet")
 
   existingDOAssociations <- QDOA.findAllByDriverId driver.id True
   unless (null existingDOAssociations) $ do

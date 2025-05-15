@@ -53,7 +53,9 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import Control.Applicative (optional)
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Csv
 import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
@@ -2035,10 +2037,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
   where
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
-    processDriverByFleetOwner merchant moc fleetOwner = linkDriverToFleetOwner merchant moc fleetOwner Nothing
+    processDriverByFleetOwner merchant moc fleetOwner req_ = do
+      void $ runRequestValidation Common.validateUpdateDriverNameReq Common.UpdateDriverNameReq {firstName = req_.driverName, middleName = Nothing, lastName = Nothing}
+      linkDriverToFleetOwner merchant moc fleetOwner Nothing req_
 
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByOperator merchant moc operator req_ = do
+      void $ runRequestValidation Common.validateUpdateDriverNameReq Common.UpdateDriverNameReq {firstName = req_.driverName, middleName = Nothing, lastName = Nothing}
       case req_.fleetPhoneNo of
         Nothing -> do
           linkDriverToOperator merchant moc operator req_
