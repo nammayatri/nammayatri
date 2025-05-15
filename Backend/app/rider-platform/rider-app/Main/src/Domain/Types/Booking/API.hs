@@ -16,7 +16,6 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
-import API.Types.RiderPlatform.Management.Endpoints.FRFSTicket (FRFSStationAPI)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
@@ -28,7 +27,6 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
-import Domain.Types.Journey (Journey, JourneyStatus)
 import Domain.Types.Location (Location, LocationAPIEntity)
 import Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as Person
@@ -63,28 +61,6 @@ import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
-
-data JourneyLocation = Taxi LocationAPIEntity | Frfs FRFSStationAPI | Null
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-newtype BookingListResV2 = BookingListResV2
-  { list :: [BookingAPIEntityV2]
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data BookingAPIEntityV2 = Ride BookingAPIEntity | MultiModalRide JourneyAPIEntity
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data JourneyAPIEntity = JourneyAPIEntity
-  { id :: Id Journey,
-    fare :: PriceAPIEntity,
-    fromLocation :: JourneyLocation,
-    toLocation :: JourneyLocation,
-    startTime :: Maybe UTCTime,
-    createdAt :: UTCTime,
-    status :: JourneyStatus
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,

@@ -8,6 +8,7 @@ import Data.Maybe
 import Data.Text
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time (NominalDiffTime)
 import Data.Time.Format
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import Domain.Types.FRFSQuote as DFRFSQuote
@@ -288,9 +289,13 @@ createOrder config booking = do
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
 
-  qrValidityTime <- case parseTimeM True defaultTimeLocale "%d/%m/%Y %H:%M:%S" (T.unpack bookJourneyResp.validUntil) :: Maybe UTCTime of
-    Nothing -> throwError $ InternalError $ "Failed to parse ticket validity time: " <> bookJourneyResp.validUntil
-    Just time -> pure time
+  -- TODO: Consume this once get confirmation from CRIS
+  -- qrValidityTime <- case parseTimeM True defaultTimeLocale "%d/%m/%Y %H:%M:%S" (T.unpack bookJourneyResp.validUntil) :: Maybe UTCTime of
+  --   Nothing -> throwError $ InternalError $ "Failed to parse ticket validity time: " <> bookJourneyResp.validUntil
+  --   Just time -> pure time
+
+  now <- getCurrentTime
+  let threeHoursFromNow = addUTCTime (3 * 60 * 60 :: NominalDiffTime) now
 
   return $
     ProviderOrder
@@ -302,7 +307,7 @@ createOrder config booking = do
                 description = bookJourneyResp.journeyComment,
                 qrData = bookJourneyResp.encryptedTicketData,
                 qrStatus = "UNCLAIMED",
-                qrValidity = qrValidityTime,
+                qrValidity = threeHoursFromNow, -- TODO: Consume qrValidityTime from CRIS once confirmed
                 qrRefreshAt = Nothing
               }
           ]

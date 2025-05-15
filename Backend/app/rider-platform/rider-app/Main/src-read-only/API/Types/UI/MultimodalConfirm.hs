@@ -85,6 +85,7 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
+    journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     merchantOperatingCityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR

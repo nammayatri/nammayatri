@@ -301,6 +301,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
 data MetroLegExtraInfo = MetroLegExtraInfo
   { routeInfo :: [MetroLegRouteInfo],
     tickets :: Maybe [Text],
+    ticketValidity :: Maybe [UTCTime],
     providerName :: Maybe Text
   }
   deriving stock (Show, Generic)
@@ -323,6 +324,7 @@ data MetroLegRouteInfo = MetroLegRouteInfo
 data SubwayLegExtraInfo = SubwayLegExtraInfo
   { routeInfo :: [SubwayLegRouteInfo],
     tickets :: Maybe [Text],
+    ticketValidity :: Maybe [UTCTime],
     providerName :: Maybe Text,
     sdkToken :: Maybe Text,
     providerRouteId :: Maybe Text,
@@ -353,6 +355,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     destinationStop :: FRFSStationAPI,
     routeCode :: Text,
     tickets :: Maybe [Text],
+    ticketValidity :: Maybe [UTCTime],
     routeName :: Maybe Text,
     providerName :: Maybe Text,
     selectedServiceTier :: Maybe LegServiceTier,
@@ -650,6 +653,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
   let journeyRouteDetails' = booking.journeyRouteDetails
   ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
   let qrDataList = ticketsData <&> (.qrData)
+  let qrValidity = ticketsData <&> (.validTill)
 
   metroRouteInfo' <- getMetroLegRouteInfo journeyRouteDetails'
   subwayRouteInfo' <- getSubwayLegRouteInfo journeyRouteDetails'
@@ -663,7 +667,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
-  legExtraInfo <- mkLegExtraInfo qrDataList journeyRouteDetails' metroRouteInfo' subwayRouteInfo'
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity journeyRouteDetails' metroRouteInfo' subwayRouteInfo'
   return $
     LegInfo
       { skipBooking,
@@ -688,7 +692,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         totalFare = mkPriceAPIEntity <$> booking.finalPrice
       }
   where
-    mkLegExtraInfo qrDataList journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
+    mkLegExtraInfo qrDataList qrValidity journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
       case booking.vehicleType of
         Spec.METRO -> do
           return $
@@ -696,6 +700,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
               MetroLegExtraInfo
                 { routeInfo = metroRouteInfo',
                   tickets = Just qrDataList,
+                  ticketValidity = Just qrValidity,
                   providerName = Just booking.providerName
                 }
         Spec.BUS -> do
@@ -717,6 +722,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   destinationStop = stationToStationAPI toStation,
                   routeCode = route.code,
                   tickets = Just qrDataList,
+                  ticketValidity = Just qrValidity,
                   providerName = Just booking.providerName,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
@@ -733,6 +739,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
                   tickets = Just qrDataList,
+                  ticketValidity = Just qrValidity,
                   providerName = Just booking.providerName,
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
@@ -858,6 +865,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
               MetroLegExtraInfo
                 { routeInfo = metroRouteInfo',
                   tickets = Nothing,
+                  ticketValidity = Nothing,
                   providerName = Nothing
                 }
         Spec.BUS -> do
@@ -877,6 +885,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   destinationStop = stationToStationAPI toStation,
                   routeCode = route.code,
                   tickets = Nothing,
+                  ticketValidity = Nothing,
                   providerName = Nothing,
                   selectedServiceTier = mbSelectedServiceTier,
                   alternateShortNames = journeyRouteDetail.alternateShortNames,
@@ -890,6 +899,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
                   tickets = Nothing,
+                  ticketValidity = Nothing,
                   providerName = Nothing,
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for cris sdk initiation
                   deviceId = Nothing, -- not required for cris sdk initiation

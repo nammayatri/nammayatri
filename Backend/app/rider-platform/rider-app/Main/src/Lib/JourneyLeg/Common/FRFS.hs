@@ -1,6 +1,5 @@
 module Lib.JourneyLeg.Common.FRFS where
 
-import API.Types.RiderPlatform.Management.Endpoints.FRFSTicket (FRFSStationAPI)
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
@@ -9,9 +8,6 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative
 import Data.List (sortBy, sortOn)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import Domain.Action.UI.Location (makeLocationAPIEntity)
-import Domain.Types.Booking.API as DBA
-import Domain.Types.Extra.Booking
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
@@ -24,8 +20,7 @@ import qualified Domain.Types.RecentLocation as DRL
 import Domain.Types.Station
 import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
-import Domain.Utils (safeHead, safeLast)
-import Environment
+import Domain.Utils (safeLast)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (comparing, (+||), (||+))
 import ExternalBPP.CallAPI as CallExternalBPP
@@ -57,17 +52,13 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.RouteStopTimeTable as QRSTT
 import qualified Storage.Queries.BecknConfig as QBC
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyRouteDetails as QJRD
 import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
-import qualified Storage.Queries.Transformers.Booking as QTB
-import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 
 getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> m JT.JourneyLegState
@@ -578,91 +569,3 @@ isCancellable searchId = do
           return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
     Nothing -> do
       return $ JT.IsCancellableResponse {canCancel = True}
-
-getLegSourceAndDestination :: Maybe DJourneyLeg.JourneyLeg -> Bool -> Flow DBA.JourneyLocation
-getLegSourceAndDestination Nothing _ = pure Null
-getLegSourceAndDestination (Just leg) getSource = do
-  let legSearchId = Id <$> leg.legSearchId
-  case legSearchId of
-    Nothing -> pure Null
-    Just searchId -> case leg.mode of
-      DTrip.Walk -> getWalkLocation searchId
-      DTrip.Taxi -> getTaxiLocation searchId
-      _ -> getPublicTransportLocation searchId
-  where
-    getLegLocation :: a -> a -> Flow a
-    getLegLocation fromLocation toLocation = pure $ if getSource then fromLocation else toLocation
-
-    getWalkLocation :: Id Text -> Flow DBA.JourneyLocation
-    getWalkLocation searchId = do
-      legData <- QWalkLeg.findById (cast searchId) >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
-      toLocation' <- legData.toLocation & fromMaybeM (InvalidRequest "To location not found")
-      location <- getLegLocation legData.fromLocation toLocation'
-      pure $ DBA.Taxi $ makeLocationAPIEntity location
-
-    getTaxiLocation :: Id Text -> Flow DBA.JourneyLocation
-    getTaxiLocation searchId = do
-      mbBooking <- QBooking.findByTransactionIdAndStatus searchId.getId (activeBookingStatus <> [COMPLETED])
-      case mbBooking of
-        Just booking -> do
-          toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
-          location <- getLegLocation booking.fromLocation toLocation
-          pure $ DBA.Taxi $ makeLocationAPIEntity location
-        Nothing -> do
-          searchReq <- QSearchRequest.findById (cast searchId) >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          toLocation <- searchReq.toLocation & fromMaybeM (InvalidRequest "To location not found")
-          location <- getLegLocation searchReq.fromLocation toLocation
-          pure $ DBA.Taxi $ makeLocationAPIEntity location
-
-    getPublicTransportLocation :: Id Text -> Flow DBA.JourneyLocation
-    getPublicTransportLocation searchId = do
-      mbBooking <- QTBooking.findBySearchId (cast searchId)
-      case mbBooking of
-        Just booking -> getFrfsLocation booking.vehicleType booking.journeyRouteDetails
-        Nothing -> do
-          searchReq <- QFRFSSearch.findById (cast searchId) >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          getFrfsLocation searchReq.vehicleType searchReq.journeyRouteDetails
-
-    getFrfsLocation :: Spec.VehicleCategory -> [JPT.MultiModalJourneyRouteDetails] -> Flow DBA.JourneyLocation
-    getFrfsLocation Spec.BUS journeyRouteDetails = do
-      journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
-      fromStation <- getStation journeyRouteDetail.fromStationId
-      toStation <- getStation journeyRouteDetail.toStationId
-      location <- getLegLocation fromStation toStation
-      pure $ DBA.Frfs $ JT.stationToStationAPI location
-    getFrfsLocation Spec.METRO journeyRouteDetails = do
-      metroLegRouteInfo <- JT.getMetroLegRouteInfo journeyRouteDetails
-      getFrfsSourceAndDestinationHelper (map Right metroLegRouteInfo)
-    getFrfsLocation Spec.SUBWAY journeyRouteDetails = do
-      subwayLegRouteInfo <- JT.getSubwayLegRouteInfo journeyRouteDetails
-      getFrfsSourceAndDestinationHelper (map Left subwayLegRouteInfo)
-
-    getFrfsSourceAndDestinationHelper :: [Either JT.SubwayLegRouteInfo JT.MetroLegRouteInfo] -> Flow DBA.JourneyLocation
-    getFrfsSourceAndDestinationHelper routeInfo = do
-      let (source, destination) = getFrfsSourceAndDestination routeInfo
-      case getSource of
-        True -> pure $ either DBA.Frfs (const Null) source
-        False -> pure $ either DBA.Frfs (const Null) destination
-
-    getStation :: Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station) -> Flow Domain.Types.Station.Station
-    getStation stationId = do
-      stationId' <- fromMaybeM (InternalError "StationId is missing") stationId
-      QStation.findById stationId' >>= fromMaybeM (InternalError "Station not found")
-
-getFrfsSourceAndDestination :: [Either JT.SubwayLegRouteInfo JT.MetroLegRouteInfo] -> (Either FRFSStationAPI (Maybe FRFSStationAPI), Either FRFSStationAPI (Maybe FRFSStationAPI))
-getFrfsSourceAndDestination legsRouteInfo =
-  let totalLegs = length legsRouteInfo
-      source = case safeHead (filter isFirstLeg legsRouteInfo) of
-        Nothing -> Right Nothing
-        Just (Left subway) -> Left subway.originStop
-        Just (Right metro) -> Left metro.originStop
-      destination = case safeHead (filter (isLastLeg $ Just totalLegs) legsRouteInfo) of
-        Nothing -> Right Nothing
-        Just (Left subway) -> Left subway.destinationStop
-        Just (Right metro) -> Left metro.destinationStop
-   in (source, destination)
-  where
-    isFirstLeg (Left subway) = subway.subOrder == Just 1
-    isFirstLeg (Right metro) = metro.subOrder == Just 1
-    isLastLeg totalLegs (Left subway) = subway.subOrder == totalLegs
-    isLastLeg totalLegs (Right metro) = metro.subOrder == totalLegs

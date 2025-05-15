@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Booking where
 
+import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Status as StatusACL
@@ -43,7 +44,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.Trip as DTrip
-import Domain.Utils (safeHead, safeLast)
 import Environment
 import EulerHS.Prelude hiding (id, pack, safeHead)
 import Kernel.Beam.Functions as B
@@ -57,8 +57,7 @@ import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Common.FRFS (getLegSourceAndDestination)
-import Lib.JourneyModule.Base (getJourneyLegs)
+import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -223,14 +222,22 @@ bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus
       logInfo $ "rbList: test " <> show rbList
       BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId') rbList
 
-bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Flow SRB.BookingListResV2
+newtype BookingListResV2 = BookingListResV2
+  { list :: [BookingAPIEntityV2]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.JourneyInfoResp
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Flow BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList = do
   (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit mbOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
   allJourneys <- getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusList
   apiEntity <- buildApiEntityForRideOrJourney personId mbLimit rbList allJourneys
   clearStuckRides allbookings rbList
   pure $
-    SRB.BookingListResV2
+    BookingListResV2
       { list = apiEntity
       }
   where
@@ -238,7 +245,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbFromDate' mbToDate' mbBo
       fork "booking list status update" $ checkBookingsForStatus allbookings
       logInfo $ "rbList: test " <> show rbList
 
-buildApiEntityForRideOrJourney :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Flow [SRB.BookingAPIEntityV2]
+buildApiEntityForRideOrJourney :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Flow [BookingAPIEntityV2]
 buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
   let mergedList = mergeBookingsJourneys bookings journeys
       limitedList = case mbLimit of
@@ -258,34 +265,22 @@ buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
     compareBookingJourney booking journey =
       compare booking.startTime (fromMaybe journey.createdAt journey.startTime)
 
-    buildBookingListV2 :: Id Person.Person -> [Either SRB.Booking DJ.Journey] -> Flow [SRB.BookingAPIEntityV2]
+    buildBookingListV2 :: Id Person.Person -> [Either SRB.Booking DJ.Journey] -> Flow [BookingAPIEntityV2]
     buildBookingListV2 _ [] = pure []
     buildBookingListV2 id (Left booking : ls) = do
       res <- buildBookingListV2 id ls
       bookingEntity <- SRB.buildBookingAPIEntity booking id
-      return $ SRB.Ride bookingEntity : res
+      return $ Ride bookingEntity : res
     buildBookingListV2 id (Right journey : ls) = do
       res <- buildBookingListV2 id ls
       journeyEntity <- buildJourneyApiEntity journey
-      return $ SRB.MultiModalRide journeyEntity : res
+      return $ MultiModalRide journeyEntity : res
 
-    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m SRB.JourneyAPIEntity
+    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m APITypes.JourneyInfoResp
     buildJourneyApiEntity journey = do
-      allLegsRawData <- getJourneyLegs journey.id
-      allLegsFare <- mapM getLegFare allLegsRawData
-      totalJourneyFare <- foldM addPrice (Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}) allLegsFare
-      legSourceLocation <- getLegSourceAndDestination (safeHead allLegsRawData) True
-      legDestinationLocation <- getLegSourceAndDestination (safeLast allLegsRawData) False
-      return $
-        SRB.JourneyAPIEntity
-          { id = journey.id,
-            fare = mkPriceAPIEntity totalJourneyFare,
-            fromLocation = legSourceLocation,
-            toLocation = legDestinationLocation,
-            startTime = journey.startTime,
-            createdAt = journey.createdAt,
-            status = journey.status
-          }
+      legsInfo <- getAllLegsInfo journey.id
+      journeyInfoResponse <- generateJourneyInfoResponse journey legsInfo
+      return journeyInfoResponse
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do

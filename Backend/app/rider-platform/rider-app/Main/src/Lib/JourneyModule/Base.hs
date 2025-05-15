@@ -1409,3 +1409,26 @@ getJourneyChangeLogCounter :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id 
 getJourneyChangeLogCounter journeyId = do
   mbJourneyChangeLogCounter <- Redis.safeGet (mkJourneyChangeLogKey journeyId.getId)
   return $ fromMaybe 0 mbJourneyChangeLogCounter
+
+generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
+generateJourneyInfoResponse journey legs = do
+  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
+  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
+  let unifiedQR = getUnifiedQR legs
+  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+  merchantOperatingCity <- maybe (pure Nothing) QMerchOpCity.findById journey.merchantOperatingCityId
+  let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
+  pure $
+    APITypes.JourneyInfoResp
+      { estimatedDuration = journey.estimatedDuration,
+        estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+        estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
+        estimatedDistance = journey.estimatedDistance,
+        journeyStatus = journey.status,
+        legs,
+        unifiedQR,
+        journeyId = journey.id,
+        startTime = journey.startTime,
+        endTime = journey.endTime,
+        merchantOperatingCityName
+      }

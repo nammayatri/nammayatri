@@ -39,6 +39,7 @@ types:
     estimatedDistance: Distance
     journeyStatus: Domain.Types.Journey.JourneyStatus
     unifiedQR: Maybe UnifiedTicketQR
+    journeyId: Id Journey
     legs: [LegInfo]
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime

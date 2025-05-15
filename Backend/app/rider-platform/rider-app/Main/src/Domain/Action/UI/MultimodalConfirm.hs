@@ -363,28 +363,6 @@ getActiveJourneyIds riderId = do
   activeJourneys <- QJourney.findAllActiveByRiderId riderId
   return activeJourneys
 
-generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> m ApiTypes.JourneyInfoResp
-generateJourneyInfoResponse journey legs = do
-  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
-  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR legs
-  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-  merchantOperatingCity <- maybe (pure Nothing) CQMOC.findById journey.merchantOperatingCityId
-  let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
-  pure $
-    ApiTypes.JourneyInfoResp
-      { estimatedDuration = journey.estimatedDuration,
-        estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-        estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-        estimatedDistance = journey.estimatedDistance,
-        journeyStatus = journey.status,
-        legs,
-        unifiedQR,
-        startTime = journey.startTime,
-        endTime = journey.endTime,
-        merchantOperatingCityName
-      }
-
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant

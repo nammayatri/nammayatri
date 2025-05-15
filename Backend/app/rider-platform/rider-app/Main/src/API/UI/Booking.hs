@@ -23,7 +23,7 @@ where
 
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Types.Booking as SRB
-import Domain.Types.Booking.API (BookingAPIEntity, BookingListResV2, BookingStatusAPIEntity)
+import Domain.Types.Booking.API (BookingAPIEntity, BookingStatusAPIEntity)
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
@@ -65,7 +65,7 @@ type API =
              :> QueryParam "toDate" Integer
              :> QueryParams "rideStatus" SRB.BookingStatus
              :> QueryParams "journeyStatus" DJ.JourneyStatus
-             :> Get '[JSON] BookingListResV2
+             :> Get '[JSON] DBooking.BookingListResV2
            :<|> "favourites"
              :> "list"
              :> TokenAuth
@@ -113,7 +113,7 @@ editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPI . wit
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> FlowHandler DBooking.BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId mbFromDate mbToDate mbBookingStatusList = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId mbFromDate mbToDate mbBookingStatusList
 
-bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> FlowHandler BookingListResV2
+bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> FlowHandler DBooking.BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbFromDate mbToDate bookingStatusList = withFlowHandlerAPI . DBooking.bookingListV2 (personId, merchantId) mbLimit mbOffset mbFromDate mbToDate bookingStatusList
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
