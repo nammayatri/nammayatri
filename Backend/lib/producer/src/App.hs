@@ -48,10 +48,10 @@ startProducer = do
   Metrics.serve (appCfg.metricsPort)
   appEnv <- buildAppEnv appCfg
   flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
-  startProducerWithEnv flowRt appCfg appEnv
+  startProducerWithEnv flowRt appCfg appEnv producerType
 
-startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> IO ()
-startProducerWithEnv flowRt appCfg appEnv = do
+startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> ProducerType -> IO ()
+startProducerWithEnv flowRt appCfg appEnv producerType = do
   runFlow
     flowRt
     ( ( prepareConnectionRider
@@ -69,4 +69,4 @@ startProducerWithEnv flowRt appCfg appEnv = do
     )
   let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
   runFlowR flowRt appEnv $ do
-    loopGracefully $ bool producers ([PF.runReviver] <> producers) appEnv.runReviver
+    loopGracefully $ bool producers ([PF.runReviver producerType] <> producers) appEnv.runReviver

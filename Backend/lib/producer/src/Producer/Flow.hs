@@ -29,6 +29,7 @@ import Lib.Scheduler.Types as ST
 import Producer.SchedulerJob ()
 import qualified Sequelize as Se
 import SharedLogic.Allocator
+import "rider-app" SharedLogic.JobScheduler (RiderJobType (..))
 
 producerLockKey :: Text
 producerLockKey = "Producer:Lock:key"
@@ -73,57 +74,94 @@ runProducer = do
       Left err -> logError $ show err
       Right _ -> pure ()
 
-runReviver :: Flow ()
-runReviver = do
+runReviver :: ProducerType -> Flow ()
+runReviver producerType = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
   let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
       shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
-  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
+  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType)
   threadDelayMilliSec 60000
 
 mkRunningJobKey :: Text -> Text
 mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
-runReviver' :: Flow ()
-runReviver' = do
+runReviver' :: ProducerType -> Flow ()
+runReviver' producerType = do
   logDebug "Reviver is Running "
-  pendingJobs :: [AnyJob AllocatorJobType] <- getAllPendingJobs
-  let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
-  filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
-  logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
-  newJobsToExecute <- do
-    forM filteredPendingJobs $ \(AnyJob x) -> do
-      updateStatusOfJobs Revived [x.id]
-      now <- getCurrentTime
-      uuid <- generateGUIDText
-      maxShards <- asks (.maxShards)
-      let newid :: (Id AnyJob) = Id uuid
-      (AnyJobInfo jobInfo) :: AnyJobInfo AllocatorJobType <- fromMaybeM (InvalidRequest "jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
-      let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
-      let newJob =
-            Job
-              { id = newid,
-                parentJobId = x.parentJobId,
-                scheduledAt = now,
-                jobInfo = jobInfo,
-                shardId = shardId,
-                maxErrors = 5,
-                createdAt = now,
-                updatedAt = now,
-                currErrors = 0,
-                status = Pending,
-                merchantId = ST.merchantId x,
-                merchantOperatingCityId = ST.merchantOperatingCityId x
-              }
-      createWithKVScheduler $ AnyJob newJob
-      logDebug $ "Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
-      pure (AnyJob newJob)
-
-  let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
-  logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
-  result <- insertIntoStream newJobsToExecute_
-  logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
+  case producerType of
+    Driver -> do
+      pendingJobs :: [AnyJob AllocatorJobType] <- getAllPendingJobs
+      let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
+      filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
+      logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
+      newJobsToExecute <-
+        forM filteredPendingJobs $ \(AnyJob x) -> do
+          updateStatusOfJobs Revived [x.id]
+          now <- getCurrentTime
+          uuid <- generateGUIDText
+          maxShards <- asks (.maxShards)
+          let newid :: (Id AnyJob) = Id uuid
+          (AnyJobInfo jobInfo) :: AnyJobInfo AllocatorJobType <- fromMaybeM (InvalidRequest "driver side jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
+          let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
+          let newJob =
+                Job
+                  { id = newid,
+                    parentJobId = x.parentJobId,
+                    scheduledAt = now,
+                    jobInfo = jobInfo,
+                    shardId = shardId,
+                    maxErrors = 5,
+                    createdAt = now,
+                    updatedAt = now,
+                    currErrors = 0,
+                    status = Pending,
+                    merchantId = ST.merchantId x,
+                    merchantOperatingCityId = ST.merchantOperatingCityId x
+                  }
+          createWithKVScheduler $ AnyJob newJob
+          logDebug $ "Driver side Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
+          pure (AnyJob newJob)
+      let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
+      logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
+      result <- insertIntoStream newJobsToExecute_
+      logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
+    Rider -> do
+      pendingJobs :: [AnyJob RiderJobType] <- getAllPendingJobs
+      let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
+      filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
+      logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
+      newJobsToExecute <-
+        forM filteredPendingJobs $ \(AnyJob x) -> do
+          updateStatusOfJobs Revived [x.id]
+          now <- getCurrentTime
+          uuid <- generateGUIDText
+          maxShards <- asks (.maxShards)
+          let newid :: (Id AnyJob) = Id uuid
+          (AnyJobInfo jobInfo) :: AnyJobInfo RiderJobType <- fromMaybeM (InvalidRequest "rider side jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
+          let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
+          let newJob =
+                Job
+                  { id = newid,
+                    parentJobId = x.parentJobId,
+                    scheduledAt = now,
+                    jobInfo = jobInfo,
+                    shardId = shardId,
+                    maxErrors = 5,
+                    createdAt = now,
+                    updatedAt = now,
+                    currErrors = 0,
+                    status = Pending,
+                    merchantId = ST.merchantId x,
+                    merchantOperatingCityId = ST.merchantOperatingCityId x
+                  }
+          createWithKVScheduler $ AnyJob newJob
+          logDebug $ "Rider sideJob Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
+          pure (AnyJob newJob)
+      let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
+      logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
+      result <- insertIntoStream newJobsToExecute_
+      logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
 
 insertIntoStream :: [B.ByteString] -> Flow ()
 insertIntoStream jobs = do
