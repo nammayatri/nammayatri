@@ -31,10 +31,32 @@ library
       App
       Environment
       Tools.Metrics
+      Domain.Types.FRFSConfig
+      Domain.Types.FRFSPayment
+      Domain.Types.FRFSSearchRequest
+      Domain.Types.FRFSTicket
+      Domain.Types.FRFSTicketBooking
+      Domain.Types.Station
+      Domain.Types.StationFare
+      Storage.Beam.FRFSConfig
+      Storage.Beam.FRFSPayment
+      Storage.Beam.FRFSSearchRequest
+      Storage.Beam.FRFSTicket
+      Storage.Beam.FRFSTicketBooking
+      Storage.Beam.Station
+      Storage.Beam.StationFare
+      Storage.Queries.FRFSConfig
+      Storage.Queries.FRFSPayment
+      Storage.Queries.FRFSSearchRequest
+      Storage.Queries.FRFSTicket
+      Storage.Queries.FRFSTicketBooking
+      Storage.Queries.Station
+      Storage.Queries.StationFare
   other-modules:
       Paths_public_transport_bpp
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -69,22 +91,28 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
     , beckn-spec
     , bytestring
     , esqueleto
+    , external
+    , haskell-cac
     , mobility-core
+    , payment
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
     , servant-server
+    , sessionizer-metrics
     , template-haskell
     , text
     , time
+    , utils
+    , webhook
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -135,6 +163,7 @@ executable public-transport-bpp-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , esqueleto
