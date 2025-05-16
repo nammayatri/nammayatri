@@ -437,7 +437,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
             skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,
-            isDeleted = Just False
+            isDeleted = Just False,
+            onSearchFailed = Nothing
           }
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
   integratedBPPConfig <-
