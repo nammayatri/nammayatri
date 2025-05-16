@@ -869,6 +869,14 @@ export const stopChatListenerService = function () {
   }
 }
 
+export const stopChatListenerServiceWithoutEffect = function () {
+  if (JBridge.stopChatListenerService) {
+    window.chatMessages = undefined;
+    window.didReceiverMessage = undefined;
+    JBridge.stopChatListenerService();
+  }
+}
+
 export const sendMessage = function (message) {
   if (JBridge.sendMessage) {
     if (timer) clearTimeout(timer);
@@ -1168,7 +1176,7 @@ export const requestLocation = (unit) => () => {
   window.JBridge.requestLocation();
 };
 
-export const requestBackgroundLocation = (unit) => () => {
+export const requestBackgroundLocation = (unit) => {
   if (window.JBridge.requestBackgroundLocation) {
     window.JBridge.requestBackgroundLocation();
   }
@@ -1577,21 +1585,21 @@ export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
     aggregate("setKeyInSharedPrefKeysImpl");
     aggregate("JBridgeCalls");
-    return JBridge.setInSharedPrefs(key, value);
+    return JBridge.setKeysInSharedPrefs(key, value);
   };
 };
 
 export const setKeyInSharedPref = function (key, value) {
   aggregate("setKeyInSharedPref");
   aggregate("JBridgeCalls");
-  return JBridge.setInSharedPrefs(key, value);
+  return JBridge.setKeysInSharedPrefs(key, value);
 };
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
     aggregate("setEnvInNativeSharedPrefKeysImpl");
     aggregate("JBridgeCalls");
-    return JBridge.setInSharedPrefs(key, value);
+    return JBridge.setKeysInSharedPrefs(key, value);
   };
 };
 

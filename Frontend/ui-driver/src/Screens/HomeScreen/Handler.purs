@@ -50,6 +50,7 @@ homeScreen = do
   action <- lift $ lift $ runLoggableScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}} (GlobalState state)
   (GlobalState updatedGlobalState) <- getState
   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { bgLocPopupShown = updatedGlobalState.globalProps.bgLocPopupShown || updatedGlobalState.homeScreen.props.bgLocationPopup }
+  let _ = spy "exit action ->" action
   case action of
     GoToCompleteProfile updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)

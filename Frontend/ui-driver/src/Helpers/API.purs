@@ -83,25 +83,25 @@ callApiBTWithOptions payload headers errorHandler = do
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
   API.callApiBT payload headers' errorHandler $ noInternetScreenHandler "lazy"
 
-callApiWithOptions :: forall a b.
+callApiWithOptions :: forall a b st.
   StandardEncode a =>
   Decode b =>
   RestEndpoint a => 
   a ->
   Array Header ->
-  Flow GlobalState (Either ErrorResponse b)
+  Flow st (Either ErrorResponse b)
 callApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
   API.callApi payload headers' $ noInternetScreenHandler "lazy"
    
 
-callApi :: forall a b.
+callApi :: forall a b st.
   StandardEncode a =>
   Decode b =>
   RestEndpoint a => 
   a ->
-  Flow GlobalState (Either ErrorResponse b)
+  Flow st (Either ErrorResponse b)
 callApi payload =
   callApiWithOptions payload []
 
@@ -160,7 +160,7 @@ callGzipApiBT payload =
 
 
 
-noInternetScreenHandler :: forall a. a -> Flow GlobalState Unit
+noInternetScreenHandler :: forall a st. a -> Flow st Unit
 noInternetScreenHandler lazy = do
   if checkConditionToShowInternetScreen "lazy" then do
     void  $ fork $ do  

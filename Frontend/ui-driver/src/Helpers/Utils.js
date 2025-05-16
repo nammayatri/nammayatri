@@ -586,7 +586,7 @@ export const istToUtcDate = function (dateStr) {
 };
 
 export const setValueToLocalStore = function (key, value) {
-  JBridge.setInSharedPrefs(key, value);
+  JBridge.setKeysInSharedPrefs(key, value);
 }
 
 export const setPopupType = function (pType) {

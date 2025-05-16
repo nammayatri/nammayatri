@@ -53,6 +53,9 @@ import Storage (KeyStore(..), setValueToLocalStore)
 import Services.API (GetDriverInfoResp(..))
 import DecodeUtil (getFromWindow, removeFromWindow, storeFiber, getFibers, resetFibers)
 import Debug
+import Services.Backend as Remote
+import Helpers.Pooling (delay)
+import Data.Time.Duration (Milliseconds(..))
 
 main :: Event -> Effect Unit
 main event = do
@@ -81,11 +84,18 @@ main event = do
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
   assetsFiber <- launchAff $ flowRunner defaultGlobalState $ fetchAssets
+  sdkEvents <- launchAff $ flowRunner defaultGlobalState $ do pushSDKEvents ""
   void $ storeFiber $ mainFiber
   void $ storeFiber $ assetsFiber
+  void $ storeFiber $ sdkEvents
   void $ markPerformance "MAIN_END"
-
   pure unit
+  
+
+pushSDKEvents _ = do
+  void $ delay $ Milliseconds 10000.0
+  void $ Remote.pushSDKEvents
+  pushSDKEvents ""
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
 mainAllocationPop payload_type entityPayload = do

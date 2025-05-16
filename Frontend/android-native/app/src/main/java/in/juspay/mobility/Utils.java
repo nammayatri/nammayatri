@@ -194,7 +194,7 @@ public class Utils {
                 })
                 .addOnFailureListener(exception -> FirebaseCrashlytics.getInstance().recordException(exception));
     }
-    public static void initCTSignedCall(Context context, Activity activity, MobilityRemoteConfigs remoteConfigs){
+    public static CleverTapSignedCall initCTSignedCall(Context context, Activity activity, MobilityRemoteConfigs remoteConfigs){
         String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
         String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
         CleverTapSignedCall cleverTapSignedCall = new CleverTapSignedCall(context, activity, true, SC_API_KEY, SC_ACCOUNT_ID);
@@ -202,22 +202,20 @@ public class Utils {
         if (BuildConfig.DEBUG) {
             SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
         }
-        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
-        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
-            @Override
-            public boolean onNetworkQualityResponse(final int score) {
-                Log.d("SC", "Signed Call Network quality score: " + score);
-                JSONObject voipCallConfig = null;
-                int scoreThreshold = 70;
-                try {
-                    voipCallConfig = new JSONObject(remoteConfigs.getString("voip_call_config"));
-                    scoreThreshold = voipCallConfig.optInt("score",70);
-                } catch (JSONException e) {
-                    Log.d("SC","Failed to fetch voip call config");
-                }
-                return score >= scoreThreshold;
+        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(cleverTapSignedCall));
+        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(score -> {
+            Log.d("SC", "Signed Call Network quality score: " + score);
+            JSONObject voipCallConfig = null;
+            int scoreThreshold = 70;
+            try {
+                voipCallConfig = new JSONObject(remoteConfigs.getString("voip_call_config"));
+                scoreThreshold = voipCallConfig.optInt("score",70);
+            } catch (JSONException e) {
+                Log.d("SC","Failed to fetch voip call config");
             }
+            return score >= scoreThreshold;
         });
+        return cleverTapSignedCall;
     }
 
     private static boolean getBooleanWithFallback (SharedPreferences sharedPref, String key) {

@@ -17,7 +17,7 @@ window.version = window.version || {};
 window.version["app"] = __VERSION__;
 let previousDateObject = new Date();
 var innerPayload;
-const refreshThreshold = 300;
+const refreshThreshold = 10;
 console.warn("Hello World");
 const JBridge = window.JBridge;
 const JOS = window.JOS;
@@ -45,6 +45,92 @@ window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", 
 
 window.callUICallback = function () {};
 
+const remoteConfig = ["fetchRemoteConfigString", "fetchRemoteConfigBool", "fetchRemoteConfigDouble", "fetchRemoteConfigLong"]
+const getSharedPrefs = ["getKeysInSharedPref", "getKeyInNativeSharedPrefKeys", "getFromSharedPrefs"]
+const setSharedPrefs = ["setKeysInSharedPrefs"]
+
+Object.getOwnPropertyNames(window.JBridge).forEach(fnName => {
+  window.JBridgeProxy = window.JBridgeProxy || {};
+  window.JBridgeProxy[fnName] = window.JBridge[fnName];
+  
+  window.JBridge[fnName] = function () {
+    window.cacheMap = window.cacheMap || {};
+    
+    try {
+      if (remoteConfig.includes(fnName)) {
+        window.cacheMap.remoteConfig = window.cacheMap.remoteConfig || {};
+        const key = arguments[0];
+        if (window.cacheMap.remoteConfig[key]) {
+          return window.cacheMap.remoteConfig[key];
+        }
+        console.log("Jbridge fnName", fnName, "arguments", arguments);
+        const result = window.JBridgeProxy[fnName](...arguments);
+        window.cacheMap.remoteConfig[key] = result;
+        return result;
+      } 
+      else if (getSharedPrefs.includes(fnName)) {
+        window.cacheMap.sharedPrefs = window.cacheMap.sharedPrefs || {};
+        const key = arguments[0];
+        if (window.cacheMap.sharedPrefs[key]) {
+          return window.cacheMap.sharedPrefs[key];
+        }
+        console.log("Jbridge fnName", fnName, "arguments", arguments);
+        const result = window.JBridgeProxy[fnName](...arguments);
+        window.cacheMap.sharedPrefs[key] = result;
+        return result;
+      }
+      else if (setSharedPrefs.includes(fnName)) {
+        window.cacheMap.sharedPrefs = window.cacheMap.sharedPrefs || {};
+        const key = arguments[0];
+        const value = arguments[1];
+        if (window.cacheMap.sharedPrefs[key] === value) {
+          console.log("Jbridge fnName", fnName, "key", key, "value", value, "no change");
+          return;
+        }
+        console.log("Jbridge fnName", fnName, "arguments", arguments);
+        const result = window.JBridgeProxy[fnName](...arguments);
+        window.cacheMap.sharedPrefs[key] = value;
+        return result;
+      }
+      else {
+        console.log("Jbridge fnName", fnName, "arguments", arguments);
+        const result = window.JBridgeProxy[fnName](...arguments);
+        return result;
+      }
+    }
+    catch(e) {
+      console.error("Error in index.js " + e + " fnName " + fnName);
+      return;
+    }
+  };
+});
+
+Object.getOwnPropertyNames(window.Android).forEach(fnName => {
+  window.AndroidProxy = window.AndroidProxy || {};
+  window.AndroidProxy[fnName] = window.Android[fnName];
+  window.Android[fnName] = function () {
+    console.log("Android fnName", fnName, "arguments", arguments);
+    try{
+    const result = window.AndroidProxy[fnName](...arguments);
+    return result;
+    }
+    catch(e){
+      console.error("Error in index.js " + e + " fnName " + fnName);
+      return;
+    }
+  };
+});
+
+window.onSharedPreferenceChanged = function (key, value) {
+  console.log("onSharedPreferenceChanged", key, value);
+  if (key) {
+    if (value) {
+      window.cacheMap.sharedPrefs[key] = value;
+    } else {
+      delete window.cacheMap.sharedPrefs[key];
+    }
+  }
+}
 
 if (window.JOS.self != "in.mobility.core") {
   window.JOS.emitEventOriginal = window.JOS.emitEvent;
@@ -140,7 +226,6 @@ function refreshFlow() {
     }
   }
 }
-
 
 function makeEvent(_type, _data) {
   return {
@@ -502,7 +587,6 @@ if (!window.JOS.tracker) {
   window.tracker = window.JOS.tracker
 
 }
-
 
 if (window.eventQueue) {
   while (window.eventQueue.length) {

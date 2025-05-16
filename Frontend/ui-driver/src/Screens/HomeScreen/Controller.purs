@@ -732,11 +732,9 @@ eval (GotoKnowMoreAction PopUpModal.OnButton1Click) state = continue state { dat
 
 eval BgLocationAC state = continue state { props { bgLocationPopup = true}}
 
-eval (BgLocationPopupAC PopUpModal.OnButton1Click) state =
-  continueWithCmd state { props { bgLocationPopup = false}} [do
-    void $ JB.requestBackgroundLocation unit
-    pure NoAction
-  ]
+eval (BgLocationPopupAC PopUpModal.OnButton1Click) state = do
+  let _ = JB.requestBackgroundLocation unit
+  continue state { props { bgLocationPopup = false}}
 
 eval (ReferralPopUpAction popUpType storageKey PopUpModal.OnButton1Click) state = do
   case storageKey of
@@ -1252,7 +1250,7 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index
   let odometerValue = if length state.props.odometerValue < 4 then state.props.odometerValue <> key else state.props.odometerValue
   continue state { props = state.props { odometerValue = odometerValue} }
 
-eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+eval (RideActionModalAction (RideActionModal.NoAction)) state = update state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   if state.data.activeRide.tripType == ST.Delivery && getValueToLocalStore PARCEL_IMAGE_UPLOADED /= "true" then do
     exit $ UploadParcelImage state
@@ -1382,23 +1380,17 @@ eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
       pure $ (RideActionModalAction (RideActionModal.LoadMessages))
     ]
 
-eval GetMessages state = do
-  continueWithCmd state [do
-    pure $ (RideActionModalAction (RideActionModal.LoadMessages))
-  ]
 
 eval (RideActionModalAction (RideActionModal.VisuallyImpairedCustomer)) state = continue state{props{showChatBlockerPopUp = true}}
 
 eval (UpdateInChat) state = continue state {props{updatedArrivalInChat = true}}
 
-eval (InitializeChat ) state = continue state {props{chatcallbackInitiated = true, chatServiceKilled = false}}
+eval (InitializeChat ) state = update state {props{chatcallbackInitiated = true, chatServiceKilled = false}}
 
 eval RemoveChat state = do
-  continueWithCmd state {props{chatcallbackInitiated = false, chatServiceKilled = false}} [ do
-    _ <- stopChatListenerService
-    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
-    pure $ NoAction
-  ]
+  let _ = JB.stopChatListenerServiceWithoutEffect unit
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
+  update state {props{chatcallbackInitiated = false, chatServiceKilled = false}}
 
 eval (UpdateMessages message sender timeStamp size) state = do
   if not state.props.chatcallbackInitiated then continue state {props {canSendSuggestion = true}} else do
@@ -1508,7 +1500,7 @@ eval (RideActionModalAction RideActionModal.ShowEndRideWithStops) state = contin
 
 eval (UpdateWaitTime status) state = do
   void $ pure $ setValueToLocalNativeStore WAITING_TIME_STATUS (show status)
-  continue state { props { waitTimeStatus = status}, data {activeRide {notifiedCustomer = status /= ST.NoStatus}}}
+  update state { props { waitTimeStatus = status}, data {activeRide {notifiedCustomer = status /= ST.NoStatus}}}
 
 eval (WaitTimerCallback timerID _ seconds) state =
   if (Just state.data.activeRide.id) == (state.data.advancedRideData <#> _.id)
@@ -1574,12 +1566,14 @@ eval (SetToken id )state = do
 eval (CurrentLocation lat lng) state = do
   let newState = state{data{ currentDriverLat = getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng }}
   exit $ UpdatedState newState
+
 eval (ModifyRoute lat lon) state = do
   let newLat = getLastKnownLocValue ST.LATITUDE lat
       newLon = getLastKnownLocValue ST.LONGITUDE lon
   let newState = state { data = state.data {currentDriverLat = newLat, currentDriverLon = newLon} }
+  -- update newState
   continueWithCmd newState [ do
-    void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRouteOnMap newState newLat newLon
+    void $ launchAff $ EHC.flowRunner unit $ updateRouteOnMap newState newLat newLon
     pure NoAction
   ]
 
@@ -1625,7 +1619,7 @@ eval (TimeUpdate time lat lng errorCode) state = do
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
             animateCamera driverLat driverLong zoomLevel "ZOOM"
-      else if state.props.currentStage == ST.RideStarted && (not $ Array.null state.data.activeRide.stops) then void $ launchAff $ flowRunner defaultGlobalState $ updateRouteOnMap newState driverLat driverLong
+      else if state.props.currentStage == ST.RideStarted && (not $ Array.null state.data.activeRide.stops) then void $ launchAff $ flowRunner unit $ updateRouteOnMap newState driverLat driverLong
       else pure unit
 
       case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
@@ -1660,32 +1654,35 @@ eval (OnMarkerClickCallBack tag lat lon) state = do
         ]
     _, _ -> continue state
 
-eval (UpdateLastLoc lat lon val) state = continue state {data { prevLatLon = Just {lat : lat, lon : lon, place : "", driverInsideThreshold : false}}}
+eval (UpdateLastLoc lat lon val) state = update state {data { prevLatLon = Just {lat : lat, lon : lon, place : "", driverInsideThreshold : false}}}
 
 eval (UpdateAndNotify atSource) state =
   continueWithCmd state
         [ do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
-              $ do
-                  push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
-                  GetRouteResp routeApiResponse <- case atSource of
-                    true -> Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon) "pickup"
-                    false -> Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon) "trip"
-                  let shortRoute = (routeApiResponse Array.!! 0)
-                  liftFlowBT $ push $ case shortRoute of
-                      Just (Route route) -> do
-                        case atSource of
-                          true -> do
-                            if route.distance <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI
-                            else do
-                              let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon
-                              if dist <= state.data.config.waitTimeConfig.straightLineDist then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
-                          false -> do
-                            if route.distance <= state.data.config.waitTimeConfig.routeDistance then NotifyReachedDestination
-                            else do
-                              let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon
-                              if dist <= state.data.config.waitTimeConfig.straightLineDist then NotifyReachedDestination else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
-                      _ -> NoAction
+            void $ launchAff $ EHC.flowRunner unit $
+              do
+                  push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                  (resp) <- case atSource of
+                    true -> Remote.getRoute (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon) "pickup"
+                    false -> Remote.getRoute (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon) "trip"
+                  case resp of
+                    Left err -> pure unit
+                    Right (GetRouteResp routeApiResponse) -> do
+                      let shortRoute = (routeApiResponse Array.!! 0)
+                      liftFlow $ push $ case shortRoute of
+                          Just (Route route) -> do
+                            case atSource of
+                              true -> do
+                                if route.distance <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI
+                                else do
+                                  let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon
+                                  if dist <= state.data.config.waitTimeConfig.straightLineDist then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+                              false -> do
+                                if route.distance <= state.data.config.waitTimeConfig.routeDistance then NotifyReachedDestination
+                                else do
+                                  let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+                                  if dist <= state.data.config.waitTimeConfig.straightLineDist then NotifyReachedDestination else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+                          _ -> NoAction
                   pure unit
             pure NoAction
         ]
@@ -2052,7 +2049,7 @@ eval (UpComingRideDetails  resp) state = do
    continue state {data {upcomingRide = scheduledRide} , props {checkUpcomingRide = false, homeScreenBannerVisibility = true , rideRequestPill{pillShimmerVisibility = false}}}
 
 eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
-eval (UpdateRetryRideList retry) state = continue state {props {retryRideList = retry}}
+eval (UpdateRetryRideList retry) state = update state {props {retryRideList = retry}}
 
 eval HideBusOnline state = continue state { props { setBusOnline = false } }
 
@@ -2073,7 +2070,7 @@ eval (VOIPCallBack callId status rideId errorCode driverFlag networkType network
       merchantOperatingCity : getValueToLocalStore DRIVER_LOCATION
     }
   continueWithCmd state [ do
-    void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+    void $ launchAff $ EHC.flowRunner unit $ do
       resp :: (Either ErrorResponse API.ApiSuccessResult) <-  HelpersAPI.callApi $ API.VoipCallReq req
       pure unit
     pure NoAction
@@ -2461,7 +2458,7 @@ fetchStageFromRideStatus activeRide =
     CANCELLED -> ST.HomeScreen
     _ -> ST.HomeScreen
 
-updateRouteOnMap :: ST.HomeScreenState -> Number -> Number-> Flow GlobalState Unit
+updateRouteOnMap :: ST.HomeScreenState -> Number -> Number-> Flow Unit Unit
 updateRouteOnMap state lat lon= do
   let leftStops = Array.filter (\(API.Stop item) -> maybe true (\(API.StopInformation stopInfo) -> isNothing stopInfo.stopEndLatLng) item.stopInfo) state.data.activeRide.stops
       hasStops = not $ Array.null leftStops
@@ -2522,7 +2519,7 @@ updateRouteOnMap state lat lon= do
             Nothing -> pure unit
         Left err -> pure unit
 
-updateRoute :: ST.HomeScreenState -> Flow GlobalState Unit
+updateRoute :: ST.HomeScreenState -> Flow Unit Unit
 updateRoute state = do
   void $ pure $ JB.exitLocateOnMap ""
   void $ pure $ JB.removeAllMarkers ""

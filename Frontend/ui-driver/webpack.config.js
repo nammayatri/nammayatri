@@ -24,14 +24,14 @@ module.exports = function (env, argv) {
     performance: {
       hints: false
     },
-    module: {
-      rules: [{
-        test: /\.js$/,
-        use: {
-          loader: './ps-lazy-loader.js',
-        }
-      }]
-    },
+    // module: {
+    //   rules: [{
+    //     test: /\.js$/,
+    //     use: {
+    //       loader: './ps-lazy-loader.js',
+    //     }
+    //   }]
+    // },
     devServer: {
       contentBase: path.join(__dirname, 'dist'),
       host: "0.0.0.0",

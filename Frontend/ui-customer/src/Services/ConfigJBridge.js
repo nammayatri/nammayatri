@@ -13,6 +13,6 @@ export const getValueToLocalNativeStoreConfig = function (key) {
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
-    window.JBridge.setInSharedPrefs(key, value);
+    window.JBridge.setKeysInSharedPrefs(key, value);
   };
 };

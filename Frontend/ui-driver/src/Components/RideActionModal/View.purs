@@ -117,7 +117,6 @@ messageButton push config =
   , background if config.bookingFromOtherPlatform then Color.grey700 else Color.white900
   , stroke if config.bookingFromOtherPlatform then "1,"<> Color.grey900 else "1,"<> Color.black500
   , cornerRadius 30.0
-  , afterRender push $ const $ LoadMessages
   , onClick (\action -> if config.bookingFromOtherPlatform
                           then void $ pure $ JB.toast $ getString SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES
                           else push action) $ const $ if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
@@ -514,7 +513,6 @@ rentalRideDescView config push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , margin $ MarginTop 20
-  , afterRender push $ const NoAction
   ][  
     linearLayout
       [ height WRAP_CONTENT
@@ -601,6 +599,7 @@ sourceAndDestinationView :: forall w. (Action -> Effect Unit) -> Config -> Prest
 sourceAndDestinationView push config =
   scrollView
     [ height $ V 120
+    , nestedScrollView true
     , width MATCH_PARENT
     , margin $ MarginVertical 24 0
     ]
@@ -633,14 +632,12 @@ startRide push config =
   , alpha $ if config.isAdvanced then 0.3 else 1.0
   , pivotY 0.0
   , onAnimationEnd push $ const NoAction
-  , afterRender push $ const NoAction
   , rippleColor Color.rippleShade
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ if config.isDelivery then if (getValueToLocalStore PARCEL_IMAGE_UPLOADED) == "true" then getString START' else getString UPLOAD_PARCEL_IMAGE else (getString START_RIDE)
       , color Color.white900
-      , afterRender push $ const NoAction
       , padding (Padding 0 0 0 4)
       ] <> FontStyle.subHeading1 TypoGraphy
       )
@@ -663,7 +660,6 @@ endRide push config =
     , text $ if config.isDelivery then getString END' else getString END_RIDE
     , color Color.white900
     , padding (Padding 0 0 0 4)
-    , afterRender push $ const NoAction
     ] <> FontStyle.subHeading1 TypoGraphy ]
 
 cancelOrEndRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -887,12 +883,12 @@ rideInfoView push config =
     , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
     , padding $ Padding 14 14 5 14
-    , afterRender push $ const NoAction
     ] [  horizontalScrollView
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , scrollBarX false
           , fillViewport true
+          , nestedScrollView true
           ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
@@ -1144,7 +1140,6 @@ sourceDestinationTextView push config =
         , color Color.black800
         , ellipsize true
         , singleLine true
-        , afterRender push $ const NoAction
         , visibility $ boolToVisibility $ config.startRideActive && not config.isDelivery 
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
@@ -1157,7 +1152,6 @@ sourceDestinationTextView push config =
         , ellipsize true
         , singleLine true
         , visibility $ boolToVisibility $ config.startRideActive &&  (not config.isDelivery || config.isSourceDetailsExpanded) 
-        , afterRender push $ const NoAction
         ] <> FontStyle.body1 TypoGraphy
       , linearLayout 
         [ height WRAP_CONTENT
@@ -1343,6 +1337,7 @@ sourceAddressTextView config push =
     , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
+    , afterRender push $ const NoAction
     ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -1351,7 +1346,6 @@ sourceAddressTextView config push =
         , color Color.black800
         , ellipsize true
         , singleLine true
-        , afterRender push $ const NoAction
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -1361,7 +1355,6 @@ sourceAddressTextView config push =
         , color Color.black650
         , margin (MarginBottom 25)
         , ellipsize true
-        , afterRender push $ const NoAction
         ] <> FontStyle.body1 TypoGraphy
       ]
 
@@ -1461,7 +1454,6 @@ personName push config isSource =
       , color Color.black800
       , ellipsize true
       , singleLine true
-      , afterRender push $ const NoAction
       ] <> FontStyle.subHeading1 TypoGraphy
 
 moreDetailsView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w

@@ -122,7 +122,7 @@ foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import startGActivity :: String -> Effect Unit
 foreign import startOpenMeterActivity :: forall action. (action -> Effect Unit) -> Effect Unit
 foreign import requestLocation  :: Unit -> Effect Unit
-foreign import requestBackgroundLocation  :: Unit -> Effect Unit
+foreign import requestBackgroundLocation  :: Unit -> Unit
 
 foreign import initiateLocationServiceClient :: Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
@@ -183,6 +183,7 @@ foreign import startService :: String -> Unit
 foreign import stopService :: String -> Unit
 foreign import scrollOnResume :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import stopChatListenerService :: Effect Unit
+foreign import stopChatListenerServiceWithoutEffect :: Unit -> Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> action -> Effect Unit
 foreign import dateCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 foreign import unregisterDateAndTime :: Effect Unit

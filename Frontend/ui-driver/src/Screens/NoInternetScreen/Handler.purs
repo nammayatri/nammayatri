@@ -34,8 +34,7 @@ import JBridge as JB
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
 noInternetScreen triggertype= do
-  (GlobalState state) <- getState
-  act <- lift $ lift $ showScreen $ NoInternetScreen.screen state.noInternetScreen triggertype
+  act <- lift $ lift $ showScreen $ NoInternetScreen.screen {} triggertype
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)
@@ -43,13 +42,12 @@ noInternetScreen triggertype= do
     InternetCallBack updatedState -> App.BackT $ App.NoBack <$> (pure CHECK_INTERNET)
 
 
-noInternetScreen' :: Flow GlobalState Unit
+noInternetScreen' :: forall st. Flow st Unit
 noInternetScreen' = do 
-  void $ EHU.toggleLoader false
-  (GlobalState state) <- Flow.getState
+  void $ EHC.liftFlow $ EHU.terminateLoader ""
   void $ EHC.liftFlow $ initUIWithNameSpace "NoInternetScreen" Nothing
   let 
-    screen = NoInternetScreen.screen state.noInternetScreen "INTERNET_ACTION"
+    screen = NoInternetScreen.screen {} "INTERNET_ACTION"
     scopedScreen = { 
       initialState : screen.initialState
       , view : screen.view

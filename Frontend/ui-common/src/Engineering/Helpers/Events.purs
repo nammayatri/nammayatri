@@ -9,7 +9,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Presto.Core.Types.Language.Flow (Flow)
 import Effect (Effect)
 import Debug
-import Types.App (FlowBT, GlobalState(..), defaultGlobalState)
+import Common.Types.App (FlowBT)
 import Data.Array (length, take, reverse, drop)
 import Helpers.API as HelpersAPI
 import Services.API as APITypes
@@ -50,7 +50,7 @@ measureDurationFlow name action = do
   void $ liftFlow $ endMeasuringDuration name
   pure result
 
-measureDurationFlowBT :: forall e st. String -> FlowBT e st -> FlowBT e st
+measureDurationFlowBT :: forall e st s. String -> FlowBT e st s -> FlowBT e st s
 measureDurationFlowBT name action = do  
   liftFlowBT $ initMeasuringDuration name
   result <- action
@@ -76,7 +76,7 @@ clearEventStorage _ = do
 
 addEvent :: Event -> Effect Unit
 addEvent event = do
-  void $ launchAff $ EHC.flowRunner defaultGlobalState $ liftFlow $ setEventToStorage updatedEvent
+  void $ launchAff $ EHC.flowRunner unit $ liftFlow $ setEventToStorage updatedEvent
   where 
     updatedEvent = -- Added this to call these functions on a new thread
       event { 
@@ -88,7 +88,7 @@ addEvent event = do
         cityId = JB.getKeyInSharedPrefKeys "DRIVER_LOCATION"
       }
 
-pushEvent :: Int -> Flow GlobalState Unit
+pushEvent :: forall st. Int -> Flow st Unit
 pushEvent noOfChunk = do
   let events = getEventFromStorage unit
   if ((length events) > 0) then do
@@ -159,7 +159,7 @@ mkEventPayload eventArray = map (\event -> (APITypes.EventsPayload
     cityId : nullToMaybe event.cityId
     })) eventArray
 
-runLogTracking :: Flow GlobalState Unit
+runLogTracking :: forall st. Flow st Unit
 runLogTracking = do
   let eventsConfig = RC.eventsConfig "events_config"
   void $ delay $ Milliseconds eventsConfig.loggingIntervalInMs

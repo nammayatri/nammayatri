@@ -20,6 +20,7 @@ import Locale.Utils
 import Services.API
 import DecodeUtil
 import Common.Types.App (Version(..))
+import Common.Types.App (FlowBT) as CommonApp
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
@@ -77,7 +78,7 @@ import Resource.Localizable.StringsV2 as StringsV2
 import Services.CallAPI (callAPI)
 
 
-getHeaders :: String -> Boolean -> Flow GlobalState Headers
+getHeaders :: forall st. String -> Boolean -> Flow st Headers
 getHeaders dummy isGzipCompressionEnabled = do
     _ <- pure $ printLog "dummy" dummy
     regToken <- loadS $ show REGISTERATION_TOKEN
@@ -93,7 +94,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Just token -> [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
-getCustomerHeader :: String -> Boolean -> Flow GlobalState Headers
+getCustomerHeader :: forall st. String -> Boolean -> Flow st Headers
 getCustomerHeader dummy isGzipCompressionEnabled = do
     _ <- pure $ printLog "dummy" dummy
     let regToken = Just $ SC.getCustomerToken ""
@@ -109,7 +110,7 @@ getCustomerHeader dummy isGzipCompressionEnabled = do
                         Just token -> [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
-getHeaders' :: String -> Boolean -> FlowBT String Headers
+getHeaders' :: forall st. String -> Boolean -> CommonApp.FlowBT String st Headers
 getHeaders' dummy isGzipCompressionEnabled = do
     regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
     _ <- pure $ spy "import headers" regToken
@@ -574,7 +575,7 @@ uploadProfileReq body = do
             BackT $ pure GoBack
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
-getRideHistoryReq :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse GetRidesHistoryResp)
+getRideHistoryReq :: forall st. String -> String -> String -> String -> String -> Flow st (Either ErrorResponse GetRidesHistoryResp)
 getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders "" true
         withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
@@ -687,7 +688,7 @@ getRouteBT body routeType = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
-getRoute :: GetRouteReq -> String -> Flow GlobalState (Either ErrorResponse GetRouteResp)
+getRoute ::forall st. GetRouteReq -> String -> Flow st (Either ErrorResponse GetRouteResp)
 getRoute body routeType = do
         headers <- getHeaders "" true
         withAPIResult (EP.getRoute routeType) unwrapResponse $  callAPI headers (RouteReq routeType body)
@@ -957,7 +958,7 @@ getDriverProfileStatsBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
-getDriverProfileStats :: DriverProfileStatsReq -> Flow GlobalState (Either ErrorResponse DriverProfileStatsResp)
+getDriverProfileStats :: forall st. DriverProfileStatsReq -> Flow st (Either ErrorResponse DriverProfileStatsResp)
 getDriverProfileStats payload = do
      headers <- getHeaders "" false
      withAPIResult ((EP.getstatsInfo "" )) unwrapResponse $ callAPI headers payload
@@ -1253,7 +1254,7 @@ createPaymentOrder dummy = do
     where
         unwrapResponse (x) = x
 
-paymentOrderStatus :: String -> Flow GlobalState (Either ErrorResponse OrderStatusRes)
+paymentOrderStatus :: forall st. String -> Flow st (Either ErrorResponse OrderStatusRes)
 paymentOrderStatus orderId = do
     headers <- getHeaders "" false
     withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
@@ -1316,7 +1317,7 @@ getKioskLocations dummy = do
     where
         unwrapResponse (x) = x
 
-getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
+getUiPlans :: forall st. String -> Flow st (Either ErrorResponse UiPlansResp)
 getUiPlans vehicleVariant = do
     headers <- getHeaders "" false
     withAPIResult (EP.getUiPlans vehicleVariant) unwrapResponse $ callAPI headers (UiPlansReq vehicleVariant)
@@ -1747,7 +1748,7 @@ payoutRegistration dummy = do
     where
         unwrapResponse (x) = x
 
-rideBooking :: String -> String -> String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse ScheduledBookingListResponse)
+rideBooking :: forall st. String -> String -> String -> String -> String -> String -> String -> Flow st (Either ErrorResponse ScheduledBookingListResponse)
 rideBooking limit offset from to  tripCategory lat lon  = do
         headers <- getHeaders "" true
         withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory lat lon ) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory lat lon )
@@ -1842,7 +1843,7 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
 
 ---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
 
-fetchDriverProfile ::  Boolean -> Flow GlobalState (Either ErrorResponse DriverProfileDataRes)
+fetchDriverProfile :: forall st. Boolean -> Flow st (Either ErrorResponse DriverProfileDataRes)
 fetchDriverProfile isImages = do
         headers <- getHeaders "" true
         withAPIResult (EP.getDriverProfile isImages) unwrapResponse $ callAPI headers $ DriverProfileDataReq isImages

@@ -121,7 +121,6 @@ newtype GlobalState = GlobalState {
   , homeScreen :: HomeScreenState
   , editBankDetailsScreen :: EditBankDetailsScreenState
   , editAadhaarDetailsScreen :: EditAadhaarDetailsScreenState
-  , noInternetScreen :: NoInternetScreenState
   , popUpScreen :: PopUpScreenState
   , driverRideRatingScreen :: DriverRideRatingScreenState
   , appUpdatePopUpScreen :: AppUpdatePopUpScreenState
@@ -186,7 +185,6 @@ defaultGlobalState = GlobalState {
 , homeScreen : HomeScreenData.initData
 , editBankDetailsScreen : EditBankDetailsScreenData.initData
 , editAadhaarDetailsScreen : EditAadhaarDetailsScreenData.initData
-, noInternetScreen : {}
 , popUpScreen : PopUpScreenData.initData
 , driverRideRatingScreen : DriverRideRatingScreenData.initData
 , appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData

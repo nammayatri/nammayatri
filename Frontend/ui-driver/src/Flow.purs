@@ -2354,7 +2354,7 @@ currentRideFlow activeRideResp isActiveRide = do
           for_ activeRideResponse.list $ \(RidesInfo ride) -> do
             let isMeterRide = maybe false (\(API.TripCategory tripCategory) -> tripCategory.contents == Just "MeterRide" ) ride.tripCategory
             if isMeterRide then  do
-              void $ liftFlowBT $ JB.requestBackgroundLocation unit
+              let _ = JB.requestBackgroundLocation unit
               void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
               void $ lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity (cb <<< Right) $> nonCanceler
               void $ liftFlowBT $  HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
@@ -2520,7 +2520,6 @@ homeScreenFlow = do
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED
   liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
   action <- UI.homeScreen
-  void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case action of
     GO_TO_PROFILE_SCREEN updatedState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
@@ -2591,7 +2590,7 @@ homeScreenFlow = do
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           void $ lift $ lift $ toggleLoader false
           void $ pure $ JB.destroySignedCall unit
-          currentRideFlow Nothing Nothing
+          homeScreenFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
@@ -2604,7 +2603,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
             void $ lift $ lift $ toggleLoader false
           else pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-          homeScreenFlow
+          currentRideFlow Nothing Nothing
     GO_TO_START_ZONE_RIDE {otp, lat, lon, ts} -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true

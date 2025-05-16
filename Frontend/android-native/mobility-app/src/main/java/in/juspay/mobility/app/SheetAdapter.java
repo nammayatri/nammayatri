@@ -48,7 +48,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         return holder.get(index);
     }
 
-    private final ArrayList<SheetViewHolder> holder = new ArrayList<>();
+    private final ArrayList<SheetViewHolder> holder = new ArrayList<>(6);
 
     public void setViewPager(ViewPager2 viewPager) {
         this.viewPager = viewPager;
