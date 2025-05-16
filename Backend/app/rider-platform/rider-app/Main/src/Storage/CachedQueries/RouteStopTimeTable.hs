@@ -43,11 +43,12 @@ findByRouteCodeAndStopCode ::
   [Text] ->
   Text ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode = do
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode = do
+  let routeCodes = P.map (\val -> fromMaybe val (listToMaybe (Text.splitOn ":" val))) routeCodes'
   allTrips <-
     Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
       Just a -> pure a
-      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode
+      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode
   logDebug $ "Fetched route stop time table cached: " <> show allTrips <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes) || (val == Just True)) allTrips
