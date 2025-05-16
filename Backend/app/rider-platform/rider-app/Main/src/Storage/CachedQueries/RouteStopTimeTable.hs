@@ -44,7 +44,7 @@ findByRouteCodeAndStopCode ::
   Text ->
   m [RouteStopTimeTable]
 findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode = do
-  let routeCodes = P.map (\val -> fromMaybe val (listToMaybe (Text.splitOn ":" val))) routeCodes'
+  let routeCodes = P.map (\val -> fromMaybe val (listToMaybe (P.drop 1 (Text.splitOn ":" val)))) routeCodes'
   allTrips <-
     Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
       Just a -> pure a
