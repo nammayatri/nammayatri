@@ -768,7 +768,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
                   let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                   mRiderNumber <- mapM decrypt person.mobileNumber
                   void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
-                  void $ CallExternalBPP.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
+                  void $ CallExternalBPPx.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
                   paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id booking

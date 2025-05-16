@@ -1,0 +1,119 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  City: Kernel.Types.Beckn.Context
+  LatLong: Kernel.External.Maps.Types
+
+FRFSSearchRequest:
+  tableName: frfs_search_request
+
+  fields:
+    transactionId: Id FRFSSearchRequest
+    bapId: Text
+    bapUri: Maybe Text
+    bppId: Text
+    sourceStationId: Maybe (Id Station)
+    destinationStationId: Maybe (Id Station)
+    quantity: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    transactionId: "!PrimaryKey"
+
+FRFSTicketBooking:
+  tableName: frfs_ticket_booking
+
+  fields:
+    id: Id FRFSTicketBooking
+    transactionId: Id FRFSSearchRequest
+    selectedFareId: Maybe (Id StationFare) # make it non maybe?
+    bppId: Text
+    bapId: Text
+    quantity: Int
+    type: BookingTypeEnum
+    status: BookingStatusEnum
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: "!PrimaryKey"
+
+FRFSTicket:
+  tableName: frfs_ticket
+
+  fields:
+    id: Id FRFSTicket
+    bookingId: Id FRFSTicketBooking
+    transactionId: Id FRFSSearchRequest
+    bppId: Text
+    bapId: Text
+    ticketQr: Text
+    validTill: UTCTime
+    ticketStatus: TicketStatusEnum
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: "!PrimaryKey"
+
+Station:
+  tableName: stations
+
+  fields:
+    id: Id Station
+    name: Text
+    code: Text
+    lat: Maybe Double
+    lon: Maybe Double
+    merchnatId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: "!PrimaryKey"
+    code: "!Unique"
+
+StationFare:
+  tableName: station_fares
+
+  fields:
+    id: Id StationFare
+    fromStationId: Id Station
+    toStationId: Id Station
+    fareAmount: HighPrecMoney
+    currency: Maybe Currency
+    # add booking type (SINGLE | ROUNDTRIP)
+
+  constraints:
+    id: "!PrimaryKey"
+
+FRFSConfig:
+  tableName: frfs_config
+
+  fields:
+    id: Id FRFSConfig
+    bppId: Text
+    config: Text
+    updatedAt: UTCTime
+
+  constraints:
+    id: "!PrimaryKey"
+    bppId: "!Unique"
+
+FRFSPayment:
+  tableName: frfs_payment
+
+  fields:
+    id: Id FRFSPayment # payment_id we receive in confirm from bap
+    transactionId: Id FRFSSearch
+    frfsTicketBookingId: Id FRFSTicketBooking
+    paymentReferenceNumber: Text # message.order.payments.params.transaction_id
+    amount: HighPrecMoney
+    currency: Currency
+    status: PaymentStatus # enums: COLLECTED_BY_BAP, SETTLED_TO_SELLER, REFUNDED_TO_BUYER, REFUND_INITIATED
+    createdAt: UTCTime
+    updatedAt: UTCTime
