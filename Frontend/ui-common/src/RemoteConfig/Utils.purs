@@ -468,5 +468,5 @@ pushEventsConfig _ =
   where
     defaultPushEventsConfig :: Types.PushEventsConfig
     defaultPushEventsConfig = {
-      loggingIntervalInS : 30000
+      loggingIntervalInS : 30
     }

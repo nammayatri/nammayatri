@@ -2905,7 +2905,7 @@ eval (BottomNavBarAction id) state = do
   case id of 
     TICKETING_ -> updateAndExit newState $ GoToTicketBookingFlow newState
     BUS_ -> do
-      void $ pure $ firebaseLogEventWithArrayOfKeyValue (HU.getLogEventPrefix <> "bus_ticketing_clicked") [(Tuple "bus_ticketing_clicked" "true")]
+      let _ = unsafePerformEffect $ Events.addEventAggregate "bus_ticketing_clicked"
       let updatedState = newState { props { ticketServiceType = API.BUS } }
       updateAndExit updatedState $ GoToBusTicketBookingFlow state
     MOBILITY -> continue newState 
@@ -3364,7 +3364,7 @@ eval (ServicesOnClick service) state = do
       -- if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
       --   then updateAndExit newState $ GoToBusTicketBookingFlow state
       --   else updateAndExit newState $ GoToSearchLocationScreenForBusRoutes state
-      void $ pure $ firebaseLogEventWithArrayOfKeyValue (HU.getLogEventPrefix <> "bus_ticketing_clicked") [(Tuple "bus_ticketing_clicked" "true")]
+      let _ = unsafePerformEffect $ Events.addEventAggregate "bus_ticketing_clicked"
       updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.AMBULANCE_SERVICE ->

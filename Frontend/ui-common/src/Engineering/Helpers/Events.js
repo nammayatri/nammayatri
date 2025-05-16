@@ -105,7 +105,6 @@ export const addEventAggregate = function (key) {
         } else {
           window.events.Events[key] += 1;
         }
-        console.log("Event aggregate: " + window.events.Events);
       } catch (error) {
         console.log("Add event aggregate catch block" + error);
       }
