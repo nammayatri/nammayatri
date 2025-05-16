@@ -60,7 +60,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.bppItemId = bppItemId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
-        Beam.childPrice = (.amount) <$> childPrice,
+        Beam.childPrice = Kernel.Prelude.fmap (.amount) childPrice,
         Beam.discountedTickets = discountedTickets,
         Beam.discountsJson = discountsJson,
         Beam.eventDiscountAmount = eventDiscountAmount,

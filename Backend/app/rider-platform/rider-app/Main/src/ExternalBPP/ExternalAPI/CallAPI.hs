@@ -84,38 +84,11 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                 via = viaStations
               }
       resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
-      let fallbackFares =
-            [ FRFSUtils.FRFSFare
-                { price =
-                    Price
-                      { amountInt = 5,
-                        amount = 5,
-                        currency = INR
-                      },
-                  childPrice =
-                    Just
-                      Price
-                        { amountInt = 5,
-                          amount = 5,
-                          currency = INR
-                        },
-                  discounts = [],
-                  fareDetails = Nothing,
-                  vehicleServiceTier =
-                    FRFSUtils.FRFSVehicleServiceTier
-                      { serviceTierType = Spec.SECOND_CLASS,
-                        serviceTierProviderCode = "II",
-                        serviceTierShortName = "Second Class",
-                        serviceTierDescription = "Second Class",
-                        serviceTierLongName = "Second Class"
-                      }
-                }
-            ]
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
-          return fallbackFares
-        Right fares -> if null fares then return fallbackFares else return fares
+          return []
+        Right fares -> return fares
     _ -> throwError $ InternalError "Unimplemented!"
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder

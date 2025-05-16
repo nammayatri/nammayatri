@@ -812,11 +812,12 @@ mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, Mo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  let isSearchFailed = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
   let bookingAllowed =
         case vehicleType of
-          Spec.METRO -> fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
-          Spec.SUBWAY -> fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
-          _ -> True
+          Spec.METRO -> not isSearchFailed && fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
+          Spec.SUBWAY -> not isSearchFailed && fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
+          Spec.BUS -> not isSearchFailed
   now <- getCurrentTime
   (mbEstimatedFare, mbQuote) <-
     case journeyLegInfo'.pricingId of
