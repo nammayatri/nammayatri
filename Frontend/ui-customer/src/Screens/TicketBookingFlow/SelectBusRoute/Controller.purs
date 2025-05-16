@@ -22,6 +22,7 @@ import Language.Types (STR(..))
 import Screens.SelectBusRoute.ScreenData (SelectBusRouteScreenState)
 import Services.API (FrfsQuote(..), FRFSRouteAPI(..))
 import Helpers.FrfsUtils (getFirstRoute)
+import Engineering.Helpers.Events as Events
 
 instance showAction :: Show Action where
   show _ = ""
@@ -51,7 +52,7 @@ eval EditStops state = continueWithCmd state [do pure BackPressed]
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
 eval (SeeRouteButtonAction (PrimaryButton.OnClick)) state = do
-  void $ pure $ firebaseLogEvent "ny_bus_user_stop_search_completed"
+  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_stop_search_completed"
   exit $ TrackBus state 
   
 eval (SelectQuote quote) state =

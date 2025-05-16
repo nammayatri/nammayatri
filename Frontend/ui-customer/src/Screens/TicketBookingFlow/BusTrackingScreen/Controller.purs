@@ -91,6 +91,7 @@ import Presto.Core.Types.Language.Flow (getLogFields)
 import Control.Monad.Except.Trans (lift)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Engineering.Helpers.LogEvent (firebaseLogEventWithArrayOfKeyValue)
+import Engineering.Helpers.Events as Events
 
 
 instance showAction :: Show Action where
@@ -175,7 +176,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
       ]
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
-  void $ pure $ firebaseLogEvent "ny_bus_user_book_ticket_initiated"
+  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
   exit $ GoToSearchLocation state
 
 eval BackPressed state =
@@ -260,11 +261,10 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
               if (count == 1) then do
                 let etaToStore =show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
                     params = [Tuple "Eta" etaToStore]
-                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_user_Eta_seen" params
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_user_Eta_seen" etaToStore
                 let vehicleTrackingDataSize = DA.length trackingData
-                let paramsTracking = [Tuple "busTrackingResponseCount" (show $ vehicleTrackingDataSize)]
-                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_tracking_count" paramsTracking
-                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_minimum_eta_distance" [Tuple "minimum_eta_distance" (show $ state.props.minimumEtaDistance)]
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_tracking_count" (show $ vehicleTrackingDataSize)
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_minimum_eta_distance" (show $ state.props.minimumEtaDistance)
                 pure unit
               else
                 pure unit
