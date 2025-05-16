@@ -19,6 +19,7 @@ data RouteStopTimeTableT f = RouteStopTimeTableT
     routeCode :: B.C f Kernel.Prelude.Text,
     serviceTierType :: B.C f BecknV2.FRFS.Enums.ServiceTierType,
     source :: B.C f (Kernel.Prelude.Maybe Domain.Types.RouteStopTimeTable.SourceType),
+    stage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     stopCode :: B.C f Kernel.Prelude.Text,
     timeOfArrival :: B.C f Kernel.Prelude.TimeOfDay,
     timeOfDeparture :: B.C f Kernel.Prelude.TimeOfDay,

@@ -67,5 +67,6 @@ parseToRouteStopTimeTable integratedBPPConfig mid mocid entry =
       createdAt = entry.createdAt,
       updatedAt = entry.updatedAt,
       delay = Nothing,
-      source = GTFS
+      source = GTFS,
+      stage = entry.stage
     }

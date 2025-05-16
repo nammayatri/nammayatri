@@ -84,6 +84,7 @@ data TimetableEntry = TimetableEntry
     timeOfArrival :: LocalTime.TimeOfDay,
     timeOfDeparture :: LocalTime.TimeOfDay,
     tripId :: Text,
+    stage :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -253,6 +254,7 @@ transformEntry stopData timestamp entry = do
           { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
             serviceTierType = BecknV2.FRFS.Enums.SECOND_CLASS,
             stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+            stage = entry.headsign >>= readMaybe . Text.unpack,
             -- Convert seconds from midnight to HH:MM:SS
             timeOfArrival = secondsToTime entry.scheduledArrival,
             timeOfDeparture = secondsToTime entry.scheduledDeparture,
@@ -264,6 +266,7 @@ transformEntry stopData timestamp entry = do
           { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
             serviceTierType = BecknV2.FRFS.Enums.FIRST_CLASS,
             stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+            stage = entry.headsign >>= readMaybe . Text.unpack,
             -- Convert seconds from midnight to HH:MM:SS
             timeOfArrival = secondsToTime entry.scheduledArrival,
             timeOfDeparture = secondsToTime entry.scheduledDeparture,
@@ -277,6 +280,7 @@ transformEntry stopData timestamp entry = do
           { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
             serviceTierType = mapToServiceTierType entry.trip.gtfsId,
             stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+            stage = entry.headsign >>= readMaybe . Text.unpack,
             -- Convert seconds from midnight to HH:MM:SS
             timeOfArrival = secondsToTime entry.scheduledArrival,
             timeOfDeparture = secondsToTime entry.scheduledDeparture,
