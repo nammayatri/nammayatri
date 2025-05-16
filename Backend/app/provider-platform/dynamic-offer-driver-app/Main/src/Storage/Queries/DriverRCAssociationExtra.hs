@@ -1,6 +1,8 @@
 module Storage.Queries.DriverRCAssociationExtra where
 
+import Control.Applicative (liftA2)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.DriverRCAssociation as DRCA
 import Domain.Types.FleetDriverAssociation as FleetDriverAssociation
@@ -8,6 +10,7 @@ import Domain.Types.Person (Person)
 import Domain.Types.VehicleRegistrationCertificate
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude hiding (on)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -124,3 +127,100 @@ mapping fleetIdWanted mbLimit mbOffset = do
     fst' (x, _, _) = x
     snd' (_, y, _) = y
     thd' (_, _, z) = z
+
+findAllActiveAssociationByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe DbHash -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllActiveAssociationByFleetOwnerId fleetOwnerId Nothing Nothing mbRegNumberString mbRegNumberStringHash = do
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \(rcAssn, rc) ->
+              rcAssn.isRcActive B.==?. B.val_ True
+                B.&&?. B.sqlBool_ (rcAssn.associatedTill B.>=. B.val_ (Just now))
+                B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                B.&&?. ( maybe
+                           (B.sqlBool_ $ B.val_ True)
+                           (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
+                           mbRegNumberString
+                           B.||?. maybe
+                             (B.sqlBool_ $ B.val_ True)
+                             (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash)
+                             mbRegNumberStringHash
+                       )
+          )
+          $ do
+            rcAssn <- B.all_ (SBC.driverRCAssociation SBC.atlasDB)
+            rc <- B.join_ (SBC.vehicleRegistrationCertificate SBC.atlasDB) (\vrc -> BeamVRC.id vrc B.==. BeamDRCA.rcId rcAssn)
+            pure (rcAssn, rc)
+  case res of
+    Right rows ->
+      catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
+    Left _ -> pure []
+findAllActiveAssociationByFleetOwnerId fleetOwnerId mbLimit mbOffset mbRegNumberString mbRegNumberStringHash = do
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromIntegral limit) $
+          B.offset_ (fromIntegral offset) $
+            B.filter_'
+              ( \(rcAssn, rc) ->
+                  rcAssn.isRcActive B.==?. B.val_ True
+                    B.&&?. B.sqlBool_ (rcAssn.associatedTill B.>=. B.val_ (Just now))
+                    B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                    B.&&?. ( maybe
+                               (B.sqlBool_ $ B.val_ True)
+                               (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
+                               mbRegNumberString
+                               B.||?. maybe
+                                 (B.sqlBool_ $ B.val_ True)
+                                 (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash)
+                                 mbRegNumberStringHash
+                           )
+              )
+              $ do
+                rcAssn <- B.all_ (SBC.driverRCAssociation SBC.atlasDB)
+                rc <- B.join_ (SBC.vehicleRegistrationCertificate SBC.atlasDB) (\vrc -> BeamVRC.id vrc B.==. BeamDRCA.rcId rcAssn)
+                pure (rcAssn, rc)
+  case res of
+    Right rows ->
+      catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
+    Left _ -> pure []
+
+findAllInactiveAssociationByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> Maybe Text -> Maybe DbHash -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllInactiveAssociationByFleetOwnerId fleetOwnerId limit offset mbRegNumberString mbRegNumberStringHash = do
+  allActiveAssocs <- findAllActiveAssociationByFleetOwnerId fleetOwnerId Nothing Nothing mbRegNumberString mbRegNumberStringHash
+  let allActiveRcIds = map (rcId . fst) allActiveAssocs
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromIntegral limit) $
+          B.offset_ (fromIntegral offset) $
+            B.filter_'
+              ( \(rcAssn, rc) ->
+                  rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                    B.&&?. B.sqlBool_ (B.not_ (rcAssn.rcId `B.in_` (B.val_ . getId <$> allActiveRcIds)))
+                    B.&&?. ( maybe
+                               (B.sqlBool_ $ B.val_ True)
+                               (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
+                               mbRegNumberString
+                               B.||?. maybe
+                                 (B.sqlBool_ $ B.val_ True)
+                                 (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash)
+                                 mbRegNumberStringHash
+                           )
+              )
+              $ do
+                rcAssn <- B.all_ (SBC.driverRCAssociation SBC.atlasDB)
+                rc <- B.join_ (SBC.vehicleRegistrationCertificate SBC.atlasDB) (\vrc -> BeamVRC.id vrc B.==. BeamDRCA.rcId rcAssn)
+                pure (rcAssn, rc)
+  case res of
+    Right rows ->
+      catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
+    Left _ -> pure []

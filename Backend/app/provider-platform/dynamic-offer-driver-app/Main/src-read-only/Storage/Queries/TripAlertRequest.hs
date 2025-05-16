@@ -34,9 +34,10 @@ updateByPrimaryKey (Domain.Types.TripAlertRequest.TripAlertRequest {..}) = do
   updateWithKV
     [ Se.Set Beam.alertRequestId (Kernel.Types.Id.getId alertRequestId),
       Se.Set Beam.alertRequestType alertRequestType,
+      Se.Set Beam.conductorFleetBadgeId (Kernel.Types.Id.getId <$> conductorFleetBadgeId),
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> driverFleetBadgeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> fleetBadgeId),
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.isViolated isViolated,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

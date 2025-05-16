@@ -38,11 +38,11 @@ TripTransaction:
     # Assignment Trip Status Flow : TRIP_ASSIGNED -> CANCELLED | INPROGRESS
     # Inprogress Trip Status Flow : IN_PROGRESS -> PAUSED | COMPLETED
     TripStatus:
-      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     ActionSource:
-      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob"
+      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob, AutoRecovery"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
@@ -50,9 +50,11 @@ TripTransaction:
     fleetOwnerId: Id Person
     vehicleNumber: Text
     tripCode: Maybe Text
-    fleetBadgeId: Maybe (Id FleetBadge)
-    driverId: Id Person
+    driverFleetBadgeId: Maybe (Id FleetBadge)
+    conductorFleetBadgeId: Maybe (Id FleetBadge)
     driverName: Maybe Text
+    conductorName: Maybe Text
+    driverId: Id Person
     routeCode: Text
     roundRouteCode: Maybe Text
     status: TripStatus
@@ -85,6 +87,8 @@ TripTransaction:
     endLocation:
       endLocationLat: Maybe Double
       endLocationLon: Maybe Double
+    driverFleetBadgeId:
+      fleetBadgeId: Maybe (Id FleetBadge)
 
   toTType:
     startLocationLat: Kernel.Prelude.fmap (.lat)|I
@@ -108,7 +112,14 @@ TripTransaction:
     updateOnStart:
       kvFunction: updateOneWithKV
       params:
-        [tripCode, startedNearStopCode, startLocation, status, tripStartTime, tripStartSource]
+        [
+          tripCode,
+          startedNearStopCode,
+          startLocation,
+          status,
+          tripStartTime,
+          tripStartSource,
+        ]
       where: id
     updateOnEnd:
       kvFunction: updateOneWithKV
@@ -135,7 +146,8 @@ TripAlertRequest:
     tripTransactionId: Id TripTransaction
     driverId: Id Person
     fleetOwnerId: Id Person
-    fleetBadgeId: Maybe (Id FleetBadge)
+    driverFleetBadgeId: Maybe (Id FleetBadge)
+    conductorFleetBadgeId: Maybe (Id FleetBadge)
     routeCode: Text
     alertRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
     isViolated: Bool
@@ -147,6 +159,10 @@ TripAlertRequest:
   constraints:
     id: "PrimaryKey"
     driverId: "!SecondaryKey"
+
+  beamFields:
+    driverFleetBadgeId:
+      fleetBadgeId: Maybe (Id FleetBadge)
 
   queries:
     updateIsViolated:
@@ -167,16 +183,25 @@ FleetConfig:
     endRideDistanceThreshold: HighPrecMeters
     allowStartRideFromQR: Bool
     allowAutomaticRoundTripAssignment: Bool
+    directlyStartFirstTripAssignment: Bool
+    unlinkDriverAndVehicleOnTripTermination: Bool
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
+    directlyStartFirstTripAssignment: Maybe Bool
+    unlinkDriverAndVehicleOnTripTermination: Maybe Bool
   toTType:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
+    directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
+    unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
   fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
+    directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
+    unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
   sqlType:
     endRideDistanceThreshold: double precision
   default:
     endRideDistanceThreshold: "100"
-
+    directlyStartFirstTripAssignment: "true"
+    unlinkDriverAndVehicleOnTripTermination: "true"
   constraints:
     fleetOwnerId: PrimaryKey

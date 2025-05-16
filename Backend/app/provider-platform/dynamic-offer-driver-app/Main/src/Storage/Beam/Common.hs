@@ -27,6 +27,7 @@ import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.FleetBadge
+import Storage.Beam.FleetBadgeAssociation
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
@@ -44,6 +45,7 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Route
+import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
 import Storage.Beam.VehicleRegistrationCertificate
 
@@ -80,7 +82,9 @@ atlasDB =
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
         route = routeTable,
-        fleetBadge = fleetBadgeTable
+        fleetBadge = fleetBadgeTable,
+        tripTransaction = tripTransactionTable,
+        fleetBadgeAssociation = fleetBadgeAssociationTable
       }
 
 data AtlasDB f = AtlasDB
@@ -113,6 +117,8 @@ data AtlasDB f = AtlasDB
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
     route :: f (B.TableEntity RouteT),
-    fleetBadge :: f (B.TableEntity FleetBadgeT)
+    fleetBadge :: f (B.TableEntity FleetBadgeT),
+    tripTransaction :: f (B.TableEntity TripTransactionT),
+    fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT)
   }
   deriving (Generic, B.Database be)

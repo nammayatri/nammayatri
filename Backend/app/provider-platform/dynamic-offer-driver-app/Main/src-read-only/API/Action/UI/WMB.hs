@@ -13,6 +13,7 @@ import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.WMB as Domain.Action.UI.WMB
 import qualified Domain.Types.AlertRequest
+import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.FleetConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -29,7 +30,20 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "wmb" :> "availableRoutes" :> ReqBody ('[JSON]) API.Types.UI.WMB.AvailableRouteReq
+  ( TokenAuth :> "wmb" :> "fleetBadges" :> QueryParam "mbSearchString" Data.Text.Text :> QueryParam "mbBadgeType" Domain.Types.FleetBadgeType.FleetBadgeType
+      :> MandatoryQueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> MandatoryQueryParam "offset" Kernel.Prelude.Int
+      :> Get
+           ('[JSON])
+           [API.Types.UI.WMB.AvailableBadge]
+      :<|> TokenAuth
+      :> "wmb"
+      :> "availableRoutes"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.WMB.AvailableRouteReq
       :> Post
            ('[JSON])
            [API.Types.UI.WMB.AvailableRoute]
@@ -37,7 +51,9 @@ type API =
       :> "wmb"
       :> "qr"
       :> "start"
-      :> ReqBody ('[JSON]) API.Types.UI.WMB.TripQrStartReq
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.WMB.TripQrStartReq
       :> Post
            ('[JSON])
            API.Types.UI.WMB.TripTransactionDetails
@@ -148,7 +164,20 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
+handler = getWmbFleetBadges :<|> postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
+
+getWmbFleetBadges ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Domain.Types.FleetBadgeType.FleetBadgeType) ->
+    Kernel.Prelude.Int ->
+    Kernel.Prelude.Int ->
+    Environment.FlowHandler [API.Types.UI.WMB.AvailableBadge]
+  )
+getWmbFleetBadges a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbFleetBadges (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postWmbAvailableRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -14,6 +14,7 @@ imports:
   FleetConfig: Domain.Types.FleetConfig
   RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
   AlertRequestStatus: Domain.Types.Alert.AlertRequestStatus
+  FleetBadgeType: Domain.Types.FleetBadgeType
 
 module: WMB
 
@@ -43,13 +44,17 @@ types:
     _type: ServiceTierType
 
   TripQrStartReq:
-    vehicleNumberHash: Text
+    vehicleNumberHash: Maybe Text
+    driverBadgeName: Maybe Text
+    conductorBadgeName: Maybe Text
     routeCode: Text
     location: LatLong
 
   TripTransactionDetails:
     tripTransactionId: Id TripTransaction
     endRideApprovalRequestId: Maybe (Id AlertRequest)
+    driverName: Maybe Text
+    conductorName: Maybe Text
     vehicleNumber: Text
     vehicleType: ServiceTierType
     source: StopInfo
@@ -85,9 +90,25 @@ types:
     status: AlertRequestStatus
 
   AvailableRouteReq:
-    vehicleNumber: Text
+    vehicleNumber: Maybe Text
+
+  AvailableBadge:
+    badgeName: Text
+    isActive: Bool
+    badgeType: FleetBadgeType
 
 apis:
+  - GET: # Get all Available Driver Badges of Private Fleet
+      endpoint: /wmb/fleetBadges
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - mbSearchString: Text
+        - mbBadgeType: FleetBadgeType
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[AvailableBadge]"
   - POST: # Fetch available routes for a driver of private fleet.
       endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE

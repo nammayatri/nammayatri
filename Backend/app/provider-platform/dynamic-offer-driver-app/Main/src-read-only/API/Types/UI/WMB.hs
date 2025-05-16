@@ -8,6 +8,7 @@ import qualified Domain.Types.Alert.AlertRequestData
 import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.Common
+import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.TripTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -28,11 +29,15 @@ data AlertRequestResp = AlertRequestResp {status :: Domain.Types.Alert.AlertRequ
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AvailableBadge = AvailableBadge {badgeName :: Data.Text.Text, badgeType :: Domain.Types.FleetBadgeType.FleetBadgeType, isActive :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AvailableRoute = AvailableRoute {destination :: StopInfo, roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AvailableRouteReq = AvailableRouteReq {vehicleNumber :: Data.Text.Text}
+data AvailableRouteReq = AvailableRouteReq {vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -62,7 +67,13 @@ data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripQrStartReq = TripQrStartReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
+data TripQrStartReq = TripQrStartReq
+  { conductorBadgeName :: Kernel.Prelude.Maybe Data.Text.Text,
+    driverBadgeName :: Kernel.Prelude.Maybe Data.Text.Text,
+    location :: Kernel.External.Maps.Types.LatLong,
+    routeCode :: Data.Text.Text,
+    vehicleNumberHash :: Kernel.Prelude.Maybe Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -71,7 +82,9 @@ data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TripTransactionDetails = TripTransactionDetails
-  { destination :: StopInfo,
+  { conductorName :: Kernel.Prelude.Maybe Data.Text.Text,
+    destination :: StopInfo,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     routeInfo :: RouteInfo,
     source :: StopInfo,

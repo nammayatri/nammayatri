@@ -24,10 +24,6 @@ FleetDriverAssociation:
     fleetOwnerId: SecondaryKey
 
   queries:
-    findAllDriverByFleetOwnerId:
-      kvFunction: findAllWithKV
-      where: fleetOwnerId
-
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId

@@ -17,6 +17,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   TimeBound: Kernel.Types.TimeBound
   ActionSource: Dashboard.Common
+  FleetBadgeType: Domain.Types.FleetBadgeType
 module: Driver
 
 apis:
@@ -178,6 +179,7 @@ apis:
         - mboffset: Int
         - mbRegNumberString: Text
         - mbFleetOwnerId: Text
+        - mbIsActive: Bool
       response:
         type: ListVehicleResT
       migrate:
@@ -192,6 +194,7 @@ apis:
               - limit: Int
               - offset: Int
               - mbRegNumberString: Text
+              - mbIsActive: Bool
             response:
               type: ListVehicleRes
 
@@ -205,6 +208,7 @@ apis:
         - mbNameString: Text
         - mbSearchString: Text
         - mbFleetOwnerId: Text
+        - mbIsActive: Bool
       response:
         type: FleetListDriverResT
       migrate:
@@ -221,6 +225,7 @@ apis:
               - mobileNumberString: Text
               - nameString: Text
               - mbSearchString: Text
+              - isActive: Bool
             response:
               type: FleetListDriverRes
 
@@ -232,6 +237,8 @@ apis:
         - mboffset: Int
         - mbSearchString: Text
         - mbFleetOwnerId: Text
+        - mbBadgeType: FleetBadgeType
+        - mbIsActive: Bool
       response:
         type: FleetBadgeResT
       migrate:
@@ -246,6 +253,8 @@ apis:
               - limit: Int
               - offset: Int
               - mbSearchString: Text
+              - mbBadgeType: FleetBadgeType
+              - mbIsActive: Bool
             response:
               type: FleetBadgeRes
 
@@ -904,7 +913,7 @@ types:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
   TripStatus:
-    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
@@ -913,7 +922,9 @@ types:
     - roundTrip: Maybe RoundTripDetail
   TripPlannerReq:
     - driverId: Id Driver
-    - badgeName: Maybe Text
+    - badgeName: Maybe Text # TODO :: To be deprecated, and replaced with driverBadgeName
+    - driverBadgeName: Maybe Text
+    - conductorBadgeName: Maybe Text
     - vehicleNumber: Text
     - trips: [TripDetails]
     - derive: "'HideSecrets"
@@ -994,9 +1005,11 @@ types:
   FleetBadgesAPIEntity:
     - badgeName: Text
     - isActive: Bool
+    - badgeType: FleetBadgeType
   FleetBadgesAPIEntityT:
     - badgeName: Text
     - isActive: Bool
+    - badgeType: FleetBadgeType
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetListDriverResT:
@@ -1052,7 +1065,7 @@ types:
     - hours: Int
     - minutes: Int
   FleetVehicleStatus:
-    - enum: "Active, InActive, Valid, Invalid, Pending"
+    - enum: "Active, InActive, Valid, Invalid, Pending, OnRide, TripAssigned"
     - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text
@@ -1072,6 +1085,7 @@ types:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
     - driverName: Maybe Text
+    - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
     - completedRides: Int # will remove this
@@ -1087,6 +1101,7 @@ types:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
     - driverName: Maybe Text
+    - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
     - completedRides: Int # will remove this
