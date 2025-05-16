@@ -289,6 +289,10 @@ postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
   let merchantOpCityId = merchantOperatingCity.id
   now <- getCurrentTime
   id' <- generateGUID
+  let uicr = LYTU.UiConfigRequest {merchantId = ccr.merchantId, city = ccr.city, os = ccr.os, platform = ccr.platform, bundle = ccr.bundle, language = Nothing, toss = Nothing}
+  (config, _) <- UIRC.findUiConfig uicr merchantOpCityId False
+  when (isJust config) $ do
+    throwError $ InvalidRequest "Config already exists"
   UIRC.create $ cfg now merchantOpCityId id'
   return Kernel.Types.APISuccess.Success
   where

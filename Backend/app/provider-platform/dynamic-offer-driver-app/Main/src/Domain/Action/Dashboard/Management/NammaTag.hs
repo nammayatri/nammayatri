@@ -326,6 +326,10 @@ postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just ccr.city)
   now <- getCurrentTime
   id' <- generateGUID
+  let uicr = LYT.UiConfigRequest {merchantId = ccr.merchantId, city = ccr.city, os = ccr.os, platform = ccr.platform, bundle = ccr.bundle, language = Nothing, toss = Nothing}
+  (config, _) <- QUiConfig.findUIConfig uicr merchantOpCityId False
+  when (isJust config) $ do
+    throwError $ InvalidRequest "Config already exists"
   QUiConfig.create $ cfg merchantOpCityId now id'
   return Kernel.Types.APISuccess.Success
   where
