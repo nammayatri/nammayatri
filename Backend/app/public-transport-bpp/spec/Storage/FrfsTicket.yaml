@@ -23,7 +23,7 @@ FRFSSearchRequest:
     updatedAt: UTCTime
 
   constraints:
-    transactionId: "!PrimaryKey"
+    transactionId: "PrimaryKey"
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -35,13 +35,19 @@ FRFSTicketBooking:
     bppId: Text
     bapId: Text
     quantity: Int
-    type: BookingTypeEnum
+    bookingType: BookingTypeEnum
     status: BookingStatusEnum
     createdAt: UTCTime
     updatedAt: UTCTime
 
   constraints:
-    id: "!PrimaryKey"
+    id: "PrimaryKey"
+
+  types:
+    BookingTypeEnum:
+      enum: "SINGLE_JOURNEY, ROUND_TRIP"
+    BookingStatusEnum:
+      enum: "CREATED, CONFIRMED, CANCELLED"
 
 FRFSTicket:
   tableName: frfs_ticket
@@ -59,7 +65,11 @@ FRFSTicket:
     updatedAt: UTCTime
 
   constraints:
-    id: "!PrimaryKey"
+    id: "PrimaryKey"
+
+  types:
+    TicketStatusEnum:
+      enum: "VALID, INVALID"
 
 Station:
   tableName: stations
@@ -74,8 +84,7 @@ Station:
     merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
-    id: "!PrimaryKey"
-    code: "!Unique"
+    id: "PrimaryKey"
 
 StationFare:
   tableName: station_fares
@@ -89,7 +98,7 @@ StationFare:
     # add booking type (SINGLE | ROUNDTRIP)
 
   constraints:
-    id: "!PrimaryKey"
+    id: "PrimaryKey"
 
 FRFSConfig:
   tableName: frfs_config
@@ -101,19 +110,22 @@ FRFSConfig:
     updatedAt: UTCTime
 
   constraints:
-    id: "!PrimaryKey"
-    bppId: "!Unique"
+    id: "PrimaryKey"
 
 FRFSPayment:
   tableName: frfs_payment
 
   fields:
     id: Id FRFSPayment # payment_id we receive in confirm from bap
-    transactionId: Id FRFSSearch
+    transactionId: Id FRFSSearchRequest
     frfsTicketBookingId: Id FRFSTicketBooking
     paymentReferenceNumber: Text # message.order.payments.params.transaction_id
     amount: HighPrecMoney
     currency: Currency
-    status: PaymentStatus # enums: COLLECTED_BY_BAP, SETTLED_TO_SELLER, REFUNDED_TO_BUYER, REFUND_INITIATED
+    status: PaymentStatusEnum # enums: COLLECTED_BY_BAP, SETTLED_TO_SELLER, REFUNDED_TO_BUYER, REFUND_INITIATED
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  types:
+    PaymentStatusEnum:
+      enum: "COLLECTED_BY_BAP, SETTLED_TO_SELLER, REFUNDED_TO_BUYER, REFUND_INITIATED"

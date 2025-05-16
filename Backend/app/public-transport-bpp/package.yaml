@@ -88,9 +88,15 @@ ghc-options:
   - -hiedir=.hie
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
-    - -Wincomplete-uni-patterns
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
     - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
@@ -106,6 +112,15 @@ library:
         ghc-options:
           - -O2
           - -j4
+  dependencies:
+    - mobility-core
+    - haskell-cac
+    - beckn-spec
+    - payment
+    - sessionizer-metrics
+    - webhook
+    - utils
+    - external
 
 executables:
   public-transport-bpp-exe:
@@ -134,3 +149,4 @@ executables:
       - public-transport-bpp
       - mobility-core
       - beckn-spec
+      - beckn-services
