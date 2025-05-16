@@ -981,6 +981,32 @@ FRFSStageFare:
       kvFunction: findAllWithKV
       where: farePolicyId
 
+FRFSGtfsStageFare:
+  tableName: frfs_gtfs_stage_fare
+  fields:
+    id: Id FRFSGtfsStageFare
+    stage: Int
+    amount: HighPrecMoney
+    currency: Currency
+    vehicleServiceTierId: Id FRFSVehicleServiceTier
+    vehicleType: VehicleCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    cessCharge: Maybe HighPrecMoney
+    discountIds: "[Id FRFSTicketDiscount]"
+  constraints:
+    id: PrimaryKey
+  default:
+    applicableDiscountIds: "'{}'"
+  queries:
+    findAllByVehicleServiceTierId:
+      kvFunction: findAllWithKV
+      where: vehicleServiceTierId
+    findAllByVehicleTypeAndStageAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [vehicleType, stage, merchantOperatingCityId]
+
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare
   fields:
@@ -1084,6 +1110,7 @@ RouteStopTimeTable:
     integratedBppConfigId: Id IntegratedBPPConfig
     delay: Maybe Seconds
     source: SourceType
+    stage: Maybe Int
   beamType:
     source: Maybe SourceType
   types:

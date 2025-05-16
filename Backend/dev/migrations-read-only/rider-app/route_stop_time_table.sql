@@ -35,3 +35,8 @@ ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN delay integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN stage integer ;

@@ -230,7 +230,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfigId mid mo
               updatedAt = currentTime,
               serviceTierType = serviceTierType,
               delay = Nothing,
-              source = LIVE
+              source = LIVE,
+              stage = Nothing
             }
 
 fetchLiveSubwayTimings ::
@@ -275,7 +276,8 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfigId mid
           updatedAt = currentTime,
           serviceTierType = Spec.SECOND_CLASS,
           delay = Just $ Seconds train.delayArrival,
-          source = LIVE
+          source = LIVE,
+          stage = Nothing
         }
 
 fetchLiveTimings ::

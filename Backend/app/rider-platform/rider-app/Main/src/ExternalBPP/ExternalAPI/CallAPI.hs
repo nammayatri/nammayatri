@@ -25,6 +25,7 @@ import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJour
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
@@ -44,7 +45,7 @@ getProviderName integrationBPPConfig =
     Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
     CRIS _ -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
 getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
   case integrationBPPConfig.providerConfig of
     CMRL config' ->

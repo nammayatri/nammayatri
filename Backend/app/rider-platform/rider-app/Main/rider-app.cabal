@@ -384,6 +384,7 @@ library
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
+      Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -669,6 +670,7 @@ library
       Domain.Types.FeedbackForm
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
+      Domain.Types.FRFSGtfsStageFare
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
       Domain.Types.FRFSRouteFareProduct
@@ -796,6 +798,7 @@ library
       Storage.Beam.FeedbackForm
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
+      Storage.Beam.FRFSGtfsStageFare
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSRouteFareProduct
@@ -924,6 +927,7 @@ library
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy
+      Storage.Queries.FRFSGtfsStageFare
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSRouteFareProduct
