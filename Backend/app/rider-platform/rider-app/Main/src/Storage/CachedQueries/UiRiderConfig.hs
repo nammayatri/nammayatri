@@ -21,10 +21,9 @@ import Domain.Types.UiRiderConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
-import Kernel.Utils.Common (CacheFlow, fromMaybeM)
+import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Time
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
@@ -35,14 +34,18 @@ import qualified Tools.DynamicLogic as TDL
 findUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe UiRiderConfig, Maybe Int)
 findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
   localTime <- getLocalCurrentTime 19800 -- Fix Me
-  version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) (LYT.RIDER_CONFIG (LYT.UiConfig os platform)) localTime toss >>= fromMaybeM (InvalidRequest $ "No version found. No dynamic logic found for merchantOpCityId: " <> show merchantOperatingCityId <> " and domain: " <> show (LYT.RIDER_CONFIG (LYT.UiConfig os platform)))
-  let mbConfigInExperimentVersions = Just [YType.ConfigVersionMap {config = LYT.RIDER_CONFIG (LYT.UiConfig os platform), version = version}]
+  let config = LYT.RIDER_CONFIG (LYT.UiConfig os platform)
+      getConfig = Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId
+  version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) config localTime toss
+  let mbConfigInExperimentVersions =
+        Just $
+          maybe [] (\v -> [YType.ConfigVersionMap {config = config, version = v}]) version
   TDL.findOneUiConfig
     (cast merchantOperatingCityId)
-    (LYT.RIDER_CONFIG (LYT.UiConfig os platform))
+    config
     mbConfigInExperimentVersions
     Nothing
-    (Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId)
+    getConfig
     isBaseLogic
 
 cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiRiderConfig -> m ()
