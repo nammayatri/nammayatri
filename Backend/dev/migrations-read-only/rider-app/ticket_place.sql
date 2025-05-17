@@ -53,3 +53,8 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN priority integer  default 0;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN ticket_merchant_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN custom_tabs json ;

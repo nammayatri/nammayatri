@@ -400,7 +400,7 @@ merchantOnboardingCancel merchantShortId opCity onboardingId requestorId request
   reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
+  unless ((onboarding.requestorId == reqId && reqRole == DMO.TICKET_DASHBOARD_USER) || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this file"
   QMO.deleteById onboarding.id
   QMOS.deleteByOnboardingId onboarding.id.getId
