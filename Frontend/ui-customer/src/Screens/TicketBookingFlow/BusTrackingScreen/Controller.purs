@@ -107,6 +107,7 @@ data ScreenOutput
   | GoBackToSearchLocationScreen ST.BusTrackingScreenState
   | GoToBusTicketBookingScreen ST.BusTrackingScreenState
   | GoBackToMetroMyTicketsScreen ST.BusTrackingScreenState
+  | GoBackToSelectBusRouteScreen ST.BusTrackingScreenState
 
 data Action
   = AfterRender
@@ -182,6 +183,7 @@ eval BackPressed state =
     case state.props.fromScreen of
       "bus_ticket_booking_screen" -> exit $ GoToBusTicketBookingScreen state
       "metro_my_tickets_screen" -> exit $ GoBackToMetroMyTicketsScreen state
+      "select_bus_route_screen" -> exit $ GoBackToSelectBusRouteScreen state
       _ -> exit $ GoBackToSearchLocationScreen state
 
 eval ViewTicket state = exit $ GoToViewTicket state

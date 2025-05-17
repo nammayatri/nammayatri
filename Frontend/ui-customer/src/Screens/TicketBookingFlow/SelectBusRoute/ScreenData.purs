@@ -30,6 +30,10 @@ initData = {
     , quotes : Nothing
     , selectedQuote : Nothing
     , logField : empty
+    , cheapestRoute : Nothing
+    , fastestRoute : Nothing
+    , isSortByPillClicked : false
+    , eta : []
   },
   props : {
     enableSeeRoute : false
@@ -47,8 +51,17 @@ type SelectBusRouteScreenData = {
   , quotes :: Maybe (Array FrfsQuote)
   , selectedQuote :: Maybe FrfsQuote
   , logField :: Object Foreign
+  , cheapestRoute :: Maybe String
+  , fastestRoute :: Maybe String
+  , isSortByPillClicked :: Boolean
+  , eta :: Array EtaBasedOnRoute
 }
 
 type SelectBusRouteScreenProp = {
     enableSeeRoute :: Boolean
+}
+
+type EtaBasedOnRoute = {
+    etas :: Maybe Int
+  , routeCode :: String
 }

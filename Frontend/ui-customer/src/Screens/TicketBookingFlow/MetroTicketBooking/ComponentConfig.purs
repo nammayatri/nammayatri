@@ -85,9 +85,8 @@ updateButtonConfig state = let
     showBusFareButton = (state.data.searchRideType /= BUS_DESTINATION) || (showFare && priceAfterExtraDiscount /= 0.0)
     updateButtonConfig' = config 
         { textConfig { textFromHtml = Just $ 
-            if (showFare &&  priceAfterExtraDiscount /= 0.0) then (getString BOOK_AND_PAY <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) 
-            else if (showFare) then "Getting Fare ..."
-            else (getString GET_FARE)}
+            if (showFare &&  priceAfterExtraDiscount /= 0.0 && state.props.isButtonActive) then (getString BOOK_AND_PAY <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) 
+            else "Getting Fare ..."}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
