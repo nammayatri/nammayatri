@@ -37,14 +37,18 @@ findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigReq
 findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
-  version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) (LYT.DRIVER_CONFIG (LYT.UiConfig os platform)) localTime toss >>= fromMaybeM (InvalidRequest $ "No version found. No dynamic logic found for merchantOpCityId: " <> show merchantOperatingCityId <> " and domain: " <> show (LYT.DRIVER_CONFIG (LYT.UiConfig os platform)))
-  let mbConfigInExperimentVersions = Just [YType.ConfigVersionMap {config = LYT.DRIVER_CONFIG (LYT.UiConfig os platform), version = version}]
+  let config = LYT.DRIVER_CONFIG (LYT.UiConfig os platform)
+      findConfig = Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId
+  version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) config localTime toss
+  let mbConfigInExperimentVersions =
+        Just $
+          maybe [] (\v -> [YType.ConfigVersionMap {config = config, version = v}]) version
   TDL.findOneUiConfig
     (cast merchantOperatingCityId)
-    (LYT.DRIVER_CONFIG (LYT.UiConfig os platform))
+    config
     mbConfigInExperimentVersions
     Nothing
-    (Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId)
+    findConfig
     isBaseLogic
 
 cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiDriverConfig -> m ()
