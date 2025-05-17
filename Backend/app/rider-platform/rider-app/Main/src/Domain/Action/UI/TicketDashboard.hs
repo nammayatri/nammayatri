@@ -270,6 +270,7 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.merchantId = pure merchantId,
         DTicketPlace.merchantOperatingCityId = merchantOpCityId,
         DTicketPlace.ticketMerchantId = creatorId,
+        DTicketPlace.customTabs = Nothing,
         DTicketPlace.createdAt = now,
         DTicketPlace.updatedAt = now
       }

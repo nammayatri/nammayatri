@@ -24,6 +24,7 @@ imports:
   Day: Data.Time
   VendorSplitDetails: Tools.Payment
   SplitType: Tools.Payment
+  TicketPlaceDef: Domain.Types.EventManagement
 
 TicketPlace:
   tableName: ticket_place
@@ -48,21 +49,32 @@ TicketPlace:
     allowSameDayBooking: Bool
     ticketMerchantId: Maybe Text
     priority: Int
+    customTabs: "Maybe [CustomTab]"
 
   types:
     PlaceType:
       enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
     PlaceStatus:
-      enum: "Active,Inactive,ComingSoon,Ended"
+      enum: "Active,Inactive,ComingSoon,Ended,Unpublished"
+    CustomTab:
+      header: Text
+      body: Text
+      derive: "Eq,Ord"
 
   beamType:
     priority: Maybe Int
+    customTabs: "Maybe Value"
+
+  sqlType:
+    customTabs: json
 
   fromTType:
     priority: Kernel.Prelude.fromMaybe 0|I
+    customTabs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs|E
 
   toTType:
     priority: Kernel.Prelude.Just|I
+    customTabs: Data.Aeson.toJSON <$> customTabs|E
 
   default:
     termsAndConditions: "'{}'"
@@ -116,6 +128,7 @@ TicketService:
     OperationalDate:
       startDate: Day
       eneDate: Day
+      derive: "Eq,Ord"
 
   beamFields:
     operationalDate:
@@ -228,6 +241,9 @@ BusinessHour:
     findAllByPlaceId:
       kvFunction: findAllWithKV
       where: placeId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -666,3 +682,90 @@ TicketBookingPeopleCategory:
 
   extraOperations:
   - EXTRA_QUERY_FILE
+
+DraftTicketChange:
+  tableName: draft_ticket_change
+  fields:
+    id: Id TicketPlace
+    draftPayload: Maybe TicketPlaceDef
+    isApprovalRequired: Bool
+    ticketMerchantId: Maybe Text
+    message: Maybe Text
+    status: DraftStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  beamType:
+    draftPayload: Maybe Value
+  types:
+    DraftStatus:
+      enum: "OPEN,APPROVAL_PENDING,REJECTED,ACCEPTED"
+      derive: "HttpInstance"
+  toTType:
+    draftPayload: Data.Aeson.toJSON <$> draftPayload|E
+  fromTType:
+    draftPayload: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< draftPayload|E
+  sqlType:
+    draftPayload: json
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateDraftById:
+      kvFunction: updateOneWithKV
+      params: [draftPayload, isApprovalRequired]
+      where: id
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateMessage:
+      kvFunction: updateOneWithKV
+      params: [message]
+      where: id
+    deleteDraftById:
+      kvFunction: deleteWithKV
+      where: id
+    findAllByStatus:
+      kvFunction: findAllWithOptionsKV
+      where: status
+      orderBy:
+        field: createdAt
+        order: desc
+
+DraftTicketChangeHistory:
+  tableName: draft_ticket_change_history
+  fields:
+    id: Id DraftTicketChangeHistory
+    ticketPlaceId: Id TicketPlace
+    draftPayload: Maybe TicketPlaceDef
+    isApprovalRequired: Bool
+    ticketMerchantId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    reviewedBy: Maybe Text
+    message: Maybe Text
+    status: Domain.Types.DraftTicketChange.DraftStatus
+  beamType:
+    draftPayload: Maybe Value
+  toTType:
+    draftPayload: Data.Aeson.toJSON <$> draftPayload|E
+  fromTType:
+    draftPayload: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< draftPayload|E
+  sqlType:
+    draftPayload: json
+  queries:
+    findByTicketPlaceIdAndStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - ticketPlaceId
+          - status
+      orderBy:
+        field: createdAt
+        order: desc
+    findByTicketPlaceId:
+      kvFunction: findAllWithOptionsKV
+      where: ticketPlaceId
+      orderBy:
+        field: createdAt
+        order: desc

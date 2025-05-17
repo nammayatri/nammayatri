@@ -4,6 +4,7 @@
 
 module Storage.Queries.TicketPlace where
 
+import qualified Data.Aeson
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketPlace
 import Kernel.Beam.Functions
@@ -53,6 +54,7 @@ updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
   updateWithKV
     [ Se.Set Beam.allowSameDayBooking allowSameDayBooking,
       Se.Set Beam.closeTimings closeTimings,
+      Se.Set Beam.customTabs (Data.Aeson.toJSON <$> customTabs),
       Se.Set Beam.description description,
       Se.Set Beam.gallery gallery,
       Se.Set Beam.iconUrl iconUrl,
@@ -82,6 +84,7 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Domain.Types.TicketPlace.TicketPlace
           { allowSameDayBooking = allowSameDayBooking,
             closeTimings = closeTimings,
+            customTabs = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs,
             description = description,
             gallery = gallery,
             iconUrl = iconUrl,
@@ -109,6 +112,7 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
     Beam.TicketPlaceT
       { Beam.allowSameDayBooking = allowSameDayBooking,
         Beam.closeTimings = closeTimings,
+        Beam.customTabs = Data.Aeson.toJSON <$> customTabs,
         Beam.description = description,
         Beam.gallery = gallery,
         Beam.iconUrl = iconUrl,

@@ -104,6 +104,7 @@ RiderConfig:
     ticketAssetDomain: Maybe Text
     qrTicketRestrictionStartTime: Maybe TimeOfDay
     qrTicketRestrictionEndTime: Maybe TimeOfDay
+    ticketingPermissionConfig: Maybe Value
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -265,6 +266,7 @@ RiderConfig:
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
     blockedUntilInMins: int
+    ticketingPermissionConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
