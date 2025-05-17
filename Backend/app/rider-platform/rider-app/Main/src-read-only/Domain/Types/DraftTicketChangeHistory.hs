@@ -20,6 +20,7 @@ data DraftTicketChangeHistory = DraftTicketChangeHistory
     message :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reviewedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.DraftTicketChange.DraftStatus,
+    ticketMerchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

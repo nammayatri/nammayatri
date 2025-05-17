@@ -9,3 +9,9 @@ ALTER TABLE atlas_app.draft_ticket_change ADD COLUMN updated_at timestamp with t
 ALTER TABLE atlas_app.draft_ticket_change ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_app.draft_ticket_change ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.draft_ticket_change ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.draft_ticket_change ADD COLUMN ticket_merchant_id text ;

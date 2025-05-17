@@ -19,6 +19,7 @@ data DraftTicketChange = DraftTicketChange
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     isApprovalRequired :: Kernel.Prelude.Bool,
     status :: Domain.Types.DraftTicketChange.DraftStatus,
+    ticketMerchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
@@ -27,6 +28,6 @@ data DraftTicketChange = DraftTicketChange
 
 data DraftStatus = OPEN | APPROVAL_PENDING | REJECTED | ACCEPTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DraftStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DraftStatus)
 
-$(mkHttpInstancesForEnum (''DraftStatus))
+$(mkHttpInstancesForEnum ''DraftStatus)

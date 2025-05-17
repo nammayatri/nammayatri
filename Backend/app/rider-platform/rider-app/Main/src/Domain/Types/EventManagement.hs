@@ -23,7 +23,8 @@ data TicketPlaceDef = TicketPlaceDef
     basicInformation :: BasicInformation,
     services :: [TicketServiceDef],
     serviceCategories :: [ServiceCategoryDef],
-    servicePeopleCategories :: [ServicePeopleCategoryDef]
+    servicePeopleCategories :: [ServicePeopleCategoryDef],
+    isDraft :: Bool
     --specialOccasions :: [SpecialOccasionDetails]
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)

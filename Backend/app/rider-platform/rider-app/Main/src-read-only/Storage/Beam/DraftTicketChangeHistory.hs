@@ -19,6 +19,7 @@ data DraftTicketChangeHistoryT f = DraftTicketChangeHistoryT
     message :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.DraftTicketChange.DraftStatus,
+    ticketMerchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ticketPlaceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

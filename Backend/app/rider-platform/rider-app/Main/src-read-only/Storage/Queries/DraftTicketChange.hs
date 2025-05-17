@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.DraftTicketChange.DraftTicketChange {..}) = do
       Se.Set Beam.draftPayload (Data.Aeson.toJSON <$> draftPayload),
       Se.Set Beam.isApprovalRequired isApprovalRequired,
       Se.Set Beam.status status,
+      Se.Set Beam.ticketMerchantId ticketMerchantId,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
@@ -77,6 +78,7 @@ instance FromTType' Beam.DraftTicketChange Domain.Types.DraftTicketChange.DraftT
             id = Kernel.Types.Id.Id id,
             isApprovalRequired = isApprovalRequired,
             status = status,
+            ticketMerchantId = ticketMerchantId,
             updatedAt = updatedAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
@@ -90,6 +92,7 @@ instance ToTType' Beam.DraftTicketChange Domain.Types.DraftTicketChange.DraftTic
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isApprovalRequired = isApprovalRequired,
         Beam.status = status,
+        Beam.ticketMerchantId = ticketMerchantId,
         Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId

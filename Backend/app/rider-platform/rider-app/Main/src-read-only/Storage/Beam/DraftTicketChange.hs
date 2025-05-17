@@ -13,14 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DraftTicketChangeT f = DraftTicketChangeT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    draftPayload :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isApprovalRequired :: (B.C f Kernel.Prelude.Bool),
-    status :: (B.C f Domain.Types.DraftTicketChange.DraftStatus),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    draftPayload :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    id :: B.C f Kernel.Prelude.Text,
+    isApprovalRequired :: B.C f Kernel.Prelude.Bool,
+    status :: B.C f Domain.Types.DraftTicketChange.DraftStatus,
+    ticketMerchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +31,6 @@ instance B.Table DraftTicketChangeT where
 
 type DraftTicketChange = DraftTicketChangeT Identity
 
-$(enableKVPG (''DraftTicketChangeT) [('id)] [])
+$(enableKVPG ''DraftTicketChangeT ['id] [])
 
-$(mkTableInstances (''DraftTicketChangeT) "draft_ticket_change")
+$(mkTableInstances ''DraftTicketChangeT "draft_ticket_change")

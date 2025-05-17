@@ -16,3 +16,8 @@ ALTER TABLE atlas_app.draft_ticket_change_history ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.draft_ticket_change_history ADD COLUMN message text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.draft_ticket_change_history ADD COLUMN ticket_merchant_id text ;

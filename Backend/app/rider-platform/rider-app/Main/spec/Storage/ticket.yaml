@@ -686,6 +686,7 @@ DraftTicketChange:
     id: Id TicketPlace
     draftPayload: Maybe TicketPlaceDef
     isApprovalRequired: Bool
+    ticketMerchantId: Maybe Text
     status: DraftStatus
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -729,6 +730,7 @@ DraftTicketChangeHistory:
     id: Id DraftTicketChangeHistory
     ticketPlaceId: Id TicketPlace
     draftPayload: Maybe TicketPlaceDef
+    ticketMerchantId: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
     reviewedBy: Maybe Text
