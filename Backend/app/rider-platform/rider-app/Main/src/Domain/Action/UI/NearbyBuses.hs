@@ -151,4 +151,4 @@ getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   now <- getCurrentTime
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
-  JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig.id mid person.merchantOperatingCityId vehicleType
+  JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig mid person.merchantOperatingCityId vehicleType

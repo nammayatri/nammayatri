@@ -751,7 +751,7 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
       let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
-      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig.id merchantId person.merchantOperatingCityId vehicleCategory
+      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
   where

@@ -3,6 +3,7 @@ module Storage.GraphqlQueries.RouteStopTimeTable
   )
 where
 
+import BecknV2.FRFS.Enums (ServiceTierType (..), VehicleCategory (..))
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -25,8 +26,9 @@ findByRouteCodeAndStopCode ::
   Id MerchantOperatingCity ->
   [Text] ->
   Text ->
+  VehicleCategory ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode = do
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode vehicleCategory = do
   let variables =
         Client.RouteStopTimeTableQueryVars
           { Client.routeCode = routeCodes,
@@ -44,29 +46,67 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
       logError $ "GraphQL query failed: " <> show err
       pure []
     Right response -> do
-      pure $ map (parseToRouteStopTimeTable integratedBPPConfig merchantId merchantOpId) response.routeStopTimeTables
+      pure $ concatMap (parseToRouteStopTimeTable integratedBPPConfig merchantId merchantOpId vehicleCategory) response.routeStopTimeTables
 
 -- Helper function to convert GraphQL response to domain type
 parseToRouteStopTimeTable ::
   Id IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  VehicleCategory ->
   Client.TimetableEntry ->
-  RouteStopTimeTable
-parseToRouteStopTimeTable integratedBPPConfig mid mocid entry =
-  RouteStopTimeTable
-    { integratedBppConfigId = integratedBPPConfig,
-      routeCode = entry.routeCode,
-      serviceTierType = entry.serviceTierType,
-      stopCode = entry.stopCode,
-      timeOfArrival = entry.timeOfArrival,
-      timeOfDeparture = entry.timeOfDeparture,
-      tripId = Id entry.tripId,
-      merchantId = Just mid,
-      merchantOperatingCityId = Just mocid,
-      createdAt = entry.createdAt,
-      updatedAt = entry.updatedAt,
-      delay = Nothing,
-      source = GTFS,
-      stage = entry.stage
-    }
+  [RouteStopTimeTable]
+parseToRouteStopTimeTable integratedBPPConfig mid mocid vehicleCategory entry =
+  case vehicleCategory of
+    SUBWAY ->
+      [ RouteStopTimeTable
+          { integratedBppConfigId = integratedBPPConfig,
+            routeCode = entry.routeCode,
+            serviceTierType = SECOND_CLASS,
+            stopCode = entry.stopCode,
+            timeOfArrival = entry.timeOfArrival,
+            timeOfDeparture = entry.timeOfDeparture,
+            tripId = Id entry.tripId,
+            merchantId = Just mid,
+            merchantOperatingCityId = Just mocid,
+            createdAt = entry.createdAt,
+            updatedAt = entry.updatedAt,
+            delay = Nothing,
+            source = GTFS,
+            stage = entry.stage
+          },
+        RouteStopTimeTable
+          { integratedBppConfigId = integratedBPPConfig,
+            routeCode = entry.routeCode,
+            serviceTierType = FIRST_CLASS,
+            stopCode = entry.stopCode,
+            timeOfArrival = entry.timeOfArrival,
+            timeOfDeparture = entry.timeOfDeparture,
+            tripId = Id entry.tripId,
+            merchantId = Just mid,
+            merchantOperatingCityId = Just mocid,
+            createdAt = entry.createdAt,
+            updatedAt = entry.updatedAt,
+            delay = Nothing,
+            source = GTFS,
+            stage = entry.stage
+          }
+      ]
+    _ ->
+      [ RouteStopTimeTable
+          { integratedBppConfigId = integratedBPPConfig,
+            routeCode = entry.routeCode,
+            serviceTierType = entry.serviceTierType,
+            stopCode = entry.stopCode,
+            timeOfArrival = entry.timeOfArrival,
+            timeOfDeparture = entry.timeOfDeparture,
+            tripId = Id entry.tripId,
+            merchantId = Just mid,
+            merchantOperatingCityId = Just mocid,
+            createdAt = entry.createdAt,
+            updatedAt = entry.updatedAt,
+            delay = Nothing,
+            source = GTFS,
+            stage = entry.stage
+          }
+      ]

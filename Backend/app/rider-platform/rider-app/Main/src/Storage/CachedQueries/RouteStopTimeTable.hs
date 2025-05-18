@@ -19,7 +19,10 @@ module Storage.CachedQueries.RouteStopTimeTable
   )
 where
 
+import qualified BecknV2.FRFS.Enums
+import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Text as Text
+import Domain.Types.GTFSFeedInfo (GTFSFeedInfo)
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -31,27 +34,43 @@ import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.GTFSFeedInfo as GTFSFeedInfo
 import qualified Storage.GraphqlQueries.RouteStopTimeTable as Queries
+import Tools.Error
+
+modifyCodesToGTFS :: GTFSFeedInfo -> Text -> Text
+modifyCodesToGTFS gtfsFeedInfo codes = gtfsFeedInfo.feedId.getId <> ":" <> codes
+
+castVehicleType :: MonadFlow m => VehicleCategory.VehicleCategory -> m BecknV2.FRFS.Enums.VehicleCategory
+castVehicleType vehicleType = do
+  case vehicleType of
+    VehicleCategory.BUS -> return BecknV2.FRFS.Enums.BUS
+    VehicleCategory.METRO -> return BecknV2.FRFS.Enums.METRO
+    VehicleCategory.SUBWAY -> return BecknV2.FRFS.Enums.SUBWAY
+    _ -> throwError $ InternalError "Invalid vehicle type"
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
     ServiceFlow m r
   ) =>
-  Id IntegratedBPPConfig ->
+  IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   [Text] ->
   Text ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode = do
-  let routeCodes = P.map (\val -> fromMaybe val (listToMaybe (P.drop 1 (Text.splitOn ":" val)))) routeCodes'
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' = do
+  vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
+  gtfsFeedInfo <- GTFSFeedInfo.findByVehicleTypeAndCity vehicleType integratedBPPConfig.merchantOperatingCityId integratedBPPConfig.merchantId
+  let routeCodes = P.map (modifyCodesToGTFS gtfsFeedInfo) routeCodes'
+      stopCode = modifyCodesToGTFS gtfsFeedInfo stopCode'
   allTrips <-
     Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
       Just a -> pure a
-      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode
+      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig.id merchantId merchantOpId routeCodes' stopCode vehicleType
   logDebug $ "Fetched route stop time table cached: " <> show allTrips <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
   val <- L.getOptionLocal CalledForFare
-  return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes) || (val == Just True)) allTrips
+  return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips
 
 cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> m ()
 cacheRouteStopTimeInfo stopCode routeStopInfo = do

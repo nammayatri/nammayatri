@@ -1007,6 +1007,21 @@ FRFSGtfsStageFare:
       where:
         and: [vehicleType, stage, merchantOperatingCityId]
 
+GTFSFeedInfo:
+  tableName: gtfs_feed_info
+  fields:
+    feedId: Id GTFSFeedInfo
+    vehicleType: VehicleCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    feedId: PrimaryKey
+  queries:
+    findByVehicleTypeAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [vehicleType, merchantId, merchantOperatingCityId]
+
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare
   fields:

@@ -377,7 +377,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
                   L.setOptionLocal QRSTT.CalledForFare True
-                  (possibleServiceTiers, availableFares) <- filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig.id fares
+                  (possibleServiceTiers, availableFares) <- filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig fares
                   L.setOptionLocal QRSTT.CalledForFare False
                   let mbMinFarePerRoute = selectMinFare availableFares
                   let mbMaxFarePerRoute = selectMaxFare availableFares
@@ -398,13 +398,13 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
       logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
       return Nothing
   where
-    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r) => UTCTime -> Text -> Text -> Id DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
-    filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfigId fares = do
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r) => UTCTime -> Text -> Text -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
+    filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig fares = do
       case vehicleCategory of
         Spec.BUS -> do
           -- Above getFares function return fares for all types of buses (e.g. AC, Non-AC, Ordinary, etc.) but instead of showing all types of buses to user,
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
-          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfigId merchant.id merchantOperatingCity.id Enums.BUS
+          (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
           return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
         _ -> return (Nothing, fares)
