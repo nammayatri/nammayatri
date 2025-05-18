@@ -56,8 +56,8 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
             destination = endStopCode,
             ticketType = "SJT"
           }
-    EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     CRIS config' -> do
       person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
       mbMobileNumber <- decrypt `mapM` person.mobileNumber

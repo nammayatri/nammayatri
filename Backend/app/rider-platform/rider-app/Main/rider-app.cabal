@@ -385,6 +385,7 @@ library
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
+      Storage.CachedQueries.GTFSFeedInfo
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -682,6 +683,7 @@ library
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
+      Domain.Types.GTFSFeedInfo
       Domain.Types.HotSpotConfig
       Domain.Types.IntegratedBPPConfig
       Domain.Types.InterCityDetails
@@ -810,6 +812,7 @@ library
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
+      Storage.Beam.GTFSFeedInfo
       Storage.Beam.HotSpotConfig
       Storage.Beam.IntegratedBPPConfig
       Storage.Beam.InterCityDetails
@@ -939,6 +942,7 @@ library
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier
+      Storage.Queries.GTFSFeedInfo
       Storage.Queries.HotSpotConfig
       Storage.Queries.IntegratedBPPConfig
       Storage.Queries.InterCityDetails

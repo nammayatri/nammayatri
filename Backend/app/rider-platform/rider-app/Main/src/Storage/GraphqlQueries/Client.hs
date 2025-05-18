@@ -244,51 +244,22 @@ executeRouteStopTimeTableQuery baseUrl vars = do
 transformToTimeTableEntries :: MonadFlow m => OTPResponse -> m [TimetableEntry]
 transformToTimeTableEntries otpResponse = do
   now <- getCurrentTime
-  return $ concatMap (transformEntry otpResponse.stop now) otpResponse.stop.stoptimesWithoutPatterns
+  return $ map (transformEntry otpResponse.stop now) otpResponse.stop.stoptimesWithoutPatterns
 
-transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> [TimetableEntry]
+transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> TimetableEntry
 transformEntry stopData timestamp entry = do
-  case "chennai_subway:" `Text.isInfixOf` stopData.gtfsId of
-    True -> do
-      [ TimetableEntry
-          { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
-            serviceTierType = BecknV2.FRFS.Enums.SECOND_CLASS,
-            stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-            stage = entry.headsign >>= readMaybe . Text.unpack,
-            -- Convert seconds from midnight to HH:MM:SS
-            timeOfArrival = secondsToTime entry.scheduledArrival,
-            timeOfDeparture = secondsToTime entry.scheduledDeparture,
-            tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
-            createdAt = timestamp,
-            updatedAt = timestamp
-          },
-        TimetableEntry
-          { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
-            serviceTierType = BecknV2.FRFS.Enums.FIRST_CLASS,
-            stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-            stage = entry.headsign >>= readMaybe . Text.unpack,
-            -- Convert seconds from midnight to HH:MM:SS
-            timeOfArrival = secondsToTime entry.scheduledArrival,
-            timeOfDeparture = secondsToTime entry.scheduledDeparture,
-            tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
-            createdAt = timestamp,
-            updatedAt = timestamp
-          }
-        ]
-    False ->
-      [ TimetableEntry
-          { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
-            serviceTierType = mapToServiceTierType entry.trip.gtfsId,
-            stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-            stage = entry.headsign >>= readMaybe . Text.unpack,
-            -- Convert seconds from midnight to HH:MM:SS
-            timeOfArrival = secondsToTime entry.scheduledArrival,
-            timeOfDeparture = secondsToTime entry.scheduledDeparture,
-            tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
-            createdAt = timestamp,
-            updatedAt = timestamp
-          }
-      ]
+  TimetableEntry
+    { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
+      serviceTierType = mapToServiceTierType entry.trip.gtfsId,
+      stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
+      stage = entry.headsign >>= readMaybe . Text.unpack,
+      -- Convert seconds from midnight to HH:MM:SS
+      timeOfArrival = secondsToTime entry.scheduledArrival,
+      timeOfDeparture = secondsToTime entry.scheduledDeparture,
+      tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
+      createdAt = timestamp,
+      updatedAt = timestamp
+    }
 
 -- Convert seconds from midnight to HH:MM:SS format
 secondsToTime :: Int -> LocalTime.TimeOfDay
