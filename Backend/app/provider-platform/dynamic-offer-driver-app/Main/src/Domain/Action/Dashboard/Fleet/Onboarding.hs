@@ -85,12 +85,12 @@ getOnboardingGetReferralDetails ::
   Text ->
   Text ->
   Environment.Flow CommonOnboarding.ReferralInfoRes
-getOnboardingGetReferralDetails merchantShortId opCity fleetOwnerId referralCode = do
+getOnboardingGetReferralDetails merchantShortId opCity requestorId referralCode = do
   when (Text.length referralCode < 6) $ throwError (InvalidRequest "Referral code should be at least 6 digits long")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-  dr <- validateReferralCodeAndRole transporterConfig (Id fleetOwnerId) referralCode (Just FLEET_OWNER)
+  dr <- validateReferralCodeAndRole transporterConfig (Id requestorId) referralCode (Just OPERATOR)
   person <- PersonQuery.findById dr.driverId >>= fromMaybeM (PersonNotFound dr.driverId.getId)
   return $
     CommonOnboarding.ReferralInfoRes

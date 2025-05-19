@@ -73,10 +73,10 @@ apis:
         type: ReferralInfoRes
       helperApi:
         - GET:
-            endpoint: /get/referralDetails/{fleetOwnerId}
+            endpoint: /get/referralDetails/{requestorId}
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             mandatoryQuery:
               - referralCode: Text
             response:

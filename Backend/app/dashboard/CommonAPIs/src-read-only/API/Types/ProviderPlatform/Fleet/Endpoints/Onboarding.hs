@@ -178,7 +178,7 @@ type PostOnboardingVerify = ("verify" :> Capture "verifyType" VerifyType :> ReqB
 type GetOnboardingGetReferralDetails = ("get" :> "referralDetails" :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text :> Get '[JSON] ReferralInfoRes)
 
 type GetOnboardingGetReferralDetailsHelper =
-  ( "get" :> "referralDetails" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text
+  ( "get" :> "referralDetails" :> Capture "requestorId" Kernel.Prelude.Text :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text
       :> Get
            '[JSON]
            ReferralInfoRes
