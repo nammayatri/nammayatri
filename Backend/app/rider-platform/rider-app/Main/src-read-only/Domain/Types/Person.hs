@@ -291,7 +291,7 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data BlockSource = DASHBOARD | DEVICE_TOKEN | FRAUD_SYSTEM | HIGH_CANCELLATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BlockSource = DASHBOARD | DEVICE_TOKEN_CHECK | FRAUD_CHECKS | HIGH_CANCELLATION_RATE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

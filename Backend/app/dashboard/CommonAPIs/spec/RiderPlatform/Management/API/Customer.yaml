@@ -6,6 +6,7 @@ imports:
   PersonRes: Dashboard.Common
   PersonIdsReq: Dashboard.Common
   PersonMobileNoReq: Dashboard.Common
+  SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
 
 module: Customer
 
@@ -39,12 +40,22 @@ apis:
       auth: ApiAuthV2
       params:
         customerId: Id Customer
-      query:
-        blockReason: Text
       response:
         type: APISuccess
       migrate:
         endpoint: CustomerAPI BlockCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
+  - POST:
+      endpoint:  /{customerId}/blockWithReason
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      request:
+        type: BlockCustomerWithReasonReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI BlockCustomerWithReasonEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
   - POST:
       endpoint:  /{customerId}/unblock
@@ -133,6 +144,21 @@ types:
     - phoneNo: Maybe Text
     - enabled: Bool
     - blocked: Bool
+    - blockedByRuleId: Maybe Text
+    - blockSource: Maybe Text
+    - merchantConfig: Maybe MerchantConfig
+  MerchantConfig:
+    - fraudAuthCountThreshold: Maybe Int
+    - fraudAuthCountWindow: Maybe SlidingWindowOptions
+    - fraudBookingCancellationCountThreshold: Int
+    - fraudBookingCancellationCountWindow: SlidingWindowOptions
+    - fraudBookingCancelledByDriverCountThreshold: Int
+    - fraudBookingCancelledByDriverCountWindow: SlidingWindowOptions
+    - fraudBookingTotalCountThreshold: Int
+    - fraudRideCountThreshold: Int
+    - fraudRideCountWindow: SlidingWindowOptions
+    - fraudSearchCountThreshold: Int
+    - fraudSearchCountWindow: SlidingWindowOptions
   CustomerInfoRes:
     - numberOfRides: Int
     - falseSafetyAlarmCount: Int
@@ -152,5 +178,5 @@ types:
     - incrementCount: Maybe Bool
     - resetCount: Maybe Bool
     - derive: "'HideSecrets"
-
-
+  BlockCustomerWithReasonReq:
+    - blockReason: Text

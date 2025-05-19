@@ -570,7 +570,7 @@ verify tokenId req = do
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken) (Just SP.DEVICE_TOKEN) Nothing
+    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken) (Just SP.DEVICE_TOKEN_CHECK) Nothing
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken

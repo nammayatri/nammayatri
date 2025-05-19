@@ -38,7 +38,7 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     BlockSource:
-      enum: "DASHBOARD, DEVICE_TOKEN, FRAUD_SYSTEM, HIGH_CANCELLATION"
+      enum: "DASHBOARD, DEVICE_TOKEN_CHECK, FRAUD_CHECKS, HIGH_CANCELLATION_RATE"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
@@ -369,4 +369,5 @@ Person:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
 
