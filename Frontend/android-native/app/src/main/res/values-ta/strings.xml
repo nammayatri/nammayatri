@@ -4,6 +4,7 @@
     <string name="ride_rejected"> சவாரி நிராகரிக்கப்பட்டது</string>
     <string name="request">கோரிக்கை</string>
     <string name="decline">நிராகரி</string>
+    <string name="pass">பாஸ்</string>
     <string name="pickup">பிக்கப்</string>
     <string name="test_request">சோதனைச் சவாரி</string>
     <string name="test_request_successful">சோதனைச் சவாரி வெற்றி!</string>
