@@ -322,6 +322,13 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarni
                                    | LOAD_MORE_HISTORY DriverEarningsScreenState
                                    | GOTO_COINS_EARNING_INFO DriverEarningsScreenState
 
+data DRIVER_EARNINGS_SCREEN_V2_OUTPUT = EARNINGS_NAV_V2 NAVIGATION_ACTIONS DriverEarningsScreenState
+                                   | CHANGE_SUB_VIEW_V2 DriverEarningsSubView DriverEarningsScreenState
+                                   | REFRESH_EARNINGS_SCREEN_V2 DriverEarningsScreenState
+                                   | EARNINGS_HISTORY_V2 DriverEarningsScreenState
+                                   | GOTO_TRIP_DETAILS_V2 IndividualRideCardState
+                                   | GOTO_COINS_EARNING_INFO_V2 DriverEarningsScreenState
+
 data HOTSPOT_SCREEN_OUTPUT = REFRESH_HOTSPOTS | BACK_TO_HOMESCREEN
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
