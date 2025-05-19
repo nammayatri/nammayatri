@@ -247,9 +247,7 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
       QOrder.updateAmount order.id totalFare
       let updatedOrder :: DOrder.PaymentOrder
           updatedOrder = order {DOrder.amount = totalFare}
-      logDebug $ "updatedOrder: " <> show updatedOrder
       sdkPayload <- buildUpdateOrderSDKPayload totalFare updatedOrder
-      logDebug $ "sdkPayload: " <> show sdkPayload
       return $
         ApiTypes.UpdatePaymentOrderResp
           { sdkPayload = sdkPayload
