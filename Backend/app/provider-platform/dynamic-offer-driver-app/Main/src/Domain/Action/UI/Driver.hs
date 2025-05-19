@@ -284,7 +284,7 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
-import Tools.Verification hiding (length)
+import Tools.Verification hiding (ImageType, length)
 import Utils.Common.Cac.KeyNameConstants
 
 data DriverInformationRes = DriverInformationRes
@@ -369,7 +369,8 @@ data DriverInformationRes = DriverInformationRes
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
-    subscriptionDown :: Maybe Bool
+    subscriptionDown :: Maybe Bool,
+    qrUrl :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -435,7 +436,8 @@ data DriverEntityRes = DriverEntityRes
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
-    subscriptionDown :: Maybe Bool
+    subscriptionDown :: Maybe Bool,
+    qrUrl :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -574,10 +576,14 @@ data DriverPhotoUploadReq = DriverPhotoUploadReq
   { image :: Text,
     fileType :: S3.FileType,
     reqContentType :: Text,
-    brisqueFeatures :: [Double]
+    brisqueFeatures :: [Double],
+    imageType :: Maybe ImageType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ImageType = ProfilePhoto | QrImage
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data DriverAlternateNumberReq = DriverAlternateNumberReq
   { mobileCountryCode :: Text,
@@ -918,6 +924,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         if transporterConfig.ratingAsDecimal
           then SP.roundToOneDecimal <$> driverStats.rating
           else driverStats.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
+  qrUrl <- forM person.qrImageId $ \mediaId -> do
+    mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+    return mediaEntry.url
   fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
   let supportedServiceTiers = nub $ map (.vehicleServiceTier) fareProductConfig
   (checkIfACWorking, mbDefaultServiceTier) <-
@@ -970,7 +979,6 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         lastName = person.lastName,
         mobileNumber = decMobNum,
         email = person.email,
-        rating,
         linkedVehicle = makeVehicleAPIEntity mbDefaultServiceTier <$> vehicleMB,
         active = driverInfo.active,
         onRide = onRideFlag,
@@ -997,12 +1005,6 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         clientVersion = person.clientSdkVersion,
         bundleVersion = person.clientBundleVersion,
         gender = Just person.gender,
-        mediaUrl = mediaUrl,
-        aadhaarCardPhoto = aadhaarCardPhoto,
-        freeTrialDaysLeft = freeTrialDaysLeft,
-        maskedDeviceToken = maskedDeviceToken,
-        checkIfACWorking,
-        isVehicleSupported = isVehicleSupported,
         payoutVpa = driverInfo.payoutVpa,
         payoutVpaStatus = driverInfo.payoutVpaStatus,
         payoutVpaBankAccount = driverInfo.payoutVpaBankAccount,
@@ -1017,6 +1019,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         softBlockExpiryTime = driverInfo.softBlockExpiryTime,
         softBlockReasonFlag = driverInfo.softBlockReasonFlag,
         onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
+        qrUrl,
         ..
       }
   where
@@ -1622,33 +1625,47 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
 driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
 driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"
 
+driverQrUploadHitsCountKey :: Id SP.Person -> Text
+driverQrUploadHitsCountKey driverId = "BPP:QRImage" <> getId driverId <> ":hitsCount"
+
 driverProfileImagesUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Issue.IssueMediaUploadReq -> Flow Issue.IssueMediaUploadRes
 driverProfileImagesUpload (driverId, merchantId, merchantOpCityId) Issue.IssueMediaUploadReq {..} = do
   Issue.issueMediaUpload' (cast driverId, cast merchantId, cast merchantOpCityId) driverIssueHandle Issue.IssueMediaUploadReq {..} "driver-profile-images" ("driverId-" <> getId driverId)
 
 driverPhotoUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverPhotoUploadReq -> Flow APISuccess
 driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq {..} = do
-  checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
+  let imageType_ = fromMaybe ProfilePhoto imageType
+  let (hitsCountKey, basePath, domain) = case imageType_ of
+        ProfilePhoto -> (driverPhotoUploadHitsCountKey, "/driver-profile-picture/", "driver/profile/photo")
+        QrImage -> (driverQrUploadHitsCountKey, "/driver-qr/", "driver/qr/image")
+
+  checkSlidingWindowLimit (hitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   imageExtension <- validateContentType
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when transporterConfig.enableFaceVerification
+
+  when (imageType_ == ProfilePhoto && transporterConfig.enableFaceVerification) $ do
     let req = IF.FaceValidationReq {file = image, brisqueFeatures}
-     in void $ validateFaceImage merchantId merchantOpCityId req
-  filePath <- S3.createFilePath "/driver-profile-picture/" ("driver-" <> getId driverId) fileType imageExtension
+    void $ validateFaceImage merchantId merchantOpCityId req
+
+  filePath <- S3.createFilePath basePath ("driver-" <> getId driverId) fileType imageExtension
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
-          & T.replace "<DOMAIN>" "driver/profile/photo"
+          & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
+
   result <- try @_ @SomeException $ S3.put (T.unpack filePath) image
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
-      case person.faceImageId of
-        Just mediaFileId -> do
+      case imageType_ of
+        ProfilePhoto -> whenJust person.faceImageId $ \mediaFileId -> do
           QPerson.updateMediaId driverId Nothing
           MFQuery.deleteById mediaFileId
-        Nothing -> return ()
+        QrImage -> whenJust person.qrImageId $ \mediaFileId -> do
+          QPerson.updateQrMediaId driverId Nothing
+          MFQuery.deleteById mediaFileId
+
   createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType} filePath
   where
     validateContentType = do

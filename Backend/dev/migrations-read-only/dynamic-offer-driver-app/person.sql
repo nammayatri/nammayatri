@@ -92,3 +92,8 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN client_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN masked_mobile_digits text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN qr_image_id character varying(36) ;
