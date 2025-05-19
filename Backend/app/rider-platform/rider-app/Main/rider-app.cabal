@@ -195,6 +195,7 @@ library
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
+      Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
       Domain.Action.UI.Disability
@@ -304,6 +305,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
       ExternalBPP.ExternalAPI.Subway.CRIS.Error
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
+      ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
@@ -566,6 +568,7 @@ library
       API.Action.Dashboard.RideBooking.Select
       API.Action.UI.BBPS
       API.Action.UI.Cac
+      API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
       API.Action.UI.EditLocation
@@ -620,6 +623,7 @@ library
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
       API.Types.UI.BBPS
+      API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson
       API.Types.UI.EditLocation
