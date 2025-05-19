@@ -948,8 +948,14 @@ driverStatusIndicators state = [
     },
     {
         status : ST.Silent,
-        background : Color.blue800,
+        background : Color.blue900,
         imageUrl : fetchImage FF_ASSET "ic_driver_status_silent",
+        textColor : Color.white900
+    },
+    {
+        status : ST.Goto,
+        background : Color.blue800,
+        imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
         textColor : Color.white900
     },
     {
@@ -3098,3 +3104,108 @@ disableMetroWarriorWarningPopup _ = PopUpModal.config {
       width = MATCH_PARENT
     }
   }
+
+
+safetyPillBottomSheetConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyPillBottomSheetConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { 
+         buttonLayoutMargin = Margin 16 24 16 20 ,
+         padding = PaddingTop 24,
+         backgroundClickable = true,
+         dismissPopup = true,
+         secondaryText {
+            visibility = GONE },
+         option1 { 
+          visibility = false
+         },
+         option2 {
+           visibility = false
+         },
+         dismissPopupConfig {
+            visibility = VISIBLE,
+            height = V 20,
+            width = V 20,
+            margin = Margin 0 0 16 16
+          },
+         listViewArrayWithImage = [
+          { text : "Police",
+            prefixImageConfig : {
+              imageUrl : "ny_ic_police_red"
+            , height : V 40
+            , width : V 40
+            , margin : Margin 12 12 12 12
+            , padding : Padding 0 0 0 0
+            , visibility : VISIBLE
+            },
+            background : Color.white900,
+            textColor : Color.black900,
+            componentStroke : "1," <> Color.grey300,
+            suffixImageConfig : {
+              visibility : VISIBLE
+            , imageUrl : "ny_ic_chevron_right"
+            , height : (V 24)
+            , width : (V 24)
+            , margin : MarginRight 8
+            , padding : Padding 0 0 0 0
+            },
+            cornerRadius : 8.0
+          },
+          { text : "Ambulance",
+            prefixImageConfig : {
+              imageUrl : "ny_ic_ambulance_blue"
+            , height : V 40
+            , width : V 40
+            , margin : Margin 12 12 12 12
+            , padding : Padding 0 0 0 0
+            , visibility : VISIBLE
+            },
+            background : Color.white900,
+            textColor : Color.black900,
+            componentStroke : "1," <> Color.grey300,
+            suffixImageConfig : {
+              visibility : VISIBLE
+            , imageUrl : "ny_ic_chevron_right"
+            , height : (V 24)
+            , width : (V 24)
+            , margin : MarginRight 8
+            , padding : Padding 0 0 0 0
+            },
+            cornerRadius : 8.0
+          },
+          { text : "Call Safety Team",
+            prefixImageConfig : {
+              imageUrl : "ny_ic_headphones_blue"
+            , height : V 40
+            , width : V 40
+            , margin : Margin 12 12 12 12
+            , padding : Padding 0 0 0 0
+            , visibility : VISIBLE
+            },
+            background : Color.white900,
+            textColor : Color.black900,
+            componentStroke : "1," <> Color.grey300,
+            suffixImageConfig : {
+              visibility : VISIBLE
+            , imageUrl : "ny_ic_chevron_right"
+            , height : (V 24)
+            , width : (V 24)
+            , margin : MarginRight 8
+            , padding : Padding 0 0 0 0
+            },
+            cornerRadius : 8.0
+          }
+        ]
+        , gravity = BOTTOM
+        , primaryText {
+            text = "Safety Options",
+            textStyle = Heading3,
+            margin = Margin 16 0 16 10,
+            gravity = LEFT
+          }
+        }
+  in
+    popUpConfig'

@@ -59,6 +59,7 @@ import Screens.DriverSavedLocationScreen.Handler (driverSavedLocationScreen) as 
 import Screens.ChooseCityScreen.Handler (chooseCityScreen) as UI
 import Screens.WelcomeScreen.Handler (welcomeScreen) as UI
 import Screens.DriverEarningsScreen.Handler (driverEarningsScreen) as UI
+import Screens.DriverEarningsScreenV2.Handler (driverEarningsScreenV2) as UI
 import Screens.Benefits.BenefitsScreen.Handler (benefitsScreen) as UI
 import Screens.Benefits.LmsVideoScreen.Handler (lmsVideoScreen) as UI
 import Screens.Benefits.LmsQuizScreen.Handler (lmsQuizScreen) as UI
