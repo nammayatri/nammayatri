@@ -83,8 +83,7 @@ import MerchantConfig.Types (RideStartAudio(..), StartAudioUrls(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback,editText,hint,pattern,onChange,inputTypeI)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
+import PrestoDOM
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -123,7 +122,6 @@ import RemoteConfig as RC
 import Services.API (DriverProfileDataRes(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Components.PopUpModal.View as PopUpModal
-import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 import Components.TripStageTopBar as TripStageTopBar
@@ -1042,20 +1040,21 @@ meterRideButtonView state push =
   , rippleColor Color.rippleShade
   , margin $ MarginLeft 10
   , gravity CENTER
+  , gradient $ Linear 90.0 ["#E21AE3", "#F7065A", "#EF062B", "#FC2308", "#FB540A"]
   ][ imageView
-      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_open_meter_icon"
+      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_tn_open_meter_icon_white"
       , width $ V 20
       , height $ V 20
       ]
     , textView $
       [ text $ "Open Meter"
-      , color Color.black800
+      , color Color.white900
       , singleLine true
       , margin $ MarginLeft 5
       , gravity CENTER
       ] <> (FontStyle.tags TypoGraphy)
     , imageView
-      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_grey"
+      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_white"
       , width $ V 12
       , height $ V 12
       , margin $ MarginLeft 5
