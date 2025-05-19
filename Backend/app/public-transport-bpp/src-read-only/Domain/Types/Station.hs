@@ -11,7 +11,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Station = Station
-  { code :: Kernel.Prelude.Text,
+  { bppId :: Kernel.Prelude.Text,
+    code :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

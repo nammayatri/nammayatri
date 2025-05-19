@@ -1,5 +1,6 @@
 CREATE TABLE atlas_public_transport_bpp.stations ();
 
+ALTER TABLE atlas_public_transport_bpp.stations ADD COLUMN bpp_id text NOT NULL;
 ALTER TABLE atlas_public_transport_bpp.stations ADD COLUMN code text NOT NULL;
 ALTER TABLE atlas_public_transport_bpp.stations ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_public_transport_bpp.stations ADD COLUMN lat double precision ;

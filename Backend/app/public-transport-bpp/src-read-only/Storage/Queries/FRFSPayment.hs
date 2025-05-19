@@ -5,6 +5,8 @@
 module Storage.Queries.FRFSPayment where
 
 import qualified Domain.Types.FRFSPayment
+import qualified Domain.Types.FRFSSearchRequest
+import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -19,6 +21,18 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSPayment.FRFSPayment] -> m ())
 createMany = traverse_ create
+
+findByFrfsTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m (Maybe Domain.Types.FRFSPayment.FRFSPayment))
+findByFrfsTicketBookingId frfsTicketBookingId = do findOneWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSPayment.FRFSPayment -> m (Maybe Domain.Types.FRFSPayment.FRFSPayment))
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByTrasactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearchRequest.FRFSSearchRequest -> m (Maybe Domain.Types.FRFSPayment.FRFSPayment))
+findByTrasactionId transactionId = do findOneWithKV [Se.Is Beam.transactionId $ Se.Eq (Kernel.Types.Id.getId transactionId)]
+
+updateStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSPayment.FRFSPayment -> m ())
+updateStatusById id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSPayment.FRFSPayment -> m (Maybe Domain.Types.FRFSPayment.FRFSPayment))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

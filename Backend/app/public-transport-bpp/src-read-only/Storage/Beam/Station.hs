@@ -11,7 +11,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StationT f = StationT
-  { code :: (B.C f Kernel.Prelude.Text),
+  { bppId :: (B.C f Kernel.Prelude.Text),
+    code :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     lat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     lon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
