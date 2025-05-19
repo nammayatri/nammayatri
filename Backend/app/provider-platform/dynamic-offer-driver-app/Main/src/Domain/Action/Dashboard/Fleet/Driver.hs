@@ -718,18 +718,35 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text)
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = Csv.readMaybeCSVField idx row.airConditioned "Air Conditioned"
-          mbRouteCodes :: Maybe [Text] = Csv.readMaybeCSVField idx row.routeCodes "Route Codes"
+          mbRouteCodes :: Maybe [Text] = Csv.readMaybeCSVField idx (fromMaybe "" row.routeCodes) "Route Codes"
           mbFleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet Phone Number"
           mbDriverPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneNo) "Driver Phone Number"
           mbCountryCode :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.countryCode) "Country Code"
-      vehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.vehicleCategory "Vehicle Category"
+          vehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.vehicleCategory) "Vehicle Category"
       vehicleRegistrationCertNumber <- Csv.cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
         case mbRouteCodes of
           Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
           Nothing -> pure []
-      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, vehicleCategory = Just vehicleCategory, ..}, vehicleNumberHash, routes, mbCountryCode, mbFleetPhoneNo, mbDriverPhoneNo)
+      pure
+        ( Common.RegisterRCReq
+            { dateOfRegistration = Nothing,
+              multipleRC = Nothing,
+              oxygen = Nothing,
+              ventilator = Nothing,
+              operatingCity = show moc.city,
+              imageId = Id "bulkVehicleUpload",
+              vehicleDetails = Nothing,
+              vehicleCategory = Just $ fromMaybe DVC.CAR vehicleCategory,
+              ..
+            },
+          vehicleNumberHash,
+          routes,
+          mbCountryCode,
+          mbFleetPhoneNo,
+          mbDriverPhoneNo
+        )
 
     buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
       now <- getCurrentTime
@@ -748,8 +765,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
 data VehicleDetailsCSVRow = VehicleDetailsCSVRow
   { registrationNo :: Text,
     airConditioned :: Text,
-    routeCodes :: Text,
-    vehicleCategory :: Text,
+    routeCodes :: Maybe Text,
+    vehicleCategory :: Maybe Text,
     fleetPhoneNo :: Maybe Text,
     driverPhoneNo :: Maybe Text,
     countryCode :: Maybe Text
@@ -761,8 +778,8 @@ instance FromNamedRecord VehicleDetailsCSVRow where
     VehicleDetailsCSVRow
       <$> r .: "registration_no"
       <*> r .: "air_conditioned"
-      <*> r .: "route_codes"
-      <*> r .: "vehicle_category"
+      <*> optional (r .: "route_codes")
+      <*> optional (r .: "vehicle_category")
       <*> optional (r .: "fleet_phone_no")
       <*> optional (r .: "driver_phone_no")
       <*> optional (r .: "country_code")
@@ -1988,14 +2005,14 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 data CreateDriversCSVRow = CreateDriversCSVRow
   { driverName :: Text,
     driverPhoneNumber :: Text,
-    driverOnboardingVehicleCategory :: Text,
+    driverOnboardingVehicleCategory :: Maybe Text,
     fleetPhoneNo :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
   { driverName :: Text,
     driverPhoneNumber :: Text,
-    driverOnboardingVehicleCategory :: DVC.VehicleCategory,
+    driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
     fleetPhoneNo :: Maybe Text
   }
 
@@ -2004,7 +2021,7 @@ instance FromNamedRecord CreateDriversCSVRow where
     CreateDriversCSVRow
       <$> r .: "driver_name"
       <*> r .: "driver_phone_number"
-      <*> r .: "driver_onboarding_vehicle_category"
+      <*> optional (r .: "driver_onboarding_vehicle_category")
       <*> optional (r .: "fleet_phone_no")
 
 postDriverFleetAddDrivers ::
@@ -2103,7 +2120,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           fork "Sending Fleet Consent SMS to Driver" $ do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
-            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId req_.driverOnboardingVehicleCategory False
+            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
@@ -2114,7 +2131,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
           fork "Sending Operator Consent SMS to Driver" $ do
             let driverMobile = req_.driverPhoneNumber
-            QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id req_.driverOnboardingVehicleCategory False
+            QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False
             sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id operator
 
     sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
@@ -2149,7 +2166,7 @@ parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
   driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
   driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
-  driverOnboardingVehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
+  let driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
   let fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
   pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo
 
