@@ -76,6 +76,7 @@ driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_n
 Peter, 2211111201, AUTO_CATEGORY, 6666666666
 Vasiliy, 2211111202, CAR, 6666666666
 William, 2211111206, FLIGHT, 6666666666
+Samwell, 2211111207, no_constraint, 6666666666
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###
@@ -94,6 +95,7 @@ driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_n
 Peter, 2211111201, AUTO_CATEGORY, no_constraint
 Vasiliy, 2211111202, CAR, no_constraint
 William, 2211111206, FLIGHT, no_constraint
+Samwell, 2211111207, no_constraint, no_constraint
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###
