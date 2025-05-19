@@ -25,6 +25,7 @@ import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
@@ -74,6 +75,7 @@ type HealthCheckAPI = Get '[JSON] Text
 type API =
   "ui"
     :> ( HealthCheckAPI
+           :<|> Merchant.API
            :<|> Registration.API
            :<|> DemandHotspots.API
            :<|> DriverOnboarding.API
@@ -126,6 +128,7 @@ type API =
 handler :: FlowServer API
 handler =
   pure "App is UP"
+    :<|> Merchant.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler
     :<|> DriverOnboarding.handler

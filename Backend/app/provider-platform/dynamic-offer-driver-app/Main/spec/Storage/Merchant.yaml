@@ -1024,6 +1024,9 @@ TransporterConfig:
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
     onboardingDocsCountLimit: Maybe Int
+    localPoliceNumbers: Maybe [Text]
+    localAmbulanceNumbers: Maybe [Text]
+    safetyTeamNumbers: Maybe [Text]
 
   beamType:
     currency: Maybe Currency

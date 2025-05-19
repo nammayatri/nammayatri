@@ -725,6 +725,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
+      API.Action.UI.Merchant
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
       API.Action.UI.Operator
@@ -766,6 +767,7 @@ library
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
+      API.Types.UI.Merchant
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
       API.Types.UI.PriceBreakup

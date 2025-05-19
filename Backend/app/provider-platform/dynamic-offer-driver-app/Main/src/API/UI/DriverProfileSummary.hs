@@ -31,6 +31,7 @@ type API =
     :> "profile"
     :> ( "summary"
            :> TokenAuth
+           :> QueryParam "fleetInfo" Bool
            :> Get '[JSON] Domain.DriverProfleSummaryRes
        )
 
@@ -38,5 +39,5 @@ handler :: FlowServer API
 handler =
   getDriverProfileSummary
 
-getDriverProfileSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.DriverProfleSummaryRes
-getDriverProfileSummary = withFlowHandlerAPI . Domain.getDriverProfileSummary
+getDriverProfileSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> FlowHandler Domain.DriverProfleSummaryRes
+getDriverProfileSummary (driverId, merchantId, merchantOpCityId) mbFleetInfo = withFlowHandlerAPI $ Domain.getDriverProfileSummary (driverId, merchantId, merchantOpCityId) mbFleetInfo
