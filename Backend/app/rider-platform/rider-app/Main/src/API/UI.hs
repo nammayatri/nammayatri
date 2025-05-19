@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.BBPS as BBPS
+import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.DeletedPerson as DeletedPerson
@@ -133,6 +134,7 @@ type API =
            :<|> NearbyDrivers.API
            :<|> NearbyBuses.API
            :<|> Places.API
+           :<|> CRIS.API
        )
 
 handler :: FlowServer API
@@ -192,3 +194,4 @@ handler =
     :<|> NearbyDrivers.handler
     :<|> NearbyBuses.handler
     :<|> Places.handler
+    :<|> CRIS.handler

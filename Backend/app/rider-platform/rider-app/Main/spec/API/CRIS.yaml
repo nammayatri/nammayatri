@@ -1,0 +1,24 @@
+imports:
+  Text: Data.Text
+
+module: CRIS
+
+types:
+  GetSDKDataRequest:
+    mobileNo: Text
+    deviceID: Text
+    derive: "Show"
+
+  GetSDKDataResponse:
+    respCode: Int
+    respMessage: Text
+    sdkData: Text
+    derive: "Show"
+
+apis:
+  - POST:
+      endpoint: cris/getSDKData
+      request:
+        type: GetSDKDataRequest
+      response:
+        type: GetSDKDataResponse
