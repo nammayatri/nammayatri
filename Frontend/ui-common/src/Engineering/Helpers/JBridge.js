@@ -2036,10 +2036,39 @@ export const showKeyboard = function (id) {
   // JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
 }
 
+const milimeterDiffForLatLong = '.00000001';
+
+function formatNumber(num) {
+  const numStr = num.toString();
+  if (numStr.includes('.')) {
+      return num;
+  } else {
+    try {
+      return Number(num + milimeterDiffForLatLong);
+    } catch (e) {
+      console.error("error in formatNumber", e);
+      return num;
+    }
+  }
+}
+
 export const locateOnMap = (configObj) => {
   if (JBridge.locateOnMapV2) {
     configObj.lat = configObj.lat == 0.0 ? "0.0" : configObj.lat.toString();
     configObj.lon = configObj.lon == 0.0 ? "0.0" : configObj.lon.toString();
+
+    // Convert points array to ensure lat/lng are doubles
+    try {
+        if (configObj.points && Array.isArray(configObj.points)) {
+          configObj.points = configObj.points.map(point => ({
+            ...point,
+            lat: formatNumber(point.lat),
+            lng: formatNumber(point.lng)
+          }));
+        }
+    }catch (e) {
+      console.error("Error in converting points", e);
+    }
     return JBridge.locateOnMapV2(JSON.stringify(configObj));
   } else {
     try {
