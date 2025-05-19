@@ -215,22 +215,22 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
 
 updatingEnabledAndBlockedStateData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe BlockSource -> Maybe Text -> m ()
 updatingEnabledAndBlockedStateData (Id personId) blockedByRule isBlocked mbBlockSource mbReason = do
-  person <- findByPId (Id personId)
-  case person of
+  mbPerson <- findByPId (Id personId)
+  case mbPerson of
     Nothing -> pure ()
-    Just driverP -> do
+    Just person -> do
       now <- getCurrentTime
       updateWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),
             Se.Set BeamP.blocked isBlocked,
             Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
-            Se.Set BeamP.blockedReason mbReason, -- add if not exists
+            Se.Set BeamP.blockedReason mbReason,
             Se.Set BeamP.blockSource mbBlockSource,
             Se.Set BeamP.updatedAt now,
             Se.Set BeamP.blockedCount $
               if isBlocked
-                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
-                else driverP.blockedCount
+                then Just $ (fromMaybe 0 person.blockedCount) + 1
+                else person.blockedCount
           ]
             <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
         )

@@ -16,8 +16,13 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters
 import Servant
 import Servant.Client
+
+data BlockCustomerWithReasonReq = BlockCustomerWithReasonReq {blockReason :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
@@ -55,12 +60,31 @@ data CustomerListItem = CustomerListItem
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     phoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
-    blocked :: Kernel.Prelude.Bool
+    blocked :: Kernel.Prelude.Bool,
+    blockedByRuleId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    merchantConfig :: Kernel.Prelude.Maybe MerchantConfig
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CustomerListRes = CustomerListRes {totalItems :: Kernel.Prelude.Int, summary :: Dashboard.Common.Summary, customers :: [CustomerListItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantConfig = MerchantConfig
+  { fraudAuthCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    fraudAuthCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    fraudBookingCancellationCountThreshold :: Kernel.Prelude.Int,
+    fraudBookingCancellationCountWindow :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    fraudBookingCancelledByDriverCountThreshold :: Kernel.Prelude.Int,
+    fraudBookingCancelledByDriverCountWindow :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    fraudBookingTotalCountThreshold :: Kernel.Prelude.Int,
+    fraudRideCountThreshold :: Kernel.Prelude.Int,
+    fraudRideCountWindow :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    fraudSearchCountThreshold :: Kernel.Prelude.Int,
+    fraudSearchCountWindow :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -71,7 +95,7 @@ data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq {incrementCou
 instance Kernel.Types.HideSecrets.HideSecrets UpdateSafetyCenterBlockingReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerBlockWithReason :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId))
 
 type GetCustomerList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -89,8 +113,10 @@ type GetCustomerList =
 
 type DeleteCustomerDelete = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostCustomerBlock =
-  ( Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "block" :> QueryParam "blockReason" Kernel.Prelude.Text
+type PostCustomerBlock = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "block" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostCustomerBlockWithReason =
+  ( Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "blockWithReason" :> ReqBody '[JSON] BlockCustomerWithReasonReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -125,7 +151,8 @@ type PostCustomerPersonId = ("personId" :> Kernel.ServantMultipart.MultipartForm
 data CustomerAPIs = CustomerAPIs
   { getCustomerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> EulerHS.Types.EulerClient CustomerListRes,
     deleteCustomerDelete :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postCustomerBlock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postCustomerBlock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postCustomerBlockWithReason :: Kernel.Types.Id.Id Dashboard.Common.Customer -> BlockCustomerWithReasonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCustomerUnblock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getCustomerInfo :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CustomerInfoRes,
     postCustomerCancellationDuesSync :: Kernel.Types.Id.Id Dashboard.Common.Customer -> CustomerCancellationDuesSyncReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -138,12 +165,13 @@ data CustomerAPIs = CustomerAPIs
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
 mkCustomerAPIs customerClient = (CustomerAPIs {..})
   where
-    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId = customerClient
+    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerBlockWithReason :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId = customerClient
 
 data CustomerUserActionType
   = GET_CUSTOMER_LIST
   | DELETE_CUSTOMER_DELETE
   | POST_CUSTOMER_BLOCK
+  | POST_CUSTOMER_BLOCK_WITH_REASON
   | POST_CUSTOMER_UNBLOCK
   | GET_CUSTOMER_INFO
   | POST_CUSTOMER_CANCELLATION_DUES_SYNC

@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Customer
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
     postCustomerPersonId,
+    postCustomerBlockWithReason,
   )
 where
 
@@ -36,6 +37,7 @@ import qualified Data.Vector as V
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Beam.Functions
@@ -56,6 +58,7 @@ import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.MerchantConfig as QMC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SavedReqLocation as QSRL
@@ -80,8 +83,8 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Maybe Text -> Flow APISuccess
-postCustomerBlock merchantShortId opCity customerId mbBlockReason = do
+postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
+postCustomerBlock merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -94,7 +97,26 @@ postCustomerBlock merchantShortId opCity customerId mbBlockReason = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
-  SMC.blockCustomer personId Nothing (Just DP.DASHBOARD) mbBlockReason
+  SMC.blockCustomer personId Nothing (Just DP.DASHBOARD) Nothing
+  logTagInfo "dashboard -> blockCustomer : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+postCustomerBlockWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Common.BlockCustomerWithReasonReq -> Flow APISuccess
+postCustomerBlockWithReason merchantShortId opCity customerId req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  let personId = cast @Common.Customer @DP.Person customerId
+  customer <-
+    runInReplica $
+      QP.findById personId
+        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = customer.merchantId
+  unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
+
+  SMC.blockCustomer personId Nothing (Just DP.DASHBOARD) (Just req.blockReason)
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
@@ -166,9 +188,10 @@ getCustomerList merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSe
     maxLimit = 20
     defaultLimit = 10
 
-buildCustomerListItem :: EncFlow m r => DP.Person -> m Common.CustomerListItem
+buildCustomerListItem :: DP.Person -> Flow Common.CustomerListItem
 buildCustomerListItem person = do
   phoneNo <- mapM decrypt person.mobileNumber
+  merchantConfig <- maybe (pure Nothing) QMC.findByPrimaryKey person.blockedByRuleId
   pure $
     Common.CustomerListItem
       { customerId = cast @DP.Person @Common.Customer person.id,
@@ -177,8 +200,14 @@ buildCustomerListItem person = do
         lastName = person.lastName,
         phoneNo,
         enabled = person.enabled,
-        blocked = person.blocked
+        blocked = person.blocked,
+        blockSource = show <$> person.blockSource,
+        blockedByRuleId = getId <$> person.blockedByRuleId,
+        merchantConfig = buildMerchantConfig <$> merchantConfig
       }
+
+buildMerchantConfig :: DMC.MerchantConfig -> Common.MerchantConfig
+buildMerchantConfig DMC.MerchantConfig {..} = Common.MerchantConfig {..}
 
 ---------------------------------------------------------------------
 postCustomerCancellationDuesSync ::

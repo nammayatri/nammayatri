@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerBlockWithReason :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getCustomerList merchantId city :<|> deleteCustomerDelete merchantId city :<|> postCustomerBlock merchantId city :<|> postCustomerUnblock merchantId city :<|> getCustomerInfo merchantId city :<|> postCustomerCancellationDuesSync merchantId city :<|> getCustomerCancellationDuesDetails merchantId city :<|> postCustomerUpdateSafetyCenterBlocking merchantId city :<|> postCustomerPersonNumbers merchantId city :<|> postCustomerPersonId merchantId city
+handler merchantId city = getCustomerList merchantId city :<|> deleteCustomerDelete merchantId city :<|> postCustomerBlock merchantId city :<|> postCustomerBlockWithReason merchantId city :<|> postCustomerUnblock merchantId city :<|> getCustomerInfo merchantId city :<|> postCustomerCancellationDuesSync merchantId city :<|> getCustomerCancellationDuesDetails merchantId city :<|> postCustomerUpdateSafetyCenterBlocking merchantId city :<|> postCustomerPersonNumbers merchantId city :<|> postCustomerPersonId merchantId city
 
 type GetCustomerList =
   ( ApiAuth
@@ -50,6 +50,14 @@ type PostCustomerBlock =
       'DSL
       ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_BLOCK)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerBlock
+  )
+
+type PostCustomerBlockWithReason =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_BLOCK_WITH_REASON)
+      :> API.Types.RiderPlatform.Management.Customer.PostCustomerBlockWithReason
   )
 
 type PostCustomerUnblock =
@@ -114,8 +122,11 @@ getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked
 deleteCustomerDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteCustomerDelete merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.deleteCustomerDelete merchantShortId opCity apiTokenInfo customerId
 
-postCustomerBlock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postCustomerBlock merchantShortId opCity apiTokenInfo customerId blockReason = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerBlock merchantShortId opCity apiTokenInfo customerId blockReason
+postCustomerBlock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerBlock merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerBlock merchantShortId opCity apiTokenInfo customerId
+
+postCustomerBlockWithReason :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.BlockCustomerWithReasonReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerBlockWithReason merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerBlockWithReason merchantShortId opCity apiTokenInfo customerId req
 
 postCustomerUnblock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUnblock merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerUnblock merchantShortId opCity apiTokenInfo customerId

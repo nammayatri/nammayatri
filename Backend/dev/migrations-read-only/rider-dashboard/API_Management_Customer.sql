@@ -62,3 +62,14 @@ UPDATE atlas_bap_dashboard.transaction
 
 -- {"api":"PostCustomerPersonId","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS FETCH_PERSON_ID","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_PERSON_ID' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'CUSTOMERS' AND T1.user_action_type = 'FETCH_PERSON_ID' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostCustomerBlockWithReason","migration":"endpoint","param":"CustomerAPI BlockCustomerWithReasonEndpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_BLOCK_WITH_REASON'
+  WHERE endpoint = 'CustomerAPI BlockCustomerWithReasonEndpoint';
+
+-- {"api":"PostCustomerBlockWithReason","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_BLOCK_WITH_REASON' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'CUSTOMERS' AND T1.user_action_type = 'CUSTOMER_BLOCK' ) ON CONFLICT DO NOTHING;
