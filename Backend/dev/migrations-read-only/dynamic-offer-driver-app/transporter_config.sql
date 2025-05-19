@@ -418,3 +418,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_existing
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN onboarding_docs_count_limit integer  default 50;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN safety_team_numbers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_police_numbers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_ambulance_numbers text[] ;
