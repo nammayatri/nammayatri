@@ -15,6 +15,9 @@ types:
     sdkData: Text
     derive: "Show"
 
+  CrisChangeDeviceRequest:
+    otp: Text
+
 apis:
   - POST:
       endpoint: cris/getSDKData
@@ -22,3 +25,15 @@ apis:
         type: GetSDKDataRequest
       response:
         type: GetSDKDataResponse
+
+  - GET:
+      endpoint: cris/otp/generation
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: cris/change/device
+      request:
+        type: CrisChangeDeviceRequest
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

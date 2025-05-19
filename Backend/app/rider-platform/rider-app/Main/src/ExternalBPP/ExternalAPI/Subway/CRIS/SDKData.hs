@@ -29,6 +29,7 @@ type SDKDataAPI =
   "t" :> "uts.cris.in" :> "VBCU" :> "1" :> "get-sdk-data"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
+    :> Header "appCode" Text
     :> ReqBody '[JSON] EncryptedRequest
     :> Post '[JSON] CRIS.GetSDKDataResponse
 
@@ -66,7 +67,7 @@ getSDKData config request = do
   where
     eulerClientFn payload token =
       let client = ET.client sdkDataAPI
-       in client (Just $ "Bearer " <> token) (Just "application/json") payload
+       in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload
 
 sdkDataAPI :: Proxy SDKDataAPI
 sdkDataAPI = Proxy

@@ -57,6 +57,7 @@ type UtsAPI =
   "t" :> "uts.cris.in" :> "VBCU" :> "1" :> "get-uts-data"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
+    :> Header "appCode" Text
     :> ReqBody '[JSON] UtsRequest
     :> Post '[JSON] UtsResponse
 
@@ -94,4 +95,4 @@ getUtsData config = do
   where
     eulerClientFn req token =
       let client = ET.client utsAPI
-       in client (Just $ "Bearer " <> token) (Just "application/json") req
+       in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") req
