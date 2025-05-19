@@ -36,5 +36,5 @@ postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
 getOnboardingGetReferralDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.ReferralInfoRes)
 getOnboardingGetReferralDetails merchantShortId opCity apiTokenInfo referralCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingGetReferralDetails) fleetOwnerId referralCode
+  let requestorId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingGetReferralDetails) requestorId referralCode
