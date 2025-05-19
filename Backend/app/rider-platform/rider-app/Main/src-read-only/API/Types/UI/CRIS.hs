@@ -9,6 +9,10 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
+data CrisChangeDeviceRequest = CrisChangeDeviceRequest {otp :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data GetSDKDataRequest = GetSDKDataRequest {deviceID :: Data.Text.Text, mobileNo :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

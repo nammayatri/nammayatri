@@ -53,6 +53,7 @@ type BookJourneyAPI =
   "t" :> "uts.cris.in" :> "VBCU" :> "1" :> "bookJrny"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
+    :> Header "appCode" Text
     :> ReqBody '[JSON] EncryptedRequest
     :> Post '[JSON] EncryptedResponse
 
@@ -195,7 +196,7 @@ getBookJourney config request = do
   where
     eulerClientFn encReq token =
       let client = ET.client bookJourneyAPI
-       in client (Just $ "Bearer " <> token) (Just "application/json") encReq
+       in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") encReq
 
 -- Helper function to convert CRISTicketData to CRISBookingResponse
 convertToBookingResponse :: CRISTicketData -> Text -> CRISBookingResponse

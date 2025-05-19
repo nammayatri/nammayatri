@@ -91,6 +91,7 @@ type RouteFareAPI =
   "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v3"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
+    :> Header "appCode" Text
     :> ReqBody '[PlainText] Text
     :> Post '[JSON] EncryptedResponse
 
@@ -209,7 +210,7 @@ getRouteFare config merchantOperatingCityId request = do
   where
     eulerClientFn payload token =
       let client = ET.client routeFareAPI
-       in client (Just $ "Bearer " <> token) (Just "application/json") payload
+       in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload
 
 routeFareAPI :: Proxy RouteFareAPI
 routeFareAPI = Proxy

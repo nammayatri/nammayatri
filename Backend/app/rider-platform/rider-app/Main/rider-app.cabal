@@ -302,8 +302,10 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
       ExternalBPP.ExternalAPI.Subway.CRIS.Auth
       ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
+      ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
       ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
       ExternalBPP.ExternalAPI.Subway.CRIS.Error
+      ExternalBPP.ExternalAPI.Subway.CRIS.OtpGeneration
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
       ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
