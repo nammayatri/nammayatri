@@ -3,6 +3,7 @@
 
 module Storage.Beam.TicketPlace where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.TicketPlace
@@ -14,6 +15,7 @@ import Tools.Beam.UtilsTH
 data TicketPlaceT f = TicketPlaceT
   { allowSameDayBooking :: B.C f Kernel.Prelude.Bool,
     closeTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
+    customTabs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gallery :: B.C f [Kernel.Prelude.Text],
     iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

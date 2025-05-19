@@ -91,6 +91,7 @@ data RiderConfigT f = RiderConfigT
     suburbanBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     thresholdCancellationPercentageToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     ticketAssetDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketingPermissionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
     useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

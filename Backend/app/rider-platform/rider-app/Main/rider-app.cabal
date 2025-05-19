@@ -150,6 +150,8 @@ library
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AppManagement.Customer
+      Domain.Action.Dashboard.AppManagement.EventManagement
+      Domain.Action.Dashboard.AppManagement.EventManagement.Utils
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
@@ -254,6 +256,8 @@ library
       Domain.Types.CacType
       Domain.Types.Common
       Domain.Types.DeliveryDetails
+      Domain.Types.EventManagement
+      Domain.Types.EventManagement.Permissions
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
@@ -539,6 +543,7 @@ library
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
+      API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
@@ -593,9 +598,11 @@ library
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Customer
       API.Types.Dashboard.AppManagement.Endpoints.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
@@ -668,6 +675,8 @@ library
       Domain.Types.DeletedPerson
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
+      Domain.Types.DraftTicketChange
+      Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -797,6 +806,8 @@ library
       Storage.Beam.DeletedPerson
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
+      Storage.Beam.DraftTicketChange
+      Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -927,6 +938,8 @@ library
       Storage.Queries.DeletedPerson
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
+      Storage.Queries.DraftTicketChange
+      Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.Exophone

@@ -13,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 data TicketPlace = TicketPlace
   { allowSameDayBooking :: Kernel.Prelude.Bool,
     closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
+    customTabs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.CustomTab],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gallery :: [Kernel.Prelude.Text],
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -36,7 +37,9 @@ data TicketPlace = TicketPlace
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PlaceStatus = Active | Inactive | ComingSoon | Ended deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CustomTab = CustomTab {body :: Kernel.Prelude.Text, header :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+data PlaceStatus = Active | Inactive | ComingSoon | Ended | Unpublished deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PlaceType
   = Museum
