@@ -304,6 +304,7 @@ initData =
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
+      , showSafetyPillBottomSheet : false
       }
   }
 

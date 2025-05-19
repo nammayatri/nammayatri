@@ -289,6 +289,7 @@ getEn =
     , we_will_notify_you_when_we_go_live : "We'll notify you when we go live"
     , upload_again : "Upload Again"
     , select_operation_hub : "Select Operation Hub"
+    , help_centre : "Help Cenre"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC location is not matching with your location")
     , updated_at: "Map updated at"
     , trip_count: "Trip Count"

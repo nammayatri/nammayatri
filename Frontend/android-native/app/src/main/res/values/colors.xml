@@ -27,8 +27,9 @@
     <color name="grey900">#E5E7EB</color>
     <color name="blue600">#F4F7FF</color>
     <color name="blue700">#80B2FF</color>
-    <color name="blue800">#2194FF</color>   
+    <color name="blue800">#3482E6</color>
     <color name="turquoise">#42B8BA</color>
     <color name="turquoise10">#1a42b8ba</color>
     <color name="black">#111112</color>
+    <color name="blue900">#171C8F</color>
 </resources>

@@ -366,6 +366,8 @@ data Action = NoAction
             | RemoveChat
             | UpdateInChat
             | HelpAndSupportScreen
+            | SafetyPillClicked
+            | SafetyPillBottomSheetAC PopUpModal.Action
             | SwitchDriverStatus ST.DriverStatus
             | PopUpModalSilentAction PopUpModal.Action
             | LinkAadhaarPopupAC PopUpModal.Action
@@ -1496,6 +1498,25 @@ eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false,zoneRideBooking = true } }
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
+
+eval SafetyPillClicked state = continue state { props { showSafetyPillBottomSheet = true } }
+
+eval (SafetyPillBottomSheetAC PopUpModal.OnImageClick) state = continue state { props { showSafetyPillBottomSheet = false } }
+
+eval (SafetyPillBottomSheetAC PopUpModal.DismissPopup) state = continue state { props { showSafetyPillBottomSheet = false } }
+
+eval (SafetyPillBottomSheetAC (PopUpModal.ListViewItemAction index )) state = do
+  case index of
+    0 -> do
+      void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+      continue state { props { showSafetyPillBottomSheet = false } }
+    1 -> do
+      void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+      continue state { props { showSafetyPillBottomSheet = false } }
+    2 -> do
+      void $ pure $ unsafePerformEffect $ contactSupportNumber "" 
+      continue state { props { showSafetyPillBottomSheet = false } } 
+    _ -> continue state { props { showSafetyPillBottomSheet = false } }
 
 eval (BannerCarousal (BannerCarousel.OnClick index)) state =
   continueWithCmd state [do

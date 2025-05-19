@@ -290,6 +290,7 @@ getHi =
     , we_will_notify_you_when_we_go_live : "जब हम लाइव होंगे तो हम आपको सूचित करेंगे"
     , upload_again : "फिर से अपलोड करें"
     , select_operation_hub : "ऑपरेटिंग हाब चुनें"
+    , help_centre : "सहायता केंद्र"
     , date_of_registration: "पंजीकरण की तिथि"
     , select_date_of_issue: "जारी करने की तिथि चुनें"
     , date_of_issue: "जारी करने की तिथि"

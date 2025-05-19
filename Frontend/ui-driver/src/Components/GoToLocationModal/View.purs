@@ -164,7 +164,7 @@ radioButton state push =
         , imageView
             [ width $ V 21
             , height $ V 21
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_selected"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_selected_purple"
             , visibility if state.isSelected then VISIBLE else GONE
             ]
         ]

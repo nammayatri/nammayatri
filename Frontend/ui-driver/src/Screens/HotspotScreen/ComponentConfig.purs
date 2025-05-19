@@ -39,7 +39,7 @@ navigateButtonConfig = PrimaryButton.config
   , id = "NavigateButton"
   , isPrefixImage = true
   , prefixImageConfig {
-      imageUrl = "ny_ic_navigation_yellow"
+      imageUrl = "ny_ic_navigation"
     , margin = MarginRight 6
     }
   , enableRipple = true
