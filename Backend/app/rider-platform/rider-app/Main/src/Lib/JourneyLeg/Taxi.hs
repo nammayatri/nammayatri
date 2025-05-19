@@ -72,7 +72,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
             OneWaySearchReq
               { origin = origin,
                 isSourceManuallyMoved = Just False,
-                initialSourceLatLong = Nothing,
                 isDestinationManuallyMoved = Just False,
                 isSpecialLocation = Just False, -- Fix it later
                 startTime = journeyLegData.fromDepartureTime,

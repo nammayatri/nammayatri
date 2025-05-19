@@ -44,7 +44,6 @@ import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Kernel.Beam.Functions as B
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
@@ -344,26 +343,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
-
-  -- We are doing this for analytics purpose, to check deviations of distance to intial source lat long to pickup lat long (our origin) to confirm if the source is moved or not
-  case req of
-    OneWaySearch reqDetails ->
-      case reqDetails.initialSourceLatLong of
-        Just initialLat -> do
-          fork "sending initial and pickup location data to kafka" $ do
-            let deviationData =
-                  SearchSourceDeviationData
-                    { initialSourceLatLong = Just initialLat,
-                      sourceLatLong = sourceLatLong,
-                      destinationLatLong = lastMaybe stopsLatLong,
-                      personId = person.id,
-                      merchantId = merchant.id,
-                      merchantOperatingCityId = merchantOperatingCityId
-                    }
-            pushToKafka deviationData "rideSearchlocation-toPickuplocation-deviation-data" ""
-        Nothing -> return ()
-    _ -> return ()
-
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchRequest = searchRequest,
