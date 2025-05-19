@@ -435,9 +435,9 @@ rateSlider push state =
               stepFunctionForCoinConversion = state.props.incrementUnit,
               enableToolTip = false,
               getCallbackOnProgressChanged = true,
-              thumbColor = Color.blue800,
+              thumbColor = Color.blue900,
               bgColor = Color.grey900,
-              progressColor = Color.blue800,
+              progressColor = Color.blue900,
               bgAlpha = 1000
               }
 
@@ -456,10 +456,8 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig
       { text = getString VIEW_BOOKING_PREF
-      , color = Color.primaryButtonColor
       }
       , margin = Margin 16 16 16 0
-      , background = Color.black900
       , height = V 54
       , id = "ViewBookingPreferencesButton"
       }

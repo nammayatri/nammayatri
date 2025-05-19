@@ -730,7 +730,7 @@ rateCardBannerView push state =
   , gravity CENTER
   , cornerRadius 8.0
   , rippleColor Color.rippleShade
-  , gradient (Linear 90.0 [Colors.darkGradientBlue, Color.lightGradientBlue])
+  , gradient (Linear 90.0 [EHU.getColorWithOpacity 20 Colors.blue900, Color.blue600])
   , onClick push $ const $ RateCardBannerClick
   , visibility $ MP.boolToVisibility state.props.rateCardLoaded
   ][  relativeLayout

@@ -3,6 +3,7 @@
     <string name="ride_rejected">যাত্রা প্রত্যাখ্যান</string>
     <string name="request">অনুরোধ</string>
     <string name="decline">পতন</string>
+    <string name="pass">পাস</string>
     <string name="pickup">পিকআপ</string>
     <string name="test_request">পরীক্ষার অনুরোধ</string>
     <string name="test_request_successful">টেস্ট রাইডের অনুরোধ সফল!</string>

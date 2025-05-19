@@ -63,7 +63,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@color/grey900"
-                        android:visibility="gone"
+                        android:visibility="visible"
                         android:id="@+id/tags_block"
                         android:padding="10dp">
                         <HorizontalScrollView
@@ -159,7 +159,7 @@
                                     <ImageView
                                         android:layout_width="16dp"
                                         android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_tip_icon"
+                                        android:src="@drawable/ny_ic_boost_icon"
                                         android:layout_marginLeft="8dp"/>
                                     <TextView
                                         android:id="@+id/tip_text"
@@ -169,7 +169,7 @@
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:paddingHorizontal="8dp"
                                         android:paddingVertical="6dp"
-                                        android:text="₹10 Tip"
+                                        android:text="₹10 Boost"
                                         android:lineHeight="20dp"
                                         android:textColor="@color/Black900"
                                         android:textSize="12dp" />
@@ -190,7 +190,7 @@
                                         android:id="@+id/rentalRideTypeImage"
                                         android:layout_width="17dp"
                                         android:layout_height="17dp"
-                                        android:src="@drawable/ic_car_unfilled" />
+                                        android:src="@drawable/ny_ic_clock_unfilled" />
 
                                     <TextView
                                         android:id="@+id/rentalRideTypeText"
@@ -221,7 +221,7 @@
                                         android:id="@+id/intercityRideTypeImage"
                                         android:layout_width="17dp"
                                         android:layout_height="17dp"
-                                        android:src="@drawable/intercity" />
+                                        android:src="@drawable/ny_ic_intercity_icon" />
 
                                     <TextView
                                         android:id="@+id/intercityRideTypeText"
@@ -390,7 +390,9 @@
                                     android:layout_marginLeft="5dp"
                                     android:background="@drawable/ic_stops_bg"
                                     android:gravity="center_vertical"
-                                    android:orientation="horizontal">
+                                    android:orientation="horizontal"
+                                    android:visibility="gone"
+                                    >
 
                                     <ImageView
                                         android:layout_width="16dp"
@@ -533,6 +535,7 @@
                                         android:layout_marginTop="4dp"
                                         app:cardElevation="0dp"
                                         app:contentPaddingRight="10dp"
+                                        android:visibility="gone"
                                         app:contentPadding="8dp">
 
                                         <LinearLayout
@@ -655,15 +658,15 @@
                                                 android:id="@+id/vehicleServiceTier"
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:textSize="16dp"
-                                                android:textColor="@color/blue800"
-                                                android:gravity="center"
-                                                android:singleLine="false"
-                                                android:textFontWeight="600"
                                                 android:layout_marginLeft="1dp"
-                                                android:paddingBottom="2dp"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
-                                                android:text="Comfy"/>
+                                                android:gravity="center"
+                                                android:paddingBottom="2dp"
+                                                android:singleLine="false"
+                                                android:text="Comfy"
+                                                android:textColor="@color/blue800"
+                                                android:textFontWeight="600"
+                                                android:textSize="16dp" />
                                         </LinearLayout>
 
                                     </com.google.android.material.card.MaterialCardView>
@@ -1016,6 +1019,7 @@
                                     android:layout_gravity="center_vertical"
                                     android:background="#F4F4F6"
                                     android:orientation="horizontal"
+                                    android:visibility="gone"
                                     android:padding="4dp">
 
                                     <com.google.android.material.card.MaterialCardView
@@ -1144,6 +1148,7 @@
                                 android:layout_height="wrap_content"
                                 android:gravity="center"
                                 android:layout_marginTop="12dp"
+                                android:visibility="gone"
                                 android:orientation="horizontal">
 
 
@@ -1197,7 +1202,7 @@
                             android:layout_height="match_parent"
                             android:fontFamily="@font/plus_jakartasans_semibold"
                             android:letterSpacing="0"
-                            android:text="@string/decline"
+                            android:text="@string/pass"
                             android:textAllCaps="false"
                             android:textColor="@color/defaultAcceptButtonBG"
                             android:textFontWeight="600"

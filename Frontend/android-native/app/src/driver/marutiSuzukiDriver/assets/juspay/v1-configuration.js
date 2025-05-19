@@ -113,6 +113,7 @@ window.getMerchantConfig = function () {
       , "black500" : "#D6D6D6"
       , "grey900" : "#E0E0E0"
       , "grey800" : "#E2E2E3"
+      , "grey700" : "#F5F5F5"
       , "blue900" : "#171C8F"
       , "blue800" : "#3482E6"
       , "blue700" : "#A4CEFF"
@@ -188,6 +189,17 @@ window.getMerchantConfig = function () {
             "viewFaqs" : true,
           },
     }
+    , "hotspotConfig" : {
+      "veryHighHotspotColor" : "#E55454",
+      "highHotspotColor" : "#F0B529",
+      "moderateHotspotColor" : "#AEC708",
+      "veryHighRange" : 67.0,
+      "highRange" : 33.0,
+      "circleRadius" : 1000.0,
+      "centerDeviation" : 0.0,
+      "showColorWithRelativeWeight" : false,
+      "minCirclesNeededForSortedWeights" : 10
+    }
     , "rideActionModelConfig" : {
       "showVehicleVariant" : false
     }
@@ -227,6 +239,8 @@ window.getMerchantConfig = function () {
       , "enableOtpRide" : false
       , "enableYatriCoins" : false
       , "showFaqsWhileOnboarding" : true
+      , "enableV2Registration" : true
+      , "enableV2Earnings" : true
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"

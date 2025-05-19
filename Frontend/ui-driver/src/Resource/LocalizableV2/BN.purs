@@ -288,6 +288,7 @@ getBn =
     , we_will_notify_you_when_we_go_live : "আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি"
     , upload_again : "আবার আপলোড করুন"
     , select_operation_hub : "অপারেটিং হাব নির্বাচন করুন"
+    , help_centre : "সহায়তা কেন্দ্র"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি")
     , updated_at: "ম্যাপ শেষ আপডেট"
     , trip_count: "আজকের ট্রিপস"

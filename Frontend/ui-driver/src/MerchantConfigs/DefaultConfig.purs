@@ -1112,6 +1112,8 @@ config =
   , enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
   , enableInterOperability : true
   , showFaqsWhileOnboarding : false
+  , enableV2Registration : false
+  , enableV2Earnings : false
   }
   , showCorporateAddress : false
   , engilshInNative: "English"
