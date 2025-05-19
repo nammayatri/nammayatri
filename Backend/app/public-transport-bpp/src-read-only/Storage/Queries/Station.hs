@@ -4,10 +4,12 @@
 
 module Storage.Queries.Station where
 
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,6 +22,25 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Station.Station] -> m ())
 createMany = traverse_ create
 
+findAllByBppId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.Station.Station]))
+findAllByBppId bppId = do findAllWithKV [Se.Is Beam.bppId $ Se.Eq bppId]
+
+findAllByMerchantOperatingCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.Station.Station]))
+findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+findByCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
+findByCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStationById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Station.Station -> m ())
+updateStationById lat lon name id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.lat lat, Se.Set Beam.lon lon, Se.Set Beam.name name, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -27,7 +48,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.code code,
+    [ Se.Set Beam.bppId bppId,
+      Se.Set Beam.code code,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -44,7 +66,8 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
     pure $
       Just
         Domain.Types.Station.Station
-          { code = code,
+          { bppId = bppId,
+            code = code,
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
@@ -59,7 +82,8 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
 instance ToTType' Beam.Station Domain.Types.Station.Station where
   toTType' (Domain.Types.Station.Station {..}) = do
     Beam.StationT
-      { Beam.code = code,
+      { Beam.bppId = bppId,
+        Beam.code = code,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,

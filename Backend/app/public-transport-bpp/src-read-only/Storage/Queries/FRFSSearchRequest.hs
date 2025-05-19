@@ -8,6 +8,7 @@ import qualified Domain.Types.FRFSSearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +20,12 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSSearchRequest.FRFSSearchRequest] -> m ())
 createMany = traverse_ create
+
+findAllByBapId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.FRFSSearchRequest.FRFSSearchRequest]))
+findAllByBapId bapId = do findAllWithKV [Se.Is Beam.bapId $ Se.Eq bapId]
+
+findByTrasactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearchRequest.FRFSSearchRequest -> m (Maybe Domain.Types.FRFSSearchRequest.FRFSSearchRequest))
+findByTrasactionId transactionId = do findOneWithKV [Se.Is Beam.transactionId $ Se.Eq (Kernel.Types.Id.getId transactionId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearchRequest.FRFSSearchRequest -> m (Maybe Domain.Types.FRFSSearchRequest.FRFSSearchRequest))
 findByPrimaryKey transactionId = do findOneWithKV [Se.And [Se.Is Beam.transactionId $ Se.Eq (Kernel.Types.Id.getId transactionId)]]

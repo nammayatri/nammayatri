@@ -25,6 +25,16 @@ FRFSSearchRequest:
   constraints:
     transactionId: "PrimaryKey"
 
+  queries:
+    findByTrasactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    findAllByBapId:
+      kvFunction: findAllWithKV
+      where: bapId
+
+
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
 
@@ -49,6 +59,21 @@ FRFSTicketBooking:
     BookingStatusEnum:
       enum: "CREATED, CONFIRMED, CANCELLED"
 
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByTrasactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+
 FRFSTicket:
   tableName: frfs_ticket
 
@@ -71,6 +96,29 @@ FRFSTicket:
     TicketStatusEnum:
       enum: "VALID, INVALID"
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where: bookingId
+
+    findByTrasactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where: bookingId
+
+    updateTicketStatusById:
+      kvFunction: updateWithKV
+      params: ticketStatus
+      where: id
+
+
 Station:
   tableName: stations
 
@@ -82,9 +130,35 @@ Station:
     lon: Maybe Double
     merchnatId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    bppId: Text
 
   constraints:
     id: "PrimaryKey"
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCode:
+      kvFunction: findOneWithKV
+      where: code
+
+    findAllByBppId:
+      kvFunction: findAllWithKV
+      where: bppId
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    updateStationById:
+      kvFunction: updateWithKV
+      params: [lat, lon, name]
+      where: id
+
+
 
 StationFare:
   tableName: station_fares
@@ -100,6 +174,22 @@ StationFare:
   constraints:
     id: "PrimaryKey"
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByFromTo:
+      kvFunction: findOneWithKV
+      where:
+        and: [fromStationId, toStationId]
+
+    updateFareAmountById:
+      kvFunction: updateWithKV
+      params: [fareAmount]
+      where: id
+
+
 FRFSConfig:
   tableName: frfs_config
 
@@ -111,6 +201,21 @@ FRFSConfig:
 
   constraints:
     id: "PrimaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByBppId:
+      kvFunction: findOneWithKV
+      where: bppId
+
+    updateConfigByBppId:
+      kvFunction: updateWithKV
+      params: config
+      where: bppId
+
 
 FRFSPayment:
   tableName: frfs_payment
@@ -129,3 +234,24 @@ FRFSPayment:
   types:
     PaymentStatusEnum:
       enum: "COLLECTED_BY_BAP, SETTLED_TO_SELLER, REFUNDED_TO_BUYER, REFUND_INITIATED"
+
+  constraints:
+    id: "PrimaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByTrasactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    findByFrfsTicketBookingId:
+      kvFunction: findOneWithKV
+      where: frfsTicketBookingId
+
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: status
+      where: id

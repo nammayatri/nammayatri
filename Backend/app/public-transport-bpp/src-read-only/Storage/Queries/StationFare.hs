@@ -4,10 +4,12 @@
 
 module Storage.Queries.StationFare where
 
+import qualified Domain.Types.Station
 import qualified Domain.Types.StationFare
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +21,23 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.StationFare.StationFare] -> m ())
 createMany = traverse_ create
+
+findByFromTo ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Station.Station -> Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.StationFare.StationFare))
+findByFromTo fromStationId toStationId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.fromStationId $ Se.Eq (Kernel.Types.Id.getId fromStationId),
+          Se.Is Beam.toStationId $ Se.Eq (Kernel.Types.Id.getId toStationId)
+        ]
+    ]
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StationFare.StationFare -> m (Maybe Domain.Types.StationFare.StationFare))
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateFareAmountById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.StationFare.StationFare -> m ())
+updateFareAmountById fareAmount id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.fareAmount fareAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StationFare.StationFare -> m (Maybe Domain.Types.StationFare.StationFare))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
