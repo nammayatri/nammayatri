@@ -16,6 +16,7 @@
 module Storage.Clickhouse.Ride where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
@@ -29,12 +30,16 @@ import Storage.Clickhouse.RideDetails (findIdsByFleetOwner, findIdsByFleetOwnerA
 
 data RideT f = RideT
   { id :: C f (Id DRide.Ride),
+    bookingId :: C f (Id DBooking.Booking),
+    shortId :: C f (ShortId DRide.Ride),
     status :: C f (Maybe DRide.RideStatus),
     fare :: C f (Maybe Int),
     driverId :: C f (Maybe (Id DP.Driver)),
     chargeableDistance :: C f (Maybe Int),
     createdAt :: C f UTCTime,
-    updatedAt :: C f UTCTime
+    updatedAt :: C f UTCTime,
+    tripEndTime :: C f (Maybe UTCTime),
+    tripStartTime :: C f (Maybe UTCTime)
   }
   deriving (Generic)
 
@@ -46,12 +51,16 @@ rideTTable :: RideT (FieldModification RideT)
 rideTTable =
   RideT
     { id = "id",
+      bookingId = "booking_id",
+      shortId = "short_id",
       status = "status",
       fare = "fare",
       driverId = "driver_id",
       chargeableDistance = "chargeable_distance",
       createdAt = "created_at",
-      updatedAt = "updated_at"
+      updatedAt = "updated_at",
+      tripEndTime = "trip_end_time",
+      tripStartTime = "trip_start_time"
     }
 
 type Ride = RideT Identity
@@ -270,3 +279,21 @@ getFleetStats rideStats =
       cancelledRides = sum $ map (.cancelledRides) rideStats
       totalDuration = sum $ map (.totalDuration) rideStats
    in (totalEarnings, totalDistanceTravelled, completedRides, cancelledRides, totalDuration)
+
+getAllCompletedRidesByDriverId ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
+  m [Ride]
+getAllCompletedRidesByDriverId driverId from to =
+  CH.findAll $
+    CH.select_ (\rd -> CH.notGrouped rd) $
+      CH.filter_
+        ( \ride _ ->
+            ride.status CH.==. Just DRide.COMPLETED
+              CH.&&. ride.createdAt >=. from
+              CH.&&. ride.createdAt <=. to
+              CH.&&. ride.driverId CH.==. Just (cast driverId)
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
