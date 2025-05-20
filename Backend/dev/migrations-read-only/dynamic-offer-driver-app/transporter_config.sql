@@ -424,3 +424,17 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN onboarding_docs
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN safety_team_numbers text[] ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_police_numbers text[] ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_ambulance_numbers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN week_start_mode int  default 3;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN earnings_window_size int  default 7;
+
+
+------- SQL updates -------
+

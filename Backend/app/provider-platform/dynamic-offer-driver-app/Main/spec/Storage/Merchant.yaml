@@ -1027,6 +1027,8 @@ TransporterConfig:
     localPoliceNumbers: Maybe [Text]
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
+    weekStartMode : Int
+    earningsWindowSize : Int
 
   beamType:
     currency: Maybe Currency
@@ -1085,7 +1087,8 @@ TransporterConfig:
     bulkWaiveOffLimit : Maybe Int
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
-
+    weekStartMode : Maybe Int
+    earningsWindowSize : Maybe Int
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1152,7 +1155,8 @@ TransporterConfig:
     bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
-
+    weekStartMode : Just weekStartMode|E
+    earningsWindowSize : Just earningsWindowSize|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1225,7 +1229,8 @@ TransporterConfig:
     bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
-
+    weekStartMode : fromMaybe 3 weekStartMode|E
+    earningsWindowSize : fromMaybe 7 earningsWindowSize|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1283,7 +1288,8 @@ TransporterConfig:
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
-
+    weekStartMode : int
+    earningsWindowSize : int
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1421,7 +1427,8 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     onboardingDocsCountLimit: "50"
-
+    weekStartMode : "3"
+    earningsWindowSize : "7"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

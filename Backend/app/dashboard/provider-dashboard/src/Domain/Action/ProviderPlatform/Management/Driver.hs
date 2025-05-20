@@ -53,6 +53,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
     getDriverStats,
+    getDriverEarnings,
   )
 where
 
@@ -339,3 +340,8 @@ getDriverStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id 
 getDriverStats merchantShortId opCity apiTokenInfo entityId fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverStats) entityId fromDate toDate apiTokenInfo.personId.getId
+
+getDriverEarnings :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Environment.Flow Common.EarningPeriodStatsRes)
+getDriverEarnings merchantShortId opCity apiTokenInfo from to earningType entityId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverEarnings) from to earningType entityId apiTokenInfo.personId.getId
