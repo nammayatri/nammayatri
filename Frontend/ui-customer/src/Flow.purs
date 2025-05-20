@@ -2479,6 +2479,8 @@ homeScreenFlow = do
         bookingId = state.rentalScreen.data.bookingId
       enterRentalRideSearchFlow bookingId
     EXIT_TO_TICKETING _ -> do
+      let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.ny_user_ticket_option_clicked" "true"
+      void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ticket_option_clicked"
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = true } })
       modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData { props { hideMyTickets = false } })
       placeListFlow
@@ -4548,10 +4550,12 @@ placeListFlow :: FlowBT String Unit
 placeListFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET PLACE LIST CALLED" currentState
-  (GlobalState state) <- getState
+  (GlobalState state) <- getState  
+  logField_ <- lift $ lift $ getLogFields      
   uiAction <- lift $ lift $ runScreen $ PlaceListS.screen state.ticketingScreen
   case uiAction of
     PlaceListC.ExitToHomeScreen updatedState -> do
+      void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_place_list_page"
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> homeScreenFlow)
     PlaceListC.ExitToMyTicketsScreen updatedState -> do
@@ -4565,12 +4569,16 @@ placeListFlow = do
     PlaceListC.BookTickets updatedState selectedPlace -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { navigateToHome = false, currentStage = DescriptionStage, previousStage = DescriptionStage }, data { totalAmount = 0, placeInfo = Just selectedPlace } })
+      let (API.TicketPlaceResp place) = selectedPlace
+          _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.ny_user_clicked_individual_place_" <> place.id) "true"
+      void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_clicked_individual_place"
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> placeDetailsFlow)
     _ -> App.BackT $ pure App.GoBack
 
 placeDetailsFlow :: FlowBT String Unit
 placeDetailsFlow = do
   (GlobalState currentState) <- getState
+  logField_ <- lift $ lift $ getLogFields 
   void $ pure $ spy "ZOO TICKET PLACE DETAILS CALLED" currentState
   liftFlowBT $ hideLoader ""
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen 
@@ -4586,14 +4594,17 @@ placeDetailsFlow = do
         selectedOperationalDay = ticketBookingScreen.props.selectedOperationalDay
       } 
   })
+  callPushSdkEventsAfterCheckingInterval FunctionCall
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ PlaceDetailsS.screen state.ticketBookingScreen
   case action of
     PlaceDetailsC.GoToHomeScreen updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
+      if updatedState.props.navigateToHome then void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_place_list_page" else  void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_individual_place"
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
     PlaceDetailsC.GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
+      void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_amount_payment_option_clicked"
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> ticketPaymentFlow state.data)
     PlaceDetailsC.GoToOpenGoogleMaps state lat2 long2 -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)

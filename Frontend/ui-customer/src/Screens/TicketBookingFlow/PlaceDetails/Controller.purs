@@ -1,7 +1,7 @@
 module Screens.TicketBookingFlow.PlaceDetails.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, discard, pure, map, unit, min, max, bind, join, (>>=), (<$>), ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show, (&&), (>), (/=), (||), (<=), (>=), (<))
+import Prelude 
 import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
@@ -17,7 +17,7 @@ import Debug (spy)
 import Helpers.Utils (generateQR)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find, sortBy, concat)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
+import Engineering.Helpers.Commons (convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag, liftFlow)
 import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..), TicketServiceResp(..), BusinessHoursResp(..), OperationalDateResp(..))
 import Data.Int (ceil)
@@ -30,6 +30,11 @@ import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.TicketBookingFlow.PlaceDetails.Transformer (selectByDefaultOneServiceCategory, transformRespToStateDatav2)
+import Control.Monad.Except.Trans (lift)
+import Presto.Core.Types.Language.Flow
+import Engineering.Helpers.LogEvent (logEvent)
+import Types.App (GlobalState, defaultGlobalState)
+import Effect.Aff (launchAff)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -104,9 +109,11 @@ eval  (DatePicker _ resp year month date ) state = do
 
 eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected}}
 
-eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do 
+eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   case state.props.currentStage of 
-    DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
+    DescriptionStage -> do
+      let _ = unsafePerformEffect $ logEvent state.props.logField "ny_user_book_ticket_option_clicked"
+      continue state{props{currentStage = ChooseTicketStage}}
     ChooseTicketStage -> updateAndExit state{props{previousStage = ChooseTicketStage}} $ GoToTicketPayment state{props{previousStage = ChooseTicketStage}}
     ViewTicketStage -> exit $ BookTickets state
     _ -> continue state
@@ -135,7 +142,9 @@ eval (UpdatePlacesData placeData mbServiceData) state = do
 eval BackPressed state = do
   case state.props.currentStage of 
     DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
-    ChooseTicketStage -> continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
+    ChooseTicketStage -> do
+      let _ = unsafePerformEffect $ logEvent state.props.logField "ny_user_dropped_choose_tickets"
+      continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
     ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}

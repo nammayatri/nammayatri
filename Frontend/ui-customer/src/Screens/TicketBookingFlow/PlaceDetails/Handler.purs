@@ -11,11 +11,13 @@ import Screens.TicketBookingFlow.PlaceDetails.View as PlaceDetails
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), TICKET_BOOKING_SCREEN_OUTPUT(..))
 import Screens.TicketBookingFlow.PlaceDetails.ScreenData (initData) as PlaceDetailsScreenData
 import Screens.Types as ST
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 placeDetailsScreen :: FlowBT String TICKET_BOOKING_SCREEN_OUTPUT
 placeDetailsScreen = do
+  logField_ <- lift $ lift $ getLogFields
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ PlaceDetails.screen state.ticketBookingScreen
+  action <- lift $ lift $ runScreen $ PlaceDetails.screen state.ticketBookingScreen {props {logField = logField_}}
   case action of
     GoToHomeScreen updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> PlaceDetailsScreenData.initData)

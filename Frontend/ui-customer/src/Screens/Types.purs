@@ -2152,7 +2152,8 @@ type TicketBookingScreenProps = {
   rightButtonDisable :: Boolean,
   leftButtonDisable :: Boolean,
   navigateToHome :: Boolean,
-  selectedOperationalDay :: String
+  selectedOperationalDay :: String,
+  logField :: Object Foreign 
 }
 
 type TicketItem = {
