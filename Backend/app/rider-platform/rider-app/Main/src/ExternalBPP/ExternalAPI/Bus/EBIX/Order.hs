@@ -18,8 +18,8 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.JSON
@@ -86,7 +86,7 @@ type SaveMobTicketAPI =
 saveMobTicketAPI :: Proxy SaveMobTicketAPI
 saveMobTicketAPI = Proxy
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => EBIXConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
 createOrder config integrationBPPConfigId qrTtl booking = do
   when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
   bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
@@ -114,7 +114,7 @@ createOrder config integrationBPPConfigId qrTtl booking = do
 -- 15. UDF5
 -- 16. UDF6
 -- {tt: [{t: "37001,37017,1,0,5,10-10-2024 19:04:54,2185755416,13,5185,,,,,130,,,"}]}
-getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => EBIXConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config integrationBPPConfigId qrTtl booking routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
@@ -126,8 +126,8 @@ getTicketDetail config integrationBPPConfigId qrTtl booking routeStation = do
     B.runInReplica $
       QRoute.findByRouteCode routeStation.code integrationBPPConfigId
         >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- (listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code integrationBPPConfigId) >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integrationBPPConfigId.getId)
-  toRoute <- (listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code integrationBPPConfigId) >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integrationBPPConfigId.getId)
+  fromRoute <- listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integrationBPPConfigId booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integrationBPPConfigId.getId)
+  toRoute <- listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integrationBPPConfigId booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integrationBPPConfigId.getId)
   now <- addUTCTime (secondsToNominalDiffTime 19800) <$> getCurrentTime
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do

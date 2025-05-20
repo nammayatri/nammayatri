@@ -53,7 +53,7 @@ getProviderName integrationBPPConfig =
     Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
     CRIS _ -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
 getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
   case integrationBPPConfig.providerConfig of
     CMRL config' ->
@@ -91,7 +91,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
         Right fares -> return fares
     _ -> throwError $ InternalError "Unimplemented!"
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLOrder.createOrder config' booking mRiderNumber

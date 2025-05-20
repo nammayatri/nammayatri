@@ -345,6 +345,9 @@ library
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
+      SharedLogic.External.Nandi.API.Nandi
+      SharedLogic.External.Nandi.Flow
+      SharedLogic.External.Nandi.Types
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
@@ -410,6 +413,7 @@ library
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PartnerOrganization
       Storage.CachedQueries.PartnerOrgConfig
       Storage.CachedQueries.PartnerOrgStation
@@ -436,6 +440,7 @@ library
       Storage.Clickhouse.Sos
       Storage.GraphqlQueries.Client
       Storage.GraphqlQueries.RouteStopTimeTable
+      Storage.GraphqlQueries.Types
       Storage.Queries.AppInstallsExtra
       Storage.Queries.BBPSExtra
       Storage.Queries.BecknConfigExtra

@@ -39,7 +39,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
-import EulerHS.Prelude (comparing, (+||), (||+))
+import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
@@ -60,6 +60,7 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
 import qualified Storage.CachedQueries.Station as CQS
@@ -72,7 +73,6 @@ import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
-import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Tools.DynamicLogic
 import Tools.Error
@@ -162,12 +162,11 @@ data RouteStopInfo = RouteStopInfo
     travelTime :: Maybe Seconds
   }
 
-getPossibleRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
+getPossibleRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
 getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = do
-  routesWithStop <- B.runInReplica $ QRouteStopMapping.findByStopCode startStationCode integratedBPPConfig.id
+  routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   let routeCodes = nub $ map (.routeCode) routesWithStop
-  let integratedBPPConfigIds = replicate (length routeCodes) (integratedBPPConfig.id)
-  routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCodes routeCodes integratedBPPConfigIds
+  routeStops <- concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) routeCodes
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
@@ -430,7 +429,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                     Just upcomingStops -> do
                       let mbUpcomingStop = find (\upcomingStop -> upcomingStop.status == LT.Upcoming) upcomingStops
                       case mbUpcomingStop of
-                        Just upcomingStop' -> listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode routeCode upcomingStop'.stop.stopCode integratedBPPConfig.id
+                        Just upcomingStop' -> listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode upcomingStop'.stop.stopCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
                         Nothing -> return Nothing
                     Nothing -> return Nothing
                 pure $
@@ -467,7 +466,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
               case mbNextStop of
                 Just nextStop -> do
                   logDebug $ "Got bus data for route " <> routeCode <> ": next stop mapping" <> show nextStop <> " data: " <> show routeCode <> " " <> nextStop.stopId <> " " <> integratedBPPConfig.id.getId
-                  listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode routeCode nextStop.stopId integratedBPPConfig.id
+                  listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode nextStop.stopId routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
                 Nothing -> pure Nothing
             return $
               VehicleTracking
@@ -493,7 +492,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                 }
     _ -> do
       route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
-      routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
+      routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
 
       let waypointsForRoute' = case route.polyline of
             Just polyline -> Just $ KEPP.decode polyline

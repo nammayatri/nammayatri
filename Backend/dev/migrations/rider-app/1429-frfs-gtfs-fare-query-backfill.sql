@@ -33,4 +33,5 @@ JOIN atlas_app.frfs_stage_fare sf ON sf.fare_policy_id = fp.id
 WHERE fp.merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874'
     AND fp.merchant_id = '4b17bd06-ae7e-48e9-85bf-282fb310209c'
     AND rfp.vehicle_type = 'BUS'
+    AND rfp.integrated_bpp_config_id = 'b0454b15-9755-470d-a16a-backup-5e003'
     AND fp.type = 'StageBased';
