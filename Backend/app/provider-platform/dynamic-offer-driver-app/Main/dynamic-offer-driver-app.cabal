@@ -221,6 +221,7 @@ library
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FleetDriverAssociation
+      Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
@@ -505,10 +506,12 @@ library
       Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
       Storage.CachedQueries.WhiteListOrg
+      Storage.Clickhouse.Booking
       Storage.Clickhouse.BppTransactionJoin
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.Estimate
+      Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
@@ -724,6 +727,7 @@ library
       API.Action.UI.DriverProfileQuestions
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
+      API.Action.UI.Invoice
       API.Action.UI.LmsModule
       API.Action.UI.Merchant
       API.Action.UI.MeterRide
@@ -766,6 +770,7 @@ library
       API.Types.UI.DriverProfileQuestions
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
+      API.Types.UI.Invoice
       API.Types.UI.LmsModule
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
