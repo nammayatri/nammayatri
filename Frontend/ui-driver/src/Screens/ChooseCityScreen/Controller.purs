@@ -85,7 +85,7 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
                   ]
               else continue state
     else if state.props.currentStage == SELECT_CITY then do
-      let newState = state {props {currentStage = DETECT_LOCATION}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
+      let newState = state {props {currentStage = DETECT_LOCATION, locationUnserviceable = false}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
       if state.props.goBackToAddVehiclesScreen then exit $ GoToAddVehicles newState else continue newState
     else if state.props.currentStage == SELECT_LANG then do
       let _ = setLanguageLocale state.props.radioMenuFocusedLang

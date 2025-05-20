@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">ONDC fleetX</string>
+    <string name="app_name" translatable="false">ONDC FleetX</string>
     <string name="client_id" translatable="false">marutisuzukiprovider</string>
     <string name="service" translatable="false">marutisuzukiprovider</string>
     <string name="bodyText" translatable="false">Maruti Suzuki Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
