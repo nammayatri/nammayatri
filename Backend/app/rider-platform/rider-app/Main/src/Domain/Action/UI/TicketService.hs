@@ -125,9 +125,9 @@ convertBusinessHT (Domain.Types.BusinessHour.Duration startTime endTime) = Conve
 getTicketPlaces :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
 getTicketPlaces (_, merchantId) = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
-  sortBy (comparing (Down . (.priority))) . filterEndedPlaces <$> QTP.getTicketPlaces merchantOpCity.id
+  sortBy (comparing (Down . (.priority))) . filterEndedOrUnPublishedPlaces <$> QTP.getTicketPlaces merchantOpCity.id
   where
-    filterEndedPlaces = filter (\place -> place.status /= Domain.Types.TicketPlace.Ended)
+    filterEndedOrUnPublishedPlaces = filter (\place -> place.status `notElem` [Domain.Types.TicketPlace.Ended, Domain.Types.TicketPlace.Unpublished])
 
 getTicketPlacesServices :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
 getTicketPlacesServices _ placeId mbDate = do
