@@ -69,14 +69,10 @@ data MeterRideQuoteAPIDetails = MeterRideQuoteAPIDetails {quoteId :: Kernel.Prel
 
 data MeterRideQuoteDetails = MeterRideQuoteDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
-  { distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters,
-    distanceToNearestDriverWithUnit :: Kernel.Types.Common.Distance,
-    tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
-  }
+data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {quoteId :: Kernel.Prelude.Text, tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data OneWayQuoteDetails = OneWayQuoteDetails {distanceToNearestDriver :: Kernel.Types.Common.Distance} deriving (Generic, Show)
+data OneWayQuoteDetails = OneWayQuoteDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show)
 
 data OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails {distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters, quoteId :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

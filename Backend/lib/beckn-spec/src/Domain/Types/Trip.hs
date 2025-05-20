@@ -199,6 +199,7 @@ data TripOption = TripOption
     isScheduled :: Bool,
     tripCategories :: [TripCategory]
   }
+  deriving stock (Eq, Show, Read, Ord, Generic)
 
 data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDynamicOffer | MeterRide
   deriving stock (Eq, Show, Read, Ord, Generic)

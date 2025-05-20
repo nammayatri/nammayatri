@@ -211,7 +211,7 @@ data MeterRideQuoteDetails = MeterRideQuoteDetails
   }
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
-  { distanceToNearestDriver :: HighPrecMeters
+  { quoteId :: Text
   }
 
 newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
@@ -448,7 +448,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
   quoteBreakupList' <- buildQuoteBreakUp quoteBreakupList uid searchRequest.merchantId searchRequest.merchantOperatingCityId
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
-      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails searchRequest.distanceUnit oneWayDetails
+      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalDetails -> do
       DQuote.RentalDetails <$> buildRentalDetails searchRequest.distanceUnit rentalDetails
     OneWaySpecialZoneDetails details -> do
@@ -491,12 +491,9 @@ buildMeterRideQuoteDetails :: MonadFlow m => MeterRideQuoteDetails -> m DQuote.M
 buildMeterRideQuoteDetails MeterRideQuoteDetails {..} = do
   pure DQuote.MeterRideQuoteDetails {..}
 
-mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
-mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =
-  DQuote.OneWayQuoteDetails
-    { distanceToNearestDriver = convertHighPrecMetersToDistance distanceUnit distanceToNearestDriver,
-      ..
-    }
+mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
+mkOneWayQuoteDetails OneWayQuoteDetails {..} =
+  DQuote.OneWayQuoteDetails {..}
 
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
