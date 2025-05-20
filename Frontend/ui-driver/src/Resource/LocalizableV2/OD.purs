@@ -283,6 +283,7 @@ getOd =
     , registration_completed : "ପଞ୍ଜିକରଣ ସମ୍ପୂର୍ଣ୍ଣ ହୋଇଛି!"
     , we_will_notify_you_when_we_go_live : "ଆପଣଙ୍କର ପ୍ରତିବାଦିତ ସମୟରେ ଆମେ ଆପଣଙ୍କରେ ନିଜରିଅଛି"
     , upload_again : "ପୁଣି ଅପଲୋଡ୍ କରନ୍ତୁ"
+    , select_operation_hub : "ଅପାରେଟିଂଗିତ ହାବ ଚୟନ କରନ୍ତୁ"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC ସ୍ଥାନ ଆପଣଙ୍କ ସ୍ଥାନ ସହିତ ମେଳ ହେଉ ନାହିଁ")
     , updated_at: "ମାନଚିତ୍ର ଅଦ୍ୟତନ ହୋଇଛି"
     , trip_count: "ରାଇଡ୍ ସଂଖ୍ୟା"

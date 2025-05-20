@@ -282,6 +282,7 @@ getTe =
     , registration_completed : "నమోదు పూర్తయ్యింది!"
     , we_will_notify_you_when_we_go_live : "మీరు నమోదు ప్రస్తుతం సిద్ధంగా నివేదికపోతుంది"
     , upload_again : "మళ్ళీ ఎక్కడి ఎగుమతి చేయండి"
+    , select_operation_hub : "ఆపరేటింగ్ హబ్ ఎంచుకోండి"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "ప్రస్తుతం, మేము కర్ణాటక రిజిస్టర్డ్ నంబర్‌ను మాత్రమే అనుమతిస్తున్నాము")
     , updated_at: "మ్యాప్ అప్‌డేట్ చేయబడిన సమయం"
     , trip_count: "ట్రిప్ కౌంట్"

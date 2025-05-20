@@ -24,6 +24,9 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Storage (KeyStore(..), getValueToLocalStore)
 import Screens.OnboardingFaqsScreen.ScreenData
+import Components.GenericHeader as GenericHeader
+import Data.Array as DA
+import Data.Maybe (fromMaybe, isNothing, isJust)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -33,11 +36,28 @@ instance loggableAction :: Loggable Action where
     _ -> pure unit
 
 data Action = BackPressed
+            | GenericHeaderAC GenericHeader.Action
+            | OpenListItem Int String
 
 data ScreenOutput = GoBack 
                 
 eval :: Action -> ST.OnboardingFaqsScreenState -> Eval Action ScreenOutput ST.OnboardingFaqsScreenState
 
-eval BackPressed state = exit $ GoBack
+eval BackPressed state = 
+  if state.props.showAns then do
+    continue state { props { showAns = false, selectedQnA = {question : "", answer : ""} }}
+  else if isJust state.props.selectedCategoryIndex then continue state { props { selectedCategoryIndex = Nothing, selectedCategory = Nothing }}
+  else exit $ GoBack
 
+eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [pure $ BackPressed ]
+
+eval (OpenListItem index item) state = 
+  if isNothing state.props.selectedCategory then do
+    let questionAnsList = maybe [] (\item -> item.questionAnsMap) (state.data.categoryToQuestionAnsMap DA.!! index)
+    continue state { data {selectedSectionQnAList = questionAnsList}, props { selectedCategory = Just item, selectedCategoryIndex = Just index }}
+    else do
+      let dummyQnA = {question : "", answer : ""}
+          selectedQnA = fromMaybe dummyQnA (state.data.selectedSectionQnAList DA.!! index)
+      continue state {props{showAns = true, selectedQnA = selectedQnA}}
+    
 eval _ state = update state

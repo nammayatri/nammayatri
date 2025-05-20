@@ -281,6 +281,7 @@ getTa =
     , registration_completed : "பதிவு முடிந்தது!"
     , we_will_notify_you_when_we_go_live : "நிங்கள் நம்ம யாத்ரி அனுப்பப்பட்டது"
     , upload_again : "மீண்டும் பதிவேற்று"
+    , select_operation_hub : "ஆப்பரேடிங் ஹூப் தேர்ந்தெடு"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "தற்போது,   கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்")
     , updated_at: "புதுப்பிக்கப்பட்டது"
     , trip_count: "இன்றைய பயணங்கள்"

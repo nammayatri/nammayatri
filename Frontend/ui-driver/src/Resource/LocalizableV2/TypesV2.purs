@@ -361,6 +361,7 @@ newtype Keymap
   , registration_completed :: String
   , we_will_notify_you_when_we_go_live :: String
   , upload_again :: String
+  , select_operation_hub :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -2882,6 +2883,9 @@ we_will_notify_you_when_we_go_live = a
 
 upload_again :: Proxy "upload_again"
 upload_again = a
+
+select_operation_hub :: Proxy "select_operation_hub"
+select_operation_hub = a
 
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a

@@ -3405,5 +3405,23 @@ type OnboardingFaqsScreenState = {
   props :: OnboardingFaqsScreenProps
 }
 
-type OnboardingFaqsScreenData = {flag :: Boolean}
-type OnboardingFaqsScreenProps = {flag :: Boolean}
+type OnboardingFaqsScreenData = {
+  categoryToQuestionAnsMap :: Array CategoryToQuestionAnsMap,
+  selectedSectionQnAList :: Array QuestionAnsMap
+  }
+type OnboardingFaqsScreenProps = {
+  selectedCategory :: Maybe String,
+  selectedCategoryIndex :: Maybe Int,
+  showAns :: Boolean,
+  selectedQnA :: QuestionAnsMap
+  }
+
+type CategoryToQuestionAnsMap = {
+  category :: String,
+  questionAnsMap :: Array QuestionAnsMap
+}
+
+type QuestionAnsMap = {
+  question :: String,
+  answer :: String
+}

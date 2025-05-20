@@ -281,6 +281,7 @@ getMl =
     , registration_completed : "രജിസ്റ്റർ പൂർത്തിയായി!"
     , we_will_notify_you_when_we_go_live : "നിങ്ങളുടെ പ്രൊഫൈൽ രജിസ്റ്റർ ചെയ്യുക"
     , upload_again : "വീണ്ടും അപ്‌ലോഡ് ചെയ്യുക"
+    , select_operation_hub : "ആപ്രസിദ്ധീകരണങ്ങളുടെ ഹബ് തിരഞ്ഞെടുക്കുക"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "നിലവിൽ, കർണാടകയിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ അനുവദനീയമായുള്ളു")
     , updated_at: "മാപ് അപ്ഡേറ്റ്"
     , trip_count: "ഇന്നത്തെ യാത്രകൾ"

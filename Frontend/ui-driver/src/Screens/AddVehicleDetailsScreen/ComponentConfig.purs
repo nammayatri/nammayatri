@@ -59,7 +59,7 @@ primaryButtonConfig state = let
                 -- (state.data.dateOfRegistration /= Just "") && 
                 (state.data.vehicleCategory /= Just ST.AmbulanceCategory || state.props.isvariant /= "") &&
                 state.data.vehicle_registration_number /= "" &&
-                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex || (JB.getAppName unit) == "ONDC fleetX") &&
+                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex || (JB.getAppName unit) == "ONDC FleetX") &&
                 ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 

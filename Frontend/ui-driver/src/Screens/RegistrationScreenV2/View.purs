@@ -184,7 +184,7 @@ view push state =
                     , if isNothing state.props.selectedDocumentCategory then categoryListView push state else categorySpecificList push state -- cardsListView push state
                     ]
                 ]
-            , refreshView push state
+            -- , refreshView push state
             , linearLayout
                 [ height $ V 1
                 , width MATCH_PARENT
@@ -699,7 +699,7 @@ refreshView push state =
           ]
         , textView $ 
           [ text $ getString REFRESH_STRING
-          , color Color.blue800
+          , color Color.blue900
           , margin $ MarginLeft 4
           ] <> FontStyle.body9 TypoGraphy
       ]

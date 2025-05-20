@@ -497,7 +497,7 @@ vehicleRegistrationNumber state push =
                     ]
                   , facilityListView state push
           ]
-        , if appName == "ONDC fleetX" then rcEligibilityCriteriaView state push else checkACView state push
+        , if appName == "ONDC FleetX" then rcEligibilityCriteriaView state push else checkACView state push
         ]
       ]
   ]

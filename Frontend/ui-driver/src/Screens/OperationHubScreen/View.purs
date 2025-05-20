@@ -172,14 +172,21 @@ contentLayout push state =
     , orientation VERTICAL
     , padding (Padding 16 0 16 0)
     ]
-    [ hubItem push state
+    [ textView $ 
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text $ getStringV2 LT2.select_operation_hub
+      , margin $ MarginVertical 4 4
+      , color Color.black700
+      ] <> (FontStyle.body3 CTA.TypoGraphy)
+    , hubItem push state
     , if (isNothing state.data.selectedHub || state.props.showOptions) then linearLayout [] [] else selectedHubItemView push state
     , relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
         [ linearLayout
-            [ height MATCH_PARENT -- $ V $ EHC.screenHeight unit
+            [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , margin $ Margin 16 16 16 0

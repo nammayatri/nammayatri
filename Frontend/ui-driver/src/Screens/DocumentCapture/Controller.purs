@@ -302,8 +302,8 @@ getImageLayoutId imageType =
           case imageType of
             API.VehicleFront -> "vehicle_image00"
             API.VehicleBack -> "vehicle_image10"
-            API.VehicleLeft -> "vehicle_image01"
-            API.VehicleRight -> "vehicle_image11"
+            API.VehicleRight -> "vehicle_image01"
+            API.VehicleLeft -> "vehicle_image11"
             API.VehicleFrontInterior -> "vehicle_image02"
             API.VehicleBackInterior -> "vehicle_image12"
             API.Odometer_ -> "vehicle_image03" 

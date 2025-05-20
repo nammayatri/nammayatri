@@ -593,6 +593,7 @@
       "ny_ic_insurance_clear" : true,
       "ny_ic_intercity" : true,
       "ny_ic_intercity_blue" : true,
+      "ny_ic_intercity_icon" : true,
       "ny_ic_intercity_info" : true,
       "ny_ic_invoice_logo" : true,
       "ny_ic_invoice_sheet_icon" : true,

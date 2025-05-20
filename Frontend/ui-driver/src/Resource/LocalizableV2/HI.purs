@@ -284,6 +284,7 @@ getHi =
     , registration_completed : "पंजीकरण पूरा हुआ!"
     , we_will_notify_you_when_we_go_live : "हम आपको जाने के लिए हमें जाने के लिए सूचित करेंगे"
     , upload_again : "फिर से अपलोड करें"
+    , select_operation_hub : "ऑपरेटिंग हाब चुनें"
     , date_of_registration: "पंजीकरण की तिथि"
     , select_date_of_issue: "जारी करने की तिथि चुनें"
     , date_of_issue: "जारी करने की तिथि"

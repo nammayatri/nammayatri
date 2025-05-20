@@ -514,10 +514,10 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
               if permissionsGiven
                 then do
                   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
+                  onBoardingFlow -- handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide) // TODO :: Shikhar revert this after R1 changes
                 else do
                   modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
+                  onBoardingFlow -- permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)  // TODO :: Shikhar revert this after R1 changes
             else do
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
@@ -4936,6 +4936,10 @@ documentcaptureScreenFlow = do
       validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory
       case validateImageResp of
         Right (ValidateImageRes resp) -> do
+          void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+          void $ lift $ lift $ toggleLoader true
+          void $ lift $ lift $ delay $ Milliseconds 3000.0
+          void $ lift $ lift $ toggleLoader false
           void $ pure $ toast $ "Image Uploaded Successfully"
           documentcaptureScreenFlow
         Left error -> do

@@ -283,6 +283,7 @@ getKn =
     , registration_completed : "ನೋಂದಾಯಿಸಿದ ಪೂರ್ಣಗೊಂಡಿದೆ!"
     , we_will_notify_you_when_we_go_live : "ನಮ್ಮ ಯಾತ್ರಿ ಅನ್ನು ಸಿದ್ಧಗೊಂಡಿರುವ ಸಮಯದಲ್ಲಿ ನೀವು ಸೂಚಿಸಬಹುದು"
     , upload_again : "ಮತ್ತೊಂದು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
+    , select_operation_hub : "ಆಪರೇಟಿಂಗ್ ಹಬ್ ಆಯ್ಕೆಮಾಡಿ"
     , updated_at: "ಕೊನೆಯ ಸ್ಥಳ ನವೀಕರಣ"
     , date_of_registration: "ನೋಂದಣಿ ದಿನಾಂಕ"
     , date_of_issue: "ವಿತರಣೆಯ ದಿನಾಂಕ"
