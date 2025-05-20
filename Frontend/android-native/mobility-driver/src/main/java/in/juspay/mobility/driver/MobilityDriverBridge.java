@@ -201,11 +201,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     public void registerCallBacks() {
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+        if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
             locationCallback = this::callUpdateTimeCallBack;
             LocationUpdateService.registerCallback(locationCallback);
-        }
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+        } else {
             locationCallbackV2 = this::callUpdateTimeCallBack;
             LocationUpdateServiceV2.registerCallback(locationCallbackV2);
         }
@@ -214,10 +213,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void onDestroy() {
         Log.e("onDestroy", "onDestroy");
         DefaultMediaPlayerControl.mediaPlayer.reset();
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+        if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
             LocationUpdateService.deRegisterCallback(locationCallback);
-        }
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+        } else {
             LocationUpdateServiceV2.deRegisterCallback(locationCallbackV2);
         }
         // Clearing all static variables

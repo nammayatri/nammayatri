@@ -155,7 +155,7 @@ public class LocationUpdateServiceV2 extends Service {
     private final ReentrantLock batchProcessingLock = new ReentrantLock();
     private final AtomicBoolean isBatchProcessing = new AtomicBoolean(false);
     private final AtomicBoolean isFlushInProgress = new AtomicBoolean(false);
-    private final LocalBinder binder = new LocalBinder();
+    private LocalBinder binder;
     // Add this class variable to track active location requests
     private final AtomicBoolean isLocationRequestInProgress = new AtomicBoolean(false);
     @Nullable
@@ -238,6 +238,9 @@ public class LocationUpdateServiceV2 extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+        if (binder == null) {
+            binder = new LocalBinder();
+        }
         return binder;
     }
 
@@ -1264,6 +1267,8 @@ public class LocationUpdateServiceV2 extends Service {
             Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
             context.stopService(grpcServiceIntent);
         }
+
+        binder = null;
 
         // Let the base class clean up
         super.onDestroy();

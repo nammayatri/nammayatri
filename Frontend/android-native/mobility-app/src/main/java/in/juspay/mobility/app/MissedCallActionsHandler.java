@@ -1,44 +1,26 @@
 package in.juspay.mobility.app;
 
-import static android.Manifest.permission.RECORD_AUDIO;
 import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.provider.Settings;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.ViewGroup;
 
-import androidx.cardview.widget.CardView;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
-import com.clevertap.android.signedcall.enums.SignallingChannel;
-import com.clevertap.android.signedcall.exception.CallException;
 import com.clevertap.android.signedcall.init.SignedCallAPI;
 import com.clevertap.android.signedcall.interfaces.MissedCallNotificationOpenedHandler;
-import com.clevertap.android.signedcall.interfaces.OutgoingCallResponse;
 import com.clevertap.android.signedcall.models.MissedCallNotificationOpenResult;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import in.juspay.hyper.core.BridgeComponents;
+import java.lang.ref.WeakReference;
 
 
 public class MissedCallActionsHandler implements MissedCallNotificationOpenedHandler {
-    private Context context;
-    private Activity activity;
-    private CleverTapSignedCall cleverTapSignedCall;
-    public MissedCallActionsHandler(Context context, Activity activity){
-        this.context = context;
-        this.activity = activity;
-        cleverTapSignedCall = new CleverTapSignedCall(context,activity);
+    private final WeakReference<CleverTapSignedCall> cleverTapSignedCall;
+
+    public MissedCallActionsHandler(CleverTapSignedCall cleverTapSignedCall) {
+        this.cleverTapSignedCall = new WeakReference<>(cleverTapSignedCall);
     }
 
     @Override
@@ -64,7 +46,13 @@ public class MissedCallActionsHandler implements MissedCallNotificationOpenedHan
         switch (actionId) {
             case "callback":
                 Log.d("MissedCallHandler", "Voip Notification Callback Pressed," + " actionId: " + actionId);
-                cleverTapSignedCall.voipDialer(config.toString(), CleverTapSignedCall.phone, "push",null);
+                CleverTapSignedCall signedCall = cleverTapSignedCall.get();
+                if (signedCall != null) {
+                    signedCall.voipDialer(config.toString(), CleverTapSignedCall.phone, "push", null);
+                } else {
+                    Log.w("MissedCallHandler",
+                            "SignedCall reference lost – skipping VOIP dialer launch");
+                }
                 break;
             case "dismiss":
                 Log.d("MissedCallHandler", "Voip Notification dismissal");
