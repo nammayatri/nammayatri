@@ -20,6 +20,7 @@ import Data.Maybe (Maybe(..))
 import ConfigProvider
 import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..), TicketBookings(..), TicketItem(..), TicketBookingPeopleCategoryDetails(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..))
 import Services.API (PlaceType(..), BookingStatus(..))
+import Foreign.Object (empty)
 
 initData :: TicketBookingScreenState
 initData = 
@@ -61,7 +62,8 @@ initData =
       rightButtonDisable : false,
       leftButtonDisable : true,
       navigateToHome : true,
-      selectedOperationalDay : ""
+      selectedOperationalDay : "",
+      logField : empty
     }
   }
 
