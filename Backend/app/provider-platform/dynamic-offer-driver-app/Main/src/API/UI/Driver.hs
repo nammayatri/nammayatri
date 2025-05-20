@@ -36,6 +36,7 @@ module API.UI.Driver
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
@@ -143,6 +144,12 @@ type API =
                       :> TokenAuth
                       :> MandatoryQueryParam "day" Day
                       :> Get '[JSON] DDriver.DriverStatsRes
+                    :<|> "earnings"
+                      :> TokenAuth
+                      :> MandatoryQueryParam "from" Day
+                      :> MandatoryQueryParam "to" Day
+                      :> MandatoryQueryParam "earningType" DCommon.EarningType
+                      :> Get '[JSON] DCommon.EarningPeriodStatsRes
                     :<|> "images"
                       :> TokenAuth
                       :> Common.IssueUploadAPI
@@ -259,6 +266,7 @@ handler =
              :<|> getInformationV2
              :<|> updateDriver
              :<|> getStats
+             :<|> getEarnings
              :<|> driverProfileImagesUpload
              :<|> verifyVpaStatus
              :<|> uploadDriverPhoto
@@ -390,3 +398,6 @@ acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId booking
 
 getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
 getInformationV2 (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName req = withFlowHandlerAPI $ DDriver.getInformationV2 (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName req
+
+getEarnings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> FlowHandler DCommon.EarningPeriodStatsRes
+getEarnings (personId, merchantId, merchantOpCityId) from to earningType = withFlowHandlerAPI $ DDriver.getEarnings (personId, merchantId, merchantOpCityId) from to earningType

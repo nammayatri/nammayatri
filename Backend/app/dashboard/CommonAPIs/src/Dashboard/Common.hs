@@ -207,3 +207,8 @@ data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | F
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ActionSource)
+
+data EarningType = DAILY | WEEKLY | MONTHLY
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''EarningType)

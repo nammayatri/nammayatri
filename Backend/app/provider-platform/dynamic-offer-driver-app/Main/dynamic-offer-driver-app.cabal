@@ -508,6 +508,7 @@ library
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BppTransactionJoin
+      Storage.Clickhouse.DailyStats
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.Estimate

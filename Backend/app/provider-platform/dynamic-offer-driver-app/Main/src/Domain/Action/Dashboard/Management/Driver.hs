@@ -55,6 +55,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverStats,
     checkDriverOperatorAssociation,
     checkFleetOperatorAssociation,
+    getDriverEarnings,
   )
 where
 
@@ -1126,8 +1127,9 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     let entityId = cast @Common.Driver @DP.Person e_Id
     when (entityId.getId /= requestorId) $ do
       entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, entityId] merchantOpCityId
-      when (length entities /= 2) $ throwError (PersonDoesNotExist (requestorId <> " or " <> entityId.getId))
-      isValid <- validatePersonAccessAndAssociation entities
+      entity <- find (\e -> e.id == entityId) entities & fromMaybeM (PersonDoesNotExist entityId.getId)
+      requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+      isValid <- isAssociationBetweenTwoPerson requestor entity
       unless isValid $ throwError AccessDenied
 
   let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestorId) mbEntityId
@@ -1137,6 +1139,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m Common.DriverStatsRes
     findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
       currency <- getCurrencyByMerchantOpCity merchantOpCityId
+      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let defaultStats =
             Common.DriverStatsRes
               { numDriversOnboarded = 0,
@@ -1186,7 +1189,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
                     totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
                     bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
                   }
-        (Just fromDate, Just toDate) | diffDays toDate fromDate <= 7 -> do
+        (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
           statsList <- B.runInReplica $ QDailyStats.findAllInRangeByDriverId_ personId fromDate toDate
           if null statsList
             then return defaultStats
@@ -1221,13 +1224,6 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
         (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
         _ -> return False
 
-    validatePersonAccessAndAssociation ::
-      (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-      [DP.Person] ->
-      m Bool
-    validatePersonAccessAndAssociation [requestedPerson, person] = isAssociationBetweenTwoPerson requestedPerson person
-    validatePersonAccessAndAssociation _ = return False
-
     calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
     calculateEarningsPerKm distance earnings =
       let distanceInKm = distance `div` 1000
@@ -1249,3 +1245,22 @@ checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
 checkDriverOperatorAssociation driverId operatorId = do
   mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
   return $ isJust mbAssoc
+
+getDriverEarnings :: ShortId DM.Merchant -> Context.City -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Text -> Flow Common.EarningPeriodStatsRes
+getDriverEarnings merchantShortId opCity from to earningType dId requestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverId = cast @Common.Driver @DP.Person dId
+  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverId] merchantOpCityId
+  driver <- find (\e -> e.id == driverId) entities & fromMaybeM (PersonDoesNotExist driverId.getId)
+  requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+  isValid <- isAssociationWithDriver requestor driver
+  unless isValid $ throwError AccessDenied
+  DDriver.getEarnings (driverId, merchant.id, merchantOpCityId) from to earningType
+  where
+    isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+    isAssociationWithDriver requestedPersonDetails driverDetails = do
+      case (requestedPersonDetails.role, driverDetails.role) of
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
+        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+        _ -> return False

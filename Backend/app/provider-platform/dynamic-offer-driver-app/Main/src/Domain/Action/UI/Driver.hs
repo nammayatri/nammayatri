@@ -57,6 +57,7 @@ module Domain.Action.UI.Driver
     respondQuote,
     offerQuoteLockKey,
     getStats,
+    getEarnings,
     driverPhotoUpload,
     driverProfileImagesUpload,
     validate,
@@ -84,6 +85,7 @@ module Domain.Action.UI.Driver
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
@@ -104,6 +106,8 @@ import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, parseTimeM)
+import Data.Time.Calendar
+import Data.Time.Calendar.WeekDate
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
@@ -248,6 +252,7 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.DailyStats as CHDS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -1559,6 +1564,60 @@ getStats (driverId, _, merchantOpCityId) date = do
         bonusEarning = roundToIntegral bonusEarning,
         bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency
       }
+
+getEarnings :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> Flow DCommon.EarningPeriodStatsRes
+getEarnings (driverId, _, merchantOpCityId) from to earningType = do
+  when (from > to) $
+    throwError $ InvalidRequest $ "Start date must not be after end date."
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  case earningType of
+    DCommon.DAILY -> do
+      when (daysBetween > transporterConfig.earningsWindowSize) $
+        throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " days (inclusive)."
+      driverStats <- runInReplica $ SQDS.findAllInRangeByDriverId_ driverId from to
+      let dailyEarningData = CHDS.mkEarningsBar <$> (map (\d -> (driverId, d.merchantLocalDate, d.totalEarnings, d.totalDistance, d.numRides, d.cancellationCharges, d.bonusEarnings)) driverStats)
+      pure $ mkEarningPeriodStatsRes dailyEarningData
+    DCommon.WEEKLY -> do
+      when (weeksBetween > transporterConfig.earningsWindowSize) $
+        throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " weeks (inclusive)."
+      weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats transporterConfig.weekStartMode)
+      pure $ mkEarningPeriodStatsRes weeklyEarningData
+    DCommon.MONTHLY -> do
+      when (monthsBetween > transporterConfig.earningsWindowSize) $
+        throwError $ InvalidRequest $ "For monthly earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " months (inclusive)."
+      monthlyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to CHDS.MonthlyStats
+      pure $ mkEarningPeriodStatsRes monthlyEarningData
+  where
+    mkEarningPeriodStatsRes :: [CHDS.EarningsBar] -> DCommon.EarningPeriodStatsRes
+    mkEarningPeriodStatsRes earningsBar =
+      let earningData = map (\e -> DCommon.EarningPeriodStats {periodStart = e.periodStartDate, totalEarnings = roundToIntegral e.earnings, totalDistance = e.distance, totalRides = e.rides, cancellationCharges = roundToIntegral e.cancellationChargesReceived, tipAmount = roundToIntegral e.bonusEarningsReceived}) earningsBar
+       in DCommon.EarningPeriodStatsRes {earnings = earningData}
+
+    daysBetween :: Int
+    daysBetween =
+      let days_diff = diffDays to from
+       in (fromIntegral days_diff) + 1
+
+    weeksBetween :: Int
+    weeksBetween =
+      let (fromYear, fromWeek, _) = toWeekDate from
+          (toYear, toWeek, _) = toWeekDate to
+          fullYearRange = [fromYear .. toYear -1]
+          weeksInFullYears = sum $ map totalWeeksOfYear fullYearRange
+          weeksInPartialYear = toWeek - fromWeek + 1
+       in weeksInFullYears + weeksInPartialYear
+
+    monthsBetween :: Int
+    monthsBetween =
+      let (fromYear, fromMonth, _) = toGregorian from
+          (toYear, toMonth, _) = toGregorian to
+       in (fromIntegral (toYear - fromYear)) * 12 + (toMonth - fromMonth + 1)
+
+    totalWeeksOfYear :: Integer -> Int
+    totalWeeksOfYear year =
+      let lastDayOfYear = fromGregorian year 12 31
+          (yearData, lastWeek, _) = toWeekDate lastDayOfYear
+       in if yearData == year then lastWeek else 52
 
 driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
 driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"

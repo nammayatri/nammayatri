@@ -15,6 +15,7 @@ imports:
   VehicleRegistrationCertificate: Dashboard.Common.Driver
   ReasonForDisablingServiceCharge: Dashboard.Common.Driver
   ServiceNames: Dashboard.Common.Driver
+  EarningType: Dashboard.Common.Driver
   Version: Kernel.Types.Version
   LatLong: Kernel.External.Maps.Types
   City: Kernel.Types.Beckn.Context
@@ -513,6 +514,29 @@ apis:
             response:
               type: DriverStatsRes
 
+  - GET: # DriverEarningsArrayAPI
+      endpoint: /earnings
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+        - earningType: EarningType
+        - driverId: Id Driver
+      response:
+        type: EarningPeriodStatsRes
+      helperApi:
+        - GET:
+            endpoint: /earnings
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+              - earningType: EarningType
+              - driverId: Id Driver
+              - requestorId: Text
+            response:
+              type: EarningPeriodStatsRes
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -715,6 +739,15 @@ types:
     - totalEarningsPerKm: Money
     - totalEarningsPerKmWithCurrency: PriceAPIEntity
     - bonusEarningsWithCurrency: PriceAPIEntity
+  EarningPeriodStatsRes:
+    - earnings: [EarningPeriodStats]
+  EarningPeriodStats:
+    - periodStart: Day
+    - totalEarnings: Money
+    - totalDistance: Meters
+    - totalRides: Int
+    - cancellationCharges: Money
+    - tipAmount: Money
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
