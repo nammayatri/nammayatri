@@ -3,7 +3,9 @@ package in.juspay.mobility;
 import static android.content.Context.MODE_PRIVATE;
 import static in.juspay.mobility.MainActivity.getService;
 import static in.juspay.mobility.Utils.getInnerPayload;
+import in.juspay.mobility.app.R;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -37,6 +39,7 @@ public class MobilityServiceHolder {
     private static long initiateTime = 0;
     private MobilityServices hyperService;
     private final Queue<Pair<JSONObject, JuspayResponseHandler>> queue = new LinkedList<>();
+    @Nullable
     private HyperPaymentsCallbackAdapter adapter = null;
 
     MobilityServiceHolder(Context context) {
@@ -44,7 +47,7 @@ public class MobilityServiceHolder {
     }
 
     public static MobilityServiceHolder getInstance(Context context) {
-        if (instance == null) {
+        if (instance == null || instance.hyperService == null) {
             Log.i("APP_PERF", "ON_CREATE_HYPER_SERVICE : " + System.currentTimeMillis());
             instance = new MobilityServiceHolder(context);
             // Backward Compatibility
@@ -67,10 +70,6 @@ public class MobilityServiceHolder {
 
     public static JSONObject getInitiatePayload() {
         return initiatePayload;
-    }
-
-    public MobilityServices getHyperService() {
-        return hyperService;
     }
 
     public boolean isInitialized() {
@@ -100,8 +99,9 @@ public class MobilityServiceHolder {
             hyperService.initiate(initiatePayload, new HyperPaymentsCallback() {
                 @Override
                 public void onStartWaitingDialogCreated(@Nullable View view) {
-
-                    adapter.onStartWaitingDialogCreated(view);
+                    if (adapter != null) {
+                        adapter.onStartWaitingDialogCreated(view);
+                    }
                 }
 
                 @Override
@@ -142,12 +142,6 @@ public class MobilityServiceHolder {
         }
     }
 
-    public void process() {
-        if (hyperService.isInitialised()) {
-            hyperService.process(getInitiatePayload());
-        }
-    }
-
     public void setCallbackAdapter(HyperPaymentsCallbackAdapter adapter) {
         if (this.adapter == null) {
             while (!queue.isEmpty()) {
@@ -163,6 +157,39 @@ public class MobilityServiceHolder {
         hyperService.terminate();
         instance = null;
         hyperService = null;
+    }
+
+    public boolean bindToService(Context context, Activity activity) {
+        if (MobilityServiceHolder.canCacheApp(context)) {
+            hyperService.resetActivity((FragmentActivity) activity);
+            terminate();
+            MobilityServiceHolder.getInstance(context).initiate(context);
+            return true;
+        } else {
+            terminate();
+            return false;
+        }
+    }
+
+    public static void leaveMeAlone() {
+        instance = null;
+    }
+
+    public static void catchMeBack(MobilityServiceHolder instance) {
+        MobilityServiceHolder.instance = instance;
+        MobilityServiceHolder.instance.queue.clear();
+    }
+
+    public static boolean canCacheApp(Context context) {
+        String s = KeyValueStore.read(context, context.getString(R.string.preference_file_key), "APP_CACHING_CONFIG", "{}");
+        boolean isCachingEnabled = false;
+        try {
+            JSONObject config = new JSONObject(s);
+            isCachingEnabled = config.optBoolean(KeyValueStore.read(context, context.getString(R.string.preference_file_key), "DRIVER_LOCATION", "").toLowerCase(),false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return isCachingEnabled;
     }
 
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {

@@ -5,10 +5,10 @@ import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.RECORD_AUDIO;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -17,19 +17,16 @@ import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.widget.Button;
-import android.os.Handler;
-import android.os.Looper;
-import java.util.HashMap;
-import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
-
 
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.signedcall.enums.VoIPCallStatus;
@@ -50,17 +47,21 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 public class CleverTapSignedCall {
 
     private Context context ;
-    private Activity activity ;
+    private WeakReference<Activity> activity ;
     public static String phone;
     public static String rideId;
     public static String merchantId;
@@ -74,7 +75,7 @@ public class CleverTapSignedCall {
 
     private BottomSheetDialog bottomSheetDialog;
     private static SharedPreferences sharedPrefs;
-    private static BridgeComponents bridgeComponent;
+    private BridgeComponents bridgeComponent;
     private MobilityRemoteConfigs remoteConfig;
     public static int useFallbackDialer;
     public static int callAttempts;
@@ -92,7 +93,7 @@ public class CleverTapSignedCall {
 
     private void init(Context cxt, Activity act) {
         context = cxt;
-        activity = act;
+        activity = new WeakReference<>(act);
         sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         remoteConfig = new MobilityRemoteConfigs(true, false);
         merchantId = context.getResources().getString(R.string.merchant_id);
@@ -126,8 +127,8 @@ public class CleverTapSignedCall {
             if (bluetoothManager != null) {
                 BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
                 if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
-                    if (activity != null && context != null && ActivityCompat.checkSelfPermission(context, BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(activity, new String[]{BLUETOOTH_CONNECT}, REQUEST_BLUETOOTH);
+                    if (activity.get() != null && context != null && ActivityCompat.checkSelfPermission(context, BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(activity.get(), new String[]{BLUETOOTH_CONNECT}, REQUEST_BLUETOOTH);
                     }
                 }
             }
@@ -274,8 +275,8 @@ public class CleverTapSignedCall {
                     sendJavaScriptCallback(callback, "", "MULTIPLE_VOIP_CALL_ATTEMPTS", rideId, callException.getErrorCode(), IsDriver, finalNetworkType, finalNetworkQuality, merchantId);
                     return;
                 } else if(callException.getErrorCode() == CallException.MicrophonePermissionNotGrantedException.getErrorCode()) {
-                    if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(activity, new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
+                    if (activity.get() != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(activity.get(), new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
                     }
                     mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
                     callbackResult = "MIC_PERMISSION_DENIED";
@@ -316,8 +317,10 @@ public class CleverTapSignedCall {
 
     @SuppressLint("RestrictedApi")
     public void initSignedCall(String configJson){
-        if (activity != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (activity.get() != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(activity.get(), new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
+            }
         }
         JSONObject initOptions = new JSONObject(), config = null;
         try {
@@ -389,14 +392,14 @@ public class CleverTapSignedCall {
 
     public void showCustomBottomSheet(boolean isDriver) {
         if (activity == null || context == null) return;
-        activity.runOnUiThread(() -> {
-                if (bottomSheetDialog != null && bottomSheetDialog.isShowing()) {
+        ExecutorManager.runOnMainThread(() -> {
+                if (bottomSheetDialog != null && bottomSheetDialog.isShowing() && activity.get() == null) {
                     return; 
                 }
-                LayoutInflater inflater = activity.getLayoutInflater();
+                LayoutInflater inflater = activity.get().getLayoutInflater();
                 int resourceValue = isDriver ? R.layout.bottom_sheet_permission_callmiss_driver : R.layout.bottom_sheet_permission;
                 ConstraintLayout constraintLayout = (ConstraintLayout) inflater.inflate(resourceValue, null);
-                bottomSheetDialog = new BottomSheetDialog(activity);
+                bottomSheetDialog = new BottomSheetDialog(activity.get());
                 bottomSheetDialog.setContentView(constraintLayout);
                 bottomSheetDialog.setCancelable(false);
                 Button btnGoToSettings = constraintLayout.findViewById(R.id.btn_go_to_settings);
@@ -404,9 +407,9 @@ public class CleverTapSignedCall {
                 btnGoToSettings.setOnClickListener(v -> {
                     bottomSheetDialog.dismiss();
                     Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                    Uri uri = Uri.fromParts("package", activity.getPackageName(), null);
+                    Uri uri = Uri.fromParts("package", context.getPackageName(), null);
                     intent.setData(uri);
-                    activity.startActivity(intent);
+                    activity.get().startActivity(intent);
                 });
                 btnCancel.setOnClickListener(v -> bottomSheetDialog.dismiss());
                 bottomSheetDialog.show();
@@ -432,7 +435,7 @@ public class CleverTapSignedCall {
         String javascript = String.format(Locale.ENGLISH,
                 "window.callUICallback('%s','%s', '%s', '%s', %d, %d, '%s', '%s', '%s');",
                 callback, callId, status, rideId, errorCode, isDriver ? 1 : 0, networkType, networkQuality, merchantId);
-        if (bridgeComponent != null) {
+        if (bridgeComponent != null && bridgeComponent.getJsCallback() != null) {
             bridgeComponent.getJsCallback().addJsToWebView(javascript);
         }
         Log.d("signedcall", "JavaScript callback sent: " + javascript);

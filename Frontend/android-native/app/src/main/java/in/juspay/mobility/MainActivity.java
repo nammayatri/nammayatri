@@ -17,18 +17,18 @@ import static in.juspay.mobility.Utils.initCTSignedCall;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
-import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -36,6 +36,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -62,10 +64,6 @@ import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
-import com.clevertap.android.signedcall.fcm.SignedCallNotificationHandler;
-import com.clevertap.android.signedcall.init.SignedCallAPI;
-import com.clevertap.android.signedcall.interfaces.SCNetworkQualityHandler;
-import com.facebook.soloader.SoLoader;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -80,6 +78,7 @@ import com.google.android.play.core.appupdate.AppUpdateManager;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.metrics.AddTrace;
 import com.google.gson.Gson;
@@ -91,49 +90,39 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.Vector;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
+import co.hyperverge.hyperkyc.HyperKyc;
+import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
+import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
-import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.CleverTapSignedCall;
+import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateServiceV2;
-import in.juspay.mobility.app.MissedCallActionsHandler;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
-import in.juspay.mobility.common.utils.CipherUtil;
-import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
-import in.juspay.services.HyperServices;
-
-import java.util.Iterator;
-
-
-import co.hyperverge.hyperkyc.HyperKyc;
-import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
-import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
+import in.juspay.mobility.common.utils.CipherUtil;
+import in.juspay.mobility.common.utils.Utils;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -143,10 +132,14 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
 
+    ServiceConnection connection;
+
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
     private Context context;
     private Activity activity;
+
+    private CleverTapSignedCall initialCall;
     @Nullable
     private SharedPreferences sharedPref;
     ShowNotificationCallBack inappCallBack;
@@ -154,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
     private JSONObject preInitFutureTaskResult = null;
     long onCreateTimeStamp = 0;
     private ActivityResultLauncher<Intent> startForResult;
+    private Runnable checkAndStartApp;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
@@ -169,34 +163,10 @@ public class MainActivity extends AppCompatActivity {
                 case "initiate_result":
                     Log.i("APP_PERF", "INITIATE_RESULT : " + System.currentTimeMillis());
                     try {
-                        JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
-
-                        String viewParam = null, deepLinkJSON = null;
-                        if(preInitFutureTaskResult != null) {
-                            Log.i("APP_PERF", "PRE_INIT : " + System.currentTimeMillis());
-                            viewParam = preInitFutureTaskResult.optString("viewParam");
-                            deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
-                        }
-                        Log.i("APP_PERF", "INIT_FUTURE_TASK_RESULT : " + System.currentTimeMillis());
-
-                        innerPayload.put("action", "process");
-                        innerPayload.put("viewParam", viewParam);
-                        innerPayload.put("view_param", viewParam);
-                        innerPayload.put("deepLinkJSON", deepLinkJSON);
-                        innerPayload.put("onCreateTimeStamp", onCreateTimeStamp);
-                        innerPayload.put("initiateTimeStamp", MobilityServiceHolder.getInstance(context).getInitiateTime());
-                        innerPayload.put("currentLocation", currentLocationRes);
-
-                        if (getIntent() != null) {
-                            setNotificationData(innerPayload, getIntent());
-                            handleGeoSchemeData(innerPayload, getIntent());
-                        }
-                        json.put(PaymentConstants.PAYLOAD, innerPayload);
-                        mFirebaseAnalytics.logEvent("ny_hyper_process", null);
-                        Log.i("APP_PERF", "INIT_HYPER_SERVICE_INITIATE_RESULT : " + System.currentTimeMillis());
+                        updateProcessPayload(json);
                         MobilityServiceHolder.getInstance(context).process((FragmentActivity) activity,findViewById(R.id.cl_dui_container),json);
-                    } catch (JSONException e) {
-                        throw new RuntimeException(e);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                     break;
                 case "hide_loader":
@@ -271,7 +241,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-    private CleverTapSignedCall cleverTapSignedCall;
 
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -302,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
             if (key != null && key.equals("DRIVER_STATUS")) {
                 String status = sharedPreferences.getString("DRIVER_STATUS", "null");
                 WorkManager mWorkManager = WorkManager.getInstance(getApplicationContext());
-                if (status.equals("null")) {
+                if (status.equals("null") || status.equals("false")) {
                     if (context != null) {
                         Intent locationUpdateIntent;
                         if (sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
@@ -465,13 +434,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (MERCHANT_TYPE.equals("DRIVER")) {
-            widgetService = new Intent(this, WidgetService.class);
+            widgetService = new Intent(context, WidgetService.class);
             if (sharedPref != null) {
                 Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }
         }
-        
-        MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
+
+        MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(activity);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
         updateConfigURL();
@@ -529,7 +498,9 @@ public class MainActivity extends AppCompatActivity {
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
-        MobilityServiceHolder.getInstance(this).initiate(this);
+
+
+
         onCreateTimeStamp = System.currentTimeMillis();
         currentLocExecuter = Executors.newSingleThreadExecutor();
         ActivityLifecycleCallback.register(this.getApplication());
@@ -538,7 +509,6 @@ public class MainActivity extends AppCompatActivity {
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
         initiateHvLauncher();
-        if (isClassAvailable("com.facebook.soloader.SoLoader")) SoLoader.init(this, false);
         initiateRSIntegration();
         String isAlwaysOnDisplay = "{}";
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
@@ -553,10 +523,7 @@ public class MainActivity extends AppCompatActivity {
         }catch(Exception e){
             Log.i("PERF", "unable to fetch PERF remote config");
             Exception exception = new Exception("Error in parsing perf config " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);            
-        }
-        if (!MobilityServiceHolder.getInstance(context).isInitialized()) {
-            MobilityServiceHolder.getInstance(context).initiate(context);
+            FirebaseCrashlytics.getInstance().recordException(exception);
         }
 
         if (isAlwaysOnDisplay != null && MERCHANT_TYPE.equals("DRIVER")) {
@@ -589,9 +556,47 @@ public class MainActivity extends AppCompatActivity {
         preInitFutureTaskResult = preInitFlow();
 
         handleSplashScreen();
+        checkAndStartApp = this::startApp;
 
-        MobilityServiceHolder.getInstance(context).setCallbackAdapter(callbackAdapter);
+        if (MobilityServiceHolder.canCacheApp(context) && LocationUpdateServiceV2.isLocationUpdating) {
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(checkAndStartApp,2000);
+            Intent locSvs = new Intent();
+            locSvs.setClass(context,LocationUpdateServiceV2.class);
+            connection = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    handler.removeCallbacks(checkAndStartApp);
+                    LocationUpdateServiceV2 locService = ((LocationUpdateServiceV2.LocalBinder)service).getService();
+                    Object cached = locService.getHyperService();
+                    if (cached != null) {
+                        MobilityServiceHolder.catchMeBack((MobilityServiceHolder)cached);
+                    }
+                    startApp();
+                }
 
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    handler.removeCallbacks(checkAndStartApp);
+                    startApp();
+                }
+
+                @Override
+                public void onBindingDied(ComponentName name) {
+                    handler.removeCallbacks(checkAndStartApp);
+                    startApp();
+                }
+
+                @Override
+                public void onNullBinding(ComponentName name) {
+                    handler.removeCallbacks(checkAndStartApp);
+                    startApp();
+                }
+            };
+            context.bindService(locSvs,connection,BIND_IMPORTANT);
+        } else{
+            startApp();
+        }
         WebView.setWebContentsDebuggingEnabled(true);
 
         boolean isMigrated = migrateLocalStore(context);
@@ -608,7 +613,10 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
-        initCTSignedCall(context,activity,remoteConfigs);
+        initialCall = initCTSignedCall(context,activity,remoteConfigs);
+        FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+        crashlytics.setCustomKey("driver_id",sharedPref != null ? sharedPref.getString("DRIVER_ID","not_set") : "not_set");
+        crashlytics.setCustomKey("customer_id",sharedPref != null ? sharedPref.getString("CUSTOMER_ID","not_set") : "not_set");
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
         sharedPref.edit().putString("UNIQUE_DD", NotificationUtils.uniqueDeviceDetails()).apply();
@@ -633,6 +641,22 @@ public class MainActivity extends AppCompatActivity {
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
         startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, MainActivity.this));
+    }
+
+    private void startApp() {
+        try{
+            context.unbindService(connection);
+        }catch (Exception e) {
+
+        }
+        if (!MobilityServiceHolder.getInstance(context).isInitialized()) {
+            MobilityServiceHolder.getInstance(context).initiate(context);
+        } else {
+            JSONObject payload = MobilityServiceHolder.getInitiatePayload();
+            updateProcessPayload(payload);
+            MobilityServiceHolder.getInstance(context).process((FragmentActivity) activity,findViewById(R.id.cl_dui_container),payload);
+        }
+        MobilityServiceHolder.getInstance(context).setCallbackAdapter(callbackAdapter);
     }
 
     private void initiateRSIntegration() {
@@ -684,13 +708,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             String merchantId = context.getResources().getString(R.string.merchant_id);
-            JSONObject clevertapConfig;
-            try {
-                clevertapConfig = new JSONObject(remoteConfigs.getString("enable_city_based_splash_scn"));
-            } catch (Exception e) {
-                clevertapConfig = new JSONObject();
-            }
-            boolean enableCityBasedSplash = clevertapConfig.optBoolean(merchantId);
+            JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_city_based_splash_scn"));
+            boolean enableCityBasedSplash = clevertapConfig.getBoolean(merchantId);
             View splash = findViewById(R.id.splash);
             LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
             if (splashLottie != null) {
@@ -709,14 +728,14 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e){
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
-            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this.getApplicationContext());
             mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
             setContentView(R.layout.activity_main_without_bg);
         }
     }
 
     private boolean setSplashAnimAndStart (LottieAnimationView view ,String city) {
-        ResourceHandler resourceHandler = new ResourceHandler(this);
+        ResourceHandler resourceHandler = new ResourceHandler(this.getApplicationContext());
         @Nullable
         String animationFile = null;
         try {
@@ -730,7 +749,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
-            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this.getApplicationContext());
             mFirebaseAnalytics.logEvent("exception_while_reading_city_config",bundle);
         }
         resourceHandler.close();
@@ -788,7 +807,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
-            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this.getApplicationContext());
             mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
         }
         return config != null ? config : cityConfig ;
@@ -818,7 +837,7 @@ public class MainActivity extends AppCompatActivity {
         String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
         String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = getApplicationContext().getSharedPreferences(
-                activity.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+                context.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
         editor.putString("MERCHANT_ID", merchantId);
         editor.putString("BASE_URL", baseUrl);
@@ -901,7 +920,7 @@ public class MainActivity extends AppCompatActivity {
     private void processDeeplink(String viewParam, String deepLinkJSON){
         try {
             JSONObject processPayloadDL = new JSONObject();
-            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process", MainActivity.this);
+            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process", this.getApplicationContext());
             if (viewParam != null && deepLinkJSON != null) {
                 innerPayloadDL.put("view_param", viewParam)
                         .put("deepLinkJSON", deepLinkJSON)
@@ -1025,7 +1044,7 @@ public class MainActivity extends AppCompatActivity {
                 innerPayload.put("fullNotificationBody", fullNotification);
             }
             if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
-                getInnerPayload(innerPayload, "OpenChatScreen", MainActivity.this);
+                getInnerPayload(innerPayload, "OpenChatScreen", context);
                 NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 notificationManager.cancel(NotificationUtils.chatNotificationId);
                 innerPayload.put("notification_type", "CHAT_MESSAGE");
@@ -1043,7 +1062,7 @@ public class MainActivity extends AppCompatActivity {
                 String type = jsonData.getString("notification_type");
                 innerPayload.put("notification_type", type);
                 if (type.equals("NEW_MESSAGE")) {
-                    getInnerPayload(innerPayload, "callDriverAlert", MainActivity.this);
+                    getInnerPayload(innerPayload, "callDriverAlert", context);
                     innerPayload.put("id", id)
                             .put("popType", type);
                 }
@@ -1079,7 +1098,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         if (MERCHANT_TYPE.equals("DRIVER")) {
-            if (NotificationUtils.overlayFeatureNotAvailable(this)) {
+            if (NotificationUtils.overlayFeatureNotAvailable(context)) {
                 checkRideRequest();
             }
             if (widgetService != null) {
@@ -1096,7 +1115,7 @@ public class MainActivity extends AppCompatActivity {
         if (sharedPref != null)
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onPause").apply();
         if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") &&
-                widgetService != null && Settings.canDrawOverlays(this) &&
+                widgetService != null && Settings.canDrawOverlays(context) &&
                 !sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null") &&
                 !sharedPref.getString("DISABLE_WIDGET", "true").equals("true") &&
                 !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true")) {
@@ -1123,10 +1142,36 @@ public class MainActivity extends AppCompatActivity {
         }
         pauseYoutubePlayer();
         mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
-        MobilityServiceHolder.getInstance(context).terminate();
+
+
+        if (MobilityServiceHolder.getInstance(context).bindToService(context, activity)) {
+            Intent locSvs = new Intent();
+            locSvs.setClass(context,LocationUpdateServiceV2.class);
+            ServiceConnection connection = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    LocationUpdateServiceV2 locService = ((LocationUpdateServiceV2.LocalBinder)service).getService();
+                    locService.storeHyperService(MobilityServiceHolder.getInstance(context));
+                    MobilityServiceHolder.leaveMeAlone();
+                    try{
+                        context.unbindService(this);
+                    }catch (Exception e) {
+                    }
+                }
+
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                }
+            };
+            context.bindService(locSvs,connection,BIND_IMPORTANT);
+        }
         ChatService.deRegisterInAppCallback(inappCallBack);
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
+        if (initialCall != null) {
+            initialCall.destroySignedCall();
+        }
+        sharedPref.unregisterOnSharedPreferenceChangeListener(mListener);
         super.onDestroy();
     }
 
@@ -1159,7 +1204,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void countAppUsageDays() {
         Date currentDate = new Date();
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(context.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         long millis = sharedPref.getLong("PREVIOUS_USED_DATE", 0L);
         if (millis == 0L) {
             sharedPref.edit().putLong("PREVIOUS_USED_DATE", currentDate.getTime()).apply();
@@ -1193,7 +1238,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             boolean rideReqExpired = NotificationUtils.lastRideReq.getBoolean("rideReqExpired", true);
             if (rideReqExpired) return;
-            Intent rideReqActivity = new Intent(this, RideRequestActivity.class);
+            Intent rideReqActivity = new Intent(context, RideRequestActivity.class);
             rideReqActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             rideReqActivity.putExtras(NotificationUtils.lastRideReq);
             startActivity(rideReqActivity);
@@ -1211,10 +1256,10 @@ public class MainActivity extends AppCompatActivity {
             AdvertisingIdClient.Info adInfo;
             adInfo = null;
             try {
-                if(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MainActivity.this.getApplicationContext()) != ConnectionResult.SUCCESS) {
+                if(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS) {
                     return "google play service not available";
                 }
-                adInfo = AdvertisingIdClient.getAdvertisingIdInfo(MainActivity.this.getApplicationContext());
+                adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context);
                 if (adInfo.isLimitAdTrackingEnabled()) // check if user has opted out of tracking
                     return "did not found GAID... sorry";
             } catch (IOException | GooglePlayServicesRepairableException |
@@ -1261,7 +1306,7 @@ public class MainActivity extends AppCompatActivity {
         oldSharedPref.edit().clear().apply();
         return true;
     }
-    
+
     public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
         if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
                 HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
@@ -1292,4 +1337,33 @@ public class MainActivity extends AppCompatActivity {
         }
         }
 
+
+    public void updateProcessPayload(JSONObject json) {
+        try {
+            JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+            String viewParam = null, deepLinkJSON = null;
+            if (preInitFutureTaskResult != null) {
+                Log.i("APP_PERF", "PRE_INIT : " + System.currentTimeMillis());
+                viewParam = preInitFutureTaskResult.optString("viewParam");
+                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
+            }
+            Log.i("APP_PERF", "INIT_FUTURE_TASK_RESULT : " + System.currentTimeMillis());
+            innerPayload.put("action", "process");
+            innerPayload.put("viewParam", viewParam);
+            innerPayload.put("view_param", viewParam);
+            innerPayload.put("deepLinkJSON", deepLinkJSON);
+            innerPayload.put("onCreateTimeStamp", onCreateTimeStamp);
+            innerPayload.put("initiateTimeStamp", MobilityServiceHolder.getInstance(context).getInitiateTime());
+            innerPayload.put("currentLocation", currentLocationRes);
+            if (getIntent() != null) {
+                setNotificationData(innerPayload, getIntent());
+                handleGeoSchemeData(innerPayload, getIntent());
+            }
+            json.put(PaymentConstants.PAYLOAD, innerPayload);
+            mFirebaseAnalytics.logEvent("ny_hyper_process", null);
+            Log.i("APP_PERF", "INIT_HYPER_SERVICE_INITIATE_RESULT : " + System.currentTimeMillis());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

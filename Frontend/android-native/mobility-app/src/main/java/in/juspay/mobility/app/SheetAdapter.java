@@ -9,32 +9,24 @@
 package in.juspay.mobility.app;
 
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
-import android.util.Log;
-import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
-
-import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.card.MaterialCardView;
 
-import org.json.JSONObject;
-
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHolder> {
@@ -44,11 +36,11 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Nullable
     public SheetViewHolder getHolder(int index) {
-        if (index >= holder.size()) return null;
-        return holder.get(index);
+        if (index >= holders.size()) return null;
+        return holders.get(index).get();
     }
 
-    private final ArrayList<SheetViewHolder> holder = new ArrayList<>();
+    private final ArrayList<WeakReference<SheetViewHolder>> holders = new ArrayList<>(6);
 
     public void setViewPager(ViewPager2 viewPager) {
         this.viewPager = viewPager;
@@ -73,14 +65,20 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position) {
-        this.holder.add(position,holder);
+        this.holders.add(position,new WeakReference<>(holder));
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, null);
     }
 
     @Override
+    public void onViewRecycled(@NonNull SheetViewHolder holder) {
+        super.onViewRecycled(holder);
+        holders.removeIf(innerHolder -> innerHolder.get() == holder);
+    }
+
+    @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position, @NonNull List<Object> payloads) {
-        this.holder.add(position,holder);
+        this.holders.add(position,new WeakReference<>(holder));
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, payloads);
     }

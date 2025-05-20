@@ -13,8 +13,8 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.Manifest.permission.RECORD_AUDIO;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
 import static android.graphics.Color.parseColor;
@@ -145,7 +145,6 @@ import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
-import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -154,8 +153,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-// import com.google.android.gms.maps.model.RoundCap;
-// import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.PolyUtil;
@@ -246,8 +243,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected HashMap<String, Marker> markers = new HashMap<>();
     protected GoogleMap googleMap;
     protected HashMap<String, Marker> zoneMarkers = new HashMap<>();
-    protected static GeoJsonLayer layer;
-    protected String regToken, baseUrl;
+    protected GeoJsonLayer layer;
     protected String zoneName = "";
     protected float zoom = 17.0f;
     // CallBacks
@@ -297,6 +293,10 @@ public class MobilityCommonBridge extends HyperBridge {
     private Sensor accelerometer;
     private ShakeDetector shakeDetector;
 
+    private final SharedPreferences.OnSharedPreferenceChangeListener sharedPreferenceChangeListener;
+
+    private final SharedPreferences sharedPref;
+
     protected class PolylineDataPoints {
         public Polyline polyline = null;
         public Polyline overlayPolylines = null;
@@ -334,12 +334,24 @@ public class MobilityCommonBridge extends HyperBridge {
     protected MapUpdate mapUpdate = new MapUpdate();
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
-    private static Hashtable<String, Hashtable<String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
+    private final Hashtable<String, Hashtable<String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
     protected BridgeComponents bridgeComponents;
 
+    @SuppressLint("MissingPermission")
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         this.bridgeComponents = bridgeComponents;
+        sharedPref = bridgeComponents.getContext().getApplicationContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
+        sharedPreferenceChangeListener = (SharedPreferences sharedPreferences, @Nullable String key) -> {
+            JsCallback callback = bridgeComponents.getJsCallback();
+            if (callback == null || key == null) return;
+
+            Object value = getSharedPreferenceValue(sharedPreferences, key);
+            if (value != null) {
+                callback.addJsToWebView(String.format("window.onSharedPreferenceChanged('%s','%s')", key, value));
+            }
+        };
+        sharedPref.registerOnSharedPreferenceChangeListener(sharedPreferenceChangeListener);
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
         if (isLocationPermissionEnabled()) {
             client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
@@ -361,6 +373,34 @@ public class MobilityCommonBridge extends HyperBridge {
         callBack = this::callImageUploadCallBack;
         Utils.registerCallback(callBack);
         fetchAndUpdateLastKnownLocation();
+    }
+
+    private Object getSharedPreferenceValue(SharedPreferences prefs, String key) {
+        // Try string first
+        try {
+            String stringValue = prefs.getString(key, null);
+            if (stringValue != null) return stringValue;
+        } catch (Exception ignored) {
+
+        }
+
+        // Try integer
+        try {
+            int intValue = prefs.getInt(key, 0);
+            if (prefs.contains(key)) return intValue;
+        } catch (Exception e) {
+            // Ignore and continue to next type
+        }
+
+        // Try boolean
+        try {
+            boolean boolValue = prefs.getBoolean(key, false);
+            if (prefs.contains(key)) return boolValue;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     protected enum AppType {
@@ -636,7 +676,7 @@ public class MobilityCommonBridge extends HyperBridge {
             this.focusedGeoJsonFeature = feature;
         }
 
-        public GeoJsonFeature getGateFeature(String gateName) {
+        public GeoJsonFeature getGateFeature(GeoJsonLayer layer, String gateName) {
             if (!this.gatesSpecialZone.isEmpty())
                 return this.gatesSpecialZone.get(gateName);
             else {
@@ -747,9 +787,13 @@ public class MobilityCommonBridge extends HyperBridge {
             receivers = null;
         }
         polylinesByMapInstance = new Hashtable<>();
+        googleMapInstance = new HashMap<>();
         googleMap = null;
+        animationView = null;
         markers = new HashMap<>();
+        filesCache = new HashMap<>();
         zoneMarkers = new HashMap<>();
+        sharedPref.unregisterOnSharedPreferenceChangeListener(sharedPreferenceChangeListener);
         layer = null;
         if (mediaPlayer != null) mediaPlayer.audioRecorder = null;
         clearAudioPlayer();
@@ -1300,7 +1344,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
                                     if (showZoneLabel && locateOnMapManager != null) {
                                         String place = nearestPoint.optString("place", "");
-                                        GeoJsonFeature feature = locateOnMapManager.getGateFeature(place);
+                                        GeoJsonFeature feature = locateOnMapManager.getGateFeature(layer,place);
                                         if (feature != null) {
                                             MarkerConfig markerConfig = new MarkerConfig();
                                             markerConfig.locationName(zoneName, locateOnMapManager.locationName);
@@ -1369,7 +1413,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 boolean sendCallback = storeLocateOnMapCallBack != null && ((mapMode.equals(MapMode.SPECIAL_ZONE) && (!isPointInsidePolygon || isOnSpot)) || (mapMode.equals(MapMode.HOTSPOT) && (isOnSpot || nearestPointDistance > goToNearestPointWithinRadius)));
                                 if (sendCallback) {
                                     if (labelView != null && mapMode.equals(MapMode.SPECIAL_ZONE) && isOnSpot) {
-                                        GeoJsonFeature gateGeoJsonFeature = locateOnMapManager.getGateFeature(zoneName);
+                                        GeoJsonFeature gateGeoJsonFeature = locateOnMapManager.getGateFeature(layer,zoneName);
                                         MarkerConfig markerConfig = new MarkerConfig();
                                         markerConfig.locationName(zoneName, locationName);
                                         markerConfig.setLabelImage(labelImage);
@@ -4164,7 +4208,6 @@ public class MobilityCommonBridge extends HyperBridge {
     // region Shared Preference Utils
     @JavascriptInterface
     public void setKeysInSharedPrefs(String key, String value) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
         if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
             Utils.updateLocaleResource(value, bridgeComponents.getContext());
@@ -4173,7 +4216,6 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         return sharedPref.getString(key, "__failed");
     }
 
