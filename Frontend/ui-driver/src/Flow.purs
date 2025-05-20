@@ -2393,7 +2393,8 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   let isBusVariant = getDriverInfoResp.onboardingVehicleCategory == Just "BUS" || HU.specialVariantsForTracking FunctionCall
   case isBusVariant, isActiveRide of
-    true, _ ->
+    true, _ -> do
+      void $ pure $ setValueToLocalStore VEHICLE_CATEGORY "BusCategory"
       case mbActiveBusTrip, busActiveRide of
         Just tripDetails, _ -> activeBusRidePatch allState tripDetails
         _, Just false -> noActiveBusRidePatch
