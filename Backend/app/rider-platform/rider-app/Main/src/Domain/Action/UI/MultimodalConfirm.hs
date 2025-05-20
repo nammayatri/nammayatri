@@ -579,7 +579,7 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
       let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] riderConfig.permissibleModes)
       return $
         ApiTypes.MultimodalUserPreferences
-          { allowedTransitModes = convertedModes,
+          { allowedTransitModes = convertedModes <> [DTrip.Taxi],
             journeyOptionsSortingType = Just DMP.MOST_RELEVANT,
             busTransitTypes = Just [Spec.ORDINARY, Spec.EXPRESS, Spec.SPECIAL],
             subwayTransitTypes = Just [Spec.FIRST_CLASS, Spec.SECOND_CLASS]
