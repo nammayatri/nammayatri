@@ -154,8 +154,8 @@ tripCategoryToFulfillmentType :: TripCategory -> Text
 tripCategoryToFulfillmentType = \case
   -- Off-us Beckn-fulfillmentType Enums
   OneWay OneWayOnDemandDynamicOffer -> show Enums.DELIVERY
+  OneWay OneWayOnDemandStaticOffer -> show Enums.SCHEDULED_TRIP
   d@(Delivery _) -> show d
-  -- TODO :: To be removed after released ---- STARTS HERE
   OneWay OneWayRideOtp -> show Enums.RIDE_OTP
   CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
   RideShare RideOtp -> show Enums.RIDE_OTP
@@ -182,4 +182,5 @@ fulfillmentTypeToTripCategory fulfillmentType =
         Just Enums.INTER_CITY -> InterCity OneWayOnDemandStaticOffer Nothing
         Just Enums.AMBULANCE_FLOW -> Ambulance OneWayOnDemandDynamicOffer
         Just Enums.METER_RIDE -> OneWay MeterRide
+        Just Enums.SCHEDULED_TRIP -> OneWay OneWayOnDemandStaticOffer
         _ -> OneWay OneWayOnDemandDynamicOffer

@@ -858,8 +858,8 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                         [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
                           <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
                   else do
-                    [OneWay OneWayOnDemandStaticOffer, Rental OnDemandStaticOffer]
-                      <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer])
+                    [Rental OnDemandStaticOffer]
+                      <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer])
               Nothing ->
                 [Rental OnDemandStaticOffer]
                   <> [Rental RideOtp | not isScheduled]
