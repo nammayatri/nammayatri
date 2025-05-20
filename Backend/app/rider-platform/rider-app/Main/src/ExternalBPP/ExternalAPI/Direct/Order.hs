@@ -16,12 +16,12 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DIRECTConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
 createOrder config integratedBPPConfigId qrTtl booking = do
   when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
   bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
@@ -31,7 +31,7 @@ createOrder config integratedBPPConfigId qrTtl booking = do
   tickets <- mapM (getTicketDetail config integratedBPPConfigId qrTtl booking) routeStations
   return ProviderOrder {..}
 
-getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
@@ -43,8 +43,8 @@ getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
     B.runInReplica $
       QRoute.findByRouteCode routeStation.code integratedBPPConfigId
         >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- (listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfigId) >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfigId.getId)
-  toRoute <- (listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfigId) >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfigId.getId)
+  fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfigId booking.merchantId booking.merchantOperatingCityId <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfigId.getId)
+  toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfigId booking.merchantId booking.merchantOperatingCityId <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfigId.getId)
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
     id <- generateGUID

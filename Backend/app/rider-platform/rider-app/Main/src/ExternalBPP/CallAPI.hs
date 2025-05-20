@@ -65,7 +65,7 @@ discoverySearch merchant bapConfig req = do
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
+search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
 search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig = do
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do

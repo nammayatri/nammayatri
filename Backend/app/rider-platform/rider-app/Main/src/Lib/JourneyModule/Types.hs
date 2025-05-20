@@ -133,7 +133,8 @@ type GetFareFlow m r =
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "shortDurationRetryCfg" r RetryCfg
   )
 
 type GetStateFlow m r c =

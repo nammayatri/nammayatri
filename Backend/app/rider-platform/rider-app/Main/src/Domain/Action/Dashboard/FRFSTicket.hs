@@ -42,12 +42,12 @@ import Kernel.Utils.Logging (logInfo)
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteExtra as RE
 import Storage.Queries.RouteStopFare as QRSF
-import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
 import Tools.Error
 
@@ -127,7 +127,7 @@ postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code _vehicleType = do
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   _ <- QRoute.findByRouteCode code integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "This route code can't be deleted")
-  routeMappings <- QRSM.findByRouteCode code integratedBPPConfig.id
+  routeMappings <- OTPRest.getRouteStopMappingByRouteCode code integratedBPPConfig.id merchant.id merchantOperatingCity.id
   unless (null routeMappings) $ throwError InvalidAction
   QRoute.deleteByRouteCode code integratedBPPConfig.id
   pure Success
@@ -349,7 +349,7 @@ postFRFSTicketFrfsStationDelete merchantShortId opCity code _vehicleType = do
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   _ <- QStation.findByStationCode code integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
-  stopMappings <- QRSM.findByStopCode code integratedBPPConfig.id
+  stopMappings <- OTPRest.getRouteStopMappingByStopCode code integratedBPPConfig.id merchant.id merchantOpCity.id
   unless (null stopMappings) $ throwError InvalidAction
   QStation.deleteByStationCode code integratedBPPConfig.id
   pure Success

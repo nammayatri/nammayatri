@@ -29,13 +29,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
-import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
@@ -313,7 +313,8 @@ findPossibleRoutes ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   Maybe [LegServiceTier] ->
   Text ->
@@ -326,10 +327,10 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <- QRouteStopMapping.findByStopCode fromStopCode integratedBppConfig.id
+  fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig.id mid mocid
 
   -- Get route mappings that contain the destination stop
-  toRouteStopMappings <- QRouteStopMapping.findByStopCode toStopCode integratedBppConfig.id
+  toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig.id mid mocid
 
   -- Find common routes that have both the origin and destination stops
   -- and ensure that from-stop comes before to-stop in the route sequence
@@ -532,7 +533,8 @@ getSingleModeRouteDetails ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   Maybe Text ->
   Maybe Text ->

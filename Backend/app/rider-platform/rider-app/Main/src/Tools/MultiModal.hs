@@ -26,8 +26,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
 
-getTransitServiceReq :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
-getTransitServiceReq merchantId merchantOperatingCityId = do
+getMultiModalConfig :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
+getMultiModalConfig merchantId merchantOperatingCityId = do
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
@@ -35,8 +35,25 @@ getTransitServiceReq merchantId merchantOperatingCityId = do
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)
       >>= fromMaybeM (InternalError $ "No MultiModal service provider configured for the merchant, merchantId:" <> merchantId.getId)
 
-  transitServiceReq <- case merchantServiceConfig.serviceConfig of
+  case merchantServiceConfig.serviceConfig of
     DMSC.MultiModalServiceConfig multiModalServiceConfig -> return $ multiModalServiceConfig
     _ -> throwError $ InternalError "Unknown Service Config"
 
+getTransitServiceReq :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
+getTransitServiceReq merchantId merchantOperatingCityId = do
+  transitServiceReq' <- getMultiModalConfig merchantId merchantOperatingCityId
+
+  transitServiceReq <- case transitServiceReq' of
+    OTPTransitConfig otpTransitConfig -> do
+      let baseUrlStr = showBaseUrl otpTransitConfig.baseUrl
+      otpGtfsUrl <- parseBaseUrl $ baseUrlStr <> "/otp/gtfs/v1"
+      return $ OTPTransitConfig otpTransitConfig{baseUrl = otpGtfsUrl}
+    _ -> return transitServiceReq'
   return transitServiceReq
+
+getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
+getOTPRestServiceReq merchantId merchantOperatingCityId = do
+  transitServiceReq' <- getMultiModalConfig merchantId merchantOperatingCityId
+  case transitServiceReq' of
+    OTPTransitConfig otpTransitConfig -> return otpTransitConfig.baseUrl
+    config -> throwError $ InternalError $ "Unknown Service Config" <> show config
