@@ -205,7 +205,7 @@ confirm DConfirmReq {..} = do
       _ -> False
 
     getBppQuoteId now = \case
-      DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
+      DQuote.OneWayDetails details -> pure (details.quoteId, Nothing)
       DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.RentalDetails rentalDetails -> pure (rentalDetails.id.getId, Nothing)

@@ -35,6 +35,7 @@ data QuoteT f = QuoteT
     meterRideBppQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rentalDetailsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    staticBppQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

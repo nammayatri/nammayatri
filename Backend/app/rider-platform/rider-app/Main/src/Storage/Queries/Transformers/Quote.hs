@@ -23,7 +23,7 @@ fromQuoteDetails quoteDetails =
   let (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
         DQ.DeliveryDetails details -> (DRIVER_OFFER, Nothing, Nothing, Just $ getId details.id, Nothing) -- for now as FareProductType deprecated, change later accordingly
         DQ.AmbulanceDetails details -> (AMBULANCE, Nothing, Nothing, Just $ getId details.id, Nothing)
-        DQ.OneWayDetails details -> (ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
+        DQ.OneWayDetails details -> (ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Just details.quoteId)
         DQ.RentalDetails rentalDetails -> (RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
         DQ.DriverOfferDetails driverOffer -> (DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
         DQ.OneWaySpecialZoneDetails specialZoneQuote -> (ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
@@ -31,8 +31,8 @@ fromQuoteDetails quoteDetails =
         DQ.MeterRideDetails details -> (ONE_WAY, Nothing, Nothing, Nothing, Just details.quoteId)
    in (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId)
 
-toQuoteDetails :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, MonadThrow m) => FareProductType -> Maybe TripCategory -> Kernel.Prelude.Maybe HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Maybe DistanceUnit -> Maybe HighPrecDistance -> m Domain.Types.Quote.QuoteDetails
-toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue =
+toQuoteDetails :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, MonadThrow m) => FareProductType -> Maybe TripCategory -> Kernel.Prelude.Maybe HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Maybe DistanceUnit -> Maybe HighPrecDistance -> m Domain.Types.Quote.QuoteDetails
+toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue =
   case mbTripCategory of
     Just tripCategory ->
       case tripCategory of
@@ -44,16 +44,16 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         Ambulance _ -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         Delivery _ -> getDeliveryDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         OneWay MeterRide -> getOneWayStaticDetails meterRideBppQuoteId & fromMaybeM (InternalError "No meter ride bpp quote details")
+        OneWay OneWayOnDemandStaticOffer -> do
+          distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
+          getOneWayStaticQuoteDetails distanceToNearestDriver' staticQuoteId & fromMaybeM (InternalError "No static bpp quote details")
         _ -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
     -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     Nothing ->
       case fareProductType of
         ONE_WAY -> do
           distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
-          pure . DQ.OneWayDetails $
-            DQ.OneWayQuoteDetails
-              { distanceToNearestDriver = distanceToNearestDriver'
-              }
+          getOneWayStaticQuoteDetails distanceToNearestDriver' staticQuoteId & fromMaybeM (InternalError "No static bpp quote details")
         RENTAL -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
         DRIVER_OFFER -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         ONE_WAY_SPECIAL_ZONE -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
@@ -65,6 +65,14 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         pure . DQ.MeterRideDetails $
           DQ.MeterRideQuoteDetails
             { quoteId = meterRideBppQuoteId'
+            }
+
+    getOneWayStaticQuoteDetails distanceToNearestDriver' mbStaticBppQuoteId = do
+      mbStaticBppQuoteId >>= \staticBppQuoteId' -> do
+        pure . DQ.OneWayDetails $
+          DQ.OneWayQuoteDetails
+            { distanceToNearestDriver = distanceToNearestDriver',
+              quoteId = staticBppQuoteId'
             }
 
     getRentalDetails rentalDetailsId' = do
@@ -118,6 +126,10 @@ getDriverOfferId (_, _, _, a, _) = a
 getMeterRideBppQuoteId :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getMeterRideBppQuoteId (ONE_WAY, _, _, _, a) = a
 getMeterRideBppQuoteId _ = Nothing
+
+getStaticBppQuoteId :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
+getStaticBppQuoteId (ONE_WAY, _, _, _, a) = a
+getStaticBppQuoteId _ = Nothing
 
 getSpecialZoneQuoteId :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getSpecialZoneQuoteId (_, _, _, _, a) = a

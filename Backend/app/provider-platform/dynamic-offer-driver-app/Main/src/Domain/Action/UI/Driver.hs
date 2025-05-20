@@ -1537,7 +1537,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
 
 acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> Flow [SearchRequestForDriver]
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
-  whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
+  whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
   when booking.isScheduled $ removeBookingFromRedis booking
@@ -2493,7 +2493,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
 
     possibleScheduledTripCategories :: [DTC.TripCategory]
-    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing]
+    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
 
     filterNearbyBookings :: UTCTime -> LatLong -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [(Text, Double, Double, UTCTime, ServiceTierType)] -> [ServiceTierType] -> [Text]
     filterNearbyBookings currentTime dLoc variant avgSpeeds parsedRes possibleServiceTierTypes = map (\(id, _, _, _, _) -> id) $ filter (\(_, lat, lon, pickupTime, bookingServiceTier) -> checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc variant avgSpeeds possibleServiceTierTypes bookingServiceTier) parsedRes

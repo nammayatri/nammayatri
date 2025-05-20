@@ -215,8 +215,9 @@ data MeterRideQuoteDetails = MeterRideQuoteDetails
   { quoteId :: Text
   }
 
-newtype OneWayQuoteDetails = OneWayQuoteDetails
-  { distanceToNearestDriver :: HighPrecMeters
+data OneWayQuoteDetails = OneWayQuoteDetails
+  { distanceToNearestDriver :: HighPrecMeters,
+    quoteId :: Text
   }
 
 newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
@@ -523,10 +524,7 @@ buildMeterRideQuoteDetails MeterRideQuoteDetails {..} = do
 
 mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =
-  DQuote.OneWayQuoteDetails
-    { distanceToNearestDriver = convertHighPrecMetersToDistance distanceUnit distanceToNearestDriver,
-      ..
-    }
+  DQuote.OneWayQuoteDetails {distanceToNearestDriver = convertHighPrecMetersToDistance distanceUnit distanceToNearestDriver, ..}
 
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do

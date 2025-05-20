@@ -529,6 +529,12 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 
 -- Run in master even if commented --
 
+-- update atlas_driver_offer_bpp.transporter_config set onboarding_retry_time_in_hours = 48 where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER');
+
+-- UPDATE atlas_driver_offer_bpp.document_verification_config SET check_extraction = false where merchant_operating_city_id in (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') and document_type = 'VehicleRegistrationCertificate';
+
+-- Run in master even if commented --
+
 -- UPDATE atlas_driver_offer_bpp.transporter_config
 -- SET
 --   safety_team_numbers = ARRAY['6666666666'],
