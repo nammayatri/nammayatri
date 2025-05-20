@@ -168,13 +168,7 @@ mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails tollCharges = \case
   DQuote.MeterRideDetails MeterRideQuoteDetails {..} -> DQuote.MeterRideAPIDetails MeterRideQuoteAPIDetails {..}
   DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
-  DQuote.OneWayDetails OneWayQuoteDetails {..} ->
-    DQuote.OneWayAPIDetails
-      OneWayQuoteAPIDetails
-        { distanceToNearestDriver = distanceToHighPrecMeters distanceToNearestDriver,
-          distanceToNearestDriverWithUnit = distanceToNearestDriver,
-          ..
-        }
+  DQuote.OneWayDetails OneWayQuoteDetails {..} -> DQuote.OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DQuote.AmbulanceDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = distanceToHighPrecMeters <$> distanceToPickup
      in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
@@ -368,7 +362,7 @@ getOffers searchRequest = do
     getMbDistanceToNearestDriver quote =
       case quote.quoteDetails of
         SQuote.MeterRideDetails _ -> Nothing
-        SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
+        SQuote.OneWayDetails _ -> Nothing
         SQuote.AmbulanceDetails details -> details.distanceToPickup
         SQuote.DeliveryDetails details -> details.distanceToPickup
         SQuote.RentalDetails _ -> Nothing
