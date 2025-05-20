@@ -38,27 +38,25 @@ postOperatorRegister ::
   Flow APISuccess
 postOperatorRegister merchantShortId opCity apiTokenInfo req = do
   runRequestValidation validateOperator req
+  unlessM (null <$> QP.findByEmailOrMobile req.email req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone or Email already registered")
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  void $ merchantServerAccessCheck merchant
   transaction <- ST.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <- ST.withTransactionStoring transaction do
     Client.callOperatorAPI checkedMerchantId opCity (.registrationDSL.postOperatorRegister) req
-  registerOperator merchantShortId opCity req res.personId
+  registerOperator opCity req res.personId merchant
   pure Success
 
 registerOperator ::
-  ShortId DM.Merchant ->
   Context.City ->
   Common.OperatorRegisterReq ->
   Id Common.Operator ->
+  DM.Merchant ->
   Flow ()
-registerOperator merchantShortId opCity req operatorId = do
-  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  operatorRole <- QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleDoesNotExist "OPERATOR")
+registerOperator opCity req operatorId merchant = do
+  operatorRole <- QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
   operator <- buildOperator req operatorId operatorRole
-  merchant <-
-    QMerchant.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  merchantServerAccessCheck merchant
   merchantAccess <- DP.buildMerchantAccess operator.id merchant.id merchant.shortId opCity
   QP.create operator
   QAccess.create merchantAccess

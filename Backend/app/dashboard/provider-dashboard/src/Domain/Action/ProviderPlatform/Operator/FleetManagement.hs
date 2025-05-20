@@ -59,7 +59,7 @@ postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetCreate) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
-    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound "FLEET_OWNER")
     DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.personId.getId) True
   pure Kernel.Types.APISuccess.Success
 
@@ -97,7 +97,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
-    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound "FLEET_OWNER")
     DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.fleetOwnerId.getId) True
   pure res
 

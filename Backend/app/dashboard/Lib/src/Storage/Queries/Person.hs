@@ -63,6 +63,28 @@ findByEmailWithType email = do
       Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))
     ]
 
+findByEmailOrMobile ::
+  (BeamFlow m r, EncFlow m r) =>
+  Maybe Text ->
+  Text ->
+  Text ->
+  m [Person]
+findByEmailOrMobile mbEmail mobileNumber mobileCountryCode = do
+  mobileDbHash <- getDbHash mobileNumber
+  case mbEmail of
+    Just email -> do
+      emailDbHash <- getDbHash email
+      findAllWithKV
+        [ Se.Or
+            [ Se.And
+                [ Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash,
+                  Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode
+                ],
+              Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash
+            ]
+        ]
+    Nothing -> findAllWithKV [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]
+
 findByEmail ::
   (BeamFlow m r, EncFlow m r) =>
   Text ->
