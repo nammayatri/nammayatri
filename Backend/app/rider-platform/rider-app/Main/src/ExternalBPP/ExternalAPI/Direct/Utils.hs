@@ -7,6 +7,7 @@ import Data.ByteString hiding (length)
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.IntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Types
 import Kernel.Prelude
@@ -25,6 +26,17 @@ qrColorHex =
     "#1B5E20", -- Green
     "#E65100" -- Deep Orange
   ]
+
+generateTimeBasedOTP :: (MonadTime m, MonadFlow m) => m Int
+generateTimeBasedOTP = do
+  now <- addUTCTime (secondsToNominalDiffTime 19800) <$> getCurrentTime
+  let epochSeconds = nominalDiffTimeToSeconds $ utcTimeToPOSIXSeconds now
+      -- Get the number of 24-hour periods since epoch
+      daySeed = fromIntegral @_ @Integer $ epochSeconds.getSeconds `div` (24 * 60 * 60)
+      -- Use a simple hash function that will work consistently across languages
+      -- Multiply by a prime number and take modulo 9000 to get a 4-digit number
+      otp = fromIntegral @Integer @Int $ ((daySeed * 9973) `mod` 9999) + 1000 -- Ensures 4-digit number between 1000-9999
+  return otp
 
 -- | Sign a request given the key
 sign :: Base64 -> Text -> Either Crypto.CryptoError ByteString

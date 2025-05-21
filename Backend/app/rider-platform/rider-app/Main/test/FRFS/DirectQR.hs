@@ -63,7 +63,8 @@ tests flowRt' appEnv = do
 
   -- Generate QR code
   logInfo "Generating QR code..."
-  qrData <- generateQR testConfig testTicket
+  otpCode <- generateTimeBasedOTP
+  qrData <- generateQR testConfig (testTicket {otpCode = Just otpCode})
   logInfo $ "Generated QR data: " <> qrData
 
   -- Decode QR code

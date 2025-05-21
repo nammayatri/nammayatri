@@ -12,7 +12,6 @@ import ExternalBPP.ExternalAPI.Types
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -51,15 +50,7 @@ getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
     uuid <- UU.fromText id & fromMaybeM (InternalError "Not being able to parse into UUID")
     return $ show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Int)
   now <- getCurrentTime
-  otpCode <-
-    Redis.get otpKey
-      >>= \case
-        Just (optCode :: Int) -> return optCode
-        Nothing -> do
-          otpCode :: Int <- (generateOTPCode >>= (pure . readMaybe . T.unpack)) >>= fromMaybeM (InternalError "Failed to generate OTP Code")
-          let endOfDayDiffInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime $ Time.TimeOfDay 23 59 59)) now
-          Redis.setExp otpKey otpCode endOfDayDiffInSeconds.getSeconds
-          return otpCode
+  otpCode <- generateTimeBasedOTP
   let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
       amount = Money $ round routeStation.priceWithCurrency.amount
       adultQuantity = booking.quantity
@@ -92,6 +83,3 @@ getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
   where
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime Time.defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
-
-    otpKey :: Text
-    otpKey = "otpKey"
