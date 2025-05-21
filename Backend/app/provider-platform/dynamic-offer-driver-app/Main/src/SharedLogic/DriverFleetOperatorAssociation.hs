@@ -1,7 +1,6 @@
 module SharedLogic.DriverFleetOperatorAssociation
   ( checkForDriverAssociationOverwrite,
     endDriverAssociationsIfAllowed,
-    checkForFleetAssociationOverwrite,
     endFleetAssociationsIfAllowed,
     makeFleetOperatorAssociation,
     makeDriverOperatorAssociation,
@@ -84,16 +83,6 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId driver = do
             let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
             TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) ()
       else throwError (InvalidRequest "Driver already associated with another operator")
-
-checkForFleetAssociationOverwrite ::
-  DM.Merchant ->
-  Id DP.Person ->
-  Flow ()
-checkForFleetAssociationOverwrite merchant fleetOwnerId = do
-  unless (merchant.overwriteAssociation == Just True) $ do
-    existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwnerId True
-    unless (null existingFOAssociations) $ do
-      throwError (InvalidRequest "Fleet already associated with another operator")
 
 endFleetAssociationsIfAllowed ::
   DM.Merchant ->
