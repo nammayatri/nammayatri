@@ -10,6 +10,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Control.Monad.Extra (mapMaybeM)
+import Data.List.Extra (notNull)
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation (fleetOwnerId))
@@ -17,7 +18,7 @@ import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
-import EulerHS.Prelude hiding (id, length)
+import EulerHS.Prelude hiding (any, id, length)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.SMS as Sms
@@ -213,9 +214,13 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
         personData <- DRegistration.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
         pure personData
 
-  SA.checkForFleetAssociationOverwrite merchant fleetOwner.id
-  checkAssocOperator <- B.runInReplica $ QFOA.findByFleetOwnerIdAndOperatorId fleetOwner.id operator.id True
-  when (isJust checkAssocOperator) $ throwError (InvalidRequest "Fleet already associated with operator")
+  existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
+  when (any (\foa -> Id foa.fleetOwnerId == fleetOwner.id && Id foa.operatorId == operator.id) existingFOAssociations)
+    . throwError
+    $ InvalidRequest "Fleet already associated with operator"
+  when (merchant.overwriteAssociation /= Just True && notNull existingFOAssociations)
+    . throwError
+    $ InvalidRequest "Fleet already associated with another operator"
 
   smsCfg <- asks (.smsCfg)
   let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
