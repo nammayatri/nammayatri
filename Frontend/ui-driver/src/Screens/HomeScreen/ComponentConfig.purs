@@ -717,6 +717,7 @@ cancelConfirmationConfig state = let
     , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
     , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
     , enableTimer = true
+    , animate = false
     , background = Color.white900
     , strokeColor = Color.black500
     , color = Color.black700

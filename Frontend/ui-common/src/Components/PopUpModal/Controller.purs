@@ -206,6 +206,7 @@ type ButtonConfig = {
   padding :: Padding,
   timerValue :: Int,
   enableTimer :: Boolean,
+  animate :: Boolean,
   timerID :: String,
   textStyle :: Style,
   height :: Length,
@@ -437,6 +438,7 @@ config = {
     , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , textStyle : Body3
     , height : (V 48)
@@ -465,6 +467,7 @@ config = {
     , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
@@ -493,6 +496,7 @@ config = {
     , padding : (Padding 0 0 0 0)
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1

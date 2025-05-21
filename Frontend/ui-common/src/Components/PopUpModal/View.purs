@@ -573,7 +573,7 @@ view push state =
                         ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
                     ]
                 ]
-               , if state.option1.enableTimer then
+               , if state.option1.enableTimer && state.option1.animate then
                  PrestoAnim.animationSet [ 
                    Anim.translateOutXBackwardAnimY animConfig
                      { duration = 4000
