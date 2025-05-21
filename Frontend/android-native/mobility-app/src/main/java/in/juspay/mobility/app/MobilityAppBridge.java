@@ -98,7 +98,6 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
-import in.juspay.mobility.app.CleverTapSignedCall;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
@@ -153,9 +152,6 @@ public class MobilityAppBridge extends HyperBridge {
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
 
-   private CleverTapSignedCall cleverTapSignedCall;
-
-
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -167,7 +163,6 @@ public class MobilityAppBridge extends HyperBridge {
         registerCallBacks();
         createVPAdapter(bridgeComponents.getContext());
         initNotificationChannel(bridgeComponents.getContext());
-        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         String mapConfig = remoteConfigs.getString("map_config");
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", remoteConfigs.getString("enable_app_caching"));
@@ -392,27 +387,6 @@ public class MobilityAppBridge extends HyperBridge {
     @JavascriptInterface
     public void removeChatMessageCallback() {
         storeChatMessageCallBack = null;
-    }
-
-    @JavascriptInterface
-    public void voipDialer(String config, String phoneNum, String callback) {
-        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
-        cleverTapSignedCall.voipDialer(config, phoneNum, callback, bridgeComponents);
-    }
-
-    @JavascriptInterface
-    public void initSignedCall(String config){
-        cleverTapSignedCall.initSignedCall(config);
-    }
-    
-    @JavascriptInterface
-    public boolean isSignedCallInitialized(){
-        return cleverTapSignedCall.isSignedCallInitialized();
-    }
-
-    @JavascriptInterface
-    public void destroySignedCall(){
-        cleverTapSignedCall.destroySignedCall();
     }
 
     public void callInAppNotificationCallBack(String onTapAction) {
@@ -1255,11 +1229,6 @@ public class MobilityAppBridge extends HyperBridge {
                 }
             }
         });
-    }
-
-    @JavascriptInterface
-    public void setExoPhoneNumber(String phoneNum) {
-        cleverTapSignedCall.setExoPhoneNumber(phoneNum);
     }
 
     @JavascriptInterface

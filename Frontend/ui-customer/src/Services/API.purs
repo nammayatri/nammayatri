@@ -2285,33 +2285,6 @@ instance showSosStatus :: Show SosStatus where show = genericShow
 instance decodeSosStatus:: Decode SosStatus where decode = defaultDecode
 instance encodeSosStatus :: Encode SosStatus where encode = defaultEncode
 
------------------------------------------------------------------------ voipCall api -------------------------------------------------------------------
-
-newtype VoipCallReq = VoipCallReq
-  {
-     callId :: String,
-     callStatus :: String,
-     rideId :: String,
-     errorCode :: Maybe Int,
-     userType :: String,
-     networkType :: String,
-     networkQuality :: String,
-     merchantId :: String,
-     merchantOperatingCity :: String
-  }
-
-
-instance makeVoipCallReq :: RestEndpoint VoipCallReq where
- makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.voipCall "") headers reqBody Nothing
- encodeRequest req = standardEncode req
-
-derive instance genericVoipCallReq :: Generic VoipCallReq _
-derive instance newtypeVoipCallReq:: Newtype VoipCallReq _
-instance standardEncodeVoipCallReq :: StandardEncode VoipCallReq where standardEncode (VoipCallReq req) = standardEncode req
-instance showVoipCallReq :: Show VoipCallReq where show = genericShow
-instance decodeVoipCallReq :: Decode VoipCallReq where decode = defaultDecode
-instance encodeVoipCallReq :: Encode VoipCallReq where encode = defaultEncode
-
 ----------------------------------------------------------------------- onCall api -------------------------------------------------------------------
 
 newtype OnCallReq = OnCallReq

@@ -364,8 +364,6 @@ data Action = NoAction
   | ConfirmDeliveryRide
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
-  | VOIPCallBack String String String Int Int String String String
-  | MicPermissionCallBack Boolean
   | UnDoEnquiryBannerAC Int String String
 
 instance showAction :: Show Action where show _ = ""

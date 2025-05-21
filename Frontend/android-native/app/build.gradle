@@ -127,9 +127,6 @@ android {
             buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
             buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
 
-            buildConfigField "String", "CLEVERTAP_SC_API_KEY", properties.getProperty("CLEVERTAP_SC_API_KEY", "")
-            buildConfigField "String", "CLEVERTAP_SC_ACCOUNT_ID", properties.getProperty("CLEVERTAP_SC_ACCOUNT_ID", "")
-
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
             resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
@@ -151,9 +148,6 @@ android {
             buildConfigField "String", "RS_ALGO", properties.getProperty("RS_ALGO", "")
             buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
             buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
-
-            buildConfigField "String", "CLEVERTAP_SC_API_KEY", properties.getProperty("CLEVERTAP_SC_API_KEY","")
-            buildConfigField "String", "CLEVERTAP_SC_ACCOUNT_ID", properties.getProperty("CLEVERTAP_SC_ACCOUNT_ID","")
 
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")

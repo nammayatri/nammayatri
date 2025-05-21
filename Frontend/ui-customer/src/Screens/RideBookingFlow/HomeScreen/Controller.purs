@@ -83,7 +83,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, setKeyInSharedPref, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image, checkAndAskMicrophonePermission, storeCallBackMicrophonePermission,cleverTapCustomEventWithParams)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, setKeyInSharedPref, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image, checkAndAskMicrophonePermission ,cleverTapCustomEventWithParams)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds,formatMonth,calculateDateInfo)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -1539,25 +1539,6 @@ eval (DriverReachedDestinationAction driverReachedDestinationTime) state =
         continue state { data { driverInfoCardState { destinationReached = true } } }
     else continue state
 
-eval (VOIPCallBack callId status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
-  let req = {
-      callId : callId,
-      callStatus : status,
-      rideId : rideId,
-      errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,
-      userType : if (driverFlag == 1) then "DRIVER" else "RIDER",
-      networkType : networkType,
-      networkQuality : networkStrength,
-      merchantId : merchantId,
-      merchantOperatingCity : getValueToLocalStore CUSTOMER_LOCATION
-    }
-  continueWithCmd state [ do
-    void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-      resp :: (Either ErrorResponse API.APISuccessResp) <-  HelpersAPI.callApi $ API.VoipCallReq req
-      pure unit
-    pure NoAction
-  ]
-
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
                 then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
@@ -2114,41 +2095,9 @@ eval CloseLocationTracking state = continue state { props { isLocationTracking =
 
 eval CloseShowCallDialer state = continue state { props { showCallPopUp = false } }
 
-eval (MicPermissionCallBack isMicPermissionEnabled) state = do
-  if (isMicPermissionEnabled && getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true") then do
-    let _ =  runFn2 setKeyInSharedPref "MIC_PERMISSION_ASKED" "true"
-    continueWithCmd state [do
-      pure $ (ShowCallDialer ANONYMOUS_CALLER)
-    ]
-  else do
-    let _ =  runFn2 setKeyInSharedPref "MIC_PERMISSION_ASKED" "true"
-    continue state
-
 eval (ShowCallDialer item) state = do
   case item of
-    ANONYMOUS_CALLER -> do
-        let driverCuid =
-              if not (STR.null state.data.driverInfoCardState.bppRideId)
-              then state.data.driverInfoCardState.bppRideId
-              else ""
-        let phoneNum = getExoPhoneNumber state
-        let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        let isMicEnabled = JB.isMicrophonePermissionEnabled unit
-        if (not (STR.null driverCuid) && voipConfig.customer.enableVoipCalling) then do
-          if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
-            continueWithCmd state [ do
-              push <-  getPushFn Nothing "HomeScreen"
-              void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack
-              void $ pure $ JB.checkAndAskMicrophonePermission unit
-              pure NoAction
-            ]
-          else
-            continueWithCmd state [ do
-              push <- getPushFn Nothing "HomeScreen"
-              void $ runEffectFn6 JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
-              pure CloseShowCallDialer
-            ]
-        else callDriver state "ANONYMOUS"
+    ANONYMOUS_CALLER -> callDriver state "ANONYMOUS"
     DIRECT_CALLER -> callDriver state "DIRECT"
 
 eval (DriverInfoCardActionController (DriverInfoCardController.StartLocationTracking item)) state = continueWithCmd state [do pure $ StartLocationTracking item]
