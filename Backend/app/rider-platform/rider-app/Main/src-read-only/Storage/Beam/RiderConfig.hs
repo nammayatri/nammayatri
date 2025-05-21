@@ -30,6 +30,7 @@ data RiderConfigT f = RiderConfigT
     cancellationPaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    collectSourceDeviationData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
