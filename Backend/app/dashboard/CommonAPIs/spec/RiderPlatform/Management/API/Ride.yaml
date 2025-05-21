@@ -192,6 +192,7 @@ types:
     - roundTrip: Maybe Bool
     - mobileCountryCode: Maybe Text
     - isSafetyPlus: Bool
+    - isAirConditioned: Bool
   ShareRideInfoRes:
     - id: Id Ride
     - bookingId: Id Booking
