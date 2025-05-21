@@ -31,6 +31,7 @@ data RiderConfig = RiderConfig
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     collectMMIRouteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    collectSourceDeviationData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     distanceWeightage :: Kernel.Prelude.Int,

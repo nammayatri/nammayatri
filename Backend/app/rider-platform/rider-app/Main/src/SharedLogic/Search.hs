@@ -212,7 +212,8 @@ data SearchReqLocation = SearchReqLocation
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data SearchSourceDeviationData = SearchSourceDeviationData
-  { initialSourceLatLong :: Maybe LatLong,
+  { searchRequestId :: Id SearchRequest.SearchRequest,
+    initialSourceLatLong :: Maybe LatLong,
     sourceLatLong :: LatLong,
     destinationLatLong :: Maybe LatLong,
     personId :: Id Person.Person,
