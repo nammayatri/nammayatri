@@ -46,7 +46,7 @@ startProducer = do
   producerType <- fromMaybe Driver . (>>= readMaybe) <$> lookupEnv "PRODUCER_TYPE"
   appCfg :: AppCfg <- readDhallConfigDefault $ getDhallName (T.traceShowId producerType)
   Metrics.serve (appCfg.metricsPort)
-  appEnv <- buildAppEnv appCfg
+  appEnv <- buildAppEnv appCfg producerType
   flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
   startProducerWithEnv flowRt appCfg appEnv producerType
 
