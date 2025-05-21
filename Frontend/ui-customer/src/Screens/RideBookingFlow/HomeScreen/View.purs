@@ -343,7 +343,6 @@ screen initialState =
               PickUpFarFromCurrentLocation ->
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                initVoipIfEnabled initialState
                 when
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -494,14 +493,6 @@ screen initialState =
 
 isCurrentLocationEnabled :: Boolean
 isCurrentLocationEnabled = isLocalStageOn HomeScreen
-
-initVoipIfEnabled :: HomeScreenState -> Effect Unit
-initVoipIfEnabled state = do
-  let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-  if voipConfig.customer.enableVoipFeature 
-    then do 
-      void $ pure $ JB.initSignedCall state.data.driverInfoCardState.bppRideId false (getExoPhoneNumber state)
-    else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =

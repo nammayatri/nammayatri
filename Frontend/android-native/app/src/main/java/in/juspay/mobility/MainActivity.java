@@ -13,7 +13,6 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.Utils.getInnerPayload;
 import static in.juspay.mobility.Utils.handleGlResp;
-import static in.juspay.mobility.Utils.initCTSignedCall;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
@@ -106,7 +105,6 @@ import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
-import in.juspay.mobility.app.CleverTapSignedCall;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateServiceV2;
@@ -139,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
     private Context context;
     private Activity activity;
 
-    private CleverTapSignedCall initialCall;
     @Nullable
     private SharedPreferences sharedPref;
     ShowNotificationCallBack inappCallBack;
@@ -613,7 +610,6 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
-        initialCall = initCTSignedCall(context,activity,remoteConfigs);
         FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
         crashlytics.setCustomKey("driver_id",sharedPref != null ? sharedPref.getString("DRIVER_ID","not_set") : "not_set");
         crashlytics.setCustomKey("customer_id",sharedPref != null ? sharedPref.getString("CUSTOMER_ID","not_set") : "not_set");
@@ -1168,9 +1164,6 @@ public class MainActivity extends AppCompatActivity {
         ChatService.deRegisterInAppCallback(inappCallBack);
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
-        if (initialCall != null) {
-            initialCall.destroySignedCall();
-        }
         sharedPref.unregisterOnSharedPreferenceChangeListener(mListener);
         super.onDestroy();
     }

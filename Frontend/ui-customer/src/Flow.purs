@@ -63,7 +63,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser, defaultMarkerImageConfig, destroySignedCall, removeAllMarkers)
+import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser, defaultMarkerImageConfig, removeAllMarkers)
 import JBridge as JB
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, normalRoute, breakPrefixAndId, editPickupCircleConfig)
 import Language.Strings (getString)
@@ -179,7 +179,7 @@ import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller as SafetyEducati
 import Screens.NammaSafetyFlow.Components.SafetyUtils
 -- import Screens.NammaSafetyFlow.Controller as NammaSafetyFlow
 import RemoteConfig as RC
-import RemoteConfig.Utils (getCustomerVoipConfig)
+import RemoteConfig.Utils
 import Engineering.Helpers.RippleCircles (clearMap)
 import Data.Array (groupBy, fromFoldable, singleton, sort)
 import Data.Foldable (maximumBy)
@@ -2093,10 +2093,6 @@ homeScreenFlow = do
         homeScreenFlow
       else do
         lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-        let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        if (voipConfig.customer.enableVoipFeature) then do
-          void $ pure $ JB.initSignedCall state.data.driverInfoCardState.rideId false (getExoPhoneNumber state)
-        else pure unit
         homeScreenFlow
     CANCEL_RIDE_REQUEST state cancelType -> do
       let
@@ -2121,7 +2117,6 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { autoScroll = false, isCancelRide = false, currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView } })
           lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
           void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
-          void $ pure $ JB.destroySignedCall unit
           liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
           liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
           removeChatService ""
@@ -7240,7 +7235,6 @@ fcmHandler notification state notificationBody= do
 
       void $ pure $ metaLogEvent "ny_user_ride_completed"
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_completed_with_props" $ rideCompletedEventParams state
-      void $ pure $ JB.destroySignedCall unit
       void $ updateLocalStage HomeScreen
       setValueToLocalStore IS_SOS_ACTIVE "false"
       deleteValueFromLocalStore SELECTED_VARIANT
@@ -7454,7 +7448,6 @@ fcmHandler notification state notificationBody= do
         void $ pure $ JB.exitLocateOnMap ""
         void $ pure $ removeAllPolylines ""
         void $ updateLocalStage HomeScreen
-        void $ pure $ JB.destroySignedCall unit
         modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { sosId = "" } })
         setValueToLocalStore IS_SOS_ACTIVE "false"
         removeChatService ""
@@ -7511,7 +7504,6 @@ fcmHandler notification state notificationBody= do
         void $ pure $ spy "after scheduled checks" notificationBody
         void $ pure $ JB.exitLocateOnMap ""
         void $ pure $ removeAllPolylines ""
-        void $ pure $ JB.destroySignedCall unit
         removeChatService ""
         setValueToLocalStore PICKUP_DISTANCE "0"
         (GlobalState updatedState) <- getState
@@ -7729,7 +7721,6 @@ rideSummaryScreenFlow = do
               state = newState.homeScreen
             updateScheduledRides true true
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
-            void $ pure $ JB.destroySignedCall unit
             if(fromScreen == Screen.getScreen Screen.RIDE_SUMMARY_SCREEN) then do
               updateLocalStage HomeScreen
               updateUserInfoToState state
