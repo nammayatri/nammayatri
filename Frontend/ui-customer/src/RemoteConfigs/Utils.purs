@@ -354,3 +354,9 @@ getReferralPayoutConfig city = do
     let config = fetchRemoteConfigString "referral_payout_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultReferralPayout
     getCityBasedConfig value $ DS.toLower city
+
+getEnableTips :: String -> Boolean
+getEnableTips city = do
+    let config = fetchRemoteConfigString "enable_tips_estimates"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig false
+    getCityBasedConfig value $ DS.toLower city
