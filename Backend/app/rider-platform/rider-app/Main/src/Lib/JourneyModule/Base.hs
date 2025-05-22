@@ -3,6 +3,7 @@ module Lib.JourneyModule.Base where
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Monad.Extra (mapMaybeM)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
@@ -192,19 +193,26 @@ getJourneyLegs journeyId = do
 getAllLegsInfo ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
+  Bool ->
   m [JL.LegInfo]
-getAllLegsInfo journeyId = do
+getAllLegsInfo journeyId skipAddLegFallback = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegsRawData <- getJourneyLegs journeyId
-    allLegsRawData `forM` \leg -> do
-      case leg.legSearchId of
-        Just legSearchIdText -> getLegInfo leg legSearchIdText
-        Nothing -> do
-          logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
-          addAllLegs journeyId [leg] -- try to add the leg again
-          updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
-          legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
-          getLegInfo updatedLeg legSearchIdText'
+    mapMaybeM
+      ( \leg -> do
+          case leg.legSearchId of
+            Just legSearchIdText -> Just <$> getLegInfo leg legSearchIdText
+            Nothing -> do
+              logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
+              if skipAddLegFallback
+                then return Nothing
+                else do
+                  addAllLegs journeyId [leg]
+                  updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
+                  legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
+                  Just <$> getLegInfo updatedLeg legSearchIdText'
+      )
+      allLegsRawData
   where
     getLegInfo ::
       JL.GetStateFlow m r c =>
@@ -366,7 +374,7 @@ startJourney ::
   Id DJourney.Journey ->
   m ()
 startJourney confirmElements forcedBookedLegOrder journeyId = do
-  allLegs <- getAllLegsInfo journeyId
+  allLegs <- getAllLegsInfo journeyId False
   mapM_
     ( \leg -> do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
@@ -640,7 +648,7 @@ getRemainingLegs ::
   Id DJourney.Journey ->
   m [JL.LegInfo]
 getRemainingLegs journeyId = do
-  journeyLegs <- getAllLegsInfo journeyId
+  journeyLegs <- getAllLegsInfo journeyId False
   let remainingLegs = filter cancellableStatus journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
 
@@ -649,7 +657,7 @@ getRemainingLegsForExtend ::
   Id DJourney.Journey ->
   m [JL.LegInfo]
 getRemainingLegsForExtend journeyId = do
-  journeyLegs <- getAllLegsInfo journeyId
+  journeyLegs <- getAllLegsInfo journeyId False
   let remainingLegs = filter cancellableExtendStatus journeyLegs
   return remainingLegs
 
@@ -801,7 +809,7 @@ skipLeg ::
   Bool ->
   m ()
 skipLeg journeyId legOrder skippedDuringConfirmation = do
-  allLegs <- getAllLegsInfo journeyId
+  allLegs <- getAllLegsInfo journeyId False
   skippingLeg <- fromMaybeM (InvalidRequest $ "Leg not found: " <> show legOrder) $ find (\leg -> leg.order == legOrder) allLegs
   if skippingLeg.skipBooking
     then return ()
@@ -1035,7 +1043,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
   journey <- getJourney journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
   endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId) parentSearchReq.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
-  allLegs <- getAllLegsInfo journeyId
+  allLegs <- getAllLegsInfo journeyId False
   case startPoint of
     JL.StartLegOrder startLegOrder -> do
       currentLeg <- find (\leg -> leg.order == startLegOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startLegOrder)
@@ -1210,7 +1218,7 @@ getExtendLegs ::
   Int ->
   m [JL.LegInfo]
 getExtendLegs journeyId legOrder = do
-  journeyLegs <- getAllLegsInfo journeyId
+  journeyLegs <- getAllLegsInfo journeyId False
   let remainingLegs = filter (\leg -> notElem (leg.status) JL.cannotCancelWalkStatus && leg.order <= legOrder) journeyLegs
   return remainingLegs
 
@@ -1229,7 +1237,7 @@ extendLegEstimatedFare ::
   m APITypes.ExtendLegGetFareResp
 extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
   journey <- getJourney journeyId
-  allLegs <- getAllLegsInfo journeyId
+  allLegs <- getAllLegsInfo journeyId False
   remainingLegs <- case legOrder of
     Just order -> getExtendLegs journeyId order
     Nothing -> getRemainingLegs journeyId
