@@ -68,14 +68,18 @@ headerConfig state = let
 seeRouteButtonConfig :: SD.SelectBusRouteScreenState -> PrimaryButton.Config
 seeRouteButtonConfig state =
   let config = PrimaryButton.config
-      enableButton = isJust state.data.selectedQuote
       seeRouteButtonConfig' = config 
-        { textConfig { textFromHtml = Just "See Route"}
+        { textConfig {
+           textFromHtml = Just "Close"
+           , color = Color.black800
+           , height = (V 40)
+          }
         , height = (V 48)
-        , cornerRadius = 8.0
+        , cornerRadius = 12.0
         , margin = (Margin 16 16 16 0)
-        , id = "PrimaryButtonSeeRoute"
-        , isClickable = enableButton
-        , alpha = if enableButton then 1.0 else 0.5
+        , id = "PrimaryButtonPopupClose"
+        , isClickable = true
+        , background = Color.grey900
+        , alpha = 1.0
         }
   in seeRouteButtonConfig'

@@ -1734,4 +1734,10 @@ getHi = Keymap {
 , free_loading_unloading_time : (\ a b -> "नि:शुल्क संयुक्त लोडिंग/अनलोडिंग समय " <> a <> " मिनट प्रदान किया जाता है। कोई भी अतिरिक्त समय " <> b <> " की दर से शुल्क लिया जाएगा।" )
 , max_capacity_warning : "सामान अधिकतम क्षमता से अधिक नहीं होना चाहिए"
 , select_route : "मार्ग चुनें"
+, ac_bus : "एसी बस"
+, early_departure : "जल्दी प्रस्थान"
+, ticket_price : "टिकट मूल्य"
+, no_incoming_bus : "कोई आने वाली बस नहीं"
+, cheapest : "सस्ता"
+, fastest : "तेज़"
 }

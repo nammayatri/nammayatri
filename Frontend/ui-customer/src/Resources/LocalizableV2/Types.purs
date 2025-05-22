@@ -1748,6 +1748,12 @@ newtype Keymap = Keymap {
 , free_loading_unloading_time :: String -> String -> String
 , max_capacity_warning :: String
 , select_route :: String
+, ac_bus :: String
+, early_departure :: String
+, ticket_price :: String
+, no_incoming_bus :: String
+, cheapest :: String
+, fastest :: String
 }
 
 
@@ -6962,3 +6968,21 @@ max_capacity_warning = a
 
 select_route :: Proxy "select_route"
 select_route = a
+
+ac_bus :: Proxy "ac_bus"
+ac_bus = a
+
+early_departure :: Proxy "early_departure"
+early_departure = a
+
+ticket_price :: Proxy "ticket_price"
+ticket_price = a
+
+no_incoming_bus :: Proxy "no_incoming_bus"
+no_incoming_bus = a
+
+cheapest :: Proxy "cheapest"
+cheapest = a
+
+fastest :: Proxy "fastest"
+fastest = a
