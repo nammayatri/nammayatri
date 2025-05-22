@@ -390,10 +390,10 @@ data VehicleTracking = VehicleTracking
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpcomingStop = UpcomingStop
-  { stop :: RouteStopMapping.RouteStopMapping,
-    estimatedTravelTime :: Maybe Seconds,
-    actualTravelTime :: Maybe Seconds,
-    distance :: Meters
+  { -- stop :: RouteStopMapping.RouteStopMapping, TODO: akhilesh, add it if required after graphql thing
+    stopName :: Text,
+    estimatedTravelTime :: Maybe UTCTime,
+    actualTravelTime :: Maybe UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -452,6 +452,16 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
             let busData = bus.busData
             let sortedEtaData = sortBy (comparing (.stopSeq)) (fromMaybe [] busData.eta_data)
             let mbNextStop = listToMaybe sortedEtaData
+            let upcomingStops =
+                  map
+                    ( \stop -> do
+                        UpcomingStop
+                          { stopName = stop.stopName,
+                            estimatedTravelTime = Just stop.arrivalTime,
+                            actualTravelTime = Nothing
+                          }
+                    )
+                    sortedEtaData
             logDebug $ "Got bus data for route " <> routeCode <> ": next stop" <> show mbNextStop
             mbNextStopMapping <-
               case mbNextStop of
@@ -464,7 +474,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                 { nextStop = mbNextStopMapping,
                   nextStopTravelTime = (\t -> nominalDiffTimeToSeconds $ diffUTCTime t now) <$> (mbNextStop <&> (.arrivalTime)),
                   nextStopTravelDistance = Nothing,
-                  upcomingStops = [], -- fix it later
+                  upcomingStops = upcomingStops, -- fix it later
                   vehicleId = bus.vehicleNumber,
                   vehicleInfo =
                     Just $
