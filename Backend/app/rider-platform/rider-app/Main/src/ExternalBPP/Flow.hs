@@ -1,7 +1,6 @@
 module ExternalBPP.Flow where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (sortOn)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
@@ -16,8 +15,6 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
-import Domain.Types.RouteStopMapping
-import Domain.Types.Station
 import Domain.Types.StationType
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Types
@@ -29,8 +26,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import Storage.Queries.Route as QRoute
-import Storage.Queries.RouteStopMapping as QRouteStopMapping
-import Storage.Queries.Station as QStation
 import Tools.Error
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
@@ -74,14 +69,14 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                     endStopCode = endStationCode,
                     travelTime = Nothing
                   }
-          stations <- buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode integratedBPPConfig.id START END
+          stations <- CallAPI.buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode integratedBPPConfig.id START END
           mkSingleRouteQuote searchReq.vehicleType routeInfo stations
         Nothing -> do
           routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
           quotes <-
             mapM
               ( \routeInfo -> do
-                  stations <- buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode integratedBPPConfig.id START END
+                  stations <- CallAPI.buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode integratedBPPConfig.id START END
                   mkSingleRouteQuote searchReq.vehicleType routeInfo stations
               )
               routesInfo
@@ -96,7 +91,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                 Just routeCode' -> do
                   let startStopType = if idx == 0 then START else TRANSIT
                   let endStopType = if idx == lastStopIndex then END else TRANSIT
-                  stations <- buildStations routeCode' routeDetail.startStationCode routeDetail.endStationCode integratedBPPConfig.id startStopType endStopType
+                  stations <- CallAPI.buildStations routeCode' routeDetail.startStationCode routeDetail.endStationCode integratedBPPConfig.id startStopType endStopType
                   return stations
                 Nothing -> return []
           )
@@ -117,26 +112,6 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                   }
           mkSingleRouteQuote searchReq.vehicleType routeInfo stations
         _ -> return []
-
-    buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Id IntegratedBPPConfig -> StationType -> StationType -> m [DStation]
-    buildStations routeCode startStationCode endStationCode integratedBPPConfigId startStopType endStopType = do
-      fromStation <- QStation.findByStationCode startStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound startStationCode)
-      toStation <- QStation.findByStationCode endStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound endStationCode)
-      stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfigId
-      stations <- mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
-      return stations
-
-    mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
-    mkStations fromStation toStation stops startStopType endStopType =
-      ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
-        <&> \(startStop, endStop) ->
-          do
-            let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) startStopType (Just startStop.sequenceNum) Nothing
-                endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) endStopType (Just endStop.sequenceNum) Nothing
-                intermediateStations =
-                  (sortOn (.sequenceNum) $ filter (\stop -> stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum < endStop.sequenceNum) stops)
-                    <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
-            [startStation] ++ intermediateStations ++ [endStation]
 
     mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> [DStation] -> m [DQuote]
     mkSingleRouteQuote vehicleType routeInfo stations = do
