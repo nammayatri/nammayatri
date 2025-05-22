@@ -30,7 +30,6 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -45,11 +44,9 @@ import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
-import Tools.Error
 import qualified Tools.Utils as Utils
 
 data LoginReq = LoginReq
@@ -303,37 +300,8 @@ buildRegistrationToken personId merchantId city = do
         enabled = True
       }
 
-registerFleetOwner ::
-  ( BeamFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
-  ) =>
-  Bool ->
-  FleetRegisterReq ->
-  Maybe Text ->
-  m APISuccess
-registerFleetOwner isOperator req mbPersonId = do
-  runRequestValidation validateFleetOwner req
-  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
-  merchant <-
-    QMerchant.findByShortId req.merchantId
-      >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  merchantServerAccessCheck merchant
-  createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId isOperator
-  return Success
-  where
-    getFleetRole mbFleetType = case mbFleetType of
-      Just RENTAL_FLEET -> RENTAL_FLEET_OWNER
-      Just NORMAL_FLEET -> FLEET_OWNER
-      Just BUSINESS_FLEET -> FLEET_OWNER
-      Nothing -> FLEET_OWNER
-
-buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Maybe Text -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
-buildFleetOwner req mbPersonId roleId dashboardAccessType = do
-  pid <- case mbPersonId of
-    Just personId -> return $ Id personId
-    Nothing -> generateGUID
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DP.Person -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
+buildFleetOwner req pid roleId dashboardAccessType = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   email <- forM req.email encrypt
@@ -374,11 +342,11 @@ createFleetOwnerDashboardOnly ::
   DRole.Role ->
   DMerchant.Merchant ->
   FleetRegisterReq ->
-  Maybe Text ->
+  Id DP.Person ->
   Bool ->
   m ()
-createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId isOperator = do
-  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
+createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId isOperator = do
+  fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) || isOperator)

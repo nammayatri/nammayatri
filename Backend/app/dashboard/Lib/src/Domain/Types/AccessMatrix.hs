@@ -384,6 +384,7 @@ data UserActionType
   | COLLECT_MANUAL_PAYMENTS
   | EXEMPT_DRIVER_FEE
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
+  | REGISTER_FLEET_OWNER
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
   | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType

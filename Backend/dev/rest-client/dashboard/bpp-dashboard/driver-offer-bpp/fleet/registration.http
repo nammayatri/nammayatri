@@ -1,0 +1,70 @@
+# access tokens with different roles
+@operator = favorit-operator-token0-000000000000
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name fleetLogin
+
+POST {{bpp-dashboard-host}}/fleet/login/otp
+content-type: application/json
+
+{ "city": "Kochi",
+  "merchantId": "NAMMA_YATRI_PARTNER",
+  "mobileCountryCode": "+91",
+  "mobileNumber": "2222345678",
+  "otp": null
+}
+
+###
+
+# @name fleetVerify
+
+POST {{bpp-dashboard-host}}/fleet/verify/otp
+content-type: application/json
+
+{ "city": "Kochi",
+  "merchantId": "NAMMA_YATRI_PARTNER",
+  "mobileCountryCode": "+91",
+  "mobileNumber": "2222345678",
+  "otp": "7891"
+}
+
+
+###
+
+# @name profile
+
+@newFleetToken = {{fleetVerify.response.body.authToken}}
+
+GET {{bpp-dashboard-host}}/user/profile
+content-type: application/json
+token: {{newFleetToken}}
+
+###
+
+# @name fleetRegister
+
+@personId = {{profile.response.body.id}}
+
+POST {{bpp-dashboard-host}}/fleet/register
+content-type: application/json
+token: {{newFleetToken}}
+# token: {{operator}}
+# token: {{fleet}}
+
+{ "businessLicenseImage": null,
+  "businessLicenseNumber": null,
+  "city": "Kochi",
+  "email": null,
+  "firstName": "Eric",
+  "fleetType": "NORMAL_FLEET",
+  "gstNumber": null,
+  "lastName": "Williams",
+  "merchantId": "NAMMA_YATRI_PARTNER",
+  "operatorReferralCode": null,
+  "personId": "{{personId}}"
+}

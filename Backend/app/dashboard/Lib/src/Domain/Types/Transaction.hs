@@ -14,6 +14,7 @@
 
 module Domain.Types.Transaction where
 
+import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement as ProviderAppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement as RiderAppManagement
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking as ProviderRideBooking
@@ -87,6 +88,7 @@ data RequestorAPIEntity = RequestorAPIEntity
 data Endpoint
   = DriverAPI Common.DriverEndpoint
   | ExotelAPI Common.ExotelEndpoint
+  | FleetAPI Fleet.FleetEndpoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
   | SafetyAPI Safety.SafetyEndpoint
   | RiderManagementAPI RiderManagement.ManagementUserActionType
@@ -106,6 +108,7 @@ instance Show Endpoint where
   show = \case
     DriverAPI e -> "DriverAPI " <> show e
     ExotelAPI e -> "ExotelAPI " <> show e
+    FleetAPI e -> "FleetAPI " <> show e
     SpecialZoneAPI e -> "SpecialZoneAPI " <> show e
     SafetyAPI e -> "SafetyAPI " <> show e
     RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
@@ -146,6 +149,10 @@ instance Read Endpoint where
           ]
             ++ [ (ExotelAPI v1, r2)
                  | r1 <- stripPrefix "ExotelAPI " r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (FleetAPI v1, r2)
+                 | r1 <- stripPrefix "FleetAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (SpecialZoneAPI v1, r2)

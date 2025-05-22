@@ -43,7 +43,6 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
-      Dashboard.ProviderPlatform.Operator.FleetManagement
       Dashboard.ProviderPlatform.Operator.Registration
       Dashboard.RiderPlatform.Management.FRFSTicket
       Dashboard.RiderPlatform.Management.Merchant

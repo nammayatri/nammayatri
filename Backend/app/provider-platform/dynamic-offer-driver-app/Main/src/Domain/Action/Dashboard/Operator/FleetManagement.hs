@@ -1,6 +1,5 @@
 module Domain.Action.Dashboard.Operator.FleetManagement
   ( getFleetManagementFleets,
-    postFleetManagementFleetRegister,
     postFleetManagementFleetCreate,
     postFleetManagementFleetUnlink,
     postFleetManagementFleetLinkSendOtp,
@@ -11,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Control.Monad.Extra (mapMaybeM)
 import Data.List.Extra (notNull)
+import qualified Dashboard.Common as Common
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation (fleetOwnerId))
@@ -117,36 +117,6 @@ mkFleetOwnerRegisterRes ::
   Common.FleetOwnerCreateRes
 mkFleetOwnerRegisterRes DRegistration.FleetOwnerRegisterRes {..} =
   Common.FleetOwnerCreateRes {personId = ID.Id personId}
-
-postFleetManagementFleetRegister ::
-  ID.ShortId Domain.Types.Merchant.Merchant ->
-  Kernel.Types.Beckn.Context.City ->
-  Text ->
-  Common.FleetOwnerRegisterReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postFleetManagementFleetRegister merchantShortId opCity requestorId req =
-  DRegistration.fleetOwnerRegister (Just requestorId) $ mkFleetOwnerRegisterReq merchantShortId opCity req
-
-mkFleetOwnerRegisterReq ::
-  ID.ShortId Domain.Types.Merchant.Merchant ->
-  Kernel.Types.Beckn.Context.City ->
-  Common.FleetOwnerRegisterReq ->
-  DRegistration.FleetOwnerRegisterReq
-mkFleetOwnerRegisterReq merchantShortId opCity (Common.FleetOwnerRegisterReq {..}) = do
-  DRegistration.FleetOwnerRegisterReq
-    { personId = ID.cast @Common.Person @DP.Person personId,
-      fleetType = castFleetType <$> fleetType,
-      operatorReferralCode = Nothing,
-      merchantId = merchantShortId.getShortId,
-      city = opCity,
-      ..
-    }
-
-castFleetType :: Common.FleetType -> FOI.FleetType
-castFleetType = \case
-  Common.RENTAL_FLEET -> FOI.RENTAL_FLEET
-  Common.NORMAL_FLEET -> FOI.NORMAL_FLEET
-  Common.BUSINESS_FLEET -> FOI.BUSINESS_FLEET
 
 checkOperator :: Text -> Environment.Flow DP.Person
 checkOperator requestorId = do

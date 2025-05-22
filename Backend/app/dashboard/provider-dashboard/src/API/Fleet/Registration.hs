@@ -18,21 +18,34 @@ module API.Fleet.Registration
   )
 where
 
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as DP
-import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
+import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Registration as Fleet
+import Control.Applicative ((<|>))
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as DR
+import "lib-dashboard" Domain.Action.Dashboard.Registration as DDR
+import qualified Domain.Types.AccessMatrix as DMatrix
+import qualified "dynamic-offer-driver-app" Domain.Types.FleetOwnerInformation as DFleet
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Person as DP
+import qualified Domain.Types.Role as DRole
+import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Fleet as Client
 import Servant hiding (throwError)
+import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
+import qualified Storage.Queries.Role as QRole
+import Tools.Auth.Api
 import "lib-dashboard" Tools.Auth.Merchant
+import "lib-dashboard" Tools.Error
 
 type API =
   "fleet"
@@ -44,64 +57,110 @@ type API =
 type FleetOwnerLoginAPI =
   "login"
     :> "otp"
-    :> ReqBody '[JSON] DP.FleetOwnerLoginReq
+    :> ReqBody '[JSON] DR.FleetOwnerLoginReq
     :> Post '[JSON] APISuccess
 
 type FleetOwnerRegisterAPI =
   "register"
-    :> ReqBody '[JSON] DP.FleetOwnerRegisterReq
+    :> ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'DMatrix.REGISTER_FLEET_OWNER
+    :> ReqBody '[JSON] DR.FleetOwnerRegisterReq
     :> Post '[JSON] APISuccess
 
 type FleetOwnerVerifyAPI =
   "verify"
     :> "otp"
-    :> ReqBody '[JSON] DP.FleetOwnerLoginReq
-    :> Post '[JSON] DP.FleetOwnerVerifyRes
+    :> ReqBody '[JSON] DR.FleetOwnerLoginReq
+    :> Post '[JSON] DR.FleetOwnerVerifyRes
 
 handler :: FlowServer API
 handler =
   fleetOwnerLogin
-    :<|> fleetOwnerVerfiy
+    :<|> fleetOwnerVerify
     :<|> fleetOwnerRegister
 
-fleetOwnerLogin :: DP.FleetOwnerLoginReq -> FlowHandler APISuccess
+fleetOwnerLogin :: DR.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerLogin req = withFlowHandlerAPI' $ do
+  runRequestValidation DR.validateInitiateLoginReq req
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
       checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
+
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  let req' = buildFleetOwnerRegisterReq req
+  merchantServerAccessCheck merchant
+  mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
+  fleetOwnerRole <- QRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
   res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerLogin) (Just enabled) req
   case mbPerson of
-    Just _ -> pure Success
+    Just person -> do
+      logError $ "PersonId mismatch for fleet owner registered: dashboard: " <> show person.id <> "; bpp: " <> show res.personId
+      pure Success
     Nothing -> do
-      let req' = buildFleetOwnerRegisterReq req
-      void $ registerFleetOwner False req' $ Just res.personId
+      let isOperator = False
+      void $ createFleetOwnerDashboardOnly fleetOwnerRole merchant req' (Id res.personId) isOperator
       pure Success
 
-fleetOwnerVerfiy :: DP.FleetOwnerLoginReq -> FlowHandler DP.FleetOwnerVerifyRes
-fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
+fleetOwnerVerify :: DR.FleetOwnerLoginReq -> FlowHandler DR.FleetOwnerVerifyRes
+fleetOwnerVerify req = withFlowHandlerAPI' $ do
   person <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
-  token <- DR.generateToken person.id merchant.id req.city
+  token <- DDR.generateToken person.id merchant.id req.city
   when (person.verified /= Just True && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
-  pure $ DP.FleetOwnerVerifyRes {authToken = token}
+  pure $ DR.FleetOwnerVerifyRes {authToken = token}
 
-fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler APISuccess
-fleetOwnerRegister req = withFlowHandlerAPI' $ do
+fleetOwnerRegister :: ApiTokenInfo -> DR.FleetOwnerRegisterReq -> FlowHandler APISuccess
+fleetOwnerRegister apiTokenInfo req = withFlowHandlerAPI' $ do
+  runRequestValidation DR.validateRegisterReq req
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  let checkedMerchantId = skipMerchantCityAccessCheck merchant.shortId
-  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) req -- transactions
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId req.city apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  fleetOwner <-
+    if DP.isFleetOwner apiTokenInfo.person
+      then do
+        when (isJust req.personId && req.personId /= Just (Id requestorId)) $ throwError AccessDenied
+        pure apiTokenInfo.person
+      else do
+        personId <- req.personId & fromMaybeM (InvalidRequest "personId required")
+        person <- QP.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+        unless (DP.isFleetOwner person) $
+          throwError (InvalidRequest "Person should be fleet owner")
+        pure person
 
-buildFleetOwnerRegisterReq :: DP.FleetOwnerLoginReq -> FleetRegisterReq
-buildFleetOwnerRegisterReq DP.FleetOwnerLoginReq {..} = do
+  whenJust req.email \reqEmail -> do
+    fleetOwnerEmail <- forM fleetOwner.email decrypt
+    unless (req.email == fleetOwnerEmail) $
+      unlessM (isNothing <$> QP.findByEmail reqEmail) $ throwError (InvalidRequest "Email already registered")
+
+  encEmail <- forM req.email encrypt
+  let fleetRole = getFleetRole req.fleetType
+  fleetOwnerRole <- QRole.findByDashboardAccessType fleetRole >>= fromMaybeM (RoleDoesNotExist $ show fleetRole)
+
+  transaction <- T.buildTransaction (DT.FleetAPI Fleet.FleetOwnerRegisterEndpoint) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  void $
+    T.withTransactionStoring transaction $ do
+      Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) (Just requestorId) req
+
+  let updFleetOwner = fleetOwner{firstName = req.firstName, lastName = req.lastName, email = encEmail <|> fleetOwner.email}
+  QP.updatePerson updFleetOwner.id updFleetOwner
+  unless (Just fleetRole == updFleetOwner.dashboardAccessType) $
+    QP.updatePersonRole updFleetOwner.id fleetOwnerRole
+  pure Success
+  where
+    getFleetRole mbFleetType = case mbFleetType of
+      Just DFleet.RENTAL_FLEET -> DRole.RENTAL_FLEET_OWNER
+      Just DFleet.NORMAL_FLEET -> DRole.FLEET_OWNER
+      Just DFleet.BUSINESS_FLEET -> DRole.FLEET_OWNER
+      Nothing -> DRole.FLEET_OWNER
+
+buildFleetOwnerRegisterReq :: DR.FleetOwnerLoginReq -> FleetRegisterReq
+buildFleetOwnerRegisterReq DR.FleetOwnerLoginReq {..} = do
   FleetRegisterReq
     { firstName = "FLEET",
       lastName = "OWNER", -- update in register
