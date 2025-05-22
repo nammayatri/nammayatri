@@ -105,30 +105,32 @@ view push config =
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , background Color.ivory
-  , cornerRadius 12.0
-  , padding $ Padding 20 12 20 12
-  , margin $ MarginTop 16
-  , gravity CENTER
-  , clickable $ not isOneWaySpecialZoneRide
-  , alpha $ if (not isOneWaySpecialZoneRide) then 1.0 else 0.5
-  , afterRender push $ const $ NoAction state
-  , onClick push $ const $ if state.tipViewProps.stage == DEFAULT && (not isOneWaySpecialZoneRide) then AddTip state.tipViewProps else NoAction state
-  , visibility $ boolToVisibility state.enableTips
-  ] $ (case state.tipViewProps.stage of
-          DEFAULT -> [defaultTipView push state]
-          TIP_AMOUNT_SELECTED -> [selectTipView push state]
-          RETRY_SEARCH_WITH_TIP -> [tipSelectedView push state]
-          _ -> [defaultTipView push state])
-  where
-    isOneWaySpecialZoneRide = selectedEstimate.searchResultType == ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
+  let rmEnableTips = RC.getEnableTips $ ST.getValueToLocalStore ST.CUSTOMER_LOCATION
+  in
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.ivory
+    , cornerRadius 12.0
+    , padding $ Padding 20 12 20 12
+    , margin $ MarginTop 16
+    , gravity CENTER
+    , clickable $ not isOneWaySpecialZoneRide
+    , alpha $ if (not isOneWaySpecialZoneRide) then 1.0 else 0.5
+    , afterRender push $ const $ NoAction state
+    , onClick push $ const $ if state.tipViewProps.stage == DEFAULT && (not isOneWaySpecialZoneRide) then AddTip state.tipViewProps else NoAction state
+    , visibility $ boolToVisibility $ state.enableTips && rmEnableTips
+    ] $ (case state.tipViewProps.stage of
+            DEFAULT -> [defaultTipView push state]
+            TIP_AMOUNT_SELECTED -> [selectTipView push state]
+            RETRY_SEARCH_WITH_TIP -> [tipSelectedView push state]
+            _ -> [defaultTipView push state])
+    where
+      isOneWaySpecialZoneRide = selectedEstimate.searchResultType == ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
 
-    selectedEstimate = case state.quoteList !! state.activeIndex of
-                        Just selectedItem -> selectedItem
-                        Nothing -> ChooseVehicle.config
+      selectedEstimate = case state.quoteList !! state.activeIndex of
+                          Just selectedItem -> selectedItem
+                          Nothing -> ChooseVehicle.config
 
 bottomLayoutView :: forall w. (Action -> Effect Unit) -> Config -> Visibility -> String -> PrestoDOM (Effect Unit) w
 bottomLayoutView push config visibility' id' =
