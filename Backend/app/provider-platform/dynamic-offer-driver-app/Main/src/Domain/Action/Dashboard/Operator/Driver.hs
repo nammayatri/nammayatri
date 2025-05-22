@@ -95,7 +95,7 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-      defaultFrom = UTCTime (utctDay now) 0
+      defaultFrom = UTCTime (fromGregorian 2020 1 1) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
       mbOperationHubId = cast @CommonDriver.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
