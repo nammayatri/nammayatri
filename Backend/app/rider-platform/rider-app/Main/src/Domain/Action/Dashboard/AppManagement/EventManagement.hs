@@ -338,7 +338,8 @@ upsertServiceDef ticketPlaceId serviceDef = do
         if any (\s -> s.id == serviceDef.id) ticketDef.services
           then map (\s -> if s.id == serviceDef.id then serviceDef else s) ticketDef.services
           else serviceDef : ticketDef.services
-  let updatedTicketDef = ticketDef {DEM.services = updatedServices, DEM.isDraft = True}
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
+  let updatedTicketDef = ticketDef {DEM.services = updatedServices, DEM.isDraft = not isDraftEqual}
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
 
@@ -346,14 +347,16 @@ delServiceDef :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kern
 delServiceDef ticketPlaceId serviceId = do
   ticketDef <- getTicketDef ticketPlaceId
   let updatedServices = filter (\s -> s.id /= serviceId) ticketDef.services
-  let updatedTicketDef = ticketDef {DEM.services = updatedServices, DEM.isDraft = True}
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
+  let updatedTicketDef = ticketDef {DEM.services = updatedServices, DEM.isDraft = not isDraftEqual}
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
 
 updateBasicInfo :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.EventManagement.BasicInformation -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef
 updateBasicInfo ticketPlaceId basicInfo = do
   ticketDef <- getTicketDef ticketPlaceId
-  let updatedTicketDef = ticketDef {DEM.basicInformation = basicInfo, DEM.isDraft = True}
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
+  let updatedTicketDef = ticketDef {DEM.basicInformation = basicInfo, DEM.isDraft = not isDraftEqual}
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
 
@@ -378,11 +381,12 @@ upsertServiceCategoryDef ticketPlaceId serviceId categoryDef = do
                 else s
           )
           ticketDef.services
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
   let updatedTicketDef =
         ticketDef
           { DEM.serviceCategories = updatedCategories,
             DEM.services = updatedServices,
-            DEM.isDraft = True
+            DEM.isDraft = not isDraftEqual
           }
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
@@ -400,11 +404,12 @@ delServiceCategoryDef ticketPlaceId serviceId categoryId = do
                 else s
           )
           ticketDef.services
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
   let updatedTicketDef =
         ticketDef
           { DEM.serviceCategories = updatedCategories,
             DEM.services = updatedServices,
-            DEM.isDraft = True
+            DEM.isDraft = not isDraftEqual
           }
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
@@ -431,11 +436,12 @@ upsertServicePeopleCategoryDef ticketPlaceId categoryId peopleDef = do
                 else sc
           )
           ticketDef.serviceCategories
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
   let updatedTicketDef =
         ticketDef
           { DEM.servicePeopleCategories = updatedPeopleCategories,
             DEM.serviceCategories = updatedServiceCategories,
-            DEM.isDraft = True
+            DEM.isDraft = not isDraftEqual
           }
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
@@ -453,14 +459,23 @@ delServicePeopleCategoryDef ticketPlaceId categoryId peopleId = do
                 else sc
           )
           ticketDef.serviceCategories
+  isDraftEqual <- checkTicketDraftEquality ticketPlaceId
   let updatedTicketDef =
         ticketDef
           { DEM.servicePeopleCategories = updatedPeopleCategories,
             DEM.serviceCategories = updatedServiceCategories,
-            DEM.isDraft = True
+            DEM.isDraft = not isDraftEqual
           }
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
   return updatedTicketDef
+
+checkTicketDraftEquality :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow Bool
+checkTicketDraftEquality ticketPlaceId = do
+  ticketDef <- getTicketDef ticketPlaceId
+  oldTicketDef <- getLiveTicketDef ticketPlaceId
+  if ticketDef == oldTicketDef
+    then return True
+    else return False
 
 checkAccess :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow ()
 checkAccess ticketPlaceId requestorId _requestorRole = do
