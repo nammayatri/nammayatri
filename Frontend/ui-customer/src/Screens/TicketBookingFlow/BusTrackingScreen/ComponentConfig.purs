@@ -25,8 +25,10 @@ import Mobility.Prelude (boolToVisibility)
 import Prelude (map, not, ($), (<>), (==), (&&), (/=))
 import PrestoDOM 
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Components.PopUpModal as PopUpModal
 import Screens.Types as ST
 import Styles.Colors as Color
+import Debug (spy)
 
 primaryButtonConfig :: ST.BusTrackingScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -45,3 +47,35 @@ primaryButtonConfig state =
         }
   in
     primaryButtonConfig'
+
+noBusPopUpModelConfig :: PopUpModal.Config
+noBusPopUpModelConfig =
+  let
+    config = PopUpModal.config
+
+    popUpModalConfig' =
+      config
+        { primaryText { text = "No incoming bus found!" }
+        , secondaryText { text = "Do you still want to book a ticket?" }
+        , optionButtonOrientation = "VERTICAL"
+        , backgroundClickable = false
+        , option1
+            { text = "Yes, Continue"
+            , enableRipple = true
+            , background = Color.black900
+            , color = Color.yellow900
+            , margin = (Margin 16 0 16 0)
+            , width = MATCH_PARENT
+            }
+        , option2
+            { text = "Cancel"
+            , enableRipple = true
+            , background = Color.white900
+            , color = Color.black600
+            , margin = (Margin 16 0 16 0)
+            , width = MATCH_PARENT
+            , strokeColor = Color.white900
+            }
+        }
+  in
+    popUpModalConfig'
