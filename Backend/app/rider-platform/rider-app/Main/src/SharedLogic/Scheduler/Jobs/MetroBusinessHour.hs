@@ -32,8 +32,7 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       maxRetries = 3
       retryInterval = 30 * 60 -- 30 minutes
   now <- getCurrentTime
-  let (year, month, day) = Time.toGregorian (Time.utctDay now)
-      tomorrow = Time.addDays 1 (Time.utctDay now)
+  let tomorrow = Time.addDays 1 (Time.utctDay now)
 
   -- Get rider config first to access timeDiffFromUtc
   mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId
