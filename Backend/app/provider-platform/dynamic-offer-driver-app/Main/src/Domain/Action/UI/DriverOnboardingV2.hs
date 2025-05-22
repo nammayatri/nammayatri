@@ -164,7 +164,7 @@ getDriverVehiclePhotos (_, merchantId, _) rcNo = do
   backInterior <- getVehicleImages rc Domain.VehicleBackInterior
   return API.Types.UI.DriverOnboardingV2.VehiclePhotosResp {..}
   where
-    getVehicleImages rc imageType = map (.s3Path) <$> runInReplica (ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType)
+    getVehicleImages rc imageType = map (.s3Path) <$> runInReplica (ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType Nothing)
 
 getDriverVehiclePhotosB64 ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -196,9 +196,8 @@ getDriverVehiclePhotosB64 (_, merchantId, _) back_ backInterior_ front_ frontInt
     getVehicleImagesB64 rc imageType shouldFetch = do
       if fromMaybe False shouldFetch
         then do
-          images <- runInReplica $ ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType
-          let imagesToProcess = if fromMaybe True onlyLatest then take 1 images else images
-          mapM (\img -> S3.get $ T.unpack img.s3Path) imagesToProcess
+          images <- runInReplica $ ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType $ if onlyLatest == Just True then Just 1 else Nothing
+          mapM (\img -> S3.get $ T.unpack img.s3Path) images
         else pure []
 
 getDriverRateCard ::
