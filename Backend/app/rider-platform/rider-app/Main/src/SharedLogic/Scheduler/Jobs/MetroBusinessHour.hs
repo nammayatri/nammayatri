@@ -32,9 +32,17 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       maxRetries = 3
       retryInterval = 30 * 60 -- 30 minutes
   now <- getCurrentTime
-  let (year, month, day) = Time.toGregorian (Time.utctDay now)
-      tomorrow = Time.fromGregorian year month (day + 1)
-      tomorrowAt5AM = Time.UTCTime tomorrow (5 * 3600) -- 5:00 AM
+  let tomorrow = Time.addDays 1 (Time.utctDay now)
+
+  -- Get rider config first to access timeDiffFromUtc
+  mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig -- Default to IST (UTC+5:30)
+      tzMinutes = getSeconds timeDiffFromUtc `div` 60
+      tz = Time.minutesToTimeZone tzMinutes
+      -- Calculate 00:30 local time
+      localTime0030 = Time.LocalTime tomorrow (Time.TimeOfDay 0 30 0)
+      tomorrowAt0030Local = Time.localTimeToUTC tz localTime0030
+
   integBPPConfig <-
     CQIntBPP.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCityId (BecknSpec.METRO) DIBC.MULTIMODAL
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| BecknSpec.METRO ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
@@ -45,16 +53,25 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       businessHourResult <- CallAPI.getBusinessHour integBPPConfig
       logInfo $ "Fetched business hours from CMRL API: " <> show businessHourResult
 
-      mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId
       case mbRiderConfig of
         Nothing -> do
           logWarning $ "RiderConfig not found for merchantOpCityId: " <> merchantOpCityId.getId
-          handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval tomorrowAt5AM
+          handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval timeDiffFromUtc tomorrowAt0030Local
         Just riderConfig -> do
           let startRestrictionTime = businessHourResult.qrTicketRestrictionStartTime
               endRestrictionTime = businessHourResult.qrTicketRestrictionEndTime
 
-          let parseTimeOfDay = Time.parseTimeM True Time.defaultTimeLocale "%H:%M:%S" . T.unpack
+          -- Updated time parsing to handle HH:MM format
+          let parseTimeOfDay timeStr = do
+                let parts = T.split (== ':') timeStr
+                case parts of
+                  [hours, minutes] -> do
+                    h <- readMaybe (T.unpack hours)
+                    m <- readMaybe (T.unpack minutes)
+                    if h >= 0 && h < 24 && m >= 0 && m < 60
+                      then Just $ Time.TimeOfDay h m 0
+                      else Nothing
+                  _ -> Nothing
               mbStartTime = parseTimeOfDay startRestrictionTime
               mbEndTime = parseTimeOfDay endRestrictionTime
 
@@ -70,13 +87,13 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               -- Reset retry counter on success
               resetRetryCounter retryKeyPrefix merchantOpCityId.getId
 
-              return $ ReSchedule tomorrowAt5AM
+              return $ ReSchedule tomorrowAt0030Local
             _ -> do
               logError $ "Failed to parse restriction times: start=" <> startRestrictionTime <> ", end=" <> endRestrictionTime
-              handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval tomorrowAt5AM
+              handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval timeDiffFromUtc tomorrowAt0030Local
     else do
       logWarning $ "No CMRL integration found for merchant operating city: " <> merchantOpCityId.getId
-      handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval tomorrowAt5AM
+      handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval timeDiffFromUtc tomorrowAt0030Local
   where
     isCMRLConfig config = case config.providerConfig of
       DIBC.CMRL _ -> True
@@ -88,9 +105,10 @@ handleJobRetry ::
   Text ->
   Int ->
   NominalDiffTime ->
+  Seconds ->
   UTCTime ->
   m ExecutionResult
-handleJobRetry keyPrefix merchantOpCityId maxRetries retryInterval nextScheduledTime = do
+handleJobRetry keyPrefix merchantOpCityId maxRetries retryInterval timeDiffFromUtc nextScheduledTime = do
   let retryKey = keyPrefix <> ":" <> merchantOpCityId
   now <- getCurrentTime
 
@@ -101,12 +119,16 @@ handleJobRetry keyPrefix merchantOpCityId maxRetries retryInterval nextScheduled
       Nothing -> do
         -- Key doesn't exist, initialize it
         void $ Hedis.set retryKey (0 :: Int)
-        -- Set expiry to end of day
-        let (year, month, day) = Time.toGregorian (Time.utctDay now)
-            nextDay = Time.fromGregorian year month (day + 1)
-            midnight = Time.UTCTime nextDay 0
-            secsUntilMidnight = round $ diffUTCTime midnight now
-        Hedis.expire retryKey secsUntilMidnight
+        -- Set expiry to end of day in local timezone
+        let tomorrow = Time.addDays 1 (Time.utctDay now)
+            tzMinutes = getSeconds timeDiffFromUtc `div` 60
+            tz = Time.minutesToTimeZone tzMinutes
+            localTimeMidnight = Time.LocalTime tomorrow (Time.TimeOfDay 0 0 0)
+            midnightLocal = Time.localTimeToUTC tz localTimeMidnight
+            secsUntilMidnight = round $ diffUTCTime midnightLocal now
+            -- Use a minimum expiry time of 1 hour if calculated TTL is non-positive
+            expirySeconds = max secsUntilMidnight (60 * 60)
+        Hedis.expire retryKey expirySeconds
         return 0
 
   -- Check if we can retry

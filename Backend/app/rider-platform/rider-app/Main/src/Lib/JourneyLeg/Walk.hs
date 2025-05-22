@@ -29,7 +29,8 @@ instance JT.JourneyLeg WalkLegRequest m where
               skipBooking = False,
               convenienceCost = 0,
               pricingId = Nothing,
-              isDeleted = Just False
+              isDeleted = Just False,
+              onSearchFailed = Nothing
             }
     let walkLeg =
           DWalkLeg.WalkLegMultimodal

@@ -142,7 +142,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
       }
   where
     getVehicleImages merchantId imageType = case mbRcId of
-      Just rcId -> map (.id.getId) <$> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType)
+      Just rcId -> map (.id.getId) <$> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing)
       Nothing -> pure []
 
     getDriverImages merchantId imageType = map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchantId (cast driverId) imageType)

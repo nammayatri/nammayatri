@@ -140,8 +140,8 @@ findByPersonIdAndImageTypes personId imageTypes = do
 
 findImagesByRCAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Id DM.Merchant -> Maybe Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [DImage.Image])
-findImagesByRCAndType merchantId rcId imageType = do
+  (Id DM.Merchant -> Maybe Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> Maybe Int -> m [DImage.Image])
+findImagesByRCAndType merchantId rcId imageType mbLimit = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
@@ -150,7 +150,7 @@ findImagesByRCAndType merchantId rcId imageType = do
         ]
     ]
     (Se.Desc BeamI.createdAt)
-    Nothing
+    mbLimit
     Nothing
 
 findRecentLatestByPersonIdAndImagesType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [DImage.Image]

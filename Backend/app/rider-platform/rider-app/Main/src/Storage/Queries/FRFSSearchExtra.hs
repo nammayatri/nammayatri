@@ -70,3 +70,9 @@ updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV
     [Se.Set Beam.isDeleted isDeleted]
     [Se.Is Beam.id (Se.Eq reqId)]
+
+updateOnSearchFailed :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
+updateOnSearchFailed (Id reqId) onSearchFailed = do
+  updateOneWithKV
+    [Se.Set Beam.onSearchFailed onSearchFailed]
+    [Se.Is Beam.id (Se.Eq reqId)]

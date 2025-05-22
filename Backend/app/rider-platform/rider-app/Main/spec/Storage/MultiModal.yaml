@@ -200,6 +200,7 @@ WalkLegMultimodal:
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
+      onSearchFailed: Maybe Bool
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit)|E
@@ -219,6 +220,7 @@ WalkLegMultimodal:
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
+    onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

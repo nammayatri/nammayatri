@@ -158,8 +158,11 @@ onSearch onSearchReq validatedReq = do
       for_ updatedQuotes \quote -> QQuote.updateCachedQuoteByPrimaryKey quote
   let search = validatedReq.search
   mbRequiredQuote <- filterQuotes quotes search.journeyLegInfo
-  whenJust mbRequiredQuote $ \requiredQuote -> do
-    void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
+  case mbRequiredQuote of
+    Just requiredQuote -> void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
+    Nothing -> do
+      whenJust validatedReq.search.journeyLegInfo $ \_journeyLegInfo -> do
+        QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
   return ()
   where

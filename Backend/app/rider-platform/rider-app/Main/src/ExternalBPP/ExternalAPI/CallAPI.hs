@@ -1,6 +1,9 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (sortOn)
+import qualified Data.Text as T
+import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSTicketBooking
@@ -8,6 +11,9 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
+import Domain.Types.RouteStopMapping
+import Domain.Types.Station
+import Domain.Types.StationType
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Order as EBIXOrder
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Status as EBIXStatus
 import qualified ExternalBPP.ExternalAPI.Direct.Order as DIRECTOrder
@@ -34,6 +40,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.RouteStopMapping as QRouteStopMapping
+import Storage.Queries.Station as QStation
 import Tools.Error
 
 getProviderName :: IntegratedBPPConfig -> Text
@@ -63,6 +71,8 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       mbMobileNumber <- decrypt `mapM` person.mobileNumber
       mbImeiNumber <- decrypt `mapM` person.imeiNumber
       sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
+      intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig.id START END
+      let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == INTERMEDIATE) intermediateStations
       let request =
             CRISRouteFare.CRISFareRequest
               { mobileNo = mbMobileNumber,
@@ -71,41 +81,14 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                 sourceCode = startStopCode,
                 changeOver = " ",
                 destCode = endStopCode,
-                via = " "
+                via = viaStations
               }
       resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
-      let fallbackFares =
-            [ FRFSUtils.FRFSFare
-                { price =
-                    Price
-                      { amountInt = 5,
-                        amount = 5,
-                        currency = INR
-                      },
-                  childPrice =
-                    Just
-                      Price
-                        { amountInt = 5,
-                          amount = 5,
-                          currency = INR
-                        },
-                  discounts = [],
-                  fareDetails = Nothing,
-                  vehicleServiceTier =
-                    FRFSUtils.FRFSVehicleServiceTier
-                      { serviceTierType = Spec.SECOND_CLASS,
-                        serviceTierProviderCode = "II",
-                        serviceTierShortName = "Second Class",
-                        serviceTierDescription = "Second Class",
-                        serviceTierLongName = "Second Class"
-                      }
-                }
-            ]
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
-          return fallbackFares
-        Right fares -> if null fares then return fallbackFares else return fares
+          return []
+        Right fares -> return fares
     _ -> throwError $ InternalError "Unimplemented!"
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
@@ -164,3 +147,23 @@ getStationList integrationBPPConfig = do
 
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
+
+buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Id IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
+buildStations routeCode startStationCode endStationCode integratedBPPConfigId startStopType endStopType = do
+  fromStation <- QStation.findByStationCode startStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound startStationCode)
+  toStation <- QStation.findByStationCode endStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound endStationCode)
+  stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfigId
+  stations <- mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
+  return stations
+
+mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
+mkStations fromStation toStation stops startStopType endStopType =
+  ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
+    <&> \(startStop, endStop) ->
+      do
+        let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) startStopType (Just startStop.sequenceNum) Nothing
+            endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) endStopType (Just endStop.sequenceNum) Nothing
+            intermediateStations =
+              (sortOn (.sequenceNum) $ filter (\stop -> stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum < endStop.sequenceNum) stops)
+                <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
+        [startStation] ++ intermediateStations ++ [endStation]

@@ -236,9 +236,9 @@ createOrder config booking = do
 
   mbImeiNumber <- decrypt `mapM` person.imeiNumber
   let deviceId = fromMaybe "ed409d8d764c04f7" mbImeiNumber
-  (trainTypeCode, via, distance, crisRouteId, appSession) <-
-    case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.via), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession)) of
-      (Just trainTypeCode, Just via, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, via, distance, crisRouteId, appSession)
+  (trainTypeCode, distance, crisRouteId, appSession) <-
+    case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession)) of
+      (Just trainTypeCode, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, distance, crisRouteId, appSession)
       _ -> throwError $ InternalError ("Invalid quote data: " <> show quote.fareDetails)
 
   frfsTicketBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InternalError "FRFS ticket booking payment not found")
@@ -253,7 +253,7 @@ createOrder config booking = do
             sessionId = appSession,
             source = fromStation.code,
             destination = toStation.code,
-            via,
+            via = " ",
             routeId = crisRouteId,
             classCode = classCode,
             trainType = trainTypeCode,

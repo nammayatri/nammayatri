@@ -69,6 +69,7 @@ FRFSSearch:
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
+      onSearchFailed: Maybe Bool
     journeyRouteDetails: {}
 
   toTType:
@@ -79,6 +80,7 @@ FRFSSearch:
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
+    onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E
 
   intermediateTransformers:
     fromTType:
