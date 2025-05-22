@@ -80,6 +80,9 @@ type API =
            "odometer"
            Kernel.Prelude.Bool
       :> QueryParam
+           "onlyLatest"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "right"
            Kernel.Prelude.Bool
       :> MandatoryQueryParam
@@ -235,10 +238,11 @@ getDriverVehiclePhotosB64 ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
   )
-getDriverVehiclePhotosB64 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotosB64 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
+getDriverVehiclePhotosB64 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotosB64 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
