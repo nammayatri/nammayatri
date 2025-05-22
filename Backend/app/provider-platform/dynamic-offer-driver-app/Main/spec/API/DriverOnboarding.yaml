@@ -140,6 +140,13 @@ types:
     frontInterior: [Text]
     backInterior: [Text]
     odometer: [Text]
+  DriverGstinReq:
+    imageId1 : Id Image
+    imageId2 : Maybe (Id Image)
+    gstNumber : Text
+    transactionId : Maybe Text
+    validationStatus : Maybe ValidationStatus
+    verifiedBy : Maybe VerifiedBy
 
 apis:
   - GET:
@@ -172,6 +179,7 @@ apis:
       mandatoryQuery:
         rcNo: Text
       query:
+        onlyLatest: Bool
         left: Bool
         right: Bool
         front: Bool

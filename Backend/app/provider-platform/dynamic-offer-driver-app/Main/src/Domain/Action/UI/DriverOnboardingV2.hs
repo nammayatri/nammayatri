@@ -178,9 +178,10 @@ getDriverVehiclePhotosB64 ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
-getDriverVehiclePhotosB64 (_, merchantId, _) back_ backInterior_ front_ frontInterior_ left_ odometer_ right_ rcNo = do
+getDriverVehiclePhotosB64 (_, merchantId, _) back_ backInterior_ front_ frontInterior_ left_ odometer_ onlyLatest right_ rcNo = do
   encryptedRC <- encrypt rcNo
   rc <- VRCE.findByRC encryptedRC >>= fromMaybeM (RCNotFound rcNo)
   odometer <- getVehicleImagesB64 rc Domain.Odometer odometer_
@@ -196,7 +197,8 @@ getDriverVehiclePhotosB64 (_, merchantId, _) back_ backInterior_ front_ frontInt
       if fromMaybe False shouldFetch
         then do
           images <- runInReplica $ ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType
-          mapM (\img -> S3.get $ T.unpack img.s3Path) images
+          let imagesToProcess = if fromMaybe True onlyLatest then take 1 images else images
+          mapM (\img -> S3.get $ T.unpack img.s3Path) imagesToProcess
         else pure []
 
 getDriverRateCard ::

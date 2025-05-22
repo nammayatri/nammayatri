@@ -142,13 +142,16 @@ findImagesByRCAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Id DM.Merchant -> Maybe Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [DImage.Image])
 findImagesByRCAndType merchantId rcId imageType = do
-  findAllWithKV
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is BeamI.rcId $ Se.Eq rcId,
           Se.Is BeamI.imageType $ Se.Eq imageType
         ]
     ]
+    (Se.Desc BeamI.createdAt)
+    Nothing
+    Nothing
 
 findRecentLatestByPersonIdAndImagesType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [DImage.Image]
 findRecentLatestByPersonIdAndImagesType driverId imgType = do
