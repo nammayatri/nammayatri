@@ -1790,4 +1790,10 @@ getMl = Keymap {
     , take_a_ride_now: "ഇപ്പോഴെന്തെങ്കിലും യാത്ര ചെയ്യൂ"
     , take_a_ride__claim_50: \a ->  "ഒരു യാത്ര എടുക്കൂ & ₹" <> a <> " വാങ്ങൂ"
 , select_route : "റൂട്ട് തിരഞ്ഞെടുക്കുക"
+, ac_bus : "എസി ബസ്"
+, early_departure : "മുന്നത്തെ പുറപ്പെടൽ"
+, ticket_price : "ടിക്കറ്റ് നിരക്ക്"
+, no_incoming_bus : "ഇനിയും ബസ് ഇല്ല"
+, cheapest : "ഏറ്റവും കുറഞ്ഞത്"
+, fastest : "ഏറ്റവും വേഗത്തിൽ"
 }

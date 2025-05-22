@@ -1788,5 +1788,11 @@ getOd = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"ଆପଣଙ୍କ ପ୍ରଥମ ଯାତ୍ରା ପାଇଁ ₹" <> a <> " ପରାମର୍ଶ ଲାଭ ପାଆନ୍ତୁ!"
     , take_a_ride_now: "ଏବେ ଏକ ଯାତ୍ରା କରନ୍ତୁ"
     , take_a_ride__claim_50: \a ->  "ଏକ ଯାତ୍ରା କରନ୍ତୁ ଏବଂ ₹" <> a <> " ପାଆନ୍ତୁ"
-    , select_route : "Select Route"
+    , select_route : "ରୁଟ୍ ବାଛନ୍ତୁ"
+    , ac_bus : "ଏସି ବସ୍"
+    , early_departure : "ପূର୍ବରୁ ଯାତ୍ରା ଆରମ୍ଭ"
+    , ticket_price : "ଟିକେଟ୍ ଦାମ"
+    , no_incoming_bus : "କୌଣସି ବସ୍ ଆସୁନାହିଁ"
+    , cheapest : "ସବୁଠାରୁ ସସ୍ତା"
+    , fastest : "ସବୁଠାରୁ ଶୀଘ୍ର"
 }

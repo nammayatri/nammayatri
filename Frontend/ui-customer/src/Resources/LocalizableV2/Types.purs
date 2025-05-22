@@ -1828,6 +1828,12 @@ newtype Keymap = Keymap {
 --, different_ambulance :: String
 , no_remaining_tickets :: String
 , select_route :: String
+, ac_bus :: String
+, early_departure :: String
+, ticket_price :: String
+, no_incoming_bus :: String
+, cheapest :: String
+, fastest :: String
 }
 
 
@@ -7190,3 +7196,21 @@ take_a_ride_now = a
 
 take_a_ride__claim_50 :: Proxy "take_a_ride__claim_50"
 take_a_ride__claim_50 = a
+
+ac_bus :: Proxy "ac_bus"
+ac_bus = a
+
+early_departure :: Proxy "early_departure"
+early_departure = a
+
+ticket_price :: Proxy "ticket_price"
+ticket_price = a
+
+no_incoming_bus :: Proxy "no_incoming_bus"
+no_incoming_bus = a
+
+cheapest :: Proxy "cheapest"
+cheapest = a
+
+fastest :: Proxy "fastest"
+fastest = a
