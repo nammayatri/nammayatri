@@ -100,7 +100,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
     addAllLegs journeyId journeyLegs
     journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JM.getAllLegsInfo journeyId
+    legs <- JM.getAllLegsInfo journeyId False
     generateJourneyInfoResponse journey legs
   where
     lockKey = "infoLock-" <> journeyId.getId
@@ -133,7 +133,7 @@ getMultimodalBookingInfo ::
   )
 getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
+  legs <- JM.getAllLegsInfo journeyId False
   JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
   generateJourneyInfoResponse journey legs
 
@@ -296,7 +296,7 @@ postMultimodalOrderSwitchTaxi ::
   )
 postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
+  legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   unless (journeyLegInfo.travelMode == DTrip.Taxi) $
     throwError (JourneyLegCannotBeCancelled (show journeyLegInfo.order))
@@ -313,7 +313,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
       cancelPrevSearch legSearchId estimate.id
       JLI.confirm True Nothing Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
-  updatedLegs <- JM.getAllLegsInfo journeyId
+  updatedLegs <- JM.getAllLegsInfo journeyId False
   generateJourneyInfoResponse journey updatedLegs
   where
     cancelPrevSearch legSearchId estimateId = do
@@ -335,12 +335,12 @@ postMultimodalOrderSwitchFRFSTier ::
   )
 postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
+  legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
   alternateShortNames <- getAlternateShortNames
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
-  updatedLegs <- JM.getAllLegsInfo journeyId
+  updatedLegs <- JM.getAllLegsInfo journeyId False
   generateJourneyInfoResponse journey updatedLegs
   where
     getAlternateShortNames :: Flow (Maybe [Text])

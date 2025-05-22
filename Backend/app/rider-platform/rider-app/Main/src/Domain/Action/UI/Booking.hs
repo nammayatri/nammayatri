@@ -273,14 +273,19 @@ buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
       return $ Ride bookingEntity : res
     buildBookingListV2 id (Right journey : ls) = do
       res <- buildBookingListV2 id ls
-      journeyEntity <- buildJourneyApiEntity journey
-      return $ MultiModalRide journeyEntity : res
+      mbJourneyEntity <- buildJourneyApiEntity journey
+      case mbJourneyEntity of
+        Just journeyEntity -> return $ MultiModalRide journeyEntity : res
+        Nothing -> return res
 
-    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m APITypes.JourneyInfoResp
+    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
-      legsInfo <- getAllLegsInfo journey.id
-      journeyInfoResponse <- generateJourneyInfoResponse journey legsInfo
-      return journeyInfoResponse
+      legsInfo <- getAllLegsInfo journey.id True
+      if null legsInfo
+        then do
+          logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from booking list"
+          return Nothing
+        else Just <$> generateJourneyInfoResponse journey legsInfo
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
