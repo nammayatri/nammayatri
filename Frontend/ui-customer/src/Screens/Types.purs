@@ -3314,7 +3314,9 @@ type BusTrackingScreenData = {
   routeShortName :: String,
   routePts :: Locations,
   previousLatLonsOfVehicle :: DM.Map String ({position :: API.LatLong, index :: Int}),
-  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI
+  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI,
+  logField :: Object Foreign,
+  isNoBusAvailable :: Boolean
 }
 
 type VehicleData = 
@@ -3351,7 +3353,9 @@ type BusTrackingScreenProps = {
   currentLon :: Number,
   minimumEtaDistance :: Maybe Int,
   isMinimumEtaDistanceAvailable :: Maybe Boolean,
-  fromScreen :: String
+  fromScreen :: String,
+  showBikeTaxiPopUp :: Boolean,
+  isBikeTaxiCrossClicked :: Boolean
 }
 
 data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen

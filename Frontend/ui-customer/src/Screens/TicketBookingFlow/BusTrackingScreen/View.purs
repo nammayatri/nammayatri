@@ -87,6 +87,7 @@ import Accessor (_code)
 import Effect.Uncurried (runEffectFn3)
 import Animation (fadeInWithDelay)
 import Data.Foldable (minimum, maximum)
+import Components.PopUpModal as PopUpModal
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState = 
@@ -166,7 +167,8 @@ view push state =
                 , rippleColor Color.rippleShade
                 ]
             ]
-        ]
+          , popUpOnNoBusFound state push 
+        ] 
   where
     bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height -100 ]
 
@@ -257,57 +259,67 @@ knobView =
 
 bottomSheetView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
 bottomSheetView push state =  
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , alignParentBottom "true,-1"
-    , orientation VERTICAL
-    ]
-    [ coordinatorLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , cornerRadii $ Corners 24.0 true true false false
-        ]
-        [ bottomSheetLayout
-            ( [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , peakHeight 200
-              , enableShift false
-              , cornerRadii $ Corners 24.0 true true false false
-              ]
-                <> if state.props.expandStopsView then  [ sheetState EXPANDED ] else []
-            ) 
-            [ linearLayout
-                [ height WRAP_CONTENT
+  let etaTimeAndTimeStampTuple = calculateMinEtaTimeWithDelay state.data.vehicleData
+      mbEtaTime = DT.fst etaTimeAndTimeStampTuple
+      mbTimestamp = DT.snd etaTimeAndTimeStampTuple
+  in 
+    linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , alignParentBottom "true,-1"
+      , orientation VERTICAL
+      ]
+      [ coordinatorLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , cornerRadii $ Corners 24.0 true true false false
+          ]
+          [ bottomSheetLayout
+              ( [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , orientation VERTICAL
+                , peakHeight 250
+                , enableShift false
+                , cornerRadii $ Corners 24.0 true true false false
                 ]
-                [ passengerBoardConfirmationPopup state push
-                , linearLayout
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , gravity CENTER
-                    , background if state.props.showRouteDetailsTab then Color.white900 else Color.grey700
-                    , cornerRadii $ Corners 24.0 true true false false
-                    ]
-                    [ bottomSheetContentView push state
-                    ]
-                ]
-            ]
-        ]
-        ,  linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , gravity CENTER
-            , visibility $ boolToVisibility state.props.showRouteDetailsTab
-            , background Color.white900
-            ]
-            [ separatorView Color.grey900 (MarginTop 10)
-            , PrimaryButton.view (push <<< BookTicketButtonAction) (primaryButtonConfig state)
-            ]
-    ]
+                  <> if state.props.expandStopsView then  [ sheetState EXPANDED ] else []
+              ) 
+              [ linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  ]
+                  [ passengerBoardConfirmationPopup state push
+                  , bikeTaxiNudgePopup state push mbEtaTime mbTimestamp
+                  , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      , gravity CENTER
+                      , background if state.props.showRouteDetailsTab then Color.white900 else Color.grey700
+                      , cornerRadii $ Corners 24.0 true true false false
+                      ]
+                      [ bottomSheetContentView push state
+                      ]
+                  ]
+              ]
+          ]
+          , linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , gravity CENTER
+              , visibility $ boolToVisibility state.props.showRouteDetailsTab
+              , background Color.white900
+              ]
+              [ separatorView Color.grey900 (MarginTop 10)
+              , PrimaryButton.view
+            ( if (((Mb.isNothing mbEtaTime || not (Mb.isJust mbTimestamp))) && not state.props.individualBusTracking)
+                then push <<< BookTicketOnNoBus
+                else push <<< BookTicketButtonAction
+            )
+            (primaryButtonConfig state)
+              ]
+      ]
 
 bottomSheetContentView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
 bottomSheetContentView push state =
@@ -779,6 +791,48 @@ passengerBoardConfirmationPopup state push =
       ] <> FontStyle.body1 CTA.TypoGraphy
     ]
 
+bikeTaxiNudgePopup :: forall w. ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Mb.Maybe Int -> Mb.Maybe String -> PrestoDOM (Effect Unit) w
+bikeTaxiNudgePopup state push mbEtaTime mbTimestamp =
+    relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , margin $ Margin 8 16 8 0
+    , cornerRadius 14.0
+    , visibility $ boolToVisibility $ state.props.showBikeTaxiPopUp && ((Mb.isNothing mbEtaTime || not (Mb.isJust mbTimestamp)) || mbEtaTime > Mb.Just 1800) && not state.props.individualBusTracking
+     ]
+    [imageView
+      [ width MATCH_PARENT
+      , height $ V 140
+      , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_bike_taxi_nudge"
+      , onClick push $ const BikeTaxiNudgeClicked
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity RIGHT
+      , padding $ Padding 0 8 8 0 
+      ]
+      [imageView
+        [ width $ V 40
+        , height $ V 40
+        , padding $ Padding 10 10 10 10
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_cross_icon_grey"
+        , rippleColor Color.rippleShade
+        , onClick push $ const CloseBikeTaxiPopUp
+        ]
+      ]
+    ]
+
+
+popUpOnNoBusFound :: forall w. ST.BusTrackingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+popUpOnNoBusFound state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , accessibility DISABLE
+    , visibility $ boolToVisibility $ state.data.isNoBusAvailable
+    ]
+    [ PopUpModal.view (push <<< PopUpModalAction) (noBusPopUpModelConfig) ]
 
 showPreBookingTracking :: String -> Boolean
 showPreBookingTracking _ = 

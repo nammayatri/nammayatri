@@ -1789,4 +1789,10 @@ getTe = Keymap {
     , take_a_ride_now: "ఇప్పుడే ఒక ప్రయాణం చేయండి"
     , take_a_ride__claim_50: \a ->  "ఒక రైడ్ తీసుకుని ₹" <> a <> " పొందండి"
 , select_route : "రూట్ ఎంచుకోండి"
+, ac_bus : "ఏసీ బస్"
+, early_departure : "ముందస్తు బయలుదేరడం"
+, ticket_price : "టికెట్ ధర"
+, no_incoming_bus : "సమీపంలో బస్సులు లేవు"
+, cheapest : "చెప్పడం"
+, fastest : "త్వరితంగా"
 }

@@ -1842,6 +1842,12 @@ getProxy str = case str of
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
     AMBULANCE_ -> \a -> a @~ ambulance_
     SELECT_ROUTE -> \a -> a @~ select_route
+    AC_BUS -> \a -> a @~ ac_bus
+    EARLY_DEPARTURE -> \a -> a @~ early_departure
+    TICKET_PRICE -> \a -> a @~ ticket_price
+    NO_INCOMING_BUS -> \a -> a @~ no_incoming_bus
+    CHEAPEST -> \a -> a @~ cheapest
+    FASTEST -> \a -> a @~ fastest
     YOUR_EARNINGS_WILL_BE_CREDITED_TO_THIS_ACCOUNT -> \a -> a @~ your_earnings_will_be_credited_to_this_account 
     TRANSACTION_HISTORY -> \a -> a @~ transaction_history 
     TOTAL_EARNED -> \a -> a @~ total_earned 
