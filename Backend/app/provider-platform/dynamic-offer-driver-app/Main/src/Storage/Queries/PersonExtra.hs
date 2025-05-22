@@ -461,7 +461,14 @@ findAllPersonAndDriverInfoWithDriverIds driverIds = do
     Left _ -> pure []
 
 updateMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
-updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
+updateMediaId (Id driverId) faceImageId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateQrMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
+updateQrMediaId (Id driverId) qrImageId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamP.qrImageId (getId <$> qrImageId), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driverId]
 
 findAllMerchantIdByPhoneNo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> m [Person]
 findAllMerchantIdByPhoneNo countryCode mobileNumberHash =

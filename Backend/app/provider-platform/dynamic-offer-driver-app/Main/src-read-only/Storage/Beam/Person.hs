@@ -54,6 +54,7 @@ data PersonT f = PersonT
     mobileNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     onboardedFromDashboard :: B.C f Kernel.Prelude.Bool,
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    qrImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registrationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     registrationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     role :: B.C f Domain.Types.Person.Role,

@@ -148,6 +148,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
       Se.Set Beam.onboardedFromDashboard onboardedFromDashboard,
       Se.Set Beam.passwordHash passwordHash,
+      Se.Set Beam.qrImageId (Kernel.Types.Id.getId <$> qrImageId),
       Se.Set Beam.registrationLat registrationLat,
       Se.Set Beam.registrationLon registrationLon,
       Se.Set Beam.role role,
