@@ -82,7 +82,6 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     email :: Maybe Text,
     city :: City.City,
     fleetType :: Maybe FOI.FleetType,
-    gstNumber :: Maybe Text,
     businessLicenseNumber :: Maybe Text,
     businessLicenseImage :: Maybe Text,
     operatorReferralCode :: Maybe Text
@@ -277,8 +276,7 @@ updateFleetOwnerInfo fleetOwnerInfo FleetOwnerRegisterReq {..} = do
   let updFleetOwnerInfo =
         fleetOwnerInfo
           { FOI.fleetType = fromMaybe fleetOwnerInfo.fleetType fleetType,
-            FOI.gstNumber = fleetOwnerInfo.gstNumber,
-            FOI.gstImageId = fleetOwnerInfo.gstImageId,
+            FOI.businessLicenseNumber = businessLicenseNumber,
             FOI.businessLicenseImageId = businessLicenseImage
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo
