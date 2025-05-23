@@ -13,12 +13,9 @@
 -}
 
 module API.Dashboard.Fleet.Registration
-  ( FleetOwnerLoginAPI,
-    fleetOwnerLogin,
-    fleetOwnerVerify,
-    FleetOwnerRegisterAPI,
-    handler,
+  ( handler,
     API,
+    FleetEndpoint (..),
   )
 where
 
@@ -37,7 +34,7 @@ type API =
   "fleet"
     :> ( FleetOwnerLoginAPI
            :<|> FleetOwnerVerifyAPI
-           :<|> FleetOwnerRegisterHelperAPI
+           :<|> FleetOwnerRegisterAPI
        )
 
 type FleetOwnerVerifyAPI =
@@ -55,14 +52,12 @@ type FleetOwnerLoginAPI =
 
 type FleetOwnerRegisterAPI =
   "register"
+    :> QueryParam "requestorId" Text
     :> ReqBody '[JSON] DFleet.FleetOwnerRegisterReq
     :> Post '[JSON] APISuccess
 
-type FleetOwnerRegisterHelperAPI =
-  ( "register"
-      :> ReqBody '[JSON] DFleet.FleetOwnerRegisterReq
-      :> Post '[JSON] APISuccess
-  )
+data FleetEndpoint = FleetOwnerRegisterEndpoint
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler _ _ =
@@ -76,5 +71,5 @@ fleetOwnerLogin enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerLog
 fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
-fleetOwnerRegister :: DFleet.FleetOwnerRegisterReq -> FlowHandler APISuccess
-fleetOwnerRegister = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister Nothing
+fleetOwnerRegister :: Maybe Text -> DFleet.FleetOwnerRegisterReq -> FlowHandler APISuccess
+fleetOwnerRegister mbRequestorId = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister mbRequestorId

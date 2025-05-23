@@ -48,23 +48,6 @@ apis:
               type: FleetOwnerCreateReq
             response:
               type: FleetOwnerCreateRes
-  - POST:
-      endpoint: /fleet/register
-      auth: ApiAuthV2
-      request:
-        type: FleetOwnerRegisterReq
-      response:
-        type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /fleet/register
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            request:
-              type: FleetOwnerRegisterReq
-            response:
-              type: APISuccess
 
   - POST:
       endpoint: /fleet/link/sendOtp
@@ -132,26 +115,6 @@ types:
     - mobileNumber: Text
     - vehicleCount: Int
     - verified: Bool
-  FleetOwnerRegisterReq:
-    - firstName: Text
-    - lastName: Text
-    - personId: Id Person
-    - email: Maybe Text
-    - fleetType: Maybe FleetType
-    - panNumber: Maybe Text
-    - gstNumber: Maybe Text
-    - businessLicenseNumber: Maybe Text
-    - panImageId1: Maybe Text
-    - panImageId2: Maybe Text
-    - gstCertificateImage: Maybe Text
-    - businessLicenseImage: Maybe Text
-  FleetOwnerRegisterTReq: # hide secrets
-    - firstName: Text
-    - lastName: Text
-    - personId: Id Person
-    - fleetType: Maybe FleetType
-  FleetType:
-    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
   FleetOwnerCreateReq:
     - mobileNumber: Text
     - mobileCountryCode: Text
@@ -170,6 +133,3 @@ types:
     - fleetOwnerId: Id Person
     - otp: Text
     - derive: "'HideSecrets"
-
-extraOperations:
-  - EXTRA_API_TYPES_FILE

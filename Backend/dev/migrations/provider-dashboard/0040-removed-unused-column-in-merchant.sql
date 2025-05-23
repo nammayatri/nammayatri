@@ -10,3 +10,5 @@ update atlas_bpp_dashboard.merchant set enabled = true;  -- query only to fix lo
 -- ONLY FOR LOCAL
 UPDATE atlas_bpp_dashboard.person SET dashboard_access_type = 'DASHBOARD_OPERATOR'
     WHERE id = 'favorit-operator-0-0000-000000000000';
+UPDATE atlas_bpp_dashboard.person SET dashboard_access_type = 'FLEET_OWNER'
+    WHERE id = 'favorit-fleet-owner-0000000000000000';

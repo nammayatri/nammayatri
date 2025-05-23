@@ -22,10 +22,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("operator" :> (GetFleetManagementFleets :<|> PostFleetManagementFleetCreate :<|> PostFleetManagementFleetRegister :<|> PostFleetManagementFleetLinkSendOtp :<|> PostFleetManagementFleetLinkVerifyOtp :<|> PostFleetManagementFleetUnlink))
+type API = ("operator" :> (GetFleetManagementFleets :<|> PostFleetManagementFleetCreate :<|> PostFleetManagementFleetLinkSendOtp :<|> PostFleetManagementFleetLinkVerifyOtp :<|> PostFleetManagementFleetUnlink))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFleetManagementFleets merchantId city :<|> postFleetManagementFleetCreate merchantId city :<|> postFleetManagementFleetRegister merchantId city :<|> postFleetManagementFleetLinkSendOtp merchantId city :<|> postFleetManagementFleetLinkVerifyOtp merchantId city :<|> postFleetManagementFleetUnlink merchantId city
+handler merchantId city = getFleetManagementFleets merchantId city :<|> postFleetManagementFleetCreate merchantId city :<|> postFleetManagementFleetLinkSendOtp merchantId city :<|> postFleetManagementFleetLinkVerifyOtp merchantId city :<|> postFleetManagementFleetUnlink merchantId city
 
 type GetFleetManagementFleets =
   ( ApiAuth
@@ -41,14 +41,6 @@ type PostFleetManagementFleetCreate =
       'DSL
       ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_CREATE)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetCreate
-  )
-
-type PostFleetManagementFleetRegister =
-  ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_REGISTER)
-      :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetRegister
   )
 
 type PostFleetManagementFleetLinkSendOtp =
@@ -80,9 +72,6 @@ getFleetManagementFleets merchantShortId opCity apiTokenInfo isActive verified l
 
 postFleetManagementFleetCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerCreateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.FleetManagement.postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req
-
-postFleetManagementFleetRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerRegisterReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFleetManagementFleetRegister merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.FleetManagement.postFleetManagementFleetRegister merchantShortId opCity apiTokenInfo req
 
 postFleetManagementFleetLinkSendOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpReq -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpRes)
 postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.FleetManagement.postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req

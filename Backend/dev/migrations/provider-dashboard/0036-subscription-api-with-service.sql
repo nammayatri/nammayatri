@@ -1,5 +1,6 @@
+-- ONLY FOR LOCAL
 INSERT INTO atlas_bpp_dashboard.role (id, name, dashboard_access_type, description, created_at, updated_at) VALUES
-    (atlas_bpp_dashboard.uuid_generate_v4(), 'RENTAL_FLEET', 'RENTAL_FLEET_OWNER', 'fleetOwner', now(), now());
+    ('00000000-0000-0000-rental-fleet-role', 'RENTAL_FLEET', 'RENTAL_FLEET_OWNER', 'fleetOwner', now(), now());
 
 insert into atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, created_at, updated_at, user_action_type) (select atlas_bpp_dashboard.uuid_generate_v4() as id,id as role_id,'DRIVERS' as api_entity, 'USER_FULL_ACCESS' as user_access_type, now() as created_at, now() as updated_at, 'VERIFY' as user_action_type from atlas_bpp_dashboard.role) on conflict do nothing;
 insert into atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, created_at, updated_at, user_action_type) (select atlas_bpp_dashboard.uuid_generate_v4() as id,id as role_id,'DRIVERS' as api_entity, 'USER_FULL_ACCESS' as user_access_type, now() as created_at, now() as updated_at, 'AUTH' as user_action_type from atlas_bpp_dashboard.role) on conflict do nothing;
