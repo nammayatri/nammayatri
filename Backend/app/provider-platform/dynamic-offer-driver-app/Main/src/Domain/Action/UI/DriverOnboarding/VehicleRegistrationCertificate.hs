@@ -22,9 +22,12 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     DriverGstinRes,
     RCStatusReq (..),
     RCValidationReq (..),
+    DriverAadhaarReq (..),
+    DriverAadhaarRes,
     verifyRC,
     verifyPan,
     verifyGstin,
+    verifyAadhaar,
     onVerifyRC,
     convertUTCTimetoDate,
     deactivateCurrentRC,
@@ -55,6 +58,7 @@ import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day)
 import Data.Time.Format
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverInformation as DI
@@ -92,6 +96,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
@@ -156,6 +161,17 @@ data DriverGstinReq = DriverGstinReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type DriverGstinRes = APISuccess
+
+data DriverAadhaarReq = DriverAadhaarReq
+  { aadhaarNumber :: Text,
+    aadhaarFrontImageId :: Text,
+    aadhaarBackImageId :: Maybe Text,
+    consent :: Bool,
+    driverId :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+type DriverAadhaarRes = APISuccess
 
 data LinkedRC = LinkedRC
   { rcDetails :: VehicleRegistrationCertificateAPIEntity,
@@ -543,6 +559,91 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto
           DGQuery.create $ gstCardDetails
       pure Success
+
+verifyAadhaar ::
+  Bool ->
+  Maybe DM.Merchant ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DriverAadhaarReq ->
+  Flow DriverAadhaarRes
+verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  blocked <- case person.role of
+    Person.FLEET_OWNER -> do
+      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+    _ -> do
+      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+  when blocked $ throwError AccountBlocked
+  whenJust mbMerchant $ \merchant -> do
+    unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
+  whenJust aadhaarInfo $ \aadhaarInfoData -> do
+    when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
+  image1 <- getImage req.aadhaarFrontImageId
+  image2 <- case req.aadhaarBackImageId of
+    Just backImageId -> do
+      image <- getImage backImageId
+      return $ Just image
+    Nothing -> return Nothing
+  let extractReq =
+        Verification.ExtractAadhaarImageReq
+          { image1 = image1,
+            image2 = image2,
+            driverId = person.id.getId,
+            consent = if req.consent then "yes" else "no"
+          }
+  resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
+  case resp.extractedAadhaar of
+    Just extractedAadhaarData -> do
+      let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
+      let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+      unless (extractedAadhaarNumber == Just req.aadhaarNumber) $
+        throwImageError (Id req.aadhaarFrontImageId) $
+          ImageDocumentNumberMismatch
+            (maybe "null" maskText extractedAadhaarNumber)
+            (maskText req.aadhaarNumber)
+      aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
+      QAadhaarCard.upsertAadhaarRecord aadhaarCard
+      pure extractedAadhaarData
+    Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
+  return Success
+  where
+    makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
+      currTime <- getCurrentTime
+      aadhaarHash <- getDbHash aadhaarReq.aadhaarNumber
+      return $
+        DAadhaarCard.AadhaarCard
+          { driverId = driverId,
+            createdAt = currTime,
+            updatedAt = currTime,
+            aadhaarNumberHash = Just aadhaarHash,
+            dateOfBirth = extractedAadhaar.date_of_birth,
+            driverGender = extractedAadhaar.gender,
+            aadhaarBackImageId = Id <$> aadhaarReq.aadhaarBackImageId,
+            aadhaarFrontImageId = Just (Id aadhaarReq.aadhaarFrontImageId),
+            address = extractedAadhaar.address,
+            verificationStatus = Documents.VALID,
+            consent = aadhaarReq.consent,
+            consentTimestamp = currTime,
+            driverImage = Nothing,
+            driverImagePath = Nothing,
+            maskedAadhaarNumber = Just $ maskText aadhaarReq.aadhaarNumber,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            nameOnCard = extractedAadhaar.name_on_card
+          }
+
+    getImage :: Text -> Flow Text
+    getImage imageId_ = do
+      imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_)
+      unless (imageMetadata.imageType == ODC.AadhaarCard) $
+        throwError (ImageInvalidType (show ODC.AadhaarCard) (show imageMetadata.imageType))
+      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+        S3.get $ T.unpack imageMetadata.s3Path
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do

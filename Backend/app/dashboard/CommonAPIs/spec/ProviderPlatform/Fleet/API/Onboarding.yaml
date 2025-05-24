@@ -87,7 +87,7 @@ types:
     imageId: Text
     identifierNumber: Text
   VerifyType:
-    enum: "VERIFY_PAN,VERIFY_GST"
+    enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR"
     derive: "HttpInstance"
   Role:
     enum: "NORMAL_FLEET, BUSINESS_FLEET"
