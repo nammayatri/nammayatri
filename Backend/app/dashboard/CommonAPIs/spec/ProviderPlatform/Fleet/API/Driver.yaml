@@ -1136,6 +1136,8 @@ types:
     - vehicleInsurance: Maybe VerificationStatus
     - vehiclePUC: Maybe VerificationStatus
     - driverLicense: Maybe VerificationStatus
+    - panCard: Maybe VerificationStatus
+    - aadhaarCard: Maybe VerificationStatus
   DriverMode:
     - enum: "ONLINE, OFFLINE, SILENT"
     - derive: "HttpInstance"
@@ -1166,6 +1168,7 @@ types:
     - fleetConfig: Maybe FleetConfig
     - operatorName: Maybe Text
     - operatorContact: Maybe Text
+    - referralCode: Maybe Text
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

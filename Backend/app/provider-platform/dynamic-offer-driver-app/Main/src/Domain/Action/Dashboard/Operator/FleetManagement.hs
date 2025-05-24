@@ -11,6 +11,7 @@ where
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Control.Monad.Extra (mapMaybeM)
 import Data.List.Extra (notNull)
+import Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation (fleetOwnerId))
@@ -31,6 +32,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder
   ( BuildFleetLinkUnlinkSuccessMessageReq (..),
@@ -39,12 +41,14 @@ import SharedLogic.MessageBuilder
     buildFleetUnlinkSuccessMessage,
     buildOperatorJoiningMessage,
   )
+import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorIdWithLimitOffset)
 import Storage.Queries.FleetOwnerInformationExtra
   ( findByPersonIdAndEnabledAndVerified,
   )
+import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import Tools.Error
@@ -59,7 +63,7 @@ getFleetManagementFleets ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Text ->
   Environment.Flow Common.FleetInfoRes
-getFleetManagementFleets _merchantShortId _opCity mbIsActive mbVerified mbLimit mbOffset requestorId = do
+getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbLimit mbOffset requestorId = do
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
   activeFleetOwnerLs <- findAllActiveByOperatorIdWithLimitOffset requestorId mbLimit mbOffset
@@ -71,13 +75,22 @@ getFleetManagementFleets _merchantShortId _opCity mbIsActive mbVerified mbLimit 
   pure Common.FleetInfoRes {..}
   where
     createFleetInfo FOI.FleetOwnerInformation {..} = do
-      totalVehicle <- VRCQuery.countAllActiveRCForFleet fleetOwnerPersonId.getId merchantId
+      now <- getCurrentTime
+      totalVehicle <- VRCQuery.countAllRCForFleet fleetOwnerPersonId.getId merchantId
       person <-
         QP.findById fleetOwnerPersonId
           >>= fromMaybeM (PersonDoesNotExist fleetOwnerPersonId.getId)
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
           >>= fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)
+      merchant <- findMerchantByShortId merchantShortId
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      driverImages <- IQuery.findAllByPersonId transporterConfig person.id
+      let driverImagesInfo = IQuery.DriverImagesInfo {driverId = person.id, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+      statusRes <-
+        castStatusRes
+          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True)
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,
@@ -86,7 +99,8 @@ getFleetManagementFleets _merchantShortId _opCity mbIsActive mbVerified mbLimit 
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             vehicleCount = totalVehicle,
-            verified = verified
+            verified = verified,
+            documents = statusRes
           }
 
 postFleetManagementFleetCreate ::
@@ -123,9 +137,10 @@ postFleetManagementFleetRegister ::
   Kernel.Types.Beckn.Context.City ->
   Text ->
   Common.FleetOwnerRegisterReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postFleetManagementFleetRegister merchantShortId opCity requestorId req =
-  DRegistration.fleetOwnerRegister (Just requestorId) $ mkFleetOwnerRegisterReq merchantShortId opCity req
+  Environment.Flow Common.FleetOwnerUpdateRes
+postFleetManagementFleetRegister merchantShortId opCity requestorId req = do
+  res <- DRegistration.fleetOwnerRegister (Just requestorId) $ mkFleetOwnerRegisterReq merchantShortId opCity req
+  pure $ Common.FleetOwnerUpdateRes {enabled = res.enabled}
 
 mkFleetOwnerRegisterReq ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
@@ -139,6 +154,7 @@ mkFleetOwnerRegisterReq merchantShortId opCity (Common.FleetOwnerRegisterReq {..
       operatorReferralCode = Nothing,
       merchantId = merchantShortId.getShortId,
       city = opCity,
+      adminApprovalRequired = Nothing, -- to be updated in fleetOwnerRegister
       ..
     }
 

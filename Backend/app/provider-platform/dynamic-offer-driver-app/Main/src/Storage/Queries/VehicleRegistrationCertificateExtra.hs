@@ -305,6 +305,23 @@ countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
                 pure (rc, driverRcAssociation)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
+countAllRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m Int
+countAllRCForFleet fleetOwnerId (Id merchantId') = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              ( \rc ->
+                  rc.merchantId B.==?. B.val_ (Just merchantId')
+                    B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+              )
+              do
+                B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())

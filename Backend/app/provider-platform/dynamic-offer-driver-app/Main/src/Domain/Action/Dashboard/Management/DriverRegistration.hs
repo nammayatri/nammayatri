@@ -100,6 +100,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   vehicleFitnessCertImgs <- getDriverImages merchant.id Domain.VehicleFitnessCertificate
   vehicleInsImgs <- getDriverImages merchant.id Domain.VehicleInsurance
   profilePics <- getDriverImages merchant.id Domain.ProfilePhoto
+  gstImgs <- getDriverImages merchant.id Domain.GSTCertificate
   panImgs <- getDriverImages merchant.id Domain.PanCard
   businessLicenseImgs <- getDriverImages merchant.id Domain.BusinessLicense
   aadhaarImgs <- getDriverImages merchant.id Domain.AadhaarCard
@@ -138,7 +139,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         businessLicense = businessLicenseImgs,
         aadhaar = aadhaarImgs,
         vehicleNOC = vehicleNOCImgs,
-        odometer = odometerImg
+        odometer = odometerImg,
+        gstCertificate = gstImgs
       }
   where
     getVehicleImages merchantId imageType = case mbRcId of

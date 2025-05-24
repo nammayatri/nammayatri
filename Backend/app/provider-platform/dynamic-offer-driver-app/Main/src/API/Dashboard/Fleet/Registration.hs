@@ -61,7 +61,7 @@ type FleetOwnerRegisterAPI =
 type FleetOwnerRegisterHelperAPI =
   ( "register"
       :> ReqBody '[JSON] DFleet.FleetOwnerRegisterReq
-      :> Post '[JSON] APISuccess
+      :> Post '[JSON] DFleet.FleetOwnerUpdateRes
   )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -76,5 +76,5 @@ fleetOwnerLogin enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerLog
 fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
-fleetOwnerRegister :: DFleet.FleetOwnerRegisterReq -> FlowHandler APISuccess
+fleetOwnerRegister :: DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerUpdateRes
 fleetOwnerRegister = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister Nothing
