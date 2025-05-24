@@ -53,6 +53,10 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DriverOnboarding.DriverGstinReq
              :> Post '[JSON] DriverOnboarding.DriverGstinRes
+           :<|> "aadhaar"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverAadhaarReq
+             :> Post '[JSON] DriverOnboarding.DriverAadhaarRes
            :<|> "status"
              :> TokenAuth
              :> QueryParam "makeSelfieAadhaarPanMandatory" Bool
@@ -113,6 +117,7 @@ handler =
       :<|> verifyRC
       :<|> verifyPan
       :<|> verifyGstin
+      :<|> verifyAadhaar
       :<|> statusHandler
       :<|> validateImage
       :<|> validateImageFile
@@ -141,6 +146,9 @@ verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Dr
 
 verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
 verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyGstin False Nothing (personId, merchantId, merchantOpCityId) req
+
+verifyAadhaar :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverAadhaarReq -> FlowHandler DriverOnboarding.DriverAadhaarRes
+verifyAadhaar (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyAadhaar False Nothing (personId, merchantId, merchantOpCityId) req
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
