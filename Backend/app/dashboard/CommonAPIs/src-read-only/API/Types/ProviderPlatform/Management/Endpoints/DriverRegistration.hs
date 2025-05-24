@@ -136,7 +136,8 @@ data DocumentsListResponse = DocumentsListResponse
     vehicleNOC :: [Kernel.Prelude.Text],
     businessLicense :: [Kernel.Prelude.Text],
     odometer :: [Kernel.Prelude.Text],
-    aadhaar :: [Kernel.Prelude.Text]
+    aadhaar :: [Kernel.Prelude.Text],
+    gstCertificate :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

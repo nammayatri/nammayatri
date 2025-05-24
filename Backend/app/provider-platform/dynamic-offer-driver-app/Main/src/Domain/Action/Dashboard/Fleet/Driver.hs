@@ -124,14 +124,17 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverPanCard as DPC
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
+import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
@@ -1091,6 +1094,20 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
               let dlStatus = DCommon.castVerificationStatus dl.verificationStatus
               pure dlStatus
             Nothing -> pure Common.PENDING
+        panCardStatus <- do
+          mbPan <- B.runInReplica $ QPanCard.findByDriverId driver.id
+          case mbPan of
+            Just pan -> do
+              let panStatus = DCommon.castVerificationStatus pan.verificationStatus
+              pure panStatus
+            Nothing -> pure Common.PENDING
+        aadhaarStatus <- do
+          mbAadhaar <- B.runInReplica $ QAadhaarCard.findByPrimaryKey driver.id
+          case mbAadhaar of
+            Just aadhaar -> do
+              let aadhaarStatus = DCommon.castVerificationStatus aadhaar.verificationStatus
+              pure aadhaarStatus
+            Nothing -> pure Common.PENDING
         (completedRides, earning) <- case mbStats of
           Just True -> do
             rides <- CQRide.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id from to
@@ -1121,6 +1138,8 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
                     Just
                       Common.VerificationDocsStatus
                         { driverLicense = Just driverLicenseStatus,
+                          panCard = Just panCardStatus,
+                          aadhaarCard = Just aadhaarStatus,
                           vehicleRegistrationCertificate = Nothing,
                           vehicleFitness = Nothing,
                           vehiclePermit = Nothing,
@@ -1194,7 +1213,9 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
                   vehicleInsurance = Just $ if any (\img -> img.imageType == DDoc.VehicleInsurance && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   vehicleFitness = Just $ if any (\img -> img.imageType == DDoc.VehicleFitnessCertificate && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   vehiclePUC = Just $ if any (\img -> img.imageType == DDoc.VehiclePUC && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  driverLicense = Nothing
+                  driverLicense = Nothing,
+                  panCard = Nothing,
+                  aadhaarCard = Nothing
                 }
         let ls =
               Common.DriveVehicleAssociationListItem
@@ -1318,6 +1339,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
   where
     makeFleetOwnerInfoRes :: Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
     makeFleetOwnerInfoRes panNumber_ mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
+      referral <- QDR.findById fleetOwnerPersonId
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
               Common.FleetConfig
@@ -1327,7 +1349,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, fleetType = show fleetType, ..}
+      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo

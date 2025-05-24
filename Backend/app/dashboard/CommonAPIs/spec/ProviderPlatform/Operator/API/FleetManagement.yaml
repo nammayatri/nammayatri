@@ -2,6 +2,7 @@ imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
   Summary: Dashboard.Common
+  StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 
 module: FleetManagement
 apiPrefix: operator
@@ -64,7 +65,7 @@ apis:
             request:
               type: FleetOwnerRegisterReq
             response:
-              type: APISuccess
+              type: FleetOwnerUpdateRes
 
   - POST:
       endpoint: /fleet/link/sendOtp
@@ -132,6 +133,7 @@ types:
     - mobileNumber: Text
     - vehicleCount: Int
     - verified: Bool
+    - documents: StatusRes
   FleetOwnerRegisterReq:
     - firstName: Text
     - lastName: Text
@@ -159,6 +161,9 @@ types:
     - personId: Id Person
     - recordType: NewType
     - derive: "'HideSecrets"
+  FleetOwnerUpdateRes:
+    - enabled: Bool
+    - recordType: NewType
   FleetOwnerSendOtpReq:
     - mobileNumber: Text
     - mobileCountryCode: Text

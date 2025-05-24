@@ -35,6 +35,7 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
@@ -45,6 +46,8 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverGstin as QGST
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
@@ -83,7 +86,8 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     gstNumber :: Maybe Text,
     businessLicenseNumber :: Maybe Text,
     businessLicenseImage :: Maybe Text,
-    operatorReferralCode :: Maybe Text
+    operatorReferralCode :: Maybe Text,
+    adminApprovalRequired :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -92,12 +96,17 @@ newtype FleetOwnerRegisterRes = FleetOwnerRegisterRes
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
+newtype FleetOwnerUpdateRes = FleetOwnerUpdateRes
+  { enabled :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
 newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   { authToken :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-fleetOwnerRegister :: Maybe Text -> FleetOwnerRegisterReq -> Flow APISuccess
+fleetOwnerRegister :: Maybe Text -> FleetOwnerRegisterReq -> Flow FleetOwnerUpdateRes
 fleetOwnerRegister mbRequestorId req = do
   let fleetOwnerId = req.personId.getId
   person <- QP.findById req.personId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
@@ -127,7 +136,32 @@ fleetOwnerRegister mbRequestorId req = do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (req.personId, person.merchantId, person.merchantOperatingCityId) req'
       QFOI.updateBusinessLicenseImage (Just image.imageId.getId) req.personId
-  return Success
+  enabled <- enableFleetIfPossible
+  return $ FleetOwnerUpdateRes enabled
+  where
+    enableFleetIfPossible :: Flow Bool
+    enableFleetIfPossible = do
+      if (req.adminApprovalRequired /= Just True)
+        then do
+          panCard <- QPanCard.findByDriverId req.personId
+          gstIn <- QGST.findByDriverId req.personId
+          case req.fleetType of
+            Just FOI.NORMAL_FLEET ->
+              case panCard of
+                Just pan | pan.verificationStatus == Documents.VALID -> do
+                  void $ QFOI.updateFleetOwnerEnabledStatus True req.personId
+                  pure True
+                _ -> pure False
+            Just FOI.BUSINESS_FLEET ->
+              case (panCard, gstIn) of
+                (Just pan, Just gst)
+                  | pan.verificationStatus == Documents.VALID
+                      && gst.verificationStatus == Documents.VALID -> do
+                    void $ QFOI.updateFleetOwnerEnabledStatus True req.personId
+                    pure True
+                _ -> pure False
+            _ -> pure False
+        else pure False
 
 getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
 getOperatorIdFromReferralCode Nothing = return Nothing

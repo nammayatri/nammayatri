@@ -46,8 +46,13 @@ postFleetManagementFleetRegister :: (Kernel.Types.Id.ShortId Domain.Types.Mercha
 postFleetManagementFleetRegister merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ do
-    Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetRegister) apiTokenInfo.personId.getId req
+  res <-
+    SharedLogic.Transaction.withTransactionStoring transaction $ do
+      Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetRegister) apiTokenInfo.personId.getId req
+  when res.enabled $ do
+    person <- QP.findById (Kernel.Types.Id.Id req.personId.getId) >>= fromMaybeM (PersonDoesNotExist req.personId.getId)
+    unless (person.verified == Just True) $ QP.updatePersonVerifiedStatus (Kernel.Types.Id.Id req.personId.getId) True
+  pure Kernel.Types.APISuccess.Success
 
 postFleetManagementFleetCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerCreateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
