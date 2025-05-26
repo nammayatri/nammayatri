@@ -18,6 +18,7 @@ import Effect (Effect)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Font.Style as FontStyle
+import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
 import Services.API (FRFSRouteAPI(..), FrfsSearchResp(..), FrfsQuotesRes(..), FrfsQuote(..), FRFSVehicleServiceTierAPI(..), BusTrackingRouteReq(..), BusTrackingRouteResp(..)) --(BookingStatus(..), TicketPlaceResp(..), PlaceType(..))
@@ -110,7 +111,7 @@ view push state =
           , margin $ MarginBottom 8
           ] <> FontStyle.body3 TypoGraphy
           , linearLayout [weight 1.0] []
---          , sortByPillView push state
+          , sortByPillView push state
         ]
       , frameLayout
         [ width MATCH_PARENT
@@ -133,7 +134,7 @@ view push state =
             ]
         ]
       ]
-  --    , sortByPopUpView push state
+     , sortByPopUpView push state
      ]
   ]
 
@@ -207,7 +208,7 @@ routeRadioComponent state push (FrfsQuote quote) totalRoutes =
       , gravity CENTER_VERTICAL
       , margin $ MarginBottom 12
       , rippleColor Color.rippleShade
-      , onClick push $ const $ SelectQuote (FrfsQuote quote)
+      , if state.data.isSortByPillClicked then onClick push $ const $ NoAction else onClick push $ const $ SelectQuote (FrfsQuote quote)
       ][linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -228,7 +229,7 @@ routeRadioComponent state push (FrfsQuote quote) totalRoutes =
         ][textView $
            [ textFromHtml $ getETAforRoute state route'.shortName
            , color Color.black800
-           , padding $ PaddingRight 16
+           , padding $ PaddingRight 4
            , visibility $ boolToVisibility $ DA.length state.data.eta == totalRoutes
            ] <> FontStyle.body4 LanguageStyle 
           , imageView
@@ -272,7 +273,7 @@ locationSelectionView push state =
       , margin $ Margin 0 46 16 0
       , alignParentRight "true,-1"
       , background Color.white900
-      , onClick push $ const $ EditStops
+      , if state.data.isSortByPillClicked then onClick push (const NoAction) else onClick push $ const $ EditStops
       ]
 ]
 
@@ -333,7 +334,7 @@ headerView state push =
     , gravity CENTER_VERTICAL
     , padding (PaddingTop EHC.safeMarginTop)
     , background Color.white900
-    ][  GenericHeader.view (push <<< GenericHeaderAC) (headerConfig state) ]
+    ][  GenericHeader.view (if state.data.isSortByPillClicked then \_ -> push NoAction else push <<< GenericHeaderAC) (headerConfig state) ]
       
 getSearchId :: (Action -> Effect Unit) -> ((Array FrfsQuote) -> Action) -> String -> String -> Flow GlobalState Unit
 getSearchId push action srcCode destCode = do
@@ -376,29 +377,29 @@ getSeeRouteButton id =
   HU.getDefaultPixelSize $ (runFn1 JB.getLayoutBounds $ getNewIDWithTag id).height - 82
 
 
--- sortByPillView :: forall w.(Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
--- sortByPillView push state = 
---   linearLayout
---   [ width WRAP_CONTENT
---   , height WRAP_CONTENT
---   , cornerRadius 20.0
---   , background Color.white900
---   , stroke ("1," <> Color.grey900)
---   , padding $ Padding 10 4 10 4
---   , margin $ MarginBottom 4
---   , onClick push $ const $ SortByPressed
---   ][textView $
---     [ text "Sort By"
---     , color Color.black800
---     , padding $ Padding 0 0 6 2
---     ] <> FontStyle.body3 TypoGraphy
---     , imageView
---       [ height $ V 14
---       , width $ V 10
---       , padding $ PaddingTop 4
---       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_down"
---       ]
---   ]
+sortByPillView :: forall w.(Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
+sortByPillView push state = 
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , cornerRadius 20.0
+  , background Color.white900
+  , stroke ("1," <> Color.grey900)
+  , padding $ Padding 10 4 10 4
+  , margin $ MarginBottom 4
+  , onClick push $ const $ SortByPressed
+  ][textView $
+    [ text state.data.sortbyPillText
+    , color Color.black800
+    , padding $ Padding 0 0 6 2
+    ] <> FontStyle.body3 TypoGraphy
+    , imageView
+      [ height $ V 14
+      , width $ V 10
+      , padding $ PaddingTop 4
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_down"
+      ]
+  ]
 
 vehicleACServiceTierPillView :: forall w. SD.SelectBusRouteScreenState -> Maybe FRFSVehicleServiceTierAPI -> PrestoDOM (Effect Unit) w
 vehicleACServiceTierPillView state mbServiceTier = 
@@ -411,20 +412,20 @@ vehicleACServiceTierPillView state mbServiceTier =
       , cornerRadius 20.0
       , background Color.blue600
       , gravity CENTER
-      , margin $ MarginLeft 16
-      , padding $ Padding 4 0 6 0
+      , margin $ Margin 8 4 0 0
+      , padding $ Padding 2 0 3 0
       , visibility $ boolToVisibility $ serviceTier._type == "AC"
       ][imageView
-        [ height $ V 21
-        , width $ V 21
+        [ height $ V 15
+        , width $ V 15
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ac"
-        , padding $ PaddingRight 4
+        , padding $ PaddingRight 2
         ]
         , textView $
         [ text "AC"
         , color Color.blue800
         , padding $ PaddingBottom 2
-        ] <> FontStyle.body25 LanguageStyle
+        ] <> FontStyle.body24 LanguageStyle
       ]
 
 cheapestRoutePillView :: forall w. SD.SelectBusRouteScreenState -> Int -> String -> PrestoDOM (Effect Unit) w
@@ -435,13 +436,13 @@ cheapestRoutePillView state totalRoutes routeCode =
     , cornerRadius 20.0
     , background Color.green300
     , gravity CENTER
-    , margin $ MarginLeft 16
-    , padding $ Padding 6 0 6 3
+    , margin $ Margin 8 4 0 0
+    , padding $ Padding 3 0 3 2
     , visibility $ boolToVisibility $ totalRoutes > 1 && state.data.cheapestRoute == Just routeCode
     ][ textView $
-      [ text "Cheapest"
+      [ text $ getString CHEAPEST
       , color Color.green900
-      ] <> FontStyle.body25 LanguageStyle
+      ] <> FontStyle.body24 LanguageStyle
     ]   
 
 fastestRoutePillView :: forall w. SD.SelectBusRouteScreenState -> Int -> String -> PrestoDOM (Effect Unit) w
@@ -452,40 +453,116 @@ fastestRoutePillView state totalRoutes routeCode =
     , cornerRadius 20.0
     , background Color.yellow800
     , gravity CENTER
-    , margin $ MarginLeft 16
-    , padding $ Padding 6 0 6 3
+    , margin $ Margin 8 4 0 0
+    , padding $ Padding 3 0 3 2
     , visibility $ boolToVisibility $ totalRoutes > 1 && state.data.fastestRoute == Just routeCode
     ][ textView $
-      [ text "Fastest"
+      [ text $ getString FASTEST
       , color Color.yellow900
-      ] <> FontStyle.body25 LanguageStyle
+      ] <> FontStyle.body24 LanguageStyle
     ]
--- TO BE USED LATER
 
+sortByPopUpView :: forall w. (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
+sortByPopUpView push state =   
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , alignParentBottom "true,-1"
+  , orientation VERTICAL
+  , gravity BOTTOM
+  , background Color.black9000
+  , visibility $ boolToVisibility state.data.isSortByPillClicked
+  ]
+  [ popUpView push state ]  
 
--- sortByPopUpView :: forall w. (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
--- sortByPopUpView push state =   
---   linearLayout
---   [ width MATCH_PARENT
---   , height MATCH_PARENT
---   , alignParentBottom "true,-1"
---   , orientation VERTICAL
---   , background Color.transparentMid
---   , visibility $ boolToVisibility state.data.isSortByPillClicked
---   ]
---   [ linearLayout
---      [ width MATCH_PARENT
---      , height WRAP_CONTENT
---      , stroke ("1," <> Color.grey900)
---      , padding $ Padding 20 16 20 16
---      , cornerRadius 8.0
---      , gravity CENTER_VERTICAL
---      , margin $ MarginBottom 12
---      , rippleColor Color.rippleShade
---      , onClick push $ const NoAction
---      ]
---      []
---   ]  
+popUpView :: forall w. (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
+popUpView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , gravity BOTTOM
+  , cornerRadius 24.0
+  , background Color.white900
+  ]
+  [ linearLayout
+    [
+      width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ Padding 20 24 20 16
+    ]
+    [textView
+      ([ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , background Color.white900
+      , gravity LEFT
+      , text $ getString SORT_BY
+      , textSize $ FontSize.a_16
+      , color Color.black800
+      , margin $ MarginBottom 12
+      ] <> FontStyle.body4 TypoGraphy
+      )
+     , linearLayout
+      [ width MATCH_PARENT
+       , height WRAP_CONTENT
+       , orientation VERTICAL
+      ] 
+      (DA.mapWithIndex (\index item -> popUpOptionsView push state item) [AC_BUS, EARLY_DEPARTURE, TICKET_PRICE])
+     ]
+     , popUpButtonView push state
+  ]
+
+popUpOptionsView :: forall w. (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> STR -> PrestoDOM (Effect Unit) w
+popUpOptionsView push state option = 
+  linearLayout
+     [ width MATCH_PARENT
+     , height WRAP_CONTENT
+     , stroke ("1," <> Color.grey900)
+     , padding $ Padding 20 16 20 16
+     , cornerRadius 12.0
+     , gravity CENTER_VERTICAL
+     , margin $ MarginBottom 12
+     , background Color.white900
+     , rippleColor Color.rippleShade
+     , onClick push $ const $ SortByOptionPressed option
+     ]
+     [
+      textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString option
+        , color Color.black800
+        , gravity LEFT
+        , padding $ PaddingBottom 3
+        ] <> FontStyle.body25 LanguageStyle 
+     ]
+
+popUpButtonView :: forall w. (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
+popUpButtonView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity BOTTOM
+  , alignParentBottom "true,-1"
+  , background Color.transparent
+  , orientation VERTICAL
+  ]
+  [ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ][
+      linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , padding $ PaddingVertical 5 24
+      , stroke ("1," <> Color.borderColorLight)
+      ][PrimaryButton.view (\_ -> push ClosePopupButtonAction) (seeRouteButtonConfig state)]
+    ]
+  ]
 
 
 getVehicleTrackingInfo :: (Action -> Effect Unit) -> Array String  -> Flow GlobalState Unit
@@ -509,5 +586,5 @@ getETAforRoute state routeCode =
     if isJustEta /= 0 then do 
       let secondsTohhmm = HU.secondsToHms isJustEta 
       if (secondsTohhmm == "--") then "In less than 1 min" else  "In " <> secondsTohhmm  
-    else ""
+    else getString NO_INCOMING_BUS
       

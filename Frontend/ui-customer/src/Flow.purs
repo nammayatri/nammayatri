@@ -4600,7 +4600,7 @@ placeDetailsFlow = do
   case action of
     PlaceDetailsC.GoToHomeScreen updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
-      if updatedState.props.navigateToHome then void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_place_list_page" else  void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_individual_place"
+      if updatedState.props.navigateToHome then void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_place_list_page" else  void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_individual_place"
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
     PlaceDetailsC.GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
@@ -7720,6 +7720,9 @@ busTrackingScreenFlow = do
           destCode = maybe "" (\item-> item.stationCode) state.data.destinationStation
       modifyScreenState $ BusTrackingScreenStateType (\state -> state { data { busRouteCode = state.data.busRouteCode, sourceStation = state.data.sourceStation, destinationStation = state.data.destinationStation } })
       selectBusRouteScreenFlow srcCode destCode
+    BusTrackingScreen.GoToHomeScreen state -> do 
+      modifyScreenState $ HomeScreenStateType (\state -> state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= getString STR.CURRENT_LOCATION}})
+      homeScreenFlow   
     _ -> busTrackingScreenFlow
 
 updateScheduledRides :: Boolean -> Boolean -> FlowBT String Unit 

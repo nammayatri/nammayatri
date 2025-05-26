@@ -1734,4 +1734,10 @@ getEn = Keymap {
 , free_loading_unloading_time : (\a b ->"Free combined loading/unloading time of " <> a <> " min is provided. Any extra time will be charged at a rate of " <> b )
 , max_capacity_warning : "Items should not exceed max capacity"
 , select_route : "Select Route"
+, ac_bus : "AC Bus"
+, early_departure : "Early Departure"
+, ticket_price : "Ticket Price"
+, no_incoming_bus : "No incoming bus"
+, cheapest : "Cheapest"
+, fastest : "Fastest"
 }

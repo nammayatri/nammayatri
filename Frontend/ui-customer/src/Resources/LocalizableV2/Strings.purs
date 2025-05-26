@@ -1808,5 +1808,11 @@ getProxy str =
     AMBULANCE_ -> \a -> a @~ ambulance_
     FREE_LOADING_UNLOADING_TIME arg1 arg2 -> \a -> (a @~ free_loading_unloading_time) arg1 arg2
     SELECT_ROUTE -> \a -> a @~ select_route
+    AC_BUS -> \a -> a @~ ac_bus
+    EARLY_DEPARTURE -> \a -> a @~ early_departure
+    TICKET_PRICE -> \a -> a @~ ticket_price
+    NO_INCOMING_BUS -> \a -> a @~ no_incoming_bus
+    CHEAPEST -> \a -> a @~ cheapest
+    FASTEST -> \a -> a @~ fastest
 
 

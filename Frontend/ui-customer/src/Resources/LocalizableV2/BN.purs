@@ -1734,4 +1734,10 @@ getBn = Keymap {
 , free_loading_unloading_time : (\a b ->  "ফ্রি সংযুক্ত লোডিং/আনলোডিং সময় " <> a <> " মিনিট প্রদান করা হয়। অতিরিক্ত সময়ের জন্য " <> b <> " হারে চার্জ করা হবে।")
 , max_capacity_warning : "আইটেম সর্বাধিক ক্ষমতা অতিক্রম করা উচিত নয়"
 , select_route : "রুট নির্বাচন করুন"
+, ac_bus : "এসি বাস"
+, early_departure : "প্রথম যাত্রা"
+, ticket_price : "টিকিটের দাম"
+, no_incoming_bus : "কোনো আসন্ন বাস নেই"
+, cheapest : "সস্তা"
+, fastest : "দ্রুততম"
 }

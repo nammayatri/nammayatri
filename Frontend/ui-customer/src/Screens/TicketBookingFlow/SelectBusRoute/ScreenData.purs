@@ -33,10 +33,12 @@ initData = {
     , cheapestRoute : Nothing
     , fastestRoute : Nothing
     , isSortByPillClicked : false
+    , sortbyPillText : "Sort By"
     , eta : []
   },
   props : {
     enableSeeRoute : false
+  , isInitialRender : true
   }
 }
 
@@ -54,11 +56,13 @@ type SelectBusRouteScreenData = {
   , cheapestRoute :: Maybe String
   , fastestRoute :: Maybe String
   , isSortByPillClicked :: Boolean
+  , sortbyPillText :: String
   , eta :: Array EtaBasedOnRoute
 }
 
 type SelectBusRouteScreenProp = {
     enableSeeRoute :: Boolean
+  , isInitialRender :: Boolean
 }
 
 type EtaBasedOnRoute = {

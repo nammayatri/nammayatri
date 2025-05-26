@@ -171,6 +171,7 @@
       "ny_ic_bike_left_side" : true,
       "ny_ic_bike_nav_on_map" : true,
       "ny_ic_bike_pickup_nav_on_map" : true,
+      "ny_ic_bike_taxi_nudge" : true,
       "ny_ic_bike_taxi_service" : true,
       "ny_ic_black_bus" : true,
       "ny_ic_black_location" : true,
