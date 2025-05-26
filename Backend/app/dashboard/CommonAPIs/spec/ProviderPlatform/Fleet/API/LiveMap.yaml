@@ -1,4 +1,5 @@
-imports: {}
+imports:
+  LatLong: Kernel.External.Maps.Types
 
 module: LiveMap
 
@@ -6,9 +7,6 @@ apis:
   - GET:
       endpoint: /drivers
       auth: ApiAuthV2
-      query:
-        - limit: Int
-        - offset: Int
       response:
         type: MapDriverInfoRes
 
@@ -17,11 +15,12 @@ types:
     - driverName: Text
     - driverStatus: Status
     - todaySummary: TodaySummary
+    - position: LatLong
   Status:
-    - enum: "ONTRIP, ONLINE, OFFLINE"
+    - enum: "TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE"
   TodaySummary:
     - driverName: Text
-    - driverStatus: Status
+    - tripStatus: Status
     - tripsCompletedCount: Int
     - earnings: Money
     - totalDistance: Meters
