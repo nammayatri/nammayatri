@@ -70,11 +70,13 @@ getDriverOperatorList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
   )
-getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset = do
+getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbDriverId mbVehicleNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset apiTokenInfo.personId.getId
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset mbDriverId mbVehicleNo apiTokenInfo.personId.getId
 
 postDriverOperatorSendJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> Environment.Flow Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes)
 postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req = do

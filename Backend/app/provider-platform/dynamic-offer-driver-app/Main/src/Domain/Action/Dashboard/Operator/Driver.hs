@@ -50,7 +50,7 @@ import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
-import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffset)
+import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffsetDriverId)
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Image as IQuery
@@ -209,17 +209,22 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbDriverId mbVehicleNo requestorId = do
   person <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
   driverOperatorAssociationLs <-
-    findAllByOperatorIdWithLimitOffset requestorId mbIsActive mbLimit mbOffset
+    findAllByOperatorIdWithLimitOffsetDriverId requestorId mbIsActive mbLimit mbOffset mbDriverId
   now <- getCurrentTime
   listItem <- mapM (createDriverInfo now) driverOperatorAssociationLs
-  let count = length listItem
+  listItemWithFilterVehicleIfExists <- case mbVehicleNo of
+    Just vehicleNo -> filterM (\x -> pure $ x.vehicleNo == Just vehicleNo) listItem
+    Nothing -> pure listItem
+  let count = length listItemWithFilterVehicleIfExists
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
@@ -232,7 +237,9 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset reque
             ( InvalidRequest $
                 "Person do not have a mobile number " <> person.id.getId
             )
-      mblinkedVehicle <- QVehicle.findById driverId
+      mblinkedVehicle <- case mbVehicleNo of
+        Just vehicleNo -> QVehicle.findByDriverIdAndRegistrationNo driverId vehicleNo
+        Nothing -> QVehicle.findById driverId
       let merchantOpCityId = person.merchantOperatingCityId
       transporterConfig <-
         findByMerchantOpCityId merchantOpCityId Nothing
@@ -255,6 +262,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset reque
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             vehicle = (.model) <$> mblinkedVehicle,
+            vehicleNo = (.registrationNo) <$> mblinkedVehicle,
             documents = statusRes
           }
 
