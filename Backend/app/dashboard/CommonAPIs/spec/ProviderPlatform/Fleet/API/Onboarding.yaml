@@ -85,6 +85,7 @@ types:
   VerifyReq:
     driverId: Text
     imageId: Text
+    optionalImageId: Maybe Text
     identifierNumber: Text
   VerifyType:
     enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR"
