@@ -1852,4 +1852,5 @@ getKn =
     , poor_cancellation_score : "ನಿಮ್ಮ ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್ ಖಾರಾಬಿಸ್ತು"
     , good : "ಉತ್ತಮ"
     , poor : "ಖಾರಾಬಿಸ್ತು"
+    , open_meter : "ತೆರೆಯಿರಿ ಮೀಟರ್"
     }

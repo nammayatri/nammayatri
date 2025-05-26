@@ -1852,4 +1852,5 @@ getBn =
     , poor_cancellation_score : "আপনার রদ্দু মাড়ালু স্কোর খারাপ"
     , good : "ভালো"
     , poor : "খারাপ"
+    , open_meter : "মিটার খোলুন"
     }

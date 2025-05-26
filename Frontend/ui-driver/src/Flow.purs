@@ -82,7 +82,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Types (AppConfig(..), Language, CityConfig)
+import MerchantConfig.Types (AppConfig(..), Language, CityConfig, OpenMeterConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage, addLanguageToPayload)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const, (>>=))
@@ -186,6 +186,7 @@ import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 import Screens (ScreenName(..)) as Screen
+
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -2356,7 +2357,10 @@ currentRideFlow activeRideResp isActiveRide = do
             if isMeterRide then  do
               void $ liftFlowBT $ JB.requestBackgroundLocation unit
               void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
-              void $ lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity (cb <<< Right) $> nonCanceler
+              appConfig <- getAppConfigFlowBT Constants.appConfig
+              let cityConfig = HU.getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+              let startOpenMeterConfig = buildStartOpenMeterConfig cityConfig.openMeter
+              void $ lift $ lift $ doAff $ makeAff \cb -> (JB.startOpenMeterActivity startOpenMeterConfig) (cb <<< Right) $> nonCanceler
               void $ liftFlowBT $  HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
               void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
             else do
@@ -3062,7 +3066,10 @@ homeScreenFlow = do
       (GlobalState globalstate) <- getState
       when (globalstate.homeScreen.props.driverStatusSet == ST.Offline) $ changeDriverStatus ST.Online
       void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
-      void $lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
+      appConfig <- getAppConfigFlowBT Constants.appConfig
+      let cityConfig = HU.getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      let startOpenMeterConfig = buildStartOpenMeterConfig cityConfig.openMeter
+      void $ lift $ lift $ doAff $ makeAff \cb -> (JB.startOpenMeterActivity startOpenMeterConfig) (cb <<< Right) $> nonCanceler
       void $ liftFlowBT $HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
       void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
   homeScreenFlow
@@ -5032,3 +5039,10 @@ extraChargeInfoScreenFlow :: FlowBT String Unit
 extraChargeInfoScreenFlow = do
   output <- UI.extraChargeInfoScreen
   pure unit
+
+
+buildStartOpenMeterConfig :: Maybe OpenMeterConfig -> JB.StartOpenMeterConfig
+buildStartOpenMeterConfig mbOpenMeterConfig = {
+  addDestination : maybe false (\openMeterConfig -> openMeterConfig.addDestination) mbOpenMeterConfig,
+  shareRideTracking : maybe false (\openMeterConfig -> openMeterConfig.shareRideTracking) mbOpenMeterConfig
+}

@@ -3266,23 +3266,25 @@ export const setupVoiceRecognitionView = function(id) {
   }
 }
 
-export const startOpenMeterActivity = (cb) => {
-  return () => {
-    const callback = () => {
-      const isMeterRideActive = window.JBridge.getFromSharedPrefs('METER_RIDE_ACTIVE');
-      console.log("isMeterRideActive", isMeterRideActive);
-      const timeTaken = Date.now() - window.onPauseTime;
-      console.log("timeTaken", timeTaken);
-      if (isMeterRideActive !== "true" && timeTaken > 500) {
-        cb()();
-        window.onResumeListeners = window.onResumeListeners.filter(item => {
-          return item !== callback;
-        })
+export const startOpenMeterActivity = (openMeterConfig) => {
+  return function(cb) {
+    return () => {
+      const callback = () => {
+        const isMeterRideActive = window.JBridge.getFromSharedPrefs('METER_RIDE_ACTIVE');
+        console.log("isMeterRideActive", isMeterRideActive);
+        const timeTaken = Date.now() - window.onPauseTime;
+        console.log("timeTaken", timeTaken);
+        if (isMeterRideActive !== "true" && timeTaken > 500) {
+          cb()();
+          window.onResumeListeners = window.onResumeListeners.filter(item => {
+            return item !== callback;
+          })
+        }
       }
+      console.log("startOpenMeterActivity", callback);
+      window.onResumeListeners.push(callback);
+      JBridge.startOpenMeterActivity(JSON.stringify(openMeterConfig));
     }
-    console.log("startOpenMeterActivity", callback);
-    window.onResumeListeners.push(callback);
-    JBridge.startOpenMeterActivity("callback");
   }
 }
 
@@ -3294,7 +3296,7 @@ export const startGActivity = (token) => {
   }
 }
 
-  
+
 export const updateMarkersOnRoute = (configObj) => {
   if (window.JBridge.updateMarkersOnRoute) {
     return window.JBridge.updateMarkersOnRoute(
@@ -3323,7 +3325,7 @@ export const scrollToChildInScrollView = (scrollViewId, childViewId, index) => {
   if (window.JBridge.scrollToChildInScrollView) {
     return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId, index : index}));
   }
-} 
+}
 
 export const showDynamicRouteMarker = (lat, lon, routeId, purescriptId) => {
   if (window.JBridge.showDynamicRouteMarker) {

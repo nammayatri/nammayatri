@@ -13,7 +13,7 @@ type AppConfigDriver a =
     primaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
-    rideCompletedCardConfig :: RideCompletedCardConfig, 
+    rideCompletedCardConfig :: RideCompletedCardConfig,
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
@@ -55,7 +55,7 @@ type AppConfigDriver a =
     scheduledRideConfig :: ScheduledRideConfig,
     customerTokenForMeterRide :: String
     | a
-  } 
+  }
 
 type LogWhitelistConfig = {
   aadhaarVerificationScreenLogWhitelist :: Array String,
@@ -272,7 +272,7 @@ type Features = {
 , enableSpecialPickup :: Boolean
 , enableInterOperability :: Boolean
 }
- 
+
  -- VV - VechileVerfication
 type VVConfig = {
   validationPrefix :: String
@@ -331,7 +331,14 @@ type CityConfig = {
   rideStartAudio :: RideStartAudio,
   showScheduledRides :: Boolean,
   chatFooterBanner :: Maybe ChatFootBannerConfig,
-  enableNammaMeter :: Maybe (Object Boolean)
+  enableNammaMeter :: Maybe (Object Boolean), -- Deprecated. Use openMeter instead.
+  openMeter :: Maybe OpenMeterConfig
+}
+
+type OpenMeterConfig = {
+  enable :: Maybe (Object Boolean),
+  addDestination :: Boolean,
+  shareRideTracking :: Boolean
 }
 
 
@@ -379,7 +386,7 @@ type PurpleRideConfigForVehicle = {
 
 type RideStartAudio = {
   acCab :: StartAudioUrls,
-  nonAcCab :: StartAudioUrls, 
+  nonAcCab :: StartAudioUrls,
   auto :: StartAudioUrls,
   bike :: StartAudioUrls
 }
@@ -399,7 +406,7 @@ type VariantToDisabilityVideo = {
 }
 
 type DisabilityToVideo = {
-  disabilityType :: String, 
+  disabilityType :: String,
   videoUrl :: String
 }
 

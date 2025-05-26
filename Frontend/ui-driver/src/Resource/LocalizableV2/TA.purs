@@ -1852,4 +1852,5 @@ getTa =
     , poor_cancellation_score: "மோசமான ரத்து\nமதிப்பெண்"
     , good: "நல்லது"
     , poor: "மோசமானது"
+    , open_meter: "ஓப்பன் மீட்டர்"
     }

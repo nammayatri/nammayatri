@@ -127,6 +127,8 @@ import DecodeUtil (getFromWindowString)
 import Components.TripStageTopBar as TripStageTopBar
 import RemoteConfig.Utils (getPerfConfigData)
 import Screens.HomeScreen.ScreenData
+import Resource.Localizable.StringsV2
+import Resource.Localizable.TypesV2
 
 screen :: HomeScreenState -> GlobalState -> LoggableScreen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -914,7 +916,7 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][  --meterBooking state push -- if fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
+        ][
         locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
             then gotoButton push state else linearLayout[][]
@@ -1016,50 +1018,65 @@ addAadhaarOrOTPView state push =
         , gravity CENTER_VERTICAL
         ][ addAadhaarNumber push state showAddAadhaar
         , if (state.data.config.feature.enableOtpRide || otpRideEnabledCityConfig.enableOtpRide) then otpButtonView state push else dummyTextView
-        , if showMeterRide then meterRideButtonView state push else dummyTextView
+        , if showOpenMeter then meterRideButtonView state push else dummyTextView
         ]
       ]
   ]
   where
     showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
-    showMeterRide = ( fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter )
-      && state.props.currentStage == ST.HomeScreen
-      && state.props.statusOnline
+    showOpenMeter =
+      let
+        vehicleVariant = getValueToLocalStore VEHICLE_VARIANT
+        vehicleCategory = show $ fromMaybe ST.CarCategory $ getCategoryFromVariant vehicleVariant
+        openMeterConfig = maybe empty (\openMeterConfig -> fromMaybe empty openMeterConfig.enable) state.data.cityConfig.openMeter
+        mbEnableOpenMeter = lookup vehicleCategory openMeterConfig
+      in
+        (fromMaybe false mbEnableOpenMeter)
+        && state.props.currentStage == ST.HomeScreen
+        && state.props.statusOnline
 
 meterRideButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 meterRideButtonView state push =
-  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , background Color.white900
-  , stroke $ "1," <> Color.grey900
-  , cornerRadius 22.0
-  , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
-  , padding $ Padding 12 10 12 10
-  , onClick push $ const $ GotoMeterRideScreen
-  , rippleColor Color.rippleShade
-  , margin $ MarginLeft 10
-  , gravity CENTER
-  , gradient $ Linear 90.0 ["#E21AE3", "#F7065A", "#EF062B", "#FC2308", "#FB540A"]
-  ][ imageView
-      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_tn_open_meter_icon_white"
-      , width $ V 20
-      , height $ V 20
-      ]
-    , textView $
-      [ text $ "Open Meter"
-      , color Color.white900
-      , singleLine true
-      , margin $ MarginLeft 5
-      , gravity CENTER
-      ] <> (FontStyle.tags TypoGraphy)
-    , imageView
-      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_white"
-      , width $ V 12
-      , height $ V 12
-      , margin $ MarginLeft 5
-      ]
-  ]
+  let
+    city = getValueToLocalStore DRIVER_LOCATION
+    isTamilNaduCity = elem city ["Chennai", "Trichy"]
+  in
+    linearLayout
+    ([ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , stroke $ "1," <> Color.grey900
+    , cornerRadius 22.0
+    , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+    , padding $ Padding 12 10 12 10
+    , onClick push $ const $ GotoMeterRideScreen
+    , rippleColor Color.rippleShade
+    , margin $ MarginLeft 10
+    , gravity CENTER
+    ] <> if isTamilNaduCity then [gradient $ Linear 90.0 ["#E21AE3", "#F7065A", "#EF062B", "#FC2308", "#FB540A"]] else [background "#299921"])
+    $
+    (if isTamilNaduCity then [openMeterLogoView "ny_ic_tn_open_meter_icon_white"] else []) <>
+    [ textView $
+        [ text $ getStringV2 open_meter
+        , color Color.white900
+        , singleLine true
+        , gravity CENTER
+        , margin $ Margin 5 0 0 2
+        ] <> (FontStyle.tags TypoGraphy)
+      , imageView
+        [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_white"
+        , width $ V 12
+        , height $ V 12
+        , margin $ MarginLeft 5
+        ]
+    ]
+
+  where
+    openMeterLogoView icon =
+      imageView
+        [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET icon
+        , width $ V 20
+        , height $ V 20
+        ]
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
@@ -2456,13 +2473,9 @@ offlineNavigationLinks push state =
             , clickable $ itemClickable item.action
             , background item.background
             , stroke item.stroke
-            ][  imageView
-                [ width $ V 16
-                , height $ V 16
-                , imageWithFallback $ HU.fetchImage HU.FF_ASSET item.icon
-                , margin $ MarginRight 5
-                ]
-              , textView $
+            ]$ (if item.icon == "" then [] else [iconImageView item.icon])
+            <> [
+              textView $
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , gravity CENTER
@@ -2470,12 +2483,12 @@ offlineNavigationLinks push state =
                 , color item.color
                 , padding $ PaddingBottom 1
                 ] <> FontStyle.tags TypoGraphy
-            ]
+              ]
           ) navLinksArray)
     ]
     where
       navLinksArray = [
-        {title : "Open Meter", icon : "ny_ic_open_meter_icon", action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
+        {title : "Open Meter", icon : meterRideCityConfig, action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
         {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
@@ -2491,7 +2504,14 @@ offlineNavigationLinks push state =
                           let hotspotsRemoteConfig = getHotspotsFeatureData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
                           boolToVisibility hotspotsRemoteConfig.enableHotspotsFeature
                         RideRequestsList -> boolToVisibility config.enableScheduledRides
-                        SwitchDriverStatus _ _ -> boolToVisibility $ fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter
+                        SwitchDriverStatus _ _ ->
+                          let
+                            vechicleVariant = getValueToLocalStore VEHICLE_VARIANT
+                            vehicleCategory = show $ fromMaybe ST.CarCategory $ getCategoryFromVariant vechicleVariant
+                            openMeterConfig = maybe empty (\openMeterConfig -> fromMaybe empty openMeterConfig.enable) state.data.cityConfig.openMeter
+                            mbEnableOpenMeter = lookup vehicleCategory openMeterConfig
+                          in
+                            boolToVisibility $ fromMaybe false $ mbEnableOpenMeter
                         _ -> VISIBLE
       itemAlpha action = case action of
                     RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5
@@ -2500,6 +2520,20 @@ offlineNavigationLinks push state =
                     RideRequestsList ->  isNothing state.data.upcomingRide
                     _ -> true
       showAddGoto = state.data.driverGotoState.savedLocationCount < state.data.config.gotoConfig.maxGotoLocations
+
+      city = getValueToLocalStore DRIVER_LOCATION
+      meterRideCityConfig = case city of
+        "Chennai" -> "ny_ic_tn_open_meter_icon_white"
+        "Trichy" -> "ny_ic_tn_open_meter_icon_white"
+        -- "Bangalore" -> "ny_ic_open_meter_icon_kn_light"
+        _ -> ""
+      iconImageView icon =
+        imageView
+        [ width $ V 16
+        , height $ V 16
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET icon
+        , margin $ MarginRight 5
+        ]
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
