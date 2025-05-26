@@ -1852,4 +1852,5 @@ getEn =
     , poor_cancellation_score : "Your cancellation\nscore is poor"
     , good : "Good"
     , poor : "Poor"
+    , open_meter : "Open Meter"
     }

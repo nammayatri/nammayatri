@@ -1852,4 +1852,5 @@ getOd =
     , poor_cancellation_score : "ଆପଣଙ୍କର ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର ଖାରାପ ହୋଇଛି"
     , good : "ଭାଲୋ"
     , poor : "ଖାରାପ"
+    , open_meter : "ମିଟର୍ ଖୋଲନ୍ତୁ"
   }

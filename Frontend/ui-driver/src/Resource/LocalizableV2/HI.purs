@@ -1852,4 +1852,5 @@ getHi =
     , poor_cancellation_score : "आपका रद्दीकरण स्कोर खराब है"
     , good : "अच्छा"
     , poor : "खराब"
+    , open_meter : "मीटर खोलें"
     }

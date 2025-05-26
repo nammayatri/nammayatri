@@ -120,7 +120,7 @@ foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- foreign import removePolyLine   :: String -> Effect Unit
 foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import startGActivity :: String -> Effect Unit
-foreign import startOpenMeterActivity :: forall action. (action -> Effect Unit) -> Effect Unit
+foreign import startOpenMeterActivity :: forall action. StartOpenMeterConfig -> (action -> Effect Unit) -> Effect Unit
 foreign import requestLocation  :: Unit -> Effect Unit
 foreign import requestBackgroundLocation  :: Unit -> Effect Unit
 
@@ -1147,14 +1147,14 @@ type UpdateMarkerOnRouteConfig = {
   , locationName :: String
   , srcMarker :: MarkerConfig
   , vehicleRotationFromPrevLatLon :: Number
-  , srcHeaderArrowMarker :: MarkerConfig 
+  , srcHeaderArrowMarker :: MarkerConfig
 }
 
 foreign import checkMarkerAvailable :: EffectFn1 String Boolean
 
 foreign import getMarkerPosition :: EffectFn1 String MarkerPositionConfig
 
-type MarkerPositionConfig = 
+type MarkerPositionConfig =
   { latitude :: Number
   , longitude :: Number
   }
@@ -1162,3 +1162,11 @@ type MarkerPositionConfig =
 foreign import scrollToChildInScrollView :: EffectFn3 String String String Unit
 
 foreign import showDynamicRouteMarker :: EffectFn4 String String String String Unit
+
+
+type StartOpenMeterConfig = {
+  addDestination :: Boolean,
+  shareRideTracking :: Boolean
+}
+
+

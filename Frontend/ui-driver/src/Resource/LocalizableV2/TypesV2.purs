@@ -1866,6 +1866,7 @@ newtype Keymap = Keymap {
     , poor_cancellation_score :: String
     , good :: String
     , poor :: String
+    , open_meter :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7407,3 +7408,5 @@ good = a
 poor :: Proxy "poor"
 poor = a
 
+open_meter :: Proxy "open_meter"
+open_meter = a
