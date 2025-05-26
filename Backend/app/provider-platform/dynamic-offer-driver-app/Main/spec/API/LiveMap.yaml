@@ -1,0 +1,34 @@
+imports: {}
+
+module: LiveMap
+
+apis:
+  - GET:
+      endpoint: /liveMap/drivers
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: MapDriverInfoRes
+
+types:
+  MapDriverInfoRes:
+    - driverName: Text
+    - driverStatus: Status
+    - todaySummary: TodaySummary
+  Status:
+    - enum: "ONTRIP, ONLINE, OFFLINE"
+  TodaySummary:
+    - driverName: Text
+    - driverStatus: Status
+    - tripsCompletedCount: Int
+    - earnings: Money
+    - totalDistance: Meters
+    - tripBalanceLeft: Int
+    - tripsCancelled: Int
+    - tripsPassed: Int
+    - tripsScheduled: Int
+    - onlineDuration: Seconds
+    - mobileCountryCode: Text
+    - mobileNumber: Text
