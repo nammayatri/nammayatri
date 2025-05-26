@@ -151,15 +151,15 @@ public class Utils {
         return bitmap;
     }
 
-    public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
+    public static void captureImage(@Nullable Uri data, Activity activity, Context context) {
         try {
             Uri imageUri;
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            if (data == null || data.getData() == null) { //Camera
+            if (data == null) { //Camera
                 File image = new File(context.getFilesDir(), "IMG_" + sharedPref.getString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
                 imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", image);
             } else { // storage
-                imageUri = data.getData();
+                imageUri = data;
             }
             startCropImageActivity(imageUri, activity);
         } catch (Exception e) {

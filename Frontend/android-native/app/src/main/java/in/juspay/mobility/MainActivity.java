@@ -41,6 +41,9 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -113,6 +116,8 @@ import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.reels.ExoplayerItem;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
+import in.juspay.mobility.common.MobilityCommonBridge;
+import in.juspay.mobility.common.PhotoPickerLauncherIF;
 import in.juspay.mobility.common.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
@@ -141,6 +146,8 @@ public class MainActivity extends AppCompatActivity {
     private JSONObject preInitFutureTaskResult = null;
     private MobilityRemoteConfigs remoteConfigs;
     long onCreateTimeStamp = 0;
+    private ActivityResultLauncher<PickVisualMediaRequest> photoPicker;
+    private ActivityResultLauncher<Uri> cameraLauncher;
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -437,6 +444,33 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+        setUpPhotoPicker();
+    }
+
+    private void setUpPhotoPicker() {
+        photoPicker = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+            if (uri != null) {
+                Log.d("PhotoPicker", "Selected URI: " + uri.toString());
+                Utils.captureImage(uri, MainActivity.this, MainActivity.this);
+            } else {
+                Log.d("PhotoPicker", "No media selected");
+            }
+        });
+        cameraLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+            if (success && MobilityCommonBridge.photoPickerLauncherIF.cameraImageUri != null) {
+                // Handle captured image
+                Utils.captureImage(MobilityCommonBridge.photoPickerLauncherIF.cameraImageUri , MainActivity.this, MainActivity.this);
+            }
+        });
+
+        MobilityCommonBridge.photoPickerLauncherIF = new PhotoPickerLauncherIF() {
+            public ActivityResultLauncher<PickVisualMediaRequest> getPhotoPickerLauncher() {
+                return photoPicker;
+            }
+            public ActivityResultLauncher<Uri> getCameraLauncher() {
+                return cameraLauncher;
+            }
+        };
     }
 
     private void handleSplashScreen() {
@@ -1136,7 +1170,6 @@ public class MainActivity extends AppCompatActivity {
         oldSharedPref.edit().clear().apply();
         return true;
     }
-
     private JSONObject getInnerPayload(JSONObject payload, String action) throws JSONException{
         String appName = "";
         try{

@@ -107,6 +107,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -305,6 +308,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected LocateOnMapManager locateOnMapManager = null;
     private Timer polylineAnimationTimer = null;
     protected BridgeComponents bridgeComponents ;
+    public static PhotoPickerLauncherIF photoPickerLauncherIF;
     
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -4789,16 +4793,6 @@ public class MobilityCommonBridge extends HyperBridge {
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-            case IMAGE_CAPTURE_REQ_CODE:
-                if (resultCode == RESULT_OK) {
-                    if (bridgeComponents.getActivity() != null) {
-                        if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
-                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
-                    }
-                } else {
-                    if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
-                }
-                break;
             case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
                 if (resultCode == RESULT_OK) {
                     new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
@@ -4819,25 +4813,6 @@ public class MobilityCommonBridge extends HyperBridge {
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {
-            case IMAGE_PERMISSION_REQ_CODE:
-                Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                    }
-                } else {
-                    Toast.makeText(context, context.getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
-                }
-                break;
             case MediaPlayerView.AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
                 if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();

@@ -496,7 +496,7 @@ public class NotificationUtils {
                     .setStyle(
                             new NotificationCompat.BigPictureStyle()
                                     .bigPicture(bitmap)
-                                    .bigLargeIcon(null));
+                                    );
         } else {
             mBuilder.setSmallIcon(smallIcon)
                     .setContentTitle(title)

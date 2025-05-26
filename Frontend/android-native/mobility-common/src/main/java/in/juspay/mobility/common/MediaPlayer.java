@@ -26,6 +26,9 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 
@@ -50,7 +53,7 @@ import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 
-public class MediaPlayer {
+public class MediaPlayer extends BaseMediaPlayer{
     public boolean isUploadPopupOpen = false;
     public ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public MediaPlayerView.AudioRecorder audioRecorder = null;
@@ -59,6 +62,7 @@ public class MediaPlayer {
     private BridgeComponents bridgeComponents = null;
 
     public MediaPlayer (BridgeComponents bridgeComponents){
+        super(bridgeComponents);
         this.bridgeComponents = bridgeComponents;
     }
 
@@ -86,32 +90,6 @@ public class MediaPlayer {
         return null;
     }
 
-    public void uploadFile() { 
-        if (!isUploadPopupOpen) {
-            ExecutorManager.runOnMainThread(() -> {
-                Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        isUploadPopupOpen = true;
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                    }
-                } else {
-                    if (bridgeComponents.getActivity() != null) {
-                        ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
-                    }
-                }
-            });
-        }
-    }
 
     public boolean isMicrophonePermissionEnabled() {
         return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;

@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 static InetAddress getLocalAddress() throws SocketException {
     List<NetworkInterface> ifaces = Collections.list(NetworkInterface.getNetworkInterfaces())
@@ -34,7 +35,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk 33
+    compileSdk 35
     namespace "in.juspay.mobility"
 
     buildFeatures{
@@ -43,7 +44,7 @@ android {
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 35
     versionCode 124
     versionName "3.0.3"
         multiDexEnabled true
@@ -256,6 +257,9 @@ android {
             setIgnore(true)
         }
     }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
 
 //    signingConfigs {
 //        release {
@@ -285,6 +289,7 @@ dependencies {
     implementation "in.juspay:hyperqr:$jpSDKversion"
     implementation "in.juspay:hypersmshandler:$jpSDKversion"
     implementation project(path: ':mobility-app')
+    implementation 'androidx.core:core-ktx:1.16.0'
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
