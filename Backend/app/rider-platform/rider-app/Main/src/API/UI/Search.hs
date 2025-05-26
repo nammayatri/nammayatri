@@ -339,11 +339,12 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
-      filteredRoutes = filter hasOnlyUserPreferredTransitModes otpResponse.routes
-      routesToProcess = if null filteredRoutes then otpResponse.routes else filteredRoutes
-      showMultimodalWarningForFirstJourney = null filteredRoutes
+      indexedRoutes = zip [0 ..] otpResponse.routes
+      filteredIndexedRoutes = filter (hasOnlyUserPreferredTransitModes . snd) indexedRoutes
+      indexedRoutesToProcess = if null filteredIndexedRoutes then indexedRoutes else filteredIndexedRoutes
+      showMultimodalWarningForFirstJourney = null filteredIndexedRoutes
 
-  mbJourneyWithIndex <- JMU.measureLatency (go 0 routesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
+  mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
   journeys <- DQuote.getJourneys searchRequest (Just True)
@@ -376,12 +377,12 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                 else Nothing
       }
   where
-    go :: Int -> [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe (Int, Journey.Journey))
-    go _ [] _ = return Nothing
-    go idx (r : routes) userPreferences = do
+    go :: [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe (Int, Journey.Journey))
+    go [] _ = return Nothing
+    go ((idx, r) : routes) userPreferences = do
       mbResult <- processRoute r userPreferences
       case mbResult of
-        Nothing -> go (idx + 1) routes userPreferences
+        Nothing -> go routes userPreferences
         Just journey -> return $ Just (idx, journey)
 
     processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe Journey.Journey)
