@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.AppManagement.TicketDashboard
     ticketDashboardDeleteAsset,
     ticketDashboardCurrentSeatStatus,
     ticketDashboardSeatManagement,
+    seatStatus,
   )
 where
 
@@ -20,12 +21,12 @@ import qualified "this" Domain.Types.TicketPlace
 import qualified Environment
 import EulerHS.Prelude hiding (elem, id, length, notElem, whenJust)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.TicketUtils
 import qualified Storage.Queries.DraftTicketChange as QDTC
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.SeatManagement as QTSM
@@ -72,7 +73,7 @@ ticketDashboardDeleteAsset _merchantShortId _opCity ticketPlaceId requestorId re
   QDTC.updateDraftById (Just updatedTicketDef) True ticketPlaceId
   mbTicketPlace <- QTP.findById ticketPlaceId
   let liveAssets = fromMaybe [] (mbTicketPlace <&> (.gallery))
-  when (assetId `notElem` liveAssets) $ do
+  when (assetId `notElem` liveAssets || reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ do
     deleteAssetHelper _merchantShortId _opCity req
   when (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ do
     whenJust mbTicketPlace $ \ticketPlace ->
@@ -85,20 +86,7 @@ ticketDashboardCurrentSeatStatus _merchantShortId _opCity ticketPlaceId requesto
   reqRole <- requestorRole_ & fromMaybeM (InvalidRequest "RequestorRole is required")
   ticketPlace <- QTP.findById ticketPlaceId >>= fromMaybeM (InvalidRequest "TicketPlace not found")
   unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN || (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_MERCHANT && ticketPlace.ticketMerchantId == requestorId)) $ throwError $ InvalidRequest "Requestor does not have this access"
-  let serviceCategoryId = Kernel.Types.Id.Id req.serviceCategory
-  let visitDate = req.date
-  ATS.setupBlockMechanismNx serviceCategoryId visitDate
-  mbBookedCount :: Maybe Int <- Redis.get (ATS.mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate)
-  mbAllowedMaxCapacity :: Maybe Int <- Redis.get (ATS.mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate)
-  if (isNothing mbBookedCount && isNothing mbAllowedMaxCapacity)
-    then do
-      mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCategoryId visitDate
-      let bookedCount = maybe 0 (.booked) mbSeatM
-      return $ CurrentSeatStatusResp {maxCapacity = Nothing, remainingCapacity = Nothing, bookedCount = bookedCount, unlimitedCapacity = True}
-    else do
-      bookedCount <- mbBookedCount & fromMaybeM (InternalError "Booked count not found")
-      maxCapacity <- mbAllowedMaxCapacity & fromMaybeM (InternalError "Max capacity not found")
-      return $ CurrentSeatStatusResp {maxCapacity = Just maxCapacity, remainingCapacity = Just (maxCapacity - bookedCount), bookedCount = bookedCount, unlimitedCapacity = False}
+  seatStatus req
 
 ticketDashboardSeatManagement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> API.Types.Dashboard.AppManagement.TicketDashboard.SeatManagementReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 ticketDashboardSeatManagement _merchantShortId _opCity ticketPlaceId requestorId requestorRole_ req = do
@@ -129,7 +117,7 @@ ticketDashboardSeatManagement _merchantShortId _opCity ticketPlaceId requestorId
               updatedAt = now
             }
     QTSM.create seatM
-  ATS.setupBlockMechanismNx serviceCategoryId visitDate
+  setupBlockMechanismNx serviceCategoryId visitDate
   -- life is sad
   when (isJust req.maxCapacityChange && isJust req.updateBookedSeats) $ do
     throwError $ InvalidRequest "Cannot change both max capacity and booked seats at the same time"

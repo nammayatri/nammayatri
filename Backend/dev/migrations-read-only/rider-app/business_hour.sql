@@ -24,3 +24,8 @@ ALTER TABLE atlas_app.business_hour ALTER COLUMN booking_closing_time TYPE time 
 
 ALTER TABLE atlas_app.business_hour ADD COLUMN place_id text ;
 ALTER TABLE atlas_app.business_hour ADD COLUMN name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.business_hour ADD COLUMN hash text ;

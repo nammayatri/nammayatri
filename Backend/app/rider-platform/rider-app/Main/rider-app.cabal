@@ -375,6 +375,9 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.TicketRule.Apply
+      SharedLogic.TicketRule.Core
+      SharedLogic.TicketUtils
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.EstimateBreakup

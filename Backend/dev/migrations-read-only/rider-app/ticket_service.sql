@@ -25,3 +25,13 @@ ALTER TABLE atlas_app.ticket_service ADD COLUMN allow_cancellation boolean NOT N
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_start_date date ;
 ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_end_date date ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN rules json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN is_closed boolean  default false;

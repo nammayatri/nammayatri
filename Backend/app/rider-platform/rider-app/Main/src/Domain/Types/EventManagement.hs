@@ -16,6 +16,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.TimeBound (TimeBound (..))
+import SharedLogic.TicketRule.Core (Rule)
 import qualified Tools.Payment as Payment
 
 data TicketPlaceDef = TicketPlaceDef
@@ -24,7 +25,8 @@ data TicketPlaceDef = TicketPlaceDef
     services :: [TicketServiceDef],
     serviceCategories :: [ServiceCategoryDef],
     servicePeopleCategories :: [ServicePeopleCategoryDef],
-    isDraft :: Bool
+    isDraft :: Bool,
+    rules :: Maybe [Rule]
     --specialOccasions :: [SpecialOccasionDetails]
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
@@ -61,8 +63,8 @@ data TicketServiceDef = TicketServiceDef
     allowFutureBooking :: Bool,
     allowCancellation :: Bool,
     expiry :: DTicketService.ExpiryType,
-    serviceCategoryId :: [Id DServiceCategory.ServiceCategory]
-    -- businessHours :: [Id DBusinessHour.BusinessHour] Making easier for users
+    serviceCategoryId :: [Id DServiceCategory.ServiceCategory],
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
@@ -78,7 +80,8 @@ data ServiceCategoryDef = ServiceCategoryDef
     description :: Text,
     allowedSeats :: Maybe Int,
     businessHours :: [BusinessHourDef],
-    peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory]
+    peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory],
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
@@ -88,7 +91,8 @@ data ServicePeopleCategoryDef = ServicePeopleCategoryDef
     description :: Text,
     pricingType :: DServicePeopleCategory.PricingType,
     priceAmount :: HighPrecMoney,
-    priceCurrency :: Currency
+    priceCurrency :: Currency,
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 

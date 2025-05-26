@@ -4,6 +4,7 @@
 
 module Storage.Queries.ServiceCategory (module Storage.Queries.ServiceCategory, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -38,9 +39,11 @@ updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
     [ Se.Set Beam.allowedSeats allowedSeats,
       Se.Set Beam.availableSeats availableSeats,
       Se.Set Beam.description description,
+      Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.name name,
       Se.Set Beam.peopleCategory (Kernel.Types.Id.getId <$> peopleCategory),
       Se.Set Beam.placeId placeId,
+      Se.Set Beam.rules (Data.Aeson.toJSON <$> rules),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

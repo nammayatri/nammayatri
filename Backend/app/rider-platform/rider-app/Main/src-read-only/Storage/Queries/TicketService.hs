@@ -4,6 +4,7 @@
 
 module Storage.Queries.TicketService (module Storage.Queries.TicketService, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -42,11 +43,13 @@ updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
       Se.Set Beam.allowFutureBooking allowFutureBooking,
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.expiry expiry,
+      Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.maxVerification maxVerification,
       Se.Set Beam.operationalEndDate (operationalDate <&> (.eneDate)),
       Se.Set Beam.operationalStartDate (operationalDate <&> (.startDate)),
       Se.Set Beam.operationalDays operationalDays,
       Se.Set Beam.placesId placesId,
+      Se.Set Beam.rules (Data.Aeson.toJSON <$> rules),
       Se.Set Beam.service service,
       Se.Set Beam.shortDesc shortDesc,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

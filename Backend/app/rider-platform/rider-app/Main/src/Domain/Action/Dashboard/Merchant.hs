@@ -1056,7 +1056,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           lon :: Maybe Double = readMaybeCSVField idx row.lon "Longitude"
           mapImageUrl :: Maybe Text = cleanMaybeCSVField idx row.mapImageUrl "Map Image URL"
           termsAndConditionsUrl :: Maybe Text = cleanMaybeCSVField idx row.termsAndConditionsUrl "Terms and conditions URL"
-          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, ..}
+          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, ..}
 
       ------------- TicketService --------------------------------------------------
       service <- cleanCSVField idx row.svc "Service"
@@ -1086,6 +1086,8 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 businessHours = [],
                 shortDesc = svcShortDesc,
                 merchantOperatingCityId = Just merchantOperatingCityId,
+                rules = Nothing,
+                isClosed = False,
                 ..
               }
 
@@ -1100,7 +1102,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           bhSlotTime :: TimeOfDay <- readCSVField idx row.businessHourSlotTime "Business hour slot time"
           return (Slot bhSlotTime, Id (show bhSlotTime <> separator <> ticketServiceId))
       let bookingClosingTime :: Maybe TimeOfDay = readMaybeCSVField idx row.businessBookingClosingTime "Booking closing Time"
-      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, placeId = Nothing, name = Nothing, ..}
+      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, placeId = Nothing, name = Nothing, hash = Nothing, ..}
 
       --------------- Service Category ------------------------------------------------
       svcCategoryDescription <- cleanCSVField idx row.svcCategoryDescription "Service Category Description"
@@ -1116,6 +1118,9 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 peopleCategory = [],
                 merchantOperatingCityId = Just merchantOperatingCityId,
                 placeId = Nothing,
+                rules = Nothing,
+                isClosed = False,
+                remainingActions = Nothing,
                 ..
               }
 
@@ -1186,6 +1191,8 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 description = peopleCategoryDescription,
                 merchantOperatingCityId = Just merchantOperatingCityId,
                 placeId = Nothing,
+                rules = Nothing,
+                isClosed = False,
                 ..
               }
       return (ticketPlace, ticketService, businessHour, serviceCategory, servicePeopleCategory)

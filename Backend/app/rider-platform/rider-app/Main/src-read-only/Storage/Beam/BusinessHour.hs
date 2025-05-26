@@ -15,6 +15,7 @@ data BusinessHourT f = BusinessHourT
   { bookingClosingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: B.C f [Kernel.Prelude.Text],
+    hash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified SharedLogic.TicketRule.Core
 import qualified Tools.Beam.UtilsTH
 
 data TicketService = TicketService
@@ -18,10 +19,12 @@ data TicketService = TicketService
     businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
     expiry :: Domain.Types.TicketService.ExpiryType,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    isClosed :: Kernel.Prelude.Bool,
     maxVerification :: Kernel.Prelude.Int,
     operationalDate :: Kernel.Prelude.Maybe Domain.Types.TicketService.OperationalDate,
     operationalDays :: [Kernel.Prelude.Text],
     placesId :: Kernel.Prelude.Text,
+    rules :: Kernel.Prelude.Maybe [SharedLogic.TicketRule.Core.Rule],
     service :: Kernel.Prelude.Text,
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

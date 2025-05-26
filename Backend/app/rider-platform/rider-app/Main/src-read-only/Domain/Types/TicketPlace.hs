@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified SharedLogic.TicketRule.Core
 import qualified Tools.Beam.UtilsTH
 
 data TicketPlace = TicketPlace
@@ -26,6 +27,7 @@ data TicketPlace = TicketPlace
     openTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     placeType :: Domain.Types.TicketPlace.PlaceType,
     priority :: Kernel.Prelude.Int,
+    rules :: Kernel.Prelude.Maybe [SharedLogic.TicketRule.Core.Rule],
     shortDesc :: Kernel.Prelude.Text,
     status :: Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: [Kernel.Prelude.Text],

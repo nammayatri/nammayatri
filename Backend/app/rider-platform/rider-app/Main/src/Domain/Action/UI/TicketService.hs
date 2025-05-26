@@ -11,7 +11,8 @@ import Data.Ord as DO
 import qualified Data.Text as Data.Text
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+--import qualified Data.Set as Set
+--import Data.Maybe (catMaybes, listToMaybe)
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
@@ -54,6 +55,9 @@ import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.TicketRule.Apply as TicketRule
+import qualified SharedLogic.TicketRule.Core
+import SharedLogic.TicketUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -75,6 +79,8 @@ import Tools.Error
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.SMS as Sms
+
+--import Control.Monad.Extra (mapMaybeM)
 
 type TicketBookingServiceMap = Map.Map (Kernel.Types.Id.Id DTB.TicketBookingService) DTB.TicketBookingService
 
@@ -125,7 +131,10 @@ convertBusinessHT (Domain.Types.BusinessHour.Duration startTime endTime) = Conve
 getTicketPlaces :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
 getTicketPlaces (_, merchantId) = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
-  sortBy (comparing (Down . (.priority))) . filterEndedOrUnPublishedPlaces <$> QTP.getTicketPlaces merchantOpCity.id
+  context <- TicketRule.getCurrentContext 330 Nothing Nothing
+  ticketPlaces' <- QTP.getTicketPlaces merchantOpCity.id
+  let ticketPlaces = TicketRule.processEntity context <$> ticketPlaces'
+  pure $ sortBy (comparing (Down . (.priority))) $ filterEndedOrUnPublishedPlaces ticketPlaces
   where
     filterEndedOrUnPublishedPlaces = filter (\place -> place.status `notElem` [Domain.Types.TicketPlace.Ended, Domain.Types.TicketPlace.Unpublished])
 
@@ -134,7 +143,9 @@ getTicketPlacesServices _ placeId mbDate = do
   ticketServices <- QTS.getTicketServicesByPlaceId placeId.getId
   now <- getCurrentTime
   let bookingDate = fromMaybe (utctDay now) mbDate
-  mkTicketServiceListRes ticketServices bookingDate placeId
+  context <- TicketRule.getCurrentContext 330 mbDate Nothing
+  let ruledTicketServices = filter (\s -> not s.isClosed) $ (TicketRule.processEntity context) <$> ticketServices
+  mkTicketServiceListRes ruledTicketServices bookingDate placeId
   where
     mkTicketServiceListRes ticketServices bookingDate_ pId =
       mapM
@@ -142,9 +153,18 @@ getTicketPlacesServices _ placeId mbDate = do
             specialOccasions <- findSpecialOccasion service
             let getBusinessHourForSpecialLocation sl businessHours = if null businessHours then map (\bh -> (sl, bh)) service.businessHours else map (\bh -> (sl, bh)) businessHours
             let specialOccBHourIds = concat (map (\sl -> getBusinessHourForSpecialLocation sl sl.businessHours) specialOccasions)
-            specialOccBHours <- mapM (\(specialOcc, bhId) -> mkBusinessHoursRes service bookingDate_ (Just specialOcc) bhId) specialOccBHourIds
-            normalBusinessHours <- mapM (mkBusinessHoursRes service bookingDate_ Nothing) service.businessHours
-            let businessHours = normalBusinessHours ++ specialOccBHours
+            specialOccBHoursWithOverrides <- mapM (\(specialOcc, bhId) -> mkBusinessHoursRes service bookingDate_ (Just specialOcc) bhId) specialOccBHourIds
+            let specialOccBHours = fst <$> specialOccBHoursWithOverrides
+            normalBusinessHoursWithOverrides <- mapM (\bhId -> mkBusinessHoursRes service bookingDate_ Nothing bhId) service.businessHours
+            let normalBusinessHours = fst <$> normalBusinessHoursWithOverrides
+                overrideBusinessHours = snd <$> normalBusinessHoursWithOverrides
+            mbNewServiceBusinessHourIds <- checkForBusinessHourOverrides service overrideBusinessHours
+            newServiceBusinessHours <- case mbNewServiceBusinessHourIds of
+              Just newServiceBusinessHourIds -> do
+                bhs <- mapM (\bhId -> mkBusinessHoursRes service bookingDate_ Nothing bhId) newServiceBusinessHourIds
+                return $ if null bhs then normalBusinessHours else fst <$> bhs
+              Nothing -> return normalBusinessHours
+            let businessHours = filter (\bh -> not $ null bh.categories) $ newServiceBusinessHours ++ specialOccBHours
             pure $
               TicketServiceResp
                 { id = service.id,
@@ -160,27 +180,51 @@ getTicketPlacesServices _ placeId mbDate = do
         )
         ticketServices
 
-    mkBusinessHoursRes :: Domain.Types.TicketService.TicketService -> Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Domain.Types.SpecialOccasion.SpecialOccasion -> Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Environment.Flow BusinessHourResp
+    mkBusinessHoursRes ::
+      Domain.Types.TicketService.TicketService ->
+      Data.Time.Calendar.Day ->
+      Maybe Domain.Types.SpecialOccasion.SpecialOccasion ->
+      Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour ->
+      Environment.Flow
+        ( BusinessHourResp,
+          ( [ ( Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+                Maybe [SharedLogic.TicketRule.Core.ActionType]
+              )
+            ],
+            [ ( Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+                Domain.Types.BusinessHour.BusinessHourType
+              )
+            ]
+          )
+        )
     mkBusinessHoursRes service bDate mbSpecialOcc bhId = do
       businessHour <- QBH.findById bhId >>= fromMaybeM (BusinessHourNotFound bhId.getId)
       let convertedBusinessHT = convertBusinessHT businessHour.btype
           mbOperationalDay = (.dayOfWeek) =<< mbSpecialOcc
-      categories <- mapM (mkServiceCategories bDate) businessHour.categoryId
+      categoriesWithBHOverrides' <- mapM (mkServiceCategories bDate) businessHour.categoryId
+      let categoriesWithBHOverrides = filter (\(c, _) -> not c.isClosed) categoriesWithBHOverrides'
+      let categories = fst <$> categoriesWithBHOverrides
+      let remainingBHOverrides = map (\(c, ov) -> (c.id, ov)) categoriesWithBHOverrides
+      let svcWrtBhs = map (\c -> (c.id, businessHour.btype)) categories
       pure $
-        BusinessHourResp
-          { id = bhId,
-            slot = convertedBusinessHT.slot,
-            startTime = convertedBusinessHT.startTime,
-            endTime = convertedBusinessHT.endTime,
-            specialDayDescription = (.description) =<< mbSpecialOcc,
-            specialDayType = (.specialDayType) <$> mbSpecialOcc,
-            operationalDays = maybe service.operationalDays (: []) mbOperationalDay,
-            operationalDate = service.operationalDate,
-            categories
-          }
+        ( BusinessHourResp
+            { id = bhId,
+              slot = convertedBusinessHT.slot,
+              startTime = convertedBusinessHT.startTime,
+              endTime = convertedBusinessHT.endTime,
+              specialDayDescription = (.description) =<< mbSpecialOcc,
+              specialDayType = (.specialDayType) <$> mbSpecialOcc,
+              operationalDays = maybe service.operationalDays (: []) mbOperationalDay,
+              operationalDate = service.operationalDate,
+              categories
+            },
+          (remainingBHOverrides, svcWrtBhs)
+        )
 
     mkServiceCategories bDate_ serviceCatId = do
-      serviceCategory <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+      context <- TicketRule.getCurrentContext 330 (Just bDate_) Nothing
+      serviceCategory' <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+      let serviceCategory = TicketRule.processEntity context serviceCategory'
       isClosed <-
         QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed (serviceCatId.getId) (Just bDate_) >>= \case
           Just _ -> pure True
@@ -188,18 +232,22 @@ getTicketPlacesServices _ placeId mbDate = do
       mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId bDate_
       peopleCategories <- mapM (mkPeopleCategoriesRes bDate_) serviceCategory.peopleCategory
       pure $
-        CategoriesResp
-          { name = serviceCategory.name,
-            id = serviceCategory.id,
-            availableSeats = serviceCategory.availableSeats,
-            bookedSeats = maybe 0 (.booked) mBeatManagement,
-            allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
-            peopleCategories,
-            isClosed = isClosed
-          }
+        ( CategoriesResp
+            { name = serviceCategory.name,
+              id = serviceCategory.id,
+              availableSeats = serviceCategory.availableSeats,
+              bookedSeats = maybe 0 (.booked) mBeatManagement,
+              allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
+              peopleCategories,
+              isClosed = isClosed || serviceCategory.isClosed || null peopleCategories
+            },
+          serviceCategory.remainingActions
+        )
 
     mkPeopleCategoriesRes bDate_ pCatId = do
-      peopleCategory <- QPC.findServicePeopleCategoryById pCatId bDate_ >>= fromMaybeM (PeopleCategoryNotFound pCatId.getId)
+      context <- TicketRule.getCurrentContext 330 (Just bDate_) Nothing
+      peopleCategory' <- QPC.findServicePeopleCategoryById pCatId bDate_ >>= fromMaybeM (PeopleCategoryNotFound pCatId.getId)
+      let peopleCategory = TicketRule.processEntity context peopleCategory'
       pure $
         PeopleCategoriesResp
           { name = peopleCategory.name,
@@ -305,10 +353,12 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       let ticketServiceId = ticketServicesReq.serviceId
       let bHourId = ticketServicesReq.businessHourId
       let categories = ticketServicesReq.categories
+      context <- TicketRule.getCurrentContext 330 (Just visitDate) Nothing
       id <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
-      ticketService <- QTS.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
+      ticketService' <- QTS.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
+      let ticketService = TicketRule.processEntity context ticketService'
       businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
 
       let businessHourTime = case businessHour.btype of
@@ -352,10 +402,12 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId visitDate businessHour ticketServiceCReq = do
       id <- generateGUID
       now <- getCurrentTime
+      context <- TicketRule.getCurrentContext 330 (Just visitDate) Nothing
       mbAnySplOccassion <- QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed (ticketServiceCReq.categoryId.getId) (Just visitDate)
       when (maybe False (\anySplOccassion -> elem businessHour.id anySplOccassion.businessHours) mbAnySplOccassion) $ throwError $ InvalidRequest "Business hour is closed"
       let serviceCatId = ticketServiceCReq.categoryId
-      tBookingSC <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+      tBookingSC' <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+      let tBookingSC = TicketRule.processEntity context tBookingSC'
       tBookingPCats <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate) ticketServiceCReq.peopleCategories
       (amount, bookedSeats) <- calculateAmountAndSeats tBookingPCats
       QTBPC.createMany tBookingPCats
@@ -403,7 +455,9 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId visitDate ticketServicePCReq = do
       id <- generateGUID
       let tPCatId = ticketServicePCReq.peopleCategoryId
-      tServicePCat <- QPC.findServicePeopleCategoryById tPCatId visitDate >>= fromMaybeM (PeopleCategoryNotFound tPCatId.getId)
+      context <- TicketRule.getCurrentContext 330 (Just visitDate) Nothing
+      tServicePCat' <- QPC.findServicePeopleCategoryById tPCatId visitDate >>= fromMaybeM (PeopleCategoryNotFound tPCatId.getId)
+      let tServicePCat = TicketRule.processEntity context tServicePCat'
       let numberOfUnits = ticketServicePCReq.numberOfUnits
           pricePerUnit = tServicePCat.pricePerUnit
       return $
@@ -431,7 +485,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       let categoriesNumberOfUnits = categories <&> (.numberOfUnits)
       withCurrencyCheckingList (categories <&> (.pricePerUnit)) $ \mbCurrency categoriesPricePerUnit -> do
         first (mkPrice mbCurrency) $
-          foldl
+          foldl'
             ( \(totalAmount, totalSeats) (pricePerUnit, numberOfUnits) -> do
                 let categoryAmount = pricePerUnit * fromIntegral numberOfUnits
                 (totalAmount + categoryAmount, totalSeats + numberOfUnits)
@@ -1077,27 +1131,6 @@ data LockBookingResult = LockBookingSuccess (Maybe RevertInfo) | LockBookingFail
 
 data RevertInfo = RevertInfo {revertKey :: Text, decrementBy :: Int} deriving (Generic, Eq, Show, Read)
 
-mkTicketServiceCategoryBlockedSeatKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
-mkTicketServiceCategoryBlockedSeatKey categoryId visitDate = "TicketServiceCategory:blockedSet:id-" <> categoryId.getId <> "-date-" <> show visitDate
-
-mkTicketServiceCategoryBookedCountKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
-mkTicketServiceCategoryBookedCountKey categoryId visitDate = "TicketServiceCategory:bookedCount:id-" <> categoryId.getId <> "-date-" <> show visitDate
-
-mkTicketServiceCategoryActiveBlockRequestKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
-mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate = "TicketServiceCategory:activeBlockQuantityRequest:id-" <> categoryId.getId <> "-date-" <> show visitDate
-
-mkTicketServiceCategoryConflictResolverKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
-mkTicketServiceCategoryConflictResolverKey categoryId visitDate = "TicketServiceCategory:activeBlockConflictResolver:id-" <> categoryId.getId <> "-date-" <> show visitDate
-
-mkTicketServiceAllowedMaxCapacityKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
-mkTicketServiceAllowedMaxCapacityKey categoryId visitDate = "TicketServiceCategory:allowedMaxCapacity:id-" <> categoryId.getId <> "-date-" <> show visitDate
-
-mkBlockMember :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Int -> Text
-mkBlockMember personId numOfUnits = "{" <> personId.getId <> "}:" <> show numOfUnits
-
-releaseBlock :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)] -> Environment.Flow ()
-releaseBlock personId visitDate = mapM_ (\(categoryId, categoryUnit) -> Redis.zRem (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) ([mkBlockMember personId categoryUnit]))
-
 tryChangeMaxCapacity :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Int -> Data.Time.Calendar.Day -> Environment.Flow ()
 tryChangeMaxCapacity categoryId newMaxCapacity visitDate = do
   mbAllowedMaxCapacity <- Redis.get (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate)
@@ -1213,34 +1246,6 @@ extractCount bs = case BS8.split ':' bs of
 
 calculateTotalRequestedUnits :: TicketBookingReq -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)]
 calculateTotalRequestedUnits req = Map.toList $ Map.fromListWith (+) [(c.categoryId, sum (map (.numberOfUnits) c.peopleCategories)) | s <- req.services, c <- s.categories]
-
-setupBlockMechanismNx :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
-setupBlockMechanismNx serviceCategoryId visitDate = do
-  mbBookedCount :: Maybe Int <- Redis.get (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate)
-  mbAllowedMaxCapacity :: Maybe Int <- Redis.get (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate)
-  when (isNothing mbBookedCount || isNothing mbAllowedMaxCapacity) $ do
-    serviceCategory <- QSC.findById serviceCategoryId >>= fromMaybeM (InternalError $ "Setup failed: Service Category id " <> serviceCategoryId.getId <> " not found")
-    whenJust serviceCategory.availableSeats $ \maxSeats -> do
-      mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCategoryId visitDate
-      let alreadyBookedCount = maybe 0 (.booked) mbSeatM
-      let allowedMaxCapacity = fromMaybe maxSeats (mbSeatM >>= (.maxCapacity))
-      keyExpiryTime <- expirationTimeInSeconds visitDate
-      let keysAndValues =
-            [ (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate, allowedMaxCapacity),
-              (mkTicketServiceCategoryConflictResolverKey serviceCategoryId visitDate, 0),
-              (mkTicketServiceCategoryActiveBlockRequestKey serviceCategoryId visitDate, 0),
-              (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate, alreadyBookedCount)
-            ]
-      when (keyExpiryTime > 0) $ forM_ keysAndValues $ \(key, value) -> void $ Redis.setNxExpire key keyExpiryTime value
-  where
-    endOfDayTime :: Day -> UTCTime
-    endOfDayTime day = UTCTime day (secondsToDiffTime (24 * 60 * 60 - 1))
-
-    expirationTimeInSeconds :: Day -> Environment.Flow Int
-    expirationTimeInSeconds day = do
-      currentTime <- getCurrentTime
-      let endTime = endOfDayTime day
-      return . round $ utcTimeToPOSIXSeconds endTime - utcTimeToPOSIXSeconds currentTime
 
 blockSeats :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)] -> Environment.Flow BlockResult
 blockSeats personId visitDate requestedUnits = do
@@ -1484,3 +1489,77 @@ postTicketDashboardSendVerifyOtp merchant req = do
           Sms.sendSMS merchant.id merchantOperatingCityId (buildSmsRes phoneNumber) >>= Sms.checkSmsResult
       Redis.setExp key otp 300
   return Success
+
+checkForBusinessHourOverrides ::
+  Domain.Types.TicketService.TicketService ->
+  [ ( [ ( Kernel.Types.Id.Id
+            Domain.Types.ServiceCategory.ServiceCategory,
+          Maybe [SharedLogic.TicketRule.Core.ActionType]
+        )
+      ],
+      [ ( Kernel.Types.Id.Id
+            Domain.Types.ServiceCategory.ServiceCategory,
+          Domain.Types.BusinessHour.BusinessHourType -- This original BHT list is not directly used if an override is found
+        )
+      ]
+    )
+  ] ->
+  Environment.Flow (Maybe [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour])
+checkForBusinessHourOverrides _service _overrideDataList = do
+  return Nothing
+
+-- let (allScActionPairsNested, allScToOriginalBhtPairsNested) = unzip overrideDataList
+-- let flatScActionPairs = concat allScActionPairsNested
+-- let flatScToOriginalBhtPairs = concat allScToOriginalBhtPairsNested
+
+-- let scToOriginalBHTs :: Map.Map (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory) (Set.Set Domain.Types.BusinessHour.BusinessHourType)
+--     scToOriginalBHTs = Map.fromListWith Set.union $ map (\(scId, bht) -> (scId, Set.singleton bht)) flatScToOriginalBhtPairs
+
+-- let initialScBhtMap :: Map.Map (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory) Domain.Types.BusinessHour.BusinessHourType
+--     initialScBhtMap = Map.mapMaybe (\bhtSet -> if Set.size bhtSet == 1 then Just (Set.elemAt 0 bhtSet) else Nothing) scToOriginalBHTs
+
+-- let scIdsWithActions = Set.toList $ Set.fromList $ map fst flatScActionPairs
+-- error "Not implemented"
+-- let (finalScBhtMap, processedOverrides) =
+--       foldl -- Changed from foldl' to foldl due to import constraints
+--         ( \(currentMap, currentOverridesFlag) scId ->
+--             let actionsForScId = catMaybes $ map (\(sId, mActions) -> if sId == scId then mActions else Nothing) flatScActionPairs
+--                 allActions = concat actionsForScId
+--                 -- Assuming newBhtVal is the payload from the ActionType constructor
+--                 mOverrideActionPayload = listToMaybe [newBhtVal | SharedLogic.TicketRule.Core.OverrideBusinessHours newBhtVal <- allActions]
+--              in case mOverrideActionPayload of
+--                   -- Unwrap the payload here. Assuming the newtype and its constructor are both SharedLogic.TicketRule.Core.OverrideBusinessHour
+--                   Just (SharedLogic.TicketRule.Core.OverrideBusinessHour _ actualDomainBht) ->
+--                       (Map.insert scId actualDomainBht currentMap, True)
+--                   Just _ -> (currentMap, currentOverridesFlag || False) -- Should not happen if the above pattern is exhaustive for overrides
+--                   Nothing -> (currentMap, currentOverridesFlag || False)
+--         )
+--         (initialScBhtMap, False)
+--         scIdsWithActions
+
+-- if not processedOverrides
+--   then pure Nothing
+--   else do
+--     let bhtToScIdsMap :: Map.Map Domain.Types.BusinessHour.BusinessHourType [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory]
+--         bhtToScIdsMap = Map.fromListWith (++) $ map (\(scId, bht) -> (bht, [scId])) (Map.toList finalScBhtMap)
+
+--     newBhIds <- forM (Map.toList bhtToScIdsMap) $ \(bht, scIds) -> do
+--       newBhId <- generateGUID
+--       now <- getCurrentTime
+--       let newBusinessHour = Domain.Types.BusinessHour.BusinessHour
+--             { id = newBhId,
+--               btype = bht,
+--               categoryId = sort scIds,
+--               hash = Nothing,
+--               name = Nothing,
+--               placeId = Nothing,
+--               bookingClosingTime = Nothing,
+--               merchantId = Nothing,
+--               merchantOperatingCityId = Nothing,
+--               createdAt = now,
+--               updatedAt = now
+--             }
+--       QBH.create newBusinessHour
+--       pure newBhId
+
+--     pure $ Just newBhIds
