@@ -112,7 +112,7 @@ data VehicleDocumentItem = VehicleDocumentItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VerifyReq = VerifyReq {driverId :: Kernel.Prelude.Text, identifierNumber :: Kernel.Prelude.Text, imageId :: Kernel.Prelude.Text}
+data VerifyReq = VerifyReq {driverId :: Kernel.Prelude.Text, identifierNumber :: Kernel.Prelude.Text, imageId :: Kernel.Prelude.Text, optionalImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
