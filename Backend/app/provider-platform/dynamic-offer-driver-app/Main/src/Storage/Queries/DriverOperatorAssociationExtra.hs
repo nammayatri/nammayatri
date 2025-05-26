@@ -14,18 +14,20 @@ import qualified Storage.Beam.DriverOperatorAssociation as Beam
 import qualified Storage.Beam.DriverOperatorAssociation as BeamDOA
 import Storage.Queries.OrphanInstances.DriverOperatorAssociation ()
 
-findAllByOperatorIdWithLimitOffset ::
+findAllByOperatorIdWithLimitOffsetDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   m [Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation]
-findAllByOperatorIdWithLimitOffset operatorId mbIsActive mbLimit mbOffset =
+findAllByOperatorIdWithLimitOffsetDriverId operatorId mbIsActive mbLimit mbOffset mbDriverId =
   findAllWithOptionsKV
     [ Se.And $
         [Se.Is Beam.operatorId $ Se.Eq operatorId]
           <> [Se.Is Beam.isActive $ Se.Eq (fromJust mbIsActive) | isJust mbIsActive]
+          <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
     ]
     (Se.Asc Beam.associatedOn)
     (Just . min 10 . fromMaybe 5 $ mbLimit)
