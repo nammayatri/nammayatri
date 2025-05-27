@@ -35,7 +35,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange, contactSupportNumber)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange, contactSupportNumber, emitTerminateApp, isParentView)
 import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
@@ -384,7 +384,11 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
                                 else case state.data.goBackTo of
                                       Screen.METER_RIDE_SCREEN -> exit $ GotoMeterRideScreen state{data{goBackTo = Screen.HOME_SCREEN}}
-                                      _ -> exit $ GoBack state
+                                      _ -> if isParentView FunctionCall 
+                                              then do 
+                                                void $ pure $ emitTerminateApp Nothing true
+                                                continue state
+                                              else exit $ GoBack state
 
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
