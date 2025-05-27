@@ -52,6 +52,9 @@ module SharedLogic.DriverPool
     addSearchRequestInfoToCache,
     isLessThenNParallelRequests,
     removeExpiredSearchRequestInfoFromCache,
+    SearchTryBatchData (..),
+    SearchTryBatchPoolData (..),
+    FilterStage (..),
   )
 where
 
@@ -801,12 +804,20 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           ..
         }
 
-data FilterStage = NearBy | MaxParallelRequests | ActualDistance
+data FilterStage = NearBy | MaxParallelRequests | ActualDistance | TaggedPool
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data SearchTryBatchData = SearchTryBatchData
   { searchTryId :: Text,
     driverIds :: [Text],
+    filterStage :: FilterStage,
+    batchNum :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data SearchTryBatchPoolData = SearchTryBatchPoolData
+  { searchTryId :: Text,
+    driverPoolData :: [DriverPoolWithActualDistResult],
     filterStage :: FilterStage,
     batchNum :: Int
   }
