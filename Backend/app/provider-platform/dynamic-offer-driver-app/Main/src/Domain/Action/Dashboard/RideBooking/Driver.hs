@@ -427,6 +427,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         softBlockStiers = info.softBlockStiers >>= (pure . map show),
         softBlockExpiryTime = info.softBlockExpiryTime,
         softBlockReasonFlag = info.softBlockReasonFlag,
+        lastActivityDate = Just info.updatedAt,
+        createdAt = Just info.createdAt,
         drunkAndDriveViolationCount
       }
 
