@@ -29,7 +29,7 @@ import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
-import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType)
+import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType,GlobalPayload)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT, runExcept)
@@ -628,6 +628,12 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
             "alerts" -> do
               let gPayload = EHC.getGlobalPayload "__payload"
               hideSplashAndCallFlow $ notificationFlow gPayload
+            "profile" -> do
+              -- liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
+              (GlobalState allState) <- getState
+              let updatedState = allState.homeScreen
+              modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
+              hideSplashAndCallFlow driverProfileFlow
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit

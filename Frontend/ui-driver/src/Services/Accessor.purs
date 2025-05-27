@@ -121,3 +121,6 @@ _types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { ty
 
 _overchargingTag :: forall a b c. Newtype a { overchargingTag :: b | c } => Lens' a b
 _overchargingTag = lens (unwrap >>> _.overchargingTag) (\oldRec newVal -> wrap ((unwrap oldRec) { overchargingTag = newVal }))
+
+_deeplinkOptions :: forall a b c. Newtype a { deeplinkOptions :: b | c } => Lens' a b
+_deeplinkOptions = lens (unwrap >>> _.deeplinkOptions) (\oldRec newVal -> wrap ((unwrap oldRec) { deeplinkOptions = newVal }))
