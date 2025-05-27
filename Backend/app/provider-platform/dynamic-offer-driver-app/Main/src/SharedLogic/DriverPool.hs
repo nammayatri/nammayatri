@@ -542,7 +542,7 @@ calculateGoHomeDriverPool ::
   m [DriverPoolWithActualDistResult]
 calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   now <- getCurrentTime
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId configsInExperimentVersions
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QP.getNearestGoHomeDrivers $

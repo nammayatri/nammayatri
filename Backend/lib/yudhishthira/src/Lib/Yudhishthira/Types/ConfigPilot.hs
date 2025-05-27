@@ -46,6 +46,7 @@ data ConfigType
   | FareProduct
   | Plan
   | PlanTranslation
+  | VehicleServiceTier
   | Toll
   | CancellationFarePolicy
   | SurgePricing

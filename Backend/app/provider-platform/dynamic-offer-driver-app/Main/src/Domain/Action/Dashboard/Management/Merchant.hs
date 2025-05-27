@@ -146,7 +146,6 @@ import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.GoHomeConfig as CQGHC
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -601,10 +600,10 @@ getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbC
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case (mbReqDocumentType, mbCategory) of
-    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId
-    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType)
-    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category
-    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category
+    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId (Just [])
+    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType) (Just [])
+    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category (Just [])
+    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category (Just [])
 
   pure $ mkDocumentVerificationConfigRes <$> configs
 
@@ -656,7 +655,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just []) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -707,7 +706,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory
+  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just [])
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
   _ <- CQDVC.create newConfig
@@ -1342,7 +1341,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           return (errors, newBoundedAlreadyDeletedMap)
 
-    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier (Just []) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
     makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
     makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
@@ -1949,9 +1948,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- vehicle service tier
   mbVehicleServiceTier <-
-    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId
+        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         newVehicleServiceTiers <- mapM (buildVehicleServiceTier newMerchantId newMerchantOperatingCityId) vehicleServiceTiers
         return $ Just newVehicleServiceTiers
       _ -> return Nothing
@@ -1967,9 +1966,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- leader board configs
   mbLeaderBoardConfig <-
-    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId
+        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newMerchantId newMerchantOperatingCityId) leaderBoardConfigs
         return $ Just newLeaderBoardConfigs
       _ -> return Nothing
@@ -1985,9 +1984,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant overlay
   mbMerchantOverlays <-
-    CQMO.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQMO.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId
+        merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         newMerchantOverlays <- mapM (buildMerchantOverlay newMerchantId newMerchantOperatingCityId) merchantOverlays
         return $ Just newMerchantOverlays
       _ -> return Nothing
@@ -2030,9 +2029,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- onboarding document config
   mbDocumentVerificationConfigs <-
-    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
+        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newMerchantId newMerchantOperatingCityId now) documentVerificationConfigs
         return $ Just newDocumentVerificationConfigs
       _ -> return Nothing
@@ -2093,8 +2092,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- subscription config
   subscriptionConfigs <-
-    mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast newMerchantOperatingCityId)) [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL] >>= \cfgs -> do
-      subscriptionCfgs <- mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast baseOperatingCityId)) $
+    mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast newMerchantOperatingCityId) (Just [])) [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL] >>= \cfgs -> do
+      subscriptionCfgs <- mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast baseOperatingCityId) (Just [])) $
         case cfgs of
           [Nothing, Nothing] -> [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL]
           [Nothing, _] -> [Plan.YATRI_SUBSCRIPTION]
@@ -2127,7 +2126,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
         whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
         whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
-        whenJust mbGoHomeConfig $ \newGoHomeConfig -> CQGHC.create newGoHomeConfig
+        whenJust mbGoHomeConfig $ \newGoHomeConfig -> CGHC.create newGoHomeConfig
         whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
         whenJust mbMerchantMessages $ \newMerchantMessages -> mapM_ CQMM.create newMerchantMessages
         whenJust mbMerchantOverlays $ \newMerchantOverlays -> mapM_ CQMO.create newMerchantOverlays

@@ -156,7 +156,7 @@ sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
       notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken entityData merchantPN.fcmNotificationType
     OVERLAY -> do
       overlayKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid overlay key for Notification")
-      merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
+      merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
       let (title, description) = messageTransformer ((fromMaybe "" merchantOverlay.title), (fromMaybe "" merchantOverlay.description))
       let overlay :: DOverlay.Overlay = overlay {DOverlay.title = Just title, DOverlay.description = Just description}
       sendOverlay merchantOpCityId driver $ mkOverlayReq overlay

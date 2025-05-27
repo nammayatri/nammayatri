@@ -182,7 +182,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       return (cancellationRate, assignedCount)
 
     nudgeDriver cancellationRate fcmType pnKey = do
-      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing Nothing >>= fromMaybeM (InternalError $ "Overlay not found for " <> pnKey)
+      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing >>= fromMaybeM (InternalError $ "Overlay not found for " <> pnKey)
       let fcmOverlayReq = Notify.mkOverlayReq overlay
       let entityData = Notify.CancellationRateBaseNudgeData {driverId = driver.id.getId, driverCancellationRate = cancellationRate}
       Notify.sendCancellationRateNudgeOverlay driver.merchantOperatingCityId driver fcmType fcmOverlayReq entityData

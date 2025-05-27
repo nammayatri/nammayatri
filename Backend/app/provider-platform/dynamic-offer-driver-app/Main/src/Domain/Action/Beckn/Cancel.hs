@@ -124,7 +124,7 @@ cancel req merchant booking mbActiveSearchTry = do
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
-        DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just $ ride.id.getId) ride.vehicleVariant
+        DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just $ ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
         whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
 

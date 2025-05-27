@@ -61,7 +61,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
       case question.quizCoinFunction of
         Nothing -> return 0
         Just functionName -> do
-          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory
+          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing
           return $ maybe 0 (\cc -> cc.coins) coinsConfig
 
     generateModuleInfo language personId eModule@LmsModule {..} = do
@@ -70,7 +70,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
       bonusCoins <- case bonusCoinEventFunction of
         Nothing -> pure $ Nothing
         Just functionName -> do
-          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMSBonus functionName _merchantId merchantOpCityId vehCategory
+          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMSBonus functionName _merchantId merchantOpCityId vehCategory Nothing
           return $ maybe Nothing (\cc -> Just cc.coins) coinsConfig
 
       -- fetching total coins for quiz
@@ -219,7 +219,7 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
           Nothing -> return Nothing
           Just functionName -> do
             let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault Nothing
-            coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory
+            coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing
             return $ maybe Nothing (\cc -> Just cc.coins) coinsConfig
 
       translations <- SCQL.getAllTranslationsForQuestionId question.questionId
@@ -394,7 +394,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                   Nothing ->
                     if (isCorrect && (length allModulesCompletionInfo == 1))
                       then do
-                        _ <- DC.driverCoinsEvent personId _merchantId merchantOpCityId DCT.LMS (Just req.questionId.getId) Nothing
+                        _ <- DC.driverCoinsEvent personId _merchantId merchantOpCityId DCT.LMS (Just req.questionId.getId) Nothing Nothing
                         return (Just True)
                       else do return Nothing
                   _ -> pure Nothing
@@ -462,7 +462,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                   -- adding bonus coins
                   if ((all (== 1) completedQuestionAttempts) && totalModuleCompletionEntries == 1 && moduleInfo.bonusCoinEventFunction /= Nothing)
                     then do
-                      _ <- DC.driverCoinsEvent personId _merchantId merchantOpCityId DCT.LMSBonus (Just moduleInfo.id.getId) Nothing
+                      _ <- DC.driverCoinsEvent personId _merchantId merchantOpCityId DCT.LMSBonus (Just moduleInfo.id.getId) Nothing Nothing
                       return (Just True)
                     else do return (Nothing)
                 else do return Nothing

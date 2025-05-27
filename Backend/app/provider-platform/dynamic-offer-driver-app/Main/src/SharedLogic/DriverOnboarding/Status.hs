@@ -184,7 +184,7 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
   vehicleDocumentsUnverified <- fetchVehicleDocuments driverImagesInfo language mbReqRegistrationNo
 
   whenJust (onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory))) $ \vehicleCategory -> do
-    documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
+    documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory Nothing
     let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
     when (null mandatoryVehicleDocumentVerificationConfigs) $ do
       allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
@@ -502,7 +502,7 @@ checkIfDocumentValid ::
   Maybe Bool ->
   Flow Bool
 checkIfDocumentValid merchantOpCityId docType category status makeSelfieAadhaarPanMandatory = do
-  mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId docType category
+  mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId docType category Nothing
   case mbVerificationConfig of
     Just verificationConfig -> do
       if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)

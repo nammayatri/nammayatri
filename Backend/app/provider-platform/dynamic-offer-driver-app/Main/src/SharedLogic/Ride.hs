@@ -96,7 +96,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
-  rideDetails <- buildRideDetails ride driver vehicle
+  rideDetails <- buildRideDetails booking ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -148,14 +148,15 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 buildRideDetails ::
+  DBooking.Booking ->
   DRide.Ride ->
   DPerson.Person ->
   DVeh.Vehicle ->
   Flow SRD.RideDetails
-buildRideDetails ride driver vehicle = do
+buildRideDetails booking ride driver vehicle = do
   now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId booking.configInExperimentVersions
   let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails

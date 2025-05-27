@@ -46,9 +46,9 @@ postMeterRideAddDestination (_mbPersonId, merchantId, merchantOpCityId) rideId m
   unless (booking.tripCategory == OneWay MeterRide) $
     throwError $ InvalidRequest ("Invalid trip category " <> show booking.tripCategory)
 
-  fareTillNow <- AUF.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters ride.traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier)
+  fareTillNow <- AUF.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters ride.traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
   (_, mbDistance, mbDuration, mbRoute, _) <- AUF.calculateDistanceAndRoutes merchantId merchantOpCityId 100 [meterRideRequest.currentLatLong, meterRideRequest.destinationLatLong]
-  fare <- AUF.calculateFareUtil merchantId merchantOpCityId (Just meterRideRequest.destinationLatLong) meterRideRequest.currentLatLong mbDistance mbDuration mbRoute (OneWay MeterRide) (Just booking.vehicleServiceTier)
+  fare <- AUF.calculateFareUtil merchantId merchantOpCityId (Just meterRideRequest.destinationLatLong) meterRideRequest.currentLatLong mbDistance mbDuration mbRoute (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
   fareTillNow' <- Kernel.Prelude.listToMaybe fareTillNow.estimatedFares & fromMaybeM (InternalError ("Failed to calculate fareTillNow for given request: " <> ride.id.getId <> " RequestBody: " <> show meterRideRequest.destinationLatLong))
   fare' <- Kernel.Prelude.listToMaybe fare.estimatedFares & fromMaybeM (InternalError ("Failed to calculate fare for given request: " <> ride.id.getId <> " RequestBody: " <> show meterRideRequest.destinationLatLong))
   let estimatedFare = fareTillNow'.minFare + fare'.minFare

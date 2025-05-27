@@ -21,30 +21,38 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleCategory as DTV
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Coins.CoinsConfig as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
-fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m [CoinsConfig]
-fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory = do
+fetchFunctionsOnEventbasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> [LYT.ConfigVersionMap] -> m [CoinsConfig]
+fetchFunctionsOnEventbasisInRideFlow eventType merchantId merchantOpCityId vehicleCategory configVersionMap = fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory (Just configVersionMap)
+
+fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m [CoinsConfig]
+fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory mbConfigVersionMap = do
   let eventTypeText = pack (show eventType)
-  Hedis.safeGet (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory) >>= \case
-    Just a -> return a
-    Nothing -> do
-      result <- Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory)
-      result' <-
-        if null result
-          then Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing
-          else return result
-      void $ cacheCoinConfig eventTypeText merchantOpCityId vehicleCategory result
-      return result'
-
-cacheCoinConfig :: CacheFlow m r => Text -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> [CoinsConfig] -> m ()
-cacheCoinConfig eventType merchantOpCityId vehicleCategory coinsConfig = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeCoinConfigKey eventType merchantOpCityId vehicleCategory) coinsConfig expTime
+  result <-
+    DynamicLogic.findAllConfigsWithCacheKey
+      (cast merchantOpCityId)
+      (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+      mbConfigVersionMap
+      Nothing
+      (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory))
+      (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory)
+  if null result
+    then
+      DynamicLogic.findAllConfigsWithCacheKey
+        (cast merchantOpCityId)
+        (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+        mbConfigVersionMap
+        Nothing
+        (Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing)
+        (makeCoinConfigKey eventTypeText merchantOpCityId vehicleCategory)
+    else return result
 
 makeCoinConfigKey :: Text -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Text
 makeCoinConfigKey eventType merchantOpCityId vehicleCategory =
@@ -57,17 +65,19 @@ makeCoinConfigKey eventType merchantOpCityId vehicleCategory =
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-fetchConfigOnEventAndFunctionBasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m (Maybe CoinsConfig)
-fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory = do
-  let eventTypeText = pack (show eventType)
-  Hedis.safeGet (makeCoinConfigOnEventAndFunctionKey eventTypeText eventFunction merchantOpCityId vehicleCategory) >>= \case
-    Just a -> return a
-    Nothing -> cacheCoinConfigOnEventAndFunction eventTypeText eventFunction merchantOpCityId vehicleCategory /=<< Queries.fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId (Just vehicleCategory)
+fetchConfigOnEventAndFunctionBasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> [LYT.ConfigVersionMap] -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasisInRideFlow eventType eventFunction merchantId merchantOpCityId vehicleCategory configVersionMap = fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory (Just configVersionMap)
 
-cacheCoinConfigOnEventAndFunction :: CacheFlow m r => Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe CoinsConfig -> m ()
-cacheCoinConfigOnEventAndFunction eventType eventFunction merchantOpCityId vehicleCategory coinsConfig = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory) coinsConfig expTime
+fetchConfigOnEventAndFunctionBasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory mbConfigVersionMap = do
+  let eventTypeText = pack (show eventType)
+  DynamicLogic.findOneConfigWithCacheKey
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId (Just vehicleCategory))
+    (makeCoinConfigOnEventAndFunctionKey eventTypeText eventFunction merchantOpCityId vehicleCategory)
 
 makeCoinConfigOnEventAndFunctionKey :: Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Text
 makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory =
@@ -82,7 +92,15 @@ makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId veh
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-clearCache :: Hedis.HedisFlow m r => Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m ()
-clearCache eventType eventFunction merchantOpCityId vehicleCategory = Hedis.withCrossAppRedis $ do
-  Hedis.del $ makeCoinConfigKey eventType merchantOpCityId vehicleCategory
-  Hedis.del $ makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Text -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m ()
+clearCache eventType eventFunction merchantOpCityId vehicleCategory = do
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeCoinConfigKey eventType merchantOpCityId vehicleCategory)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+    Nothing
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+    Nothing

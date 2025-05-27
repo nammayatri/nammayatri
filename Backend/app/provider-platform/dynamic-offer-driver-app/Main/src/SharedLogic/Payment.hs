@@ -193,7 +193,7 @@ offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Pers
 offerListCache merchantId driverId merchantOpCityId serviceName req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   paymentServiceName <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
