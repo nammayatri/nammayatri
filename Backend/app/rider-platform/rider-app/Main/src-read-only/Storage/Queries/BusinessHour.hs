@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.BusinessHour.BusinessHour {..}) = do
     [ Se.Set Beam.bookingClosingTime bookingClosingTime,
       Se.Set Beam.btype btype,
       Se.Set Beam.categoryId (Kernel.Types.Id.getId <$> categoryId),
+      Se.Set Beam.hash hash,
       Se.Set Beam.name name,
       Se.Set Beam.placeId placeId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

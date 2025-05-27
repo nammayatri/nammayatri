@@ -15,6 +15,7 @@ data BusinessHour = BusinessHour
   { bookingClosingTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     btype :: Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory],
+    hash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

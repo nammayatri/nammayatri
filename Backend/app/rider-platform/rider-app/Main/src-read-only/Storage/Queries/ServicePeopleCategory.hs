@@ -73,11 +73,13 @@ updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..
   updateWithKV
     [ Se.Set Beam.cancellationCharges (convertCancellationChargesToTable cancellationCharges),
       Se.Set Beam.description description,
+      Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.name name,
       Se.Set Beam.placeId placeId,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
       Se.Set Beam.pricingType (Kernel.Prelude.Just pricingType),
+      Se.Set Beam.rules (Data.Aeson.toJSON <$> rules),
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

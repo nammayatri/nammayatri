@@ -3,10 +3,12 @@
 
 module Storage.Queries.OrphanInstances.TicketService where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -22,10 +24,12 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
             businessHours = Kernel.Types.Id.Id <$> businessHours,
             expiry = expiry,
             id = Kernel.Types.Id.Id id,
+            isClosed = fromMaybe False isClosed,
             maxVerification = maxVerification,
             operationalDate = ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate',
             operationalDays = operationalDays,
             placesId = placesId,
+            rules = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules,
             service = service,
             shortDesc = shortDesc,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -42,11 +46,13 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
         Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
         Beam.expiry = expiry,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isClosed = Kernel.Prelude.Just isClosed,
         Beam.maxVerification = maxVerification,
         Beam.operationalEndDate = operationalDate <&> (.eneDate),
         Beam.operationalStartDate = operationalDate <&> (.startDate),
         Beam.operationalDays = operationalDays,
         Beam.placesId = placesId,
+        Beam.rules = Data.Aeson.toJSON <$> rules,
         Beam.service = service,
         Beam.shortDesc = shortDesc,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

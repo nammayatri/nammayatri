@@ -16,3 +16,13 @@ ALTER TABLE atlas_app.service_category ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_category ADD COLUMN place_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_category ADD COLUMN rules json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_category ADD COLUMN is_closed boolean ;

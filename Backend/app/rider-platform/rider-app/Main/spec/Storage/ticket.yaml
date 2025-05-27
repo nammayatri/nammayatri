@@ -25,6 +25,8 @@ imports:
   VendorSplitDetails: Tools.Payment
   SplitType: Tools.Payment
   TicketPlaceDef: Domain.Types.EventManagement
+  Rule: SharedLogic.TicketRule.Core
+  ActionType: SharedLogic.TicketRule.Core
 
 TicketPlace:
   tableName: ticket_place
@@ -50,6 +52,7 @@ TicketPlace:
     ticketMerchantId: Maybe Text
     priority: Int
     customTabs: "Maybe [CustomTab]"
+    rules: "Maybe [Rule]"
 
   types:
     PlaceType:
@@ -64,18 +67,20 @@ TicketPlace:
   beamType:
     priority: Maybe Int
     customTabs: "Maybe Value"
+    rules: "Maybe Value"
 
   sqlType:
     customTabs: json
+    rules: json
 
   fromTType:
     priority: Kernel.Prelude.fromMaybe 0|I
     customTabs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs|E
-
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
   toTType:
     priority: Kernel.Prelude.Just|I
     customTabs: Data.Aeson.toJSON <$> customTabs|E
-
+    rules: Data.Aeson.toJSON <$> rules|E
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
@@ -122,6 +127,8 @@ TicketService:
     allowCancellation: Bool
     expiry: ExpiryType
     businessHours: "[Id BusinessHour]"
+    rules: "Maybe [Rule]"
+    isClosed: Bool
   types:
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
@@ -130,6 +137,10 @@ TicketService:
       eneDate: Day
       derive: "Eq,Ord"
 
+  beamType:
+    rules: "Maybe Value"
+    isClosed: Maybe Bool
+
   beamFields:
     operationalDate:
       operationalStartDate: Maybe Day
@@ -137,20 +148,23 @@ TicketService:
 
   sqlType:
     operationalDates: text[]
-
+    rules: json
   fromTType:
     operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
-
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    isClosed: fromMaybe False isClosed|E
   toTType:
     operationalStartDate: operationalDate <&> (.startDate)|E
     operationalEndDate: operationalDate <&> (.eneDate)|E
-
+    rules: Data.Aeson.toJSON <$> rules|E
+    isClosed: Kernel.Prelude.Just isClosed|E
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
     allowFutureBooking: "true"
     allowCancellation: "false"
     business_hours: "'{}'"
     expiry: "'VisitDate 12:00:00'"
+    isClosed: "false"
 
   queries:
     findById:
@@ -227,6 +241,7 @@ BusinessHour:
     btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
     categoryId: "[Id ServiceCategory]"
     bookingClosingTime : Maybe TimeOfDay
+    hash: Maybe Text
     placeId: Maybe Text
     name: Maybe Text
 
@@ -259,7 +274,23 @@ ServiceCategory:
     allowedSeats: Maybe Int
     peopleCategory: "[Id ServicePeopleCategory]"
     placeId: Maybe Text
-
+    rules: "Maybe [Rule]"
+    remainingActions: "Maybe [ActionType]"
+    isClosed: Bool
+  beamFields:
+    remainingActions: {}
+  sqlType:
+    rules: json
+  beamType:
+    rules: "Maybe Value"
+    isClosed: Maybe Bool
+  fromTType:
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    isClosed: fromMaybe False isClosed|E
+    remainingActions: Nothing|E
+  toTType:
+    rules: Data.Aeson.toJSON <$> rules|E
+    isClosed: Kernel.Prelude.Just isClosed|E
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -284,17 +315,20 @@ ServicePeopleCategory:
     pricingType: PricingType
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     placeId: Maybe Text
-
+    rules: "Maybe [Rule]"
+    isClosed: Bool
   beamType:
     cancellationCharges: Maybe Value
     vendorSplitDetails: Maybe Value
     timeBounds: Maybe TimeBound
     pricingType: Maybe PricingType
+    rules: Maybe Value
+    isClosed: Maybe Bool
 
   sqlType:
     cancellationCharges: json
     vendorSplitDetails: json
-
+    rules: json
   beamFields:
     pricePerUnit:
       currency: Maybe Currency
@@ -307,7 +341,8 @@ ServicePeopleCategory:
     pricingType: (Kernel.Prelude.fromMaybe Domain.Types.ServicePeopleCategory.AllDays)|I
     vendorSplitDetails: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
-
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    isClosed: fromMaybe False isClosed|E
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
@@ -315,11 +350,12 @@ ServicePeopleCategory:
     timeBounds: Kernel.Prelude.Just|I
     pricingType: Kernel.Prelude.Just|I
     vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
-
+    rules: Data.Aeson.toJSON <$> rules|E
+    isClosed: Kernel.Prelude.Just isClosed|E
   default:
     timeBounds: "'Unbounded'"
     pricingType: "'AllDays'"
-
+    isClosed: "false"
   types:
     CancellationCharge:
       time: Seconds
