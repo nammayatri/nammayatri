@@ -5,6 +5,10 @@
 @juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
 @customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
 
+@fleet_owner = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+
+@rental_fleet_owner = favorit-rental_fleet-token-000000000
+
 # @name healthcheck
 GET {{bpp-dashboard-host}}
 
@@ -68,3 +72,57 @@ content-type: application/json
     "otp": "7891",
     "deviceToken": ""
 }
+
+###
+
+# @name addDriversToFleetByFleet
+
+# fleet mobile number = 6666666666
+# existing driver id = favorit-auto2-0000000000000000000000
+# existing driver mobile = 2345678901
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/addDrivers
+token: {{fleet_owner}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="addDrivers.txt"
+Content-Type: text/csv
+
+driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_no
+ExistingDriver, 2345678901, CAR, 6666666666
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# @name addDriversToRentalFleetByRentalFleet
+
+# rental fleet mobile number = 6666666667
+# existing driver id = favorit-auto2-0000000000000000000000
+# existing driver mobile = 2345678901
+# for overwrte testing run migration:
+# UPDATE atlas_driver_offer_bpp.merchant SET overwrite_association=true WHERE id='favorit0-0000-0000-0000-00000favorit'
+
+@existingDriverToken = favorit-auto2-0000000000000000-token
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/addDrivers
+token: {{rental_fleet_owner}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="addDrivers.txt"
+Content-Type: text/csv
+
+driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_no
+ExistingDriver, 2345678901, CAR, 6666666667
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+@driver-offer-bpp-host = http://localhost:8016
+
+# fb4a43a9-41c8-4836-a226-aa756022004c
+# @name fleetConsent
+POST {{driver-offer-bpp-host}}/ui/fleet/consent
+token: {{existingDriverToken}}
+content-type: application/json
