@@ -4517,7 +4517,7 @@ updateDistanceInfo state lat lon = do
                 { tagExists = distanceInfo.tagExists
                 , isLocateOnMap = false
                 , showSavePlaceView = true
-                , isBtnActive = false
+                , isBtnActive = state.props.editLocation
                 }
               , data
                 { selectedTag = state.data.selectedTag
