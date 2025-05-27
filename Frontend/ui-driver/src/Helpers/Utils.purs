@@ -22,7 +22,7 @@ import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..)
 import Language.Strings (getString)
 import Data.Ord (comparing, Ordering)
 import Data.Lens ((^.))
-import Services.Accessor (_distance_meters)
+import Services.Accessor (_distance_meters , _payload , _deeplinkOptions)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
@@ -31,7 +31,7 @@ import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (EventPayload(..), LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
+import Common.Types.App (EventPayload(..), LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..), DeeplinkOptions(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -68,7 +68,7 @@ import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, r
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5, EffectFn2(..))
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner,getGlobalPayload)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
@@ -812,9 +812,13 @@ emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode 
   , exit_app : exitApp
   }
 }
+getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
+getDeepLinkOptions _ =
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
 
 isParentView :: LazyCheck -> Boolean
-isParentView lazy = false -- NOTE:: Adding this temporary to pass the build check
+isParentView lazy = maybe false (\(DeeplinkOptions options) -> fromMaybe false options.parent_view) $ getDeepLinkOptions lazy
 
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
 generateReferralLink source medium term content campaign driverReferralType =
