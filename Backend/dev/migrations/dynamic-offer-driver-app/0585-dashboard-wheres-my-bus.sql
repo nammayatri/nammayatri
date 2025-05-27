@@ -46,3 +46,26 @@ INSERT INTO atlas_driver_offer_bpp.fleet_owner_information
     now(),
     now()
   );
+
+--ONLY_FOR_LOCAL
+INSERT INTO atlas_driver_offer_bpp.fleet_owner_information
+  (
+    blocked,
+    enabled,
+    fleet_owner_person_id,
+    fleet_type,
+    merchant_id,
+    verified,
+    created_at,
+    updated_at
+  ) VALUES
+  (
+    false,
+    true,
+    'favorit-rental_fleet-owner-000000000',
+    'RENTAL_FLEET',
+    '94bbea0d-3c52-479b-81f5-eca4969ae797',
+    true,
+    now(),
+    now()
+  );

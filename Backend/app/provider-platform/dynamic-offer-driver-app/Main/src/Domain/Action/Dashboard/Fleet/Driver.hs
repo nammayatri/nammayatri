@@ -2061,6 +2061,15 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc fleetOwner req_ = do
       void $ runRequestValidation Common.validateUpdateDriverNameReq Common.UpdateDriverNameReq {firstName = req_.driverName, middleName = Nothing, lastName = Nothing}
+      -- extra validation in case if fleet owner present in csv
+      whenJust req_.fleetPhoneNo \fleetPhoneNo -> do
+        mobileNumberHash <- getDbHash fleetPhoneNo
+        fleetOwnerCsv <-
+          B.runInReplica $
+            QP.findByMobileNumberAndMerchantAndRole DCommon.mobileIndianCode mobileNumberHash merchant.id DP.FLEET_OWNER
+              >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
+        unless (fleetOwnerCsv.id == fleetOwner.id) $
+          throwError AccessDenied
       linkDriverToFleetOwner merchant moc fleetOwner Nothing req_
 
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
@@ -2090,28 +2099,23 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       (person, isNew) <- fetchOrCreatePerson moc req_
       (if isNew then pure False else WMB.checkFleetDriverAssociation person.id fleetOwner.id)
         >>= \isAssociated -> unless isAssociated $ do
+          unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
           fork "Sending Fleet Consent SMS to Driver" $ do
-            void $
-              try @_ @SomeException (unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id) >>= \case
-                Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> T.pack (displayException err)
-                Right _ -> do
-                  let driverMobile = req_.driverPhoneNumber
-                  let onboardedOperatorId = if isNew then mbOperatorId else Nothing
-                  FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId req_.driverOnboardingVehicleCategory False
-                  sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
+            let driverMobile = req_.driverPhoneNumber
+            let onboardedOperatorId = if isNew then mbOperatorId else Nothing
+            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId req_.driverOnboardingVehicleCategory False
+            sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToOperator merchant moc operator req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
       (if isNew then pure False else QDOA.checkDriverOperatorAssociation person.id operator.id)
         >>= \isAssociated -> unless isAssociated $ do
+          unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
           fork "Sending Operator Consent SMS to Driver" $ do
-            try @_ @SomeException (unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id) >>= \case
-              Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Operator: " <> T.pack (displayException err)
-              Right _ -> do
-                let driverMobile = req_.driverPhoneNumber
-                QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id req_.driverOnboardingVehicleCategory False
-                sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id operator
+            let driverMobile = req_.driverPhoneNumber
+            QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id req_.driverOnboardingVehicleCategory False
+            sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id operator
 
     sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
     sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId fleetOwner = do

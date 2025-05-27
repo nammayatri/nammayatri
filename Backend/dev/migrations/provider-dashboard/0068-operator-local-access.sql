@@ -1,4 +1,4 @@
--- ONLY FOR LOCAL
+-- ONLY FOR LOCAL: operator role
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
     VALUES
     ( atlas_bpp_dashboard.uuid_generate_v4(),
@@ -15,5 +15,27 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
             'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST'
           ]
         )
+    )
+    ON CONFLICT DO NOTHING;
+
+-- ONLY FOR LOCAL: fleet owner role
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+    VALUES
+    ( atlas_bpp_dashboard.uuid_generate_v4(),
+      'e5a69a26-d165-455a-a711-33a41e0d4812',
+      'DSL',
+      'USER_FULL_ACCESS',
+      'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS'
+    )
+    ON CONFLICT DO NOTHING;
+
+-- ONLY FOR LOCAL: rental fleet owner role
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+    VALUES
+    ( atlas_bpp_dashboard.uuid_generate_v4(),
+      '00000000-0000-0000-rental-fleet-role',
+      'DSL',
+      'USER_FULL_ACCESS',
+      'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS'
     )
     ON CONFLICT DO NOTHING;
