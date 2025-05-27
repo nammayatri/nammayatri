@@ -8,7 +8,7 @@ apis:
       endpoint: /drivers
       auth: ApiAuthV2
       response:
-        type: MapDriverInfoRes
+        type: "[MapDriverInfoRes]"
 
 types:
   MapDriverInfoRes:

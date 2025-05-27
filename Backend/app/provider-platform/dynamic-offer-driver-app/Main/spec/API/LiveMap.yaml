@@ -8,7 +8,7 @@ apis:
       endpoint: /liveMap/drivers
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: MapDriverInfoRes
+        type: "[MapDriverInfoRes]"
 
 types:
   MapDriverInfoRes:
