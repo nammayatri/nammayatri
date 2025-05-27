@@ -4,7 +4,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortOn)
 import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.OnSearch
-import Domain.Types
+import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
@@ -64,6 +64,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
             destination = endStopCode,
             ticketType = "SJT"
           }
+    ONDC _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     CRIS config' -> do
@@ -89,7 +90,6 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
           logError $ "Error while calling CRIS API: " <> show err
           return []
         Right fares -> return fares
-    _ -> throwError $ InternalError "Unimplemented!"
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
