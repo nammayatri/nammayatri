@@ -1073,7 +1073,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             else QJourneyLeg.updateIsDeleted (Just True) (Just currLeg.searchId)
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        void $ addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation)
+        searchResp <- addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation)
+        QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.order == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
       case (currentLeg.travelMode, currentLeg.skipBooking) of
@@ -1095,7 +1096,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs
         QJourneyLeg.create journeyLeg
-        void $ addTaxiLeg parentSearchReq journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
+        searchResp <- addTaxiLeg parentSearchReq journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
+        QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
         startJourney [] (Just currentLeg.order) journeyId
 
     cancelRequiredLegs = do
