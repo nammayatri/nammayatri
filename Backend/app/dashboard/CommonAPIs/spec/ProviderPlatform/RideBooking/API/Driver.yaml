@@ -270,6 +270,9 @@ types:
     - driverLicenseDetails: Maybe DriverLicenseAPIEntity
     - vehicleRegistrationDetails: [DriverRCAssociationAPIEntity]
     - onboardingDate: Maybe UTCTime
+    - lastActivityDate: Maybe UTCTime
+    - createdAt: Maybe UTCTime
+    - drunkAndDriveViolationCount: Int
     - bundleVersion: Maybe Version
     - clientVersion: Maybe Version
     - alternateNumber: Maybe Text
