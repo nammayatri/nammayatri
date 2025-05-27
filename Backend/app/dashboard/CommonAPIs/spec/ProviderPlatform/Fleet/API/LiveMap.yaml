@@ -1,5 +1,6 @@
 imports:
   LatLong: Kernel.External.Maps.Types
+  TimeBound: Kernel.Types.TimeBound
 
 module: LiveMap
 
@@ -16,6 +17,9 @@ types:
     - driverStatus: Status
     - todaySummary: TodaySummary
     - position: LatLong
+    - source: Text
+    - destination: Text
+    - routeDetails: RouteDetails
   Status:
     - enum: "TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE"
   TodaySummary:
@@ -31,3 +35,18 @@ types:
     - onlineDuration: Seconds
     - mobileCountryCode: Text
     - mobileNumber: Text
+  RouteDetails:
+    - code: Text
+    - shortName: Text
+    - longName: Text
+    - startPoint: LatLong
+    - endPoint: LatLong
+    - stops: [StopInfo]
+    - waypoints: Maybe [LatLong]
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+  StopInfo:
+    - name: Text
+    - code: Text
+    - point: LatLong
+    - derive: "'HideSecrets"
