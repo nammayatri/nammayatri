@@ -18,5 +18,5 @@ getCategoryFromSubscriptionConfig mbVehicleCategory merchantOpCityId serviceName
   case mbVehicleCategory of
     Just vehicleCategory -> pure vehicleCategory
     Nothing -> do
-      subscriptionConfig <- CQP.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Id merchantOpCityId) serviceName
+      subscriptionConfig <- CQP.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Id merchantOpCityId) Nothing serviceName
       return $ fromMaybe DVC.AUTO_CATEGORY (subscriptionConfig <&> (.defaultCityVehicleCategory))

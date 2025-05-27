@@ -39,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.Scheduler.Types
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DTS
 import Tools.Maps as Google
 
@@ -63,7 +64,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     currentSearchInfo :: DTS.CurrentSearchInfo,
-    transporterConfig :: DTC.TransporterConfig
+    transporterConfig :: DTC.TransporterConfig,
+    configsInExperimentVersions :: [LYT.ConfigVersionMap]
   }
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig

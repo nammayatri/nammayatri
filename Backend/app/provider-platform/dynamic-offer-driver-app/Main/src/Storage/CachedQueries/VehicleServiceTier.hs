@@ -20,43 +20,40 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.VehicleServiceTier as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [VehicleServiceTier] -> m ()
 createMany = Queries.createMany
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [VehicleServiceTier]
-findAllByMerchantOpCityId merchantOpCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId)) >>= \case
-    Just a -> return a
-    Nothing -> cacheByMerchantOpCityId merchantOpCityId /=<< Queries.findAllByMerchantOpCityId merchantOpCityId
+findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [VehicleServiceTier]
+findAllByMerchantOpCityIdInRideFlow id configVersionMap = findAllByMerchantOpCityId id (Just configVersionMap)
 
-findByServiceTierTypeAndCityId :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
-findByServiceTierTypeAndCityId serviceTier merchantOpCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier)) >>= \case
-    Just a -> return a
-    Nothing -> cacheByMerchantOpCityIdAndServiceTier merchantOpCityId serviceTier /=<< Queries.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
+findByServiceTierTypeAndCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
+findByServiceTierTypeAndCityIdInRideFlow serviceTier merchantOpCityId configVersionMap = findByServiceTierTypeAndCityId serviceTier merchantOpCityId (Just configVersionMap)
 
-cacheByMerchantOpCityId :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [VehicleServiceTier] -> m ()
-cacheByMerchantOpCityId merchanOperatingCityId cityServiceTiers = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantOpCityIdKey merchanOperatingCityId) cityServiceTiers expTime
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [VehicleServiceTier]
+findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap =
+  DynamicLogic.findAllConfigs
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityId merchantOpCityId)
 
-cacheByMerchantOpCityIdAndVehicleCategory :: (CacheFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> Maybe VehicleServiceTier -> m ()
-cacheByMerchantOpCityIdAndVehicleCategory vehicleCategory merchanOperatingCityId serviceTier = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeVehicleCategoryAndCityIdKey vehicleCategory merchanOperatingCityId) serviceTier expTime
-
-cacheByMerchantOpCityIdAndServiceTier :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceTierType -> Maybe VehicleServiceTier -> m ()
-cacheByMerchantOpCityIdAndServiceTier merchanOperatingCityId serviceTier cityServiceTier = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeServiceTierTypeAndCityIdKey merchanOperatingCityId serviceTier) cityServiceTier expTime
-
-makeMerchantOpCityIdKey :: Id DMOC.MerchantOperatingCity -> Text
-makeMerchantOpCityIdKey merchantOpCityId = "CachedQueries:VehicleServiceTier:MerchantOpCityId-" <> merchantOpCityId.getId
+findByServiceTierTypeAndCityId :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
+findByServiceTierTypeAndCityId serviceTier merchantOpCityId mbConfigVersionMap =
+  DynamicLogic.findOneConfigWithCacheKey
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findByServiceTierTypeAndCityId serviceTier merchantOpCityId)
+    (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier)
 
 makeServiceTierTypeAndCityIdKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> Text
 makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier = "CachedQueries:VehicleServiceTier:MerchantOpCityId-" <> merchantOpCityId.getId <> ":ServiceTier-" <> show serviceTier
@@ -64,12 +61,38 @@ makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier = "CachedQueries:Ve
 makeVehicleCategoryAndCityIdKey :: Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> Text
 makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId = "CachedQueries:VehicleServiceTier:MerchantOpCityId-" <> merchantOpCityId.getId <> ":vehicleCategory-" <> show vehicleCategory
 
-findBaseServiceTierTypeByCategoryAndCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> m (Maybe VehicleServiceTier)
-findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId = do
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId)) >>= \case
-    Just a -> return a
-    Nothing -> cacheByMerchantOpCityIdAndVehicleCategory vehicleCategory merchantOpCityId /=<< Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId
+findBaseServiceTierTypeByCategoryAndCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m (Maybe VehicleServiceTier)
+findBaseServiceTierTypeByCategoryAndCityIdInRideFlow vehicleCategory merchantOpCityId configsInExperimentVersions = findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId (Just configsInExperimentVersions)
 
-clearCache :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
-clearCache merchantOperatingCityId = do
-  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)
+findBaseServiceTierTypeByCategoryAndCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe VehicleServiceTier)
+findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId mbConfigVersionMap =
+  DynamicLogic.findOneConfigWithCacheKey
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId)
+    (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId)
+
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOperatingCityId)
+    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
+    Nothing
+
+clearCacheByServiceTier :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceTierType -> m ()
+clearCacheByServiceTier merchantOpCityId serviceTier =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
+    Nothing
+
+clearCacheByVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe VehicleCategory -> m ()
+clearCacheByVehicleCategory merchantOpCityId vehicleCategory =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.VehicleServiceTier)
+    Nothing

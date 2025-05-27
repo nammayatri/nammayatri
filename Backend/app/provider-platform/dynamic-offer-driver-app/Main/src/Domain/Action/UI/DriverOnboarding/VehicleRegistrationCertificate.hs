@@ -216,7 +216,7 @@ verifyRC ::
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe DVC.CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
+  documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe DVC.CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
   let checkPrefixOfRCNumber = null documentVerificationConfig.rcNumberPrefixList || prefixMatchedResult req.vehicleRegistrationCertNumber documentVerificationConfig.rcNumberPrefixList
   unless checkPrefixOfRCNumber $ throwError (InvalidRequest "RC number prefix is not valid")
   runRequestValidation validateDriverRCReq req
@@ -914,7 +914,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                   driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-                  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+                  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
                   let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
                   VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
@@ -1032,7 +1032,7 @@ activateRC driverInfo merchantId merchantOpCityId now rc = do
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == DV.SUV) $
           DIQuery.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi driverInfo.driverId
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing

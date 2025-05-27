@@ -919,7 +919,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
     case vehicleMB of
       Nothing -> return (False, Nothing)
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
         let mbDefaultServiceTierItem = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
         let checIfACWorking' =
               case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
@@ -1245,7 +1245,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
-      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchRequest.fromLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion (Just (TransactionId (Id searchRequest.transactionId)))
+      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchRequest.fromLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion (Just (TransactionId (Id searchRequest.transactionId))) searchRequest.configInExperimentVersions
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
@@ -1431,7 +1431,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
+      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust reqOfferedValue $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -1898,7 +1898,7 @@ clearDriverDues ::
   m ClearDuesRes
 clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   now <- getCurrentTime
   (dueDriverFees', mKey) <- do
@@ -2341,7 +2341,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               now <- getCurrentTime
               driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
               vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
+              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
               let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               let mbScheduleBookingListEligibilityTags = (listToMaybe availableServiceTierItems) >>= (.scheduleBookingListEligibilityTags)
@@ -2494,7 +2494,7 @@ clearDriverFeeWithCreate ::
 clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbCgst, mbSgst) feeType currency mbDeepLinkData sendPaymentLink = do
   dueDriverFee <- QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING] feeType serviceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   (sgst, cgst) <- case gstPercentagesByFeeTypeAndServiceName feeType subscriptionConfig of
     Just (sgstPercentage, cgstPercentage) -> do
@@ -2679,7 +2679,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       when (refundAmount < 0.0) $ throwError (InternalError "refund amount is less than 0")
       let driverFeeSorted = sortOn (.platformFee.fee) driverFees
       subscriptionConfig <- do
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
       uid <- generateGUID
       let ((driverFeeToPayout, driverFeeToSettle), _) = driverFeeWithRefundData driverFeeSorted refundAmount uid
@@ -2786,7 +2786,7 @@ getDriverSpecificSubscriptionDataWithSubsConfig ::
   m DriverSpecificSubscriptionData
 getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transporterConfig driverInfo mbVehicle serviceName = do
   let mbVehicleCategory = mbVehicle >>= (.category)
-  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
   (autoPayStatus, mbDriverPlan) <- DAPlan.getSubcriptionStatusWithPlan serviceName personId
   freeTrialDaysLeft <- if isFreeTrialEnabled subscriptionConfig then getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo else return 0
   let freeTrialDays = if isFreeTrialEnabled subscriptionConfig then transporterConfig.freeTrialDays else 0

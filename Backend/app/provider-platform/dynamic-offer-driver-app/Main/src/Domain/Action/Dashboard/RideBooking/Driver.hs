@@ -359,7 +359,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just [])
   driverStats <- runInReplica $ QDriverStats.findById person.id >>= fromMaybeM DriverInfoNotFound
   selectedServiceTiers <-
     maybe
@@ -596,7 +596,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
         QRCAssociation.create driverRCAssoc
 
       fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
       QVehicle.create vehicle

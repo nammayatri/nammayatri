@@ -136,7 +136,7 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
     case vehicleMB of
       Nothing -> return Nothing
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just [])
         return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
   cancellationRateData <- CR.getCancellationRateData mocId driverId
   return $

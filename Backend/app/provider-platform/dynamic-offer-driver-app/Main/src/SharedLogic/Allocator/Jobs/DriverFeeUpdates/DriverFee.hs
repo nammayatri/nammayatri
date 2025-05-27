@@ -100,7 +100,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
@@ -635,7 +635,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       endTime = jobData.endTime
       serviceName = jobData.serviceName
   now <- getCurrentTime
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   let deepLinkExpiry = subscriptionConfigs.deepLinkExpiryTimeInMinutes
   driverPlansToProccess <- findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId endTime subscriptionConfigs.genericBatchSizeForJobs
   if null driverPlansToProccess

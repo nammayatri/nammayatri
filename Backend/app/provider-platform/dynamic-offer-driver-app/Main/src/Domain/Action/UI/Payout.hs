@@ -87,7 +87,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
   payoutServiceName' <- case mbServiceName of
     Just serviceName -> do
       subscriptionConfig <- do
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName)
       return $ fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName
     Nothing -> return $ DEMSC.PayoutService TPayout.Juspay

@@ -222,7 +222,7 @@ planServiceLists ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m ServicesEntity
 planServiceLists (driverId, _, merchantOpCityId) = do
-  subscriptionConfigs <- CQSC.findAllServicesUIEnabledByCity merchantOpCityId True
+  subscriptionConfigs <- CQSC.findAllServicesUIEnabledByCity merchantOpCityId True Nothing
   driverInfo <- DI.findById (cast driverId)
   let driverEnabledForServices = maybe [] (.servicesEnabledForSubscription) driverInfo
   let commonServices = DL.intersect driverEnabledForServices (map (.serviceName) subscriptionConfigs)
@@ -356,7 +356,7 @@ getSubsriptionConfigAndPlanGeneric ::
   Maybe DriverPlan ->
   m (SubscriptionConfig, [Plan])
 getSubsriptionConfigAndPlanGeneric serviceName (_, _, merchantOpCityId) mbDPlan = do
-  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   plans <- QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName (Just False)
   return (subscriptionConfig, plans)
 
@@ -367,7 +367,7 @@ getSubsriptionConfigAndPlanSubscription ::
   Maybe DriverPlan ->
   m (SubscriptionConfig, [Plan])
 getSubsriptionConfigAndPlanSubscription serviceName (driverId, _, merchantOpCityId) mbDPlan = do
-  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   vehicleCategory <- getVehicleCategory driverId subscriptionConfig
   let planModeToList = maybe AUTOPAY (.planType) mbDPlan
   plans <- QPD.findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId planModeToList serviceName vehicleCategory False
@@ -412,7 +412,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   driverStats <- QDS.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
-  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
   (autoPayStatus, mDriverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentModeWithServiceName p.planId (maybe AUTOPAY (.planType) mDriverPlan) serviceName) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
@@ -482,7 +482,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   (autoPayStatus, driverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   let deepLinkExpiry = subscriptionConfig.deepLinkExpiryTimeInMinutes
   let allowDeepLink = subscriptionConfig.sendDeepLink
@@ -556,7 +556,7 @@ planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
   (autoPayStatus, _) <- getSubcriptionStatusWithPlan serviceName driverId
   plan <- QPD.findByIdAndPaymentModeWithServiceName planId (getDriverPaymentMode autoPayStatus) serviceName >>= fromMaybeM (PlanNotFound planId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
   let isSubscriptionEnabledAtCategoryLevel = fromMaybe False (subscriptionConfig <&> (.enableCityBasedFeeSwitch))
   QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
   when (serviceName == YATRI_SUBSCRIPTION) $ do
@@ -646,7 +646,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   let allowDueAddition = subscriptionConfig.allowDueAddition
   let paymentServiceName = subscriptionConfig.paymentServiceName

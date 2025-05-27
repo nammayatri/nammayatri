@@ -155,6 +155,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
   when (isNothing origin' && isNothing destination') $
     throwError PickupOrDropLocationNotFound
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus ("Can't edit destination for completed/cancelled ride." <> Text.pack (show ride.status))
   let udf1 = if ride.status == DRide.INPROGRESS then "RIDE_INPROGRESS" else "RIDE_PICKUP"
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -170,7 +171,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id searchReq.id.getId DLM.SEARCH_REQUEST (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForSearchReq
     driverInfo <- QDI.findById person.id >>= fromMaybeM DriverInfoNotFound
-    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
+    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing Nothing (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
     let fcmOverlayReq = Notify.mkOverlayReq overlay
     let entityData = Notify.EditPickupLocationReq {hasAdvanceBooking = driverInfo.hasAdvanceBooking, ..}
     Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
@@ -180,7 +181,6 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     --------------------TO DO ----------------------- Dependency on other people changes
     -----------1. Add a check for forward dispatch ride -----------------
     -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
-    booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
     hasAdvancedRide <- QDI.findById (cast ride.driverId) <&> maybe False (.hasAdvanceBooking)
     if hasAdvancedRide
       then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
@@ -230,8 +230,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
             Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
-            fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory
-            farePolicy <- getFarePolicy (Just srcPt) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
+            fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions
+            farePolicy <- getFarePolicy (Just srcPt) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
             let isTollAllowed =
@@ -314,7 +314,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                           oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
                           validTill = bookingUpdateReq.validTill
                         }
-                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
+                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
                 let locationLat = if ride.status == DRide.INPROGRESS then dropLocation.lat else ride.fromLocation.lat
                     locationLon = if ride.status == DRide.INPROGRESS then dropLocation.lon else ride.fromLocation.lon
                     actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2

@@ -106,7 +106,7 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
   let mbServiceName = listToMaybe invoices <&> (.serviceName)
   let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentServiceName = subscriptionConfig.paymentServiceName
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
@@ -174,7 +174,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
       serviceConfig <-
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion
@@ -222,7 +222,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   let merchantId = merchant.id
       serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName'
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId Nothing serviceName'
       >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchanOperatingCityId
@@ -285,7 +285,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       let serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName'
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       serviceConfig <-
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId serviceName'
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId Nothing serviceName'
           >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
       return (invoices', serviceName', serviceConfig, driver)
 
@@ -413,7 +413,7 @@ pdnNotificationStatus (personId, merchantId, opCity) notificationId = do
   driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
   driver <- B.runInReplica $ QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity Nothing driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
   paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
   resp <- Payment.mandateNotificationStatus merchantId opCity paymentServiceName (mkNotificationRequest pdnNotification.shortId)

@@ -30,7 +30,7 @@ getMeterRidePrice _merchantShortId _opCity rideId = do
   merchantId <- fromMaybeM (RideNotFound rideId.getId) ride.merchantId
   let merchantOpCityId = ride.merchantOperatingCityId
   traveledDistance <- LU.getTravelledDistance driverId
-  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier)
+  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)

@@ -112,6 +112,9 @@ handler merchantId req ride = do
                       }
               RDC.create riderDriverCorr
               SQD.incFavouriteRiderCount ride.driverId
+              logDebug "Driver Rating Coin Event"
+              fork "DriverCoinRating Event" $ do
+                DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
     Nothing -> do
       logError $ "Booking not found for bookingId : " <> req.bookingId.getId
       pure ()
@@ -143,9 +146,6 @@ handler merchantId req ride = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
-  logDebug "Driver Rating Coin Event"
-  fork "DriverCoinRating Event" $ do
-    DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) ride.vehicleVariant
   calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
 
 calculateAverageRating ::

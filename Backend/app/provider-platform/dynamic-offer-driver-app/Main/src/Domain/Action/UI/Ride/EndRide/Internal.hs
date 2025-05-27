@@ -178,8 +178,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
   let validRide = isValidRide ride
-  sendReferralFCM validRide ride mbRiderDetails thresholdConfig
-  when validRide $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
+  sendReferralFCM validRide ride booking mbRiderDetails thresholdConfig
+  when validRide $ updateLeaderboardZScore booking ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
@@ -215,10 +215,11 @@ sendReferralFCM ::
   ) =>
   Bool ->
   Ride.Ride ->
+  SRB.Booking ->
   Maybe RD.RiderDetails ->
   TransporterConfig ->
   m ()
-sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
+sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
   now <- getCurrentTime
   let shouldUpdateRideComplete = validRide && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
   whenJust mbRiderDetails $ \riderDetails -> do
@@ -232,7 +233,7 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
                 referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
-              DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant
+              DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) driver.merchantOperatingCityId.getId)
@@ -324,20 +325,20 @@ getDefaultTime = defaultTime
     time = secondsToDiffTime 0
     defaultTime = UTCTime day time
 
-updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
-updateLeaderboardZScore merchantId merchantOpCityId ride = do
+updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => SRB.Booking -> Ride.Ride -> m ()
+updateLeaderboardZScore booking ride = do
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ mapM_ updateLeaderboardZScore' [LConfig.DAILY, LConfig.WEEKLY, LConfig.MONTHLY]
   where
     updateLeaderboardZScore' :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => LConfig.LeaderBoardType -> m ()
     updateLeaderboardZScore' leaderBoardType = do
       currentTime <- getCurrentTime
-      leaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType leaderBoardType merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+      leaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyTypeInRideFlow leaderBoardType booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "Leaderboard configs not present")
       when leaderBoardConfig.isEnabled $ do
         let rideDate = getCurrentDate currentTime
             (fromDate, toDate) = calculateFromDateToDate leaderBoardType rideDate
-            leaderBoardKey = makeDriverLeaderBoardKey leaderBoardType False merchantOpCityId fromDate toDate
+            leaderBoardKey = makeDriverLeaderBoardKey leaderBoardType False booking.merchantOperatingCityId fromDate toDate
         driverZscore <- Hedis.zScore leaderBoardKey $ ride.driverId.getId
-        updateDriverZscore ride rideDate fromDate toDate driverZscore ride.chargeableDistance merchantId merchantOpCityId leaderBoardConfig
+        updateDriverZscore ride rideDate fromDate toDate driverZscore ride.chargeableDistance booking.providerId booking.merchantOperatingCityId leaderBoardConfig
 
     calculateFromDateToDate :: LConfig.LeaderBoardType -> Day -> (Day, Day)
     calculateFromDateToDate leaderBoardType rideDate =
@@ -584,7 +585,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       vehicle <- QV.findById driverId
       let currentVehicleCategory = vehicle >>= (.category)
-      subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+      subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId (Just booking.configInExperimentVersions) serviceName
       let isPlanMandatoryForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       (mbDriverPlan, isOnFreeTrial) <- getPlanAndPushToDefualtIfEligible transporterConfig subscriptionConfig freeTrialDaysLeft' isSpecialZoneCharge isPlanMandatoryForVariant currentVehicleCategory
       let enableCityBasedFeeSwitch = fromMaybe False $ subscriptionConfig <&> (.enableCityBasedFeeSwitch)

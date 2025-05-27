@@ -63,7 +63,7 @@ getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goH
   logDebug $ "Doing Special Driver Pooling for seachReq:- " <> show searchReq
   batchNum <- SDP.getPoolBatchNum searchTry.id
   SDP.incrementBatchNum searchTry.id
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId searchReq.merchantOperatingCityId
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId searchReq.configInExperimentVersions
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig
 
@@ -480,6 +480,7 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   isRental = isRentalTrip searchTry.tripCategory,
                   isInterCity = isInterCityTrip searchTry.tripCategory,
                   onlinePayment = merchant.onlinePayment,
+                  configsInExperimentVersions = searchReq.configInExperimentVersions,
                   ..
                 }
         filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) pool) goHomeReq merchantOpCityId

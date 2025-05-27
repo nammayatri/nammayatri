@@ -123,12 +123,12 @@ getOnboardingConfigs' ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
 getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
-  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR
-  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY
-  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE
-  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE
-  truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK
-  busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS
+  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR Nothing
+  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY Nothing
+  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE Nothing
+  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE Nothing
+  truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK Nothing
+  busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS Nothing
   cabConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments cabConfigsRaw mbOnlyVehicle)
   autoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments autoConfigsRaw mbOnlyVehicle)
   bikeConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments bikeConfigsRaw mbOnlyVehicle)
@@ -220,7 +220,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
   (mbTripCategory, mbPickup, mbVehicleServiceType) <-
     if driverInfo.onRide
       then do
@@ -254,9 +254,9 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
     getRateCardForServiceTier mbDistance mbDuration mbPickupLatLon transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
       eitherFullFarePolicy <-
-        try @_ @SomeException (getFarePolicy mbPickupLatLon Nothing Nothing Nothing Nothing merchantOperatingCityId False tripCategory serviceTierType Nothing Nothing Nothing Nothing)
+        try @_ @SomeException (getFarePolicy mbPickupLatLon Nothing Nothing Nothing Nothing merchantOperatingCityId False tripCategory serviceTierType Nothing Nothing Nothing Nothing [])
           >>= \case
-            Left _ -> try @_ @SomeException $ getFarePolicy Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing Nothing
+            Left _ -> try @_ @SomeException $ getFarePolicy Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing Nothing []
             Right farePolicy -> return $ Right farePolicy
       case eitherFullFarePolicy of
         Left _ -> return Nothing
@@ -336,7 +336,7 @@ postDriverUpdateAirCondition ::
   )
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just [])
   SDO.checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers Nothing
   now <- getCurrentTime
   QDI.updateLastACStatusCheckedAt (Just now) personId
@@ -355,7 +355,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
   let personLanguage = fromMaybe ENGLISH person.language
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
@@ -438,7 +438,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just [])
 
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers Nothing
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound

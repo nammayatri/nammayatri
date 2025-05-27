@@ -49,7 +49,7 @@ getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode mbMercha
           _ -> do
             subscriptionConfig <- do
               merchantOpCityId <- getMerchantOperatingCityId mbMerchantOpCityId driverId id
-              QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+              QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
             return (Nothing, subscriptionConfig)
       let vehilceCategory = (plan <&> (.vehicleCategory)) <|> (subscriptionConf <&> (.defaultCityVehicleCategory))
       updateOneWithKV

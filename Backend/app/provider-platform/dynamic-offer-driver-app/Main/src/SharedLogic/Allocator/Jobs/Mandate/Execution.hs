@@ -66,7 +66,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
-      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
@@ -180,7 +180,7 @@ asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   driver <- QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
   let serviceName = invoice.serviceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
   paymentService <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE

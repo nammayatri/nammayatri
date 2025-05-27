@@ -17,44 +17,48 @@ module Storage.CachedQueries.Merchant.LeaderBoardConfig where
 import Domain.Types.LeaderBoardConfigs
 import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, MonadFlow)
-import Storage.Queries.LeaderBoardConfigs as Queries
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.Queries.LeaderBoardConfigs as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
-create :: (MonadFlow m, CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardConfigs -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LeaderBoardConfigs -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [LeaderBoardConfigs]
-findAllByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return a
-    Nothing -> cacheLeaderBoardConfigs id /=<< Queries.findAllByMerchantOpCityId id
+findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [LeaderBoardConfigs]
+findAllByMerchantOpCityIdInRideFlow id configVersionMap = findAllByMerchantOpCityId id (Just configVersionMap)
 
-cacheLeaderBoardConfigs :: CacheFlow m r => Id MerchantOperatingCity -> [LeaderBoardConfigs] -> m ()
-cacheLeaderBoardConfigs merchantOperatingCityId cfg = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey cfg expTime
+findLeaderBoardConfigbyTypeInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyTypeInRideFlow leaderBType merchantOpCityId configVersionMap = findLeaderBoardConfigbyType leaderBType merchantOpCityId (Just configVersionMap)
 
-makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:LeaderBoardConfigs:MerchantOperatingCityId-" <> id.getId
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [LeaderBoardConfigs]
+findAllByMerchantOpCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs
+    (cast id)
+    (LYT.DRIVER_CONFIG LYT.LeaderBoardConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityId id)
 
-findLeaderBoardConfigbyType :: (CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> m (Maybe LeaderBoardConfigs)
-findLeaderBoardConfigbyType leaderBType merchantOpCityId =
-  Hedis.safeGet (makeLeaderBoardConfigKey leaderBType merchantOpCityId) >>= \case
-    Just config -> pure $ Just config
-    Nothing -> flip whenJust (cacheLeaderBoardConfig leaderBType merchantOpCityId) /=<< Queries.findLeaderBoardConfigbyType leaderBType merchantOpCityId
+findLeaderBoardConfigbyType :: (CacheFlow m r, EsqDBFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType merchantOpCityId mbConfigVersionMap =
+  DynamicLogic.findOneConfigWithCacheKey
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.LeaderBoardConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findLeaderBoardConfigbyType leaderBType merchantOpCityId)
+    (makeLeaderBoardConfigKey leaderBType merchantOpCityId)
 
 makeLeaderBoardConfigKey :: LeaderBoardType -> Id MerchantOperatingCity -> Text
 makeLeaderBoardConfigKey leaderBType merchantOpCityId = "LBCFG:" <> merchantOpCityId.getId <> ":" <> show leaderBType
 
-cacheLeaderBoardConfig :: (CacheFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> LeaderBoardConfigs -> m ()
-cacheLeaderBoardConfig leaderBType merchantOpCityId lbConfig = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeLeaderBoardConfigKey leaderBType merchantOpCityId) lbConfig expTime
-
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache merchantOperatingCityId = do
-  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache merchantOpCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.LeaderBoardConfig)
+    Nothing

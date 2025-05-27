@@ -682,7 +682,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
   callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::

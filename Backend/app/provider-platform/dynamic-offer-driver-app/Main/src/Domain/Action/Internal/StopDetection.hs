@@ -47,7 +47,7 @@ stopDetection StopDetectionReq {..} = do
     oldStopCount :: Maybe Int <- Redis.safeGet $ mkStopCountRedisKey rideId.getId
     let currStopCount = 1 + fromMaybe 0 oldStopCount
     Redis.setExp (mkStopCountRedisKey ride.id.getId) currStopCount 1200 --20 mins
-    vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityId booking.vehicleServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
+    vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
     case (vehicleServiceTier.stopFcmThreshold, vehicleServiceTier.stopFcmSuppressCount) of
       (Just threshold, Just suppressCount) -> do
         let condition = sendNotificationCondition threshold suppressCount currStopCount

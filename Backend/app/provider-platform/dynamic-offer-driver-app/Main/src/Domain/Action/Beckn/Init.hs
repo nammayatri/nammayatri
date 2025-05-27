@@ -178,7 +178,7 @@ handler merchantId req validatedReq = do
           stops = searchRequest.stops
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       let bapUri = showBaseUrl req.bapUri
       (initiatedAs, senderDetails, receiverDetails) <- do
         case tripCategory of

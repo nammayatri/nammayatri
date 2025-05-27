@@ -44,7 +44,7 @@ reportIssue rideId issueType apiKey = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
   case issueType of
     ICommon.AC_RELATED_ISSUE -> do
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
