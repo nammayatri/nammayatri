@@ -1,0 +1,35 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+
+module: LiveMap
+
+apis:
+  - GET:
+      endpoint: /drivers
+      auth: ApiAuthV2
+      response:
+        type: "[MapDriverInfoRes]"
+
+types:
+  MapDriverInfoRes:
+    - driverName: Text
+    - driverStatus: Status
+    - todaySummary: TodaySummary
+    - position: LatLong
+    - source: Text
+    - destination: Text
+  Status:
+    - enum: "TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE"
+  TodaySummary:
+    - driverName: Text
+    - tripStatus: Status
+    - tripsCompletedCount: Int
+    - earnings: Money
+    - totalDistance: Meters
+    - tripBalanceLeft: Int
+    - tripsCancelled: Int
+    - tripsPassed: Int
+    - tripsScheduled: Int
+    - onlineDuration: Seconds
+    - mobileCountryCode: Text
+    - mobileNumber: Text

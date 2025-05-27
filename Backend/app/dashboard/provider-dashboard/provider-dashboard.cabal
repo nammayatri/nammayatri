@@ -41,6 +41,7 @@ library
       Domain.Action.ProviderPlatform.AppManagement.Subscription
       Domain.Action.ProviderPlatform.CheckVerification
       Domain.Action.ProviderPlatform.Fleet.Driver
+      Domain.Action.ProviderPlatform.Fleet.LiveMap
       Domain.Action.ProviderPlatform.Fleet.Onboarding
       Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Account
@@ -82,6 +83,7 @@ library
       API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.Fleet.LiveMap
       API.Action.ProviderPlatform.Fleet.Onboarding
       API.Action.ProviderPlatform.IssueManagement
       API.Action.ProviderPlatform.IssueManagement.Issue
