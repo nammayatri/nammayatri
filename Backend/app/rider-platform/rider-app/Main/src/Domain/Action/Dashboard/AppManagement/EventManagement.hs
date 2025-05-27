@@ -92,12 +92,14 @@ postEventManagementTicketdashboardTicketplaceSubmitDraft _merchantShortId _opCit
     Just _ -> do
       ticketDef <- getTicketDef ticketPlaceId
       oldTicketDef <- getLiveTicketDef ticketPlaceId
-      unless (ticketDef /= oldTicketDef) $ throwError $ InvalidRequest "No changes to submit"
+      unless (Just ticketDef /= oldTicketDef) $ throwError $ InvalidRequest "No changes to submit"
       draftChange <- QDTC.findById ticketPlaceId >>= fromMaybeM (InvalidRequest "No draft found")
       m <- findMerchantByShortId _merchantShortId
       moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
       riderConfig <- QRC.findByMerchantOperatingCityId moCity.id >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
-      let approvalRequired = Permissions.needsApproval riderConfig.ticketingPermissionConfig oldTicketDef ticketDef
+      let approvalRequired = case oldTicketDef of
+            Just mo -> Permissions.needsApproval riderConfig.ticketingPermissionConfig mo ticketDef
+            Nothing -> True
       if approvalRequired
         then do
           QDTC.updateStatus DDTC.APPROVAL_PENDING ticketPlaceId
@@ -220,49 +222,53 @@ newTicketPlaceDef requestorId requestorRole basicInfo merchantId merchantOperati
   QDTC.create draftTicketChange
   return ticketDef
 
-getLiveTicketDef :: Id DTicketPlace.TicketPlace -> Environment.Flow DEM.TicketPlaceDef
+getLiveTicketDef :: Id DTicketPlace.TicketPlace -> Environment.Flow (Maybe DEM.TicketPlaceDef)
 getLiveTicketDef placeId = do
-  ticketPlace <- QTicketPlace.findById placeId >>= fromMaybeM (InvalidRequest $ "Ticket place not found: " <> getId placeId)
-  services <- QTicketService.getTicketServicesByPlaceId placeId.getId
-  let linkedBusinessHourIds = concatMap (.businessHours) services
-  linkedBusinessHours <- catMaybes <$> mapM QBusinessHour.findById linkedBusinessHourIds
-  let linkedServiceCategoryIds = concatMap (.categoryId) linkedBusinessHours
-  linkedServiceCategories <- catMaybes <$> mapM QServiceCategory.findById linkedServiceCategoryIds
-  let linkedServicePeopleCategoryIds = concatMap (.peopleCategory) linkedServiceCategories
-  linkedServicePeopleCategories <- concatMapM QServicePeopleCategory.findAllById linkedServicePeopleCategoryIds
-  let basicInfo =
-        DEM.BasicInformation
-          { name = ticketPlace.name,
-            description = ticketPlace.description,
-            shortDesc = ticketPlace.shortDesc,
-            address = Nothing,
-            latitude = ticketPlace.lat,
-            longitude = ticketPlace.lon,
-            status = ticketPlace.status,
-            priority = ticketPlace.priority,
-            placeType = ticketPlace.placeType,
-            allowSameDayBooking = ticketPlace.allowSameDayBooking,
-            gallery = ticketPlace.gallery,
-            iconUrl = ticketPlace.iconUrl,
-            mapImageUrl = ticketPlace.mapImageUrl,
-            termsAndConditions = ticketPlace.termsAndConditions,
-            termsAndConditionsUrl = ticketPlace.termsAndConditionsUrl,
-            openTimings = ticketPlace.openTimings,
-            closeTimings = ticketPlace.closeTimings,
-            customTabs = ticketPlace.customTabs
-          }
-      serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
-      serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
-      servicePeopleCategoryDefs = map toServicePeopleCategoryDef linkedServicePeopleCategories
-  return $
-    DEM.TicketPlaceDef
-      { id = ticketPlace.id,
-        basicInformation = basicInfo,
-        services = serviceDefs,
-        serviceCategories = serviceCategoryDefs,
-        servicePeopleCategories = servicePeopleCategoryDefs,
-        isDraft = False
-      }
+  mbTicketPlace <- QTicketPlace.findById placeId
+  case mbTicketPlace of
+    Nothing -> return Nothing
+    Just ticketPlace -> do
+      services <- QTicketService.getTicketServicesByPlaceId placeId.getId
+      let linkedBusinessHourIds = concatMap (.businessHours) services
+      linkedBusinessHours <- catMaybes <$> mapM QBusinessHour.findById linkedBusinessHourIds
+      let linkedServiceCategoryIds = concatMap (.categoryId) linkedBusinessHours
+      linkedServiceCategories <- catMaybes <$> mapM QServiceCategory.findById linkedServiceCategoryIds
+      let linkedServicePeopleCategoryIds = concatMap (.peopleCategory) linkedServiceCategories
+      linkedServicePeopleCategories <- concatMapM QServicePeopleCategory.findAllById linkedServicePeopleCategoryIds
+      let basicInfo =
+            DEM.BasicInformation
+              { name = ticketPlace.name,
+                description = ticketPlace.description,
+                shortDesc = ticketPlace.shortDesc,
+                address = Nothing,
+                latitude = ticketPlace.lat,
+                longitude = ticketPlace.lon,
+                status = ticketPlace.status,
+                priority = ticketPlace.priority,
+                placeType = ticketPlace.placeType,
+                allowSameDayBooking = ticketPlace.allowSameDayBooking,
+                gallery = ticketPlace.gallery,
+                iconUrl = ticketPlace.iconUrl,
+                mapImageUrl = ticketPlace.mapImageUrl,
+                termsAndConditions = ticketPlace.termsAndConditions,
+                termsAndConditionsUrl = ticketPlace.termsAndConditionsUrl,
+                openTimings = ticketPlace.openTimings,
+                closeTimings = ticketPlace.closeTimings,
+                customTabs = ticketPlace.customTabs
+              }
+          serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
+          serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
+          servicePeopleCategoryDefs = map toServicePeopleCategoryDef linkedServicePeopleCategories
+      return $
+        pure $
+          DEM.TicketPlaceDef
+            { id = ticketPlace.id,
+              basicInformation = basicInfo,
+              services = serviceDefs,
+              serviceCategories = serviceCategoryDefs,
+              servicePeopleCategories = servicePeopleCategoryDefs,
+              isDraft = False
+            }
   where
     toTicketServiceDef :: [DBusinessHour.BusinessHour] -> DTicketService.TicketService -> DEM.TicketServiceDef
     toTicketServiceDef linkedBusinessHours svc =
@@ -311,7 +317,7 @@ getTicketDef placeId = do
   case mbDraftChange >>= (.draftPayload) of
     Just ticketPlaceDef -> return ticketPlaceDef
     Nothing -> do
-      ticketDef <- getLiveTicketDef placeId
+      ticketDef <- getLiveTicketDef placeId >>= fromMaybeM (InvalidRequest $ "Ticket place not found: " <> getId placeId)
       ticketPlace <- QTicketPlace.findById placeId >>= fromMaybeM (InvalidRequest $ "Ticket place not found: " <> getId placeId)
       now <- getCurrentTime
       let draftTicketChange =
@@ -471,11 +477,18 @@ delServicePeopleCategoryDef ticketPlaceId categoryId peopleId = do
 
 checkTicketDraftEquality :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow Bool
 checkTicketDraftEquality ticketPlaceId = do
-  ticketDef <- getTicketDef ticketPlaceId
-  oldTicketDef <- getLiveTicketDef ticketPlaceId
-  if ticketDef == oldTicketDef
-    then return True
-    else return False
+  mbDraftChange <- QDTC.findById ticketPlaceId
+  case mbDraftChange >>= (.draftPayload) of
+    Just ticketDef -> do
+      oldTicketDef <- getLiveTicketDef ticketPlaceId
+      return $ maybe False (\oldDef -> compareDef ticketDef oldDef) oldTicketDef
+    Nothing -> return True
+  where
+    compareDef new old =
+      new.basicInformation == old.basicInformation
+        && old.services == new.services
+        && old.serviceCategories == new.serviceCategories
+        && old.servicePeopleCategories == new.servicePeopleCategories
 
 checkAccess :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow ()
 checkAccess ticketPlaceId requestorId _requestorRole = do
