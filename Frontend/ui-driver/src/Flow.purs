@@ -173,7 +173,7 @@ import Screens.RideRequestScreen.ScreenData as RideRequestData
 import Screens.RideSummaryScreen.Controller as RSC
 import Screens.RideSummaryScreen.ScreenData (initData) as RideSummaryScreenData
 import DecodeUtil as DU
-import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
+import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash, hideLoaderFlow)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
 import Screens.MetroWarriorsScreen.Controller (getMetroWarriorFromLocationId, makeStationsData)
@@ -186,11 +186,11 @@ import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 import Screens (ScreenName(..)) as Screen
+import Helpers.PrestoUtils
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
-    when baseFlow $ do
-      lift $ lift $ initUI
+    when baseFlow $ initUIWrapper ""
     let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "splash"
     when (baseFlow && bundleSplashConfig.enable) $ do
       toggleSetupSplash true
