@@ -42,14 +42,12 @@ getMultiModalConfig merchantId merchantOperatingCityId = do
 getTransitServiceReq :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
 getTransitServiceReq merchantId merchantOperatingCityId = do
   transitServiceReq' <- getMultiModalConfig merchantId merchantOperatingCityId
-
-  transitServiceReq <- case transitServiceReq' of
+  case transitServiceReq' of
     OTPTransitConfig otpTransitConfig -> do
       let baseUrlStr = showBaseUrl otpTransitConfig.baseUrl
-      otpGtfsUrl <- parseBaseUrl $ baseUrlStr <> "/otp/gtfs/v1"
+      otpGtfsUrl <- parseBaseUrl $ baseUrlStr <> "/otp/gtfs/v1/"
       return $ OTPTransitConfig otpTransitConfig{baseUrl = otpGtfsUrl}
     _ -> return transitServiceReq'
-  return transitServiceReq
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
 getOTPRestServiceReq merchantId merchantOperatingCityId = do
