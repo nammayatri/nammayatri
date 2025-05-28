@@ -272,3 +272,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_end_time tim
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN collect_source_deviation_data boolean ;

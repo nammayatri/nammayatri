@@ -45,6 +45,7 @@ import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Kernel.Beam.Functions as B
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
@@ -441,12 +442,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       SearchReq ->
       m RouteDetails
     getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide = \case
-      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq.sessionToken ambulanceReq.isSourceManuallyMoved ambulanceReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.initialSourceLatLong
+      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq.sessionToken ambulanceReq.isSourceManuallyMoved ambulanceReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
+      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
-      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-      PTSearch _ -> processOneWaySearch person merchant merchantOperatingCity searchRequestId Nothing Nothing Nothing stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
+      PTSearch _ -> processOneWaySearch person merchant merchantOperatingCity searchRequestId Nothing Nothing Nothing stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
 
     processOneWaySearch ::
       SearchRequestFlow m r =>
@@ -463,9 +464,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       Bool ->
       RiderConfig ->
       Maybe Bool ->
+      Maybe LatLong ->
       m RouteDetails
-    processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide = do
+    processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide initialSourceLatLong = do
       autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now
+      sourceDeviationEvent riderConfig searchRequestId sourceLatLong stopsLatLong person.id merchant.id merchantOperatingCity.id isSourceManuallyMoved initialSourceLatLong
       destinationLatLong <- case lastMaybe stopsLatLong of
         Just latLong -> return (Just latLong)
         Nothing -> do
@@ -691,3 +694,37 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
           let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isDestinationManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
           -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
           triggerAutoCompleteEvent updatedRecord
+
+-- We are doing this for analytics purpose, to check deviations of distance to intial source lat long to pickup lat long (our origin) to confirm if the source is moved or not
+sourceDeviationEvent ::
+  SearchRequestFlow m r =>
+  RiderConfig ->
+  Id SearchRequest.SearchRequest ->
+  LatLong ->
+  [LatLong] ->
+  Id Person.Person ->
+  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Bool ->
+  Maybe LatLong ->
+  m ()
+sourceDeviationEvent riderConfig searchRequestId sourceLatLong stopsLatLong personId merchantId merchantOperatingCityId isSourceManuallyMoved initialSourceLatLong = do
+  let deviationDataFlag = fromMaybe False riderConfig.collectSourceDeviationData
+      isSourceMoved = fromMaybe False isSourceManuallyMoved
+  when (deviationDataFlag && isSourceMoved) $ do
+    fork "sending initial and pickup location data to kafka" $ do
+      let deviationData =
+            SearchSourceDeviationData
+              { searchRequestId = searchRequestId,
+                initialSourceLatLong = initialSourceLatLong,
+                sourceLatLong = sourceLatLong,
+                destinationLatLong = lastMaybe stopsLatLong,
+                personId = personId,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOperatingCityId
+              }
+      pushToKafka deviationData "rideSearchlocation-toPickuplocation-deviation-data" ""
+      logInfo $ "Deviation data: " <> show deviationData
+  where
+    lastMaybe [] = Nothing
+    lastMaybe xs = Just $ last xs
