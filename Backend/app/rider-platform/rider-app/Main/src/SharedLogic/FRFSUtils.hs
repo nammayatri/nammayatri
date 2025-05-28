@@ -73,6 +73,7 @@ import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
+import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Tools.DynamicLogic
 import Tools.Error
@@ -164,9 +165,19 @@ data RouteStopInfo = RouteStopInfo
 
 getPossibleRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
 getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = do
-  routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routesWithStop <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) >>= \case
+      Left _ -> QRSM.findByStopCode startStationCode integratedBPPConfig.id
+      Right stops -> pure stops
   let routeCodes = nub $ map (.routeCode) routesWithStop
-  routeStops <- concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) routeCodes
+  routeStops <-
+    concatMapM
+      ( \routeCode ->
+          try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) >>= \case
+            Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
+            Right stops -> pure stops
+      )
+      routeCodes
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops

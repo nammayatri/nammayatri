@@ -41,8 +41,8 @@ getRouteStopMapping baseUrl = do
                 RouteStopMappingNandi
                   { dailyTripCount = Just $ length patternDetails.trips,
                     endPoint = maybe (Kernel.External.Maps.Types.LatLong 0 0) (\s -> Kernel.External.Maps.Types.LatLong s.lat s.lon) $ lastMay patternDetails.stops,
-                    routeLongName = routeDetail.longName,
-                    routeShortName = routeDetail.shortName,
+                    routeLongName = fromMaybe "sampleLongName" routeDetail.longName,
+                    routeShortName = fromMaybe "sampleShortName" routeDetail.shortName,
                     startPoint = maybe (Kernel.External.Maps.Types.LatLong 0 0) (\s -> Kernel.External.Maps.Types.LatLong s.lat s.lon) $ headMay patternDetails.stops,
                     stopCount = Just $ length patternDetails.stops,
                     estimatedTravelTimeFromPreviousStop = Nothing, -- This would need to be calculated if available
