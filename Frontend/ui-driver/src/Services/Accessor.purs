@@ -124,3 +124,6 @@ _overchargingTag = lens (unwrap >>> _.overchargingTag) (\oldRec newVal -> wrap (
 
 _deeplinkOptions :: forall a b c. Newtype a { deeplinkOptions :: b | c } => Lens' a b
 _deeplinkOptions = lens (unwrap >>> _.deeplinkOptions) (\oldRec newVal -> wrap ((unwrap oldRec) { deeplinkOptions = newVal }))
+
+_show_splash :: forall a b c. Newtype a { show_splash :: b | c } => Lens' a b
+_show_splash = lens (unwrap >>> _.show_splash) (\oldRec newVal -> wrap ((unwrap oldRec) { show_splash = newVal }))
