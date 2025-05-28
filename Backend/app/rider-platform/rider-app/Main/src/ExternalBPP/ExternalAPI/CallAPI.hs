@@ -35,11 +35,11 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
-import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
 import Tools.Error
@@ -68,28 +68,33 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
     EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     CRIS config' -> do
-      person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
-      mbMobileNumber <- decrypt `mapM` person.mobileNumber
-      mbImeiNumber <- decrypt `mapM` person.imeiNumber
-      sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
-      intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig.id START END
-      let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == INTERMEDIATE) intermediateStations
-      let request =
-            CRISRouteFare.CRISFareRequest
-              { mobileNo = mbMobileNumber,
-                imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-                appSession = sessionId,
-                sourceCode = startStopCode,
-                changeOver = " ",
-                destCode = endStopCode,
-                via = viaStations
-              }
-      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
-      case resp of
-        Left err -> do
-          logError $ "Error while calling CRIS API: " <> show err
-          return []
-        Right fares -> return fares
+      redisResp <- Redis.safeGet mkRouteFareKey
+      case redisResp of
+        Just frfsFare -> return frfsFare
+        Nothing -> do
+          sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
+          intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig.id START END
+          let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == INTERMEDIATE) intermediateStations
+          let request =
+                CRISRouteFare.CRISFareRequest
+                  { mobileNo = Just "1111111111", -- dummy number and imei for all other requests to avoid sdkToken confusion
+                    imeiNo = "abcdefgh",
+                    appSession = sessionId,
+                    sourceCode = startStopCode,
+                    changeOver = " ",
+                    destCode = endStopCode,
+                    via = viaStations
+                  }
+          resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
+          case resp of
+            Left err -> do
+              logError $ "Error while calling CRIS API: " <> show err
+              return []
+            Right fares -> do
+              Redis.setExp mkRouteFareKey fares 3600 -- 1 hour
+              return fares
+  where
+    mkRouteFareKey = "CRIS:" <> startStopCode <> "-" <> endStopCode
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do

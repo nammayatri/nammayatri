@@ -1438,5 +1438,6 @@ generateJourneyInfoResponse journey legs = do
         journeyId = journey.id,
         startTime = journey.startTime,
         endTime = journey.endTime,
-        merchantOperatingCityName
+        merchantOperatingCityName,
+        crisSdkToken = Nothing
       }

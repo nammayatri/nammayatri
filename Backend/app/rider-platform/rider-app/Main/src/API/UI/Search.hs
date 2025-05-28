@@ -37,6 +37,7 @@ import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
+import Domain.Action.UI.Quote as Quote
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Booking as Booking
@@ -47,12 +48,16 @@ import qualified Domain.Types.Estimate as Estimate
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import ExternalBPP.ExternalAPI.CallAPI as CallAPI
+import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MInterface
@@ -61,6 +66,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
+import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
@@ -84,6 +90,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
@@ -177,7 +184,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $ do
-      void (multiModalSearch dSearchRes.searchRequest riderConfig False req)
+      void (multiModalSearch dSearchRes.searchRequest riderConfig False req personId)
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -218,10 +225,10 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initateJourney = fromMaybe False mbInitateJourney
-    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney req
+    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney req personId
 
-multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initateJourney req' = do
+multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Id Person.Person -> Flow MultimodalSearchResp
+multiModalSearch searchRequest riderConfig initateJourney req' personId = do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -355,8 +362,10 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         case mbJourneyWithIndex of
           Just (idx, firstJourney) -> do
             resp <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+            mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId journeys
+            let updatedResp = resp{crisSdkToken = mbCrisSdkToken}
             fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences
-            return $ Just resp
+            return $ Just updatedResp
           Nothing -> return Nothing
       else return Nothing
 
@@ -504,6 +513,55 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
 
     isLegModeIn :: [GeneralVehicleType] -> MultiModalTypes.MultiModalLeg -> Bool
     isLegModeIn modes leg = leg.mode `elem` modes
+
+    getCrisSdkToken :: Id MerchantOperatingCity -> Maybe [Quote.JourneyData] -> Flow (Maybe Text)
+    getCrisSdkToken _ Nothing = return Nothing
+    getCrisSdkToken merchantOperatingCityId (Just journeys) = do
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+
+      return (find (\j -> any (\leg -> leg.journeyMode == DTrip.Subway) j.journeyLegs) journeys)
+        >>= maybe
+          (return Nothing)
+          ( \journey ->
+              return (find (\leg -> leg.journeyMode == DTrip.Subway) journey.journeyLegs)
+                >>= maybe
+                  (return Nothing)
+                  ( \leg -> do
+                      case (leg.fromStationCode, leg.toStationCode, listToMaybe leg.routeDetails >>= (.routeCode)) of
+                        (Just fromCode, Just toCode, Just routeCode) -> do
+                          case integratedBPPConfig.providerConfig of
+                            DIBC.CRIS config' -> do
+                              mbMobileNumber <- mapM decrypt person.mobileNumber
+                              mbImeiNumber <- mapM decrypt person.imeiNumber
+                              sessionId <- getRandomInRange (1, 1000000 :: Int)
+
+                              intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig.id Station.START Station.END
+
+                              let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
+
+                              let routeFareReq =
+                                    CRISRouteFare.CRISFareRequest
+                                      { mobileNo = mbMobileNumber,
+                                        imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+                                        appSession = sessionId,
+                                        sourceCode = fromCode,
+                                        changeOver = " ",
+                                        destCode = toCode,
+                                        via = viaStations
+                                      }
+
+                              CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq
+                                <&> listToMaybe
+                                >>= maybe
+                                  (return Nothing)
+                                  ( \fare ->
+                                      return $ fare.fareDetails >>= \details -> Just details.sdkToken
+                                  )
+                            _ -> return Nothing
+                        _ -> return Nothing
+                  )
+          )
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

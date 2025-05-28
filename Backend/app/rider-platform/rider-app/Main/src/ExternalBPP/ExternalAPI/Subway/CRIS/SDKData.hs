@@ -62,7 +62,6 @@ getSDKData config request = do
             data_ = payload
           }
   sdkData <- callCRISAPI config sdkDataAPI (eulerClientFn encReq) "getSDKData"
-  logInfo $ "Get SDK Data Response: " <> show sdkData
   return sdkData
   where
     eulerClientFn payload token =
