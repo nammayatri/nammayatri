@@ -44,6 +44,7 @@ types:
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
     merchantOperatingCityName : Maybe Text
+    crisSdkToken : Maybe Text
 
   LegStatus:
     legOrder: Int
