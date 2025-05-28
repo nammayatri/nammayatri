@@ -31,6 +31,7 @@ import Presto.Core.Types.Language.Flow (getState) as Flow
 import Engineering.Helpers.Utils as EHU
 import DecodeUtil as DU
 import JBridge as JB
+import Helpers.PrestoUtils
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
 noInternetScreen triggertype= do
@@ -47,7 +48,7 @@ noInternetScreen' :: Flow GlobalState Unit
 noInternetScreen' = do 
   void $ EHU.toggleLoader false
   (GlobalState state) <- Flow.getState
-  void $ EHC.liftFlow $ initUIWithNameSpace "NoInternetScreen" Nothing
+  void $ EHC.liftFlow $ initUIWithNameSpace "NoInternetScreen" (getFragmentView "")
   let 
     screen = NoInternetScreen.screen state.noInternetScreen "INTERNET_ACTION"
     scopedScreen = { 
