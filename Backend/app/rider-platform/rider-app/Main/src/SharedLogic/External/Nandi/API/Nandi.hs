@@ -5,7 +5,7 @@ import Kernel.Prelude
 import Servant
 import SharedLogic.External.Nandi.Types
 
-type NandiPatternsAPI = "otp" :> "routers" :> "default" :> "index" :> "patterns" :> Get '[JSON] NandiPatternsRes
+type NandiPatternsAPI = "otp" :> "routers" :> "default" :> "index" :> "patterns" :> Get '[JSON] [NandiPattern]
 
 type NandiGetSpecificPatternAPI = "otp" :> "routers" :> "default" :> "index" :> "patterns" :> Capture "patternId" Text :> Get '[JSON] NandiPatternDetails
 
@@ -20,7 +20,7 @@ nandiGetSpecificPatternAPI = Proxy
 nandiRoutesAPI :: Proxy RoutesAPI
 nandiRoutesAPI = Proxy
 
-getNandiPatterns :: ET.EulerClient NandiPatternsRes
+getNandiPatterns :: ET.EulerClient [NandiPattern]
 getNandiPatterns = ET.client nandiPatternsAPI
 
 getNandiGetSpecificPattern :: Text -> ET.EulerClient NandiPatternDetails

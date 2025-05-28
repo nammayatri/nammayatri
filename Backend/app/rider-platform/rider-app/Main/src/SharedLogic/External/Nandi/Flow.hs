@@ -10,7 +10,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.API.Nandi as NandiAPI
 import SharedLogic.External.Nandi.Types
 
-getAllRoutePatterns :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m NandiPatternsRes
+getAllRoutePatterns :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [NandiPattern]
 getAllRoutePatterns baseUrl = do
   withShortRetry $ callAPI baseUrl NandiAPI.getNandiPatterns "getAllRoutePatterns" NandiAPI.nandiPatternsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_PATTERNS_API") baseUrl)
 
@@ -27,9 +27,9 @@ getRouteStopMapping baseUrl = do
   allRoutePatterns <- getAllRoutePatterns baseUrl
   allRouteDetails <- getRoutesFromNandi baseUrl
 
-  let routePatternMap = Map.fromList [(p.routeId, p) | p <- allRoutePatterns.patterns]
+  let routePatternMap = Map.fromList [(p.routeId, p) | p <- allRoutePatterns]
       routeDetailsMap = Map.fromList [(r.id, r) | r <- allRouteDetails]
-      matchingPatterns = Map.filterWithKey (\k _ -> k `elem` map (.routeId) allRoutePatterns.patterns) routePatternMap
+      matchingPatterns = Map.filterWithKey (\k _ -> k `elem` map (.routeId) allRoutePatterns) routePatternMap
 
   allMappings <- forM (Map.toList matchingPatterns) $ \(_, p) -> do
     patternDetails <- getRoutePatternDetails baseUrl p.id
