@@ -38,6 +38,7 @@ import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
+import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
@@ -135,6 +136,7 @@ type API =
            :<|> NearbyBuses.API
            :<|> Places.API
            :<|> CRIS.API
+           :<|> TicketKapture.API
        )
 
 handler :: FlowServer API
@@ -195,3 +197,4 @@ handler =
     :<|> NearbyBuses.handler
     :<|> Places.handler
     :<|> CRIS.handler
+    :<|> TicketKapture.handler
