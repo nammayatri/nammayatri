@@ -31,11 +31,12 @@ import PrestoDOM.Core(terminateUI)
 import Effect.Class (liftEffect)
 import JBridge (deletePopUpCallBack)
 import Engineering.Helpers.Commons (liftFlow)
+import Helpers.PrestoUtils
 
 popUpScreen :: FlowBT String POPUP_SCREEN_OUTPUT
 popUpScreen = do
     (GlobalState state) <- getState
-    _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PopUpScreen" Nothing
+    _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PopUpScreen" (getFragmentView "")
     action <- lift $ lift $ runLoggableScreen $ PopUpScreen.screen state.popUpScreen
     _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "PopUpScreen"
     case action of
