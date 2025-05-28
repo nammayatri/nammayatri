@@ -5,6 +5,7 @@ import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Confirm as ACL
 import qualified Beckn.ACL.FRFS.Init as ACL
 import qualified Beckn.ACL.FRFS.Search as ACL
+import qualified Beckn.ACL.FRFS.Select as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
@@ -85,6 +86,33 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
     processOnSearch onSearchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
+
+select ::
+  FRFSConfirmFlow m r =>
+  Merchant ->
+  MerchantOperatingCity ->
+  BecknConfig ->
+  DBooking.FRFSTicketBooking ->
+  DIBC.PlatformType ->
+  m ()
+select merchant merchantOperatingCity bapConfig booking platformType = do
+  integratedBPPConfig <-
+    QIBC.findByDomainAndCityAndVehicleCategory
+      (show Spec.FRFS)
+      merchantOperatingCity.id
+      (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
+      platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+  case integratedBPPConfig.providerConfig of
+    ONDC _ -> do
+      providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+      bknSelectReq <- ACL.buildSelectReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city
+      logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
+      Metrics.startMetrics Metrics.SELECT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
+      void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
+    _ -> do
+      -- Add external flow if needed, similar to search/init
+      pure ()
 
 init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking platformType = do

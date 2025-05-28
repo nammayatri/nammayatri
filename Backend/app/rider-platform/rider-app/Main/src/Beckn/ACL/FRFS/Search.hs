@@ -59,7 +59,7 @@ tfIntent vehicleType mbFromStation mbToStation =
   Just $
     Spec.Intent
       { intentFulfillment = tfIntentFulfillment vehicleType mbFromStation mbToStation,
-        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing Nothing Nothing Nothing Nothing
+        intentPayment = Just $ Utils.mkPaymentForSearchReq Nothing Nothing Nothing Nothing Nothing Nothing (Just "0")
       }
 
 tfIntentFulfillment :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe DStation.Station -> Maybe Spec.Fulfillment
@@ -100,7 +100,7 @@ tfLocation (Just station) =
   Just $
     Spec.Location
       { locationDescriptor = Utils.tfDescriptor (Just $ station.code) (Just $ station.name),
-        locationGps = Nothing,
+        locationGps = Just (show station.lat <> ", " <> show station.lon),
         locationCity = Nothing,
         locationCountry = Nothing
       }

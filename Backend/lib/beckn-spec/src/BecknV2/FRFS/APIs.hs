@@ -34,6 +34,22 @@ type OnSearchAPI =
 onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
 
+type SelectAPI =
+  "select"
+    :> ReqBody '[JSON] Spec.SelectReq
+    :> Post '[JSON] Spec.AckResponse
+
+selectAPI :: Proxy SelectAPI
+selectAPI = Proxy
+
+type OnSelectAPI =
+  "on_select"
+    :> ReqBody '[JSON] Spec.OnSelectReq
+    :> Post '[JSON] Spec.AckResponse
+
+onSelectAPI :: Proxy OnSelectAPI
+onSelectAPI = Proxy
+
 type InitAPI =
   "init"
     :> ReqBody '[JSON] Spec.InitReq
