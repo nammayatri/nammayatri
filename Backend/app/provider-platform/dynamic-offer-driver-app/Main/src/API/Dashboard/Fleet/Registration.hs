@@ -49,19 +49,19 @@ type FleetOwnerVerifyAPI =
 type FleetOwnerLoginAPI =
   "login"
     :> "otp"
-    :> QueryParam "enabled" Bool
     :> ReqBody '[JSON] DFleet.FleetOwnerLoginReq
-    :> Post '[JSON] DFleet.FleetOwnerRegisterRes
+    :> Post '[JSON] APISuccess
 
 type FleetOwnerRegisterAPI =
   "register"
     :> ReqBody '[JSON] DFleet.FleetOwnerRegisterReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] DFleet.FleetOwnerRegisterRes
 
 type FleetOwnerRegisterHelperAPI =
   ( "register"
+      :> QueryParam "enabled" Bool
       :> ReqBody '[JSON] DFleet.FleetOwnerRegisterReq
-      :> Post '[JSON] APISuccess
+      :> Post '[JSON] DFleet.FleetOwnerRegisterRes
   )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -70,11 +70,11 @@ handler _ _ =
     :<|> fleetOwnerVerify
     :<|> fleetOwnerRegister
 
-fleetOwnerLogin :: Maybe Bool -> DFleet.FleetOwnerLoginReq -> FlowHandler DFleet.FleetOwnerRegisterRes
-fleetOwnerLogin enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerLogin Nothing enabled req
+fleetOwnerLogin :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
+fleetOwnerLogin = withDashboardFlowHandlerAPI . DFleet.fleetOwnerLogin
 
 fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
-fleetOwnerRegister :: DFleet.FleetOwnerRegisterReq -> FlowHandler APISuccess
-fleetOwnerRegister = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister Nothing
+fleetOwnerRegister :: Maybe Bool -> DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerRegisterRes
+fleetOwnerRegister enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerRegister req enabled

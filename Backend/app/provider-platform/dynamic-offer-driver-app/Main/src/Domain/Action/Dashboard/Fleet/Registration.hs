@@ -14,10 +14,12 @@
 
 module Domain.Action.Dashboard.Fleet.Registration where
 
+import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -27,7 +29,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -45,7 +46,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -75,13 +75,18 @@ data UpdateFleetOwnerReq = UpdateFleetOwnerReq
 data FleetOwnerRegisterReq = FleetOwnerRegisterReq
   { firstName :: Text,
     lastName :: Text,
-    personId :: Id DP.Person,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text,
     merchantId :: Text,
     email :: Maybe Text,
     city :: City.City,
     fleetType :: Maybe FOI.FleetType,
+    panNumber :: Maybe Text,
     gstNumber :: Maybe Text,
     businessLicenseNumber :: Maybe Text,
+    panImageId1 :: Maybe Text,
+    panImageId2 :: Maybe Text,
+    gstCertificateImage :: Maybe Text,
     businessLicenseImage :: Maybe Text,
     operatorReferralCode :: Maybe Text
   }
@@ -97,37 +102,30 @@ newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-fleetOwnerRegister :: Maybe Text -> FleetOwnerRegisterReq -> Flow APISuccess
-fleetOwnerRegister mbRequestorId req = do
-  let fleetOwnerId = req.personId.getId
-  person <- QP.findById req.personId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
-  fleetOwnerInfo <- QFOI.findByPrimaryKey req.personId >>= fromMaybeM (PersonDoesNotExist req.personId.getId)
-  void $ QP.updateByPrimaryKey person{firstName = req.firstName, lastName = Just req.lastName}
-  void $ updateFleetOwnerInfo fleetOwnerInfo req
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-
-  mbRequestedOperatorId <- case mbRequestorId of
-    Just requestorId -> do
-      requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
-      if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
-    Nothing -> pure Nothing
-
-  mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-  whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
-    fleetAssocs <- QFOA.findAllFleetAssociations req.personId.getId
-    when (null fleetAssocs) $ do
-      fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId (req.personId.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-      QFOA.create fleetOperatorAssocData
-      DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
-  when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
-    fleetReferral <- QDR.findById person.id
-    when (isNothing fleetReferral) $ void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (req.personId, person.merchantId, person.merchantOperatingCityId)
-  fork "Uploading Business License Image" $ do
-    whenJust req.businessLicenseImage $ \businessLicenseImage -> do
-      let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
-      image <- Image.validateImage True (req.personId, person.merchantId, person.merchantOperatingCityId) req'
-      QFOI.updateBusinessLicenseImage (Just image.imageId.getId) req.personId
-  return Success
+fleetOwnerRegister :: FleetOwnerRegisterReq -> Maybe Bool -> Flow FleetOwnerRegisterRes
+fleetOwnerRegister req mbEnabled = do
+  let merchantId = ShortId req.merchantId
+  mobileNumberHash <- getDbHash req.mobileNumber
+  deploymentVersion <- asks (.version)
+  merchant <-
+    QMerchant.findByShortId merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
+  let personAuth = buildFleetOwnerAuthReq merchant.id req
+  personOpt <- QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+  case personOpt of
+    Just pData -> throwError $ UserAlreadyExists pData.id.getId
+    Nothing -> do
+      maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType mbEnabled req.gstNumber maybeOperatorId
+      fork "Creating Pan Info for Fleet Owner" $ do
+        createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
+      fork "Uploading GST Image" $ do
+        whenJust req.gstCertificateImage $ \gstImage -> do
+          let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
+          image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
+          QFOI.updateGstImage req.gstNumber (Just image.imageId.getId) person.id
+      return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
 getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
 getOperatorIdFromReferralCode Nothing = return Nothing
@@ -137,32 +135,48 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbEnabled mbgstNumber mbReferredOperatorId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled
+  createFleetOwnerInfo person.id merchantId mbfleetType mbEnabled mbgstNumber mbReferredOperatorId
+  whenJust mbReferredOperatorId $ \referredOperatorId -> do
+    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    QFOA.create fleetOperatorAssData
+    DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
+  when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
+    void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Flow ()
-createFleetOwnerInfo personId merchantId enabled = do
+createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
+createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just panNo) = do
+  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
+  image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
+  let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
+  void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
+createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
+
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbReferredByOperatorId = do
   now <- getCurrentTime
-  let fleetOwnerInfo =
+  let fleetType = fromMaybe NORMAL_FLEET mbFleetType
+      enabled = fromMaybe True mbEnabled
+      fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
             merchantId = merchantId,
-            fleetType = NORMAL_FLEET, -- overwrite in register
-            enabled = fromMaybe True enabled,
+            fleetType = fleetType,
+            enabled = enabled, ------ currently we are not validating any fleet owner Document there fore marking it as true
             blocked = False,
             verified = False,
-            gstNumber = Nothing,
+            gstNumber = mbGstNumber,
             gstImageId = Nothing,
             businessLicenseImageId = Nothing,
             businessLicenseNumber = Nothing,
-            referredByOperatorId = Nothing,
+            referredByOperatorId = mbReferredByOperatorId,
             panImageId = Nothing,
             panNumber = Nothing,
             createdAt = now,
@@ -171,28 +185,26 @@ createFleetOwnerInfo personId merchantId enabled = do
   QFOI.create fleetOwnerInfo
 
 fleetOwnerLogin ::
-  Maybe Text ->
-  Maybe Bool ->
   FleetOwnerLoginReq ->
-  Flow FleetOwnerRegisterRes
-fleetOwnerLogin _mbRequestorId enabled req = do
+  Flow APISuccess
+fleetOwnerLogin req = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
       merchantId = ShortId req.merchantId
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
+
+  merchant <-
+    QMerchant.findByShortId merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
   mobileNumberHash <- getDbHash mobileNumber
-  mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
-  personId <- case mbPerson of
-    Just person -> pure person.id
-    Nothing -> do
-      -- Operator won't reach here as it has separate sign up flow --
-      let personAuth = buildFleetOwnerAuthReq merchant.id req
-      deploymentVersion <- asks (.version)
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
-      pure person.id
+  person <-
+    QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
+      >>= fromMaybeM (PersonNotFound mobileNumber)
+  when (person.role == DP.FLEET_OWNER) $ do
+    fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+    unless fleetOwnerInfo.enabled (throwError $ InvalidRequest "fleetOwner is not enabled")
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
   let useFakeOtpM = useFakeSms smsCfg
   otp <- maybe generateOTPCode (return . show) useFakeOtpM
   whenNothing_ useFakeOtpM $ do
@@ -212,16 +224,16 @@ fleetOwnerLogin _mbRequestorId enabled req = do
         >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  void $ Redis.setExp key otp expTime
-  pure $ FleetOwnerRegisterRes {personId = personId.getId}
+  Redis.setExp key otp expTime
+  pure Success
 
 buildFleetOwnerAuthReq ::
   Id DMerchant.Merchant ->
-  FleetOwnerLoginReq ->
+  FleetOwnerRegisterReq ->
   Registration.AuthReq
-buildFleetOwnerAuthReq merchantId' FleetOwnerLoginReq {..} =
+buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
   Registration.AuthReq
-    { name = Just "Fleet Owner", -- to be updated in register
+    { name = Just (firstName <> " " <> lastName),
       mobileNumber = Just mobileNumber,
       mobileCountryCode = Just mobileCountryCode,
       merchantId = merchantId'.getId,
@@ -231,20 +243,6 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerLoginReq {..} =
       registrationLat = Nothing,
       registrationLon = Nothing
     }
-
-updateFleetOwnerInfo ::
-  FOI.FleetOwnerInformation ->
-  FleetOwnerRegisterReq ->
-  Flow ()
-updateFleetOwnerInfo fleetOwnerInfo FleetOwnerRegisterReq {..} = do
-  let updFleetOwnerInfo =
-        fleetOwnerInfo
-          { FOI.fleetType = fromMaybe fleetOwnerInfo.fleetType fleetType,
-            FOI.gstNumber = fleetOwnerInfo.gstNumber,
-            FOI.gstImageId = fleetOwnerInfo.gstImageId,
-            FOI.businessLicenseImageId = businessLicenseImage
-          }
-  void $ QFOI.updateByPrimaryKey updFleetOwnerInfo
 
 fleetOwnerVerify ::
   FleetOwnerLoginReq ->
