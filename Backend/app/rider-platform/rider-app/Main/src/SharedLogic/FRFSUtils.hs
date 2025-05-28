@@ -440,7 +440,12 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                     Just upcomingStops -> do
                       let mbUpcomingStop = find (\upcomingStop -> upcomingStop.status == LT.Upcoming) upcomingStops
                       case mbUpcomingStop of
-                        Just upcomingStop' -> listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode upcomingStop'.stop.stopCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+                        Just upcomingStop' -> do
+                          upcomingStopNew <-
+                            try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode upcomingStop'.stop.stopCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) >>= \case
+                              Left _ -> QRSM.findByRouteCodeAndStopCode upcomingStop'.stop.stopCode routeCode integratedBPPConfig.id
+                              Right stops -> pure stops
+                          return $ listToMaybe upcomingStopNew
                         Nothing -> return Nothing
                     Nothing -> return Nothing
                 pure $
@@ -477,7 +482,11 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
               case mbNextStop of
                 Just nextStop -> do
                   logDebug $ "Got bus data for route " <> routeCode <> ": next stop mapping" <> show nextStop <> " data: " <> show routeCode <> " " <> nextStop.stopId <> " " <> integratedBPPConfig.id.getId
-                  listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode nextStop.stopId routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+                  nextStop' <-
+                    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode nextStop.stopId routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) >>= \case
+                      Left _ -> QRSM.findByRouteCodeAndStopCode nextStop.stopId routeCode integratedBPPConfig.id
+                      Right stops -> pure stops
+                  return $ listToMaybe nextStop'
                 Nothing -> pure Nothing
             return $
               VehicleTracking
@@ -503,7 +512,10 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                 }
     _ -> do
       route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
-      routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      routeStops <-
+        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) >>= \case
+          Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
+          Right stops -> pure stops
 
       let waypointsForRoute' = case route.polyline of
             Just polyline -> Just $ KEPP.decode polyline

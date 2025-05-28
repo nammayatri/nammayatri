@@ -36,6 +36,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
+import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
@@ -327,10 +328,16 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig.id mid mocid
+  fromRouteStopMappings <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig.id mid mocid) >>= \case
+      Left _ -> QRSM.findByStopCode fromStopCode integratedBppConfig.id
+      Right stops -> pure stops
 
   -- Get route mappings that contain the destination stop
-  toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig.id mid mocid
+  toRouteStopMappings <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig.id mid mocid) >>= \case
+      Left _ -> QRSM.findByStopCode toStopCode integratedBppConfig.id
+      Right stops -> pure stops
 
   -- Find common routes that have both the origin and destination stops
   -- and ensure that from-stop comes before to-stop in the route sequence

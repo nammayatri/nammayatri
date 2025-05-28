@@ -22,7 +22,7 @@ data NandiPattern = NandiPattern
 
 data NandiPatternDetails = NandiPatternDetails
   { id :: Text,
-    desc :: Text,
+    desc :: Maybe Text,
     routeId :: Text,
     stops :: [NandiStop],
     trips :: [NandiTrip]
@@ -40,7 +40,7 @@ data NandiStop = NandiStop
 
 data NandiTrip = NandiTrip
   { id :: Text,
-    direction :: Text
+    direction :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
