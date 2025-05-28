@@ -186,11 +186,12 @@ import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 import Screens (ScreenName(..)) as Screen
-import Helpers.PrestoUtils
+import Helpers.PrestoUtils 
 
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
+    let gPayload = EHC.getGlobalPayload "__payload"
     when baseFlow $ initUIWrapper ""
     let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "splash"
         hybridInit = fromMaybe true $ gPayload >>= (\payload -> payload ^. _payload ^. _show_splash)
