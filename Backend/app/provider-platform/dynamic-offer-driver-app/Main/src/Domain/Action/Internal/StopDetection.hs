@@ -5,6 +5,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Trip as DTC
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Maps.Types
@@ -61,10 +62,13 @@ stopDetection StopDetectionReq {..} = do
           INPROGRESS -> do
             vehicle <- QVehicle.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
             case condition of
-              True -> BP.sendSafetyAlertToBAP booking ride Enums.RIDE_STOPPAGE driver vehicle
+              True -> case booking.tripCategory of
+                DTC.Rental _ -> logDebug $ "Skipping safety alert for rental ride with id" <> rideId.getId
+                DTC.InterCity _ _ -> logDebug $ "Skipping safety alert for intercity ride with id" <> rideId.getId
+                _ -> BP.sendSafetyAlertToBAP booking ride Enums.RIDE_STOPPAGE driver vehicle
               _ -> logDebug $ "Either condition not met or no merchant PN for driver with id" <> driverId.getId
           _ -> logDebug $ "Ride status for rideId:" <> rideId.getId
-      _ -> logDebug $ "Configs are empty to send stop detection alet to driver with id" <> driverId.getId
+      _ -> logDebug $ "Configs are empty to send stop detection alert to driver with id" <> driverId.getId
 
   pure Success
   where
