@@ -790,17 +790,38 @@ postDriverFleetRemoveDriver ::
   Context.City ->
   Text ->
   Id Common.Driver ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveDriver merchantShortId _ fleetOwnerId driverId = do
+postDriverFleetRemoveDriver merchantShortId _ requestorId driverId mbFleetOwnerId = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson
   merchant <- findMerchantByShortId merchantShortId
-  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let personId = cast @Common.Driver @DP.Person driverId
-  associationList <- QRCAssociation.findAllLinkedByDriverId personId
-  forM_ associationList $ \assoc -> do
-    rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just fleetOwnerId
-    when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
-  FDV.endFleetDriverAssociation fleetOwnerId personId
+  case entityRole of
+    DP.FLEET_OWNER -> do
+      DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
+      associationList <- QRCAssociation.findAllLinkedByDriverId personId
+      forM_ associationList $ \assoc -> do
+        rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
+        when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
+      FDV.endFleetDriverAssociation entityId personId
+    DP.OPERATOR -> do
+      associationList <- QRCAssociation.findAllLinkedByDriverId personId
+      unless (null associationList) $ throwError (InvalidRequest "Driver is linked to Vehicle, first unlink then try")
+      DOV.endOperatorDriverAssociation entityId personId
+    _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
+  where
+    validateRequestorRoleAndGetEntityId :: DP.Person -> Flow (DP.Role, Text)
+    validateRequestorRoleAndGetEntityId requestedPerson = do
+      case requestedPerson.role of
+        DP.FLEET_OWNER -> do
+          fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
+          pure (DP.FLEET_OWNER, fleetOwnerid)
+        DP.OPERATOR -> do
+          when (isJust mbFleetOwnerId) $ throwError (InvalidRequest "Operator cannot remove driver owned by the fleet")
+          pure (DP.OPERATOR, requestedPerson.id.getId)
+        _ -> throwError (InvalidRequest "Invalid Data")
 
 ---------------------------------------------------------------------
 getDriverFleetTotalEarning ::

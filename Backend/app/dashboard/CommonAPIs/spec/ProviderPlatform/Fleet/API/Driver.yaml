@@ -316,11 +316,13 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
       helperApi:
         - POST:
-            endpoint: /{fleetOwnerId}/{driverId}/fleet/remove/driver
+            endpoint: /{requestorId}/{driverId}/fleet/remove/driver
             auth: ApiAuthV2
             params:
               driverId: Id Driver
-              fleetOwnerId: Text
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
             response:
               type: APISuccess
 

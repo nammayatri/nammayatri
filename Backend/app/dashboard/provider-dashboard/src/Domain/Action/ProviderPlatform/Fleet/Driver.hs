@@ -378,8 +378,8 @@ postDriverFleetRemoveDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo 
 postDriverFleetRemoveDriver merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveDriver) fleetOwnerId driverId
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveDriver) requestorId driverId mbFleetOwnerId'
 
 ---------------------------------------------------------------------------------------------------------------
 ---------------------------------------- READ LAYER (Single Fleet Level) --------------------------------------
