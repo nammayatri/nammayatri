@@ -46,10 +46,10 @@ data NandiTrip = NandiTrip
 
 data NandiRoutesRes = NandiRoutesRes
   { id :: Text,
-    shortName :: Text,
-    longName :: Text,
+    shortName :: Maybe Text,
+    longName :: Maybe Text,
     mode :: Text,
-    agencyName :: Text
+    agencyName :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 

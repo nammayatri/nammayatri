@@ -20,6 +20,7 @@ import Kernel.Utils.Common
 import Servant hiding (route, throwError)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Route as QRoute
+import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.JSON
@@ -126,8 +127,16 @@ getTicketDetail config integrationBPPConfigId qrTtl booking routeStation = do
     B.runInReplica $
       QRoute.findByRouteCode routeStation.code integrationBPPConfigId
         >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integrationBPPConfigId booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integrationBPPConfigId.getId)
-  toRoute <- listToMaybe <$> OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integrationBPPConfigId booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integrationBPPConfigId.getId)
+  fromRoute <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integrationBPPConfigId booking.merchantId booking.merchantOperatingCityId) >>= \case
+      Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code fromStation.code integrationBPPConfigId
+      Right stops -> pure $ listToMaybe stops
+      >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integrationBPPConfigId.getId)
+  toRoute <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integrationBPPConfigId booking.merchantId booking.merchantOperatingCityId) >>= \case
+      Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code toStation.code integrationBPPConfigId
+      Right stops -> pure $ listToMaybe stops
+      >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integrationBPPConfigId.getId)
   now <- addUTCTime (secondsToNominalDiffTime 19800) <$> getCurrentTime
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
