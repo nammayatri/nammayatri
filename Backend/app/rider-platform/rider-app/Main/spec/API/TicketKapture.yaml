@@ -1,0 +1,16 @@
+imports:
+  Text: Data.Text
+
+module: TicketKapture
+
+types:
+  TicketKaptureResp:
+    encryptedCc: Text
+    encryptedIv: Text
+
+apis:
+  - POST:
+      endpoint: /kaptureCustomerLogin
+      auth: TokenAuth
+      response:
+        type: TicketKaptureResp
