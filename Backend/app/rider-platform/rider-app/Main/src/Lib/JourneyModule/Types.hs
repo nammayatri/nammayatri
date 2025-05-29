@@ -257,7 +257,8 @@ data LegInfo = LegInfo
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     personId :: Id DP.Person,
     actualDistance :: Maybe Distance,
-    totalFare :: Maybe PriceAPIEntity
+    totalFare :: Maybe PriceAPIEntity,
+    isSearchFailed :: Maybe Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -516,7 +517,8 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 exoPhoneNumber = Just booking.primaryExophone
               },
         actualDistance = mRide >>= (.traveledDistance),
-        totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare))
+        totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare)),
+        isSearchFailed = Nothing
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -585,7 +587,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 exoPhoneNumber = Nothing
               },
         actualDistance = Nothing,
-        totalFare = Nothing
+        totalFare = Nothing,
+        isSearchFailed = Nothing
       }
 
 getWalkLegStatusFromWalkLeg :: DWalkLeg.WalkLegMultimodal -> JourneySearchData -> JourneyLegStatus
@@ -632,7 +635,8 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         status = getWalkLegStatusFromWalkLeg legData journeyLegInfo',
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'},
         actualDistance = estimatedDistance,
-        totalFare = Nothing
+        totalFare = Nothing,
+        isSearchFailed = Nothing
       }
 
 getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
@@ -690,7 +694,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         status = legStatus,
         legExtraInfo = legExtraInfo,
         actualDistance = distance,
-        totalFare = mkPriceAPIEntity <$> booking.finalPrice
+        totalFare = mkPriceAPIEntity <$> booking.finalPrice,
+        isSearchFailed = Nothing
       }
   where
     mkLegExtraInfo qrDataList qrValidity journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
@@ -813,12 +818,12 @@ mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, Mo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
-  let isSearchFailed = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
+  let isSearchFailed' = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
   let bookingAllowed =
         case vehicleType of
-          Spec.METRO -> not isSearchFailed && fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
-          Spec.SUBWAY -> not isSearchFailed && fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
-          Spec.BUS -> not isSearchFailed
+          Spec.METRO -> not isSearchFailed' && fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
+          Spec.SUBWAY -> not isSearchFailed' && fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
+          Spec.BUS -> not isSearchFailed'
   now <- getCurrentTime
   (mbEstimatedFare, mbQuote) <-
     case journeyLegInfo'.pricingId of
@@ -856,7 +861,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
         status = fromMaybe InPlan journeyLegStatus,
         legExtraInfo = legExtraInfo,
         actualDistance = Nothing,
-        totalFare = Nothing
+        totalFare = Nothing,
+        isSearchFailed = Just isSearchFailed'
       }
   where
     mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo' = do
