@@ -200,5 +200,5 @@ createPayments merchantOperatingCityId merchantId orderId orderShortId amount pe
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType person.clientSdkVersion
+      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
   DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId createOrderReq createOrderCall

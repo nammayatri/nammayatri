@@ -126,8 +126,8 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
                 entityName = DLP.METRO_BOOKING_CASHBACK
                 createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType True
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
-            let serviceName = DEMSC.PayoutService PT.Juspay
-                createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
+            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+            let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
             mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()

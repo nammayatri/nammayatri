@@ -2787,10 +2787,10 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       let ((driverFeeToPayout, driverFeeToSettle), _) = driverFeeWithRefundData driverFeeSorted refundAmount uid
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       phoneNo <- mapM decrypt person.mobileNumber
+      payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
       let createPayoutOrderReq = mkPayoutReq driverFeeToPayout person vpa uid phoneNo
-          payoutServiceName = fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName
           entityName = DPayment.DRIVER_FEE
-          createPayoutOrderCall = Payout.createPayoutOrder person.merchantId opCityId payoutServiceName
+          createPayoutOrderCall = Payout.createPayoutOrder person.merchantId opCityId payoutServiceName (Just person.id.getId)
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
       when (createPayoutOrderReq.amount < 0.0) $ throwError (InternalError "refund amount is less than 0")

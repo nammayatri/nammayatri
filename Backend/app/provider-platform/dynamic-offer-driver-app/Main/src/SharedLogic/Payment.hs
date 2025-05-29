@@ -127,8 +127,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
-  paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion
-  (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName -- api call
+  paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
+  (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName (Just driver.id.getId) -- api call
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
@@ -201,14 +201,14 @@ offerListCache merchantId driverId merchantOpCityId serviceName req = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  paymentServiceName <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
+  paymentServiceName <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   if transporterConfig.useOfferListCache
     then do
       key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req
       Hedis.get key >>= \case
         Just a -> return a
-        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId merchantOpCityId paymentServiceName req
-    else TPayment.offerList merchantId merchantOpCityId paymentServiceName req
+        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId merchantOpCityId paymentServiceName (Just driver.id.getId) req
+    else TPayment.offerList merchantId merchantOpCityId paymentServiceName (Just driver.id.getId) req
 
 cacheOfferListResponse :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> Payment.OfferListResp -> m ()
 cacheOfferListResponse includeDriverId req resp = do

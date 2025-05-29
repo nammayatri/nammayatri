@@ -179,8 +179,8 @@ callPayout DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRet
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
-              let serviceName = DEMSC.PayoutService PT.Juspay
-                  createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
+              payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+              let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
               mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
               errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do
