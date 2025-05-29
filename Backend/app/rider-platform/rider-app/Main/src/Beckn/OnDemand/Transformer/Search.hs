@@ -57,7 +57,8 @@ tfIntent res bapConfig = do
   let intentTags_ = Nothing
       intentFulfillment_ = tfFulfillment res
       intentPayment_ = tfPayment res bapConfig
-      returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
+      intentCategory_ = tfCategory
+      returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_, intentCategory = intentCategory_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
@@ -91,3 +92,9 @@ tfPerson taggings = do
   if allNothing
     then Nothing
     else Just returnData
+
+tfCategory :: Maybe BecknV2.OnDemand.Types.Category
+tfCategory = do
+  let descriptorCode_ = Just $ show Enums.CATEGORY_ON_DEMAND_TRIP -- FIXME
+  let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
+  Just $ BecknV2.OnDemand.Types.Category {categoryDescriptor = categoryDescriptor_}
