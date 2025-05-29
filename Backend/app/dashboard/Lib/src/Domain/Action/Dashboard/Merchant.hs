@@ -140,6 +140,7 @@ buildMerchant req = do
         enabled = Just True,
         createdAt = now,
         requireAdminApprovalForFleetOnboarding = Just False,
+        verifyFleetWhileLogin = Just True,
         hasFleetMemberHierarchy = Just True
       }
 
