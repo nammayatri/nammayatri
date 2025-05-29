@@ -667,8 +667,8 @@ cancellableExtendStatus leg = if leg.travelMode == DTrip.Walk then not (leg.stat
 cancellableStatus :: JL.LegInfo -> Bool
 cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)
 
-getUnifiedQR :: [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
-getUnifiedQR legs = do
+getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
+getUnifiedQR journey legs = do
   let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
   let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL]
   let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC]
@@ -679,6 +679,9 @@ getUnifiedQR legs = do
       Just $
         JL.UnifiedTicketQR
           { version = "1.0",
+            _type = "INTEGRATED_QR",
+            txnId = journey.id.getId,
+            createdAt = journey.createdAt,
             cmrl = cmrlBookings,
             mtc = mtcBookings,
             cris = crisBookings
@@ -1422,7 +1425,7 @@ generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => DJourney.Journe
 generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR legs
+  let unifiedQR = getUnifiedQR journey legs
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- maybe (pure Nothing) QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
