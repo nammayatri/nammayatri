@@ -1031,6 +1031,8 @@ TransporterConfig:
     earningsWindowSize : Int
     liveEKD: Maybe Bool
     deactivateRCOnUnlink: Maybe Bool
+    aaEnabledClientSdkVersion : Maybe Text
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1432,6 +1434,7 @@ TransporterConfig:
     weekStartMode : "3"
     earningsWindowSize : "7"
     deactivateRCOnUnlink: "true"
+    aaEnabledClientSdkVersion : "999.999.999"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

@@ -211,8 +211,8 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
   req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
   driver <- QP.findById driverToNotify.driverId >>= fromMaybeM (PersonDoesNotExist driverToNotify.driverId.getId)
   QNTF.create $ buildNotificationEntity notificationId req driverToNotify.driverFeeId driverToNotify.mandateId now
-  paymentServiceName <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
-  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId paymentServiceName))
+  paymentServiceName <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id subscriptionConfig.serviceName
+  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId paymentServiceName (Just driver.id.getId)))
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverToNotify.driverFeeId] Nothing
@@ -253,8 +253,7 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
             txnDate = addUTCTime (3600 * 24) now,
             mandateId = driverInfoForPDN.mandateId.getId, --- not sure regarding this m
             notificationId = shortId,
-            description = "Driver fee mandate notification",
-            personId = Just driverToNotify.driverId.getId
+            description = "Driver fee mandate notification"
           }
 
 handleNotificationFailureAfterRetiresEnd :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DF.DriverFee -> m ()
