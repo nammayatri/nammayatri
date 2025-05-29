@@ -11,14 +11,14 @@ import qualified Kernel.Types.Time
 newtype NandiPatternsRes = NandiPatternsRes
   { patterns :: [NandiPattern]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiPattern = NandiPattern
   { id :: Text,
     desc :: Text,
     routeId :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiPatternDetails = NandiPatternDetails
   { id :: Text,
@@ -27,7 +27,7 @@ data NandiPatternDetails = NandiPatternDetails
     stops :: [NandiStop],
     trips :: [NandiTrip]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiStop = NandiStop
   { id :: Text,
@@ -36,13 +36,13 @@ data NandiStop = NandiStop
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiTrip = NandiTrip
   { id :: Text,
     direction :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiRoutesRes = NandiRoutesRes
   { id :: Text,
@@ -51,7 +51,7 @@ data NandiRoutesRes = NandiRoutesRes
     mode :: Text,
     agencyName :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data RouteStopMappingNandi = RouteStopMappingNandi
   { dailyTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -68,3 +68,4 @@ data RouteStopMappingNandi = RouteStopMappingNandi
     stopPoint :: Kernel.External.Maps.Types.LatLong,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
