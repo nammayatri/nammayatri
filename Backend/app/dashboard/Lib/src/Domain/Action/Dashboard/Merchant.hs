@@ -140,8 +140,9 @@ buildMerchant req = do
         enabled = Just True,
         createdAt = now,
         requireAdminApprovalForFleetOnboarding = Just False,
-        hasFleetMemberHierarchy = Just True,
-        isStrongNameCheckRequired = Just True
+        isStrongNameCheckRequired = Just True,
+        verifyFleetWhileLogin = Just True,
+        hasFleetMemberHierarchy = Just True
       }
 
 changeMerchantEnableState ::

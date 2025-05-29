@@ -35,8 +35,9 @@ data MerchantE e = Merchant
     createdAt :: UTCTime,
     enabled :: Maybe Bool,
     requireAdminApprovalForFleetOnboarding :: Maybe Bool,
-    hasFleetMemberHierarchy :: Maybe Bool,
-    isStrongNameCheckRequired :: Maybe Bool
+    isStrongNameCheckRequired :: Maybe Bool,
+    verifyFleetWhileLogin :: Maybe Bool,
+    hasFleetMemberHierarchy :: Maybe Bool
   }
   deriving (Generic)
 
