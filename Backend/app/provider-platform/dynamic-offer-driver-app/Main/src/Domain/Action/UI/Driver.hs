@@ -2522,7 +2522,17 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       let parsedRes = mapMaybe (parseMember . decodeUtf8) res
           nearbyBookings = take (fromIntegral limit) $ filterNearbyBookings now dLoc variant avgSpeedOfVehicle parsedRes possibleServiceTierTypes
       if not $ null nearbyBookings
-        then Redis.hmGet redisKeyForHset nearbyBookings
+        then do
+          redisRes <- try @_ @SomeException $ Redis.hmGet redisKeyForHset nearbyBookings
+          case redisRes of
+            Left _ -> do
+              let bookingIds = map Id nearbyBookings
+              bookings <- mapM QBooking.findById bookingIds
+              let validBookings = catMaybes bookings
+              void $ mapM removeBookingFromRedis validBookings
+              void $ mapM addScheduledBookingInRedis validBookings
+              pure bookings
+            Right (bookings :: [Maybe DRB.Booking]) -> pure bookings
         else pure []
 
 acceptScheduledBooking ::
