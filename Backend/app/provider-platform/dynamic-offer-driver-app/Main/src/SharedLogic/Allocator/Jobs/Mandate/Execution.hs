@@ -139,7 +139,6 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
                     notificationId = notification.shortId,
                     mandateId = mandateId.getId,
                     executionDate,
-                    personId = Just driverFee.driverId.getId,
                     splitSettlementDetails = splitSettlementDetails
                   }
           return $
@@ -182,10 +181,10 @@ asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-  paymentService <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
+  paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id subscriptionConfig.serviceName
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
-      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
+      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))
       case exec of
         Left err -> do
           QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing
