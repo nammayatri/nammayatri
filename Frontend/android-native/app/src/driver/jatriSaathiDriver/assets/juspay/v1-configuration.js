@@ -606,6 +606,14 @@ let getAllCityConfig = () => {
       cityLat: 22.40117,
       cityLong: 88.58293,
       showSubscriptions: false
+    }),
+    Object.assign({}, baseCityConfig, {
+      cityName: "Digha",
+      mapImage: "ys_ic_digha_map",
+      cityCode: "std:03216",
+      cityLat: 21.6222,
+      cityLong: 87.5066,
+      showSubscriptions: false
     })
   ];
   return cityConfigs;
