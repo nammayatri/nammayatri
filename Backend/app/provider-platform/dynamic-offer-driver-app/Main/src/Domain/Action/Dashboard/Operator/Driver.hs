@@ -220,11 +220,11 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbDri
   driverOperatorAssociationLs <-
     findAllByOperatorIdWithLimitOffsetDriverId requestorId mbIsActive mbLimit mbOffset mbDriverId
   now <- getCurrentTime
-  listItem <- mapM (createDriverInfo now) driverOperatorAssociationLs
-  listItemWithFilterVehicleIfExists <- case mbVehicleNo of
-    Just vehicleNo -> filterM (\x -> pure $ x.vehicleNo == Just vehicleNo) listItem
-    Nothing -> pure listItem
-  let count = length listItemWithFilterVehicleIfExists
+  listItemWithoutFilter <- mapM (createDriverInfo now) driverOperatorAssociationLs
+  listItem <- case mbVehicleNo of
+    Just vehicleNo -> filterM (\x -> pure $ x.vehicleNo == Just vehicleNo) listItemWithoutFilter
+    Nothing -> pure listItemWithoutFilter
+  let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
