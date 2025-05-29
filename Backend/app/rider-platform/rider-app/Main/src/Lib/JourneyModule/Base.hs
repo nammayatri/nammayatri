@@ -15,6 +15,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.Extra.Ride as DRide
+import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
@@ -697,21 +698,24 @@ getTickets :: JL.LegInfo -> Maybe (Text, JL.BookingData)
 getTickets leg =
   leg.pricingId >>= \_ -> do
     case leg.legExtraInfo of
-      JL.Metro info -> processTickets JL.CMRL info.tickets info.providerName
-      JL.Bus info -> processTickets JL.MTC info.tickets info.providerName
-      JL.Subway info -> processTickets JL.CRIS info.tickets info.providerName
+      JL.Metro info -> processTickets JL.CMRL info.bookingId info.tickets info.providerName
+      JL.Bus info -> processTickets JL.MTC info.bookingId info.tickets info.providerName
+      JL.Subway info -> processTickets JL.CRIS info.bookingId info.tickets info.providerName
       _ -> Nothing
   where
-    processTickets :: JL.Provider -> Maybe [Text] -> Maybe Text -> Maybe (Text, JL.BookingData)
-    processTickets expectedProvider mbTickets mbProviderName = do
+    processTickets :: JL.Provider -> Maybe (Id DFRFSBooking.FRFSTicketBooking) -> Maybe [Text] -> Maybe Text -> Maybe (Text, JL.BookingData)
+    processTickets expectedProvider mbBookingId mbTickets mbProviderName = do
       tickets <- mbTickets
       provider <- mbProviderName
+      bookingId <- mbBookingId
       if (provider == providerToText expectedProvider || provider == providerToText JL.DIRECT) && not (null tickets)
         then
           Just
             ( providerToText expectedProvider,
               JL.BookingData
-                { ticketData = tickets
+                { bookingId = bookingId.getId,
+                  isRoundTrip = False, -- TODO: add round trip support
+                  ticketData = tickets
                 }
             )
         else Nothing

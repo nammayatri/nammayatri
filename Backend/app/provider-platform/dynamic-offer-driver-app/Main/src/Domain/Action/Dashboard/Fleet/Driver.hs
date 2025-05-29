@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Fleet.Driver
   ( getDriverFleetAccessList,
     postDriverFleetAccessSelect,
+    postDriverFleetV2AccessSelect,
     postDriverFleetAddVehicle,
     postDriverFleetAddRCWithoutDriver,
     getDriverFleetGetAllVehicle,
@@ -2280,6 +2281,9 @@ getDriverFleetAccessList _ _ = throwError $ InternalError "Unimplemented!"
 
 postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Bool -> Flow APISuccess
 postDriverFleetAccessSelect _ _ _ _ _ = throwError $ InternalError "Unimplemented!"
+
+postDriverFleetV2AccessSelect :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetV2AccessSelect _ _ _ _ _ _ = throwError $ InternalError "Unimplemented!"
 
 -- Helper function to convert RegisterRCReq to AddVehicleReq
 convertToAddVehicleReq :: Common.RegisterRCReq -> Common.AddVehicleReq

@@ -302,6 +302,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
 
 data MetroLegExtraInfo = MetroLegExtraInfo
   { routeInfo :: [MetroLegRouteInfo],
+    bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
     providerName :: Maybe Text
@@ -325,6 +326,7 @@ data MetroLegRouteInfo = MetroLegRouteInfo
 
 data SubwayLegExtraInfo = SubwayLegExtraInfo
   { routeInfo :: [SubwayLegRouteInfo],
+    bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
     providerName :: Maybe Text,
@@ -356,6 +358,7 @@ data BusLegExtraInfo = BusLegExtraInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
     routeCode :: Text,
+    bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
     routeName :: Maybe Text,
@@ -377,10 +380,12 @@ data UpdateJourneyReq = UpdateJourneyReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BookingData = BookingData
-  { ticketData :: [Text]
+  { bookingId :: Text,
+    isRoundTrip :: Bool,
+    ticketData :: [Text]
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
@@ -394,11 +399,11 @@ data UnifiedTicketQR = UnifiedTicketQR
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
 
-instance FromJSON UnifiedTicketQR where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
 instance ToJSON UnifiedTicketQR where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance FromJSON UnifiedTicketQR where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 data Provider = CMRL | MTC | DIRECT | CRIS
   deriving (Eq, Show)
@@ -710,6 +715,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
             Metro $
               MetroLegExtraInfo
                 { routeInfo = metroRouteInfo',
+                  bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
                   providerName = Just booking.providerName
@@ -732,6 +738,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 { originStop = stationToStationAPI fromStation,
                   destinationStop = stationToStationAPI toStation,
                   routeCode = route.code,
+                  bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
                   providerName = Just booking.providerName,
@@ -749,6 +756,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
             Subway $
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
+                  bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
                   providerName = Just booking.providerName,
@@ -876,6 +884,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
             Metro $
               MetroLegExtraInfo
                 { routeInfo = metroRouteInfo',
+                  bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
                   providerName = Nothing
@@ -896,6 +905,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                 { originStop = stationToStationAPI fromStation,
                   destinationStop = stationToStationAPI toStation,
                   routeCode = route.code,
+                  bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
                   providerName = Nothing,
@@ -910,6 +920,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
             Subway $
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
+                  bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
                   providerName = Nothing,

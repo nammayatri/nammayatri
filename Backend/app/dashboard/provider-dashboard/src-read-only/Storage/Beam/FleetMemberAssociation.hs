@@ -14,7 +14,11 @@ data FleetMemberAssociationT f = FleetMemberAssociationT
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetMemberId :: B.C f Kernel.Prelude.Text,
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
+    groupCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isFleetOwner :: B.C f Kernel.Prelude.Bool,
+    level :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    order :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parentGroupCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

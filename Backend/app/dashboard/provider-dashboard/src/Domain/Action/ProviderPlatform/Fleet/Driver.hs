@@ -16,6 +16,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
   ( getDriverFleetGetAllBadge,
     getDriverFleetAccessList,
     postDriverFleetAccessSelect,
+    postDriverFleetV2AccessSelect,
     postDriverFleetAddVehicle,
     postDriverFleetAddRCWithoutDriver,
     getDriverFleetGetAllVehicle,
@@ -204,9 +205,6 @@ verifyFleetOwnerAccess :: Text -> Text -> Flow Text
 verifyFleetOwnerAccess fleetMemberId accessedFleetOwnerId = do
   fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
   (fleetOwnerId, _) <- find (\(fleetOwnerId, _) -> fleetOwnerId == accessedFleetOwnerId) fleetOwnerIds & fromMaybeM AccessDenied
-  -- let otherFleetOwnerIds = filter (\fleetOwnerId' -> fleetOwnerId' /= accessedFleetOwnerId) $ map fst fleetOwnerIds
-  -- when (not $ null otherFleetOwnerIds) $
-  --   FMA.updateFleetMembersActiveStatus False fleetMemberId otherFleetOwnerIds
   return fleetOwnerId
 
 ------------------------------------- Fleet Owners Access Control --------------------------------------
@@ -219,6 +217,23 @@ postDriverFleetAccessSelect merchantShortId opCity apiTokenInfo fleetOwnerId mbO
     fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
     FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
   FMA.updateFleetMemberActiveStatus enable fleetMemberId fleetOwnerId
+  return Success
+
+postDriverFleetV2AccessSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetV2AccessSelect merchantShortId opCity apiTokenInfo mbFleetOwnerId mbGroupCode mbOnlyCurrent enable = do
+  _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let fleetMemberId = apiTokenInfo.personId.getId
+      onlyCurrent = fromMaybe False mbOnlyCurrent
+  when (onlyCurrent && enable) $ do
+    fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
+    FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
+  case (mbFleetOwnerId, mbGroupCode) of
+    (Just fleetOwnerId, _) -> do
+      FMA.updateFleetMemberActiveStatus enable fleetMemberId fleetOwnerId
+    (Nothing, Just groupCode) -> do
+      -- TODO: add group code support
+      FMA.updateFleetMembersActiveStatusByGroupCode enable fleetMemberId (Just groupCode)
+    _ -> return ()
   return Success
 
 ------------------------------------- Fleet Owners Access List --------------------------------------
@@ -236,6 +251,12 @@ getDriverFleetAccessList merchantShortId opCity apiTokenInfo = do
             Common.FleetOwnerListAPIEntity
               { fleetOwnerId = fleetMemberAssociation.fleetOwnerId,
                 fleetOwnerName = person.firstName <> " " <> person.lastName,
+                fleetGroup =
+                  ((,) <$> fleetMemberAssociation.level <*> fleetMemberAssociation.groupCode)
+                    <&> \case
+                      (level, groupCode) ->
+                        Common.FleetGroup {level, parentGroupCode = fleetMemberAssociation.parentGroupCode, groupCode},
+                order = fleetMemberAssociation.order,
                 enabled = fleetMemberAssociation.enabled
               }
       )
