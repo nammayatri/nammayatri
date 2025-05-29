@@ -190,14 +190,14 @@ checkAuthFraud mc riderId = Redis.withNonCriticalCrossAppRedis $ do
 
   pure (authFraudDetected, fraudMerchantConfigId)
 
-blockCustomer :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> m ()
-blockCustomer riderId mcId = do
+blockCustomer :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Person.BlockSource -> Maybe Text -> m ()
+blockCustomer riderId mcId blockSource reason = do
   regTokens <- RT.findAllByPersonId riderId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
   _ <- RT.deleteByPersonId riderId
-  void $ QP.updatingEnabledAndBlockedState riderId mcId True
+  void $ QP.updatingEnabledAndBlockedStateData riderId mcId True blockSource reason
 
 customerAuthBlock :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
 customerAuthBlock riderId mcId blockDurationMinutes = do
