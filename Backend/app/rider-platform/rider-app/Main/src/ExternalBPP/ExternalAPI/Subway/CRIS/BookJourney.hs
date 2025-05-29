@@ -19,6 +19,7 @@ import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
+import Kernel.Prelude (intToNominalDiffTime)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -118,7 +119,7 @@ data CRISBookingResponse = CRISBookingResponse
     serviceTax :: Maybe Text,
     transactionTime :: Maybe Text, -- txnTime
     journeyComment :: Maybe Text, -- jrnyCommencingString
-    validUntil :: Text, -- showTicketValidity
+    validUntil :: Maybe Int, -- jrnyCommencingHour
     journeyDate :: Maybe Text, -- journeyDate
     routeMessage :: Maybe Text,
     chargeableAmount :: Maybe HighPrecMoney,
@@ -141,10 +142,11 @@ data CRISTicketData = CRISTicketData
     serviceTax :: Maybe Text,
     txnTime :: Maybe Text,
     jrnyCommencingString :: Maybe Text,
-    showTicketValidity :: Text,
+    -- showTicketValidity :: Text,
     journeyDate :: Maybe Text,
     routeMessage :: Maybe Text,
-    chargeableAmount :: Maybe HighPrecMoney
+    chargeableAmount :: Maybe HighPrecMoney,
+    jrnyCommencingHour :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -215,7 +217,7 @@ convertToBookingResponse ticketData encrypted =
       serviceTax = ticketData.serviceTax,
       transactionTime = ticketData.txnTime,
       journeyComment = ticketData.jrnyCommencingString,
-      validUntil = ticketData.showTicketValidity,
+      validUntil = ticketData.jrnyCommencingHour,
       journeyDate = ticketData.journeyDate,
       routeMessage = ticketData.routeMessage,
       chargeableAmount = ticketData.chargeableAmount,
@@ -290,13 +292,9 @@ createOrder config booking = do
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
 
-  -- TODO: Consume this once get confirmation from CRIS
-  -- qrValidityTime <- case parseTimeM True defaultTimeLocale "%d/%m/%Y %H:%M:%S" (T.unpack bookJourneyResp.validUntil) :: Maybe UTCTime of
-  --   Nothing -> throwError $ InternalError $ "Failed to parse ticket validity time: " <> bookJourneyResp.validUntil
-  --   Just time -> pure time
-
+  let journeyCommencingHours = intToNominalDiffTime $ fromMaybe 3 bookJourneyResp.validUntil
   now <- getCurrentTime
-  let threeHoursFromNow = addUTCTime (3 * 60 * 60 :: NominalDiffTime) now
+  let hoursFromNow = addUTCTime (journeyCommencingHours * 60 * 60 :: NominalDiffTime) now
 
   return $
     ProviderOrder
@@ -308,7 +306,7 @@ createOrder config booking = do
                 description = bookJourneyResp.journeyComment,
                 qrData = bookJourneyResp.encryptedTicketData,
                 qrStatus = "UNCLAIMED",
-                qrValidity = threeHoursFromNow, -- TODO: Consume qrValidityTime from CRIS once confirmed
+                qrValidity = hoursFromNow,
                 qrRefreshAt = Nothing
               }
           ]
