@@ -126,6 +126,7 @@ import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
+import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
@@ -1363,9 +1364,17 @@ getDriverFleetOwnerInfo _ _ driverId = do
   fleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   fleetConfig <- QFC.findByPrimaryKey personId
   panDetails <- B.runInReplica $ DPC.findByDriverId personId
+  gstDetails <- QGST.findByDriverId personId
+  aadhaarDetails <- QAadhaarCard.findByPrimaryKey personId
   panNumber <- case panDetails of
     Just pan -> Just <$> decrypt pan.panCardNumber
     Nothing -> pure Nothing
+  gstNumber <- case gstDetails of
+    Just gst -> Just <$> decrypt gst.gstin
+    Nothing -> pure Nothing
+  let aadhaarNumber = case aadhaarDetails of
+        Just aadhaar -> aadhaar.maskedAadhaarNumber
+        Nothing -> Nothing
   mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
   (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
     Nothing -> pure (Nothing, Nothing)
@@ -1373,10 +1382,10 @@ getDriverFleetOwnerInfo _ _ driverId = do
       person <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
       contact <- mapM decrypt person.mobileNumber
       pure $ (Just (person.firstName <> fromMaybe "" person.middleName <> fromMaybe "" person.lastName), contact)
-  makeFleetOwnerInfoRes panNumber fleetConfig fleetOwnerInfo operatorName operatorContact
+  makeFleetOwnerInfoRes panNumber gstNumber aadhaarNumber fleetConfig fleetOwnerInfo operatorName operatorContact
   where
-    makeFleetOwnerInfoRes :: Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes panNumber_ mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
+    makeFleetOwnerInfoRes :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes panNumber_ gstNumber_ maskedAadhaarNumber mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
       referral <- QDR.findById fleetOwnerPersonId
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
@@ -1387,7 +1396,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
+      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, gstNumber = gstNumber_, fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo
