@@ -487,7 +487,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
   let deepLinkExpiry = subscriptionConfig.deepLinkExpiryTimeInMinutes
   let allowDeepLink = subscriptionConfig.sendDeepLink
   let mbDeepLinkData = if isDashboard && allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = deepLinkExpiry} else Nothing
-  paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion
+  paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   when (autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
   plan <- QPD.findByIdAndPaymentModeWithServiceName planId MANUAL serviceName >>= fromMaybeM (PlanNotFound planId.getId)
   let isSamePlan = maybe False (\dp -> dp.planId == planId) driverPlan
@@ -497,7 +497,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
     let mbMandateId = (.mandateId) =<< driverPlan
     whenJust mbMandateId $ \mandateId -> do
       fork "Cancelling paused Mandate" $ do
-        void $ Payment.mandateRevoke merchantId merchantOpCityId paymentServiceName (Payment.MandateRevokeReq {mandateId = mandateId.getId, personId = Just $ getId driverId})
+        void $ Payment.mandateRevoke merchantId merchantOpCityId paymentServiceName (Just driver.id.getId) (Payment.MandateRevokeReq {mandateId = mandateId.getId})
   unless (autoPayStatus == Just DI.PENDING) $ do
     updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (Just DI.PENDING) Nothing
   when (isNothing driverPlan) $ do
@@ -858,7 +858,6 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = getPaymentModeAndVehicleCategoryKey plan,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            personId = Just driverId.getId,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
           }
     mkPlanFareBreakup currency offers now = do
