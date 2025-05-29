@@ -109,10 +109,7 @@ data SchedulerEnv = SchedulerEnv
     jobInfoMap :: JobInfoMap,
     kvConfigUpdateFrequency :: Int,
     cacheConfig :: CacheConfig,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    cacConfig :: CacConfig,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    cacConfig :: CacConfig
   }
   deriving (Generic)
 

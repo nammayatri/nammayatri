@@ -24,7 +24,6 @@ import EulerHS.Prelude hiding (fromList, (.~))
 import External.Flow (getDriverId)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.ARTUtils (HasARTFlow)
 import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -69,8 +68,7 @@ instance
     HasField "driverAppConfig" r DriverAppConfig,
     HasLog r,
     HasCoreMetrics r,
-    HasCacheConfig r,
-    HasARTFlow r
+    HasCacheConfig r
   ) =>
   HasServer (TokenAuth tokenHeader clientTypeHeader :> api) ctx
   where

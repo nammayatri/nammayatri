@@ -17,7 +17,6 @@ module Environment where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Kernel.Prelude
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
@@ -30,7 +29,6 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -66,10 +64,7 @@ data AppEnv = AppEnv
     hostName :: Text,
     disableSignatureAuth :: Bool,
     version :: DeploymentVersion,
-    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -80,9 +75,6 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Nothing
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return AppEnv {..}
 

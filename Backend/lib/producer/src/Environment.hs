@@ -95,10 +95,7 @@ data AppEnv = AppEnv
     reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
     runReviver :: Bool,
-    kafkaProducerTools :: KafkaProducerTools,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerTools :: KafkaProducerTools
   }
   deriving (Generic)
 
@@ -112,9 +109,6 @@ buildAppEnv AppCfg {..} producerType = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

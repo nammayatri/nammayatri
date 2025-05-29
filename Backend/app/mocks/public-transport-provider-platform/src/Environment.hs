@@ -17,7 +17,6 @@ module Environment where
 import Control.Monad.Catch (bracket)
 import Kernel.Mock.ExternalAPI
 import Kernel.Storage.Hedis
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Utils.Dhall (FromDhall)
@@ -25,7 +24,6 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth hiding (prepareAuthManager)
 import Network.HTTP.Client (Manager, newManager)
 import Relude
-import System.Environment as SE
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -65,10 +63,7 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     authManager :: Manager,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool,
-    shouldLogRequestId :: Bool,
-    requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 
@@ -76,9 +71,6 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("mock_public_transport_provider_platform" <>)
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Nothing
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv

@@ -31,7 +31,6 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 import Tools.Metrics.Types
 import Tools.Streaming.Kafka.Environment
 
@@ -98,10 +97,7 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -128,9 +124,6 @@ buildAppEnv AppCfg {..} = do
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Just kafkaProducerTools
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

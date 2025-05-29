@@ -100,9 +100,6 @@ data HandlerEnv = HandlerEnv
     nwAddress :: BaseUrl,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     schedulerType :: SchedulerType,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
@@ -135,9 +132,6 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   serviceClickhouseEnv <- createConn driverClickhouseCfg
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

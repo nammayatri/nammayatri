@@ -26,7 +26,6 @@ import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
-import qualified System.Environment as SE
 
 data DriverAppConfig = DriverAppConfig
   { url :: BaseUrl,
@@ -71,10 +70,7 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableRedisLatencyLogging :: Bool,
-    cacheConfig :: CacheConfig,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 
@@ -86,9 +82,6 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   version <- lookupDeploymentVersion
   isShuttingDown <- mkShutdown
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Just kafkaProducerTools
   let modifierFunc = ("sdk-event:" <>)
   hedisEnv <- connectHedisCluster hedisClusterCfg modifierFunc
   hedisClusterEnv <- connectHedisCluster hedisClusterCfg modifierFunc
