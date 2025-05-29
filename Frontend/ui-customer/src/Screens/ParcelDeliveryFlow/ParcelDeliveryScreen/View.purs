@@ -97,6 +97,7 @@ view push state =
         , linearLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
+          , padding $ PaddingBottom 100
           ][ deliveryDetailsView push state
           , deliveryInstructionView push state
           ]
