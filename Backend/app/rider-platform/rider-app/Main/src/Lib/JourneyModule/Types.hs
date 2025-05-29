@@ -48,6 +48,7 @@ import Kernel.Types.Id
 import Kernel.Types.Price as KTP
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -382,12 +383,21 @@ data BookingData = BookingData
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
+    _type :: Text,
+    txnId :: Text,
+    createdAt :: UTCTime,
     cmrl :: [BookingData],
     mtc :: [BookingData],
     cris :: [BookingData]
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON UnifiedTicketQR where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON UnifiedTicketQR where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Provider = CMRL | MTC | DIRECT | CRIS
   deriving (Eq, Show)
