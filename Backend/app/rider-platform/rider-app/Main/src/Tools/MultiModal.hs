@@ -14,6 +14,7 @@
 
 module Tools.MultiModal where
 
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -24,6 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified System.Environment as Se
 import Tools.Error
 
 getMultiModalConfig :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
@@ -44,9 +46,13 @@ getTransitServiceReq merchantId merchantOperatingCityId = do
   transitServiceReq' <- getMultiModalConfig merchantId merchantOperatingCityId
   case transitServiceReq' of
     OTPTransitConfig otpTransitConfig -> do
-      let baseUrlStr = showBaseUrl otpTransitConfig.baseUrl
-      otpGtfsUrl <- parseBaseUrl $ baseUrlStr <> "/otp/gtfs/v1/"
-      return $ OTPTransitConfig otpTransitConfig{baseUrl = otpGtfsUrl}
+      baseUrlPath <- liftIO $ Se.lookupEnv "OTP_GTFS_URL_PATH"
+      if isJust baseUrlPath
+        then do
+          let baseUrlStr = showBaseUrl otpTransitConfig.baseUrl
+          otpGtfsUrl <- parseBaseUrl $ baseUrlStr <> maybe "" T.pack baseUrlPath
+          return $ OTPTransitConfig otpTransitConfig{baseUrl = otpGtfsUrl}
+        else return transitServiceReq'
     _ -> return transitServiceReq'
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
