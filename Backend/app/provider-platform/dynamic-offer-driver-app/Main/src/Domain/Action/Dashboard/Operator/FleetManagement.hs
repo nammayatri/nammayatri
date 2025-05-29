@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.Operator.FleetManagement
     postFleetManagementFleetLinkVerifyOtp,
     createFleetOwnerInfo,
     postFleetManagementFleetMemberAssociationCreate,
+    castFleetType,
   )
 where
 
