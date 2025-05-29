@@ -80,7 +80,7 @@ onInit onInitReq merchant booking_ = do
   void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
-
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   case booking.journeyId of
     Just journeyId -> do
       QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
@@ -90,7 +90,7 @@ onInit onInitReq merchant booking_ = do
         Redis.withLockRedis (key journeyId) 60 $ do
           (orderId, orderShortId) <- getPaymentIds
           ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
-          let amount = sum $ allJourneyBookings <&> (.price.amount)
+          let amount :: HighPrecMoney = if isMetroTestTransaction then 1 else sum $ allJourneyBookings <&> (.price.amount) -- For Testing in Master Environment
           let paymentType = Payment.FRFSMultiModalBooking
           mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType
           case mCreateOrderRes of
@@ -104,7 +104,8 @@ onInit onInitReq merchant booking_ = do
       (orderId, orderShortId) <- getPaymentIds
       ticketBookingPayment <- processPayments orderId booking
       let paymentType = getPaymentType booking.vehicleType
-      mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId booking.price.amount person paymentType
+      let amt :: HighPrecMoney = if isMetroTestTransaction then 1 else booking.price.amount -- For Testing in Master Environment
+      mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType
       case mCreateOrderRes of
         Just _ -> do
           markBookingApproved (ticketBookingPayment, booking)
