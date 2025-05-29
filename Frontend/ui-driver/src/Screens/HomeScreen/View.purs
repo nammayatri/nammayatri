@@ -2484,7 +2484,7 @@ offlineNavigationLinks push state =
     ]
     where
       navLinksArray = [
-        {title : "Open Meter", icon : meterRideCityConfig, action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
+        {title : "Open Meter", icon : "", action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
         {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
@@ -2518,11 +2518,6 @@ offlineNavigationLinks push state =
       showAddGoto = state.data.driverGotoState.savedLocationCount < state.data.config.gotoConfig.maxGotoLocations
 
       city = getValueToLocalStore DRIVER_LOCATION
-      meterRideCityConfig = case city of
-        "Chennai" -> "ny_ic_tn_open_meter_icon_white"
-        "Trichy" -> "ny_ic_tn_open_meter_icon_white"
-        -- "Bangalore" -> "ny_ic_open_meter_icon_kn_light"
-        _ -> ""
       iconImageView icon =
         imageView
         [ width $ V 16
