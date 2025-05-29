@@ -204,10 +204,13 @@ instance Enumerable LogicDomain where
       DYNAMIC_PRICING_UNIFIED,
       FRFS_DISCOUNTS
     ]
-      ++ map CONFIG Reexport.allValuesConfigTypes
-      ++ map RIDER_CONFIG Reexport.allValuesConfigTypes
-      ++ map DRIVER_CONFIG Reexport.allValuesConfigTypes
-      ++ map RIDER_CONFIG_OVERRIDES Reexport.allValuesConfigTypes
+      ++ map CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG [minBound .. maxBound]
+      ++ map DRIVER_CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
+
+instance Enumerable ConfigType where
+  allValues = [minBound .. maxBound]
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -220,7 +223,7 @@ generateLogicDomainShowInstances =
     ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
   where
-    configTypes = Reexport.allValuesConfigTypes
+    configTypes = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
