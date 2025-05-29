@@ -2,7 +2,6 @@ module Domain.Action.UI.ReferralPayout where
 
 import qualified API.Types.UI.ReferralPayout
 import Data.Text hiding (elem, filter, map)
-import qualified Data.Text as T
 import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
@@ -15,7 +14,6 @@ import Domain.Types.Person
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payout.Interface.Types as Payout
@@ -28,7 +26,6 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Version (textToVersionDefault)
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -41,7 +38,6 @@ import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
-import qualified System.Environment as SE
 import Tools.Error
 import qualified Tools.Payout as TP
 
@@ -129,9 +125,10 @@ postPayoutCreateOrder ::
 postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  let serviceName = DEMSC.PayoutService PT.Juspay
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   let entityName = DLP.MANUAL
-      createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
+      createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
   pure Kernel.Types.APISuccess.Success
@@ -146,18 +143,15 @@ getPayoutOrderStatus ::
     m Payout.PayoutOrderStatusResp
   )
 getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
-  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
-      serviceName = case person.clientSdkVersion of
-        Just v | v >= textToVersionDefault aaClientSdkVersion -> DEMSC.PayoutService PT.AAJuspay
-        _ -> DEMSC.PayoutService PT.Juspay
-  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
+  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
+  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId payoutServiceName (Just $ getId personId) payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
     whenJust payoutOrder.entityIds $ \dStatsIds -> do
