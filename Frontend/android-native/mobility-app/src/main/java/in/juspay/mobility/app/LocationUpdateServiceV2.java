@@ -29,6 +29,7 @@ import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -64,6 +65,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -155,6 +158,7 @@ public class LocationUpdateServiceV2 extends Service {
     private final ReentrantLock batchProcessingLock = new ReentrantLock();
     private final AtomicBoolean isBatchProcessing = new AtomicBoolean(false);
     private final AtomicBoolean isFlushInProgress = new AtomicBoolean(false);
+    private final AtomicBoolean isCheckingInternet = new AtomicBoolean(false);
     private LocalBinder binder;
     // Add this class variable to track active location requests
     private final AtomicBoolean isLocationRequestInProgress = new AtomicBoolean(false);
@@ -182,7 +186,7 @@ public class LocationUpdateServiceV2 extends Service {
     private int locationBatchSize = 20; // How many locations to batch before sending
     private int locationMaxBatchSize = 100; // How many locations to batch before sending
     // State tracking
-    public  static boolean isLocationUpdating = false;
+    public static boolean isLocationUpdating = false;
     private double lastLatitudeValue;
     private double lastLongitudeValue;
     private Context context;
@@ -208,6 +212,7 @@ public class LocationUpdateServiceV2 extends Service {
     private boolean useWakeLock = false;  // Default to false until config is loaded
     private long wakeLockTimeoutMs = 30000;  // Default 30 seconds timeout
     private long rateLimitTimeInSeconds = 2; // Default rate limiting time in seconds
+    private final ExecutorService internetCheckExecutor = Executors.newCachedThreadPool();
     @Nullable
     private Object hyperServices;
 
@@ -377,19 +382,43 @@ public class LocationUpdateServiceV2 extends Service {
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(@NonNull android.net.Network network) {
-                    Log.i(TAG, "Network connectivity available");
+                    if (isCheckingInternet.getAndSet(true)) {
+                        Log.d(TAG, "Internet check already in progress, skipping");
+                        return;
+                    }
 
-                    // Execute on main thread to avoid concurrency issues
-                    new Handler(Looper.getMainLooper()).post(() -> {
-                        messageQueue.triggerBatchProcess();
-
+                    checkInternetAccess(network, () -> new Handler(Looper.getMainLooper()).post(() -> {
+                        isCheckingInternet.set(false);
+                        if (messageQueue != null) messageQueue.triggerBatchProcess();
                         // Start GRPC service if not running
                         if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
                             Log.i(TAG, "Starting GRPC service");
                             Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
                             context.startService(grpcServiceIntent);
                         }
-                    });
+                        startLocationUpdates();
+                        startLocationHeartbeatTimer();
+                        startBatchScheduler();
+
+                    }));
+                    Log.i(TAG, "Network connectivity available");
+                }
+
+                @Override
+                public void onLost(@NonNull Network network) {
+                    // Lost the network — likely no internet
+                    Log.d("NetworkCallback", "No internet connection");
+                    stopLocationUpdates();
+                    stopLocationHeartbeatTimer();
+                    stopBatchScheduler();
+                }
+
+                @Override
+                public void onUnavailable() {
+                    Log.d("NetworkCallback", "No network available");
+                    stopLocationUpdates();
+                    stopLocationHeartbeatTimer();
+                    stopBatchScheduler();
                 }
             };
 
@@ -400,6 +429,37 @@ public class LocationUpdateServiceV2 extends Service {
                 Log.e(TAG_ERROR, "Failed to register network callback", e);
             }
         }
+    }
+
+    interface OnNetworkAvailable {
+        void onSuccess();
+    }
+
+    private void checkInternetAccess(@Nullable Network network, OnNetworkAvailable callback) {
+        internetCheckExecutor.execute(() -> {
+            try {
+                HttpURLConnection urlConnection;
+                if (network == null) {
+                    urlConnection = (HttpURLConnection) (new URL("https://clients3.google.com/generate_204").openConnection());
+                } else {
+                    urlConnection = (HttpURLConnection) network.openConnection(new URL("https://clients3.google.com/generate_204"));
+                }
+                urlConnection.setConnectTimeout(3000);
+                urlConnection.setReadTimeout(3000);
+                urlConnection.connect();
+                boolean hasInternet = urlConnection.getResponseCode() == 204;
+                if (hasInternet) {
+                    try {
+                        callback.onSuccess();
+                    } catch (Exception e) {
+                        Log.e(TAG_ERROR, "Error in network available callback", e);
+                        FirebaseCrashlytics.getInstance().recordException(e);
+                    }
+                }
+            } catch (IOException e) {
+                Log.d("InternetCheck", "No actual internet: " + e.getMessage());
+            }
+        });
     }
 
     /**
@@ -439,23 +499,6 @@ public class LocationUpdateServiceV2 extends Service {
         // Make sure we're a foreground service
         startAsForegroundService();
 
-        initializeMessageQueue();
-
-        // Initialize location components
-        initializeLocationComponents();
-
-        // Start as foreground service
-        startAsForegroundService();
-
-        // Register preference change listener
-        setupPreferenceChangeListener();
-
-        // Initialize internet connectivity receiver
-        setupInternetReceiver();
-
-        // Start the batch scheduler
-        startBatchScheduler();
-
         // Load driver ID
         SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(
                 getString(R.string.preference_file_key), MODE_PRIVATE);
@@ -463,28 +506,44 @@ public class LocationUpdateServiceV2 extends Service {
             driverId = sharedPrefs.getString("DRIVER_ID", "empty");
         }
 
-        // Update settings from SharedPreferences
-        updateConfigVariables();
-
-        // Start location updates if not already running
-        if (!isLocationUpdating) {
-            startLocationUpdates();
-        }
-
-        // Start GRPC service if not running
-        if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
-            Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
-            context.startService(grpcServiceIntent);
-        }
-
-        Log.setLogRetentionDays((int)remoteConfigs.getLong("log_retention_days"));
+        Log.setLogRetentionDays((int) remoteConfigs.getLong("log_retention_days"));
 
         // Log health check event if applicable
         logEventForHealthCheck(intent);
 
-        if (messageQueue != null && messageQueue.size() > locationMaxBatchSize) {
-            messageQueue.flushToBackend(messageQueue.size() - locationBatchSize);
-        }
+
+        checkInternetAccess(null, () -> {
+            initializeMessageQueue();
+
+            // Initialize location components
+            initializeLocationComponents();
+
+            // Register preference change listener
+            setupPreferenceChangeListener();
+
+            // Initialize internet connectivity receiver
+            setupInternetReceiver();
+
+            // Start the batch scheduler
+            startBatchScheduler();
+
+            // Update settings from SharedPreferences
+            updateConfigVariables();
+
+            // Start location updates if not already running
+            if (!isLocationUpdating) {
+                startLocationUpdates();
+            }
+
+            // Start GRPC service if not running
+            if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
+                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                context.startService(grpcServiceIntent);
+            }
+            if (messageQueue != null && messageQueue.size() > locationMaxBatchSize) {
+                messageQueue.flushToBackend(messageQueue.size() - locationBatchSize);
+            }
+        });
 
         Log.d(TAG, "onStartCommand() complete");
         return START_STICKY;
@@ -1247,6 +1306,10 @@ public class LocationUpdateServiceV2 extends Service {
             batchScheduler.shutdown();
         }
 
+        if (internetCheckExecutor != null && !internetCheckExecutor.isShutdown()) {
+            internetCheckExecutor.shutdown();
+        }
+
         // Save any pending locations before shutting down
         if (messageQueue != null) {
             messageQueue.flushCache();
@@ -1624,9 +1687,9 @@ public class LocationUpdateServiceV2 extends Service {
 
         locationHeartbeatScheduler.scheduleWithFixedDelay(
                 this::checkAndSendLocationHeartbeat,
-            heartbeatIntervalMillis,
-            heartbeatIntervalMillis,
-            TimeUnit.MILLISECONDS
+                heartbeatIntervalMillis,
+                heartbeatIntervalMillis,
+                TimeUnit.MILLISECONDS
         );
 
         Log.d(TAG_TIMER, "Started location heartbeat scheduler with interval: " +
@@ -1722,7 +1785,7 @@ public class LocationUpdateServiceV2 extends Service {
             long elapsedLastLocationMinutes = TimeUnit.MILLISECONDS.toMinutes(currentTime - lastCachedLocation.getTime());
 
             // If more than the threshold has passed, consider it stale
-            boolean isStale = elapsedMinutes <= 0 || elapsedLastLocationMinutes <= 0 || (elapsedMinutes >= locationFreshnessThresholdMinutes) || elapsedLastLocationMinutes  >= locationFreshnessThresholdMinutes;
+            boolean isStale = elapsedMinutes <= 0 || elapsedLastLocationMinutes <= 0 || (elapsedMinutes >= locationFreshnessThresholdMinutes) || elapsedLastLocationMinutes >= locationFreshnessThresholdMinutes;
             Log.d(TAG_TIMER, "Location staleness check: elapsed=" + elapsedMinutes +
                     "m, threshold=" + locationFreshnessThresholdMinutes + "m, isStale=" + isStale);
 
@@ -2036,6 +2099,19 @@ public class LocationUpdateServiceV2 extends Service {
     }
 
     /**
+     * Stops the batch scheduler.
+     */
+    private void stopBatchScheduler() {
+        Log.d(TAG_BATCH, "stopBatchScheduler() called");
+        if (batchScheduler != null && !batchScheduler.isShutdown()) {
+            batchScheduler.shutdown();
+            batchScheduler = null;
+        }
+        Log.d(TAG_BATCH, "stopBatchScheduler() complete");
+    }
+
+
+    /**
      * Restarts the batch scheduler with current settings.
      */
     private void restartBatchScheduler() {
@@ -2264,9 +2340,8 @@ public class LocationUpdateServiceV2 extends Service {
                             executor.execute(() -> saveQueueToCache());
 
 
-
-                            // Emitte the location object to react application
-                            if(locationEmitter != null){
+                            // Emit the location object to react application
+                            if (locationEmitter != null) {
                                 String locationEmitterPayload = buildLocationEmitterPayload(locationData);
 
                                 emitReactEvent(locationEmitterPayload);
@@ -2294,10 +2369,10 @@ public class LocationUpdateServiceV2 extends Service {
             };
         }
 
-        private String buildLocationEmitterPayload(LocationData locationData){
+        private String buildLocationEmitterPayload(LocationData locationData) {
             try {
                 return locationData.toJsonObject().toString();
-            }catch (JSONException e){
+            } catch (JSONException e) {
                 Log.e(TAG_ERROR, "Can't convert LocationData to JSON: " + e);
                 return "";
             }
@@ -2433,7 +2508,7 @@ public class LocationUpdateServiceV2 extends Service {
                 try {
                     List<LocationData> flushBatch = messageQueue.drainBatch(size);
                     while (!flushBatch.isEmpty()) {
-                        int toIndex = Math.min(locationMaxBatchSize,flushBatch.size());
+                        int toIndex = Math.min(locationMaxBatchSize, flushBatch.size());
                         try {
                             List<LocationData> batch = flushBatch.subList(0, toIndex);
                             // Convert batch to JSONArray
@@ -2463,8 +2538,8 @@ public class LocationUpdateServiceV2 extends Service {
 
                             // Make API call synchronously
                             MobilityAPIResponse response = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
-                            Log.i(TAG_API,"Flush to Backend response code " + response.getStatusCode());
-                            Log.i(TAG_API,"Flush to Backend response body " + response.getResponseBody());
+                            Log.i(TAG_API, "Flush to Backend response code " + response.getStatusCode());
+                            Log.i(TAG_API, "Flush to Backend response body " + response.getResponseBody());
                         } catch (Exception e) {
                             Log.e(TAG_ERROR, "Error preparing batch ", e);
                             FirebaseCrashlytics.getInstance().recordException(e);
@@ -2658,7 +2733,7 @@ public class LocationUpdateServiceV2 extends Service {
 
     public ReactLocationEmitter locationEmitter;
 
-    public void storeReactEmitter(ReactLocationEmitter reactLocationEmitter){
+    public void storeReactEmitter(ReactLocationEmitter reactLocationEmitter) {
         locationEmitter = reactLocationEmitter;
     }
 
