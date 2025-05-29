@@ -25,8 +25,9 @@ getRoutesFromNandi baseUrl = do
 getRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [RouteStopMappingNandi]
 getRouteStopMapping baseUrl = do
   allRoutePatterns <- getAllRoutePatterns baseUrl
+  logDebug $ "allRoutePatterns from nandi rest api: " <> show allRoutePatterns
   allRouteDetails <- getRoutesFromNandi baseUrl
-
+  logDebug $ "allRouteDetails from nandi rest api: " <> show allRouteDetails
   let routePatternMap = Map.fromList [(p.routeId, p) | p <- allRoutePatterns]
       routeDetailsMap = Map.fromList [(r.id, r) | r <- allRouteDetails]
       matchingPatterns = Map.filterWithKey (\k _ -> k `elem` map (.routeId) allRoutePatterns) routePatternMap
@@ -34,7 +35,6 @@ getRouteStopMapping baseUrl = do
   allMappings <- forM (Map.toList matchingPatterns) $ \(_, p) -> do
     patternDetails <- getRoutePatternDetails baseUrl p.id
     routeDetail <- fromMaybeM (InternalError ("ROUTE_NOT_FOUND" <> p.routeId)) $ Map.lookup p.routeId routeDetailsMap
-
     let stopMappings =
           zipWith
             ( \stop idx ->
@@ -59,7 +59,7 @@ getRouteStopMapping baseUrl = do
     pure stopMappings
 
   let allMappingsList = concat allMappings
-
+  logDebug $ "allMappingsList from nandi rest api: " <> show allMappingsList <> " length: " <> show (length allMappingsList)
   pure allMappingsList
 
 caseTextToVehicleCategory :: Text -> BecknV2.FRFS.Enums.VehicleCategory

@@ -69,8 +69,11 @@ findAndCache ::
 findAndCache integratedBPPConfigId merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   baseUrl <- MM.getOTPRestServiceReq merchantId merchantOperatingCityId
+  logDebug $ "baseUrl: " <> showBaseUrl baseUrl
   routeStopMapping' <- Flow.getRouteStopMapping baseUrl
+  logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   let routeStopMapping = parseRouteStopMapping routeStopMapping' integratedBPPConfigId merchantId merchantOperatingCityId now
+  logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   fork "caching route stop mapping info" $ cacheAllRouteStopMapping routeStopMapping
   return routeStopMapping
 
