@@ -21,7 +21,6 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
-
 findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> m (Maybe a)
 findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
   currentTime <- getCurrentTime

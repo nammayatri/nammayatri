@@ -8,7 +8,7 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
-import qualified Domain.Types.UiDriverConfig as DTU
+-- import qualified Domain.Types.UiDriverConfig as DTU
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Beckn.Context
@@ -25,18 +25,18 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMM
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCMTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCR
-import qualified Storage.CachedQueries.UiDriverConfig as SCU
+-- import qualified Storage.CachedQueries.UiDriverConfig as SCU
 import qualified Storage.Queries.DriverPoolConfig as SCMD
 import qualified Storage.Queries.MerchantMessage as SQM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.PayoutConfig as SCP
 import qualified Storage.Queries.RideRelatedNotificationConfig as SQR
 import qualified Storage.Queries.TransporterConfig as SCMT
-import qualified Storage.Queries.UiDriverConfig as SQU
+-- import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.DynamicLogic as DynamicLogic
 
 returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id LYT.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp
-returnConfigs cfgType merchantOpCityId merchantId opCity = do
+returnConfigs cfgType merchantOpCityId _ _ = do
   case cfgType of
     LYT.DriverPoolConfig -> do
       driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just []) Nothing
@@ -56,14 +56,14 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYT.MerchantPushNotification -> do
       merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYT.TableDataResp {configs = map A.toJSON merchantPushNotification}
-    (LYT.UiConfig dt pt) -> do
-      let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      (mbUiConfig, _) <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
-      return LYT.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
+    -- (LYT.UiConfig dt pt) -> do
+    --   let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+    --   (mbUiConfig, _) <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
+    --   return LYT.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()
-handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity = do
+handleConfigDBUpdate merchantOpCityId concludeReq baseLogics _ _ = do
   case concludeReq.domain of
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
       handleConfigUpdateWithExtraDimensions SCMD.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DriverPoolConfig)) SCMD.updateByPrimaryKey (cast merchantOpCityId)
@@ -77,9 +77,9 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdate SQM.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantMessage)) SQM.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
       handleConfigUpdate SQMPN.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)) SQMPN.updateByPrimaryKey (cast merchantOpCityId)
-    LYT.DRIVER_CONFIG (LYT.UiConfig dt pt) -> do
-      let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      handleConfigUpdateWithExtraDimensionsUi SQU.findUIConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq
+    -- LYT.DRIVER_CONFIG (LYT.UiConfig dt pt) -> do
+    --   let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+    --   handleConfigUpdateWithExtraDimensionsUi SQU.findUIConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq
     _ -> throwError $ InvalidRequest $ "Logic Domain not supported" <> show concludeReq.domain
   where
     convertToConfigWrapper :: [a] -> [LYT.Config a]
@@ -144,22 +144,22 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       mapM_ updateFunc configsToUpdate
       clearCacheFunc
 
-    handleConfigUpdateWithExtraDimensionsUi ::
-      (MonadFlow m) =>
-      (LYT.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe DTU.UiDriverConfig)) -> -- Fetch function
-      m () -> -- Cache clearing function
-      (DTU.UiDriverConfig -> m ()) -> -- Update function
-      Id MerchantOperatingCity ->
-      LYT.UiConfigRequest ->
-      m ()
-    handleConfigUpdateWithExtraDimensionsUi fetchFunc clearCacheFunc updateFunc merchantOpCityId' uiConfigReq' = do
-      uiConfig :: DTU.UiDriverConfig <- fetchFunc uiConfigReq' merchantOpCityId' >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
-      let configWrapper = convertToConfigWrapper [uiConfig.config]
-      patchedConfigs <- applyPatchToConfig configWrapper
-      configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
-      let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
-      mapM_ updateFunc configsToUpdate'
-      clearCacheFunc
+    -- handleConfigUpdateWithExtraDimensionsUi ::
+    --   (MonadFlow m) =>
+    --   (LYT.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe DTU.UiDriverConfig)) -> -- Fetch function
+    --   m () -> -- Cache clearing function
+    --   (DTU.UiDriverConfig -> m ()) -> -- Update function
+    --   Id MerchantOperatingCity ->
+    --   LYT.UiConfigRequest ->
+    --   m ()
+    -- handleConfigUpdateWithExtraDimensionsUi fetchFunc clearCacheFunc updateFunc merchantOpCityId' uiConfigReq' = do
+    --   uiConfig :: DTU.UiDriverConfig <- fetchFunc uiConfigReq' merchantOpCityId' >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
+    --   let configWrapper = convertToConfigWrapper [uiConfig.config]
+    --   patchedConfigs <- applyPatchToConfig configWrapper
+    --   configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
+    --   let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
+    --   mapM_ updateFunc configsToUpdate'
+    --   clearCacheFunc
 
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
