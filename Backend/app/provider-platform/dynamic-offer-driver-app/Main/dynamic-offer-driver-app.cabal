@@ -146,6 +146,7 @@ library
       Domain.Action.Dashboard.Fleet.Onboarding
       Domain.Action.Dashboard.Fleet.Referral
       Domain.Action.Dashboard.Fleet.Registration
+      Domain.Action.Dashboard.Fleet.RegistrationV2
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Account
       Domain.Action.Dashboard.Management.Booking
@@ -691,6 +692,7 @@ library
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
       API.Action.Dashboard.Fleet.Onboarding
+      API.Action.Dashboard.Fleet.RegistrationV2
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.Management
