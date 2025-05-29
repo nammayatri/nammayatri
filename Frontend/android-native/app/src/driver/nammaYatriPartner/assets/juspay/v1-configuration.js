@@ -247,6 +247,19 @@ function getNammaYatriConfig() {
       , "cityConfig" : [
         {
           "cityName" : "Bangalore",
+          "enableNammaMeter" : {
+            "AUTO_RICKSHAW": true,
+            "AutoCategory" : true,
+            "CarCategory" : true,
+          },
+          "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+              "CarCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : true
+          },
           "mapImage" : "ny_ic_bangalore_map",
           "cityCode" : "std:080",
           "showSubscriptions" : true,
@@ -968,6 +981,14 @@ function getNammaYatriConfig() {
             "AutoCategory" : true,
             "CarCategory" : true,
           },
+          "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+              "CarCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : true
+          },
           "chatFooterBanner": {
             "enable": true,
             "defaultText" : "Do not demand extra from customer",
@@ -1680,6 +1701,14 @@ function getNammaYatriConfig() {
             "AUTO_RICKSHAW": true, // Deprecated
             "AutoCategory" : true,
             "CarCategory" : true,
+          },
+          "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+              "CarCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : true
           },
           "showSubscriptions" : false,
           "enableAdvancedBooking" : false,
@@ -4447,11 +4476,6 @@ function getKeralaSavaariConfig() {
       },
       {
         "cityName" : "Chennai",
-        "enableNammaMeter" : {
-          "AUTO_RICKSHAW": true, // Deprecated
-          "AutoCategory" : true,
-          "CarCategory" : true,
-        },
         "chatFooterBanner": {
           "enable": true,
           "defaultText" : "Do not demand extra from customer",
@@ -5160,11 +5184,6 @@ function getKeralaSavaariConfig() {
         "cityName" : "Trichy",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0431",
-        "enableNammaMeter" : {
-          "AUTO_RICKSHAW": true, // Deprecated
-          "AutoCategory" : true,
-          "CarCategory" : true,
-        },
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "enableGullak": false,
