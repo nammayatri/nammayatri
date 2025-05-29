@@ -1029,6 +1029,7 @@ TransporterConfig:
     safetyTeamNumbers: Maybe [Text]
     weekStartMode : Int
     earningsWindowSize : Int
+    aaEnabledClientSdkVersion : Maybe Text
 
   beamType:
     currency: Maybe Currency
@@ -1429,6 +1430,7 @@ TransporterConfig:
     onboardingDocsCountLimit: "50"
     weekStartMode : "3"
     earningsWindowSize : "7"
+    aaEnabledClientSdkVersion : "999.999.999"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

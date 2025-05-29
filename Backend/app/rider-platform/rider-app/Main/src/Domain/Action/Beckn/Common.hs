@@ -1142,8 +1142,8 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             let entityName = entity
                 createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-            let serviceName = DEMSC.PayoutService PT.Juspay
-                createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
+            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+            let createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId payoutServiceName (Just person.id.getId)
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
             mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             case mbPayoutOrderResp of

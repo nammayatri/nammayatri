@@ -14,35 +14,55 @@
 
 module Tools.Payout where
 
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified EulerHS.Language as L
 import qualified Kernel.External.Payout.Interface as Payout
+import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified System.Environment as SE
 
-createPayoutOrder :: (ServiceFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payout.CreatePayoutOrderReq -> m Payout.CreatePayoutOrderResp
+createPayoutOrder :: (ServiceFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payout.CreatePayoutOrderReq -> m Payout.CreatePayoutOrderResp
 createPayoutOrder = runWithServiceConfigAndName Payout.createPayoutOrder
 
-payoutOrderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payout.PayoutOrderStatusReq -> m Payout.PayoutOrderStatusResp
+payoutOrderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payout.PayoutOrderStatusReq -> m Payout.PayoutOrderStatusResp
 payoutOrderStatus = runWithServiceConfigAndName Payout.payoutOrderStatus
 
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
-  (Payout.PayoutServiceConfig -> req -> m resp) ->
+  (Payout.PayoutServiceConfig -> Maybe Text -> req -> m resp) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DMSC.ServiceName ->
+  Maybe Text ->
   req ->
   m resp
-runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName req = do
+runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId req = do
   merchantServiceConfig <-
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity serviceName
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
   case merchantServiceConfig.serviceConfig of
-    DMSC.PayoutServiceConfig vsc -> func vsc req
+    DMSC.PayoutServiceConfig vsc -> func vsc getRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
+  where
+    getRoutingId = do
+      case serviceName of
+        DMSC.PayoutService PT.AAJuspay -> mRoutingId
+        _ -> Nothing
+
+decidePayoutService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
+decidePayoutService payoutServiceName clientSdkVersion = do
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
+  return $ case clientSdkVersion of
+    Just v
+      | v >= textToVersionDefault aaClientSdkVersion -> DMSC.PayoutService PT.AAJuspay
+    _ -> payoutServiceName

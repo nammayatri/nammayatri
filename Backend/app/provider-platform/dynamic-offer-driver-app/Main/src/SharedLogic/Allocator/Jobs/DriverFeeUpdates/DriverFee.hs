@@ -260,7 +260,6 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
       paymentMode = getPaymentModeAndVehicleCategoryKey plan,
       dutyDate,
       numOfRides,
-      personId = Just driver.id.getId,
       offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing
     }
 

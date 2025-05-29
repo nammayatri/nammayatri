@@ -14,12 +14,14 @@
 
 module Tools.Payment where
 
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
-import qualified EulerHS.Language as L
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Plan as DPlan
+-- import qualified EulerHS.Language as L
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -29,56 +31,64 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
+-- import System.Environment as SE
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import System.Environment as SE
+import qualified Storage.Queries.DriverPlan as QDPlan
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
 createOrder = runWithServiceConfigAndName Payment.createOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithUnWrap Payment.orderStatus
 
-offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OfferListReq -> m Payment.OfferListResp
+offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList = runWithUnWrap Payment.offerList
 
-offerApply :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
+offerApply :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
 offerApply = runWithUnWrap Payment.offerApply
 
-mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
+mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
 mandateRevoke = runWithUnWrap Payment.mandateRevoke
 
-mandateNotification :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateNotificationReq -> m Payment.MandateNotificationRes
+mandateNotification :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.MandateNotificationReq -> m Payment.MandateNotificationRes
 mandateNotification = runWithUnWrap Payment.mandateNotification
 
-mandateNotificationStatus :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.NotificationStatusReq -> m Payment.NotificationStatusResp
+mandateNotificationStatus :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.NotificationStatusReq -> m Payment.NotificationStatusResp
 mandateNotificationStatus = runWithUnWrap Payment.mandateNotificationStatus
 
-mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
+mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
 mandateExecution = runWithUnWrap Payment.mandateExecution
 
-verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
+verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa = runWithUnWrap Payment.verifyVPA
 
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
-  (Payment.PaymentServiceConfig -> req -> m resp) ->
+  (Payment.PaymentServiceConfig -> Maybe Text -> req -> m resp) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DMSC.ServiceName ->
+  Maybe Text ->
   m (req -> m resp, Maybe Text)
-runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName = do
+runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId = do
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity serviceName merchantOperatingCity
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show serviceName))
   case merchantServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
-    DMSC.RentalPaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
-    DMSC.CautioPaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
+    DMSC.PaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
+    DMSC.RentalPaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
+    DMSC.CautioPaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPclient vsc = do
       case vsc of
         Payment.JuspayConfig config -> config.pseudoClientId
+        _ -> Nothing
+
+    getRoutingId = do
+      case serviceName of
+        DMSC.PaymentService Payment.AAJuspay -> mRoutingId
         _ -> Nothing
 
 createIndividualConnectAccount ::
@@ -124,20 +134,36 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
 
 runWithUnWrap ::
   ServiceFlow m r =>
-  (Payment.PaymentServiceConfig -> req -> m resp) ->
+  (Payment.PaymentServiceConfig -> Maybe Text -> req -> m resp) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DMSC.ServiceName ->
+  Maybe Text ->
   req ->
   m resp
-runWithUnWrap func merchantId merchantOperatingCity serviceName req = do
-  (call, _) <- runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName
+runWithUnWrap func merchantId merchantOperatingCity serviceName mRoutingId req = do
+  (call, _) <- runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId
   call req
 
-decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
-decidePaymentService paymentServiceName clientSdkVersion = do
-  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
-  return $ case clientSdkVersion of
-    Just v
-      | v >= textToVersionDefault aaClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
+decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
+decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  return $ case (clientSdkVersion, transporterConfig.aaEnabledClientSdkVersion) of
+    (Just v, Just k)
+      | v >= textToVersionDefault k -> DMSC.PaymentService Payment.AAJuspay
     _ -> paymentServiceName
+
+decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> DPlan.ServiceNames -> m DMSC.ServiceName
+decidePaymentServiceForRecurring paymentServiceName driverId serviceName = do
+  mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
+  case mDriverPlan of
+    Just driverPlan -> do
+      now <- getCurrentTime
+      let mandateSetupTime = fromMaybe now driverPlan.mandateSetupDate
+          elapsed = diffUTCTime now mandateSetupTime
+          sixHours = 6 * 60 * 60
+      pure $
+        if elapsed > sixHours
+          then DMSC.PaymentService Payment.AAJuspay
+          else paymentServiceName
+    Nothing -> pure paymentServiceName
