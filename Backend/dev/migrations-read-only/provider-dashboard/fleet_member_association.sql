@@ -7,3 +7,12 @@ ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN fleet_owner_
 ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN is_fleet_owner boolean NOT NULL;
 ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD PRIMARY KEY ( fleet_member_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN parent_group_code text ;
+ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN "order" integer ;
+ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN level integer ;
+ALTER TABLE atlas_bpp_dashboard.fleet_member_association ADD COLUMN group_code text ;

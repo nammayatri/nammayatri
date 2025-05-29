@@ -43,6 +43,20 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS
 
+  - POST:
+      endpoint: /fleet/v2/access/select
+      auth: ApiAuthV2
+      mandatoryQuery:
+        enable: Bool
+      query:
+        onlyCurrent: Bool
+        fleetOwnerId: Text
+        groupCode: Text
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS_SELECT
+
   - POST: # BulkUploadVehiclesForFleetAPI
       endpoint: /fleet/addVehicles
       auth: ApiAuthV2
@@ -946,9 +960,15 @@ types:
   FleetOwnerListRes:
     - recordType: NewType
     - ownersList: [FleetOwnerListAPIEntity]
+  FleetGroup:
+    - level: Int
+    - parentGroupCode: Maybe Text # At Initial Level, this will be Nothing
+    - groupCode: Text
   FleetOwnerListAPIEntity:
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - fleetGroup: Maybe FleetGroup
+    - order: Maybe Int
     - enabled: Bool
   TripTransactionDetail:
     - tripTransactionId: Id TripTransaction

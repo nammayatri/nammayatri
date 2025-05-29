@@ -40,6 +40,11 @@ updateFleetMembersActiveStatus enabled fleetMemberId fleetOwnerId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.enabled enabled, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId, Se.Is Beam.fleetOwnerId $ Se.In fleetOwnerId]]
 
+updateFleetMembersActiveStatusByGroupCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateFleetMembersActiveStatusByGroupCode enabled fleetMemberId groupCode = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.enabled enabled, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId, Se.Is Beam.groupCode $ Se.Eq groupCode]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FleetMemberAssociation.FleetMemberAssociation))
 findByPrimaryKey fleetMemberId = do findOneWithKV [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId]]
 
@@ -50,7 +55,11 @@ updateByPrimaryKey (Domain.Types.FleetMemberAssociation.FleetMemberAssociation {
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
+      Se.Set Beam.groupCode groupCode,
       Se.Set Beam.isFleetOwner isFleetOwner,
+      Se.Set Beam.level level,
+      Se.Set Beam.order order,
+      Se.Set Beam.parentGroupCode parentGroupCode,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId]]

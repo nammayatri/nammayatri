@@ -4,6 +4,10 @@ FleetMemberAssociation:
   fields:
     fleetMemberId: Text
     fleetOwnerId: Text
+    level: Maybe Int
+    parentGroupCode: Maybe Text
+    groupCode: Maybe Text
+    order: Maybe Int
     isFleetOwner: Bool
     enabled: Bool
     createdAt: UTCTime
@@ -42,6 +46,13 @@ FleetMemberAssociation:
         and:
           - eq: [fleetMemberId]
           - in: [fleetOwnerId]
+
+    updateFleetMembersActiveStatusByGroupCode:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where:
+        and:
+          - eq: [fleetMemberId, groupCode]
 
   extraOperations:
     - EXTRA_QUERY_FILE
