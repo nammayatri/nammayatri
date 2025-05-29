@@ -487,38 +487,38 @@ callWebHook req = do
   CPFC.callConfigPilotFrontend req cfg
 
 -- This updates on going release flag in TS Service
-callTheFrontEndHook ::
-  BeamFlow m r =>
-  Kernel.Types.Beckn.Context.City ->
-  Lib.Yudhishthira.Types.LogicDomain ->
-  m Kernel.Types.APISuccess.APISuccess
-callTheFrontEndHook opCity domain = do
-  case domain of
-    Lib.Yudhishthira.Types.DRIVER_CONFIG cfg -> do
-      case cfg of
-        Lib.Yudhishthira.Types.UiConfig os pt -> do
-          let req = makeReq opCity os pt
-          res <- callWebHook req
-          logDebug $ "Response from Frontend Logic: " <> show res
-          return Kernel.Types.APISuccess.Success
-        _ -> return Kernel.Types.APISuccess.Success
-    Lib.Yudhishthira.Types.RIDER_CONFIG cfg -> do
-      case cfg of
-        Lib.Yudhishthira.Types.UiConfig os pt -> do
-          let req = makeReq opCity os pt
-          res <- callWebHook req
-          logDebug $ "Response from Frontend Logic: " <> show res
-          return Kernel.Types.APISuccess.Success
-        _ -> return Kernel.Types.APISuccess.Success
-    _ -> return Kernel.Types.APISuccess.Success
-  where
-    makeReq city os pt =
-      CPFC.ConfigPilotFrontendReq
-        { city = T.pack (show city),
-          os = T.pack (show os),
-          platform = T.pack (show pt),
-          isOnGoingRelease = True
-        }
+-- callTheFrontEndHook ::
+--   BeamFlow m r =>
+--   Kernel.Types.Beckn.Context.City ->
+--   Lib.Yudhishthira.Types.LogicDomain ->
+--   m Kernel.Types.APISuccess.APISuccess
+-- callTheFrontEndHook opCity domain = do
+--   case domain of
+--     Lib.Yudhishthira.Types.DRIVER_CONFIG cfg -> do
+--       case cfg of
+--         Lib.Yudhishthira.Types.UiConfig os pt -> do
+--           let req = makeReq opCity os pt
+--           res <- callWebHook req
+--           logDebug $ "Response from Frontend Logic: " <> show res
+--           return Kernel.Types.APISuccess.Success
+--         _ -> return Kernel.Types.APISuccess.Success
+--     Lib.Yudhishthira.Types.RIDER_CONFIG cfg -> do
+--       case cfg of
+--         Lib.Yudhishthira.Types.UiConfig os pt -> do
+--           let req = makeReq opCity os pt
+--           res <- callWebHook req
+--           logDebug $ "Response from Frontend Logic: " <> show res
+--           return Kernel.Types.APISuccess.Success
+--         _ -> return Kernel.Types.APISuccess.Success
+--     _ -> return Kernel.Types.APISuccess.Success
+--   where
+--     makeReq city os pt =
+--       CPFC.ConfigPilotFrontendReq
+--         { city = T.pack (show city),
+--           os = T.pack (show os),
+--           platform = T.pack (show pt),
+--           isOnGoingRelease = True
+--         }
 
 upsertLogicRollout ::
   (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -543,8 +543,8 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
         when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
         configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
         pushConfigHistory domain version merchantOpCityId configsJson
-      when (isUIConfig domain) $ do
-        void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
+      -- when (isUIConfig domain) $ do
+      --   void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
       return Kernel.Types.APISuccess.Success
     else handleOtherDomain merchantOpCityId now rolloutReq domain
   where
@@ -735,7 +735,7 @@ getNammaTagConfigPilotAllConfigs merchantOpCityId mbUnderExp configChoice = do
             Lib.Yudhishthira.Types.RiderCfg -> map extractRiderConfig configsInExperiment
       return $ catMaybes configTypes
     _ -> do
-      let configTypes = Lib.Yudhishthira.Types.allValuesConfigTypes
+      let configTypes :: [Lib.Yudhishthira.Types.ConfigType] = Lib.Yudhishthira.Types.allValues
       return configTypes
 
 getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
@@ -884,10 +884,10 @@ isDriverOrRiderConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG _) = True
 isDriverOrRiderConfig (Lib.Yudhishthira.Types.RIDER_CONFIG _) = True
 isDriverOrRiderConfig _ = False
 
-isUIConfig :: LYT.LogicDomain -> Bool
-isUIConfig (LYT.DRIVER_CONFIG (LYT.UiConfig _ _)) = True
-isUIConfig (LYT.RIDER_CONFIG (LYT.UiConfig _ _)) = True
-isUIConfig _ = False
+-- isUIConfig :: LYT.LogicDomain -> Bool
+-- isUIConfig (LYT.DRIVER_CONFIG (LYT.UiConfig _ _)) = True
+-- isUIConfig (LYT.RIDER_CONFIG (LYT.UiConfig _ _)) = True
+-- isUIConfig _ = False
 
 extractDriverConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
 extractDriverConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG config) = Just config
