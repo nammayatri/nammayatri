@@ -1,0 +1,93 @@
+imports:
+  Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  FleetType: API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
+
+module: RegistrationV2
+apiPrefix: fleet
+
+apis:
+  - POST:
+      endpoint: /v2/login/otp
+      name: postRegistrationV2LoginOtp
+      auth: NoAuth
+      request:
+        type: FleetOwnerLoginReqV2
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /v2/login/otp
+            auth: NoAuth
+            mandatoryQuery:
+              - enabled: Bool
+            request:
+              type: FleetOwnerLoginReqV2
+            response:
+              type: FleetOwnerLoginResV2
+
+  - POST:
+      endpoint: /v2/verify/otp
+      name: postRegistrationV2VerifyOtp
+      auth: NoAuth
+      request:
+        type: FleetOwnerVerifyReqV2
+      response:
+        type: FleetOwnerVerifyResV2
+      helperApi:
+        - POST:
+            endpoint: /v2/verify/otp
+            auth: NoAuth
+            request:
+              type: FleetOwnerVerifyReqV2
+            response:
+              type: APISuccess
+
+  - POST:
+      endpoint: /v2/register
+      name: postRegistrationV2Register
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerRegisterReqV2
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /v2/register
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerRegisterReqV2
+            response:
+              type: FleetOwnerRegisterResV2
+
+types:
+  FleetOwnerLoginReqV2:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  FleetOwnerLoginResV2:
+    - personId: Id Person
+    - recordType: NewType
+  FleetOwnerVerifyReqV2:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otp: Maybe Text
+  FleetOwnerVerifyResV2:
+    - authToken: Text
+    - recordType: NewType
+  FleetOwnerRegisterReqV2: # TODO remove redundant and hide secrets
+    - firstName: Text
+    - lastName: Text
+    - personId: Id Person
+    - email: Maybe Text
+    - fleetType: Maybe FleetType
+    - gstNumber: Maybe Text
+    - businessLicenseNumber: Maybe Text
+    - businessLicenseImage: Maybe Text
+    - operatorReferralCode: Maybe Text
+    - adminApprovalRequired: Maybe Bool
+    - derive: "'HideSecrets"
+  FleetOwnerRegisterResV2:
+    - enabled: Bool
+    - recordType: NewType
