@@ -25,7 +25,6 @@ Frontend/android-native/app/driverProd/debug/output-metadata.json
 Frontend/android-native/app/driverProd/release/output-metadata.json
 Frontend/android-native/package-lock.json
 # Ignore all files in the app directory
-Frontend/android-native/app/**
 .idea
 
 # Non-nix bans
