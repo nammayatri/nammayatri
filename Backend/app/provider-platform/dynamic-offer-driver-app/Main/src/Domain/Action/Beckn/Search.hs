@@ -28,6 +28,7 @@ module Domain.Action.Beckn.Search
 where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
+import qualified BecknV2.OnDemand.Enums as BecknV2
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
@@ -148,7 +149,8 @@ data DSearchReq = DSearchReq
     isMultimodalSearch :: Maybe Bool,
     isReserveRide :: Maybe Bool,
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
-    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
+    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate,
+    categoryCode :: Maybe BecknV2.CategoryCode
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -839,10 +841,17 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchan
 
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
-  let (schedule, isScheduled) =
-        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
-          then (dsReq.pickupTime, True)
-          else (now, False)
+  let categoryCodeIn codes = maybe True (`elem` codes) dsReq.categoryCode
+      isRentalCategoryCode = categoryCodeIn [BecknV2.CATEGORY_ON_DEMAND_RENTAL, BecknV2.CATEGORY_SCHEDULED_RENTAL]
+      isOnDemandRentalCategoryCode = categoryCodeIn [BecknV2.CATEGORY_ON_DEMAND_RENTAL]
+      isTripCategoryCode = categoryCodeIn [BecknV2.CATEGORY_ON_DEMAND_TRIP, BecknV2.CATEGORY_SCHEDULED_TRIP]
+      isOnDemandTripCategoryCode = categoryCodeIn [BecknV2.CATEGORY_ON_DEMAND_TRIP]
+      isScheduledTripCategoryCode = categoryCodeIn [BecknV2.CATEGORY_ON_DEMAND_TRIP]
+  let isScheduled =
+        maybe True not dsReq.isMultimodalSearch
+          && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+          && categoryCodeIn [BecknV2.CATEGORY_SCHEDULED_TRIP, BecknV2.CATEGORY_SCHEDULED_RENTAL]
+      schedule = if isScheduled then dsReq.pickupTime else now
       tripCategories =
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
           then [OneWay MeterRide]
@@ -853,17 +862,20 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                   then do
                     if isCrossCity
                       then do
-                        [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                        [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName | isTripCategoryCode]
+                          <> (if not isScheduled then bool [] [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] isOnDemandTripCategoryCode else [])
                       else do
-                        [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                        [InterCity OneWayOnDemandStaticOffer destinationTravelCityName | isTripCategoryCode]
+                          <> (if not isScheduled then bool [] [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] isOnDemandTripCategoryCode else [])
                   else do
-                    [Rental OnDemandStaticOffer]
-                      <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer])
+                    [Rental OnDemandStaticOffer | isRentalCategoryCode]
+                      <> ( if not isScheduled
+                             then bool [] [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] isOnDemandTripCategoryCode
+                             else bool [] [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer] isScheduledTripCategoryCode
+                         )
               Nothing ->
-                [Rental OnDemandStaticOffer]
-                  <> [Rental RideOtp | not isScheduled]
+                [Rental OnDemandStaticOffer | isRentalCategoryCode]
+                  <> [Rental RideOtp | not isScheduled && isOnDemandRentalCategoryCode]
 
   TripOption {..}
   where
