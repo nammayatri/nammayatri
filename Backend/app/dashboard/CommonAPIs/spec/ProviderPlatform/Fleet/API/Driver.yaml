@@ -287,11 +287,13 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
       helperApi:
         - POST:
-            endpoint: /{fleetOwnerId}/{driverId}/{vehicleNo}/fleet/unlink
+            endpoint: /{requestorId}/{driverId}/{vehicleNo}/fleet/unlink
             auth: ApiAuthV2
             params:
               driverId: Id Driver
               vehicleNo: Text
+              requestorId: Text
+            query:
               fleetOwnerId: Text
             response:
               type: APISuccess
@@ -314,6 +316,8 @@ apis:
             params:
               vehicleNo: Text
               fleetOwnerId: Text
+            query:
+              - requestorId: Text
             response:
               type: APISuccess
 

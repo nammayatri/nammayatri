@@ -842,6 +842,7 @@ data FleetErrors
   | VehicleBelongsToAnotherFleet
   | VehicleNotPartOfFleet
   | DriverNotPartOfFleet
+  | DriverNotPartOfOperator
   | DriverNotActiveWithFleet
   | UserAlreadyExists Text
   deriving (Eq, Show, IsBecknAPIError)
@@ -854,6 +855,7 @@ instance IsBaseError FleetErrors where
     VehicleBelongsToAnotherFleet -> Just "Vehicle is already part of another fleet"
     VehicleNotPartOfFleet -> Just "Vehicle is not part of any fleet"
     DriverNotPartOfFleet -> Just "Driver is not part of the fleet"
+    DriverNotPartOfOperator -> Just "Driver is not part of the operator"
     DriverNotActiveWithFleet -> Just "Driver is not active with the fleet"
     UserAlreadyExists userId -> Just $ "User with id " <> show userId <> " already exists"
 
@@ -863,6 +865,7 @@ instance IsHTTPError FleetErrors where
     VehicleBelongsToAnotherFleet -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
     VehicleNotPartOfFleet -> "VEHICLE_NOT_PART_OF_FLEET"
     DriverNotPartOfFleet -> "DRIVER_NOT_PART_OF_FLEET"
+    DriverNotPartOfOperator -> "DRIVER_NOT_PART_OF_OPERATOR"
     DriverNotActiveWithFleet -> "DRIVER_NOT_ACTIVE_WITH_FLEET"
     UserAlreadyExists _ -> "USER_ALREADY_EXISTS"
   toHttpCode = \case
@@ -870,6 +873,7 @@ instance IsHTTPError FleetErrors where
     VehicleBelongsToAnotherFleet -> E400
     VehicleNotPartOfFleet -> E400
     DriverNotPartOfFleet -> E400
+    DriverNotPartOfOperator -> E400
     DriverNotActiveWithFleet -> E400
     UserAlreadyExists _ -> E400
 
@@ -1616,7 +1620,7 @@ instance IsBaseError WMBErrors where
     RequestAlreadyProcessed id -> Just $ "Request already processed" <> id
     FleetOwnerIdRequired -> Just "Fleet Owner Id is required"
     MaxVehiclesLimitExceeded limit -> Just $ "Maximum " <> show limit <> " vehicles can be added in one go"
-    VehicleLinkedToAnotherDriver vehicleNo -> Just $ "Vehicle" <> vehicleNo <> "is linked to some other driver"
+    VehicleLinkedToAnotherDriver vehicleNo -> Just $ "Vehicle" <> vehicleNo <> " is linked to some other driver"
     DriverNotLinkedToFleet id -> Just $ "Driver is not linked to the fleet, driver id :" <> id
     MobileNumberAlreadyLinked mobile -> Just $ "Mobile number is already linked with another fleet owner: " <> mobile
     EmailAlreadyLinked email -> Just $ "Email is already linked with another fleet owner: " <> email
