@@ -283,7 +283,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config tex
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer ;
 
-INSERT INTO riderConfig (user_service_tier_order_config)
+INSERT INTO atlas_app.riderConfig (user_service_tier_order_config)
 VALUES (
   ARRAY[
     '{"vehicle": "AUTO_RICKSHAW", "orderArray": ["AUTO_RICKSHAW","ECO","TAXI","COMFY","SUV", "SUV_PLUS"]}'::jsonb,
