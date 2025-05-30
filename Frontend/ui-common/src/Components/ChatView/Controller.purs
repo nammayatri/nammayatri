@@ -133,7 +133,7 @@ config =
     , chatBodyPadding : Padding 0 0 0 0
     , chatMargin : Margin 0 0 0 0
     , showNavigate : true
-    , useSuggestionsView : false
+    , useSuggestionsView : true
     , footerBanner : {
         text : "",
         enable : true
