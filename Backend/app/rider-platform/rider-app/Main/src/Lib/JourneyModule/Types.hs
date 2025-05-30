@@ -57,13 +57,14 @@ import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Metrics.BAPMetrics.Types
@@ -666,7 +667,7 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> m LegInfo
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> m LegInfo
 mkLegInfoFromFrfsBooking booking distance duration = do
   let journeyRouteDetails' = booking.journeyRouteDetails
   ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
@@ -731,7 +732,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
 
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-          route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+          integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'.getId
           mbQuote <- QFRFSQuote.findById booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
@@ -771,11 +773,11 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   selectedServiceTier = mbSelectedServiceTier
                 }
 
-getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
+getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
 getMetroLegRouteInfo journeyRouteDetails = do
   mapM transformJourneyRouteDetails journeyRouteDetails
   where
-    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m MetroLegRouteInfo
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => MultiModalJourneyRouteDetails -> m MetroLegRouteInfo
     transformJourneyRouteDetails journeyRouteDetail = do
       fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
       toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
@@ -783,7 +785,8 @@ getMetroLegRouteInfo journeyRouteDetails = do
 
       fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
       toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-      route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+      integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+      route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'.getId
 
       return
         MetroLegRouteInfo
@@ -798,11 +801,11 @@ getMetroLegRouteInfo journeyRouteDetails = do
             frequency = journeyRouteDetail.frequency
           }
 
-getSubwayLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [SubwayLegRouteInfo]
+getSubwayLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> m [SubwayLegRouteInfo]
 getSubwayLegRouteInfo journeyRouteDetails = do
   mapM transformJourneyRouteDetails journeyRouteDetails
   where
-    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m SubwayLegRouteInfo
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => MultiModalJourneyRouteDetails -> m SubwayLegRouteInfo
     transformJourneyRouteDetails journeyRouteDetail = do
       fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
       toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
@@ -810,7 +813,8 @@ getSubwayLegRouteInfo journeyRouteDetails = do
 
       fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
       toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-      route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+      integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+      route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'.getId
 
       return
         SubwayLegRouteInfo
@@ -831,7 +835,7 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m LegInfo
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m LegInfo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
@@ -901,7 +905,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
 
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-          route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+          integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'.getId
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Bus $

@@ -3,6 +3,7 @@ module Lib.JourneyModule.Utils where
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import Control.Monad.Extra (maybeM)
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
@@ -376,7 +377,12 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         routeCodesForTier = nub $ map (.routeCode) timingsForTier
 
     -- Get route details to include the short name
-    routeDetails <- mapM (\routeCode -> QRoute.findByRouteCode routeCode integratedBppConfig.id) routeCodesForTier
+    routeDetails <-
+      mapM
+        ( \routeCode ->
+            fmap Just $ OTPRest.getRouteByRouteCodeWithFallback integratedBppConfig routeCode
+        )
+        routeCodesForTier
     let validRouteDetails = catMaybes routeDetails
         routeShortNames = nub $ map (.shortName) validRouteDetails
 
@@ -564,7 +570,15 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
           (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc) "findPossibleRoutes"
 
           let routeCode = mbRouteCode <|> nextAvailableRouteCode
-          mbRoute <- maybe (return Nothing) (\rc -> QRoute.findByRouteCode rc integratedBppConfig.id) routeCode
+          mbRoute <-
+            maybe
+              (return Nothing)
+              ( \rc ->
+                  try @_ @SomeException (OTPRest.getRouteByRouteId integratedBppConfig rc) >>= \case
+                    Left _ -> QRoute.findByRouteCode rc integratedBppConfig.id
+                    Right route -> maybeM (QRoute.findByRouteCode rc integratedBppConfig.id) (pure . Just) (pure route)
+              )
+              routeCode
           case mbRoute of
             Just route -> do
               -- Get timing information for this route at the origin stop

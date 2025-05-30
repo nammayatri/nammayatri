@@ -26,7 +26,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
 import Tools.Error
@@ -62,7 +61,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     buildSingleTransitRouteQuote FRFSRouteDetails {..} = do
       case routeCode of
         Just routeCode' -> do
-          route <- QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
           let routeInfo =
                 RouteStopInfo
                   { route,
@@ -103,7 +102,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
       let routeDetail = mergeFFRFSRouteDetails routesDetails
       case (routeDetail, routeDetail >>= (.routeCode)) of
         (Just routeDetail', Just routeCode') -> do
-          route <- QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
           let routeInfo =
                 RouteStopInfo
                   { route,

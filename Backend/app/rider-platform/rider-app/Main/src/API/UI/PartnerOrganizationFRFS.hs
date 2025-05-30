@@ -42,10 +42,10 @@ import Servant hiding (route, throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Station as CQS
 import qualified Storage.Queries.FRFSQuote as QQuote
-import qualified Storage.Queries.Route as QRoute
 import Tools.Auth
 import Tools.Error
 
@@ -107,12 +107,11 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
-
   route <-
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          route' <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
           return $ Just route'
       )
       req.routeCode

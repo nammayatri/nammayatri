@@ -771,6 +771,7 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteDetails
+      Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
@@ -902,6 +903,7 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteDetails
+      Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
@@ -1088,6 +1090,7 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteDetails
+      Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
