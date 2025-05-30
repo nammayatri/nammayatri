@@ -4,6 +4,7 @@ imports:
   EmailOTPConfig: Email.Types
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
+  VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
@@ -105,6 +106,8 @@ RiderConfig:
     qrTicketRestrictionStartTime: Maybe TimeOfDay
     qrTicketRestrictionEndTime: Maybe TimeOfDay
     ticketingPermissionConfig: Maybe Value
+    userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    noOfRideRequestsConfig: Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -136,6 +139,8 @@ RiderConfig:
     nearByDriverRingBucketCfg: Maybe Value
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
+    userServiceTierOrderConfig: "Maybe [VehicleServiceTierOrderConfig]"
+    noOfRideRequestsConfig: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -174,6 +179,8 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
+    userServiceTierOrderConfig: fromMaybe [] userServiceTierOrderConfig|E
+    noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -205,6 +212,8 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
+    userServiceTierOrderConfig: Just userServiceTierOrderConfig|E
+    noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
 
   default:
     enableLocalPoliceSupport: "false"

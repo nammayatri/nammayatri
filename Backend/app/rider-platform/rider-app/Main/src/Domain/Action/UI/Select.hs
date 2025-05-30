@@ -54,6 +54,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
+import qualified Domain.Types.ServiceTierType as DVSTT
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
@@ -75,6 +76,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
@@ -248,6 +250,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -258,6 +261,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
+    let lastUsedVehicleServiceTiers = insertVehicleServiceTier (fromMaybe 5 ((.noOfRideRequestsConfig) <$> riderConfig)) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
+    QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
     let senderLocationId = searchRequest.fromLocation.id
     receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
     let senderLocationAddress = validDeliveryDetails.senderDetails.address
@@ -374,3 +379,8 @@ updateRequiredDeliveryDetails searchRequestId merchantId merchantOperatingCityId
           }
   QSRPL.createMany [senderParty, receiverParty]
   QParcel.create $ DParcel.ParcelDetails {createdAt = now, updatedAt = now, ..}
+
+insertVehicleServiceTier :: Int -> DVSTT.ServiceTierType -> [ServiceTierType] -> [ServiceTierType]
+insertVehicleServiceTier n newVehicle currentList
+  | length currentList < n = currentList ++ [newVehicle]
+  | otherwise = tail currentList ++ [newVehicle]

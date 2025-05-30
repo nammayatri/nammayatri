@@ -493,6 +493,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         verificationChannel = Nothing,
         blockedUntil = Nothing,
         authBlocked = Nothing,
+        lastUsedVehicleServiceTiers = [],
         imeiNumber = Nothing -- TODO: take it from the request
       }
 
