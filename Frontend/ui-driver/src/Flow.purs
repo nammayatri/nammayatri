@@ -636,6 +636,16 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               let updatedState = allState.homeScreen
               modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
               hideSplashAndCallFlow driverProfileFlow
+            "ride_request" -> do
+              (GlobalState allState) <- getState
+              let updatedState = allState.homeScreen
+              LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon updatedState.data.currentDriverLat updatedState.data.currentDriverLon 700 false true
+              modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> (RideRequestData.initData "") {data{driverLat = Just lat , driverLong = Just lon}})
+              hideSplashAndCallFlow rideRequestScreenFlow
+            "hotspot" -> do
+              (GlobalState allState) <- getState
+              let updatedState = allState.homeScreen
+              hideSplashAndCallFlow hotspotScreenFlow
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit

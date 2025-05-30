@@ -1,5 +1,6 @@
 module Screens.RideRequestScreen.Controller where
 
+import Common.Types.App
 import Prelude
 import Screens.RideRequestScreen.ScreenData
 import Data.Array (find, elem, filter, mapWithIndex, length, nubByEq)
@@ -96,7 +97,12 @@ data Action
 
 
 eval :: Action -> RideRequestScreenState -> Eval Action ScreenOutput RideRequestScreenState
-eval BackPressed state = exit $ GoBack state
+eval BackPressed state = if HU.isParentView FunctionCall 
+                            then do 
+                              void $ pure $ HU.emitTerminateApp Nothing true
+                              continue state
+                            else do
+                              exit $ GoBack state
 
 eval (SelectDay index) state = do
   let
