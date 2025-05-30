@@ -7,6 +7,7 @@ import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -70,6 +71,7 @@ data PersonT f = PersonT
     juspayCustomerPaymentID :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     lastName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lastUsedVehicleServiceTiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     latestLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     latestLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     liveActivityToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

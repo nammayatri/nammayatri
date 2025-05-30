@@ -14,7 +14,9 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude hiding (error)
+import qualified Tools.Beam.UtilsTH
 import Prelude
 
 data AppletKey = SosAppletID | RentalAppletID | UnattendedTicketAppletID | PostRideSafetyCheckAppletID deriving (Show, Read, Eq, Ord, Generic)
@@ -79,3 +81,11 @@ instance ToJSON ExotelMapping where
 
 instance FromJSON ExotelMapping where
   parseJSON = withObject "ExotelMapping" $ \v -> ExotelMapping <$> v .: "exotelMap"
+
+data VehicleServiceTierOrderConfig = VehicleServiceTierOrderConfig {orderArray :: [Domain.Types.ServiceTierType.ServiceTierType], vehicle :: Domain.Types.ServiceTierType.ServiceTierType}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read, Ord)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehicleServiceTierOrderConfig where
+  sqlValueSyntax = autoSqlValueSyntax
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForList ''VehicleServiceTierOrderConfig)

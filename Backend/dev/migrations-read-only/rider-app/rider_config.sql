@@ -272,3 +272,21 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_end_time tim
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer ;
+
+INSERT INTO riderConfig (user_service_tier_order_config)
+VALUES (
+  ARRAY[
+    '{"vehicle": "AUTO_RICKSHAW", "orderArray": ["AUTO_RICKSHAW","ECO","TAXI","COMFY","SUV", "SUV_PLUS"]}'::jsonb,
+    '{"vehicle": "TAXI", "orderArray": ["ECO","TAXI","AUTO_RICKSHAW","COMFY","SUV", "SUV_PLUS"]}'::jsonb
+  ]
+);
