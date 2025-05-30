@@ -187,3 +187,38 @@ ALTER TABLE atlas_app.person ADD COLUMN auth_blocked boolean  default false;
 
 ALTER TABLE atlas_app.person ADD COLUMN latest_lon double precision ;
 ALTER TABLE atlas_app.person ADD COLUMN latest_lat double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ALTER COLUMN blocked_until SET DEFAULT '';
+ALTER TABLE atlas_app.person ADD COLUMN last_used_vehicle_service_tiers text[] ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

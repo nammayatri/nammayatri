@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
+import qualified Domain.Types.ServiceTierType
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -69,6 +70,7 @@ data PersonE e = Person
     juspayCustomerPaymentID :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lastUsedVehicleServiceTiers :: [Domain.Types.ServiceTierType.ServiceTierType],
     latestLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     latestLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     liveActivityToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -161,6 +163,7 @@ instance EncryptedItem Person where
           juspayCustomerPaymentID = juspayCustomerPaymentID entity,
           language = language entity,
           lastName = lastName entity,
+          lastUsedVehicleServiceTiers = lastUsedVehicleServiceTiers entity,
           latestLat = latestLat entity,
           latestLon = latestLon entity,
           liveActivityToken = liveActivityToken entity,
@@ -245,6 +248,7 @@ instance EncryptedItem Person where
             juspayCustomerPaymentID = juspayCustomerPaymentID entity,
             language = language entity,
             lastName = lastName entity,
+            lastUsedVehicleServiceTiers = lastUsedVehicleServiceTiers entity,
             latestLat = latestLat entity,
             latestLon = latestLon entity,
             liveActivityToken = liveActivityToken entity,
