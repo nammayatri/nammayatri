@@ -50,6 +50,19 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data RouteInfoNandi = RouteInfoNandi
+  { id :: Text,
+    shortName :: Maybe Text,
+    longName :: Maybe Text,
+    mode :: BecknV2.FRFS.Enums.VehicleCategory,
+    agencyName :: Maybe Text,
+    tripCount :: Maybe Int,
+    startPoint :: Kernel.External.Maps.Types.LatLong,
+    endPoint :: Kernel.External.Maps.Types.LatLong,
+    stopCount :: Maybe Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data NandiTrip = NandiTrip
   { id :: Text,
     direction :: Maybe Text

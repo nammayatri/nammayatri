@@ -1,12 +1,15 @@
 module Storage.CachedQueries.OTPRest.OTPRest where
 
+import BecknV2.FRFS.Enums
 import Data.List (groupBy)
 import Data.Text (splitOn)
 import qualified Domain.Types.GTFSFeedInfo as GTFSFeedInfo
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Route as Route
 import Domain.Types.RouteStopMapping
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -17,7 +20,52 @@ import qualified SharedLogic.External.Nandi.Flow as Flow
 import SharedLogic.External.Nandi.Types
 import Storage.CachedQueries.GTFSFeedInfo (findByVehicleTypeAndCity)
 import Storage.CachedQueries.RouteStopTimeTable (castVehicleType)
+import qualified Storage.Queries.Route as QRoute
+import qualified Storage.Queries.RoutePolylines as QRoutePolylines
+import Tools.Error
 import Tools.MultiModal as MM
+
+getRouteByRouteId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Route.Route)
+getRouteByRouteId integratedBPPConfig routeId = do
+  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
+  route <- Flow.getRouteByRouteId baseUrl feedInfo.feedId.getId routeId
+  case route of
+    Just route' -> Just <$> parseRouteFromInMemoryServer route' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+    Nothing -> do
+      logError $ "Route not found in OTPRest: " <> show routeId
+      pure Nothing
+
+getRouteByFuzzySearch ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m [Route.Route]
+getRouteByFuzzySearch integratedBPPConfig query = do
+  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
+  routes <- Flow.getRouteByFuzzySearch baseUrl feedInfo.feedId.getId query
+  mapM (\route -> parseRouteFromInMemoryServer route integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) routes
+
+getRoutesByGtfsId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [Route.Route]
+getRoutesByGtfsId integratedBPPConfig = do
+  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
+  routes <- Flow.getRoutesByGtfsId baseUrl feedInfo.feedId.getId
+  mapM (\route -> parseRouteFromInMemoryServer route integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) routes
+
+getRoutesByVehicleType ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  VehicleCategory ->
+  m [Route.Route]
+getRoutesByVehicleType integratedBPPConfig vehicleType = do
+  routes <- getRoutesByGtfsId integratedBPPConfig
+  return $ filter (\route -> route.vehicleType == vehicleType) routes
 
 getFeedInfoVehicleTypeAndBaseUrl ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -69,25 +117,6 @@ getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
 
-findAndCache ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
-  IntegratedBPPConfig ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  m [RouteStopMapping]
-findAndCache integratedBPPConfig merchantId merchantOperatingCityId = do
-  vehicleType' <- castVehicleType integratedBPPConfig.vehicleCategory
-  feedInfo <- findByVehicleTypeAndCity vehicleType' merchantOperatingCityId merchantId
-  now <- getCurrentTime
-  baseUrl <- MM.getOTPRestServiceReq merchantId merchantOperatingCityId
-  logDebug $ "baseUrl: " <> showBaseUrl baseUrl
-  routeStopMapping' <- Flow.getRouteStopMapping baseUrl feedInfo.feedId.getId
-  logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
-  let routeStopMapping = parseRouteStopMapping routeStopMapping' integratedBPPConfig.id merchantId merchantOperatingCityId now
-  logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
-  fork "caching route stop mapping info" $ cacheAllRouteStopMapping routeStopMapping
-  return routeStopMapping
-
 parseRouteStopMapping ::
   [RouteStopMappingNandi] ->
   Id IntegratedBPPConfig ->
@@ -117,6 +146,37 @@ parseRouteStopMapping routeStopMappingNandi integratedBppConfig merchantId merch
     )
     routeStopMappingNandi
 
+parseRouteFromInMemoryServer ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  RouteInfoNandi ->
+  Id IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m Route.Route
+parseRouteFromInMemoryServer routeInfoNandi integratedBppConfig merchantId merchantOperatingCityId = do
+  routePolyline <- QRoutePolylines.findByRouteIdAndCity routeInfoNandi.id merchantOperatingCityId
+  now <- getCurrentTime
+  return $
+    Route.Route
+      { code = routeInfoNandi.id,
+        color = Nothing,
+        dailyTripCount = routeInfoNandi.tripCount,
+        endPoint = routeInfoNandi.endPoint,
+        startPoint = routeInfoNandi.startPoint,
+        id = Id $ routeInfoNandi.id,
+        integratedBppConfigId = integratedBppConfig,
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
+        polyline = routePolyline >>= (.polyline),
+        longName = fromMaybe "" routeInfoNandi.longName,
+        shortName = fromMaybe "" routeInfoNandi.shortName,
+        vehicleType = routeInfoNandi.mode,
+        stopCount = routeInfoNandi.stopCount,
+        timeBounds = Unbounded,
+        createdAt = now,
+        updatedAt = now
+      }
+
 parseRouteStopMappingInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
   [RouteStopMappingInMemoryServer] ->
@@ -134,7 +194,7 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBpp
               integratedBppConfigId = integratedBppConfig,
               merchantId,
               merchantOperatingCityId,
-              providerCode = "NANDI", -- Hardcoding provider code as NANDI since it's not in RouteStopMappingNandi
+              Domain.Types.RouteStopMapping.providerCode = "NANDI", -- Hardcoding provider code as NANDI since it's not in RouteStopMappingNandi
               routeCode = last $ splitOn ":" mapping.routeCode,
               sequenceNum = mapping.sequenceNum,
               stopCode = last $ splitOn ":" mapping.stopCode,
@@ -179,3 +239,17 @@ allRouteStopMappingKey = "allRouteStopMapping"
 
 routeStopMappingByStopCodeKey :: Text -> Text
 routeStopMappingByStopCodeKey stopCode = "routeStopMappingByStopCode:" <> stopCode
+
+getRouteByRouteCodeWithFallback ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m Route.Route
+getRouteByRouteCodeWithFallback integratedBPPConfig routeCode = do
+  try @_ @SomeException (getRouteByRouteId integratedBPPConfig routeCode) >>= \case
+    Left err -> do
+      logError $ "Error getting route by route code: " <> show err
+      B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
+    Right route'' -> case route'' of
+      Just route' -> pure route'
+      Nothing -> B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)

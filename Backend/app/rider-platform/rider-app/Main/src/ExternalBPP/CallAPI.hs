@@ -95,7 +95,7 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
         onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
         processOnSearch onSearchReq
   where
-    processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()
+    processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch

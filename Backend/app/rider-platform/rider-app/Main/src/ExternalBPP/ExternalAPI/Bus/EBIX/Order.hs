@@ -7,7 +7,7 @@ import qualified Data.Time as Time
 import Data.Time.Format
 import qualified Data.UUID as UU
 import Domain.Types.FRFSTicketBooking
-import Domain.Types.IntegratedBPPConfig
+import Domain.Types.IntegratedBPPConfig as DIBC
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Bus.EBIX.Auth
 import ExternalBPP.ExternalAPI.Types
@@ -18,7 +18,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -122,10 +121,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
       endStation = last routeStation.stations
   fromStation <- B.runInReplica $ QStation.findByStationCode startStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- B.runInReplica $ QStation.findByStationCode endStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  route <- do
-    B.runInReplica $
-      QRoute.findByRouteCode routeStation.code integratedBPPConfig.id
-        >>= fromMaybeM (RouteNotFound routeStation.code)
+  route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeStation.code
   fromRoute <-
     try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig) >>= \case
       Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfig.id

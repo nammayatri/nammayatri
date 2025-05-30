@@ -71,7 +71,6 @@ import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
-import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
@@ -218,8 +217,8 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
               )
               groupedStops
   let mappedRouteCodes = map (\(routeCode, _, _, _) -> routeCode) possibleRoutes
-  let integratedBPPConfigIds' = replicate (length mappedRouteCodes) (integratedBPPConfig.id)
-  routes <- QRoute.findByRouteCodes mappedRouteCodes integratedBPPConfigIds'
+  routes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) mappedRouteCodes
+
   return $
     map
       ( \route ->
@@ -514,7 +513,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                   delay = Nothing
                 }
     _ -> do
-      route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
+      route <-
+        OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode
       routeStops <-
         try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id

@@ -16,7 +16,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -39,10 +38,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
       endStation = last routeStation.stations
   fromStation <- B.runInReplica $ QStation.findByStationCode startStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- B.runInReplica $ QStation.findByStationCode endStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  route <- do
-    B.runInReplica $
-      QRoute.findByRouteCode routeStation.code integratedBPPConfig.id
-        >>= fromMaybeM (RouteNotFound routeStation.code)
+  route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeStation.code
   fromRoute <-
     try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig) >>= \case
       Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfig.id

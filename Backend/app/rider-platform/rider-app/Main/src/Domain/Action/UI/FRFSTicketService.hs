@@ -38,6 +38,7 @@ import Domain.Types.StationType
 import qualified Environment
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, fromList, groupBy, id, length, map, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
+import GHC.Num (integerToInt)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
@@ -136,7 +137,10 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
           )
           routesInfo
     _ -> do
-      routes <- B.runInReplica $ QRoute.findAllByVehicleType Nothing Nothing _vehicleType integratedBPPConfig.id
+      routes <-
+        try @_ @SomeException (OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType) >>= \case
+          Left _ -> B.runInReplica $ QRoute.findAllByVehicleType Nothing Nothing _vehicleType integratedBPPConfig.id
+          Right routes -> pure routes
       return $
         map
           ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, ..}
@@ -170,11 +174,11 @@ getFrfsRoute ::
   Environment.Flow API.Types.UI.FRFSTicketService.FRFSRouteAPI
 getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _mbCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _mbCity)
-  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
+  let platformType = fromMaybe DIBC.APPLICATION _platformType
   integratedBPPConfig <-
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
-  route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
+  route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode
   routeStops <-
     try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
       Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
@@ -472,7 +476,8 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          route' <-
+            OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
           return $ Just route'
       )
       routeCode
@@ -1121,7 +1126,10 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
       let mbLimitInteger = fmap toInteger mbLimit
           mbOffsetInteger = fmap toInteger mbOffset
       matchingStops <- QStation.findAllMatchingStations (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
-      matchingRoutes <- QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
+      matchingRoutes <-
+        try @_ @SomeException (OTPRest.getRouteByFuzzySearch integratedBPPConfig userInput) >>= \case
+          Left _ -> QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
+          Right routes -> bool (pure $ take (integerToInt $ fromMaybe 0 mbOffsetInteger) $ drop (integerToInt $ fromMaybe 0 mbOffsetInteger) routes) (QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id) (null routes)
       currentTime <- getCurrentTime
       let serviceableStops = DTB.findBoundedDomain matchingStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) matchingStops
           serviceableRoutes = DTB.findBoundedDomain matchingRoutes currentTime ++ filter (\route -> route.timeBounds == DTB.Unbounded) matchingRoutes

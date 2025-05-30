@@ -41,14 +41,14 @@ import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
-import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopFare as QRSF
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -145,21 +145,23 @@ validateRequest DOnSearch {..} = do
 onSearch ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   DOnSearch ->
   ValidatedDOnSearch ->
   m ()
 onSearch onSearchReq validatedReq = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) validatedReq.search.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType) DIBC.PARTNERORG >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| validatedReq.search.merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType ||+ "Platform Type:" +|| DIBC.PARTNERORG ||+ "")
   filteredQuotes <-
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
       else do
-        routesCodes <- (fmap (.code)) <$> (catMaybeM (QRoute.findByRouteId) $ catMaybes (map (.routeId) validatedReq.search.journeyRouteDetails <> [validatedReq.search.routeId]))
-        pure $ case routesCodes of
+        routeCodes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) (catMaybes ((map (\x -> (.getId) <$> x.routeId) validatedReq.search.journeyRouteDetails) <> [fmap (.getId) validatedReq.search.routeId]))
+        pure $ case routeCodes of
           [] -> onSearchReq.quotes
-          routesCodes' -> filter (\quote -> quote.routeCode `elem` routesCodes') onSearchReq.quotes
+          routesCodes' -> filter (\quote -> quote.routeCode `elem` map (.code) routesCodes') onSearchReq.quotes
   quotes <- traverse (mkQuotes onSearchReq validatedReq) filteredQuotes
   traverse_ cacheQuote quotes
   if null quotesCreatedByCache
@@ -187,15 +189,6 @@ onSearch onSearchReq validatedReq = do
           QRSF.updateFareByRouteCodeAndStopCodes price farePolicyId routeCode startStopCode endStopCode
   return ()
   where
-    catMaybeM fn = go
-      where
-        go [] = pure []
-        go (x : xs) = do
-          xx <- fn x
-          newAcc <- go xs
-          pure $ case xx of
-            Just xx' -> (xx' : newAcc)
-            Nothing -> newAcc
     cacheQuote quote = do
       let key =
             CachedQuote.FRFSCachedQuoteKey
