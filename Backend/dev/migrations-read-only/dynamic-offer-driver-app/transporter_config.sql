@@ -444,3 +444,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN earnings_window
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN live_ekd boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN de_activate_all_rc_of_driver boolean  default true;
