@@ -2,14 +2,19 @@ module Storage.CachedQueries.Merchant.MultiModalBus
   ( BusStopETA (..),
     BusData (..),
     RouteWithBuses (..),
+    FullBusData (..),
     getRoutesBuses,
     getBusesForRoutes,
     mkRouteKey,
     withCrossAppRedisNew,
     utcToIST,
+    mkVehicleMetadataKey,
+    getBusesForVehicleNumber,
+    getBusesForVehicleNumbers,
   )
 where
 
+import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
@@ -60,7 +65,8 @@ data BusData = BusData
     timestamp :: Int,
     speed :: Double,
     device_id :: Text,
-    eta_data :: Maybe [BusStopETA]
+    eta_data :: Maybe [BusStopETA],
+    route_id :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -81,6 +87,10 @@ data RouteWithBuses = RouteWithBuses
 mkRouteKey :: Text -> Text
 mkRouteKey routeId = "route:" <> routeId
 
+-- Create Redis key for a vehicleNumber
+mkVehicleMetadataKey :: Text -> Text
+mkVehicleMetadataKey vehicleNumber = "vehicle_metadata:" <> vehicleNumber
+
 -- Get all buses for a single route
 getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m RouteWithBuses
 getRoutesBuses routeId = do
@@ -97,3 +107,16 @@ getRoutesBuses routeId = do
 
 getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithBuses]
 getBusesForRoutes = mapM getRoutesBuses
+
+-- Get the bus data for a single vehicleNumber
+getBusesForVehicleNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m (Maybe BusData)
+getBusesForVehicleNumber vehicleNumber = do
+  let key = mkVehicleMetadataKey vehicleNumber
+
+  busMetadata :: Maybe BusData <- withCrossAppRedisNew $ Hedis.safeGet key
+  logDebug $ "Got and parsed bus data for route " <> vehicleNumber <> ": " <> show busMetadata
+
+  return busMetadata
+
+getBusesForVehicleNumbers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [BusData]
+getBusesForVehicleNumbers = mapMaybeM getBusesForVehicleNumber
