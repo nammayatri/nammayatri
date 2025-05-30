@@ -540,3 +540,23 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 --   WHERE city = 'Delhi'
 --     AND merchant_short_id = 'MSIL_PARTNER'
 -- );
+
+-- Run in master even if commented --
+
+-- INSERT INTO atlas_driver_offer_bpp.rc_validation_rules (
+--   id,
+--   max_vehicle_age,
+--   fuel_type,
+--   vehicle_class,
+--   vehicle_oem,
+--   merchant_id,
+--   merchant_operating_city_id
+-- )
+-- SELECT
+--   atlas_driver_offer_bpp.uuid_generate_v4(),
+--   36,
+--   ARRAY['Petrol', 'Diesel', 'CNG', 'LPG', 'EV', 'Electric'],
+--   ARRAY['SUV', 'SEDAN'],
+--   ARRAY['MARUTI'],
+--   (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER'),
+--   (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER' AND city = 'Delhi');
