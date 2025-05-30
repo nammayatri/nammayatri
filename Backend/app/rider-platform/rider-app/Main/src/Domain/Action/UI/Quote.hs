@@ -480,13 +480,13 @@ mostFrequent xs = Just $ fst $ maximumBy (comparing snd) frequencyList
     grouped = group . sort $ xs
     frequencyList = [(head g, length g) | g <- grouped]
 
-mostFrequentVehicleCategoryConfig :: (Maybe DVST.ServiceTierType) -> [VehicleServiceTierOrderConfig] -> Maybe VehicleServiceTierOrderConfig
+mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> Maybe VehicleServiceTierOrderConfig
 mostFrequentVehicleCategoryConfig Nothing _ = Nothing
 mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) orderArray =
   find (\v -> v.vehicle == vehicleServiceTier) orderArray
 
 -- Sorting function
-estimatesSorting :: [UEstimate.EstimateAPIEntity] -> (Maybe VehicleServiceTierOrderConfig) -> [UEstimate.EstimateAPIEntity]
+estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrderConfig -> [UEstimate.EstimateAPIEntity]
 estimatesSorting list Nothing = list
 estimatesSorting list (Just config) =
   sortBy (comparing (\estimate -> vehicleOrderIndex config.orderArray estimate.serviceTierType)) list
