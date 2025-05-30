@@ -536,30 +536,42 @@ postDriverFleetUnlink ::
   Text ->
   Id Common.Driver ->
   Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo = do
+postDriverFleetUnlink merchantShortId _opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
-  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
+  case entityRole of
+    DP.FLEET_OWNER -> do
+      DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
+      isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
+      case isFleetDriver of
+        Nothing -> throwError DriverNotPartOfFleet
+        Just fleetDriver -> do
+          unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
+      unlinkVehicleFromDriver merchant.id personId vehicleNo DP.FLEET_OWNER
+    DP.OPERATOR -> do
+      isDriverOperator <- DOV.checkDriverOperatorAssociation personId (Id entityId)
+      when (not isDriverOperator) $ throwError DriverNotPartOfOperator
+      unlinkVehicleFromDriver merchant.id personId vehicleNo DP.OPERATOR
+    _ -> throwError $ InvalidRequest "Invalid Data"
+  pure Success
+
+unlinkVehicleFromDriver :: Id DM.Merchant -> Id DP.Person -> Text -> DP.Role -> Flow ()
+unlinkVehicleFromDriver merchantId personId vehicleNo role = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
-  case isFleetDriver of
-    Nothing -> throwError DriverNotPartOfFleet
-    Just fleetDriver -> do
-      unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless (merchantId == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
+  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ QDriverInfo.updateEnabledVerifiedState driverId False (Just False) -- TODO :: Is it required for Normal Fleet ?
-  rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
+  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
   _ <- QRCAssociation.endAssociationForRC personId rc.id
-  logTagInfo "fleet -> unlinkVehicle : " (show personId)
-  pure Success
+  logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveVehicle ::
@@ -567,8 +579,10 @@ postDriverFleetRemoveVehicle ::
   Context.City ->
   Text ->
   Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo = do
+postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequestorId = do
+  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId_
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId_ merchant.fleetOwnerEnabledCheck
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
@@ -796,7 +810,7 @@ postDriverFleetRemoveDriver ::
   Flow APISuccess
 postDriverFleetRemoveDriver merchantShortId _ requestorId driverId mbFleetOwnerId = do
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person driverId
   case entityRole of
@@ -813,17 +827,22 @@ postDriverFleetRemoveDriver merchantShortId _ requestorId driverId mbFleetOwnerI
       DOV.endOperatorDriverAssociation entityId personId
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
-  where
-    validateRequestorRoleAndGetEntityId :: DP.Person -> Flow (DP.Role, Text)
-    validateRequestorRoleAndGetEntityId requestedPerson = do
-      case requestedPerson.role of
-        DP.FLEET_OWNER -> do
-          fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
-          pure (DP.FLEET_OWNER, fleetOwnerid)
-        DP.OPERATOR -> do
-          when (isJust mbFleetOwnerId) $ throwError (InvalidRequest "Operator cannot remove driver owned by the fleet")
-          pure (DP.OPERATOR, requestedPerson.id.getId)
-        _ -> throwError (InvalidRequest "Invalid Data")
+
+validateRequestorRoleAndGetEntityId :: DP.Person -> Maybe Text -> Flow (DP.Role, Text)
+validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId = do
+  case requestedPerson.role of
+    DP.FLEET_OWNER -> do
+      -- Fleet Owner tries to do operation
+      fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
+      pure (DP.FLEET_OWNER, fleetOwnerid)
+    DP.OPERATOR -> do
+      case mbFleetOwnerId of
+        Just fleetOwnerId -> do
+          -- Operator tries to do operation on behalf of the fleet
+          validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+          pure (DP.FLEET_OWNER, fleetOwnerId)
+        Nothing -> pure (DP.OPERATOR, requestedPerson.id.getId) -- Operator tries to do operation
+    _ -> throwError (InvalidRequest "Invalid Data")
 
 ---------------------------------------------------------------------
 getDriverFleetTotalEarning ::
