@@ -43,6 +43,7 @@ data ServiceName
   | PayoutService Payout.PayoutService
   | MultiModalService MultiModal.MultiModalService
   | WalletService GW.WalletService
+  | MultiModalStaticDataService MultiModal.MultiModalService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -66,6 +67,7 @@ instance Show ServiceName where
   show (PayoutService s) = "Payout_" <> show s
   show (MultiModalService s) = "MultiModal_" <> show s
   show (WalletService s) = "Wallet_" <> show s
+  show (MultiModalStaticDataService s) = "MultiModalStaticData_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -140,6 +142,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Wallet_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (MultiModalStaticDataService v1, r2)
+                 | r1 <- stripPrefix "MultiModalStaticData_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -163,6 +169,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PayoutServiceConfig !PayoutServiceConfig
   | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
   | WalletServiceConfig !GW.WalletServiceConfig
+  | MultiModalStaticDataServiceConfig !MultiModal.MultiModalServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe

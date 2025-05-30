@@ -121,7 +121,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
       fromStation <- QStation.findByStationCode startStationCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound startStationCode)
       toStation <- QStation.findByStationCode endStationCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound endStationCode)
       stops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) >>= \case
+        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
           Right stops' -> pure stops'
       CallAPI.mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)

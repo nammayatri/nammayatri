@@ -5,11 +5,11 @@ import Kernel.Prelude
 import Servant
 import SharedLogic.External.Nandi.Types
 
-type NandiPatternsAPI = "otp" :> "routers" :> "default" :> "index" :> "patterns" :> Get '[JSON] [NandiPattern]
+type NandiPatternsAPI = "patterns" :> Capture "gtfs_id" Text :> Get '[JSON] [NandiPattern]
 
-type NandiGetSpecificPatternAPI = "otp" :> "routers" :> "default" :> "index" :> "patterns" :> Capture "patternId" Text :> Get '[JSON] NandiPatternDetails
+type NandiGetSpecificPatternAPI = "patterns" :> Capture "patternId" Text :> Get '[JSON] NandiPatternDetails
 
-type RoutesAPI = "otp" :> "routers" :> "default" :> "index" :> "routes" :> Get '[JSON] [NandiRoutesRes]
+type RoutesAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [NandiRoutesRes]
 
 nandiPatternsAPI :: Proxy NandiPatternsAPI
 nandiPatternsAPI = Proxy
@@ -20,11 +20,11 @@ nandiGetSpecificPatternAPI = Proxy
 nandiRoutesAPI :: Proxy RoutesAPI
 nandiRoutesAPI = Proxy
 
-getNandiPatterns :: ET.EulerClient [NandiPattern]
+getNandiPatterns :: Text -> ET.EulerClient [NandiPattern]
 getNandiPatterns = ET.client nandiPatternsAPI
 
 getNandiGetSpecificPattern :: Text -> ET.EulerClient NandiPatternDetails
 getNandiGetSpecificPattern = ET.client nandiGetSpecificPatternAPI
 
-getNandiRoutes :: ET.EulerClient [NandiRoutesRes]
+getNandiRoutes :: Text -> ET.EulerClient [NandiRoutesRes]
 getNandiRoutes = ET.client nandiRoutesAPI

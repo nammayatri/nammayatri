@@ -329,13 +329,13 @@ findPossibleRoutes ::
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig.id mid mocid) >>= \case
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) >>= \case
       Left _ -> QRSM.findByStopCode fromStopCode integratedBppConfig.id
       Right stops -> pure stops
 
   -- Get route mappings that contain the destination stop
   toRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig.id mid mocid) >>= \case
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) >>= \case
       Left _ -> QRSM.findByStopCode toStopCode integratedBppConfig.id
       Right stops -> pure stops
 

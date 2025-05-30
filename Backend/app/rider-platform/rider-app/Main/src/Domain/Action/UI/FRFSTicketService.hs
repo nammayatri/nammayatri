@@ -174,7 +174,7 @@ getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
   route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
   routeStops <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id _mId merchantOpCity.id) >>= \case
+    try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
       Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
       Right stops -> pure stops
   currentTime <- getCurrentTime
@@ -240,14 +240,14 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
     (Nothing, Nothing, Just endStationCode) -> do
       currentTime <- getCurrentTime
       routesWithStop <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode endStationCode integratedBPPConfig.id mId merchantOpCity.id) >>= \case
+        try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode endStationCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByStopCode endStationCode integratedBPPConfig.id
           Right stops -> pure stops
       let routeCodes = nub $ map (.routeCode) routesWithStop
       routeStops <-
         EulerHS.Prelude.concatMapM
           ( \routeCode ->
-              try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id mId merchantOpCity.id) >>= \case
+              try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
                 Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
                 Right stops -> pure stops
           )
@@ -283,7 +283,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
     -- Return possible End stops, when Route & Start Stop is Known
     (Just routeCode, Just startStationCode, Nothing) -> do
       routeStops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id mId merchantOpCity.id) >>= \case
+        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
           Right stops -> pure stops
       currentTime <- getCurrentTime
@@ -312,7 +312,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
     (Just routeCode, Nothing, Nothing) -> do
       currentTime <- getCurrentTime
       routeStops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id mId merchantOpCity.id) >>= \case
+        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
           Right stops -> pure stops
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
@@ -339,14 +339,14 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
     (Nothing, Just startStationCode, Nothing) -> do
       currentTime <- getCurrentTime
       routesWithStop <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig.id mId merchantOpCity.id) >>= \case
+        try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByStopCode startStationCode integratedBPPConfig.id
           Right stops -> pure stops
       let routeCodes = nub $ map (.routeCode) routesWithStop
       routeStops <-
         EulerHS.Prelude.concatMapM
           ( \routeCode ->
-              try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig.id mId merchantOpCity.id) >>= \case
+              try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
                 Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
                 Right stops -> pure stops
           )

@@ -14,18 +14,17 @@
 
 module Tools.MultiModal where
 
-import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified System.Environment as Se
 import Tools.Error
 
 getMultiModalConfig :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
@@ -42,22 +41,14 @@ getMultiModalConfig merchantId merchantOperatingCityId = do
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getTransitServiceReq :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
-getTransitServiceReq merchantId merchantOperatingCityId = do
-  transitServiceReq' <- getMultiModalConfig merchantId merchantOperatingCityId
-  case transitServiceReq' of
-    OTPTransitConfig otpTransitConfig -> do
-      baseUrlPath <- liftIO $ Se.lookupEnv "OTP_GTFS_URL_PATH"
-      if isJust baseUrlPath
-        then do
-          let baseUrlStr = showBaseUrl otpTransitConfig.baseUrl
-          otpGtfsUrl <- parseBaseUrl $ baseUrlStr <> maybe "" T.pack baseUrlPath
-          return $ OTPTransitConfig otpTransitConfig{baseUrl = otpGtfsUrl}
-        else return transitServiceReq'
-    _ -> return transitServiceReq'
+getTransitServiceReq = getMultiModalConfig
 
 getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m BaseUrl
 getOTPRestServiceReq merchantId merchantOperatingCityId = do
-  transitServiceReq' <- getMultiModalConfig merchantId merchantOperatingCityId
+  transitServiceReq <- CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MultiModalStaticDataService MultiModal.OTPTransit) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found")
+  transitServiceReq' <- case transitServiceReq.serviceConfig of
+    DMSC.MultiModalServiceConfig multiModalServiceConfig -> return multiModalServiceConfig
+    _ -> throwError $ InternalError "Unknown Service Config"
   case transitServiceReq' of
     OTPTransitConfig otpTransitConfig -> return otpTransitConfig.baseUrl
     config -> throwError $ InternalError $ "Unknown Service Config" <> show config

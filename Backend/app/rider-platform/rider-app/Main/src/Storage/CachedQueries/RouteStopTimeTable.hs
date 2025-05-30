@@ -16,6 +16,7 @@
 module Storage.CachedQueries.RouteStopTimeTable
   ( findByRouteCodeAndStopCode,
     CalledForFare (..),
+    castVehicleType,
   )
 where
 

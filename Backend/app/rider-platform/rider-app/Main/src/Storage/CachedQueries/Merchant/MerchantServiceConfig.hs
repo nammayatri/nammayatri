@@ -134,6 +134,9 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
       WalletServiceConfig walletCfg -> case walletCfg of
         GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
+      MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
+        MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
+        MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName

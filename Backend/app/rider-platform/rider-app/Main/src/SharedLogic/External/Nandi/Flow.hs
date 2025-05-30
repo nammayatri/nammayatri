@@ -9,24 +9,30 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.API.Nandi as NandiAPI
 import SharedLogic.External.Nandi.Types
+import System.Environment (lookupEnv)
 
-getAllRoutePatterns :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [NandiPattern]
-getAllRoutePatterns baseUrl = do
-  withShortRetry $ callAPI baseUrl NandiAPI.getNandiPatterns "getAllRoutePatterns" NandiAPI.nandiPatternsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_PATTERNS_API") baseUrl)
+getAllRoutePatterns :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m [NandiPattern]
+getAllRoutePatterns baseUrl gtfsId = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiPatterns gtfsId) "getAllRoutePatterns" NandiAPI.nandiPatternsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_PATTERNS_API") baseUrl)
 
 getRoutePatternDetails :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m NandiPatternDetails
 getRoutePatternDetails baseUrl routeId = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetSpecificPattern routeId) "getRoutePatternDetails" NandiAPI.nandiGetSpecificPatternAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_SPECIFIC_PATTERN_API") baseUrl)
 
-getRoutesFromNandi :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [NandiRoutesRes]
-getRoutesFromNandi baseUrl = do
-  withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutes "getRoutesFromNandi" NandiAPI.nandiRoutesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_ROUTES_API") baseUrl)
+getRoutesFromNandi :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m [NandiRoutesRes]
+getRoutesFromNandi baseUrl gtfsId = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutes gtfsId) "getRoutesFromNandi" NandiAPI.nandiRoutesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_ROUTES_API") baseUrl)
 
-getRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [RouteStopMappingNandi]
-getRouteStopMapping baseUrl = do
-  allRoutePatterns <- getAllRoutePatterns baseUrl
+getRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m [RouteStopMappingNandi]
+getRouteStopMapping baseUrl gtfsId = do
+  env <- fromMaybe False . (>>= readMaybe) <$> liftIO (lookupEnv "ENABLE_INMEMORY_SERVER")
+  unless env $ do
+    logDebug "ENABLE_INMEMORY_SERVER is not set, skipping nandi rest api calls"
+    throwError $ InternalError "ENABLE_INMEMORY_SERVER is not set, skipping nandi rest api calls"
+
+  allRoutePatterns <- getAllRoutePatterns baseUrl gtfsId
   logDebug $ "allRoutePatterns from nandi rest api: " <> show allRoutePatterns
-  allRouteDetails <- getRoutesFromNandi baseUrl
+  allRouteDetails <- getRoutesFromNandi baseUrl gtfsId
   logDebug $ "allRouteDetails from nandi rest api: " <> show allRouteDetails
   let routePatternMap = Map.fromList [(p.routeId, p) | p <- allRoutePatterns]
       routeDetailsMap = Map.fromList [(r.id, r) | r <- allRouteDetails]
