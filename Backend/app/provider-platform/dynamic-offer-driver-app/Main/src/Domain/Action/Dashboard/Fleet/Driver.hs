@@ -538,7 +538,7 @@ postDriverFleetUnlink ::
   Text ->
   Maybe Text ->
   Flow APISuccess
-postDriverFleetUnlink merchantShortId _opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
+postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
@@ -551,23 +551,25 @@ postDriverFleetUnlink merchantShortId _opCity requestorId reqDriverId vehicleNo 
         Nothing -> throwError DriverNotPartOfFleet
         Just fleetDriver -> do
           unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
-      unlinkVehicleFromDriver merchant.id personId vehicleNo DP.FLEET_OWNER
+      unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.FLEET_OWNER
     DP.OPERATOR -> do
       isDriverOperator <- DOV.checkDriverOperatorAssociation personId (Id entityId)
       when (not isDriverOperator) $ throwError DriverNotPartOfOperator
-      unlinkVehicleFromDriver merchant.id personId vehicleNo DP.OPERATOR
+      unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.OPERATOR
     _ -> throwError $ InvalidRequest "Invalid Data"
   pure Success
 
-unlinkVehicleFromDriver :: Id DM.Merchant -> Id DP.Person -> Text -> DP.Role -> Flow ()
-unlinkVehicleFromDriver merchantId personId vehicleNo role = do
+unlinkVehicleFromDriver :: DM.Merchant -> Id DP.Person -> Text -> Context.City -> DP.Role -> Flow ()
+unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchantId == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
   driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-  DomainRC.deactivateCurrentRC personId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
   when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
   _ <- QRCAssociation.endAssociationForRC personId rc.id
