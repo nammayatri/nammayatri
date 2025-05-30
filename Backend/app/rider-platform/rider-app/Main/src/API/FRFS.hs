@@ -18,6 +18,7 @@ import qualified API.Beckn.FRFS.OnCancel as OnCancel
 import qualified API.Beckn.FRFS.OnConfirm as OnConfirm
 import qualified API.Beckn.FRFS.OnInit as OnInit
 import qualified API.Beckn.FRFS.OnSearch as OnSearch
+import qualified API.Beckn.FRFS.OnSelect as OnSelect
 import qualified API.Beckn.FRFS.OnStatus as OnStatus
 import qualified API.Beckn.FRFS.OnUpdate as OnUpdate
 import qualified Domain.Types.Merchant as DM
@@ -31,6 +32,7 @@ type API =
   "beckn" :> "frfs" :> "v1"
     :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
     :> ( OnSearch.API
+           :<|> OnSelect.API
            :<|> OnInit.API
            :<|> OnConfirm.API
            :<|> OnStatus.API
@@ -43,6 +45,7 @@ type APIM =
     :> Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
     :> ( OnSearch.API
+           :<|> OnSelect.API
            :<|> OnInit.API
            :<|> OnConfirm.API
            :<|> OnStatus.API
@@ -53,6 +56,7 @@ type APIM =
 handler :: FlowServer API
 handler auth =
   OnSearch.handler auth
+    :<|> OnSelect.handler auth
     :<|> OnInit.handler auth
     :<|> OnConfirm.handler auth
     :<|> OnStatus.handler auth
