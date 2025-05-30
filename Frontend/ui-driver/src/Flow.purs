@@ -632,6 +632,11 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
             "alerts" -> do
               let gPayload = EHC.getGlobalPayload "__payload"
               hideSplashAndCallFlow $ notificationFlow gPayload
+            "earnings" -> do              
+              (GlobalState globalState) <- getState
+              appConfig <- getAppConfigFlowBT Constants.appConfig              
+              modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+              hideSplashAndCallFlow driverEarningsFlow
             "profile" -> do
               -- liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
               (GlobalState allState) <- getState
