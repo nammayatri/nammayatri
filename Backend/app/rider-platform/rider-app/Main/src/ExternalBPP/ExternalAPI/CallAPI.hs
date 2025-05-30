@@ -100,8 +100,8 @@ createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlo
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLOrder.createOrder config' booking mRiderNumber
-    EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig.id qrTtl booking
-    DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig.id qrTtl booking
+    EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
+    DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
     CRIS config' -> CRISBookJourney.createOrder config' booking
     _ -> throwError $ InternalError "Unimplemented!"
 

@@ -14,7 +14,6 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Route as QRoute
@@ -22,38 +21,38 @@ import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
-createOrder config integratedBPPConfigId qrTtl booking = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
+createOrder config integratedBPPConfig qrTtl booking = do
   when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
   bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
   let orderId = show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) :: Integer) -- This should be max 20 characters UUID (Using Transaction UUID)
       mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
   routeStations <- mbRouteStations & fromMaybeM (InternalError "Route Stations Not Found.")
-  tickets <- mapM (getTicketDetail config integratedBPPConfigId qrTtl booking) routeStations
+  tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking) routeStations
   return ProviderOrder {..}
 
-getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> Id IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
-getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
+getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
       endStation = last routeStation.stations
-  fromStation <- B.runInReplica $ QStation.findByStationCode startStation.code integratedBPPConfigId >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfigId.getId)
-  toStation <- B.runInReplica $ QStation.findByStationCode endStation.code integratedBPPConfigId >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfigId.getId)
+  fromStation <- B.runInReplica $ QStation.findByStationCode startStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- B.runInReplica $ QStation.findByStationCode endStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   route <- do
     B.runInReplica $
-      QRoute.findByRouteCode routeStation.code integratedBPPConfigId
+      QRoute.findByRouteCode routeStation.code integratedBPPConfig.id
         >>= fromMaybeM (RouteNotFound routeStation.code)
   fromRoute <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfigId booking.merchantId booking.merchantOperatingCityId) >>= \case
-      Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfigId
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig) >>= \case
+      Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfig.id
       Right stops -> pure $ listToMaybe stops
-      >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfigId.getId)
+      >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfig.id.getId)
   toRoute <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfigId booking.merchantId booking.merchantOperatingCityId) >>= \case
-      Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfigId
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfig) >>= \case
+      Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfig.id
       Right stops -> pure $ listToMaybe stops
-      >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfigId.getId)
+      >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfig.id.getId)
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
     id <- generateGUID
