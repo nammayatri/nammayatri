@@ -901,7 +901,7 @@ config =
               showDriverReferral : true,
               showCustomerReferral : true,
               uploadRCandDL : true, 
-              enableYatriCoins : false,
+              enableYatriCoins : true,
               vehicleNSImg : "",
               registration : {
                   supportWAN : "",
