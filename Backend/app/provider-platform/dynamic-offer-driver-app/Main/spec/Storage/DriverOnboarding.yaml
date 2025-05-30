@@ -1012,9 +1012,9 @@ RCValidationRules:
   fields:
     id: Id RCValidationRules
     maxVehicleAge: Maybe Int
-    fuelType: '[Text]'
-    vehicleClass: '[Text]'
-    vehicleOEM: '[Text]'
+    fuelType: Maybe [Text]
+    vehicleClass: Maybe [Text]
+    vehicleOEM: Maybe [Text]
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
@@ -1023,4 +1023,3 @@ RCValidationRules:
     findByCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
-

@@ -923,9 +923,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
 validateRCResponse :: MonadFlow m => RCValidationReq -> RCValidationRules -> m [Text]
 validateRCResponse rc rule = do
   now <- getCurrentTime
-  let fuelValid = maybe True (\ft -> Kernel.Prelude.any (`isInfixOf` ft) (T.toLower <$> rule.fuelType)) (T.toLower <$> rc.fuelType)
-      vehicleClassValid = maybe True (\vc -> Kernel.Prelude.any (`isInfixOf` vc) (T.toLower <$> rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
-      manufacturerValid = maybe True (\m -> Kernel.Prelude.any (`isInfixOf` m) (T.toLower <$> rule.vehicleOEM)) (T.toLower <$> rc.manufacturer)
+  let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `isInfixOf` ft) (map T.toLower $ fromMaybe [] rule.fuelType)) (T.toLower <$> rc.fuelType)
+      vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `isInfixOf` vc) (map T.toLower $ fromMaybe [] rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
+      manufacturerValid = maybe True (\m -> isNothing rule.vehicleOEM || Kernel.Prelude.any (\mnRule -> mnRule `isInfixOf` m) (map T.toLower $ fromMaybe [] rule.vehicleOEM)) (T.toLower <$> rc.manufacturer)
       vehicleAge = getVehicleAge rc.mYManufacturing now
       vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
       failures =
