@@ -3,17 +3,16 @@
 module Domain.Action.UI.LiveMap (getLiveMapDrivers) where
 
 import qualified API.Types.UI.LiveMap as Common
---import Servant
-
 import qualified Data.List as L
 import Data.OpenApi (ToSchema)
 import Data.Ord (comparing)
---import Kernel.Utils.Common (fromMaybeM)
 import Data.Time (UTCTime (UTCTime, utctDay), getCurrentTime)
 import Domain.Action.UI.Invoice (getSourceAndDestination)
+import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as DR
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -28,8 +27,10 @@ import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Ride as CHR
 import qualified Storage.Clickhouse.RideDetails as CHRD
+import Storage.Queries.DriverInformationExtra (findByIdAndVerified)
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
+import Tools.Error (DriverInformationError (..))
 
 getLiveMapDrivers ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -48,16 +49,42 @@ getLiveMapDrivers (mbPersonId, _merchantId, _merchantOpCityId) = do
   vehicleNumber <-
     Kernel.Prelude.msum <$> CHRD.findByIdAndVehicleNumber (Kernel.Types.Id.cast ride.id) Nothing
       >>= fromMaybeM (VehicleNotFound $ "for rideId" <> ride.id.getId)
+  driverInformation <- findByIdAndVerified driver.id Nothing >>= fromMaybeM DriverInfoNotFound
+  -- driverStatus <- castDriverStatus driverInformation.mode
+  -- vehicleStatus <- getVehicleStatus driverInformation rideLs
   position <- getDriverCurrentLocation driver.id
   mbBooking <- CHB.findById ride.bookingId
   (source, destination) <- getSourceAndDestination mbBooking
   pure . pure $
     Common.MapDriverInfoRes
       { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
-        driverStatus = Common.ONLINE,
-        rcNo = vehicleNumber,
-        vehicleStatus = Common.OnRide,
+        driverStatus = castDriverStatus driverInformation.mode,
+        vehicleNumber = vehicleNumber,
+        vehicleStatus = getVehicleStatus driverInformation rideLs,
         position = position,
         source = source,
         destination = destination
       }
+  where
+    castDriverStatus = \case
+      Just DCommon.ONLINE -> Common.ONLINE
+      Just DCommon.SILENT -> Common.SILENT
+      _ -> Common.OFFLINE
+    -- getVehicleStatus driverInformation rideLs =
+    --     if driverInformation.active
+    --       then
+    --         if driverInformation.onRide
+    --           then Common.OnRide
+    --           else
+    --             if any (\ride -> ride.status `elem` [Just DR.UPCOMING, Just DR.NEW, Just DR.INPROGRESS]) rideLs
+    --               then Common.TripAssigned
+    --               else Common.Pending
+    --       else Common.InActive
+    getVehicleStatus driverInformation rideLs
+      | not driverInformation.active = Common.InActive
+      | driverInformation.onRide = Common.OnRide
+      | any checkRideStatus rideLs = Common.TripAssigned
+      | otherwise = Common.Pending
+      where
+        checkRideStatus ride = ride.status `elem` activeRideStatuses
+        activeRideStatuses = Just <$> [DR.UPCOMING, DR.NEW, DR.INPROGRESS]

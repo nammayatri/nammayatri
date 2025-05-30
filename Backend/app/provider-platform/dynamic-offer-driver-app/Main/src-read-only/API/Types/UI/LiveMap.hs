@@ -21,7 +21,7 @@ data DriverStatus
 data MapDriverInfoRes = MapDriverInfoRes
   { driverName :: Kernel.Prelude.Text,
     driverStatus :: DriverStatus,
-    rcNo :: Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Text,
     vehicleStatus :: VehicleStatus,
     position :: Kernel.External.Maps.Types.LatLong,
     source :: Kernel.Prelude.Text,
