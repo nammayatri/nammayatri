@@ -1029,8 +1029,8 @@ TransporterConfig:
     safetyTeamNumbers: Maybe [Text]
     weekStartMode : Int
     earningsWindowSize : Int
-
     liveEKD: Maybe Bool
+    deactivateRCOnUnlink: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1431,6 +1431,7 @@ TransporterConfig:
     liveEKD: "false"
     weekStartMode : "3"
     earningsWindowSize : "7"
+    deactivateRCOnUnlink: "true"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
