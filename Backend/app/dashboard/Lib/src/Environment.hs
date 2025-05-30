@@ -112,9 +112,6 @@ data AppEnv = AppEnv
     cacConfig :: CacConfig,
     kafkaProducerTools :: KafkaProducerTools,
     cacAclMap :: [(String, [(String, String)])],
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools,
     passettoContext :: PassettoContext
   }
   deriving (Generic)
@@ -132,9 +129,6 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let modifierFunc = ("dashboard:" <>)
   let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   hedisClusterEnv <-

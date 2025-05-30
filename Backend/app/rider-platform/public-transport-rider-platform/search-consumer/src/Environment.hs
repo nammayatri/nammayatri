@@ -18,7 +18,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
@@ -26,7 +25,6 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -66,10 +64,7 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
     version :: DeploymentVersion,
-    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -80,9 +75,6 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Nothing
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap

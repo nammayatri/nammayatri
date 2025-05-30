@@ -35,7 +35,6 @@ import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.ARTUtils (HasARTFlow)
 import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Kernel.Types.Base64
 import qualified Kernel.Types.CacheFlow as CF
@@ -43,6 +42,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.IOLogging
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import Kernel.Utils.Servant.Server (HasEnvEntry (..), runFlowRDelayedIO)
 import qualified Network.Wai as Wai
@@ -101,7 +101,7 @@ instance
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
     CF.HasCacConfig r,
-    HasARTFlow r,
+    HasLog r,
     HasCoreMetrics r,
     HasCacheConfig r
   ) =>

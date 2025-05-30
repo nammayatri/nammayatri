@@ -75,7 +75,6 @@ import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
 import qualified Storage.Queries.BecknConfig as QBC
-import System.Environment as SE
 import Tools.Error
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -248,9 +247,6 @@ data AppEnv = AppEnv
     cacTenants :: [String],
     superPositionConfig :: CF.SuperPositionConfig,
     collectRouteData :: Bool,
-    shouldLogRequestId :: Bool,
-    requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
@@ -300,10 +296,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
-  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
