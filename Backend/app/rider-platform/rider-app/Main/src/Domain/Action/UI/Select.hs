@@ -261,7 +261,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
-    let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (. noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
+    let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
     QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
     let senderLocationId = searchRequest.fromLocation.id
     receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
