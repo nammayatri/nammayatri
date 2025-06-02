@@ -58,6 +58,7 @@ let eventType =
       | AutoCompleteData
       | RouteCollection
       | EventTracker
+      | MarketingParamsData
       >
 
 let httpClientOptions = { timeoutMs = +200000 }
