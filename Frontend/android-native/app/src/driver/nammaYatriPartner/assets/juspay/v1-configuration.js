@@ -250,15 +250,13 @@ function getNammaYatriConfig() {
           "enableNammaMeter" : {
             "AUTO_RICKSHAW": true,
             "AutoCategory" : true,
-            "CarCategory" : true,
           },
           "openMeter" : {
             "enable" : {
               "AutoCategory" : true,
-              "CarCategory" : true,
             },
             "addDestination" : true,
-            "shareRideTracking" : true
+            "shareRideTracking" : false
           },
           "mapImage" : "ny_ic_bangalore_map",
           "cityCode" : "std:080",
@@ -979,12 +977,10 @@ function getNammaYatriConfig() {
           "enableNammaMeter" : {
             "AUTO_RICKSHAW": true, // Deprecated
             "AutoCategory" : true,
-            "CarCategory" : true,
           },
           "openMeter" : {
             "enable" : {
               "AutoCategory" : true,
-              "CarCategory" : true,
             },
             "addDestination" : true,
             "shareRideTracking" : true
@@ -1700,15 +1696,13 @@ function getNammaYatriConfig() {
           "enableNammaMeter" : {
             "AUTO_RICKSHAW": true, // Deprecated
             "AutoCategory" : true,
-            "CarCategory" : true,
           },
           "openMeter" : {
             "enable" : {
               "AutoCategory" : true,
-              "CarCategory" : true,
             },
             "addDestination" : true,
-            "shareRideTracking" : true
+            "shareRideTracking" : false
           },
           "showSubscriptions" : false,
           "enableAdvancedBooking" : false,

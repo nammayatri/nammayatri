@@ -944,7 +944,7 @@ meterBooking state push =
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , cornerRadius 22.0
-    , onClick push $ const $ SwitchDriverStatus Online DriverStatusChangeMeterRideEntry
+    , onClick push $ const $ GotoMeterRideScreen
     , background Color.white900
     , padding $ Padding 15 11 15 11
     , gravity CENTER
