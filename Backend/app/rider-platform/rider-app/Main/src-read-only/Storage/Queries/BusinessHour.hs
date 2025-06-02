@@ -25,6 +25,9 @@ createMany = traverse_ create
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m ())
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findAllByHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.BusinessHour.BusinessHour])
+findAllByHash hash = do findAllWithKV [Se.Is Beam.hash $ Se.Eq hash]
+
 findAllByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.BusinessHour.BusinessHour])
 findAllByPlaceId placeId = do findAllWithKV [Se.Is Beam.placeId $ Se.Eq placeId]
 
@@ -41,6 +44,7 @@ updateByPrimaryKey (Domain.Types.BusinessHour.BusinessHour {..}) = do
     [ Se.Set Beam.bookingClosingTime bookingClosingTime,
       Se.Set Beam.btype btype,
       Se.Set Beam.categoryId (Kernel.Types.Id.getId <$> categoryId),
+      Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.hash hash,
       Se.Set Beam.name name,
       Se.Set Beam.placeId placeId,

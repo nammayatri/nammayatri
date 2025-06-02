@@ -4,6 +4,7 @@
 module Domain.Types.BusinessHour where
 
 import Data.Aeson
+import qualified Data.Time
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
@@ -15,6 +16,7 @@ data BusinessHour = BusinessHour
   { bookingClosingTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     btype :: Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory],
+    expiryDate :: Kernel.Prelude.Maybe Data.Time.Day,
     hash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

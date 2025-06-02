@@ -339,6 +339,7 @@ createBusinessHour (merchantId, merchantOpCityId) bhDetails placeId = do
         DBusinessHour.merchantId = pure merchantId,
         DBusinessHour.merchantOperatingCityId = pure merchantOpCityId,
         DBusinessHour.hash = Nothing,
+        DBusinessHour.expiryDate = Nothing,
         DBusinessHour.createdAt = now,
         DBusinessHour.updatedAt = now
       }

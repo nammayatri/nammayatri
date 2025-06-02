@@ -1,13 +1,16 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.TicketRule.Core where
 
 import Data.Aeson
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Parser, parseEither)
 import Data.Time (Day (..), TimeOfDay (..), fromGregorian)
 import GHC.Generics
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data Rule = Rule
   { condition :: Condition,
@@ -431,6 +434,8 @@ instance FromJSON Rule where
     timezone <- obj .: "timezone"
     pure $ Rule condition action timezone
 
+$(mkHttpInstancesForEnum ''Weekday)
+
 -- |
 -- JSON Structure Documentation for Rule Type
 --
@@ -475,12 +480,8 @@ testRuleJSON :: IO ()
 testRuleJSON = do
   let rule =
         Rule
-          ( And
-              [ Weekday [Monday, Tuesday, Wednesday, Thursday, Friday],
-                TimeOfDayRange [(TimeOfDay 9 0 0, TimeOfDay 17 0 0)]
-              ]
-          )
-          (Action (PricingIncreaseBy 1.5))
+          (Weekday [Monday, Tuesday, Wednesday, Thursday, Friday])
+          (Action (PricingIncreaseBy 10))
           330 -- IST timezone (+5:30)
   putTextLn "JSON representation of rule:"
   let jsonValue = encode rule
@@ -496,3 +497,38 @@ testRuleJSON = do
         if decodedRule == rule
           then "Success: Original and decoded rules match!"
           else "Error: Original and decoded rules don't match!"
+
+-- Test function for a single specific Rule instance (matching user's example)
+testSingleRuleJSON :: IO ()
+testSingleRuleJSON = do
+  let exampleRule =
+        Rule
+          { condition = Weekday [Monday, Tuesday, Wednesday, Thursday, Friday],
+            action =
+              Action
+                { actionType = PricingIncreaseBy 10
+                },
+            timezone = 330
+          }
+
+  putTextLn "\n--- Testing Single Rule (User Example) using toJSON/fromJSON ---"
+  putTextLn "Original Rule Value:"
+  print exampleRule
+
+  putTextLn "\nConverting to Aeson Value using toJSON:"
+  let aesonValue = toJSON exampleRule
+  -- For printing the Value as a JSON string:
+  putTextLn "Aeson Value (encoded to JSON string for display):"
+  putTextLn $ decodeUtf8 $ encode aesonValue
+
+  putTextLn "\nAttempting to parse Aeson Value back to Rule using fromJSON (via parseEither parseJSON):"
+  case parseEither parseJSON aesonValue of
+    Left err -> putTextLn $ "Error parsing Aeson Value: " <> show err
+    Right decodedRule -> do
+      putTextLn "\nParsed rule value:"
+      print decodedRule
+      putTextLn "\nVerification of single rule (toJSON/fromJSON):"
+      if decodedRule == exampleRule
+        then putTextLn "Success: Original and parsed single rule match!"
+        else putTextLn "Error: Original and parsed single rule do NOT match!"
+  putTextLn "--- End of Single Rule Test (toJSON/fromJSON) ---"

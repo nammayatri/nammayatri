@@ -3,6 +3,7 @@
 
 module Storage.Beam.BusinessHour where
 
+import qualified Data.Time
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
 import Domain.Types.Common ()
@@ -15,6 +16,7 @@ data BusinessHourT f = BusinessHourT
   { bookingClosingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: B.C f [Kernel.Prelude.Text],
+    expiryDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     hash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

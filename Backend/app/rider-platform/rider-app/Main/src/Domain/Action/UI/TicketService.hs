@@ -3,16 +3,17 @@ module Domain.Action.UI.TicketService where
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import API.Types.UI.TicketService
+import qualified Crypto.Hash as Hash
+import Data.Aeson (encode)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Data.List (partition)
 import qualified Data.Map as Map
 import Data.Ord as DO
-import qualified Data.Text as Data.Text
+import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
---import qualified Data.Set as Set
---import Data.Maybe (catMaybes, listToMaybe)
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
@@ -192,7 +193,7 @@ getTicketPlacesServices _ placeId mbDate = do
               )
             ],
             [ ( Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
-                Domain.Types.BusinessHour.BusinessHourType
+                SharedLogic.TicketRule.Core.BusinessHourDef
               )
             ]
           )
@@ -205,7 +206,13 @@ getTicketPlacesServices _ placeId mbDate = do
       let categoriesWithBHOverrides = filter (\(c, _) -> not c.isClosed) categoriesWithBHOverrides'
       let categories = fst <$> categoriesWithBHOverrides
       let remainingBHOverrides = map (\(c, ov) -> (c.id, ov)) categoriesWithBHOverrides
-      let svcWrtBhs = map (\c -> (c.id, businessHour.btype)) categories
+      let svcWrtBhs =
+            map
+              ( \c ->
+                  let coreBHDef = SharedLogic.TicketRule.Core.BusinessHourDef (convertDomainBHTtoCoreBHT businessHour.btype) businessHour.bookingClosingTime
+                   in (c.id, coreBHDef)
+              )
+              categories
       pure $
         ( BusinessHourResp
             { id = bhId,
@@ -732,7 +739,7 @@ postTicketBookingsVerify _ = processBookingService
             _ -> Nothing
         Nothing -> Nothing
 
-    verificationMsg :: TicketVerificationStatus -> Data.Text.Text
+    verificationMsg :: TicketVerificationStatus -> T.Text
     verificationMsg BookingSuccess = "Validated successfully!"
     verificationMsg BookingExpired = "Booking Expired!"
     verificationMsg BookingFuture = "Booking for Later Date!"
@@ -1259,7 +1266,7 @@ blockSeats personId visitDate requestedUnits = do
       releaseBlock personId visitDate (map fst successfulBlocks)
       return $ BlockFailed (getErrorMessage $ snd <$> failedBlocks)
   where
-    getErrorMessage failedBlocks = Data.Text.intercalate "\n" [msg | BlockFailed msg <- failedBlocks]
+    getErrorMessage failedBlocks = T.intercalate "\n" [msg | BlockFailed msg <- failedBlocks]
 
 bookAndReleaseBlock :: Kernel.Types.Id.Id Domain.Types.Person.Person -> DTB.TicketBookingServiceCategory -> Environment.Flow LockBookingResult
 bookAndReleaseBlock personId tbsc = withLogTag "Redis" $ do
@@ -1499,67 +1506,81 @@ checkForBusinessHourOverrides ::
       ],
       [ ( Kernel.Types.Id.Id
             Domain.Types.ServiceCategory.ServiceCategory,
-          Domain.Types.BusinessHour.BusinessHourType -- This original BHT list is not directly used if an override is found
+          SharedLogic.TicketRule.Core.BusinessHourDef
         )
       ]
     )
   ] ->
   Environment.Flow (Maybe [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour])
-checkForBusinessHourOverrides _service _overrideDataList = do
-  return Nothing
+checkForBusinessHourOverrides _service overrideDataList = do
+  let (allScActionPairsNested, allScToOriginalBhtPairsNested) = (second concat . first (filter (isJust . snd) . concat) . unzip) overrideDataList
+  let allScWithOverrideBHDefs ::
+        [ ( Kernel.Types.Id.Id
+              Domain.Types.ServiceCategory.ServiceCategory,
+            [SharedLogic.TicketRule.Core.BusinessHourDef]
+          )
+        ] = map (\(scId, actions) -> (scId, maybe [] extractBusinessHrs actions)) allScActionPairsNested
 
--- let (allScActionPairsNested, allScToOriginalBhtPairsNested) = unzip overrideDataList
--- let flatScActionPairs = concat allScActionPairsNested
--- let flatScToOriginalBhtPairs = concat allScToOriginalBhtPairsNested
+  -- make a 2 maps one for orginial , and another for override Map ScId (Set BhDEf)
+  let originalBHDefs = Map.fromListWith Set.union $ map (\(scId, bhs) -> (scId.getId, Set.singleton bhs)) allScToOriginalBhtPairsNested
+  let overrideBHDefs = Map.fromListWith Set.union $ map (\(scId, bhs) -> (scId.getId, Set.fromList bhs)) allScWithOverrideBHDefs
 
--- let scToOriginalBHTs :: Map.Map (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory) (Set.Set Domain.Types.BusinessHour.BusinessHourType)
---     scToOriginalBHTs = Map.fromListWith Set.union $ map (\(scId, bht) -> (scId, Set.singleton bht)) flatScToOriginalBhtPairs
+  if not $ Map.null overrideBHDefs
+    then do
+      let finalBHDefs = Map.unionWith (\_ override -> override) originalBHDefs overrideBHDefs
+      let hashDigest = sha1 finalBHDefs
+      allHashedBHs <- QBH.findAllByHash (Just hashDigest)
+      if null allHashedBHs then do createHashedBHs hashDigest finalBHDefs else pure Nothing
+    else return Nothing
+  where
+    createHashedBHs :: Text -> Map.Map Text (Set.Set SharedLogic.TicketRule.Core.BusinessHourDef) -> Environment.Flow (Maybe [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour])
+    createHashedBHs hashDigest localFinalBHDefs = do
+      let allBhDefScIdPairs =
+            concatMap
+              ( \(scIdText, bhDefSet) ->
+                  map (\bhDef -> (bhDef, scIdText)) (Set.toList bhDefSet)
+              )
+              (Map.toList localFinalBHDefs)
+      let bhDefToScIdsMap = Map.fromListWith (++) $ map (\(bhDef, scIdText) -> (bhDef, [scIdText])) allBhDefScIdPairs
+      newBhIds <- forM (Map.toList bhDefToScIdsMap) $ \(coreBhDef, serviceCatIdTexts) -> do
+        newBhId <- generateGUID
+        now <- getCurrentTime
+        let newBusinessHour =
+              Domain.Types.BusinessHour.BusinessHour
+                { id = newBhId,
+                  btype = convertCoreBHTtoDomainBHT coreBhDef.btype,
+                  categoryId = map Kernel.Types.Id.Id serviceCatIdTexts,
+                  hash = Just hashDigest,
+                  expiryDate = Just $ addDays 5 (utctDay now),
+                  name = Nothing,
+                  placeId = Nothing,
+                  bookingClosingTime = coreBhDef.bookingClosingTime,
+                  merchantId = Nothing,
+                  merchantOperatingCityId = Nothing,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        QBH.create newBusinessHour
+        pure newBhId
+      pure $ Just newBhIds
 
--- let initialScBhtMap :: Map.Map (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory) Domain.Types.BusinessHour.BusinessHourType
---     initialScBhtMap = Map.mapMaybe (\bhtSet -> if Set.size bhtSet == 1 then Just (Set.elemAt 0 bhtSet) else Nothing) scToOriginalBHTs
+    extractBusinessHrs :: [SharedLogic.TicketRule.Core.ActionType] -> [SharedLogic.TicketRule.Core.BusinessHourDef]
+    extractBusinessHrs x =
+      concat $
+        mapMaybe
+          ( \case
+              SharedLogic.TicketRule.Core.OverrideBusinessHours bhs -> if bhs.serviceId == Kernel.Types.Id.getId _service.id then pure bhs.businessHours else Nothing
+              _ -> Nothing
+          )
+          x
 
--- let scIdsWithActions = Set.toList $ Set.fromList $ map fst flatScActionPairs
--- error "Not implemented"
--- let (finalScBhtMap, processedOverrides) =
---       foldl -- Changed from foldl' to foldl due to import constraints
---         ( \(currentMap, currentOverridesFlag) scId ->
---             let actionsForScId = catMaybes $ map (\(sId, mActions) -> if sId == scId then mActions else Nothing) flatScActionPairs
---                 allActions = concat actionsForScId
---                 -- Assuming newBhtVal is the payload from the ActionType constructor
---                 mOverrideActionPayload = listToMaybe [newBhtVal | SharedLogic.TicketRule.Core.OverrideBusinessHours newBhtVal <- allActions]
---              in case mOverrideActionPayload of
---                   -- Unwrap the payload here. Assuming the newtype and its constructor are both SharedLogic.TicketRule.Core.OverrideBusinessHour
---                   Just (SharedLogic.TicketRule.Core.OverrideBusinessHour _ actualDomainBht) ->
---                       (Map.insert scId actualDomainBht currentMap, True)
---                   Just _ -> (currentMap, currentOverridesFlag || False) -- Should not happen if the above pattern is exhaustive for overrides
---                   Nothing -> (currentMap, currentOverridesFlag || False)
---         )
---         (initialScBhtMap, False)
---         scIdsWithActions
+convertCoreBHTtoDomainBHT :: SharedLogic.TicketRule.Core.BusinessHourType -> Domain.Types.BusinessHour.BusinessHourType
+convertCoreBHTtoDomainBHT (SharedLogic.TicketRule.Core.Slot t) = Domain.Types.BusinessHour.Slot t
+convertCoreBHTtoDomainBHT (SharedLogic.TicketRule.Core.Duration st ed) = Domain.Types.BusinessHour.Duration st ed
 
--- if not processedOverrides
---   then pure Nothing
---   else do
---     let bhtToScIdsMap :: Map.Map Domain.Types.BusinessHour.BusinessHourType [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory]
---         bhtToScIdsMap = Map.fromListWith (++) $ map (\(scId, bht) -> (bht, [scId])) (Map.toList finalScBhtMap)
+convertDomainBHTtoCoreBHT :: Domain.Types.BusinessHour.BusinessHourType -> SharedLogic.TicketRule.Core.BusinessHourType
+convertDomainBHTtoCoreBHT (Domain.Types.BusinessHour.Slot t) = SharedLogic.TicketRule.Core.Slot t
+convertDomainBHTtoCoreBHT (Domain.Types.BusinessHour.Duration st ed) = SharedLogic.TicketRule.Core.Duration st ed
 
---     newBhIds <- forM (Map.toList bhtToScIdsMap) $ \(bht, scIds) -> do
---       newBhId <- generateGUID
---       now <- getCurrentTime
---       let newBusinessHour = Domain.Types.BusinessHour.BusinessHour
---             { id = newBhId,
---               btype = bht,
---               categoryId = sort scIds,
---               hash = Nothing,
---               name = Nothing,
---               placeId = Nothing,
---               bookingClosingTime = Nothing,
---               merchantId = Nothing,
---               merchantOperatingCityId = Nothing,
---               createdAt = now,
---               updatedAt = now
---             }
---       QBH.create newBusinessHour
---       pure newBhId
-
---     pure $ Just newBhIds
+sha1 :: ToJSON a => a -> Text
+sha1 = T.pack . show . Hash.hashWith Hash.SHA1 . BS.toStrict . encode
