@@ -27,6 +27,7 @@ data TicketPlace = TicketPlace
     openTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     placeType :: Domain.Types.TicketPlace.PlaceType,
     priority :: Kernel.Prelude.Int,
+    recommend :: Kernel.Prelude.Bool,
     rules :: Kernel.Prelude.Maybe [SharedLogic.TicketRule.Core.Rule],
     shortDesc :: Kernel.Prelude.Text,
     status :: Domain.Types.TicketPlace.PlaceStatus,

@@ -1056,7 +1056,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           lon :: Maybe Double = readMaybeCSVField idx row.lon "Longitude"
           mapImageUrl :: Maybe Text = cleanMaybeCSVField idx row.mapImageUrl "Map Image URL"
           termsAndConditionsUrl :: Maybe Text = cleanMaybeCSVField idx row.termsAndConditionsUrl "Terms and conditions URL"
-          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, ..}
+          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, recommend = False, ..}
 
       ------------- TicketService --------------------------------------------------
       service <- cleanCSVField idx row.svc "Service"

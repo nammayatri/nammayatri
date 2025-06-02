@@ -15,6 +15,7 @@ module Domain.Action.Dashboard.AppManagement.EventManagement
     postEventManagementTicketdashboardTicketPlaceCategoryDelPeople,
     getEventManagementTicketdashboardTicketplaceDrafts,
     postEventManagementTicketdashboardTicketplaceCancelSubmitDraft,
+    postEventManagementTicketdashboardTicketplaceRecommend,
     getTicketDef,
     checkAccess,
   )
@@ -52,6 +53,7 @@ import qualified "this" Domain.Types.TicketService
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id (Id (..))
@@ -188,6 +190,20 @@ getEventManagementTicketdashboardTicketplaceDrafts _merchantShortId _opCity requ
   unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Requestor does not have this access"
   drafts <- QDTC.findAllByStatus (pure limit) (pure offset) status
   return $ catMaybes $ map (.draftPayload) drafts
+
+postEventManagementTicketdashboardTicketplaceRecommend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> [API.Types.Dashboard.AppManagement.EventManagement.RecommendToggleReq] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceRecommend _merchantShortId _opCity requestorId requestorRole req = do
+  _reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Requestor does not have this access"
+  forM_ req $ \r -> QTicketPlace.updateRecommendById r.recommend r.placeId
+  m <- findMerchantByShortId _merchantShortId
+  let redisKey = makeRecommendedTicketPlacesKey m.id
+  _ <- Hedis.del redisKey
+  return Kernel.Types.APISuccess.Success
+  where
+    makeRecommendedTicketPlacesKey :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Text
+    makeRecommendedTicketPlacesKey merchantId = "AttractionRecommend:mid-" <> merchantId.getId
 
 newTicketPlaceDef :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.BasicInformation -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow DEM.TicketPlaceDef
 newTicketPlaceDef requestorId requestorRole basicInfo merchantId merchantOperatingCityId = do
@@ -559,7 +575,8 @@ applyDraftChanges draftChange = do
             merchantOperatingCityId = fromMaybe mocityId (existingTicketPlace <&> (.merchantOperatingCityId)),
             createdAt = now,
             updatedAt = now,
-            rules = ticketDef.rules
+            rules = ticketDef.rules,
+            recommend = fromMaybe False (existingTicketPlace <&> (.recommend))
           }
   case existingTicketPlace of
     Just extTP -> do

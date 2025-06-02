@@ -28,6 +28,7 @@ data TicketPlaceT f = TicketPlaceT
     openTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     placeType :: B.C f Domain.Types.TicketPlace.PlaceType,
     priority :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    recommend :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rules :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     shortDesc :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.TicketPlace.PlaceStatus,

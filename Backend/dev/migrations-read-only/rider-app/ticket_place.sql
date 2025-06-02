@@ -63,3 +63,8 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN custom_tabs json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN rules json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN recommend boolean ;

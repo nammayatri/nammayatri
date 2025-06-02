@@ -53,6 +53,7 @@ TicketPlace:
     priority: Int
     customTabs: "Maybe [CustomTab]"
     rules: "Maybe [Rule]"
+    recommend: Bool
 
   types:
     PlaceType:
@@ -68,6 +69,7 @@ TicketPlace:
     priority: Maybe Int
     customTabs: "Maybe Value"
     rules: "Maybe Value"
+    recommend: Maybe Bool
 
   sqlType:
     customTabs: json
@@ -77,10 +79,12 @@ TicketPlace:
     priority: Kernel.Prelude.fromMaybe 0|I
     customTabs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    recommend: fromMaybe False recommend|E
   toTType:
     priority: Kernel.Prelude.Just|I
     customTabs: Data.Aeson.toJSON <$> customTabs|E
     rules: Data.Aeson.toJSON <$> rules|E
+    recommend: Kernel.Prelude.Just|I
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
@@ -110,6 +114,13 @@ TicketPlace:
     updateGalleryById:
       kvFunction: updateOneWithKV
       params: [gallery]
+      where: id
+    findAllRecommendationTicketPlaces:
+      kvFunction: findAllWithKV
+      where: recommend
+    updateRecommendById:
+      kvFunction: updateOneWithKV
+      params: [recommend]
       where: id
 
 TicketService:

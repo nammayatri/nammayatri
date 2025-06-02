@@ -23,6 +23,10 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data RecommendToggleReq = RecommendToggleReq {placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace, recommend :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ReviewDraftReq = ReviewDraftReq {message :: Kernel.Prelude.Maybe Kernel.Prelude.Text, status :: ReviewStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -33,7 +37,7 @@ data ReviewStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-type API = (GetEventManagementTicketdashboardTicketplaceDef :<|> PostEventManagementTicketdashboardTicketplaceCleardraft :<|> PostEventManagementTicketdashboardTicketplaceSubmitDraft :<|> PostEventManagementTicketdashboardTicketplaceCancelSubmitDraft :<|> PostEventManagementTicketdashboardTicketplaceReviewDraft :<|> PostEventManagementTicketdashboardTicketplaceCreate :<|> PostEventManagementTicketdashboardTicketplaceUpdateBasicInfo :<|> PostEventManagementTicketdashboardTicketplaceUpdateService :<|> PostEventManagementTicketdashboardTicketplaceDelService :<|> PostEventManagementTicketdashboardTicketplaceServiceUpdateCategory :<|> PostEventManagementTicketdashboardTicketplaceServiceDelCategory :<|> PostEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :<|> PostEventManagementTicketdashboardTicketPlaceCategoryDelPeople :<|> GetEventManagementTicketdashboardTicketplaceDrafts)
+type API = (GetEventManagementTicketdashboardTicketplaceDef :<|> PostEventManagementTicketdashboardTicketplaceCleardraft :<|> PostEventManagementTicketdashboardTicketplaceSubmitDraft :<|> PostEventManagementTicketdashboardTicketplaceCancelSubmitDraft :<|> PostEventManagementTicketdashboardTicketplaceReviewDraft :<|> PostEventManagementTicketdashboardTicketplaceCreate :<|> PostEventManagementTicketdashboardTicketplaceUpdateBasicInfo :<|> PostEventManagementTicketdashboardTicketplaceUpdateService :<|> PostEventManagementTicketdashboardTicketplaceDelService :<|> PostEventManagementTicketdashboardTicketplaceServiceUpdateCategory :<|> PostEventManagementTicketdashboardTicketplaceServiceDelCategory :<|> PostEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :<|> PostEventManagementTicketdashboardTicketPlaceCategoryDelPeople :<|> GetEventManagementTicketdashboardTicketplaceDrafts :<|> PostEventManagementTicketdashboardTicketplaceRecommend)
 
 type GetEventManagementTicketdashboardTicketplaceDef =
   ( "ticketdashboard" :> "ticketplace"
@@ -292,6 +296,17 @@ type GetEventManagementTicketdashboardTicketplaceDrafts =
            [Domain.Types.EventManagement.TicketPlaceDef]
   )
 
+type PostEventManagementTicketdashboardTicketplaceRecommend =
+  ( "ticketdashboard" :> "ticketplace" :> "recommend" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam
+           "requestorRole"
+           Domain.Types.MerchantOnboarding.RequestorRole
+      :> ReqBody '[JSON] [RecommendToggleReq]
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data EventManagementAPIs = EventManagementAPIs
   { getEventManagementTicketdashboardTicketplaceDef :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.EventManagement.TicketPlaceDef,
     postEventManagementTicketdashboardTicketplaceCleardraft :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -306,13 +321,14 @@ data EventManagementAPIs = EventManagementAPIs
     postEventManagementTicketdashboardTicketplaceServiceDelCategory :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.EventManagement.TicketPlaceDef,
     postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Domain.Types.EventManagement.ServicePeopleCategoryDef -> EulerHS.Types.EulerClient Domain.Types.EventManagement.TicketPlaceDef,
     postEventManagementTicketdashboardTicketPlaceCategoryDelPeople :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.EventManagement.TicketPlaceDef,
-    getEventManagementTicketdashboardTicketplaceDrafts :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Domain.Types.DraftTicketChange.DraftStatus -> EulerHS.Types.EulerClient [Domain.Types.EventManagement.TicketPlaceDef]
+    getEventManagementTicketdashboardTicketplaceDrafts :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Domain.Types.DraftTicketChange.DraftStatus -> EulerHS.Types.EulerClient [Domain.Types.EventManagement.TicketPlaceDef],
+    postEventManagementTicketdashboardTicketplaceRecommend :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> [RecommendToggleReq] -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkEventManagementAPIs :: (Client EulerHS.Types.EulerClient API -> EventManagementAPIs)
 mkEventManagementAPIs eventManagementClient = (EventManagementAPIs {..})
   where
-    getEventManagementTicketdashboardTicketplaceDef :<|> postEventManagementTicketdashboardTicketplaceCleardraft :<|> postEventManagementTicketdashboardTicketplaceSubmitDraft :<|> postEventManagementTicketdashboardTicketplaceCancelSubmitDraft :<|> postEventManagementTicketdashboardTicketplaceReviewDraft :<|> postEventManagementTicketdashboardTicketplaceCreate :<|> postEventManagementTicketdashboardTicketplaceUpdateBasicInfo :<|> postEventManagementTicketdashboardTicketplaceUpdateService :<|> postEventManagementTicketdashboardTicketplaceDelService :<|> postEventManagementTicketdashboardTicketplaceServiceUpdateCategory :<|> postEventManagementTicketdashboardTicketplaceServiceDelCategory :<|> postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :<|> postEventManagementTicketdashboardTicketPlaceCategoryDelPeople :<|> getEventManagementTicketdashboardTicketplaceDrafts = eventManagementClient
+    getEventManagementTicketdashboardTicketplaceDef :<|> postEventManagementTicketdashboardTicketplaceCleardraft :<|> postEventManagementTicketdashboardTicketplaceSubmitDraft :<|> postEventManagementTicketdashboardTicketplaceCancelSubmitDraft :<|> postEventManagementTicketdashboardTicketplaceReviewDraft :<|> postEventManagementTicketdashboardTicketplaceCreate :<|> postEventManagementTicketdashboardTicketplaceUpdateBasicInfo :<|> postEventManagementTicketdashboardTicketplaceUpdateService :<|> postEventManagementTicketdashboardTicketplaceDelService :<|> postEventManagementTicketdashboardTicketplaceServiceUpdateCategory :<|> postEventManagementTicketdashboardTicketplaceServiceDelCategory :<|> postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :<|> postEventManagementTicketdashboardTicketPlaceCategoryDelPeople :<|> getEventManagementTicketdashboardTicketplaceDrafts :<|> postEventManagementTicketdashboardTicketplaceRecommend = eventManagementClient
 
 data EventManagementUserActionType
   = GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEF
@@ -329,6 +345,7 @@ data EventManagementUserActionType
   | POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_UPDATE_PEOPLE
   | POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_DEL_PEOPLE
   | GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DRAFTS
+  | POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_RECOMMEND
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

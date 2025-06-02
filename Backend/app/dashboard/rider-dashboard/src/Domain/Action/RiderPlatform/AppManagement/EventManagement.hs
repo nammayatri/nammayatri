@@ -15,6 +15,7 @@ module Domain.Action.RiderPlatform.AppManagement.EventManagement
     postEventManagementTicketdashboardTicketPlaceCategoryDelPeople,
     postEventManagementTicketdashboardTicketplaceCancelSubmitDraft,
     getEventManagementTicketdashboardTicketplaceDrafts,
+    postEventManagementTicketdashboardTicketplaceRecommend,
   )
 where
 
@@ -139,3 +140,10 @@ getEventManagementTicketdashboardTicketplaceDrafts merchantShortId opCity apiTok
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.eventManagementDSL.getEventManagementTicketdashboardTicketplaceDrafts) (Just requestorId) (Just requestorRole) limit offset status
+
+postEventManagementTicketdashboardTicketplaceRecommend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> [API.Types.Dashboard.AppManagement.EventManagement.RecommendToggleReq] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceRecommend merchantShortId opCity apiTokenInfo _requestorId _requestorRole req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  requestorRole <- getDashboardAccessType requestorId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.eventManagementDSL.postEventManagementTicketdashboardTicketplaceRecommend) (Just requestorId) (Just requestorRole) req
