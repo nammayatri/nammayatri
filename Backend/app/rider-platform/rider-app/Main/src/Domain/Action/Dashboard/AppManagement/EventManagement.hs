@@ -24,7 +24,7 @@ import qualified API.Types.Dashboard.AppManagement.Endpoints.EventManagement as 
 import qualified API.Types.Dashboard.AppManagement.EventManagement
 import API.Types.Dashboard.AppManagement.TicketDashboard as DTD
 import Control.Monad.Extra (concatMapM)
-import Data.List (nub, (\\))
+import Data.List (nub, nubBy, (\\))
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -567,7 +567,7 @@ applyDraftChanges draftChange = do
       QTicketPlace.updateByPrimaryKey ticketPlaceData
     Nothing -> QTicketPlace.create (ticketPlaceData {DTicketPlace.status = DTicketPlace.Unpublished})
 
-  mapM_ processServicePeopleCategory ticketDef.servicePeopleCategories
+  mapM_ processServicePeopleCategory (nubBy (\a b -> a.id == b.id) ticketDef.servicePeopleCategories)
 
   mapM_ processServiceCategory ticketDef.serviceCategories
 
