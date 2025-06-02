@@ -189,6 +189,7 @@ library
       Domain.Action.Internal.StopEvents
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
+      Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
       Domain.Action.UI.Booking
       Domain.Action.UI.Cac
@@ -582,6 +583,7 @@ library
       API.Action.Dashboard.RideBooking.Registration
       API.Action.Dashboard.RideBooking.Search
       API.Action.Dashboard.RideBooking.Select
+      API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
       API.Action.UI.CRIS
@@ -641,6 +643,7 @@ library
       API.Types.Dashboard.RideBooking.Registration
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
+      API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral

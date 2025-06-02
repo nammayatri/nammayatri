@@ -274,7 +274,8 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.customTabs = Nothing,
         DTicketPlace.createdAt = now,
         DTicketPlace.updatedAt = now,
-        DTicketPlace.rules = Nothing
+        DTicketPlace.rules = Nothing,
+        DTicketPlace.recommend = False
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService

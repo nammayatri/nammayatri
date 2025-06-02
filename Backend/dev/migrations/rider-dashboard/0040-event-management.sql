@@ -30,3 +30,7 @@ INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_acc
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CANCEL_SUBMIT_DRAFT', now(), now()),
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_REVIEW_DRAFT', now(), now()),
     (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DRAFTS', now(), now());
+
+-- Recommendation APIs for TICKET_DASHBOARD_ADMIN role
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at) VALUES
+    (atlas_bap_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4903', 'DSL', 'USER_FULL_ACCESS', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_RECOMMEND', now(), now());

@@ -205,8 +205,20 @@ apis:
         - limit: Int
         - offset: Int
         - status: DraftStatus
-
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/recommend
+      auth: ApiAuthV2
+      request:
+        type: "[RecommendToggleReq]"
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
 types:
+  RecommendToggleReq:
+    - placeId: Id TicketPlace
+    - recommend: Bool
   ReviewStatus:
     enum: "APPROVE,REJECT"
     derive: "HttpInstance"
