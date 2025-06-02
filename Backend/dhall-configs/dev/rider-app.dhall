@@ -93,6 +93,12 @@ let autoCompleteKafkaConfig
       , kafkaKey = "rider-app-autocomplete-events"
       }
 
+let marketingParamsKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsData"
+      , kafkaKey = "rider-app-marketing-events"
+      }
+
 let routeDataKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "RouteCollection"
@@ -156,6 +162,11 @@ let eventStreamMappings =
         , streamConfig =
             globalCommon.streamConfig.KafkaStream routeDataKafkaConfig
         , eventTypes = [ globalCommon.eventType.RouteCollection ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream marketingParamsKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsData ]
         }
       ]
 
