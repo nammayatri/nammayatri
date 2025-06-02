@@ -7,7 +7,7 @@ import SharedLogic.External.Nandi.Types
 
 type NandiPatternsAPI = "patterns" :> Capture "gtfs_id" Text :> Get '[JSON] [NandiPattern]
 
-type NandiGetSpecificPatternAPI = "patterns" :> Capture "patternId" Text :> Get '[JSON] NandiPatternDetails
+type NandiGetSpecificPatternAPI = "pattern" :> Capture "patternId" Text :> Get '[JSON] NandiPatternDetails
 
 type RoutesAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [NandiRoutesRes]
 
