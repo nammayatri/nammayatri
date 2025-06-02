@@ -140,9 +140,6 @@ data AppEnv = AppEnv
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    requestId :: Maybe Text,
-    shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools,
     cacConfig :: CacConfig,
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     isShuttingDown :: Shutdown,
@@ -185,9 +182,6 @@ buildAppEnv AppCfg {..} consumerType = do
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
-  let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Nothing
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

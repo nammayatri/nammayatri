@@ -3593,15 +3593,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1748509686,
-        "narHash": "sha256-ty8YRNLWH83JBRVMdpzWTec4gd9pvEAD51Mx3mURIjw=",
+        "lastModified": 1748539665,
+        "narHash": "sha256-qadFPlPb2L2zDVHILGbku6GptMUKcyniZxkdY4RY40A=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "8fe2f4845fb59c12ae08c1c4d16bffc6ec6a63fb",
+        "rev": "12c6a955189f058c2f0516d9a5447ee048b96e86",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "ref/removing-redundant-ART-code",
         "repo": "shared-kernel",
         "type": "github"
       }

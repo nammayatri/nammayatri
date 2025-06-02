@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/ref/removing-redundant-ART-code";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
