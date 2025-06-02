@@ -914,6 +914,7 @@ gotoRecenterAndSupport state push =
         , gravity CENTER_VERTICAL
         ][
         locationUpdateView push state
+          , if showMeterBooking then meterBooking state push else noView
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
             then gotoButton push state else linearLayout[][]
           , if hotspotsRemoteConfig.enableHotspotsFeature then seeNearbyHotspots state push else noView
@@ -926,6 +927,15 @@ gotoRecenterAndSupport state push =
   where
     showReportText = state.props.currentStage == ST.HomeScreen
     centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen && state.data.config.gotoConfig.enableGoto
+    showMeterBooking =
+      let
+        vechicleVariant = getValueToLocalStore VEHICLE_VARIANT
+        vehicleCategory = show $ fromMaybe ST.CarCategory $ getCategoryFromVariant vechicleVariant
+        openMeterConfig = maybe empty (\openMeterConfig -> fromMaybe empty openMeterConfig.enable) state.data.cityConfig.openMeter
+        mbEnableOpenMeter = lookup vehicleCategory openMeterConfig
+        isTamilNaduCity = elem (getValueToLocalStore DRIVER_LOCATION) ["Chennai", "Trichy"]
+      in
+        (not isTamilNaduCity) && (fromMaybe false $ mbEnableOpenMeter)
 
 meterBooking :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 meterBooking state push =
@@ -934,26 +944,27 @@ meterBooking state push =
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , cornerRadius 22.0
-    , onClick push $ const $ GotoMeterRideScreen
-    , background Color.blue800
+    , onClick push $ const $ SwitchDriverStatus Online DriverStatusChangeMeterRideEntry
+    , background Color.white900
     , padding $ Padding 15 11 15 11
     , gravity CENTER
     , stroke $ "1,"<> Color.grey900
     , rippleColor Color.rippleShade
     , margin $ MarginRight 8
-    ][ imageView
+    ][
+      imageView
         [ width $ V 15
         , height $ V 15
-        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_open_meter_icon"
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_open_meter_icon_black900"
+        , margin $ MarginRight 4
         ]
-      , textView $
+    , textView $
         [ weight 1.0
-        , text $ getString NAMMA_METER
+        , text $ getStringV2 open_meter
         , gravity CENTER
-        , margin $ MarginLeft 6
-         , color Color.white900
+         , color Color.black900
         , padding $ PaddingBottom 3
-        ] <> FontStyle.body37 TypoGraphy
+        ] <> FontStyle.tags TypoGraphy
     ]
 
 locationUpdateView :: forall w .(Action -> Effect Unit) -> HomeScreenState  ->  PrestoDOM (Effect Unit) w
@@ -1023,6 +1034,8 @@ addAadhaarOrOTPView state push =
     showOpenMeter =
       let
         vehicleVariant = getValueToLocalStore VEHICLE_VARIANT
+        city = getValueToLocalStore DRIVER_LOCATION
+        isTamilNaduCity = elem city ["Chennai", "Trichy"]
         vehicleCategory = show $ fromMaybe ST.CarCategory $ getCategoryFromVariant vehicleVariant
         openMeterConfig = maybe empty (\openMeterConfig -> fromMaybe empty openMeterConfig.enable) state.data.cityConfig.openMeter
         mbEnableOpenMeter = lookup vehicleCategory openMeterConfig
@@ -1030,6 +1043,7 @@ addAadhaarOrOTPView state push =
         (fromMaybe false mbEnableOpenMeter)
         && state.props.currentStage == ST.HomeScreen
         && state.props.statusOnline
+        && isTamilNaduCity
 
 meterRideButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 meterRideButtonView state push =
@@ -1048,7 +1062,7 @@ meterRideButtonView state push =
     , rippleColor Color.rippleShade
     , margin $ MarginLeft 10
     , gravity CENTER
-    ] <> if isTamilNaduCity then [gradient $ Linear 90.0 ["#E21AE3", "#F7065A", "#EF062B", "#FC2308", "#FB540A"]] else [background "#299921"])
+    ] <> if isTamilNaduCity then [gradient $ Linear 90.0 ["#E21AE3", "#F7065A", "#EF062B", "#FC2308", "#FB540A"]] else [background "#232323"])
     $
     (if isTamilNaduCity then [openMeterLogoView "ny_ic_tn_open_meter_icon_white"] else []) <>
     [ textView $
@@ -1056,7 +1070,7 @@ meterRideButtonView state push =
         , color Color.white900
         , singleLine true
         , gravity CENTER
-        , margin $ Margin 5 0 0 2
+        , margin $ Margin 5 0 0 1
         ] <> (FontStyle.tags TypoGraphy)
       , imageView
         [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_white"
@@ -2484,7 +2498,7 @@ offlineNavigationLinks push state =
     ]
     where
       navLinksArray = [
-        {title : "Open Meter", icon : "", action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
+        {title : "Open Meter", icon : meterIcon, action : (SwitchDriverStatus Online DriverStatusChangeMeterRideEntry), color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
         {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
@@ -2518,6 +2532,8 @@ offlineNavigationLinks push state =
       showAddGoto = state.data.driverGotoState.savedLocationCount < state.data.config.gotoConfig.maxGotoLocations
 
       city = getValueToLocalStore DRIVER_LOCATION
+      isTamilNaduCity = elem city ["Chennai", "Trichy"]
+      meterIcon = if isTamilNaduCity then "ny_ic_open_meter_icon" else "ny_ic_open_meter_icon_black900"
       iconImageView icon =
         imageView
         [ width $ V 16
