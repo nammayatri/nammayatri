@@ -212,7 +212,8 @@ public class LocationUpdateServiceV2 extends Service {
     private boolean useWakeLock = false;  // Default to false until config is loaded
     private long wakeLockTimeoutMs = 30000;  // Default 30 seconds timeout
     private long rateLimitTimeInSeconds = 2; // Default rate limiting time in seconds
-    private final ExecutorService internetCheckExecutor = Executors.newCachedThreadPool();
+    @Nullable
+    private ExecutorService internetCheckExecutor;
     @Nullable
     private Object hyperServices;
 
@@ -272,6 +273,8 @@ public class LocationUpdateServiceV2 extends Service {
         Log.i(TAG, "Service onCreate()");
 
         context = getApplicationContext();
+
+        internetCheckExecutor = Executors.newCachedThreadPool();
 
         // Initialize shared preferences first
         sharedPrefs = getApplicationContext().getSharedPreferences(
@@ -436,30 +439,32 @@ public class LocationUpdateServiceV2 extends Service {
     }
 
     private void checkInternetAccess(@Nullable Network network, OnNetworkAvailable callback) {
-        internetCheckExecutor.execute(() -> {
-            try {
-                HttpURLConnection urlConnection;
-                if (network == null) {
-                    urlConnection = (HttpURLConnection) (new URL("https://clients3.google.com/generate_204").openConnection());
-                } else {
-                    urlConnection = (HttpURLConnection) network.openConnection(new URL("https://clients3.google.com/generate_204"));
-                }
-                urlConnection.setConnectTimeout(3000);
-                urlConnection.setReadTimeout(3000);
-                urlConnection.connect();
-                boolean hasInternet = urlConnection.getResponseCode() == 204;
-                if (hasInternet) {
-                    try {
-                        callback.onSuccess();
-                    } catch (Exception e) {
-                        Log.e(TAG_ERROR, "Error in network available callback", e);
-                        FirebaseCrashlytics.getInstance().recordException(e);
+        if(internetCheckExecutor != null && !internetCheckExecutor.isShutdown()) {
+            internetCheckExecutor.execute(() -> {
+                try {
+                    HttpURLConnection urlConnection;
+                    if (network == null) {
+                        urlConnection = (HttpURLConnection) (new URL("https://clients3.google.com/generate_204").openConnection());
+                    } else {
+                        urlConnection = (HttpURLConnection) network.openConnection(new URL("https://clients3.google.com/generate_204"));
                     }
+                    urlConnection.setConnectTimeout(3000);
+                    urlConnection.setReadTimeout(3000);
+                    urlConnection.connect();
+                    boolean hasInternet = urlConnection.getResponseCode() == 204;
+                    if (hasInternet) {
+                        try {
+                            callback.onSuccess();
+                        } catch (Exception e) {
+                            Log.e(TAG_ERROR, "Error in network available callback", e);
+                            FirebaseCrashlytics.getInstance().recordException(e);
+                        }
+                    }
+                } catch (IOException e) {
+                    Log.d("InternetCheck", "No actual internet: " + e.getMessage());
                 }
-            } catch (IOException e) {
-                Log.d("InternetCheck", "No actual internet: " + e.getMessage());
-            }
-        });
+            });
+        }
     }
 
     /**
