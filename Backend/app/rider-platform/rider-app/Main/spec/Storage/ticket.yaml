@@ -242,6 +242,7 @@ BusinessHour:
     categoryId: "[Id ServiceCategory]"
     bookingClosingTime : Maybe TimeOfDay
     hash: Maybe Text
+    expiryDate: Maybe Day
     placeId: Maybe Text
     name: Maybe Text
 
@@ -259,6 +260,9 @@ BusinessHour:
     deleteById:
       kvFunction: deleteWithKV
       where: id
+    findAllByHash:
+      kvFunction: findAllWithKV
+      where: hash
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -1102,7 +1102,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           bhSlotTime :: TimeOfDay <- readCSVField idx row.businessHourSlotTime "Business hour slot time"
           return (Slot bhSlotTime, Id (show bhSlotTime <> separator <> ticketServiceId))
       let bookingClosingTime :: Maybe TimeOfDay = readMaybeCSVField idx row.businessBookingClosingTime "Booking closing Time"
-      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, placeId = Nothing, name = Nothing, hash = Nothing, ..}
+      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, placeId = Nothing, name = Nothing, hash = Nothing, expiryDate = Nothing, ..}
 
       --------------- Service Category ------------------------------------------------
       svcCategoryDescription <- cleanCSVField idx row.svcCategoryDescription "Service Category Description"

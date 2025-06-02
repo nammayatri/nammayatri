@@ -29,3 +29,8 @@ ALTER TABLE atlas_app.business_hour ADD COLUMN name text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.business_hour ADD COLUMN hash text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.business_hour ADD COLUMN expiry_date date ;

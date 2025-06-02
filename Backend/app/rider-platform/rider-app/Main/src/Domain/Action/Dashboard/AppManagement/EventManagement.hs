@@ -259,7 +259,7 @@ getLiveTicketDef placeId = do
               }
           serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
           serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
-          servicePeopleCategoryDefs = map toServicePeopleCategoryDef linkedServicePeopleCategories
+          servicePeopleCategoryDefs = nub $ map toServicePeopleCategoryDef linkedServicePeopleCategories
       return $
         pure $
           DEM.TicketPlaceDef
@@ -667,6 +667,7 @@ applyDraftChanges draftChange = do
                 merchantId = Nothing,
                 merchantOperatingCityId = Nothing,
                 hash = Nothing,
+                expiryDate = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
