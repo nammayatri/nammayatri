@@ -40,8 +40,8 @@ getLiveMapDrivers ::
   ) ->
   Environment.Flow [Common.MapDriverInfoRes]
 getLiveMapDrivers (_mbPersonId, merchantId, _merchantOpCityId) = do
-  driverAnddriverInfoLs <- findAllWithLimitOffsetByMerchantId Nothing Nothing Nothing Nothing merchantId
-  catMaybes <$> mapM buildMapDriverInfo driverAnddriverInfoLs
+  driverAndDriverInfoLs <- findAllWithLimitOffsetByMerchantId Nothing Nothing Nothing Nothing merchantId
+  catMaybes <$> mapM buildMapDriverInfo driverAndDriverInfoLs
 
 buildMapDriverInfo :: (DP.Person, DDI.DriverInformation) -> Environment.Flow (Kernel.Prelude.Maybe Common.MapDriverInfoRes)
 buildMapDriverInfo (driver, driverInformation) = do
