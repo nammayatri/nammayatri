@@ -37,8 +37,8 @@ getMultiModalConfig merchantId merchantOperatingCityId = do
       >>= fromMaybeM (InternalError $ "No MultiModal service provider configured for the merchant, merchantId:" <> merchantId.getId)
 
   case merchantServiceConfig.serviceConfig of
-    DMSC.MultiModalServiceConfig multiModalServiceConfig -> return $ multiModalServiceConfig
-    _ -> throwError $ InternalError $ "Unknown Service Config in multimodalConfig"
+    DMSC.MultiModalServiceConfig multiModalServiceConfig -> return multiModalServiceConfig
+    cfg -> throwError $ InternalError $ "Unknown Service Config in multimodalConfig" <> show cfg
 
 getTransitServiceReq :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
 getTransitServiceReq = getMultiModalConfig
@@ -48,7 +48,7 @@ getOTPRestServiceReq merchantId merchantOperatingCityId = do
   transitServiceReq <- CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MultiModalStaticDataService MultiModal.OTPTransit) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found")
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig
-    _ -> throwError $ InternalError $ "Unknown Service Config in otprestservicereq"
+    cfg -> throwError $ InternalError $ "Unknown Service Config in otprestservicereq" <> show cfg
   case transitServiceReq' of
     OTPTransitConfig otpTransitConfig -> return otpTransitConfig.baseUrl
     config -> throwError $ InternalError $ "Unknown Service Config" <> show config

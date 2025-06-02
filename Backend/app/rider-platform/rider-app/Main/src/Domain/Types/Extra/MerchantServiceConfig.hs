@@ -181,3 +181,43 @@ instance ToJSON (ServiceConfigD 'Unsafe)
 instance FromJSON (ServiceConfigD 'Safe)
 
 instance ToJSON (ServiceConfigD 'Safe)
+
+instance Show (ServiceConfigD 'Safe) where
+  show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
+  show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
+  show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
+  show (AadhaarVerificationServiceConfig cfg) = "AadhaarVerificationServiceConfig " <> show cfg
+  show (CallServiceConfig cfg) = "CallServiceConfig " <> show cfg
+  show (NotificationServiceConfig cfg) = "NotificationServiceConfig " <> show cfg
+  show (PaymentServiceConfig cfg) = "PaymentServiceConfig " <> show cfg
+  show (MetroPaymentServiceConfig cfg) = "MetroPaymentServiceConfig " <> show cfg
+  show (BusPaymentServiceConfig cfg) = "BusPaymentServiceConfig " <> show cfg
+  show (BbpsPaymentServiceConfig cfg) = "BbpsPaymentServiceConfig " <> show cfg
+  show (MultiModalPaymentServiceConfig cfg) = "MultiModalPaymentServiceConfig " <> show cfg
+  show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
+  show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
+  show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg
+  show (PayoutServiceConfig cfg) = "PayoutServiceConfig " <> show cfg
+  show (MultiModalServiceConfig cfg) = "MultiModalServiceConfig " <> show cfg
+  show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
+  show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
+
+instance Show (ServiceConfigD 'Unsafe) where
+  show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
+  show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
+  show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
+  show (AadhaarVerificationServiceConfig cfg) = "AadhaarVerificationServiceConfig " <> show cfg
+  show (CallServiceConfig cfg) = "CallServiceConfig " <> show cfg
+  show (NotificationServiceConfig cfg) = "NotificationServiceConfig " <> show cfg
+  show (PaymentServiceConfig cfg) = "PaymentServiceConfig " <> show cfg
+  show (MetroPaymentServiceConfig cfg) = "MetroPaymentServiceConfig " <> show cfg
+  show (BusPaymentServiceConfig cfg) = "BusPaymentServiceConfig " <> show cfg
+  show (BbpsPaymentServiceConfig cfg) = "BbpsPaymentServiceConfig " <> show cfg
+  show (MultiModalPaymentServiceConfig cfg) = "MultiModalPaymentServiceConfig " <> show cfg
+  show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
+  show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
+  show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg
+  show (PayoutServiceConfig cfg) = "PayoutServiceConfig " <> show cfg
+  show (MultiModalServiceConfig cfg) = "MultiModalServiceConfig " <> show cfg
+  show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
+  show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
