@@ -47,11 +47,9 @@ getLiveMapDrivers (mbPersonId, _merchantId, _merchantOpCityId) = do
   when (null rideLs) . throwError . RideDoesNotExist $ "for driverId " <> driver.id.getId
   let ride = L.maximumBy (comparing (.tripStartTime)) rideLs
   vehicleNumber <-
-    Kernel.Prelude.msum <$> CHRD.findByIdAndVehicleNumber (Kernel.Types.Id.cast ride.id) Nothing
-      >>= fromMaybeM (VehicleNotFound $ "for rideId" <> ride.id.getId)
+    CHRD.findByIdAndVehicleNumber (Kernel.Types.Id.cast ride.id) Nothing
+      >>= fromMaybeM (VehicleNotFound $ "for rideId" <> ride.id.getId) . Kernel.Prelude.msum
   driverInformation <- findByIdAndVerified driver.id Nothing >>= fromMaybeM DriverInfoNotFound
-  -- driverStatus <- castDriverStatus driverInformation.mode
-  -- vehicleStatus <- getVehicleStatus driverInformation rideLs
   position <- getDriverCurrentLocation driver.id
   mbBooking <- CHB.findById ride.bookingId
   (source, destination) <- getSourceAndDestination mbBooking
@@ -67,19 +65,10 @@ getLiveMapDrivers (mbPersonId, _merchantId, _merchantOpCityId) = do
       }
   where
     castDriverStatus = \case
+      -- Needs to be changed after implementation "2. Live Activity (No. of drivers)"
       Just DCommon.ONLINE -> Common.ONLINE
       Just DCommon.SILENT -> Common.SILENT
       _ -> Common.OFFLINE
-    -- getVehicleStatus driverInformation rideLs =
-    --     if driverInformation.active
-    --       then
-    --         if driverInformation.onRide
-    --           then Common.OnRide
-    --           else
-    --             if any (\ride -> ride.status `elem` [Just DR.UPCOMING, Just DR.NEW, Just DR.INPROGRESS]) rideLs
-    --               then Common.TripAssigned
-    --               else Common.Pending
-    --       else Common.InActive
     getVehicleStatus driverInformation rideLs
       | not driverInformation.active = Common.InActive
       | driverInformation.onRide = Common.OnRide
