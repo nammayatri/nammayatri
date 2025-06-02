@@ -1136,7 +1136,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
           from = fromMaybe defaultFrom mbFrom
           to = fromMaybe now mbTo
       forM (zip driverListWithInfo fdaList) $ \((driver, driverInfo'), fda) -> do
-        driverRCAssociation <- QRCAssociation.findAllByDriverId driver.id
+        driverRCAssociation <- QRCAssociation.findAllActiveAndInactiveAssociationsByDriverId driver.id
         let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
         (vehicleNo, vehicleType) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
           [] -> pure (Nothing, Nothing)
