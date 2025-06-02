@@ -257,7 +257,8 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   deriving anyclass (FromJSON, ToJSON)
 
 data FRFSFare = FRFSFare
-  { price :: Price,
+  { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
+    price :: Price,
     childPrice :: Maybe Price,
     discounts :: [FRFSDiscount],
     fareDetails :: Maybe Quote.FRFSFareDetails,
@@ -302,7 +303,8 @@ getFare riderId vehicleType integratedBPPConfigId merchantId merchantOperatingCi
         discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
         return $
           FRFSFare
-            { price = price,
+            { farePolicyId = Just farePolicy.id,
+              price = price,
               childPrice = Nothing,
               discounts = map (mkDiscount price) discountsWithEligibility,
               fareDetails = Nothing,
@@ -361,7 +363,8 @@ getFareThroughGTFS riderId vehicleType integratedBPPConfig merchantId merchantOp
             logDebug $ "discountsWithEligibility: " <> show discountsWithEligibility <> " fare: " <> show fare <> " price: " <> show price <> " vehicleServiceTier: " <> show vehicleServiceTier <> " fare.discountIds: "
             return $
               FRFSFare
-                { price = price,
+                { farePolicyId = Nothing,
+                  price = price,
                   childPrice = Nothing,
                   discounts = map (mkDiscount price) discountsWithEligibility,
                   fareDetails = Nothing,

@@ -186,6 +186,7 @@ getRouteFare config merchantOperatingCityId request = do
                       currency = INR
                     },
               discounts = [],
+              farePolicyId = Nothing,
               fareDetails =
                 Just
                   Quote.FRFSFareDetails

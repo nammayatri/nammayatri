@@ -23,6 +23,7 @@ import Data.List (sortBy)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
+import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -48,6 +49,7 @@ import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
+import qualified Storage.Queries.RouteStopFare as QRSF
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
@@ -104,7 +106,8 @@ data DRouteStation = DRouteStation
     routeSequenceNum :: Maybe Int,
     routeServiceTier :: Maybe DVehicleServiceTier,
     routePrice :: Price,
-    routeColor :: Maybe Text
+    routeColor :: Maybe Text,
+    routeFarePolicyId :: Maybe (Id FRFSFarePolicy.FRFSFarePolicy)
   }
 
 data DStation = DStation
@@ -164,6 +167,15 @@ onSearch onSearchReq validatedReq = do
       whenJust validatedReq.search.journeyLegInfo $ \_journeyLegInfo -> do
         QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
+  fork "Updating Route Stop Fare" $ do
+    forM_ onSearchReq.quotes $ \quote ->
+      forM_ quote.routeStations $ \routeStation -> do
+        let price = routeStation.routePrice.amount
+            routeCode = routeStation.routeCode
+            mbStartStopCode = find (\station -> station.stationType == Station.START) routeStation.routeStations <&> (.stationCode)
+            mbEndStopCode = find (\station -> station.stationType == Station.END) routeStation.routeStations <&> (.stationCode)
+        whenJust ((,,) <$> routeStation.routeFarePolicyId <*> mbStartStopCode <*> mbEndStopCode) $ \(farePolicyId, startStopCode, endStopCode) ->
+          QRSF.updateFareByRouteCodeAndStopCodes price farePolicyId routeCode startStopCode endStopCode
   return ()
   where
     cacheQuote quote = do

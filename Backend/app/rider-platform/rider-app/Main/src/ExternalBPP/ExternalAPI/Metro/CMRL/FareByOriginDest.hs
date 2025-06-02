@@ -76,6 +76,7 @@ getFareByOriginDest config fareReq = do
                     childPrice = Nothing,
                     discounts = [],
                     fareDetails = Nothing,
+                    farePolicyId = Nothing,
                     vehicleServiceTier =
                       FRFSUtils.FRFSVehicleServiceTier
                         { serviceTierType = Spec.ORDINARY,

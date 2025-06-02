@@ -144,7 +144,8 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                           routeServiceTier = Just $ mkDVehicleServiceTier vehicleServiceTier,
                           routePrice = price,
                           routeSequenceNum = Nothing,
-                          routeColor = Nothing
+                          routeColor = Nothing,
+                          routeFarePolicyId = farePolicyId
                         }
                     ]
                in DQuote
