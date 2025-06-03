@@ -642,9 +642,10 @@ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appCon
 handleDeepLinksFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 handleDeepLinksFlow event activeRideResp isActiveRide = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS_FLOW"
+  let _ = spy "handleDeepLinksFlow event" event
   case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e ->
-          case e.data of
+          case (spy "handleDeepLinksFlow e.data" e.data) of
             "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
             "lang" -> do
               modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
@@ -694,6 +695,10 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               (GlobalState allState) <- getState
               let updatedState = allState.homeScreen
               hideSplashAndCallFlow hotspotScreenFlow
+            "subscription" -> do
+              hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
+            "benefits" -> do
+              hideSplashAndCallFlow benefitsScreenFlow
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
