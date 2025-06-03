@@ -231,14 +231,17 @@ data CancellationSource
 data SafetyReasonCode
   = DEVIATION
   | RIDE_STOPPAGE
+  | RIDE_STOPPAGE_FOR_DRIVER
   deriving (Eq, Generic, ToJSON, FromJSON)
 
 instance Show SafetyReasonCode where
   show DEVIATION = "DEVIATION"
   show RIDE_STOPPAGE = "RIDE_STOPPAGE"
+  show RIDE_STOPPAGE_FOR_DRIVER = "RIDE_STOPPAGE_FOR_DRIVER"
 
 instance Read SafetyReasonCode where
   readsPrec _ = \case
     "DEVIATION" -> [(DEVIATION, "")]
     "RIDE_STOPPAGE" -> [(RIDE_STOPPAGE, "")]
+    "RIDE_STOPPAGE_FOR_DRIVER" -> [(RIDE_STOPPAGE_FOR_DRIVER, "")]
     _ -> []

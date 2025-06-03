@@ -1400,4 +1400,5 @@ mkSafetyNotificationKey code =
   case readMaybe (T.unpack code) of
     Just BecknEnums.DEVIATION -> "SAFETY_ALERT_DEVIATION"
     Just BecknEnums.RIDE_STOPPAGE -> "SAFETY_ALERT_RIDE_STOPPAGE"
+    Just BecknEnums.RIDE_STOPPAGE_FOR_DRIVER -> "SAFETY_ALERT_RIDE_STOPPAGE_FOR_DRIVER"
     Nothing -> code
