@@ -364,7 +364,7 @@ upsertServiceDef ticketPlaceId serviceDef = do
   let updatedServices =
         if any (\s -> s.id == serviceDef.id) ticketDef.services
           then map (\s -> if s.id == serviceDef.id then serviceDef else s) ticketDef.services
-          else serviceDef : ticketDef.services
+          else ticketDef.services ++ [serviceDef]
   isDraftEqual <- checkTicketDraftEquality ticketPlaceId
   let updatedTicketDef = ticketDef {DEM.services = updatedServices, DEM.isDraft = not isDraftEqual}
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
@@ -393,7 +393,7 @@ upsertServiceCategoryDef ticketPlaceId serviceId categoryDef = do
   let updatedCategories =
         if any (\c -> c.id == categoryDef.id) ticketDef.serviceCategories
           then map (\c -> if c.id == categoryDef.id then categoryDef else c) ticketDef.serviceCategories
-          else categoryDef : ticketDef.serviceCategories
+          else ticketDef.serviceCategories ++ [categoryDef]
   let updatedServices =
         map
           ( \s ->
@@ -447,7 +447,7 @@ upsertServicePeopleCategoryDef ticketPlaceId categoryId peopleDef = do
   let updatedPeopleCategories =
         if any (\p -> p.id == peopleDef.id) ticketDef.servicePeopleCategories
           then map (\p -> if p.id == peopleDef.id then peopleDef else p) ticketDef.servicePeopleCategories
-          else peopleDef : ticketDef.servicePeopleCategories
+          else ticketDef.servicePeopleCategories ++ [peopleDef]
   -- Update peopleCategory in the specific service category
   let updatedServiceCategories =
         map
