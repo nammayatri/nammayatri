@@ -84,14 +84,14 @@ castDriverStatus = \case
 buildTodaySummary :: (DP.Person, DDI.DriverInformation) -> [CHR.Ride] -> Environment.Flow Common.TodaySummary
 buildTodaySummary (driver, driverInformation) rideLs = do
   mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-  let trips = countTrips rideLs $ Trips 0 0 0 0
+  let trips = countTrips rideLs $ Trips 0 0 0 0 0 0
   pure $
     Common.TodaySummary
       { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
         tripStatus = castDriverStatus driverInformation.mode,
         tripsCompletedCount = trips.tripsCompletedCount,
-        earnings = Kernel.Types.Common.Money 0, --TODO
-        totalDistance = Kernel.Types.Common.Meters 0, --TODO
+        earnings = Kernel.Types.Common.Money trips.fare,
+        totalDistance = Kernel.Types.Common.Meters trips.chargeableDistance,
         tripBalanceLeft = 0, -- FXME
         tripsCancelled = trips.tripsCancelled,
         tripsPassed = trips.tripsPassed,
@@ -105,7 +105,9 @@ data Trips = Trips
   { tripsCompletedCount :: Int,
     tripsCancelled :: Int,
     tripsPassed :: Int,
-    tripsScheduled :: Int
+    tripsScheduled :: Int,
+    chargeableDistance :: Int,
+    fare :: Int
   }
 
 -- RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED
@@ -113,18 +115,22 @@ data Trips = Trips
 countTrips :: [CHR.Ride] -> Trips -> Trips
 countTrips [] trips = trips
 countTrips (rd : rds) trips =
-  case rd.status of
-    Nothing -> countTrips rds trips
-    Just DR.COMPLETED ->
-      countTrips rds $
-        trips
-          { tripsCompletedCount = trips.tripsCompletedCount + 1,
-            tripsPassed = trips.tripsPassed + 1
+  let trips' =
+        case rd.status of
+          Nothing -> trips
+          Just DR.COMPLETED ->
+            trips
+              { tripsCompletedCount = trips.tripsCompletedCount + 1,
+                tripsPassed = trips.tripsPassed + 1
+              }
+          Just DR.CANCELLED ->
+            trips
+              { tripsCancelled = trips.tripsCancelled + 1,
+                tripsPassed = trips.tripsPassed + 1
+              }
+          _ -> countTrips rds $ trips {tripsScheduled = trips.tripsScheduled + 1}
+   in countTrips rds $
+        trips'
+          { chargeableDistance = trips.chargeableDistance + fromMaybe 0 rd.chargeableDistance,
+            fare = trips.fare + fromMaybe 0 rd.fare
           }
-    Just DR.CANCELLED ->
-      countTrips rds $
-        trips
-          { tripsCancelled = trips.tripsCancelled + 1,
-            tripsPassed = trips.tripsPassed + 1
-          }
-    _ -> countTrips rds $ trips {tripsScheduled = trips.tripsScheduled + 1}
