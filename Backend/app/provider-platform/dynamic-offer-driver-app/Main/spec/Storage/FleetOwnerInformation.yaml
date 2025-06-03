@@ -56,7 +56,7 @@ FleetOwnerInformation:
       where: fleetOwnerPersonId
     updateBusinessLicenseImageAndNumber:
       kvFunction: updateOneWithKV
-      params: [businessLicenseImageId, businessLicenseNumber, updatedAt, registeredAt]
+      params: [businessLicenseImageId, businessLicenseNumber, updatedAt]
       where: fleetOwnerPersonId
     updateRegistration:
       kvFunction: updateOneWithKV

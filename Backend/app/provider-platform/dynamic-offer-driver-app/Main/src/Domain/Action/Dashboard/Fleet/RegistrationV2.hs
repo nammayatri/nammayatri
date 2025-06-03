@@ -90,7 +90,7 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
   fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   void $ QP.updateByPrimaryKey person{firstName = req.firstName, lastName = Just req.lastName}
-  void $ updateFleetOwnerInfo fleetOwnerInfo req
+  void $ updateFleetOwnerInfo fleetOwnerInfo{registeredAt = Just now} req
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   mbRequestedOperatorId <- case mbRequestorId of
@@ -113,8 +113,7 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (personId, person.merchantId, person.merchantOperatingCityId) req'
-      QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) req.businessLicenseNumber (Just now) personId
-  when (isNothing req.businessLicenseImage) $ QFOI.updateRegistration (Just now) personId
+      QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) req.businessLicenseNumber personId
   enabled <- enableFleetIfPossible
   return $ Common.FleetOwnerRegisterResV2 enabled
   where
