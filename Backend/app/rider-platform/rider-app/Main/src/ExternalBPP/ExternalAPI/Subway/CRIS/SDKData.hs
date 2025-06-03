@@ -54,8 +54,8 @@ getSDKData config request = do
           ]
   let jsonStr = decodeUtf8 $ LBS.toStrict $ encode sdkDataRequest
   logInfo $ "Get SDK Data JSON string: " <> jsonStr
-  clientKey <- decrypt config.clientKey
-  payload <- encryptPayload jsonStr clientKey
+  encryptionKey <- decrypt config.encryptionKey
+  payload <- encryptPayload jsonStr encryptionKey
   let encReq =
         EncryptedRequest
           { app = config.appCode,

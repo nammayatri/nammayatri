@@ -44,12 +44,14 @@ updateCrisUtsDataJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     CRIS config -> do
       utsData <- Uts.getUtsData config
       encryptedAgentDataKey <- encrypt utsData.tkt
-      encryptedClientKey <- encrypt utsData.fare
+      encryptedEncryptionKey <- encrypt utsData.url
+      encryptedDecryptionKey <- encrypt utsData.fare
       let updatedProviderConfig =
             CRIS $
               CRISConfig
                 { baseUrl = config.baseUrl,
-                  clientKey = encryptedClientKey,
+                  encryptionKey = encryptedEncryptionKey,
+                  decryptionKey = encryptedDecryptionKey,
                   clientSecret = clientSecret config,
                   appCode = appCode config,
                   tpAccountId = tpAccountId config,

@@ -130,8 +130,9 @@ getRouteFare config merchantOperatingCityId request = do
 
   logInfo $ "JSON string: " <> jsonStr
 
-  clientKey <- decrypt config.clientKey
-  payload <- encryptPayload jsonStr clientKey
+  encryptionKey <- decrypt config.encryptionKey
+  decryptionKey <- decrypt config.decryptionKey
+  payload <- encryptPayload jsonStr encryptionKey
 
   encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
 
@@ -146,7 +147,7 @@ getRouteFare config merchantOperatingCityId request = do
 
       if encResp.responseCode == "0"
         then do
-          case decryptResponseData (responseData encResp) clientKey of
+          case decryptResponseData (responseData encResp) decryptionKey of
             Left err -> throwError (InternalError $ "Failed to decrypt response: " <> T.pack err)
             Right decryptedJson -> do
               logInfo $ "Decrypted JSON: " <> decryptedJson

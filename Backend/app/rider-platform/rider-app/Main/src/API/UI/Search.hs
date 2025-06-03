@@ -518,50 +518,53 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
     getCrisSdkToken _ Nothing = return Nothing
     getCrisSdkToken merchantOperatingCityId (Just journeys) = do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+      mbIntegratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
 
-      return (find (\j -> any (\leg -> leg.journeyMode == DTrip.Subway) j.journeyLegs) journeys)
-        >>= maybe
-          (return Nothing)
-          ( \journey ->
-              return (find (\leg -> leg.journeyMode == DTrip.Subway) journey.journeyLegs)
-                >>= maybe
-                  (return Nothing)
-                  ( \leg -> do
-                      case (leg.fromStationCode, leg.toStationCode, listToMaybe leg.routeDetails >>= (.routeCode)) of
-                        (Just fromCode, Just toCode, Just routeCode) -> do
-                          case integratedBPPConfig.providerConfig of
-                            DIBC.CRIS config' -> do
-                              mbMobileNumber <- mapM decrypt person.mobileNumber
-                              mbImeiNumber <- mapM decrypt person.imeiNumber
-                              sessionId <- getRandomInRange (1, 1000000 :: Int)
+      case mbIntegratedBPPConfig of
+        Just integratedBPPConfig ->
+          return (find (\j -> any (\leg -> leg.journeyMode == DTrip.Subway) j.journeyLegs) journeys)
+            >>= maybe
+              (return Nothing)
+              ( \journey ->
+                  return (find (\leg -> leg.journeyMode == DTrip.Subway) journey.journeyLegs)
+                    >>= maybe
+                      (return Nothing)
+                      ( \leg -> do
+                          case (leg.fromStationCode, leg.toStationCode, listToMaybe leg.routeDetails >>= (.routeCode)) of
+                            (Just fromCode, Just toCode, Just routeCode) -> do
+                              case integratedBPPConfig.providerConfig of
+                                DIBC.CRIS config' -> do
+                                  mbMobileNumber <- mapM decrypt person.mobileNumber
+                                  mbImeiNumber <- mapM decrypt person.imeiNumber
+                                  sessionId <- getRandomInRange (1, 1000000 :: Int)
 
-                              intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig.id Station.START Station.END
+                                  intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig.id Station.START Station.END
 
-                              let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
+                                  let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
 
-                              let routeFareReq =
-                                    CRISRouteFare.CRISFareRequest
-                                      { mobileNo = mbMobileNumber,
-                                        imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-                                        appSession = sessionId,
-                                        sourceCode = fromCode,
-                                        changeOver = " ",
-                                        destCode = toCode,
-                                        via = viaStations
-                                      }
+                                  let routeFareReq =
+                                        CRISRouteFare.CRISFareRequest
+                                          { mobileNo = mbMobileNumber,
+                                            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+                                            appSession = sessionId,
+                                            sourceCode = fromCode,
+                                            changeOver = " ",
+                                            destCode = toCode,
+                                            via = viaStations
+                                          }
 
-                              CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq
-                                <&> listToMaybe
-                                >>= maybe
-                                  (return Nothing)
-                                  ( \fare ->
-                                      return $ fare.fareDetails >>= \details -> Just details.sdkToken
-                                  )
+                                  CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq
+                                    <&> listToMaybe
+                                    >>= maybe
+                                      (return Nothing)
+                                      ( \fare ->
+                                          return $ fare.fareDetails >>= \details -> Just details.sdkToken
+                                      )
+                                _ -> return Nothing
                             _ -> return Nothing
-                        _ -> return Nothing
-                  )
-          )
+                      )
+              )
+        Nothing -> return Nothing
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
