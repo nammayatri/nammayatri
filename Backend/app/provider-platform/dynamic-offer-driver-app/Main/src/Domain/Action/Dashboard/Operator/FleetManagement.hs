@@ -239,8 +239,12 @@ createFleetOwnerInfo personId merchantId enabled = do
             referredByOperatorId = Nothing,
             panImageId = Nothing,
             panNumber = Nothing,
+            aadhaarBackImageId = Nothing,
+            aadhaarFrontImageId = Nothing,
+            aadhaarNumber = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            registeredAt = Nothing
           }
   QFOI.create fleetOwnerInfo
 

@@ -127,12 +127,10 @@ import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
-import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
-import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
@@ -1364,18 +1362,6 @@ getDriverFleetOwnerInfo _ _ driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   fleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   fleetConfig <- QFC.findByPrimaryKey personId
-  panDetails <- B.runInReplica $ DPC.findByDriverId personId
-  gstDetails <- QGST.findByDriverId personId
-  aadhaarDetails <- QAadhaarCard.findByPrimaryKey personId
-  panNumber <- case panDetails of
-    Just pan -> Just <$> decrypt pan.panCardNumber
-    Nothing -> pure Nothing
-  gstNumber <- case gstDetails of
-    Just gst -> Just <$> decrypt gst.gstin
-    Nothing -> pure Nothing
-  let aadhaarNumber = case aadhaarDetails of
-        Just aadhaar -> aadhaar.maskedAadhaarNumber
-        Nothing -> Nothing
   mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
   (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
     Nothing -> pure (Nothing, Nothing)
@@ -1383,10 +1369,10 @@ getDriverFleetOwnerInfo _ _ driverId = do
       person <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
       contact <- mapM decrypt person.mobileNumber
       pure $ (Just (person.firstName <> fromMaybe "" person.middleName <> fromMaybe "" person.lastName), contact)
-  makeFleetOwnerInfoRes panNumber gstNumber aadhaarNumber fleetConfig fleetOwnerInfo operatorName operatorContact
+  makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo operatorName operatorContact
   where
-    makeFleetOwnerInfoRes :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes panNumber_ gstNumber_ maskedAadhaarNumber mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
+    makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
       referral <- QDR.findById fleetOwnerPersonId
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
@@ -1397,7 +1383,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, gstNumber = gstNumber_, fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
+      return $ Common.FleetOwnerInfoRes {fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo
@@ -2108,8 +2094,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   where
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc fleetOwner req_ = do
-      void $ runRequestValidation Common.validateUpdateDriverNameReq Common.UpdateDriverNameReq {firstName = req_.driverName, middleName = Nothing, lastName = Nothing}
-      -- extra validation in case if fleet owner present in csv
+      validateDriverName req_.driverName
       whenJust req_.fleetPhoneNo \fleetPhoneNo -> do
         mobileNumberHash <- getDbHash fleetPhoneNo
         fleetOwnerCsv <-
@@ -2122,7 +2107,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByOperator merchant moc operator req_ = do
-      void $ runRequestValidation Common.validateUpdateDriverNameReq Common.UpdateDriverNameReq {firstName = req_.driverName, middleName = Nothing, lastName = Nothing}
+      validateDriverName req_.driverName
       case req_.fleetPhoneNo of
         Nothing -> do
           linkDriverToOperator merchant moc operator req_
@@ -2141,6 +2126,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             when (now > associatedTill) $
               throwError (InvalidRequest "FleetOperatorAssociation expired")
           linkDriverToFleetOwner merchant moc fleetOwner (Just operator.id) req_
+
+    validateDriverName :: Text -> Flow ()
+    validateDriverName driverName = do
+      result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
+      case result of
+        Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 3 letters"
+        Right _ -> pure ()
 
     linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToFleetOwner merchant moc fleetOwner mbOperatorId req_ = do

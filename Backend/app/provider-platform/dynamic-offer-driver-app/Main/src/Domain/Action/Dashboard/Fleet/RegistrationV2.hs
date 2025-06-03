@@ -84,6 +84,7 @@ fleetOwnerRegister ::
   Common.FleetOwnerRegisterReqV2 ->
   Flow Common.FleetOwnerRegisterResV2
 fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
+  now <- getCurrentTime
   let fleetOwnerId = req.personId.getId
       personId = cast @Common.Person @DP.Person req.personId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
@@ -112,7 +113,8 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (personId, person.merchantId, person.merchantOperatingCityId) req'
-      QFOI.updateBusinessLicenseImage (Just image.imageId.getId) personId
+      QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) req.businessLicenseNumber (Just now) personId
+  when (isNothing req.businessLicenseImage) $ QFOI.updateRegistration (Just now) personId
   enabled <- enableFleetIfPossible
   return $ Common.FleetOwnerRegisterResV2 enabled
   where
@@ -175,10 +177,14 @@ createFleetOwnerInfo personId merchantId enabled = do
             businessLicenseImageId = Nothing,
             businessLicenseNumber = Nothing,
             referredByOperatorId = Nothing,
+            aadhaarBackImageId = Nothing,
+            aadhaarFrontImageId = Nothing,
+            aadhaarNumber = Nothing,
             panImageId = Nothing,
             panNumber = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            registeredAt = Nothing
           }
   QFOI.create fleetOwnerInfo
 

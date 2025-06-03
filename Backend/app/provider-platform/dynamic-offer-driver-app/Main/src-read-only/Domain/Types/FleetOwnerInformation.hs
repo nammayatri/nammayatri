@@ -11,7 +11,10 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FleetOwnerInformation = FleetOwnerInformation
-  { blocked :: Kernel.Prelude.Bool,
+  { aadhaarBackImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    aadhaarFrontImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    aadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blocked :: Kernel.Prelude.Bool,
     businessLicenseImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
@@ -23,6 +26,7 @@ data FleetOwnerInformation = FleetOwnerInformation
     panImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     verified :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

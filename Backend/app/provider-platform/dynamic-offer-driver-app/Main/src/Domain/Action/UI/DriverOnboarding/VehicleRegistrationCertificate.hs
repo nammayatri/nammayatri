@@ -194,6 +194,7 @@ data RCValidationReq = RCValidationReq
   { fuelType :: Maybe Text,
     vehicleClass :: Maybe Text,
     manufacturer :: Maybe Text,
+    model :: Maybe Text,
     mYManufacturing :: Maybe Day
   }
   deriving (Generic, Show, ToJSON, FromJSON)
@@ -337,8 +338,7 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       panCardDetails <- buildPanCard person Nothing Nothing Nothing
       DPQuery.create $ panCardDetails
   case person.role of
-    Person.FLEET_OWNER -> do
-      QFOI.updatePanImage (Just req.panNumber) (Just req.imageId) person.id
+    Person.FLEET_OWNER -> QFOI.updatePanImage (Just req.panNumber) (Just req.imageId) person.id
     _ -> pure ()
   return Success
   where
@@ -478,8 +478,7 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       DGQuery.create $ gstCardDetails
 
   case person.role of
-    Person.FLEET_OWNER -> do
-      QFOI.updateGstImage (Just req.gstin) (Just req.imageId) person.id
+    Person.FLEET_OWNER -> QFOI.updateGstImage (Just req.gstin) (Just req.imageId) person.id
     _ -> pure ()
   return Success
   where
@@ -608,6 +607,9 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
       QAadhaarCard.upsertAadhaarRecord aadhaarCard
       pure extractedAadhaarData
     Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
+  case person.role of
+    Person.FLEET_OWNER -> QFOI.updateAadhaarImage (Just req.aadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
+    _ -> pure ()
   return Success
   where
     makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
@@ -752,7 +754,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   now <- getCurrentTime
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   rcValidationRules <- findByCityId person.merchantOperatingCityId
-  let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer}
+  let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer, model = rcVerificationResponse.manufacturerModel}
   failures <- case rcValidationRules of
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules
@@ -925,7 +927,15 @@ validateRCResponse rc rule = do
   now <- getCurrentTime
   let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `isInfixOf` ft) (map T.toLower $ fromMaybe [] rule.fuelType)) (T.toLower <$> rc.fuelType)
       vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `isInfixOf` vc) (map T.toLower $ fromMaybe [] rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
-      manufacturerValid = maybe True (\m -> isNothing rule.vehicleOEM || Kernel.Prelude.any (\mnRule -> mnRule `isInfixOf` m) (map T.toLower $ fromMaybe [] rule.vehicleOEM)) (T.toLower <$> rc.manufacturer)
+
+      manufacturerValid = case rule.vehicleOEM of
+        Nothing -> True
+        Just oems ->
+          let lowerOems = map T.toLower oems
+              matches val = Kernel.Prelude.any (`T.isInfixOf` T.toLower val) lowerOems
+           in (maybe False matches rc.manufacturer)
+                || (maybe False matches rc.model)
+
       vehicleAge = getVehicleAge rc.mYManufacturing now
       vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
       failures =

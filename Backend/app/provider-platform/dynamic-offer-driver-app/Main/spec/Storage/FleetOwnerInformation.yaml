@@ -16,9 +16,13 @@ FleetOwnerInformation:
     fleetType: FleetType
     gstImageId : Maybe Text
     panImageId: Maybe Text
+    aadhaarNumber: Maybe Text
+    aadhaarFrontImageId: Maybe Text
+    aadhaarBackImageId: Maybe Text
     businessLicenseNumber : Maybe Text
     businessLicenseImageId : Maybe Text
     referredByOperatorId: Maybe Text
+    registeredAt: Maybe UTCTime
   sqlType:
     referredByOperatorId: character varying (36)
   excludedFields: [merchantOperatingCityId]
@@ -31,27 +35,39 @@ FleetOwnerInformation:
 
   queries:
     updateFleetOwnerVerifiedStatus:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [verified, updatedAt]
       where: fleetOwnerPersonId
     updateGstImage:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [gstNumber, gstImageId, updatedAt]
       where: fleetOwnerPersonId
     updatePanImage:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [panNumber, panImageId, updatedAt]
       where: fleetOwnerPersonId
     updateBusinessLicenseImage:
       kvFunction: updateOneWithKV
       params: [businessLicenseImageId, updatedAt]
       where: fleetOwnerPersonId
+    updateAadhaarImage:
+      kvFunction: updateOneWithKV
+      params: [aadhaarNumber, aadhaarFrontImageId, aadhaarBackImageId, updatedAt]
+      where: fleetOwnerPersonId
+    updateBusinessLicenseImageAndNumber:
+      kvFunction: updateOneWithKV
+      params: [businessLicenseImageId, businessLicenseNumber, updatedAt, registeredAt]
+      where: fleetOwnerPersonId
+    updateRegistration:
+      kvFunction: updateOneWithKV
+      params: [registeredAt]
+      where: fleetOwnerPersonId
     updateFleetOwnerGstNumberAndEnabledStatus:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [gstNumber, enabled, updatedAt]
       where: fleetOwnerPersonId
     updateFleetOwnerEnabledStatus:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [enabled]
       where: fleetOwnerPersonId
     updateReferredByOperatorId:

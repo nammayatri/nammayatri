@@ -65,7 +65,7 @@ postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetCreate) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
     fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound "FLEET_OWNER")
-    DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.personId.getId) True
+    DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.personId.getId)
   pure Kernel.Types.APISuccess.Success
 
 buildFleetOwnerRegisterReq ::
@@ -103,7 +103,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
     fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound "FLEET_OWNER")
-    DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.fleetOwnerId.getId) True
+    DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' (Just res.fleetOwnerId.getId)
   pure res
 
 postFleetManagementFleetLinkVerifyOtp :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerVerifyOtpReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess

@@ -80,4 +80,4 @@ switchMerchantAndCity :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantAndCityReq
 switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
 
 registerFleetOwner :: BeamFlow' => DReg.FleetRegisterReq -> FlowHandler APISuccess
-registerFleetOwner req = withFlowHandlerAPI' $ DReg.registerFleetOwner False req Nothing
+registerFleetOwner req = withFlowHandlerAPI' $ DReg.registerFleetOwner req Nothing

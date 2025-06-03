@@ -574,7 +574,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   failures <- case rcValidationRules of
     Nothing -> pure []
     Just rules -> do
-      let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make}
+      let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make, model = Just req.model}
       DomainRC.validateRCResponse rcValidationReq rules
   -- Create RC for vehicle before verifying it
   now <- getCurrentTime

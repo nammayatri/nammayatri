@@ -304,11 +304,13 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gstImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    aadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetConfig :: Kernel.Prelude.Maybe FleetConfig,
     operatorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatorContact :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
