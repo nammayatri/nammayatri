@@ -55,6 +55,7 @@ import Services.API as APITypes
 import Screens.Types as ST 
 import Screens.SubscriptionScreen.Transformer as Transformer
 import Common.RemoteConfig.Utils as RC
+import Helpers.Utils
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -190,7 +191,10 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | SwitchPlanOnCityOrVehicleChange ST.PlanCardState ST.SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
-eval BackPressed state =
+eval BackPressed state = do
+  let
+    _ = spy "BackPressed" state
+    _ = spy "isParentView" $ isParentView FunctionCall
   if state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
   else if ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
   else if state.props.optionsMenuState /= ALL_COLLAPSED then continue state{props{optionsMenuState = ALL_COLLAPSED}}
@@ -204,6 +208,9 @@ eval BackPressed state =
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
   else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && (Mb.fromMaybe false state.data.vehicleAndCityConfig.enableSubscriptionSupportPopup) then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if isParentView FunctionCall then do 
+    void $ pure $ emitTerminateApp Mb.Nothing true
+    continue state
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -268,18 +275,23 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
                   Mb.Just PaymentSuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Nothing -> continue state
 
-eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirectToNav of
-            "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Earnings" -> exit $ EarningsScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Alert" -> do
-              _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-              _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-              exit $ Alerts state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Rankings" -> do
-              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-              exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            _ -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = 
+  if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Mb.Nothing true
+    continue state
+  else do
+    case state.props.redirectToNav of
+      "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+      "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+      "Earnings" -> exit $ EarningsScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+      "Alert" -> do
+        _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+        _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+        exit $ Alerts state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+      "Rankings" -> do
+        _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+        exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+      _ -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
 
 eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure CallSupport]
 
@@ -316,18 +328,22 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   if screen == "Join" then continue state
   else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then do 
     continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
-  else do case screen of
-            "Home" -> exit $ HomeScreen newState
-            "Earnings" -> exit $ EarningsScreen newState
-            "Rides" -> exit $ RideHistory newState
-            "Alert" -> do
-              _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-              _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-              exit $ Alerts newState
-            "Rankings" -> do
-              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-              exit $ Contest newState
-            _ -> continue state
+  else if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Mb.Nothing true
+    continue state
+  else 
+    case screen of
+      "Home" -> exit $ HomeScreen newState
+      "Earnings" -> exit $ EarningsScreen newState
+      "Rides" -> exit $ RideHistory newState
+      "Alert" -> do
+        _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+        _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+        exit $ Alerts newState
+      "Rankings" -> do
+        _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+        exit $ Contest newState
+      _ -> continue state
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuState = ALL_COLLAPSED}}
 
@@ -501,7 +517,11 @@ eval (OnCityOrVehicleChange (APITypes.UiPlansResp plansListResp)) state = do
   let plans = map (\plan -> Transformer.transformPlan state.props.isSelectedLangTamil $ Transformer.getPlanCardConfig plan false false state.data.config.subscriptionConfig) plansListResp.list
   continue state { data { switchPlanModalState { plansList = plans, selectedPlan = DA.head plans, showSwitchPlanModal = true }}}
 
-eval (SelectPlansModalAction SelectPlansModal.Dismiss) state = exit $ HomeScreen state
+eval (SelectPlansModalAction SelectPlansModal.Dismiss) state = 
+  if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Mb.Nothing true
+    continue state
+  else exit $ HomeScreen state
 
 eval (SelectPlansModalAction SelectPlansModal.Support) state = continueWithCmd state [pure CallSupport]
 
@@ -515,7 +535,11 @@ eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButton.OnC
 eval (PaymentUnderMaintenanceModalAC popUpModalAC) state = do
   let newState = state{data{subscriptionDown = Mb.Nothing}}
   case popUpModalAC of
-      PopUpModal.OnButton2Click -> exit $ HomeScreen newState
+      PopUpModal.OnButton2Click -> 
+        if isParentView FunctionCall then do
+          void $ pure $ emitTerminateApp Mb.Nothing true
+          continue state
+        else exit $ HomeScreen newState
       _ -> continue state
 
 eval _ state = update state
