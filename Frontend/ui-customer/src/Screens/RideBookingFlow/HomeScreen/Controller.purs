@@ -2375,6 +2375,8 @@ eval (CurrentLocation lat lng) state = do
     then continue state
     else exit $ UpdatedState state { props { currentLocation { lat =  fromMaybe 0.0 (NUM.fromString lat), lng = fromMaybe 0.0 (NUM.fromString lng) }, sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
+eval (UpdateLocationOnSignInSignUp lat lng) state = exit $ UpdateLocationOnSignInSignUpOutput state lat lng
+
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}
 
 eval (RateCardAction RateCard.BackPressed) state = continue state { props { showRateCard = false } ,data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}

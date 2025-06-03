@@ -136,6 +136,7 @@ data ScreenOutput = LogoutUser
   | GoToSearchLocationScreenForRoutes HomeScreenState LocationActionId
   | GoToBusTicketBookingFlow HomeScreenState
   | AddVPAOut Int HomeScreenState
+  | UpdateLocationOnSignInSignUpOutput HomeScreenState String String
 
 data Action = NoAction
   | BackPressed
@@ -162,6 +163,7 @@ data Action = NoAction
   | UpdateSource Number Number String
   | Restart ErrorResponse
   | CurrentLocation String String
+  | UpdateLocationOnSignInSignUp String String
   | PrimaryButtonActionController PrimaryButtonController.Action
   | SettingSideBarActionController SettingSideBarController.Action
   | PricingTutorialModelActionController PricingTutorialModelController.Action

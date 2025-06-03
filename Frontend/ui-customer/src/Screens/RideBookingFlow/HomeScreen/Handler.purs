@@ -309,3 +309,6 @@ homeScreen' = do
     AddVPAOut earnings state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
       App.BackT $ App.NoBack <$> (pure $ ADD_VPA_OUT earnings state) 
+    UpdateLocationOnSignInSignUpOutput state lat lng -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_LOCATION_ON_SIGN_IN_SIGN_UP lat lng)

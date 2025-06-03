@@ -25,6 +25,7 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.AccountSetUpScreen.View as AccountSetUpScreen
 import Types.App (FlowBT, GlobalState(..),ACCOUNT_SET_UP_SCREEN_OUTPUT(..))
+import Storage (KeyStore(..), setValueToLocalStore)
 import Engineering.Helpers.Events as EHE
 
 
@@ -32,6 +33,7 @@ accountSetUpScreen ::FlowBT String ACCOUNT_SET_UP_SCREEN_OUTPUT
 accountSetUpScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ AccountSetUpScreen.screen state.accountSetUpScreen
+  _ <- setValueToLocalStore CUSTOMER_FIRST_SIGNUP "true"
   let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_page_loaded") { module = "onboarding"}
   case act of
     GoHome updatedState ->  App.BackT $ App.NoBack <$> (pure $ GO_HOME updatedState)
