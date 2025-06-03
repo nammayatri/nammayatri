@@ -288,7 +288,10 @@ baseAppFlow baseFlow event driverInfoResponse = do
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       liftFlowBT $ markPerformance "INITIAL_FLOW_END"
       if isTokenValid regToken then do
-        checkRideAndInitiate event driverInfoResponse
+        if HU.isParentView FunctionCall then do 
+          handleDeepLinksFlow event Nothing Nothing
+        else do
+          checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
         chooseLanguageFlow event
       else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
@@ -503,36 +506,53 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
             void $ lift $ lift $ fork $ Remote.getDriverInfoApi ""
           if getDriverInfoResp.enabled
             then do
-              deleteValueFromLocalStore ENTERED_RC
-              if getValueToLocalStore IS_DRIVER_ENABLED == "false"
-                then do
-                  void $ pure $ firebaseLogEvent "ny_driver_enabled"
-                  void $ pure $ metaLogEvent "ny_driver_enabled"
-                  let (Vehicle linkedVehicle) = fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle
-                  let category = fromMaybe "" linkedVehicle.category
-                  when (category /= "") $ do
-                    void $ lift $ lift $ liftFlow $ logEvent logField_ $ "ny_driver_" <> toLower category <> "_enabled"
-                    void $ pure $ metaLogEvent $ "ny_driver_" <> toLower category <> "_enabled"
-                else pure unit
-              setValueToLocalStore IS_DRIVER_ENABLED "true"
-              if updateShowSubscription
-                then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
-                else pure unit
-              (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
-              modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
-              updateDriverDataToStates
-              void $ liftFlowBT $ runEffectFn1 consumeBP unit
-              if (isJust getDriverInfoResp.autoPayStatus)
-                then setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
-                else pure unit
-              permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
-              if permissionsGiven
-                then do
-                  liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
-                else do
-                  modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
+              if (HU.isParentView FunctionCall) then do
+                void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
+                  $ EventPayload
+                      { event: "process_result"
+                      , payload:
+                          Just
+                            { action: "terminate"
+                            , trip_amount: Nothing
+                            , ride_status: Nothing
+                            , trip_id: Nothing
+                            , screen: Nothing
+                            , exit_app: true
+                            , registration_token: Just $ getValueToLocalStore REGISTERATION_TOKEN
+                            }
+                      }
+                pure unit
+              else
+                deleteValueFromLocalStore ENTERED_RC
+                if getValueToLocalStore IS_DRIVER_ENABLED == "false"
+                  then do
+                    void $ pure $ firebaseLogEvent "ny_driver_enabled"
+                    void $ pure $ metaLogEvent "ny_driver_enabled"
+                    let (Vehicle linkedVehicle) = fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle
+                    let category = fromMaybe "" linkedVehicle.category
+                    when (category /= "") $ do
+                      void $ lift $ lift $ liftFlow $ logEvent logField_ $ "ny_driver_" <> toLower category <> "_enabled"
+                      void $ pure $ metaLogEvent $ "ny_driver_" <> toLower category <> "_enabled"
+                  else pure unit
+                setValueToLocalStore IS_DRIVER_ENABLED "true"
+                if updateShowSubscription
+                  then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
+                  else pure unit
+                (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
+                modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
+                updateDriverDataToStates
+                void $ liftFlowBT $ runEffectFn1 consumeBP unit
+                if (isJust getDriverInfoResp.autoPayStatus)
+                  then setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
+                  else pure unit
+                permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
+                if permissionsGiven
+                  then do
+                    liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
+                    handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
+                  else do
+                    modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
+                    permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
             else do
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"

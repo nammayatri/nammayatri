@@ -839,7 +839,11 @@ eval (UpdateGoHomeTimer seconds status timerID) state = do
       let timeInMinutes = seconds/60 + 1
       continue state { data { driverGotoState { timerInMinutes = show timeInMinutes <> " " <>(getString LT.MIN_LEFT), timerId = timerID} } }
 
-eval (CancelBackAC PrimaryButtonController.OnClick) state = continue state { data { driverGotoState { showGoto = false}}}
+eval (CancelBackAC PrimaryButtonController.OnClick) state = if (HU.isParentView Common.FunctionCall) 
+                                                            then do 
+                                                            void $ pure $ HU.emitTerminateApp Nothing true 
+                                                            continue state { data { driverGotoState { showGoto = false }}} 
+                                                            else continue state { data { driverGotoState { showGoto = false }}}
 
 eval (AddLocation PrimaryButtonController.OnClick) state = exit $ ExitGotoLocation state true
 
@@ -878,7 +882,12 @@ eval BackPressed state = do
   else if state.data.driverGotoState.goToInfo then continue state{data {driverGotoState {goToInfo = false}}}
   else if state.data.driverGotoState.gotoLocInRange then continue state { data { driverGotoState { gotoLocInRange = false }}}
   else if state.data.driverGotoState.confirmGotoCancel then continue state { data { driverGotoState { confirmGotoCancel = false }}}
-  else if state.data.driverGotoState.showGoto then continue state { data { driverGotoState { showGoto = false }}}
+  else if state.data.driverGotoState.showGoto 
+        then if (HU.isParentView Common.FunctionCall) 
+                  then do 
+                  void $ pure $ HU.emitTerminateApp Nothing true 
+                  continue state { data { driverGotoState { showGoto = false }}} 
+                  else continue state { data { driverGotoState { showGoto = false }}}
   else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}}
   else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
   else if state.props.accountBlockedPopup then continue state {props {accountBlockedPopup = false}}
