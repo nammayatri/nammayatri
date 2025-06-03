@@ -899,6 +899,7 @@ riderRideCompletedScreenFlow = do
                   , ride_status: Nothing
                   , screen: Just "RiderRideCompletedScreenState"
                   , exit_app: false
+                  , registration_id: Nothing
                   }
             }
       (GlobalState globalState) <- getState
