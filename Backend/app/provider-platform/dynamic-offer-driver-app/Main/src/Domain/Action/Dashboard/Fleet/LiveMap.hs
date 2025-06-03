@@ -117,14 +117,14 @@ countTrips (rd : rds) trips =
     Nothing -> countTrips rds trips
     Just DR.COMPLETED ->
       countTrips rds $
-        Trips
+        trips
           { tripsCompletedCount = trips.tripsCompletedCount + 1,
             tripsPassed = trips.tripsPassed + 1
           }
     Just DR.CANCELLED ->
       countTrips rds $
-        Trips
+        trips
           { tripsCancelled = trips.tripsCancelled + 1,
             tripsPassed = trips.tripsPassed + 1
           }
-    _ -> countTrips rds $ Trips {tripsScheduled = trips.tripsScheduled + 1}
+    _ -> countTrips rds $ trips {tripsScheduled = trips.tripsScheduled + 1}
