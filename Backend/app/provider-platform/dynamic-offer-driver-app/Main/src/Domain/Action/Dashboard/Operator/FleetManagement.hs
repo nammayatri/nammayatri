@@ -431,7 +431,11 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
   mobileNumberHash <- getDbHash req.mobileNumber
   let enabled = Just True
   fleetOwner <- do
-    mbFleetOwner <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+    mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
+    mbFleetOwner <- forM mbPerson $ \person -> case person.role of
+      DP.FLEET_OWNER -> pure person
+      _ -> throwError (InvalidRequest "Person should be fleet owner")
+
     case mbFleetOwner of
       Just owner -> pure owner
       Nothing -> do

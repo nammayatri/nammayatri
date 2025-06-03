@@ -33,7 +33,7 @@ postOperatorRegister merchantShortId opCity req = do
 
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personAuth = buildOperatorAuthReq merchant.id opCity req
-  personOpt <- QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.OPERATOR
+  personOpt <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.OPERATOR, DP.FLEET_OWNER]
   case personOpt of
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
