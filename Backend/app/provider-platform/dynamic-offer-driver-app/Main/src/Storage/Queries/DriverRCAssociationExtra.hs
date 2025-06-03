@@ -152,8 +152,7 @@ findActiveAssociationsForDriverOrRC (Id driverId) (Id rcId) now = do
             [ Se.Is BeamDRCA.driverId $ Se.Eq driverId,
               Se.Is BeamDRCA.rcId $ Se.Eq rcId
             ],
-          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now,
-          Se.Is BeamDRCA.isRcActive $ Se.Eq True
+          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now
         ]
     ]
     (Se.Desc BeamDRCA.associatedOn)
