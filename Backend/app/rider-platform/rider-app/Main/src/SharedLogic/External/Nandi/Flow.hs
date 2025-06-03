@@ -2,6 +2,7 @@ module SharedLogic.External.Nandi.Flow where
 
 import BecknV2.FRFS.Enums
 import qualified Data.Map as Map
+import Data.Text (splitOn)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -52,9 +53,9 @@ getRouteStopMapping baseUrl gtfsId = do
                     startPoint = maybe (Kernel.External.Maps.Types.LatLong 0 0) (\s -> Kernel.External.Maps.Types.LatLong s.lat s.lon) $ headMay patternDetails.stops,
                     stopCount = Just $ length patternDetails.stops,
                     estimatedTravelTimeFromPreviousStop = Nothing, -- This would need to be calculated if available
-                    routeCode = routeDetail.id,
+                    routeCode = last $ splitOn ":" routeDetail.id,
                     sequenceNum = idx,
-                    stopCode = stop.code,
+                    stopCode = last $ splitOn ":" stop.code,
                     stopName = stop.name,
                     stopPoint = Kernel.External.Maps.Types.LatLong stop.lat stop.lon,
                     vehicleType = caseTextToVehicleCategory routeDetail.mode
