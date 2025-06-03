@@ -1,6 +1,7 @@
 module Storage.CachedQueries.OTPRest.OTPRest where
 
 import Data.List (groupBy)
+import Data.Text (splitOn)
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -91,9 +92,9 @@ parseRouteStopMapping routeStopMappingNandi integratedBppConfig merchantId merch
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             providerCode = "NANDI", -- Hardcoding provider code as NANDI since it's not in RouteStopMappingNandi
-            routeCode = mapping.routeCode,
+            routeCode = last $ splitOn ":" mapping.routeCode,
             sequenceNum = mapping.sequenceNum,
-            stopCode = mapping.stopCode,
+            stopCode = last $ splitOn ":" mapping.stopCode,
             stopName = mapping.stopName,
             stopPoint = mapping.stopPoint,
             timeBounds = Unbounded,
