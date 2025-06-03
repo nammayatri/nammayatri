@@ -453,7 +453,7 @@ notifyOnRideCompleted booking ride otherParties = do
                                 vehicleVariant = Nothing,
                                 source = Nothing,
                                 destination = toLocationDestination,
-                                estimatedFare = Just (show booking.estimatedFare)
+                                estimatedFare = Just (showPriceWithRoundingWithoutCurrency totalFare)
                               },
                         timerDuration = Nothing,
                         customMessage = Nothing
@@ -581,10 +581,10 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
       liveActivityCustomMessage = case cancellationSource of
         SBCR.ByDriver -> do
           case mbRide of
-            Nothing -> Just "Sorry, we could not find any driver for your ride."
-            Just _ -> Just "The driver had to cancel the ride."
-        SBCR.ByUser -> Just "You have cancelled your ride."
-        _ -> Just "Sorry, we could not find any driver for your ride."
+            Nothing -> Just "Sorry, No drivers found!"
+            Just _ -> Just "The driver had to cancel the ride!"
+        SBCR.ByUser -> Just "You have cancelled your ride!"
+        _ -> Just "Sorry, No drivers found!"
   fork "Disabling share ride" $ do
     disableFollowRide person.id
     Redis.del $ CQSos.mockSosKey person.id
