@@ -527,7 +527,7 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 
 -- update atlas_driver_offer_bpp.document_verification_config set document_category = 'Vehicle', description = 'Operation Hub Flow', title = 'Operation Hub Flow' where document_type = 'InspectionHub';
 
--- Run in master even if commented --
+-- Run in master even if commented -
 
 -- UPDATE atlas_driver_offer_bpp.transporter_config
 -- SET
