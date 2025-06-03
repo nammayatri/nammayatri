@@ -42,14 +42,13 @@ updateBusinessLicenseImage businessLicenseImageId fleetOwnerPersonId = do
 
 updateBusinessLicenseImageAndNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateBusinessLicenseImageAndNumber businessLicenseImageId businessLicenseNumber registeredAt fleetOwnerPersonId = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateBusinessLicenseImageAndNumber businessLicenseImageId businessLicenseNumber fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.businessLicenseImageId businessLicenseImageId,
       Se.Set Beam.businessLicenseNumber businessLicenseNumber,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.registeredAt registeredAt
+      Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
