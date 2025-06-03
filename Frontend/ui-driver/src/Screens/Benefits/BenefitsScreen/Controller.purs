@@ -43,6 +43,7 @@ import PrestoDOM.Core (processEvent)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
+import Helpers.Utils (emitTerminateApp, isParentView)
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -152,11 +153,18 @@ eval BackPressed state =
     continue state{props{showDriverReferralQRCode = false}}
   else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then 
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
+  else if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Nothing true
+    continue state
   else exit $ GoToHomeScreen state
 
 eval (GoToCustomerReferralTracker openPP) state = exit $ GoToCustomerReferralTrackerScreen openPP state
 
-eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
+eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = 
+  if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Nothing true
+    continue state
+  else exit $ GoBack
 
 eval (GullakSDKResponse _ ) state = 
   continueWithCmd state { props { glBannerClickable = true}}
@@ -182,22 +190,26 @@ eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick) )
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   pure $ hideKeyboardOnNavigation true
-  case item of
-    "Home" -> exit $ GoToHomeScreen state
-    "Earnings" -> exit $ EarningsScreen state
-    "Alert" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications state
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    "Earnings" -> exit $ EarningsScreen state
-    _ -> continue state
+  if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Nothing true
+    continue state
+  else 
+    case item of
+      "Home" -> exit $ GoToHomeScreen state
+      "Earnings" -> exit $ EarningsScreen state
+      "Alert" -> do
+        void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
+        exit $ GoToNotifications state
+      "Join" -> do
+        let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+        void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
+        void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+        void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+        let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+        exit $ SubscriptionScreen state
+      "Earnings" -> exit $ EarningsScreen state
+      _ -> continue state
 
 eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
   continue state {
