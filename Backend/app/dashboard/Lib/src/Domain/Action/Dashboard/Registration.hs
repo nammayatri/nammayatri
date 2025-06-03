@@ -308,11 +308,10 @@ registerFleetOwner ::
     EncFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
-  Bool ->
   FleetRegisterReq ->
   Maybe Text ->
   m APISuccess
-registerFleetOwner isOperator req mbPersonId = do
+registerFleetOwner req mbPersonId = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
   fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
@@ -320,7 +319,7 @@ registerFleetOwner isOperator req mbPersonId = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId isOperator
+  createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId
   return Success
   where
     getFleetRole mbFleetType = case mbFleetType of
@@ -375,12 +374,11 @@ createFleetOwnerDashboardOnly ::
   DMerchant.Merchant ->
   FleetRegisterReq ->
   Maybe Text ->
-  Bool ->
   m ()
-createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId isOperator = do
+createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId = do
   fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) || isOperator)
+  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding))
   QP.create fleetOwner {verified = mbBoolVerified}
   QAccess.create merchantAccess

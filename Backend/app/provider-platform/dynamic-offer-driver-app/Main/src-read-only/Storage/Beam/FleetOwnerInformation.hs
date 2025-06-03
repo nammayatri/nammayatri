@@ -12,7 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
-  { blocked :: B.C f Kernel.Prelude.Bool,
+  { aadhaarBackImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    aadhaarFrontImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    aadhaarNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    blocked :: B.C f Kernel.Prelude.Bool,
     businessLicenseImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enabled :: B.C f Kernel.Prelude.Bool,
@@ -24,6 +27,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     panImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    registeredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     verified :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

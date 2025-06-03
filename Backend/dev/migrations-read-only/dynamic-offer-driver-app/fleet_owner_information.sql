@@ -41,3 +41,15 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_l
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_number text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_image_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_number text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_front_image_id text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_back_image_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN registered_at timestamp with time zone ;

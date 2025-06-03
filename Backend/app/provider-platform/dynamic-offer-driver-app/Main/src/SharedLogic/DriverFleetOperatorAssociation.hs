@@ -36,7 +36,7 @@ checkForDriverAssociationOverwrite merchant driverId = do
   unless (merchant.overwriteAssociation == Just True) $ do
     existingFDAssociations <- QFDA.findAllByDriverId driverId True
     unless (null existingFDAssociations) $ do
-      throwError (InvalidRequest "Driver already associated with another fleet")
+      throwError (InvalidRequest "Driver already associated with a fleet")
 
     existingDOAssociations <- QDOA.findAllByDriverId driverId True
     unless (null existingDOAssociations) $ do

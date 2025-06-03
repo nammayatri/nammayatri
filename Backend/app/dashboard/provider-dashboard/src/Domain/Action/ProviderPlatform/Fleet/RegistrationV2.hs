@@ -40,7 +40,7 @@ postRegistrationV2LoginOtp merchantShortId opCity req = do
     Just _ -> pure Success
     Nothing -> do
       let req' = buildFleetOwnerRegisterReq merchantShortId opCity req
-      void $ registerFleetOwner False req' $ Just res.personId.getId
+      void $ registerFleetOwner req' $ Just res.personId.getId
       pure Success
 
 buildFleetOwnerRegisterReq :: ShortId DM.Merchant -> City.City -> Common.FleetOwnerLoginReqV2 -> FleetRegisterReq
