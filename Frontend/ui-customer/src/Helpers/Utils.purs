@@ -599,6 +599,7 @@ emitTerminateApp screen exitApp = do
   , trip_id : Nothing
   , screen : screen
   , exit_app : exitApp
+  , registration_token: Nothing
   }
 }
 
@@ -612,6 +613,7 @@ nudgeRNApp bookingId screen action = runFn3 emitJOSEvent "java" "onEvent" $ enco
   , trip_id : Just bookingId
   , screen: screen
   , exit_app : true
+  , registration_token: Nothing
   }
 }
 
@@ -703,6 +705,7 @@ triggerRideStatusEvent status amount bookingId screen = do
     , trip_id : bookingId
     , screen : Just screen
     , exit_app : false
+    , registration_token: Nothing
     }
   pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
     event : "process_result"
