@@ -40,8 +40,9 @@ data ONDCBecknConfig = ONDCBecknConfig
 
 data CRISConfig = CRISConfig
   { baseUrl :: BaseUrl,
-    clientKey :: EncryptedField 'AsEncrypted Text,
+    decryptionKey :: EncryptedField 'AsEncrypted Text,
     clientSecret :: EncryptedField 'AsEncrypted Text,
+    encryptionKey :: EncryptedField 'AsEncrypted Text,
     appCode :: Text,
     tpAccountId :: Int,
     sourceZone :: Text,

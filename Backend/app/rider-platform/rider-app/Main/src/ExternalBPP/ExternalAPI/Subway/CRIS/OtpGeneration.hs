@@ -68,8 +68,8 @@ generateOtp config request = do
 
   -- 1. Construct and encrypt the request
   let jsonStr = constructOtpJson request
-  decryptedKey <- decrypt config.clientKey -- Decrypt the key first
-  encryptedPayload <- encryptPayload jsonStr decryptedKey
+  encryptionKey <- decrypt config.encryptionKey -- Decrypt the key first
+  encryptedPayload <- encryptPayload jsonStr encryptionKey
 
   -- 2. Make API call with encrypted request
   let encReq =

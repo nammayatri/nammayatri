@@ -166,8 +166,8 @@ getBookJourney config request = do
 
   -- 1. Construct and encrypt the request
   let jsonStr = constructBookingJson request
-  decryptedKey <- decrypt config.clientKey -- Decrypt the key first
-  encryptedPayload <- encryptPayload jsonStr decryptedKey
+  encryptionKey <- decrypt config.encryptionKey -- Decrypt the key first
+  encryptedPayload <- encryptPayload jsonStr encryptionKey
   let mobilePrefix = T.take 5 request.mob
   let mobileSuffix = T.takeEnd 5 request.mob
   agentKey <- decrypt config.agentDataDecryptionKey
