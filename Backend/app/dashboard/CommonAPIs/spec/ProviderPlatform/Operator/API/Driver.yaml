@@ -56,8 +56,8 @@ apis:
         - isActive: Bool
         - limit: Int
         - offset: Int
-        - driverId: Text # have to talk about this field because if we need to filter with driverNo then we should add driverNo field in DriverOperationAssociation table
         - vehicleNo: Text
+        - mbSearchString: Text
       response:
         type: DriverInfoResp
       helperApi:
@@ -68,8 +68,8 @@ apis:
               - isActive: Bool
               - limit: Int
               - offset: Int
-              - driverId: Text
               - vehicleNo: Text
+              - mbSearchString: Text
             mandatoryQuery:
               - requestorId: Text
             response:

@@ -108,7 +108,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mbMobi
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                         B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` (B.val_ ("%" <> toLower name <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
+                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))) mbSearchString
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                                )
                   )
@@ -141,7 +141,7 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId Nothing Nothing mbMobileNumberSea
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                     B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbSearchString
-                               B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
+                               B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))) mbSearchString
                                B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                            )
               )
@@ -175,7 +175,7 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId mbLimit mbOffset mbMobileNumberSe
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                         B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
+                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))) mbSearchString
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                                )
                   )
@@ -245,7 +245,7 @@ findAllDriverByFleetOwnerId fleetOwnerId mbLimit mbOffset mbMobileNumberSearchSt
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                         B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
+                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))) mbSearchString
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                                )
                   )

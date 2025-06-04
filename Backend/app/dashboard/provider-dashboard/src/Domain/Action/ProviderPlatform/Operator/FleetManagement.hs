@@ -35,12 +35,14 @@ getFleetManagementFleets ::
   ApiTokenInfo ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.FleetManagement.FleetInfoRes
-getFleetManagementFleets merchantShortId opCity apiTokenInfo mbIsActive mbVerified mbLimit mbOffset = do
+getFleetManagementFleets merchantShortId opCity apiTokenInfo mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.getFleetManagementFleets) mbIsActive mbVerified mbLimit mbOffset apiTokenInfo.personId.getId
+  Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.getFleetManagementFleets) mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString apiTokenInfo.personId.getId
 
 postFleetManagementFleetRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerRegisterReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFleetManagementFleetRegister merchantShortId opCity apiTokenInfo req = do

@@ -155,8 +155,8 @@ type GetDriverOperatorList =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam "driverId" Kernel.Prelude.Text
       :> QueryParam "vehicleNo" Kernel.Prelude.Text
+      :> QueryParam "mbSearchString" Kernel.Prelude.Text
       :> Get '[JSON] DriverInfoResp
   )
 
@@ -165,9 +165,9 @@ type GetDriverOperatorListHelper =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam "driverId" Kernel.Prelude.Text
+      :> QueryParam "vehicleNo" Kernel.Prelude.Text
       :> QueryParam
-           "vehicleNo"
+           "mbSearchString"
            Kernel.Prelude.Text
       :> MandatoryQueryParam
            "requestorId"

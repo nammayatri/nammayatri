@@ -98,21 +98,35 @@ data FleetType
 type API = ("operator" :> (GetFleetManagementFleetsHelper :<|> PostFleetManagementFleetCreateHelper :<|> PostFleetManagementFleetRegisterHelper :<|> PostFleetManagementFleetLinkSendOtpHelper :<|> PostFleetManagementFleetLinkVerifyOtpHelper :<|> PostFleetManagementFleetUnlinkHelper))
 
 type GetFleetManagementFleets =
-  ( "fleets" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "verified" Kernel.Prelude.Bool :> QueryParam "limit" Kernel.Prelude.Int
+  ( "fleets" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "verified" Kernel.Prelude.Bool :> QueryParam "enabled" Kernel.Prelude.Bool
       :> QueryParam
-           "offset"
+           "limit"
            Kernel.Prelude.Int
-      :> Get '[JSON] FleetInfoRes
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "mbSearchString"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           FleetInfoRes
   )
 
 type GetFleetManagementFleetsHelper =
   ( "fleets" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "verified" Kernel.Prelude.Bool
       :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
+           "enabled"
+           Kernel.Prelude.Bool
+      :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
-      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Get '[JSON] FleetInfoRes
+      :> QueryParam
+           "mbSearchString"
+           Kernel.Prelude.Text
+      :> MandatoryQueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           FleetInfoRes
   )
 
 type PostFleetManagementFleetCreate = ("fleet" :> "create" :> ReqBody '[JSON] FleetOwnerCreateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -162,7 +176,7 @@ type PostFleetManagementFleetUnlinkHelper =
   )
 
 data FleetManagementAPIs = FleetManagementAPIs
-  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetInfoRes,
+  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetInfoRes,
     postFleetManagementFleetCreate :: Kernel.Prelude.Text -> FleetOwnerCreateReq -> EulerHS.Types.EulerClient FleetOwnerCreateRes,
     postFleetManagementFleetRegister :: Kernel.Prelude.Text -> FleetOwnerRegisterReq -> EulerHS.Types.EulerClient FleetOwnerUpdateRes,
     postFleetManagementFleetLinkSendOtp :: Kernel.Prelude.Text -> FleetOwnerSendOtpReq -> EulerHS.Types.EulerClient FleetOwnerSendOtpRes,

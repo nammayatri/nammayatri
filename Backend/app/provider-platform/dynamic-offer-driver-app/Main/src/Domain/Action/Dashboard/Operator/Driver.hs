@@ -50,7 +50,7 @@ import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
-import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffsetDriverId)
+import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffsetSearch)
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Image as IQuery
@@ -212,14 +212,13 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbDriverId mbVehicleNo requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString requestorId = do
   person <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
-  driverOperatorAssociationLs <-
-    findAllByOperatorIdWithLimitOffsetDriverId requestorId mbIsActive mbLimit mbOffset mbDriverId
+  driverOperatorAssociationAndPersonLs <- findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString
   now <- getCurrentTime
-  listItemWithoutFilter <- mapM (createDriverInfo now) driverOperatorAssociationLs
+  listItemWithoutFilter <- mapM (createDriverInfo now) driverOperatorAssociationAndPersonLs
   listItem <- case mbVehicleNo of
     Just vehicleNo -> filterM (\x -> pure $ x.vehicleNo == Just vehicleNo) listItemWithoutFilter
     Nothing -> pure listItemWithoutFilter
@@ -227,9 +226,8 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbDri
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
-    createDriverInfo now drvOpAsn = do
+    createDriverInfo now (drvOpAsn, person) = do
       let driverId = drvOpAsn.driverId
-      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
           >>= fromMaybeM
