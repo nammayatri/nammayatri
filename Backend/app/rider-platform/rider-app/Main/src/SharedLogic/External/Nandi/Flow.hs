@@ -24,6 +24,26 @@ getRoutesFromNandi :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDura
 getRoutesFromNandi baseUrl gtfsId = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutes gtfsId) "getRoutesFromNandi" NandiAPI.nandiRoutesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_ROUTES_API") baseUrl)
 
+getRouteStopMappingByRouteCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
+getRouteStopMappingByRouteCode baseUrl gtfsId routeCode = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetRouteStopMappingByRouteId gtfsId routeCode) "getRouteStopMappingByRouteCode" NandiAPI.nandiGetRouteStopMappingByRouteIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_ROUTE_CODE_API") baseUrl)
+
+getRouteStopMappingByStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
+getRouteStopMappingByStopCode baseUrl gtfsId stopCode = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetRouteStopMappingByStopCode gtfsId stopCode) "getRouteStopMappingByStopCode" NandiAPI.nandiGetRouteStopMappingByStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_STOP_CODE_API") baseUrl)
+
+getRouteStopMappingInMemoryServer :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> m [RouteStopMappingInMemoryServer]
+getRouteStopMappingInMemoryServer baseUrl gtfsId routeCode' stopCode' = do
+  case (routeCode', stopCode') of
+    (Just routeCode, Just stopCode) -> do
+      routeStopMapping <- getRouteStopMappingByRouteCode baseUrl gtfsId routeCode
+      return $ filter (\r -> r.stopCode == stopCode) routeStopMapping
+    (Just routeCode, Nothing) -> getRouteStopMappingByRouteCode baseUrl gtfsId routeCode
+    (Nothing, Just stopCode) -> getRouteStopMappingByStopCode baseUrl gtfsId stopCode
+    (Nothing, Nothing) -> do
+      logError $ "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls" <> show (baseUrl, gtfsId)
+      throwError $ InternalError "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls"
+
 getRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m [RouteStopMappingNandi]
 getRouteStopMapping baseUrl gtfsId = do
   env <- fromMaybe False . (>>= readMaybe) <$> liftIO (lookupEnv "ENABLE_INMEMORY_SERVER")
