@@ -209,8 +209,8 @@ checkRCAssociationForDriver driverId vehicleRC checkFleet = do
   now <- getCurrentTime
   allAssociations <- DRCAE.findActiveAssociationsForDriverOrRC driverId vehicleRC.id now
   let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
-      rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId) allAssociations
-      driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id) allAssociations
+      rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId && assoc.isRcActive) allAssociations
+      driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id && assoc.isRcActive) allAssociations
   if (isJust exactMatch)
     then return True
     else do
