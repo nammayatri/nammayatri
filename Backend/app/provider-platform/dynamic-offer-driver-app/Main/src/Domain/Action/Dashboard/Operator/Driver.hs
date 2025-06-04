@@ -127,7 +127,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
         personId <- case creator.role of
           DP.DRIVER -> pure creator.id
-          DP.OPERATOR -> do
+          _ -> do
             rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
             drc <- SQDRA.findAllActiveAssociationByRCId rc.id
             case drc of
@@ -142,7 +142,6 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
                       unless isFleetAssociated $ throwError (InvalidRequest ("Driver id " <> show assoc.driverId <> " not associated with operator"))
                     _ -> throwError (InvalidRequest ("Driver id " <> show assoc.driverId <> " not associated with operator"))
                 pure assoc.driverId
-          _ -> throwError (InvalidRequest "Creator is not driver or operator")
         merchant <- findMerchantByShortId merchantShortId
         merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
         transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
