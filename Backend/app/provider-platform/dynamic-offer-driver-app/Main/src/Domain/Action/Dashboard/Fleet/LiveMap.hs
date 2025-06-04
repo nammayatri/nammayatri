@@ -39,7 +39,9 @@ import qualified Storage.Clickhouse.RideDetails as CHRD
 import Storage.Queries.DriverInformationExtra (findAllWithLimitOffsetByMerchantId, findByIdAndVerified)
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
-import Tools.Error (DriverInformationError (..))
+import Tools.Error (DriverInformationError (..), TransporterError (TransporterConfigNotFound))
+import qualified Storage.Queries.DailyStats as SQDS
+import qualified Storage.Cac.TransporterConfig as CTC
 
 getLiveMapDrivers ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -85,7 +87,13 @@ buildTodaySummary :: (DP.Person, DDI.DriverInformation) -> [CHR.Ride] -> Environ
 buildTodaySummary (driver, driverInformation) rideLs = do
   mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
   let trips = countTrips rideLs $ Trips 0 0 0 0 0 0
-  pure $
+  transporterConfig <- CTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing >>= 
+    fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let merchantLocalDate = utctDay localTime
+  mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
+  let onlineDuration = maybe 0 (.onlineDuration) mbDailyStats
+  pure $ 
     Common.TodaySummary
       { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
         tripStatus = castDriverStatus driverInformation.mode,
@@ -96,7 +104,7 @@ buildTodaySummary (driver, driverInformation) rideLs = do
         tripsCancelled = trips.tripsCancelled,
         tripsPassed = trips.tripsPassed,
         tripsScheduled = trips.tripsScheduled,
-        onlineDuration = Kernel.Types.Common.Seconds 0, --TODO
+        onlineDuration = onlineDuration, --TODO
         mobileCountryCode = fromMaybe mobileIndianCode driver.mobileCountryCode,
         mobileNumber = mobileNumber
       }
