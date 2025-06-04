@@ -632,6 +632,7 @@ library
       Storage.Queries.Transformers.DriverPlan
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
+      Storage.Queries.Transformers.FleetOwnerInformation
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location
       Storage.Queries.Transformers.MerchantMessage
@@ -673,6 +674,7 @@ library
       Tools.Csv
       Tools.Dashcam
       Tools.DriverBackgroundVerification
+      Tools.Encryption
       Tools.Error
       Tools.Event
       Tools.Maps
@@ -1220,6 +1222,7 @@ library
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
       Storage.Queries.OrphanInstances.FleetDriverAssociation
       Storage.Queries.OrphanInstances.FleetOperatorAssociation
+      Storage.Queries.OrphanInstances.FleetOwnerInformation
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice

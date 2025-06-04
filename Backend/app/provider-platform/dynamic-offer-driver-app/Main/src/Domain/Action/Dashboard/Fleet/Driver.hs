@@ -100,7 +100,6 @@ import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude hiding (toList)
@@ -157,6 +156,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
 import qualified Tools.Csv as Csv
+import Tools.Encryption
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
@@ -1404,7 +1404,20 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
+      gstNumber' <- decryptWithDefault gstNumber gstNumberDec
+      panNumber' <- decryptWithDefault panNumber panNumberDec
+      aadhaarNumber' <- decryptWithDefault aadhaarNumber aadhaarNumberDec
+      businessLicenseNumber' <- decryptWithDefault businessLicenseNumber businessLicenseNumberDec
+      return $
+        Common.FleetOwnerInfoRes
+          { fleetType = show fleetType,
+            referralCode = (.referralCode.getId) <$> referral,
+            gstNumber = gstNumber',
+            panNumber = panNumber',
+            aadhaarNumber = aadhaarNumber',
+            businessLicenseNumber = businessLicenseNumber',
+            ..
+          }
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo

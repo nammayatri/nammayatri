@@ -36,6 +36,7 @@ library
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
+      Dashboard.ProviderPlatform.Fleet.RegistrationV2
       Dashboard.ProviderPlatform.Management.Driver
       Dashboard.ProviderPlatform.Management.DriverCoins
       Dashboard.ProviderPlatform.Management.DriverReferral

@@ -6,7 +6,6 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
-import qualified Dashboard.Common as Common
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Operator.FleetManagement as DFleetManagement
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
@@ -21,7 +20,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (encrypt, getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -113,7 +112,8 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (personId, person.merchantId, person.merchantOperatingCityId) req'
-      QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) req.businessLicenseNumber personId
+      businessLicenseNumber <- forM req.businessLicenseNumber encrypt
+      QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber personId
   enabled <- enableFleetIfPossible
   return $ Common.FleetOwnerRegisterResV2 enabled
   where
@@ -172,15 +172,19 @@ createFleetOwnerInfo personId merchantId enabled = do
             blocked = False,
             verified = False,
             gstNumber = Nothing,
+            gstNumberDec = Nothing,
             gstImageId = Nothing,
             businessLicenseImageId = Nothing,
             businessLicenseNumber = Nothing,
+            businessLicenseNumberDec = Nothing,
             referredByOperatorId = Nothing,
             aadhaarBackImageId = Nothing,
             aadhaarFrontImageId = Nothing,
             aadhaarNumber = Nothing,
+            aadhaarNumberDec = Nothing,
             panImageId = Nothing,
             panNumber = Nothing,
+            panNumberDec = Nothing,
             createdAt = now,
             updatedAt = now,
             registeredAt = Nothing

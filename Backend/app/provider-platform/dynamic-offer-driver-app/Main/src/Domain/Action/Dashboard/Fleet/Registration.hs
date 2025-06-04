@@ -29,7 +29,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (encrypt, getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -130,7 +130,8 @@ fleetOwnerRegister req mbEnabled = do
         whenJust req.gstCertificateImage $ \gstImage -> do
           let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
           image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
-          QFOI.updateGstImage req.gstNumber (Just image.imageId.getId) person.id
+          gstNumber <- forM req.gstNumber encrypt
+          QFOI.updateGstImage gstNumber (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
 getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
@@ -168,6 +169,7 @@ createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow ()
 createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbReferredByOperatorId = do
   now <- getCurrentTime
+  mbGstNumberEnc <- forM mbGstNumber encrypt
   let fleetType = fromMaybe NORMAL_FLEET mbFleetType
       enabled = fromMaybe True mbEnabled
       fleetOwnerInfo =
@@ -178,16 +180,20 @@ createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbRef
             enabled = enabled, ------ currently we are not validating any fleet owner Document there fore marking it as true
             blocked = False,
             verified = False,
-            gstNumber = mbGstNumber,
+            gstNumber = mbGstNumberEnc,
+            gstNumberDec = Nothing,
             gstImageId = Nothing,
             businessLicenseImageId = Nothing,
             businessLicenseNumber = Nothing,
+            businessLicenseNumberDec = Nothing,
             referredByOperatorId = mbReferredByOperatorId,
             panImageId = Nothing,
             panNumber = Nothing,
+            panNumberDec = Nothing,
             aadhaarBackImageId = Nothing,
             aadhaarFrontImageId = Nothing,
             aadhaarNumber = Nothing,
+            aadhaarNumberDec = Nothing,
             createdAt = now,
             updatedAt = now,
             registeredAt = Nothing

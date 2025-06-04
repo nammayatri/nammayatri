@@ -12,7 +12,6 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
-import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
@@ -40,10 +39,18 @@ data FleetOwnerRegisterReqV2 = FleetOwnerRegisterReqV2
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerRegisterReqV2 where
-  hideSecrets = Kernel.Prelude.identity
-
 newtype FleetOwnerRegisterResV2 = FleetOwnerRegisterResV2 {enabled :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOwnerRegisterTReqV2 = FleetOwnerRegisterTReqV2
+  { firstName :: Kernel.Prelude.Text,
+    lastName :: Kernel.Prelude.Text,
+    personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement.FleetType,
+    operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

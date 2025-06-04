@@ -80,7 +80,7 @@ postRegistrationV2Register merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  let req' = req {Common.adminApprovalRequired = merchant.requireAdminApprovalForFleetOnboarding}
+  let req' = req{Common.adminApprovalRequired = merchant.requireAdminApprovalForFleetOnboarding}
   let requestorId = apiTokenInfo.personId.getId
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <-
