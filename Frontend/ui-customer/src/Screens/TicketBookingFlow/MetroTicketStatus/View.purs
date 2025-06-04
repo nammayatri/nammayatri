@@ -34,6 +34,7 @@ import Data.Foldable (foldl, foldMap)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils 
+import JBridge (cleverTapCustomEvent)
 import JBridge as JB
 import Prelude 
 import PrestoDOM 
@@ -151,6 +152,10 @@ metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state p
                 doAff do liftEffect $ push $ action resp
               else if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED"])) then do
                   void $ pure $ spy "case 2" statusResp.status
+                  if statusResp.status == "CONFIRMED" then do
+                    void $ pure $ cleverTapCustomEvent "ny_bus_user_booked_ticket"
+                  else
+                    pure $ unit
                   _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
                   doAff do liftEffect $ push $ action resp
               else do
