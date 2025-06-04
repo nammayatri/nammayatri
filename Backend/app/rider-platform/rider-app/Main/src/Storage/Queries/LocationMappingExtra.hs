@@ -15,23 +15,26 @@ import Storage.Queries.OrphanInstances.LocationMapping ()
 -- Extra code goes here --
 
 -- This function is not correct, need to correct it later
-incrementVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m ()
-incrementVersion mapping = do
-  newVersion <- getNewVersion mapping
+incrementVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> Int -> m ()
+incrementVersion mapping lenMappings = do
+  newVersion <- getNewVersion mapping lenMappings
   updateVersion mapping.id newVersion
 
 latestTag :: Text
 latestTag = "LATEST"
 
-getNewVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m Text
-getNewVersion mapping =
-  case T.splitOn "-" mapping.version of
-    ["v", versionNum] -> do
-      oldVersionInt <-
-        fromEitherM (InternalError . (("Location mapping version parse failed: id: " <> mapping.id.getId <> "; err: ") <>)) $
-          readEither @String @Integer (T.unpack versionNum)
-      pure $ "v-" <> T.pack (show (oldVersionInt + 1))
-    _ -> pure "v-1"
+getNewVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> Int -> m Text
+getNewVersion mapping lenMappings =
+  if lenMappings == 0
+    then pure "v-1"
+    else case T.splitOn "-" mapping.version of
+      ["v", versionNum] -> do
+        _oldVersionInt <-
+          fromEitherM (InternalError . (("Location mapping version parse failed: id: " <> mapping.id.getId <> "; err: ") <>)) $
+            readEither @String @Integer (T.unpack versionNum)
+        pure $ mapping.version
+      _ | mapping.version == latestTag -> pure $ T.pack ("v-" <> show lenMappings)
+      _ -> pure "v-1"
 
 findAllByEntityIdAndOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
@@ -96,7 +99,9 @@ maxOrderByEntity entityId = do
 updatePastMappingVersions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
-  traverse_ incrementVersion mappings
+  let isVersioned = any (\mapping -> T.isPrefixOf (T.pack "v") mapping.version) mappings
+  let lenMappings = if isVersioned then length mappings else 0
+  traverse_ (`incrementVersion` lenMappings) mappings
 
 countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
 countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
