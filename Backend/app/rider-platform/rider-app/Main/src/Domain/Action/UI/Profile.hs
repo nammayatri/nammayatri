@@ -333,7 +333,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   fork "Triggering kafka marketing params event for person" $
-    when person.isNew $ do
+    when (isNothing person.firstName) $ do
       case req.marketingParams of
         Just params -> do
           now <- getCurrentTime
