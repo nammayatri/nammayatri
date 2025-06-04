@@ -294,7 +294,6 @@ public class LocationUpdateServiceV2 extends Service {
             stopSelf();
             return;
         }
-
         // Initialize message queue with dedicated looper thread
         initializeMessageQueue();
 
@@ -310,17 +309,11 @@ public class LocationUpdateServiceV2 extends Service {
         // Initialize internet connectivity receiver
         setupInternetReceiver();
 
-        // Start the batch scheduler
-        startBatchScheduler();
-
         // Restore any cached locations
         messageQueue.restoreFromCache();
 
         // Restore any cached locations
         messageQueue.flushToBackend(messageQueue.size());
-
-        // Start the heartbeat timer
-        startLocationHeartbeatTimer();
 
         Log.i(TAG, "Service initialization complete");
         Log.d(TAG, "onCreate() complete");
@@ -534,6 +527,10 @@ public class LocationUpdateServiceV2 extends Service {
 
             // Update settings from SharedPreferences
             updateConfigVariables();
+
+            // Start the heartbeat timer
+            startLocationHeartbeatTimer();
+
 
             // Start location updates if not already running
             if (!isLocationUpdating) {
@@ -1683,22 +1680,20 @@ public class LocationUpdateServiceV2 extends Service {
      */
     private void startLocationHeartbeatTimer() {
         Log.d(TAG_TIMER, "startLocationHeartbeatTimer() called");
-        if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
-            locationHeartbeatScheduler.shutdown();
+
+        if (locationHeartbeatScheduler == null) {
+            locationHeartbeatScheduler = Executors.newScheduledThreadPool(2);
+            int heartbeatIntervalMillis = locationUpdateInterval * 1000;
+
+            locationHeartbeatScheduler.scheduleWithFixedDelay(
+                    this::checkAndSendLocationHeartbeat,
+                    heartbeatIntervalMillis,
+                    heartbeatIntervalMillis,
+                    TimeUnit.MILLISECONDS
+            );
+            Log.d(TAG_TIMER, "Started location heartbeat scheduler with interval: " +
+                    locationUpdateInterval + "s");
         }
-
-        locationHeartbeatScheduler = Executors.newScheduledThreadPool(2);
-        int heartbeatIntervalMillis = locationUpdateInterval * 1000;
-
-        locationHeartbeatScheduler.scheduleWithFixedDelay(
-                this::checkAndSendLocationHeartbeat,
-                heartbeatIntervalMillis,
-                heartbeatIntervalMillis,
-                TimeUnit.MILLISECONDS
-        );
-
-        Log.d(TAG_TIMER, "Started location heartbeat scheduler with interval: " +
-                locationUpdateInterval + "s");
         Log.d(TAG_TIMER, "startLocationHeartbeatTimer() complete");
     }
 
@@ -1709,6 +1704,7 @@ public class LocationUpdateServiceV2 extends Service {
         Log.d(TAG_TIMER, "restartLocationHeartbeatTimer() called");
         if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
             locationHeartbeatScheduler.shutdown();
+            locationHeartbeatScheduler = null;
         }
         startLocationHeartbeatTimer();
         Log.d(TAG_TIMER, "restartLocationHeartbeatTimer() complete");
