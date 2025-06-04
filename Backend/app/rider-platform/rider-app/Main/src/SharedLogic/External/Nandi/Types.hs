@@ -38,6 +38,18 @@ data NandiStop = NandiStop
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
+  { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    providerCode :: Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    sequenceNum :: Kernel.Prelude.Int,
+    stopCode :: Kernel.Prelude.Text,
+    stopName :: Kernel.Prelude.Text,
+    stopPoint :: Kernel.External.Maps.Types.LatLong,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data NandiTrip = NandiTrip
   { id :: Text,
     direction :: Maybe Text
