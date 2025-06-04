@@ -25,8 +25,8 @@ data TicketPlaceDef = TicketPlaceDef
     services :: [TicketServiceDef],
     serviceCategories :: [ServiceCategoryDef],
     servicePeopleCategories :: [ServicePeopleCategoryDef],
-    isDraft :: Bool,
-    rules :: Maybe [Rule]
+    isDraft :: Bool
+    --rules :: Maybe [Rule]
     --specialOccasions :: [SpecialOccasionDetails]
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
@@ -49,7 +49,8 @@ data BasicInformation = BasicInformation
     termsAndConditionsUrl :: Maybe Text,
     openTimings :: Maybe TimeOfDay,
     closeTimings :: Maybe TimeOfDay,
-    customTabs :: Maybe [DTicketPlace.CustomTab]
+    customTabs :: Maybe [DTicketPlace.CustomTab],
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, Ord, Eq, ToJSON, FromJSON, ToSchema)
 

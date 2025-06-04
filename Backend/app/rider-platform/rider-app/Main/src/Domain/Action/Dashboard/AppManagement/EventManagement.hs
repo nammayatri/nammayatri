@@ -218,8 +218,7 @@ newTicketPlaceDef requestorId requestorRole basicInfo merchantId merchantOperati
             services = [],
             serviceCategories = [],
             servicePeopleCategories = [],
-            isDraft = True,
-            rules = Nothing
+            isDraft = True
           }
   let draftTicketChange =
         DDTC.DraftTicketChange
@@ -271,7 +270,8 @@ getLiveTicketDef placeId = do
                 termsAndConditionsUrl = ticketPlace.termsAndConditionsUrl,
                 openTimings = ticketPlace.openTimings,
                 closeTimings = ticketPlace.closeTimings,
-                customTabs = ticketPlace.customTabs
+                customTabs = ticketPlace.customTabs,
+                rules = ticketPlace.rules
               }
           serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
           serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
@@ -284,8 +284,7 @@ getLiveTicketDef placeId = do
               services = serviceDefs,
               serviceCategories = serviceCategoryDefs,
               servicePeopleCategories = servicePeopleCategoryDefs,
-              isDraft = False,
-              rules = ticketPlace.rules
+              isDraft = False
             }
   where
     toTicketServiceDef :: [DBusinessHour.BusinessHour] -> DTicketService.TicketService -> DEM.TicketServiceDef
@@ -575,7 +574,7 @@ applyDraftChanges draftChange = do
             merchantOperatingCityId = fromMaybe mocityId (existingTicketPlace <&> (.merchantOperatingCityId)),
             createdAt = now,
             updatedAt = now,
-            rules = ticketDef.rules,
+            rules = ticketDef.basicInformation.rules,
             recommend = fromMaybe False (existingTicketPlace <&> (.recommend))
           }
   case existingTicketPlace of
