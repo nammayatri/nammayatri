@@ -1789,4 +1789,5 @@ getMl = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി ₹" <> a <> " റഫറൽ പ്രയോജനം നേടുക!"
     , take_a_ride_now: "ഇപ്പോഴെന്തെങ്കിലും യാത്ര ചെയ്യൂ"
     , take_a_ride__claim_50: \a ->  "ഒരു യാത്ര എടുക്കൂ & ₹" <> a <> " വാങ്ങൂ"
+, select_route : "റൂട്ട് തിരഞ്ഞെടുക്കുക"
 }
