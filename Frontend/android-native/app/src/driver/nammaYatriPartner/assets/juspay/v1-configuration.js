@@ -1247,6 +1247,13 @@ function getNammaYatriConfig() {
           "enableAdvancedBooking" : false,
           "enableGullak": true,
           "advancedRidePopUpYoutubeLink" : "" ,
+          "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : false
+          },
         "callDriverInfoPost": false, // Dummy link need to change
           "cityLat" : 15.32383804957557,
           "cityLong" : 75.88071672412116,
