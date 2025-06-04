@@ -23,12 +23,15 @@ import Storage.Beam.DriverFee
 import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLicense
+import Storage.Beam.DriverOperatorAssociation
 import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.FleetBadge
 import Storage.Beam.FleetBadgeAssociation
 import Storage.Beam.FleetDriverAssociation
+import Storage.Beam.FleetOperatorAssociation
+import Storage.Beam.FleetOwnerInformation
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
@@ -83,12 +86,15 @@ atlasDB =
         driverGoHomeRequest = driverGoHomeRequestTable,
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
+        fleetOperatorAssociation = fleetOperatorAssociationTable,
+        driverOperatorAssociation = driverOperatorAssociationTable,
         route = routeTable,
         operationHub = operationHubTable,
         operationHubRequests = operationHubRequestsTable,
         fleetBadge = fleetBadgeTable,
         tripTransaction = tripTransactionTable,
-        fleetBadgeAssociation = fleetBadgeAssociationTable
+        fleetBadgeAssociation = fleetBadgeAssociationTable,
+        fleetOwnerInformation = fleetOwnerInformationTable
       }
 
 data AtlasDB f = AtlasDB
@@ -120,11 +126,14 @@ data AtlasDB f = AtlasDB
     notification :: f (B.TableEntity NotificationT),
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
+    fleetOperatorAssociation :: f (B.TableEntity FleetOperatorAssociationT),
+    driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
     route :: f (B.TableEntity RouteT),
     operationHub :: f (B.TableEntity OperationHubT),
     operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
     fleetBadge :: f (B.TableEntity FleetBadgeT),
     tripTransaction :: f (B.TableEntity TripTransactionT),
-    fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT)
+    fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT),
+    fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT)
   }
   deriving (Generic, B.Database be)

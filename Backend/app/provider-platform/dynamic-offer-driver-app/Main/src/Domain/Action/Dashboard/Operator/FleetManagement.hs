@@ -11,7 +11,6 @@ module Domain.Action.Dashboard.Operator.FleetManagement
 where
 
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
-import Control.Monad.Extra (mapMaybeM)
 import Data.List.Extra (notNull)
 import Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
@@ -21,7 +20,6 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation (fleetOwnerId))
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DMerchant
@@ -63,11 +61,8 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
-import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorIdWithLimitOffset)
+import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorIdWithLimitOffsetSearch)
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
-import Storage.Queries.FleetOwnerInformationExtra
-  ( findByPersonIdAndEnabledAndVerified,
-  )
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
@@ -79,27 +74,24 @@ getFleetManagementFleets ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Environment.Flow Common.FleetInfoRes
-getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbLimit mbOffset requestorId = do
+getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString requestorId = do
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
-  activeFleetOwnerLs <- findAllActiveByOperatorIdWithLimitOffset requestorId mbLimit mbOffset
-  fleetOwnerInfoLs <-
-    mapMaybeM (findByPersonIdAndEnabledAndVerified mbIsActive mbVerified . ID.Id . fleetOwnerId) activeFleetOwnerLs
-  listItem <- mapM createFleetInfo fleetOwnerInfoLs
+  (_, personLs, fleetOwnerInfoLs) <- unzip3 <$> findAllActiveByOperatorIdWithLimitOffsetSearch requestorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
+  listItem <- mapM createFleetInfo (zip fleetOwnerInfoLs personLs)
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.FleetInfoRes {..}
   where
-    createFleetInfo FOI.FleetOwnerInformation {..} = do
+    createFleetInfo (FOI.FleetOwnerInformation {..}, person) = do
       now <- getCurrentTime
       totalVehicle <- VRCQuery.countAllRCForFleet fleetOwnerPersonId.getId merchantId
-      person <-
-        QP.findById fleetOwnerPersonId
-          >>= fromMaybeM (PersonDoesNotExist fleetOwnerPersonId.getId)
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
           >>= fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)

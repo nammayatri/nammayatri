@@ -14,8 +14,10 @@ apis:
       query:
         - isActive: Bool
         - verified: Bool
+        - enabled: Bool
         - limit: Int
         - offset: Int
+        - mbSearchString: Text
       response:
         type: FleetInfoRes
       helperApi:
@@ -25,8 +27,10 @@ apis:
             query:
               - isActive: Bool
               - verified: Bool
+              - enabled: Bool
               - limit: Int
               - offset: Int
+              - mbSearchString: Text
             mandatoryQuery:
               - requestorId: Text
             response:

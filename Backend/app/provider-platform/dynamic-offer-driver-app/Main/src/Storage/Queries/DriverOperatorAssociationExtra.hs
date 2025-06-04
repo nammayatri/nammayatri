@@ -1,37 +1,77 @@
 module Storage.Queries.DriverOperatorAssociationExtra where
 
+import Control.Applicative (liftA2)
+import Data.Text (toLower)
+import qualified Database.Beam as B
 import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVeh
 import Domain.Utils (convertTextToUTC)
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified Storage.Beam.DriverOperatorAssociation as Beam
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOperatorAssociation as BeamDOA
+import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.DriverOperatorAssociation ()
+import Storage.Queries.OrphanInstances.Person ()
 
-findAllByOperatorIdWithLimitOffsetDriverId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+findAllByOperatorIdWithLimitOffsetSearch ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-  m [Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation]
-findAllByOperatorIdWithLimitOffsetDriverId operatorId mbIsActive mbLimit mbOffset mbDriverId =
-  findAllWithOptionsKV
-    [ Se.And $
-        [Se.Is Beam.operatorId $ Se.Eq operatorId]
-          <> [Se.Is Beam.isActive $ Se.Eq (fromJust mbIsActive) | isJust mbIsActive]
-          <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
-    ]
-    (Se.Asc Beam.associatedOn)
-    (Just . min 10 . fromMaybe 5 $ mbLimit)
-    (Just $ fromMaybe 0 mbOffset)
+  m [(Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation, DP.Person)]
+findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset mbSearchString =
+  do
+    dbConf <- getReplicaBeamConfig
+    now <- getCurrentTime
+    encryptedMobileNumberHash <- mapM getDbHash mbSearchString
+    let limit = min 10 $ fromMaybe 5 mbLimit
+        offset = fromMaybe 0 mbOffset
+    res <-
+      L.runDB dbConf $
+        L.findRows $
+          B.select $
+            B.limit_ (fromIntegral limit) $
+              B.offset_ (fromIntegral offset) $
+                B.orderBy_ (\(doa', _) -> B.desc_ doa'.associatedOn) $
+                  B.filter_'
+                    ( \(doa, person) ->
+                        doa.operatorId B.==?. B.val_ operatorId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> doa.isActive B.==?. B.val_ isActive) mbIsActive
+                          B.&&?. B.sqlBool_ (doa.associatedTill B.>=. B.val_ (Just now))
+                          B.&&?. ( case mbSearchString of
+                                     Nothing -> B.sqlBool_ $ B.val_ True
+                                     Just searchString ->
+                                       B.sqlBool_
+                                         (B.lower_ person.firstName `B.like_` B.lower_ (B.val_ ("%" <> toLower searchString <> "%")))
+                                         B.||?. ( B.sqlBool_
+                                                    (B.lower_ (B.coalesce_ [person.lastName] (B.val_ "")) `B.like_` B.lower_ (B.val_ ("%" <> toLower searchString <> "%")))
+                                                )
+                                         B.||?. B.sqlBool_
+                                           (B.like_ (B.coalesce_ [person.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))
+                                         B.||?. maybe
+                                           (B.sqlBool_ $ B.val_ False)
+                                           (\mobileNumberSearchStringDB -> person.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB))
+                                           encryptedMobileNumberHash
+                                 )
+                    )
+                    do
+                      doa <- B.all_ (BeamCommon.driverOperatorAssociation BeamCommon.atlasDB)
+                      person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> doa.driverId B.==. BeamP.id person)
+                      pure (doa, person)
+    case res of
+      Right doaList ->
+        catMaybes <$> mapM (\(d, p) -> liftA2 (,) <$> fromTType' d <*> fromTType' p) doaList
+      Left _ -> pure []
 
 createDriverOperatorAssociationIfNotExists ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
