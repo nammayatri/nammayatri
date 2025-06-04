@@ -60,6 +60,7 @@ public class Log {
      * @param message The message to log.
      */
     public static void i(String tag, String message) {
+        android.util.Log.i(tag,message);
         Date now = new Date();
         writeLog("INFO", tag, message, null, now);
     }
@@ -71,7 +72,9 @@ public class Log {
      * @param message The message to log.
      */
     public static void d(String tag, String message) {
+        android.util.Log.d(tag,message);
         Date now = new Date();
+
         writeLog("DEBUG", tag, message, null, now);
     }
 
@@ -82,6 +85,7 @@ public class Log {
      * @param message The message to log.
      */
     public static void w(String tag, String message) {
+        android.util.Log.w(tag,message);
         Date now = new Date();
         writeLog("WARN", tag, message, null, now);
     }
@@ -93,6 +97,7 @@ public class Log {
      * @param message The message to log.
      */
     public static void e(String tag, String message) {
+        android.util.Log.e(tag,message);
         Date now = new Date();
         writeLog("ERROR", tag, message, null, now);
     }
@@ -105,6 +110,7 @@ public class Log {
      * @param throwable The Throwable to log (stack trace will be included).
      */
     public static void e(String tag, String message, Throwable throwable) {
+        android.util.Log.e(tag,message,throwable);
         Date now = new Date();
         writeLog("ERROR", tag, message, throwable, now);
     }
