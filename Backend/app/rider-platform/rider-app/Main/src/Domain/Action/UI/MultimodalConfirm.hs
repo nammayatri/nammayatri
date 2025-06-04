@@ -324,6 +324,19 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
         Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId.getId)
         Select.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show legSearchId.getId)
 
+updateFRFSBookingAndPayment ::
+  Domain.Types.Person.Person ->
+  DFRFSB.FRFSTicketBooking ->
+  HighPrecMoney ->
+  FRFSTicketBookingPayment ->
+  Environment.Flow ()
+updateFRFSBookingAndPayment person booking totalPrice payment = do
+  QFRFSTicketBooking.updateByPrimaryKey booking
+  order <- QOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
+  let updateReq = KT.OrderUpdateReq {amount = totalPrice, orderShortId = order.shortId.getShortId}
+  _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking person.clientSdkVersion updateReq
+  QOrder.updateAmount order.id totalPrice
+
 postMultimodalOrderSwitchFRFSTier ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -331,17 +344,59 @@ postMultimodalOrderSwitchFRFSTier ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
-    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+    Environment.Flow ApiTypes.JourneyInfoRespWithFare
   )
 postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  let mbBooking = find (\booking -> booking.searchId == Id journeyLegInfo.searchId) allJourneyFrfsBookings
+  mbUpdatedTotalPrice <- case mbBooking of
+    Nothing -> return Nothing
+    Just booking -> do
+      quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
+      let quantity = booking.quantity
+          childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
+          quantityRational = fromIntegral quantity :: Rational
+          childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+          childPrice = fromMaybe quote.price quote.childPrice
+          totalPriceForSwitchLeg =
+            Price
+              { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
+                amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
+                currency = quote.price.currency
+              }
+          updatedBooking =
+            booking
+              { DFRFSB.quoteId = req.quoteId,
+                DFRFSB.price = totalPriceForSwitchLeg,
+                DFRFSB.estimatedPrice = totalPriceForSwitchLeg
+              }
+          updatedTotalPrice =
+            foldl'
+              ( \acc booking' ->
+                  if booking'.id == booking.id
+                    then acc + totalPriceForSwitchLeg.amount
+                    else acc + booking'.price.amount
+              )
+              (HighPrecMoney 0)
+              allJourneyFrfsBookings
+      payments <- QFRFSTicketBookingPayment.findAllTicketBookingId booking.id
+      whenJust (listToMaybe payments) $ \payment -> updateFRFSBookingAndPayment person updatedBooking updatedTotalPrice payment
+      return $ Just updatedTotalPrice
   alternateShortNames <- getAlternateShortNames
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId False
-  generateJourneyInfoResponse journey updatedLegs
+  journeyInfoResponse <- generateJourneyInfoResponse journey updatedLegs
+  return $
+    ApiTypes.JourneyInfoRespWithFare
+      { journeyInfoResponse = journeyInfoResponse,
+        totalFare = mbUpdatedTotalPrice
+      }
   where
     getAlternateShortNames :: Flow (Maybe [Text])
     getAlternateShortNames = do

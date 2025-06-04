@@ -94,6 +94,10 @@ data JourneyInfoResp = JourneyInfoResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data JourneyInfoRespWithFare = JourneyInfoRespWithFare {journeyInfoResponse :: JourneyInfoResp, totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data JourneyStatusResp = JourneyStatusResp
   { journeyChangeLogCounter :: Kernel.Prelude.Int,
     journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
