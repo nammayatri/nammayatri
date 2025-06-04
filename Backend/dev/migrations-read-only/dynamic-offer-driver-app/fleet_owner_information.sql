@@ -53,3 +53,15 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_ba
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN registered_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_number_encrypted character varying (255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN gst_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN gst_number_encrypted character varying (255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_license_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_license_number_encrypted character varying (255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_number_encrypted character varying (255) ;

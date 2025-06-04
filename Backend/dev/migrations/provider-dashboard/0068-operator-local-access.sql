@@ -25,7 +25,12 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
       'e5a69a26-d165-455a-a711-33a41e0d4812',
       'DSL',
       'USER_FULL_ACCESS',
-      'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS'
+      unnest
+        (ARRAY
+          [ 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS',
+            'PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER'
+          ]
+        )
     )
     ON CONFLICT DO NOTHING;
 
@@ -36,6 +41,11 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
       '00000000-0000-0000-rental-fleet-role',
       'DSL',
       'USER_FULL_ACCESS',
-      'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS'
+      unnest
+        (ARRAY
+          [ 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS',
+            'PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER'
+          ]
+        )
     )
     ON CONFLICT DO NOTHING;

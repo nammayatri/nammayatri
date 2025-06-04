@@ -338,7 +338,9 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       panCardDetails <- buildPanCard person Nothing Nothing Nothing
       DPQuery.create $ panCardDetails
   case person.role of
-    Person.FLEET_OWNER -> QFOI.updatePanImage (Just req.panNumber) (Just req.imageId) person.id
+    Person.FLEET_OWNER -> do
+      panNumber <- encrypt req.panNumber
+      QFOI.updatePanImage (Just panNumber) (Just req.imageId) person.id
     _ -> pure ()
   return Success
   where
@@ -478,7 +480,9 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       DGQuery.create $ gstCardDetails
 
   case person.role of
-    Person.FLEET_OWNER -> QFOI.updateGstImage (Just req.gstin) (Just req.imageId) person.id
+    Person.FLEET_OWNER -> do
+      gstin <- encrypt req.gstin
+      QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
     _ -> pure ()
   return Success
   where
@@ -608,7 +612,9 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
       pure extractedAadhaarData
     Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
   case person.role of
-    Person.FLEET_OWNER -> QFOI.updateAadhaarImage (Just req.aadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
+    Person.FLEET_OWNER -> do
+      aadhaarNumber <- encrypt req.aadhaarNumber
+      QFOI.updateAadhaarImage (Just aadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
     _ -> pure ()
   return Success
   where

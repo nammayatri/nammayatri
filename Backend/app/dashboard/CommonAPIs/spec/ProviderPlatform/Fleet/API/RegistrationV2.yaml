@@ -76,7 +76,7 @@ types:
   FleetOwnerVerifyResV2:
     - authToken: Text
     - recordType: NewType
-  FleetOwnerRegisterReqV2: # TODO remove redundant and hide secrets
+  FleetOwnerRegisterReqV2: # TODO remove redundant
     - firstName: Text
     - lastName: Text
     - personId: Id Person
@@ -87,7 +87,16 @@ types:
     - businessLicenseImage: Maybe Text
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
-    - derive: "'HideSecrets"
+  FleetOwnerRegisterTReqV2: # hide secrets
+    - firstName: Text
+    - lastName: Text
+    - personId: Id Person
+    - fleetType: Maybe FleetType
+    - operatorReferralCode: Maybe Text
+    - adminApprovalRequired: Maybe Bool
   FleetOwnerRegisterResV2:
     - enabled: Bool
     - recordType: NewType
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

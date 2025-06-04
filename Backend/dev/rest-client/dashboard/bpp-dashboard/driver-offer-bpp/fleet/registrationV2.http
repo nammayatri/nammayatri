@@ -1,6 +1,8 @@
 # access tokens with different roles
 @operator = favorit-operator-token0-000000000000
 @fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+
 
 # @name healthcheck
 GET {{bpp-dashboard-host}}
@@ -60,3 +62,12 @@ token: {{newFleetToken}}
   "operatorReferralCode": null,
   "personId": "{{personId}}"
 }
+
+###
+
+# @name getDriverFleetOwnerInfo
+
+@fleetId = favorit-fleet-owner-0000000000000000
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{fleetId}}/fleetOwnerInfo
+token: {{juspay_admin}}
