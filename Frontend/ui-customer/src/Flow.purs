@@ -7990,6 +7990,11 @@ busTrackingScreenFlow = do
       updateMapReady true
       busTicketBookingFlow
     BusTrackingScreen.GoBackToMetroMyTicketsScreen state -> metroMyTicketsFlow
+    BusTrackingScreen.GoBackToSelectBusRouteScreen state -> do
+      let srcCode = maybe "" (\item-> item.stationCode) state.data.sourceStation
+          destCode = maybe "" (\item-> item.stationCode) state.data.destinationStation
+      modifyScreenState $ BusTrackingScreenStateType (\state -> state { data { busRouteCode = state.data.busRouteCode, sourceStation = state.data.sourceStation, destinationStation = state.data.destinationStation } })
+      selectBusRouteScreenFlow srcCode destCode
     _ -> busTrackingScreenFlow
 
 updateScheduledRides :: Boolean -> Boolean -> FlowBT String Unit

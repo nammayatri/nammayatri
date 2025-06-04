@@ -1825,7 +1825,9 @@ newtype Keymap = Keymap {
 , uncomfortable_ambulance :: String
 , clean_ambulance :: String
 , ambulance_booking_disclaimer :: String
+--, different_ambulance :: String
 , no_remaining_tickets :: String
+, select_route :: String
 }
 
 
@@ -7033,6 +7035,10 @@ ambulance_booking_disclaimer = a
 no_remaining_tickets :: Proxy "no_remaining_tickets"
 no_remaining_tickets = a
 
+
+
+select_route :: Proxy "select_route"
+select_route = a
 your_earnings_will_be_credited_to_this_account :: Proxy "your_earnings_will_be_credited_to_this_account"
 your_earnings_will_be_credited_to_this_account = a
 
@@ -7184,4 +7190,3 @@ take_a_ride_now = a
 
 take_a_ride__claim_50 :: Proxy "take_a_ride__claim_50"
 take_a_ride__claim_50 = a
-

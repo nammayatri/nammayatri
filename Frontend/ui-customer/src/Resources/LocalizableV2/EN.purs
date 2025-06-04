@@ -1695,6 +1695,7 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, bus__ : "Track Bus"
 , complete_profile: "Complete Profile"
 , metro_tickets : "Metro Tickets"
 , offers : "Offers"
@@ -1703,7 +1704,6 @@ getEn = Keymap {
 , updated_fare_str : "Updated Fare"
 , book_any_details : "Book Any Details"
 , boost_search : "Boost Search"
-, bus__ : "Bus"
 , tickets_for_chennai_bus : "Tickets for Chennai Bus"
 , buy_bus_tickets : "Buy Bus Tickets"
 , book_and_pay : "Book & Pay"
@@ -1738,6 +1738,7 @@ getEn = Keymap {
 ,clean_ambulance : "Clean Ambulance"
 ,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
 , no_remaining_tickets : "No remaining tickets"
+, select_route : "Select Route"
     , your_earnings_will_be_credited_to_this_account: "Your earnings will be credited to this account"
     , transaction_history: "Transaction History"
     , total_earned: "Total Earned"
