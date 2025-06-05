@@ -334,7 +334,7 @@ updateFRFSBookingAndPayment person booking totalPrice payment = do
   QFRFSTicketBooking.updateByPrimaryKey booking
   order <- QOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
   let updateReq = KT.OrderUpdateReq {amount = totalPrice, orderShortId = order.shortId.getShortId}
-  _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking person.clientSdkVersion updateReq
+  _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
   QOrder.updateAmount order.id totalPrice
 
 postMultimodalOrderSwitchFRFSTier ::
