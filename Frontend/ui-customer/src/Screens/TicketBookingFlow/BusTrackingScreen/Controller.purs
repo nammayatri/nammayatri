@@ -128,7 +128,7 @@ data Action
   | BookTicketOnNoBus PrimaryButton.Action
   | PopUpModalAction PopUpModal.Action
   | BikeTaxiNudgeClicked
-  | CloseBikeTaxiPopUp 
+  | CloseBikeTaxiPopUp
 
 -- | API.BusTrackingRouteResp
 eval :: Action -> ST.BusTrackingScreenState -> Eval Action ScreenOutput ST.BusTrackingScreenState
@@ -468,15 +468,6 @@ eval (UserBoarded mbVehicleId) state = do
 eval (SaveRoute route) state = continue state {data{routePts = route}}
 
 eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
-
-eval (BookTicketOnNoBus PrimaryButton.OnClick) state = continue state {data{isNoBusAvailable = true}}
-
-eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state
-eval (PopUpModalAction PopUpModal.OnButton2Click) state = continue state {data{isNoBusAvailable = false}}
-
-eval BikeTaxiNudgeClicked state = exit $ GoToHomeScreen state
-
-eval CloseBikeTaxiPopUp state = continue state{props{showBikeTaxiPopUp = false, isBikeTaxiCrossClicked = true}}
 
 eval _ state = update state
 
