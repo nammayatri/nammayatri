@@ -85,18 +85,23 @@ findAllByEntityIdAndOrder entityId order =
 updatePastMappingVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
-  traverse_ incrementVersion mappings
+  let isVersioned = any (\mapping -> T.isPrefixOf (T.pack "v") mapping.version) mappings
+  let lenMappings = if isVersioned then length mappings else 0
+  traverse_ (`incrementVersion` lenMappings) mappings
 
-incrementVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
-incrementVersion mapping = do
-  let newVersion = getNewVersion mapping.version
+incrementVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> Int -> m ()
+incrementVersion mapping lenMappings = do
+  let newVersion = getNewVersion mapping.version lenMappings
   updateVersion mapping.id newVersion
 
-getNewVersion :: Text -> Text
-getNewVersion oldVersion =
-  case T.splitOn "-" oldVersion of
-    ["v", versionNum] -> "v-" <> T.pack (show (read @Integer (T.unpack versionNum) + 1))
-    _ -> "v-1"
+getNewVersion :: Text -> Int -> Text
+getNewVersion oldVersion lenMappings =
+  if lenMappings == 0
+    then "v-1"
+    else case T.splitOn "-" oldVersion of
+      ["v", _versionNum] -> oldVersion
+      _ | oldVersion == latestTag -> "v-" <> T.pack (show lenMappings)
+      _ -> "v-1"
 
 updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id LocationMapping -> Text -> m ()
 updateVersion id version = do
