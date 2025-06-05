@@ -139,13 +139,13 @@ mapping fleetIdWanted mbLimit mbOffset = do
     thd' (_, _, z) = z
 
 -- Returns a structured result to facilitate association checks
-findActiveAssociationsForDriverOrRC ::
+findValidAssociationsForDriverOrRC ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id VehicleRegistrationCertificate ->
   UTCTime ->
   m [DriverRCAssociation]
-findActiveAssociationsForDriverOrRC (Id driverId) (Id rcId) now = do
+findValidAssociationsForDriverOrRC (Id driverId) (Id rcId) now = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Or
