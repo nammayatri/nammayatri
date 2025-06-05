@@ -207,7 +207,7 @@ checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate ->
 checkRCAssociationForDriver driverId vehicleRC checkFleet = do
   when (isJust vehicleRC.fleetOwnerId && checkFleet) $ throwError VehicleBelongsToFleet
   now <- getCurrentTime
-  allAssociations <- DRCAE.findActiveAssociationsForDriverOrRC driverId vehicleRC.id now
+  allAssociations <- DRCAE.findValidAssociationsForDriverOrRC driverId vehicleRC.id now
   let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
       rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId && assoc.isRcActive) allAssociations
       driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id && assoc.isRcActive) allAssociations
@@ -1381,16 +1381,39 @@ getDriverFleetOwnerInfo ::
   Flow Common.FleetOwnerInfoRes
 getDriverFleetOwnerInfo _ _ driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
-  fleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  fleetConfig <- QFC.findByPrimaryKey personId
-  mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
-  (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
-    Nothing -> pure (Nothing, Nothing)
-    Just fleetOperatorAssoc -> do
-      person <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
-      contact <- mapM decrypt person.mobileNumber
-      pure $ (Just (person.firstName <> fromMaybe "" person.middleName <> fromMaybe "" person.lastName), contact)
-  makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo operatorName operatorContact
+  mbFleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId
+  case mbFleetOwnerInfo of
+    Nothing -> do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Person is not a fleet owner or operator")
+      referral <- QDR.findById personId
+      pure
+        Common.FleetOwnerInfoRes
+          { fleetType = "",
+            referralCode = (.referralCode.getId) <$> referral,
+            blocked = False,
+            enabled = True,
+            verified = True,
+            gstNumber = Nothing,
+            gstImageId = Nothing,
+            panNumber = Nothing,
+            aadhaarNumber = Nothing,
+            fleetConfig = Nothing,
+            operatorName = Nothing,
+            operatorContact = Nothing,
+            registeredAt = Nothing,
+            businessLicenseNumber = Nothing
+          }
+    Just fleetOwnerInfo -> do
+      fleetConfig <- QFC.findByPrimaryKey personId
+      mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
+      (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
+        Nothing -> pure (Nothing, Nothing)
+        Just fleetOperatorAssoc -> do
+          person <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
+          contact <- mapM decrypt person.mobileNumber
+          pure $ (Just (person.firstName <> fromMaybe "" person.middleName <> fromMaybe "" person.lastName), contact)
+      makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo operatorName operatorContact
   where
     makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
     makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
