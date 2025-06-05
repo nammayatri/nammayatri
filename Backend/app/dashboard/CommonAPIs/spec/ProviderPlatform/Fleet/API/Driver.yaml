@@ -24,6 +24,8 @@ apis:
   - GET:
       endpoint: /fleet/access/list
       auth: ApiAuthV2
+      query:
+        fleetMemberId: Text
       response:
         type: FleetOwnerListRes
       migrate:
@@ -38,6 +40,7 @@ apis:
         enable: Bool
       query:
         onlySingle: Bool
+        fleetMemberId: Text
       response:
         type: APISuccess
       migrate:
@@ -52,6 +55,7 @@ apis:
         onlyCurrent: Bool
         fleetOwnerId: Text
         groupCode: Text
+        fleetMemberId: Text
       response:
         type: APISuccess
       migrate:
@@ -118,29 +122,30 @@ apis:
         - mbRouteCode: Text
         - mbDriverId: Text
         - mbBadgeName: Text
+        - mbFleetOwnerId: Text
         - mbLimit: Int
         - mbOffset: Int
       response:
         type: DriverRequestRespT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_REQUESTS
-      helperApi:
-        - GET:
-            endpoint: /fleet/driverRequests/{fleetOwnerId}
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            query:
-              - from: UTCTime
-              - to: UTCTime
-              - requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
-              - routeCode: Text
-              - driverId: Text
-              - badgeName: Text
-              - limit: Int
-              - offset: Int
-            response:
-              type: DriverRequestResp
+      # helperApi:
+      #   - GET:
+      #       endpoint: /fleet/driverRequests/{fleetOwnerId}
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #       query:
+      #         - from: UTCTime
+      #         - to: UTCTime
+      #         - requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+      #         - routeCode: Text
+      #         - driverId: Text
+      #         - badgeName: Text
+      #         - limit: Int
+      #         - offset: Int
+      #       response:
+      #         type: DriverRequestResp
 
   - POST: # RespondDriverRequestsAPI
       endpoint: /fleet/respond/driverRequest
@@ -195,23 +200,25 @@ apis:
         - mbRegNumberString: Text
         - mbFleetOwnerId: Text
         - mbIsActive: Bool
+        - mbMemberPersonId: Text
       response:
         type: ListVehicleResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_VEHICLE_FOR_FLEET
-      helperApi:
-        - GET:
-            endpoint: /{fleetOwnerId}/fleet/getAllVehicle
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - mbRegNumberString: Text
-              - mbIsActive: Bool
-            response:
-              type: ListVehicleRes
+      # helperApi:
+      #   - GET:
+      #       endpoint: /{fleetOwnerId}/fleet/getAllVehicle
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #       query:
+      #         - limit: Int
+      #         - offset: Int
+      #         - mbRegNumberString: Text
+      #         - mbIsActive: Bool
+      #         - mbMemberPersonId: Text
+      #       response:
+      #         type: ListVehicleRes
 
   - GET: # GetAllDriverForFleetAPI
       endpoint: /fleet/getAllDriver
@@ -224,25 +231,26 @@ apis:
         - mbSearchString: Text
         - mbFleetOwnerId: Text
         - mbIsActive: Bool
+        - mbMemberPersonId: Text
       response:
         type: FleetListDriverResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_DRIVERS_FOR_FLEET
-      helperApi:
-        - GET:
-            endpoint: /{fleetOwnerId}/fleet/getAllDriver
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - mobileNumberString: Text
-              - nameString: Text
-              - mbSearchString: Text
-              - isActive: Bool
-            response:
-              type: FleetListDriverRes
+      # helperApi:
+      #   - GET:
+      #       endpoint: /{fleetOwnerId}/fleet/getAllDriver
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #       query:
+      #         - limit: Int
+      #         - offset: Int
+      #         - mobileNumberString: Text
+      #         - nameString: Text
+      #         - mbSearchString: Text
+      #         - isActive: Bool
+      #       response:
+      #         type: FleetListDriverRes
 
   - GET: # GetAllBadgeForFleetAPI
       endpoint: /fleet/getAllBadge
@@ -254,24 +262,25 @@ apis:
         - mbFleetOwnerId: Text
         - mbBadgeType: FleetBadgeType
         - mbIsActive: Bool
+        - mbMemberPersonId: Text
       response:
         type: FleetBadgeResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_BADGES_FOR_FLEET
-      helperApi:
-        - GET:
-            endpoint: /{fleetOwnerId}/fleet/getAllBadge
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - mbSearchString: Text
-              - mbBadgeType: FleetBadgeType
-              - mbIsActive: Bool
-            response:
-              type: FleetBadgeRes
+      # helperApi:
+      #   - GET:
+      #       endpoint: /{fleetOwnerId}/fleet/getAllBadge
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #       query:
+      #         - limit: Int
+      #         - offset: Int
+      #         - mbSearchString: Text
+      #         - mbBadgeType: FleetBadgeType
+      #         - mbIsActive: Bool
+      #       response:
+      #         type: FleetBadgeRes
 
   - POST: # FleetUnlinkVehicleAPI
       endpoint: /{driverId}/{vehicleNo}/fleet/unlink
@@ -467,8 +476,8 @@ apis:
       auth: ApiAuthV2
       query:
         - isActive: Bool
-        - Limit: Int
-        - Offset: Int
+        - limit: Int
+        - offset: Int
         - countryCode: Text
         - phoneNo: Text
         - includeStats: Bool
@@ -478,31 +487,34 @@ apis:
         - name: Text
         - mbSearchString: Text
         - fleetOwnerId: Text
+        - mbRequestorId: Text
+        - hasFleetMemberHierarchy: Bool
+        - isRequestorFleerOwner: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
-      helperApi:
-        - GET:
-            endpoint: /{fleetOwnerId}/fleet/getFleetDriverAssociation
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            query:
-              - isActive: Bool
-              - limit: Int
-              - offset: Int
-              - countryCode: Text
-              - phoneNo: Text
-              - includeStats: Bool
-              - from: UTCTime
-              - to: UTCTime
-              - status: DriverMode
-              - name: Text
-              - mbSearchString: Text
-              - requestorId: Text
-            response:
-              type: DrivertoVehicleAssociationRes
+      # helperApi:
+      #   - GET:
+      #       endpoint: /{fleetOwnerId}/fleet/getFleetDriverAssociation
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #       query:
+      #         - isActive: Bool
+      #         - limit: Int
+      #         - offset: Int
+      #         - countryCode: Text
+      #         - phoneNo: Text
+      #         - includeStats: Bool
+      #         - from: UTCTime
+      #         - to: UTCTime
+      #         - status: DriverMode
+      #         - name: Text
+      #         - mbSearchString: Text
+      #         - requestorId: Text
+      #       response:
+      #         type: DrivertoVehicleAssociationRes
 
   - GET: # GetFleetVehicleAssociationAPI
       endpoint: /fleet/vehicleAssociation
@@ -518,29 +530,32 @@ apis:
         - mbSearchString: Text
         - statusAwareVehicleNo: Text
         - fleetOwnerId: Text
+        - mbRequestorId: Text
+        - hasFleetMemberHierarchy: Bool
+        - isRequestorFleerOwner: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
-      helperApi:
-        - GET:
-            endpoint: /{fleetOwnerId}/fleet/getFleetVehicleAssociation
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - vehicleNo: Text
-              - includeStats: Bool
-              - from: UTCTime
-              - to: UTCTime
-              - status: FleetVehicleStatus
-              - mbSearchString: Text
-              - statusAwareVehicleNo: Text
-              - requestorId: Text
-            response:
-              type: DrivertoVehicleAssociationRes
+      # helperApi:
+      #   - GET:
+      #       endpoint: /{fleetOwnerId}/fleet/getFleetVehicleAssociation
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #       query:
+      #         - limit: Int
+      #         - offset: Int
+      #         - vehicleNo: Text
+      #         - includeStats: Bool
+      #         - from: UTCTime
+      #         - to: UTCTime
+      #         - status: FleetVehicleStatus
+      #         - mbSearchString: Text
+      #         - statusAwareVehicleNo: Text
+      #         - requestorId: Text
+      #       response:
+      #         type: DrivertoVehicleAssociationRes
 
   - POST: # SetVehicleDriverRcStatusForFleetAPI
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
@@ -745,26 +760,27 @@ apis:
         - mbTo: UTCTime
         - mbVehicleNumber: Text
         - fleetOwnerId: Text
+        - mbMemberPersonId: Text
       response:
         type: TripTransactionRespT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
-      helperApi:
-        - GET:
-            endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-              driverId: Id Driver
-            mandatoryQuery:
-              - limit: Int
-              - offset: Int
-            query:
-              - mbFrom: UTCTime
-              - mbTo: UTCTime
-              - mbVehicleNumber: Text
-            response:
-              type: TripTransactionResp
+      # helperApi:
+      #   - GET:
+      #       endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}
+      #       auth: ApiAuthV2
+      #       params:
+      #         fleetOwnerId: Text
+      #         driverId: Id Driver
+      #       mandatoryQuery:
+      #         - limit: Int
+      #         - offset: Int
+      #       query:
+      #         - mbFrom: UTCTime
+      #         - mbTo: UTCTime
+      #         - mbVehicleNumber: Text
+      #       response:
+      #         type: TripTransactionResp
 
   - POST: # BulkUploadDriversForFleetAPI
       endpoint: /fleet/addDrivers
@@ -910,6 +926,24 @@ apis:
               type: TrackDriverLocationsReq
             response:
               type: TrackDriverLocationsRes
+  - GET:
+      endpoint: /dashboard/internal/helper/getFleetOwnerId
+      auth: NoAuth
+      mandatoryQuery:
+        - memberPersonId: Text
+      query:
+        - mbFleetOwnerId: Text
+      response:
+        type: Text
+  - GET:
+      endpoint: /dashboard/internal/helper/getFleetOwnerIds
+      auth: NoAuth
+      mandatoryQuery:
+        - memberPersonId: Text
+      query:
+        - mbFleetOwnerId: Text
+      response:
+        type: "[(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
 types:
   NearbyDriverReq:
     - point: LatLong
