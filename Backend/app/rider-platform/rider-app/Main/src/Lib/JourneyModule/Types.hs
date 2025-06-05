@@ -585,7 +585,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 serviceTierName = mbEstimate >>= (.serviceTierName),
                 bookingId = Nothing,
                 rideId = Nothing,
-                vehicleIconUrl = Nothing,
+                vehicleIconUrl = mbEstimate >>= (.vehicleIconUrl),
                 tollDifference = Nothing,
                 batchConfig,
                 chargeableRideDistance = Nothing,
