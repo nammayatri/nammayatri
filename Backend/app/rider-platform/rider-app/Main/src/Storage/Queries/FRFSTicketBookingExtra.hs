@@ -13,6 +13,11 @@ import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
 
+updateBookingAuthCodeById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
+updateBookingAuthCodeById bookingAuthCode id = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.bookingAuthCode bookingAuthCode, Se.Set Beam.updatedAt now] [Se.Is Beam.id $ Se.Eq (id.getId)]
+
 insertPayerVpaIfNotPresent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
 insertPayerVpaIfNotPresent (Just vpa) bookingId = do
   mbBooking <- findOneWithKV [Se.Is Beam.id $ Se.Eq (bookingId.getId)]

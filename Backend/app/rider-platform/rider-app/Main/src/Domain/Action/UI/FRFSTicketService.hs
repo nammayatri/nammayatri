@@ -558,7 +558,20 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
 
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
-      maybeM (buildAndCreateBooking rider quote selectedDiscounts) (\booking -> return (rider, booking)) (QFRFSTicketBooking.findByQuoteId quoteId)
+      let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
+      maybeM
+        (buildAndCreateBooking rider quote selectedDiscounts)
+        ( \booking -> do
+            let needsAuthCodeUpdate = isJust mBookAuthCode && booking.bookingAuthCode /= mBookAuthCode
+            updatedBooking <-
+              if needsAuthCodeUpdate
+                then do
+                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
+                  pure booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode}
+                else pure booking
+            pure (rider, updatedBooking)
+        )
+        (QFRFSTicketBooking.findByQuoteId quoteId)
 
     validateDiscounts :: (MonadFlow m) => [FRFSDiscountReq] -> [FRFSDiscountRes] -> m [FRFSDiscountRes]
     validateDiscounts selectedDiscounts allDiscounts = do
