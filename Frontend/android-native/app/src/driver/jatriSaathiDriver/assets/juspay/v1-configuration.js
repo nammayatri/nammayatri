@@ -468,7 +468,29 @@ let getAllCityConfig = () => {
         "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
         "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
       }
-    }
+      },
+    "vehicleVariantWaitingChargeConfig" : {
+        "deliveryTruckMini" : {
+          "freeSeconds" : 3600,
+          "perMinCharges" : 5.0
+        },
+        "deliveryTruckSmall" : {
+            "freeSeconds" : 3600,
+            "perMinCharges" : 5.0
+          },
+        "deliveryTruckMedium" : {
+            "freeSeconds" : 3600,
+            "perMinCharges" : 5.0
+          },
+        "deliveryTruckLarge" : {
+            "freeSeconds" : 3600,
+            "perMinCharges" : 5.0
+          },
+        "deliveryTruckUltraLarge" : {
+            "freeSeconds" : 3600,
+            "perMinCharges" : 5.0
+          }
+      }
   };
   
   let cityConfigs = [
