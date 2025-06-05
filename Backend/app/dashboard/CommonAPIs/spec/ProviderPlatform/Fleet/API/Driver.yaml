@@ -24,6 +24,8 @@ apis:
   - GET:
       endpoint: /fleet/access/list
       auth: ApiAuthV2
+      query:
+        fleetMemberId: Text
       response:
         type: FleetOwnerListRes
       migrate:
@@ -38,6 +40,7 @@ apis:
         enable: Bool
       query:
         onlySingle: Bool
+        fleetMemberId: Text
       response:
         type: APISuccess
       migrate:
@@ -52,6 +55,7 @@ apis:
         onlyCurrent: Bool
         fleetOwnerId: Text
         groupCode: Text
+        fleetMemberId: Text
       response:
         type: APISuccess
       migrate:
@@ -908,6 +912,24 @@ apis:
               type: TrackDriverLocationsReq
             response:
               type: TrackDriverLocationsRes
+  - GET:
+      endpoint: /dashboard/internal/helper/getFleetOwnerId
+      auth: NoAuth
+      mandatoryQuery:
+        - memberPersonId: Text
+      query:
+        - mbFleetOwnerId: Text
+      response:
+        type: Text
+  - GET:
+      endpoint: /dashboard/internal/helper/getFleetOwnerIds
+      auth: NoAuth
+      mandatoryQuery:
+        - memberPersonId: Text
+      query:
+        - mbFleetOwnerId: Text
+      response:
+        type: "[(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
 types:
   NearbyDriverReq:
     - point: LatLong

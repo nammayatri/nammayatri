@@ -49,6 +49,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
     postDriverFleetGetNearbyDrivers,
+    getDriverDashboardInternalHelperGetFleetOwnerId,
+    getDriverDashboardInternalHelperGetFleetOwnerIds,
   )
 where
 
@@ -116,6 +118,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
+import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
@@ -139,6 +142,7 @@ import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -2302,14 +2306,56 @@ postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
       TR.INPROGRESS -> Common.ON_RIDE
       _ -> Common.ON_PICKUP
 
-getDriverFleetAccessList :: ShortId DM.Merchant -> Context.City -> Flow Common.FleetOwnerListRes
-getDriverFleetAccessList _ _ = throwError $ InternalError "Unimplemented!"
+getDriverFleetAccessList :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Flow Common.FleetOwnerListRes
+getDriverFleetAccessList _ _ mbFleetMemberId = do
+  fleetMemberId <- mbFleetMemberId & fromMaybeM (InvalidRequest "Fleet member ID is required")
+  fleetOwners <- FMA.findAllByfleetMemberId fleetMemberId
+  ownersList <-
+    mapM
+      ( \fleetMemberAssociation -> do
+          fleetMemberAssociation' <- FMA.findOneByFleetOwnerId fleetMemberAssociation.fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetOwnerId)
+          person <- QP.findById (Id fleetMemberAssociation'.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation'.fleetMemberId)
+          return $
+            Common.FleetOwnerListAPIEntity
+              { fleetOwnerId = fleetMemberAssociation.fleetOwnerId,
+                fleetOwnerName = person.firstName <> maybe "" (" " <>) person.lastName,
+                fleetGroup =
+                  ((,) <$> fleetMemberAssociation.level <*> fleetMemberAssociation.groupCode)
+                    <&> \case
+                      (level, groupCode) ->
+                        Common.FleetGroup {level, parentGroupCode = fleetMemberAssociation.parentGroupCode, groupCode},
+                order = fleetMemberAssociation.order,
+                enabled = fleetMemberAssociation.enabled
+              }
+      )
+      fleetOwners
+  return $ Common.FleetOwnerListRes {..}
 
-postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Bool -> Flow APISuccess
-postDriverFleetAccessSelect _ _ _ _ _ = throwError $ InternalError "Unimplemented!"
+postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetAccessSelect _ _ fleetOwnerId mbFleetMemberId mbOnlySingle enable = do
+  fleetMemberId <- mbFleetMemberId & fromMaybeM (InvalidRequest "Fleet member ID is required")
+  let onlySingle = fromMaybe False mbOnlySingle
+  when (onlySingle && enable) $ do
+    fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
+    FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
+  FMA.updateFleetMemberActiveStatus enable fleetMemberId fleetOwnerId
+  return Success
 
-postDriverFleetV2AccessSelect :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
-postDriverFleetV2AccessSelect _ _ _ _ _ _ = throwError $ InternalError "Unimplemented!"
+postDriverFleetV2AccessSelect :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetV2AccessSelect _ _ mbFleetMemberId mbFleetOwnerId mbGroupCode mbOnlyCurrent enable = do
+  fleetMemberId <- mbFleetMemberId & fromMaybeM (InvalidRequest "Fleet member ID is required")
+  let onlyCurrent = fromMaybe False mbOnlyCurrent
+  when (onlyCurrent && enable) $ do
+    fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
+    FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
+  case (mbFleetOwnerId, mbGroupCode) of
+    (Just fleetOwnerId, _) -> do
+      FMA.updateFleetMemberActiveStatus enable fleetMemberId fleetOwnerId
+    (Nothing, Just groupCode) -> do
+      -- TODO: add group code support
+      FMA.updateFleetMembersActiveStatusByGroupCode enable fleetMemberId (Just groupCode)
+    _ -> return ()
+  return Success
 
 -- Helper function to convert RegisterRCReq to AddVehicleReq
 convertToAddVehicleReq :: Common.RegisterRCReq -> Common.AddVehicleReq
@@ -2334,3 +2380,9 @@ convertToAddVehicleReq rcReq =
       vehicleTags = Nothing,
       fuelType = Nothing
     }
+
+getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)
+getDriverDashboardInternalHelperGetFleetOwnerId _ _ mbFleetOwnerId memberPersonId = getFleetOwnerId memberPersonId mbFleetOwnerId
+
+getDriverDashboardInternalHelperGetFleetOwnerIds :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow [(Text, Text)])
+getDriverDashboardInternalHelperGetFleetOwnerIds _ _ mbFleetOwnerId memberPersonId = getFleetOwnerIds memberPersonId mbFleetOwnerId

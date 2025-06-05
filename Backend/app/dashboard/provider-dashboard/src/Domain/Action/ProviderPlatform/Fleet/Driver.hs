@@ -25,6 +25,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetRemoveVehicle,
     getFleetOwnerId,
     getFleetOwnerIds,
+    verifyFleetOwnerAccess,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
     getDriverFleetVehicleEarning,
@@ -51,6 +52,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
     postDriverFleetGetNearbyDrivers,
+    getDriverDashboardInternalHelperGetFleetOwnerId,
+    getDriverDashboardInternalHelperGetFleetOwnerIds,
   )
 where
 
@@ -64,7 +67,6 @@ import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
 import Domain.Types.Alert
 import Domain.Types.FleetBadgeType as DFBT
-import Domain.Types.FleetMemberAssociation as DFMA
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -72,6 +74,7 @@ import "lib-dashboard" Environment
 import EulerHS.Prelude hiding (elem, find, length, map, null, whenJust)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
@@ -80,7 +83,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import qualified Storage.Queries.FleetMemberAssociation as FMA
 import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -103,15 +105,15 @@ buildTransaction apiTokenInfo driverId =
 --------------------------------------- Single Fleet Owners Access --------------------------------------
 getFleetOwnerId :: Text -> Maybe Text -> Flow Text
 getFleetOwnerId memberPersonId mbFleetOwnerId = do
-  maybe
-    ( FMA.findAllActiveByfleetMemberId memberPersonId True
-        >>= \case
-          [] -> return memberPersonId
-          [DFMA.FleetMemberAssociation {..}] -> return fleetOwnerId
-          _ -> throwError AccessDenied
-    )
-    identity
-    ((verifyFleetOwnerAccess memberPersonId) <$> mbFleetOwnerId)
+  mbCachedFleetOwnerId :: Maybe Text <- Redis.get redisKey
+  case mbCachedFleetOwnerId of
+    Just fleetOwnerId -> return fleetOwnerId
+    Nothing -> do
+      fleetOwnerId <- Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) City.AnyCity (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerId) mbFleetOwnerId memberPersonId
+      Redis.setExp redisKey fleetOwnerId 84600
+      return fleetOwnerId
+  where
+    redisKey = "CachedFleetOwnerId:memberPersonId-" <> memberPersonId <> "-fleetOwnerId-" <> fromMaybe "None" mbFleetOwnerId
 
 ------------------------------------- Helper Functions --------------------------------------
 -- in case if fleet owner is mandatory
@@ -176,29 +178,15 @@ getFleetOwnersInfoMerchantBased apiTokenInfo mbFleetOwnerId = do
 ------------------------------------- Multiple Fleet Owners Access --------------------------------------
 getFleetOwnerIds :: Text -> Maybe Text -> Flow [(Text, Text)]
 getFleetOwnerIds memberPersonId mbFleetOwnerId = do
-  maybe
-    ( FMA.findAllActiveByfleetMemberId memberPersonId True
-        >>= \case
-          [] -> do
-            person <- QP.findById (Id memberPersonId) >>= fromMaybeM (PersonNotFound memberPersonId)
-            return [(memberPersonId, person.firstName <> " " <> person.lastName)]
-          fleetMemberAssociations -> do
-            mapM
-              ( \DFMA.FleetMemberAssociation {..} -> do
-                  fleetMemberAssociation <- FMA.findOneByFleetOwnerId fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetOwnerId)
-                  person <- QP.findById (Id fleetMemberAssociation.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetMemberId)
-                  return (fleetOwnerId, person.firstName <> " " <> person.lastName)
-              )
-              fleetMemberAssociations
-    )
-    identity
-    ( ( \fleetOwnerId -> do
-          fleetMemberAssociation <- FMA.findOneByFleetOwnerId fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetOwnerId)
-          person <- QP.findById (Id fleetMemberAssociation.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetMemberId)
-          return [(fleetOwnerId, person.firstName <> " " <> person.lastName)]
-      )
-        <$> mbFleetOwnerId
-    )
+  mbCachedFleetOwnerIds :: Maybe [(Text, Text)] <- Redis.get redisKey
+  case mbCachedFleetOwnerIds of
+    Just fleetOwnerIds -> return fleetOwnerIds
+    Nothing -> do
+      fleetOwnerIds <- Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) City.AnyCity (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerIds) mbFleetOwnerId memberPersonId
+      Redis.setExp redisKey fleetOwnerIds 84600
+      return fleetOwnerIds
+  where
+    redisKey = "CachedFleetOwnerIds:memberPersonId-" <> memberPersonId <> "-fleetOwnerId-" <> fromMaybe "None" mbFleetOwnerId
 
 ------------------------------------- Verify Fleet Owners Access --------------------------------------
 verifyFleetOwnerAccess :: Text -> Text -> Flow Text
@@ -208,60 +196,24 @@ verifyFleetOwnerAccess fleetMemberId accessedFleetOwnerId = do
   return fleetOwnerId
 
 ------------------------------------- Fleet Owners Access Control --------------------------------------
-postDriverFleetAccessSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Bool -> Bool -> Flow APISuccess
-postDriverFleetAccessSelect merchantShortId opCity apiTokenInfo fleetOwnerId mbOnlySingle enable = do
-  _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+postDriverFleetAccessSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetAccessSelect merchantShortId opCity apiTokenInfo fleetOwnerId _ mbOnlySingle enable = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetMemberId = apiTokenInfo.personId.getId
-      onlySingle = fromMaybe False mbOnlySingle
-  when (onlySingle && enable) $ do
-    fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
-    FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
-  FMA.updateFleetMemberActiveStatus enable fleetMemberId fleetOwnerId
-  return Success
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAccessSelect) fleetOwnerId (Just fleetMemberId) mbOnlySingle enable
 
-postDriverFleetV2AccessSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
-postDriverFleetV2AccessSelect merchantShortId opCity apiTokenInfo mbFleetOwnerId mbGroupCode mbOnlyCurrent enable = do
-  _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+postDriverFleetV2AccessSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetV2AccessSelect merchantShortId opCity apiTokenInfo _ mbFleetOwnerId mbGroupCode mbOnlyCurrent enable = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetMemberId = apiTokenInfo.personId.getId
-      onlyCurrent = fromMaybe False mbOnlyCurrent
-  when (onlyCurrent && enable) $ do
-    fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
-    FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
-  case (mbFleetOwnerId, mbGroupCode) of
-    (Just fleetOwnerId, _) -> do
-      FMA.updateFleetMemberActiveStatus enable fleetMemberId fleetOwnerId
-    (Nothing, Just groupCode) -> do
-      -- TODO: add group code support
-      FMA.updateFleetMembersActiveStatusByGroupCode enable fleetMemberId (Just groupCode)
-    _ -> return ()
-  return Success
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetV2AccessSelect) (Just fleetMemberId) mbFleetOwnerId mbGroupCode mbOnlyCurrent enable
 
 ------------------------------------- Fleet Owners Access List --------------------------------------
-getDriverFleetAccessList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.FleetOwnerListRes
-getDriverFleetAccessList merchantShortId opCity apiTokenInfo = do
-  _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+getDriverFleetAccessList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Flow Common.FleetOwnerListRes
+getDriverFleetAccessList merchantShortId opCity apiTokenInfo _ = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetMemberId = apiTokenInfo.personId.getId
-  fleetOwners <- FMA.findAllByfleetMemberId fleetMemberId
-  ownersList <-
-    mapM
-      ( \fleetMemberAssociation -> do
-          fleetMemberAssociation' <- FMA.findOneByFleetOwnerId fleetMemberAssociation.fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetOwnerId)
-          person <- QP.findById (Id fleetMemberAssociation'.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation'.fleetMemberId)
-          return $
-            Common.FleetOwnerListAPIEntity
-              { fleetOwnerId = fleetMemberAssociation.fleetOwnerId,
-                fleetOwnerName = person.firstName <> " " <> person.lastName,
-                fleetGroup =
-                  ((,) <$> fleetMemberAssociation.level <*> fleetMemberAssociation.groupCode)
-                    <&> \case
-                      (level, groupCode) ->
-                        Common.FleetGroup {level, parentGroupCode = fleetMemberAssociation.parentGroupCode, groupCode},
-                order = fleetMemberAssociation.order,
-                enabled = fleetMemberAssociation.enabled
-              }
-      )
-      fleetOwners
-  return $ Common.FleetOwnerListRes {..}
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetAccessList) (Just fleetMemberId)
 
 -------------------------------------------------------------------------------------------------------------
 ----------------------------------- WRITE LAYER (Single Fleet Level) ---------------------------------
@@ -598,3 +550,9 @@ postDriverFleetGetNearbyDrivers merchantShortId opCity apiTokenInfo req = do
   return $ Common.NearbyDriverRespT {..}
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.DriverInfo {..} = Common.DriverInfoT {..}
+
+getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> City.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text)
+getDriverDashboardInternalHelperGetFleetOwnerId _ _ _ _ = throwError $ InternalError "Unimplemented!"
+
+getDriverDashboardInternalHelperGetFleetOwnerIds :: (ShortId DM.Merchant -> City.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.Flow [(Kernel.Prelude.Text, Kernel.Prelude.Text)])
+getDriverDashboardInternalHelperGetFleetOwnerIds _ _ _ _ = throwError $ InternalError "Unimplemented!"
