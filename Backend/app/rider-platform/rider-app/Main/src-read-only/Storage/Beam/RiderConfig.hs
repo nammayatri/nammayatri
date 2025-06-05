@@ -96,7 +96,7 @@ data RiderConfigT f = RiderConfigT
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
     useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    userServiceTierOrderConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig]),
+    userServiceTierOrderConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     variantListForNearByReq :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
