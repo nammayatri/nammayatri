@@ -694,7 +694,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
       let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.CONFIRMING -> do
-      if booking.validTill < now
+      if addUTCTime 5 booking.validTill < now
         then do
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
