@@ -139,7 +139,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: Maybe Value
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
-    userServiceTierOrderConfig: "Maybe [VehicleServiceTierOrderConfig]"
+    userServiceTierOrderConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
 
   constraints:
@@ -179,7 +179,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
-    userServiceTierOrderConfig: fromMaybe [] userServiceTierOrderConfig|E
+    userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
 
   toTType:
@@ -212,7 +212,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
-    userServiceTierOrderConfig: Just userServiceTierOrderConfig|E
+    userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
 
   default:
@@ -274,6 +274,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: "json"
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
+    userServiceTierOrderConfig : "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
 
