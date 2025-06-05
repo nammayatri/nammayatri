@@ -104,6 +104,7 @@ eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTic
 eval GoBack state = exit $ GoToHomeScreen state
 
 eval SearchButtonClick state = do
+  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_clicked_search_Location_bus"
   void $ pure $ cleverTapCustomEvent "ny_bus_user_clicked_search_Location_bus"
   updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 

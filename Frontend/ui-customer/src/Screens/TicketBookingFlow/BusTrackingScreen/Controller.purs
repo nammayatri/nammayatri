@@ -182,6 +182,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
       ]
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
+  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
   void $ pure $ cleverTapCustomEvent "ny_bus_user_book_ticket_initiated"
   exit $ GoToSearchLocation state
 
@@ -268,6 +269,12 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
                 $ do
                     when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
               if (count == 1) then do
+                let etaToStore =show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
+                    params = [Tuple "Eta" etaToStore]
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_user_Eta_seen" etaToStore
+                let vehicleTrackingDataSize = DA.length trackingData
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_tracking_count" (show $ vehicleTrackingDataSize)
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_minimum_eta_distance" (show $ state.props.minimumEtaDistance)
                 let etaToStore = show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
                 void $ pure $ cleverTapCustomEventWithParams "Eta" "ny_bus_user_Eta_seen" etaToStore
                 void $ pure $ cleverTapCustomEventWithParams "busTrackingResponseCount" "ny_bus_tracking_count" (show $ DA.length trackingData)
