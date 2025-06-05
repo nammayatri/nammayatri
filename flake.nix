@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:imviv3kshukla/shared-kernel?ref=backend/enh/aa-juspay-changes";
+      url = "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
