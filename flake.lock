@@ -3593,16 +3593,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1748561501,
-        "narHash": "sha256-CKKsP16wEePDG/w1RLi4YTh+80/WOyELqtxtMeJDUZ8=",
-        "owner": "imviv3kshukla",
+        "lastModified": 1749111587,
+        "narHash": "sha256-uFel/p0D1CSLiqm9Uk18PSqY+qJHam1J1U+1xCkG3mk=",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "c663cb8903d63520ef4e87b8af2b46745fbc419e",
+        "rev": "d7848b7178d8aca8b757ae61e4519d63b854390b",
         "type": "github"
       },
       "original": {
-        "owner": "imviv3kshukla",
-        "ref": "backend/enh/aa-juspay-changes",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
         "type": "github"
       }
