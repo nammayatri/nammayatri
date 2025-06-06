@@ -85,6 +85,9 @@ withDashboardType :: forall m a. Monad m => Maybe DashboardType -> (forall (t ::
 withDashboardType (Just TICKET_DASHBOARD) f = f (Proxy @'TicketDashboard)
 withDashboardType _ f = f (Proxy @'DefaultDashboard)
 
+isFleetOwner :: Person -> Bool
+isFleetOwner person = person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
+
 $(mkBeamInstancesForEnum ''DashboardType)
 
 $(mkHttpInstancesForEnum ''DashboardType)

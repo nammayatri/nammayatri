@@ -66,7 +66,7 @@ import Domain.Types.Alert
 import Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetMemberAssociation as DFMA
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified Domain.Types.Role as DRole
+import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude hiding (elem, find, length, map, null, whenJust)
@@ -128,7 +128,7 @@ getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId = do
     Just False -> do
       -- MSIL: requestor is fleet owner or operator, access check on bpp side required!
       let requestorId = apiTokenInfo.personId.getId
-      if apiTokenInfo.person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
+      if DP.isFleetOwner apiTokenInfo.person
         then do
           -- requestor is fleet owner
           whenJust mbFleetOwnerId $ \fleetOwnerId ->
@@ -155,7 +155,7 @@ getFleetOwnersInfoMerchantBased apiTokenInfo mbFleetOwnerId = do
       -- MSIL: requestor is fleet owner or operator, access check on bpp side required!
       let requestor = apiTokenInfo.person
           requestorId = requestor.id.getId
-      if apiTokenInfo.person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
+      if DP.isFleetOwner apiTokenInfo.person
         then do
           -- requestor is fleet owner
           whenJust mbFleetOwnerId $ \fleetOwnerId ->

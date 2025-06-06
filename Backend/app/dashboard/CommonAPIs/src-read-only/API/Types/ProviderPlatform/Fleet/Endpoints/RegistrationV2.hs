@@ -3,7 +3,6 @@
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 where
 
-import qualified API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -12,6 +11,7 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
@@ -24,13 +24,15 @@ newtype FleetOwnerLoginResV2 = FleetOwnerLoginResV2 {personId :: Kernel.Types.Id
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerLoginResV2 where
+  hideSecrets = Kernel.Prelude.identity
+
 data FleetOwnerRegisterReqV2 = FleetOwnerRegisterReqV2
   { firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
-    personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    personId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person),
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement.FleetType,
-    gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetType :: Kernel.Prelude.Maybe FleetType,
     businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     businessLicenseImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -46,8 +48,8 @@ newtype FleetOwnerRegisterResV2 = FleetOwnerRegisterResV2 {enabled :: Kernel.Pre
 data FleetOwnerRegisterTReqV2 = FleetOwnerRegisterTReqV2
   { firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
-    personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
-    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement.FleetType,
+    personId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person),
+    fleetType :: Kernel.Prelude.Maybe FleetType,
     operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
@@ -60,6 +62,13 @@ data FleetOwnerVerifyReqV2 = FleetOwnerVerifyReqV2 {mobileNumber :: Kernel.Prelu
 
 newtype FleetOwnerVerifyResV2 = FleetOwnerVerifyResV2 {authToken :: Kernel.Prelude.Text}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetType
+  = RENTAL_FLEET
+  | NORMAL_FLEET
+  | BUSINESS_FLEET
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistrationV2V2VerifyOtpHelper :<|> PostRegistrationV2V2RegisterHelper))

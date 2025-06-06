@@ -12,7 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Dashboard.Fleet.Registration where
+module Domain.Action.Dashboard.Fleet.Registration
+  ( fleetOwnerRegister,
+    fleetOwnerLogin,
+    FleetOwnerLoginReq (..),
+    FleetOwnerRegisterReq (..),
+    FleetOwnerRegisterRes (..),
+    fleetOwnerVerify,
+    FleetOwnerVerifyHandle (..),
+    FleetOwnerVerifyRes (..),
+    fleetOwnerVerifyHandler,
+  )
+where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
@@ -63,15 +74,6 @@ data FleetOwnerLoginReq = FleetOwnerLoginReq
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-data UpdateFleetOwnerReq = UpdateFleetOwnerReq
-  { firstName :: Maybe Text,
-    lastName :: Maybe Text,
-    email :: Maybe Text,
-    mobileNumber :: Maybe Text,
-    mobileCountryCode :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
 data FleetOwnerRegisterReq = FleetOwnerRegisterReq
   { firstName :: Text,
     lastName :: Text,
@@ -95,11 +97,6 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
 
 newtype FleetOwnerRegisterRes = FleetOwnerRegisterRes
   { personId :: Text
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
-newtype FleetOwnerUpdateRes = FleetOwnerUpdateRes
-  { enabled :: Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -264,9 +261,21 @@ fleetOwnerVerify ::
   FleetOwnerLoginReq ->
   Flow APISuccess
 fleetOwnerVerify req = do
+  let h = FleetOwnerVerifyHandle {mkMobileNumberOtpKey = makeMobileNumberOtpKey}
+  fleetOwnerVerifyHandler h req
+
+newtype FleetOwnerVerifyHandle = FleetOwnerVerifyHandle
+  { mkMobileNumberOtpKey :: Text -> Text
+  }
+
+fleetOwnerVerifyHandler ::
+  FleetOwnerVerifyHandle ->
+  FleetOwnerLoginReq ->
+  Flow APISuccess
+fleetOwnerVerifyHandler h req = do
   case req.otp of
     Just otp -> do
-      mobileNumberOtpKey <- Redis.safeGet $ makeMobileNumberOtpKey req.mobileNumber
+      mobileNumberOtpKey <- Redis.safeGet $ h.mkMobileNumberOtpKey req.mobileNumber
       case mobileNumberOtpKey of
         Just otpHash -> do
           unless (otpHash == otp) $ throwError InvalidAuthData

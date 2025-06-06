@@ -1,7 +1,6 @@
 imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
-  FleetType: API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -69,6 +68,7 @@ types:
   FleetOwnerLoginResV2:
     - personId: Id Person
     - recordType: NewType
+    - derive: "'HideSecrets"
   FleetOwnerVerifyReqV2:
     - mobileNumber: Text
     - mobileCountryCode: Text
@@ -76,13 +76,12 @@ types:
   FleetOwnerVerifyResV2:
     - authToken: Text
     - recordType: NewType
-  FleetOwnerRegisterReqV2: # TODO remove redundant
+  FleetOwnerRegisterReqV2:
     - firstName: Text
     - lastName: Text
-    - personId: Id Person
+    - personId: Maybe (Id Person)
     - email: Maybe Text
     - fleetType: Maybe FleetType
-    - gstNumber: Maybe Text
     - businessLicenseNumber: Maybe Text
     - businessLicenseImage: Maybe Text
     - operatorReferralCode: Maybe Text
@@ -90,10 +89,12 @@ types:
   FleetOwnerRegisterTReqV2: # hide secrets
     - firstName: Text
     - lastName: Text
-    - personId: Id Person
+    - personId: Maybe (Id Person)
     - fleetType: Maybe FleetType
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
+  FleetType:
+    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
   FleetOwnerRegisterResV2:
     - enabled: Bool
     - recordType: NewType

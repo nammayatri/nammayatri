@@ -46,7 +46,6 @@ mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> T
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
   let registration = FleetRegistrationAPIs {..}
 
-  -- TODO rename to operations
   FleetAPIs {..}
   where
     fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
