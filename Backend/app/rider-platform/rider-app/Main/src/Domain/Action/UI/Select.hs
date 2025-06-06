@@ -261,9 +261,6 @@ select2 personId estimateId req@DSelectReq {..} = do
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
-    let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
-    logError $ "lastUsedVehicleServiceTiers personId: " <> personId.getId <> " lastUsedVehicleServiceTiers: " <> show lastUsedVehicleServiceTiers
-    QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
     let senderLocationId = searchRequest.fromLocation.id
     receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
     let senderLocationAddress = validDeliveryDetails.senderDetails.address
@@ -272,6 +269,9 @@ select2 personId estimateId req@DSelectReq {..} = do
     QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
     QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
 
+  let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
+  logError $ "lastUsedVehicleServiceTiers personId: " <> personId.getId <> " lastUsedVehicleServiceTiers: " <> show lastUsedVehicleServiceTiers
+  QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
