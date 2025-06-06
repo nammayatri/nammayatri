@@ -65,13 +65,13 @@ getFleetManagementFleets ::
 getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString requestorId = do
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
-  (_, personLs, fleetOwnerInfoLs) <- unzip3 <$> findAllActiveByOperatorIdWithLimitOffsetSearch requestorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
-  listItem <- mapM createFleetInfo (zip fleetOwnerInfoLs personLs)
+  foaPersonFleetOwnerInfo <- findAllActiveByOperatorIdWithLimitOffsetSearch requestorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
+  listItem <- mapM createFleetInfo foaPersonFleetOwnerInfo
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.FleetInfoRes {..}
   where
-    createFleetInfo (FOI.FleetOwnerInformation {..}, person) = do
+    createFleetInfo (foa, person, FOI.FleetOwnerInformation {..}) = do
       now <- getCurrentTime
       totalVehicle <- VRCQuery.countAllRCForFleet fleetOwnerPersonId.getId merchantId
       decryptedMobileNumber <-
@@ -89,7 +89,8 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,
             name = person.firstName,
-            isActive = enabled,
+            isActive = foa.isActive,
+            enabled = enabled,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             vehicleCount = totalVehicle,

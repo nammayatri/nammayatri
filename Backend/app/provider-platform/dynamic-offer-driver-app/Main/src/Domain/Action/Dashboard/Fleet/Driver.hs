@@ -1320,9 +1320,11 @@ postDriverFleetVehicleDriverRcStatus ::
   Context.City ->
   Id Common.Driver ->
   Text ->
+  Maybe Text ->
   Common.RCStatusReq ->
   Flow APISuccess
-postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId req = do
+postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId mbRequestorId req = do
+  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)

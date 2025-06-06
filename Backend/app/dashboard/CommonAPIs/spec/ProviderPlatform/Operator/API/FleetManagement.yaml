@@ -138,6 +138,7 @@ types:
   FleetInfo:
     - id: Id Person
     - name: Text
+    - enabled: Bool
     - isActive: Bool
     - mobileCountryCode: Text
     - mobileNumber: Text
