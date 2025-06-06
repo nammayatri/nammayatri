@@ -5,6 +5,7 @@
 module Storage.Queries.AadhaarCard (module Storage.Queries.AadhaarCard, module ReExport) where
 
 import qualified Domain.Types.AadhaarCard
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -30,6 +31,12 @@ deleteByPersonId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel
 
 findByAadhaarNumberHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
 findByAadhaarNumberHash aadhaarNumberHash = do findOneWithKV [Se.Is Beam.aadhaarNumberHash $ Se.Eq aadhaarNumberHash]
+
+findByBackImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
+findByBackImageId aadhaarBackImageId = do findOneWithKV [Se.Is Beam.aadhaarBackImageId $ Se.Eq (Kernel.Types.Id.getId <$> aadhaarBackImageId)]
+
+findByFrontImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
+findByFrontImageId aadhaarFrontImageId = do findOneWithKV [Se.Is Beam.aadhaarFrontImageId $ Se.Eq (Kernel.Types.Id.getId <$> aadhaarFrontImageId)]
 
 findByPhoneNumberAndUpdate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

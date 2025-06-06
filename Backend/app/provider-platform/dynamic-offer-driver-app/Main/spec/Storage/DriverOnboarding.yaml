@@ -849,6 +849,12 @@ AadhaarCard:
   constraints:
     driverId: PrimaryKey
   queries:
+    findByFrontImageId:
+      kvFunction: findOneWithKV
+      where: aadhaarFrontImageId
+    findByBackImageId:
+      kvFunction: findOneWithKV
+      where: aadhaarBackImageId
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
