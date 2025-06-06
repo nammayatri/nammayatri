@@ -49,8 +49,9 @@
     <string name="customer_is_waiting">Customer is waiting!</string>
     <string name="please_start_moving_towards_the_pickup_location">Please start moving towards the pickup location</string>
     <string name="quick_chats">Quick Chats:</string>
-    <string name="assistance_required">Assistance Required</string>
+    <string name="assistance_required">Assisted</string>
     <string name="tip">Tip</string>
+    <string name="pet">Pet</string>
     <string name="merchant_id" translatable="false">for_compilation</string>
     <string name="client_id" translatable="false">for_compilation</string>
     <string name="qr_for_your_vpa_is_downloaded">QR for your vpa is downloaded!!!</string>
