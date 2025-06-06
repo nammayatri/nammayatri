@@ -83,13 +83,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.distance ((.value) <$> distance),
+    [ Se.Set Beam.changedBusesInSequence changedBusesInSequence,
+      Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
       Se.Set Beam.duration duration,
       Se.Set Beam.endLocationLat (endLocation & (.latitude)),
       Se.Set Beam.endLocationLon (endLocation & (.longitude)),
       Se.Set Beam.estimatedMaxFare estimatedMaxFare,
       Se.Set Beam.estimatedMinFare estimatedMinFare,
+      Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
       Se.Set Beam.fromArrivalTime fromArrivalTime,
       Se.Set Beam.fromDepartureTime fromDepartureTime,
       Se.Set Beam.fromStopCode (fromStopDetails >>= (.stopCode)),

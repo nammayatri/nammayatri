@@ -105,7 +105,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   legOrder = journeyLegOrder,
                   subLegOrder = 1,
                   statusChanged,
-                  mode
+                  mode,
+                  boardedVehicles = Nothing
                 }
         _ -> do
           routeStatuses <- getStatusForMetroAndSubway booking.journeyRouteDetails booking.searchId isLastCompleted
@@ -147,7 +148,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                       legOrder = journeyLegOrder,
                       subLegOrder = fromMaybe 1 subRoute.subLegOrder,
                       statusChanged = changed,
-                      mode
+                      mode,
+                      boardedVehicles = Nothing
                     }
                   | (subRoute, changed, newStatus) <- routeStatuses
                 ]
@@ -197,7 +199,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   legOrder = journeyLegInfo.journeyLegOrder,
                   subLegOrder = 1,
                   statusChanged,
-                  mode
+                  mode,
+                  boardedVehicles = Nothing
                 }
         _ -> do
           searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
@@ -251,7 +254,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                       legOrder = journeyLegInfo.journeyLegOrder,
                       subLegOrder = fromMaybe 1 subRoute.subLegOrder,
                       statusChanged = changed,
-                      mode
+                      mode,
+                      boardedVehicles = Nothing
                     }
                   | (subRoute, changed, newStatus) <- routeStatuses
                 ]
