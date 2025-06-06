@@ -18,7 +18,6 @@ import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Aeson
--- import Data.Text hiding(map,zip,find,length,null,any)
 import Data.List (sortBy)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
@@ -49,6 +48,7 @@ import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
+import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopFare as QRSF
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -76,6 +76,7 @@ data DVehicleServiceTier = DVehicleServiceTier
 
 data DQuote = DQuote
   { bppItemId :: Text,
+    routeCode :: Text,
     price :: Price,
     childPrice :: Maybe Price,
     vehicleType :: Spec.VehicleCategory,
@@ -151,7 +152,15 @@ onSearch ::
   m ()
 onSearch onSearchReq validatedReq = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
-  quotes <- traverse (mkQuotes onSearchReq validatedReq) onSearchReq.quotes
+  filteredQuotes <-
+    if validatedReq.search.vehicleType /= Spec.BUS
+      then pure onSearchReq.quotes
+      else do
+        routesCodes <- (fmap (.code)) <$> (catMaybeM (QRoute.findByRouteId) $ catMaybes (map (.routeId) validatedReq.search.journeyRouteDetails <> [validatedReq.search.routeId]))
+        pure $ case routesCodes of
+          [] -> onSearchReq.quotes
+          routesCodes' -> filter (\quote -> quote.routeCode `elem` routesCodes') onSearchReq.quotes
+  quotes <- traverse (mkQuotes onSearchReq validatedReq) filteredQuotes
   traverse_ cacheQuote quotes
   if null quotesCreatedByCache
     then QQuote.createMany quotes
@@ -178,6 +187,15 @@ onSearch onSearchReq validatedReq = do
           QRSF.updateFareByRouteCodeAndStopCodes price farePolicyId routeCode startStopCode endStopCode
   return ()
   where
+    catMaybeM fn = go
+      where
+        go [] = pure []
+        go (x : xs) = do
+          xx <- fn x
+          newAcc <- go xs
+          pure $ case xx of
+            Just xx' -> (xx' : newAcc)
+            Nothing -> newAcc
     cacheQuote quote = do
       let key =
             CachedQuote.FRFSCachedQuoteKey
@@ -229,6 +247,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.id = uid,
         Quote.price,
         Quote.childPrice,
+        Quote.estimatedPrice = Just price,
         Quote.providerDescription = dOnSearch.providerDescription,
         Quote.providerId = dOnSearch.providerId,
         Quote.providerName = dOnSearch.providerName,
@@ -247,6 +266,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
         Quote.createdAt = now,
         Quote.updatedAt = now,
+        Quote.integratedBppConfigId = search.integratedBppConfigId,
         bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
         oldCacheDump = Nothing,
         ..
@@ -330,6 +350,7 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.id = quotesFromCache.id,
       Quote.price = quotesFromOnSearch.price,
       Quote.childPrice = quotesFromOnSearch.childPrice,
+      Quote.estimatedPrice = quotesFromOnSearch.estimatedPrice,
       Quote.providerDescription = quotesFromOnSearch.providerDescription,
       Quote.providerId = quotesFromCache.providerId,
       Quote.providerName = quotesFromCache.providerName,
@@ -352,6 +373,7 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.oldCacheDump,
       Quote.fareDetails = quotesFromOnSearch.fareDetails,
       Quote.eventDiscountAmount = quotesFromOnSearch.eventDiscountAmount,
+      Quote.integratedBppConfigId = quotesFromOnSearch.integratedBppConfigId,
       Quote.discountedTickets = quotesFromOnSearch.discountedTickets
     }
   where

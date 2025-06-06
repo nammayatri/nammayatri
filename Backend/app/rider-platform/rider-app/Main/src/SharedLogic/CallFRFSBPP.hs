@@ -73,6 +73,20 @@ search gatewayUrl req merchantId = do
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
   callBecknAPIWithSignature' merchantId bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
 
+select ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BecknAPICallFlow m r
+  ) =>
+  BaseUrl ->
+  Spec.SelectReq ->
+  Id Merchant.Merchant ->
+  m Spec.AckResponse
+select providerUrl req merchantId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- req.selectReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
+  callBecknAPIWithSignature' merchantId bapId "select" Spec.selectAPI providerUrl internalEndPointHashMap req
+
 init ::
   ( CacheFlow m r,
     EsqDBFlow m r,

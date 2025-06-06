@@ -46,3 +46,10 @@ updateCachedQuoteByPrimaryKey FRFSQuote {..} = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Price -> m ())
+updatePriceById id price = do
+  _now <- getCurrentTime
+  updateWithKV
+    ([Se.Set Beam.price ((.amount) price), Se.Set Beam.updatedAt _now])
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

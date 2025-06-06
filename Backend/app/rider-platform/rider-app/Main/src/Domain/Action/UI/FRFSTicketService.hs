@@ -614,7 +614,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
       let childTicketQuantity' = fromMaybe 0 childTicketQuantity
       let childPriceAmount = maybe quote.price.amount (.amount) quote.childPrice
       let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational ticketQuantity')) + (childPriceAmount.getHighPrecMoney * (toRational childTicketQuantity'))) - totalDiscount
-      let isFareChanged = isJust oldCacheDump
+      let isFareChanged = if isJust partnerOrgId then isJust oldCacheDump else maybe False (\estimatedPrice' -> quote.price /= estimatedPrice') quote.estimatedPrice
       let journeyRouteDetails' = maybe [] (.journeyRouteDetails) mbSearch
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking

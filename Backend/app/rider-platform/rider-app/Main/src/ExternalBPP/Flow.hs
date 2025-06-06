@@ -150,6 +150,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                     ]
                in DQuote
                     { bppItemId = CallAPI.getProviderName integratedBPPConfig,
+                      routeCode = routeInfo.route.code,
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
                       fareDetails = fareDetails,
@@ -164,6 +165,19 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     mkDDiscount FRFSDiscount {..} = DDiscount {..}
 
     mapWithIndexM f xs = zipWithM f [0 ..] xs
+
+select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> m DOnSelect
+select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote = do
+  return $
+    DOnSelect
+      { providerId = quote.providerId,
+        totalPrice = quote.price,
+        fareBreakUp = [],
+        bppItemId = quote.bppItemId,
+        validTill = Just quote.validTill,
+        transactionId = quote.searchId.getId,
+        messageId = quote.id.getId
+      }
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do

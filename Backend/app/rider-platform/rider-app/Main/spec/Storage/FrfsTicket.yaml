@@ -240,12 +240,14 @@ FRFSQuote:
     providerDescription: Maybe Text
     price: Price
     childPrice: Maybe Price
+    estimatedPrice: Maybe Price
     fareDetails: Maybe FRFSFareDetails
     validTill: UTCTime
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
@@ -258,6 +260,8 @@ FRFSQuote:
       price: HighPrecMoney
     childPrice:
       childPrice: Maybe HighPrecMoney
+    estimatedPrice:
+      estimatedPrice: Maybe HighPrecMoney
     fareDetails:
       providerRouteId: Maybe Text
       distance: Maybe Meters
@@ -285,6 +289,7 @@ FRFSQuote:
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
     childPrice: Kernel.Types.Common.mkPrice currency <$> childPrice|E
+    estimatedPrice: Kernel.Types.Common.mkPrice currency <$> estimatedPrice|E
     applicableDiscountIds: (Kernel.Types.Id.Id <$> ) <$>|I
     fareDetails: Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> sdkToken <*> ticketTypeCode <*> trainTypeCode <*> via|E
 
@@ -292,6 +297,7 @@ FRFSQuote:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
     childPrice: Kernel.Prelude.fmap (.amount)|I
+    estimatedPrice: Kernel.Prelude.fmap (.amount)|I
     applicableDiscountIds: (Kernel.Types.Id.getId <$> ) <$>|I
     providerRouteId: (fareDetails <&> (.providerRouteId))|E
     distance: (fareDetails <&> (.distance))|E

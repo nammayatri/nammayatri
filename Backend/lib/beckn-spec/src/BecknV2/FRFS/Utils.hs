@@ -149,7 +149,7 @@ validateCoreVersion :: MonadFlow m => Spec.Context -> m ()
 validateCoreVersion context = do
   let supportedVersion = "2.0.0"
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion) $
+  unless (version == supportedVersion || version == "2.0.1") $
     throwError Error.UnsupportedCoreVer
 
 frfsVehicleCategoryToBecknVehicleCategory :: Spec.VehicleCategory -> BecknSpec.VehicleCategory

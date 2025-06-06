@@ -33,6 +33,7 @@ data BAPMetricsContainer = BAPMetricsContainer
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
     searchDurationFRFS :: DurationMetric,
+    selectDurationFRFS :: DurationMetric,
     initDurationFRFS :: DurationMetric,
     confirmDurationFRFS :: DurationMetric,
     cancelDurationFRFS :: DurationMetric,
@@ -54,6 +55,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
+  selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
   initDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_frfs_round_trip" "beckn_init_frfs_round_trip_failure_counter"
   confirmDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_frfs_round_trip" "beckn_confirm_frfs_round_trip_failure_counter"
   cancelDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_cancel_frfs_round_trip" "beckn_cancel_frfs_round_trip_failure_counter"

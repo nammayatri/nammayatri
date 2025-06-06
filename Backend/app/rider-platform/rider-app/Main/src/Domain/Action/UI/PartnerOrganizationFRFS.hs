@@ -598,6 +598,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.id = quoteId,
                 DFRFSQuote.price = frfsCachedData.price,
                 DFRFSQuote.childPrice = Nothing,
+                DFRFSQuote.estimatedPrice = Just frfsCachedData.price,
                 DFRFSQuote.providerDescription = Nothing,
                 DFRFSQuote.providerId = fromMaybe "metro_provider_id" frfsConfig'.providerId,
                 DFRFSQuote.providerName = fromMaybe "metro_provider_name" frfsConfig'.providerName,
@@ -619,6 +620,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.bppDelayedInterest = Nothing,
                 DFRFSQuote.discountedTickets = Nothing,
                 DFRFSQuote.eventDiscountAmount = Nothing,
+                DFRFSQuote.integratedBppConfigId = Just fromStation'.integratedBppConfigId,
                 DFRFSQuote.fareDetails = Nothing,
                 DFRFSQuote.oldCacheDump = Nothing
               }
