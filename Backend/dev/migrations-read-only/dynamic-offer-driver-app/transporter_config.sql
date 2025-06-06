@@ -450,3 +450,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN live_ekd boolea
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN deactivate_rc_on_unlink boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_aa_enabled_for_recurring boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN aa_enabled_client_sdk_version text  default '999.999.999';

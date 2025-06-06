@@ -1031,7 +1031,8 @@ TransporterConfig:
     earningsWindowSize : Int
     liveEKD: Maybe Bool
     deactivateRCOnUnlink: Maybe Bool
-    aaEnabledClientSdkVersion : Maybe Text
+    aaEnabledClientSdkVersion : Text
+    isAAEnabledForRecurring : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1092,6 +1093,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: Maybe Bool
     weekStartMode : Maybe Int
     earningsWindowSize : Maybe Int
+    aaEnabledClientSdkVersion: Maybe Text
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1160,6 +1162,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     weekStartMode : Just weekStartMode|E
     earningsWindowSize : Just earningsWindowSize|E
+    aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1221,6 +1224,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
     dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
+    aaEnabledClientSdkVersion: fromMaybe "99999999999" aaEnabledClientSdkVersion| E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
@@ -1434,7 +1438,8 @@ TransporterConfig:
     weekStartMode : "3"
     earningsWindowSize : "7"
     deactivateRCOnUnlink: "true"
-    aaEnabledClientSdkVersion : "999.999.999"
+    aaEnabledClientSdkVersion : "'999.999.999'"
+    isAAEnabledForRecurring : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
