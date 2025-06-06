@@ -195,6 +195,8 @@ data LogicDomain
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
   | RIDER_CONFIG_OVERRIDES ConfigType
+  | UI_DRIVER DeviceType PlatformType
+  | UI_RIDER DeviceType PlatformType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance Enumerable LogicDomain where
@@ -208,6 +210,8 @@ instance Enumerable LogicDomain where
       ++ map RIDER_CONFIG [minBound .. maxBound]
       ++ map DRIVER_CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
+      ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
+      ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
 
 instance Enumerable ConfigType where
   allValues = [minBound .. maxBound]
@@ -222,8 +226,12 @@ generateLogicDomainShowInstances =
     ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
     ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
+    ++ [show (UI_DRIVER a b) | a <- a', b <- b']
+    ++ [show (UI_RIDER a b) | a <- a', b <- b']
   where
     configTypes = [minBound .. maxBound]
+    a' = [minBound .. maxBound]
+    b' = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -242,6 +250,8 @@ instance Show LogicDomain where
   show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
   show (DRIVER_CONFIG configType) = "DRIVER-CONFIG_" ++ show configType
   show (RIDER_CONFIG_OVERRIDES configType) = "RIDER-CONFIG-OVERRIDES_" ++ show configType
+  show (UI_DRIVER a b) = "UI-DRIVER_" ++ show a ++ "_" ++ show b
+  show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -275,6 +285,24 @@ instance Read LogicDomain where
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
                   Just configType -> [(RIDER_CONFIG_OVERRIDES configType, rest1)]
+                  Nothing -> []
+          "UI-DRIVER" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType'' ->
+                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
+                     in case readMaybe configType''' of
+                          Just configType -> [(UI_DRIVER configType'' configType, rest2)]
+                          Nothing -> []
+                  Nothing -> []
+          "UI-RIDER" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType'' ->
+                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
+                     in case readMaybe configType''' of
+                          Just configType -> [(UI_RIDER configType'' configType, rest2)]
+                          Nothing -> []
                   Nothing -> []
           _ -> []
 
