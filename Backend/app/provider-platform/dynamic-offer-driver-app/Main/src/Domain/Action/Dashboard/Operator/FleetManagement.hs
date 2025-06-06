@@ -83,15 +83,16 @@ getFleetManagementFleets ::
 getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString requestorId = do
   person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
-  (_, personLs, fleetOwnerInfoLs) <- unzip3 <$> findAllActiveByOperatorIdWithLimitOffsetSearch requestorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
-  listItem <- mapM createFleetInfo (zip fleetOwnerInfoLs personLs)
+  (_, _, fleetOwnerInfoLs) <- unzip3 <$> findAllActiveByOperatorIdWithLimitOffsetSearch requestorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
+  listItem <- mapM createFleetInfo fleetOwnerInfoLs
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.FleetInfoRes {..}
   where
-    createFleetInfo (FOI.FleetOwnerInformation {..}, person) = do
+    createFleetInfo FOI.FleetOwnerInformation {..} = do
       now <- getCurrentTime
       totalVehicle <- VRCQuery.countAllRCForFleet fleetOwnerPersonId.getId merchantId
+      person <- QP.findById fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerPersonId.getId)
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
           >>= fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)
