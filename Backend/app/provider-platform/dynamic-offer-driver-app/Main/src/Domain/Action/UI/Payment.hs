@@ -415,7 +415,7 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity Nothing driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
-  paymentServiceName <- Payment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id subscriptionConfig.serviceName
+  paymentServiceName <- Payment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id driver.merchantOperatingCityId subscriptionConfig.serviceName
   resp <- Payment.mandateNotificationStatus merchantId opCity paymentServiceName (Just driver.id.getId) (mkNotificationRequest pdnNotification.shortId)
   let (responseCode, reponseMessage) = Tuple.both (\func -> func =<< resp.providerResponse) ((.responseCode), (.responseMessage))
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False
