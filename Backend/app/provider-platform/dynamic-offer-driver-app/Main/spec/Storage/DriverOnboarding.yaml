@@ -199,6 +199,9 @@ VehicleRegistrationCertificate:
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
+    approved: Maybe Bool
+  default:
+    approved: "false"
   constraints:
     id: PrimaryKey
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
@@ -241,6 +244,10 @@ VehicleRegistrationCertificate:
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
+    updateApproved:
+      kvFunction: updateOneWithKV
+      params: [approved]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 

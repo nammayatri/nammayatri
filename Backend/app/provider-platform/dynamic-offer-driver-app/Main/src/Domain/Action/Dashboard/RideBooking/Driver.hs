@@ -599,11 +599,13 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
 
       fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
-      driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
-      QVehicle.create vehicle
-      when (vehicle.variant == DV.SUV) $
-        QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+      -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
+      unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
+        driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
+        QVehicle.create vehicle
+        when (vehicle.variant == DV.SUV) $
+          QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success

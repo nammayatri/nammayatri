@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    approved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
     certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     dateOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

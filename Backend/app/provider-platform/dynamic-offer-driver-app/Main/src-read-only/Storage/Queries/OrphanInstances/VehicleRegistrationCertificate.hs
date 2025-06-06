@@ -18,6 +18,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
       Just
         Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate
           { airConditioned = airConditioned,
+            approved = approved,
             certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
             dateOfRegistration = dateOfRegistration,
             documentImageId = Kernel.Types.Id.Id documentImageId,
@@ -60,6 +61,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
   toTType' (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate {..}) = do
     Beam.VehicleRegistrationCertificateT
       { Beam.airConditioned = airConditioned,
+        Beam.approved = approved,
         Beam.certificateNumberEncrypted = certificateNumber & unEncrypted . encrypted,
         Beam.certificateNumberHash = certificateNumber & hash,
         Beam.dateOfRegistration = dateOfRegistration,
