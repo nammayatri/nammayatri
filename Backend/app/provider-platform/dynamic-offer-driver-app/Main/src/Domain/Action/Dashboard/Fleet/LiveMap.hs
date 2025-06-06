@@ -8,7 +8,6 @@ import Data.OpenApi (ToSchema)
 import Data.Ord (comparing)
 import Data.Time (UTCTime (UTCTime, utctDay), getCurrentTime)
 --import qualified Domain.Types.MerchantOperatingCity
-
 import Domain.Action.Dashboard.Common (mobileIndianCode)
 import Domain.Action.UI.Invoice (getSourceAndDestination)
 import Domain.Action.UI.Person (getPersonNumber)
@@ -21,7 +20,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Common
+import Kernel.Types.Common (Meters (..), Money (..), Seconds (..))
 import Kernel.Types.Error
   ( GenericError (InternalError),
     PersonError (PersonNotFound),
@@ -30,18 +29,19 @@ import Kernel.Types.Error
   )
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
+import Kernel.Utils.Time (getLocalCurrentTime)
 import Servant
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Ride as CHR
 import qualified Storage.Clickhouse.RideDetails as CHRD
+import qualified Storage.Queries.DailyStats as SQDS
 import Storage.Queries.DriverInformationExtra (findAllWithLimitOffsetByMerchantId, findByIdAndVerified)
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Error (DriverInformationError (..), TransporterError (TransporterConfigNotFound))
-import qualified Storage.Queries.DailyStats as SQDS
-import qualified Storage.Cac.TransporterConfig as CTC
 
 getLiveMapDrivers ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -87,19 +87,20 @@ buildTodaySummary :: (DP.Person, DDI.DriverInformation) -> [CHR.Ride] -> Environ
 buildTodaySummary (driver, driverInformation) rideLs = do
   mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
   let trips = countTrips rideLs $ Trips 0 0 0 0 0 0
-  transporterConfig <- CTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing >>= 
-    fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  transporterConfig <-
+    CTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let merchantLocalDate = utctDay localTime
-  mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
-  let onlineDuration = maybe 0 (.onlineDuration) mbDailyStats
-  pure $ 
+  mbDailyStats <- SQDS.findByDriverIdAndDate driver.id merchantLocalDate
+  let onlineDuration = fromMaybe (Seconds 0) $ (.onlineDuration) =<< mbDailyStats
+  pure $
     Common.TodaySummary
       { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
         tripStatus = castDriverStatus driverInformation.mode,
         tripsCompletedCount = trips.tripsCompletedCount,
-        earnings = Kernel.Types.Common.Money trips.fare,
-        totalDistance = Kernel.Types.Common.Meters trips.chargeableDistance,
+        earnings = Money trips.fare,
+        totalDistance = Meters trips.chargeableDistance,
         tripBalanceLeft = 0, -- FXME
         tripsCancelled = trips.tripsCancelled,
         tripsPassed = trips.tripsPassed,
