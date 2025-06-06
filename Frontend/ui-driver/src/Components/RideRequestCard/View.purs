@@ -54,9 +54,9 @@ view push =
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation VERTICAL
-                , padding $ PaddingLeft 2 
+                , padding $ PaddingLeft 2
                 ]
-                [ 
+                [
                 sourceView push
                ,destinationView push
                 ]
@@ -70,7 +70,7 @@ view push =
         , pill push
         ]
      , expireOverlay push
-     , shimmerView push 
+     , shimmerView push
 
     ]
 
@@ -213,7 +213,7 @@ carView push =
                 ]
             ]
         , linearLayout
-            [ width MATCH_PARENT 
+            [ width MATCH_PARENT
             , height MATCH_PARENT
             , gravity BOTTOM
             ]
@@ -222,7 +222,7 @@ carView push =
                 , width MATCH_PARENT
                 , gravity CENTER
                 ]
-                [ linearLayout 
+                [ linearLayout
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , background Color.lightGrey1
@@ -268,7 +268,7 @@ expireOverlay push =
           ]
     ]
 sourceView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-sourceView push  = 
+sourceView push  =
   linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -289,13 +289,14 @@ sourceView push  =
       , padding $ Padding 2 0 0 2
       , ellipsize true
       , singleLine true
+      , color Color.black900
       ,PrestoList.textHolder "source"
       ] <> FontStyle.tags TypoGraphy
-  ] 
+  ]
 
 
 destinationView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destinationView push  = 
+destinationView push  =
   linearLayout
       [ width $ V 200
       , height WRAP_CONTENT
@@ -318,8 +319,9 @@ destinationView push  =
       , ellipsize true
       , singleLine true
       ,PrestoList.textHolder "destination"
+      , color Color.black900
       ] <> FontStyle.tags TypoGraphy
-  ] 
+  ]
 
 
 sfl :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
@@ -356,7 +358,7 @@ shimmerView push =
                 , orientation VERTICAL
                 , padding $ PaddingLeft 2
                 ]
-                [ 
+                [
                 sourceShimmerView push
                ,destinationShimmerView push
                 ]
@@ -370,7 +372,7 @@ shimmerView push =
         , pillShimmer push
         ]
 
-    
+
 
 
 cardHeaderShimmerView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -415,7 +417,7 @@ cardHeaderLeftShimmer push =
           , background Color.borderGreyColor
           ]
         <> FontStyle.h3 TypoGraphy
-    ] 
+    ]
 
 cardHeaderRightShimmer :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 cardHeaderRightShimmer push =
@@ -435,7 +437,7 @@ cardHeaderRightShimmer push =
         <> FontStyle.h3 TypoGraphy
     ]
 sourceShimmerView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-sourceShimmerView push  = 
+sourceShimmerView push  =
     linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -457,23 +459,23 @@ sourceShimmerView push  =
       [ width $ V 200
       , height WRAP_CONTENT
       , padding $ Padding 2 0 0 2
-      ,margin $ Margin 0 0 0 4 
+      ,margin $ Margin 0 0 0 4
       ,PrestoList.textHolder "source"
       , color Color.borderGreyColor
       , background Color.borderGreyColor
       ] <> FontStyle.tags TypoGraphy
-  ]  
+  ]
 
 destinationShimmerView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destinationShimmerView push  = 
+destinationShimmerView push  =
     linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      ,gravity CENTER     
+      ,gravity CENTER
       , PrestoList.visibilityHolder "visible"
       ,PrestoList.visibilityHolder "shimmerVisibility"
-     
+
       ]
      [
    sfl $ imageView
@@ -493,7 +495,7 @@ destinationShimmerView push  =
        , color Color.borderGreyColor
       , background Color.borderGreyColor
       ] <> FontStyle.tags TypoGraphy
-  ] 
+  ]
 
 
 
@@ -524,7 +526,7 @@ carShimmerView push =
                 ]
             ]
         , linearLayout
-            [ width MATCH_PARENT 
+            [ width MATCH_PARENT
             , height MATCH_PARENT
             , gravity BOTTOM
             ]
@@ -533,7 +535,7 @@ carShimmerView push =
                 , width MATCH_PARENT
                 , gravity CENTER
                 ]
-                [ linearLayout 
+                [ linearLayout
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , background Color.lightGrey1
@@ -555,7 +557,7 @@ carShimmerView push =
                 ]
             ]
         ] ]
-    
+
 pillShimmer :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillShimmer push =
  sfl $ linearLayout

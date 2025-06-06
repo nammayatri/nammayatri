@@ -251,13 +251,6 @@ function getNammaYatriConfig() {
             "AUTO_RICKSHAW": true,
             "AutoCategory" : true,
           },
-          "openMeter" : {
-            "enable" : {
-              "AutoCategory" : true,
-            },
-            "addDestination" : true,
-            "shareRideTracking" : false
-          },
           "mapImage" : "ny_ic_bangalore_map",
           "cityCode" : "std:080",
           "showSubscriptions" : true,

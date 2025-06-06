@@ -62,6 +62,7 @@ pillViewV2 txt =
     ,   cornerRadius 4.0
     ,   padding $ Padding 8 4 8 4
     ,   margin $ MarginLeft 8
+    ,   color Color.black900
     ] <> (FontStyle.subHeading1 TypoGraphy)
 
 
