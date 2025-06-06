@@ -29,6 +29,9 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagConfigPilotConfigDetails,
     getNammaTagConfigPilotGetTableData,
     postNammaTagConfigPilotActionChange,
+    getNammaTagConfigPilotAllUiConfigs,
+    getNammaTagConfigPilotUiConfigDetails,
+    getNammaTagConfigPilotGetUiTableData,
   )
 where
 
@@ -36,7 +39,7 @@ import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Singletons
--- import qualified Data.Text as Text
+import qualified Data.Text as Text
 import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DTM
@@ -44,7 +47,7 @@ import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.TransporterConfig as DTT
--- import Domain.Types.UiDriverConfig (UiDriverConfig (..))
+import Domain.Types.UiDriverConfig (UiDriverConfig (..))
 import qualified Domain.Types.UiDriverConfig as DTDC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
@@ -58,7 +61,7 @@ import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
--- import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.TypesTH as YTH
@@ -72,10 +75,9 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
--- import qualified Storage.Queries.UiDriverConfig as SQU
+import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.ConfigPilot as TC
-
--- import qualified Tools.DynamicLogic as TDL
+import qualified Tools.DynamicLogic as TDL
 
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
@@ -181,13 +183,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTD.DriverPoolConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTD.DriverPoolConfig)) transporterConfig.referralLinkPassword req logicData
-    -- LYT.DRIVER_CONFIG (LYT.UiConfig dt pt) -> do
-    --   let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-    --   defaultConfig <- SQU.findUIConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
-    --   let configWrap = LYT.Config defaultConfig.config Nothing 1
-    --   logicData :: (LYT.Config Value) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-    --   -- Add type verification for driver side
-    --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config Value)) transporterConfig.referralLinkPassword req logicData
+    LYT.UI_DRIVER dt pt -> do
+      let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+      defaultConfig <- SQU.findUIConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
+      let configWrap = LYT.Config defaultConfig.config Nothing 1
+      logicData :: (LYT.Config Value) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      -- Add type verification for driver side
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config Value)) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
       defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
@@ -300,29 +302,25 @@ getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
 
 postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow Text
-postNammaTagConfigPilotGetVersion _ _ _ = do
-  throwError $ InvalidRequest "Not supported"
-
--- merchant <- findById (Id uicr.merchantId)
--- merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
--- (_, version) <- QUiConfig.findUIConfig uicr merchantOpCityId False
--- case version of
---   Just ver -> pure $ Text.pack (show ver)
---   Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+postNammaTagConfigPilotGetVersion _ _ uicr = do
+  merchant <- findById (Id uicr.merchantId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
+  (_, version) <- QUiConfig.findUIConfig uicr merchantOpCityId False
+  case version of
+    Just ver -> pure $ Text.pack (show ver)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
 postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow LYT.UiConfigResponse
-postNammaTagConfigPilotGetConfig _ _ _ = do
-  throwError $ InvalidRequest "Not supported"
-
--- merchant <- findById (Id uicr.merchantId)
--- merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
--- (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId False
--- isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.DRIVER_CONFIG $ LYT.UiConfig uicr.os uicr.platform)
--- baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) (LYT.DRIVER_CONFIG $ LYT.UiConfig uicr.os uicr.platform) >>= fromMaybeM (InvalidRequest "Base Rollout not found")
--- let baseVersion = Just baseRollout.version
--- case config of
---   Just cfg -> pure (LYT.UiConfigResponse cfg.config (Text.pack .show <$> version) (Text.pack .show <$> baseVersion) isExp)
---   Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+postNammaTagConfigPilotGetConfig _ _ uicr = do
+  merchant <- findById (Id uicr.merchantId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
+  (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId False
+  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.UI_DRIVER uicr.os uicr.platform)
+  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) (LYT.UI_DRIVER uicr.os uicr.platform) >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+  let baseVersion = Just baseRollout.version
+  case config of
+    Just cfg -> pure (LYT.UiConfigResponse cfg.config (Text.pack .show <$> version) (Text.pack .show <$> baseVersion) isExp)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
@@ -365,13 +363,34 @@ getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merch
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  TC.returnConfigs configType (cast merchantOpCityId) (cast merchant.id) _opCity
+  let domain = LYT.DRIVER_CONFIG configType
+  TC.returnConfigs domain (cast merchantOpCityId) (cast merchant.id) _opCity
 
 postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
+
+getNammaTagConfigPilotAllUiConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Bool -> Environment.Flow [LYT.LogicDomain]
+getNammaTagConfigPilotAllUiConfigs _merchantShortId _opCity mbUnderExp = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  YudhishthiraFlow.getNammaTagConfigPilotAllUiConfigs (cast merchantOpCityId) mbUnderExp LYT.DriverCfg
+
+getNammaTagConfigPilotUiConfigDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiDevicePlatformReq -> Environment.Flow [LYT.ConfigDetailsResp]
+getNammaTagConfigPilotUiConfigDetails _merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let domain = LYT.UI_DRIVER req.deviceType req.platformType
+  YudhishthiraFlow.getNammaTagConfigPilotUiConfigDetails (cast merchantOpCityId) domain
+
+getNammaTagConfigPilotGetUiTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiDevicePlatformReq -> Environment.Flow LYT.TableDataResp
+getNammaTagConfigPilotGetUiTableData _merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let domain = LYT.UI_DRIVER req.deviceType req.platformType
+  TC.returnConfigs domain (cast merchantOpCityId) (cast merchant.id) _opCity
 
 -- { os :: DeviceType,
 --     language :: Language,
