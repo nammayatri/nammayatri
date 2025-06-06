@@ -1049,7 +1049,8 @@ TransporterConfig:
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     driverCallingOption: "Maybe CallingOption"
 
-    aaEnabledClientSdkVersion : Maybe Text
+    aaEnabledClientSdkVersion : Text
+    isAAEnabledForRecurring : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1111,6 +1112,7 @@ TransporterConfig:
     isMLBasedDynamicPricingEnabled: Maybe Bool
 
     cancellationRateSlabConfig: Maybe Value
+    aaEnabledClientSdkVersion: Maybe Text
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1180,6 +1182,7 @@ TransporterConfig:
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
 
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
+    aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1241,6 +1244,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
     dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
+    aaEnabledClientSdkVersion: fromMaybe "99999999999" aaEnabledClientSdkVersion| E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
@@ -1455,7 +1459,8 @@ TransporterConfig:
     cancellationRateSlabConfig: '{}'
     driverCallingOption: "'AnonymousCall'"
 
-    aaEnabledClientSdkVersion : "999.999.999"
+    aaEnabledClientSdkVersion : "'999.999.999'"
+    isAAEnabledForRecurring : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
