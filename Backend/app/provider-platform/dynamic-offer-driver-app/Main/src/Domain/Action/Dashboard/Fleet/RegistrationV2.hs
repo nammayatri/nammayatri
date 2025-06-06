@@ -37,6 +37,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
@@ -88,7 +89,27 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       personId = cast @Common.Person @DP.Person req.personId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
   fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  void $ QP.updateByPrimaryKey person{firstName = req.firstName, lastName = Just req.lastName}
+  -- TODO: Refactor later --
+  case fleetOwnerInfo.panImageId of
+    Nothing -> throwError $ InvalidRequest "PAN not uploaded"
+    Just imageId -> do
+      panCard <- QPanCard.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("PAN not uploaded " <> imageId))
+      unless (panCard.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "PAN not validated"
+  case fleetOwnerInfo.gstImageId of
+    Nothing -> throwError $ InvalidRequest "GST not uploaded"
+    Just imageId -> do
+      gstIn <- QGST.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("GST not uploaded " <> imageId))
+      unless (gstIn.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "GST not validated"
+  case fleetOwnerInfo.aadhaarFrontImageId of
+    Nothing -> throwError $ InvalidRequest "Aadhaar front image not uploaded"
+    Just imageId -> do
+      aadhaarCard <- QAadhaarCard.findByFrontImageId (Just $ Id imageId) >>= fromMaybeM (InvalidRequest ("Aadhaar front image not uploaded " <> imageId))
+      unless (aadhaarCard.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "Aadhaar front image not validated"
+  case fleetOwnerInfo.aadhaarBackImageId of
+    Nothing -> throwError $ InvalidRequest "Aadhaar back image not uploaded"
+    Just imageId -> do
+      aadhaarCard <- QAadhaarCard.findByBackImageId (Just $ Id imageId) >>= fromMaybeM (InvalidRequest ("Aadhaar back image not uploaded " <> imageId))
+      unless (aadhaarCard.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "Aadhaar back image not validated"
   void $ updateFleetOwnerInfo fleetOwnerInfo{registeredAt = Just now} req
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
