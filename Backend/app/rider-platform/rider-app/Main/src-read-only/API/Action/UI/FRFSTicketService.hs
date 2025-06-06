@@ -52,6 +52,9 @@ type API =
            "location"
            Kernel.External.Maps.Types.LatLong
       :> QueryParam
+           "minimalData"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "platformType"
            Domain.Types.IntegratedBPPConfig.PlatformType
       :> QueryParam
@@ -301,13 +304,14 @@ getFrfsStations ::
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
-getFrfsStations a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
+getFrfsStations a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
 
 getFrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

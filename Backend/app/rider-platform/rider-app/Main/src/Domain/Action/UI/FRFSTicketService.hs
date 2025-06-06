@@ -107,8 +107,9 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
                     ( mapWithIndex
                         ( \idx stop ->
                             FRFSStationAPI
-                              { name = stop.stopName,
+                              { name = Just stop.stopName,
                                 code = stop.stopCode,
+                                routeCodes = Nothing,
                                 lat = Just stop.stopPoint.lat,
                                 lon = Just stop.stopPoint.lon,
                                 stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
@@ -146,7 +147,8 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
 
 data StationResult = StationResult
   { code :: Kernel.Prelude.Text,
-    name :: Kernel.Prelude.Text,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeCodes :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     lat :: Double,
     lon :: Double,
     stationType :: Maybe StationType,
@@ -193,8 +195,9 @@ getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
             map
               ( \stop ->
                   FRFSStationAPI
-                    { name = stop.stopName,
+                    { name = Just stop.stopName,
                       code = stop.stopCode,
+                      routeCodes = Nothing,
                       lat = Just stop.stopPoint.lat,
                       lon = Just stop.stopPoint.lon,
                       stationType = Nothing,
@@ -217,12 +220,13 @@ getFrfsStations ::
   Kernel.Prelude.Maybe Context.City ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe DIBC.PlatformType ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Text ->
   Spec.VehicleCategory ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType mbRouteCode mbStartStationCode vehicleType_ = do
+getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _platformType mbRouteCode mbStartStationCode vehicleType_ = do
   merchantOpCity <-
     case mbCity of
       Nothing ->
@@ -266,8 +270,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
             map
               ( \routeStop ->
                   FRFSStationAPI
-                    { name = routeStop.stopName,
+                    { name = Just routeStop.stopName,
                       code = routeStop.stopCode,
+                      routeCodes = Nothing,
                       lat = Just routeStop.stopPoint.lat,
                       lon = Just routeStop.stopPoint.lon,
                       stationType = Nothing,
@@ -294,8 +299,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
             map
               ( \routeStop ->
                   FRFSStationAPI
-                    { name = routeStop.stopName,
+                    { name = Just routeStop.stopName,
                       code = routeStop.stopCode,
+                      routeCodes = Nothing,
                       lat = Just routeStop.stopPoint.lat,
                       lon = Just routeStop.stopPoint.lon,
                       stationType = Just (if routeStop.sequenceNum == 1 then START else if routeStop.sequenceNum < length filteredRouteStops then INTERMEDIATE else END),
@@ -321,8 +327,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
             map
               ( \routeStop ->
                   FRFSStationAPI
-                    { name = routeStop.stopName,
+                    { name = Just routeStop.stopName,
                       code = routeStop.stopCode,
+                      routeCodes = Nothing,
                       lat = Just routeStop.stopPoint.lat,
                       lon = Just routeStop.stopPoint.lon,
                       stationType = Just (if routeStop.sequenceNum == 1 then START else if routeStop.sequenceNum < length stopsSortedBySequenceNumber then INTERMEDIATE else END),
@@ -354,28 +361,33 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
           groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
           possibleEndStops =
-            nubBy (\a b -> a.stopCode == b.stopCode) $
-              concatMap
-                ( \stops ->
-                    let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
-                     in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
-                )
-                groupedStopsByRouteCode
-      let endStops =
             map
-              ( \routeStop ->
-                  FRFSStationAPI
-                    { name = routeStop.stopName,
-                      code = routeStop.stopCode,
-                      lat = Just routeStop.stopPoint.lat,
-                      lon = Just routeStop.stopPoint.lon,
-                      stationType = Nothing,
-                      sequenceNum = Nothing,
-                      address = Nothing,
-                      distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
-                    }
+              ( \stops ->
+                  let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
+                   in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+              )
+              groupedStopsByRouteCode
+      let endStops =
+            concatMap
+              ( \routeStops' ->
+                  case routeStops' of
+                    routeStop : xs ->
+                      let routeCodes' = nub $ routeStop.routeCode : map (.routeCode) xs
+                       in [ FRFSStationAPI
+                              { name = if fromMaybe False minimalData then Nothing else Just routeStop.stopName,
+                                code = routeStop.stopCode,
+                                routeCodes = Just routeCodes',
+                                lat = Just routeStop.stopPoint.lat,
+                                lon = Just routeStop.stopPoint.lon,
+                                stationType = Nothing,
+                                sequenceNum = Nothing,
+                                address = Nothing,
+                                distance = Nothing,
+                                color = Nothing,
+                                towards = Nothing
+                              }
+                          ]
+                    _ -> []
               )
               possibleEndStops
       mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
@@ -391,6 +403,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
                       sequenceNum = Nothing,
                       stationType = Nothing,
                       towards = Nothing,
+                      name = Just name,
+                      routeCodes = Nothing,
                       ..
                     }
               )
@@ -1139,10 +1153,12 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
         ( \Station {..} ->
             FRFSStationAPI
               { color = Nothing,
+                routeCodes = Nothing,
                 distance = Nothing,
                 sequenceNum = Nothing,
                 stationType = Nothing,
                 towards = Nothing,
+                name = Just name,
                 ..
               }
         )
@@ -1159,6 +1175,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
                     { lat = fromMaybe merchantOpCity.lat stop.lat,
                       lon = fromMaybe merchantOpCity.long stop.lon,
                       code = stop.code,
+                      routeCodes = stop.routeCodes,
                       name = stop.name,
                       stationType = stop.stationType,
                       sequenceNum = stop.sequenceNum
@@ -1192,6 +1209,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
       FRFSStationAPI
         { name = stop.name,
           code = stop.code,
+          routeCodes = stop.routeCodes,
           lat = Just stop.lat,
           lon = Just stop.lon,
           distance = Just distance,

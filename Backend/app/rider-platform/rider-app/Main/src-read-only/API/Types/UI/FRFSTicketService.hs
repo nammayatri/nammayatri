@@ -168,7 +168,8 @@ data FRFSStationAPI = FRFSStationAPI
     distance :: Data.Maybe.Maybe Kernel.Types.Common.Meters,
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
-    name :: Data.Text.Text,
+    name :: Data.Maybe.Maybe Data.Text.Text,
+    routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
     towards :: Data.Maybe.Maybe Data.Text.Text
