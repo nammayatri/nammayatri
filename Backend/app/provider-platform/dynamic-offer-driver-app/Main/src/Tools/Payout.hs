@@ -65,7 +65,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
 decidePayoutService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePayoutService payoutServiceName clientSdkVersion merchantOpCityId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  return $ case (clientSdkVersion, transporterConfig.aaEnabledClientSdkVersion) of
-    (Just v, Just k)
-      | v >= textToVersionDefault k -> DMSC.PayoutService PT.AAJuspay
+  return $ case clientSdkVersion of
+    Just v
+      | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PayoutService PT.AAJuspay
     _ -> payoutServiceName

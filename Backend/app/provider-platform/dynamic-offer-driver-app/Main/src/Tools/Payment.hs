@@ -148,22 +148,26 @@ runWithUnWrap func merchantId merchantOperatingCity serviceName mRoutingId req =
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  return $ case (clientSdkVersion, transporterConfig.aaEnabledClientSdkVersion) of
-    (Just v, Just k)
-      | v >= textToVersionDefault k -> DMSC.PaymentService Payment.AAJuspay
+  return $ case clientSdkVersion of
+    Just v
+      | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
     _ -> paymentServiceName
 
-decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> DPlan.ServiceNames -> m DMSC.ServiceName
-decidePaymentServiceForRecurring paymentServiceName driverId serviceName = do
-  mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
-  case mDriverPlan of
-    Just driverPlan -> do
-      now <- getCurrentTime
-      let mandateSetupTime = fromMaybe now driverPlan.mandateSetupDate
-          elapsed = diffUTCTime now mandateSetupTime
-          sixHours = 6 * 60 * 60
-      pure $
-        if elapsed > sixHours
-          then DMSC.PaymentService Payment.AAJuspay
-          else paymentServiceName
-    Nothing -> pure paymentServiceName
+decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> m DMSC.ServiceName
+decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId serviceName = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  case transporterConfig.isAAEnabledForRecurring of
+    Just True -> do
+      mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
+      case mDriverPlan of
+        Just driverPlan -> do
+          now <- getCurrentTime
+          let mandateSetupTime = fromMaybe now driverPlan.mandateSetupDate
+              elapsed = diffUTCTime now mandateSetupTime
+              sixHours = 6 * 60 * 60
+          pure $
+            if elapsed > sixHours
+              then DMSC.PaymentService Payment.AAJuspay
+              else paymentServiceName
+        Nothing -> pure paymentServiceName
+    _ -> pure paymentServiceName
