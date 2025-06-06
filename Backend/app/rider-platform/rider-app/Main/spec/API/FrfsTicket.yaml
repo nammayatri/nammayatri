@@ -139,8 +139,9 @@ types:
     enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
 
   FRFSStationAPI:
-    name: Text
+    name: Maybe Text
     code: Text
+    routeCodes: Maybe [Text]
     lat: Maybe Double
     lon: Maybe Double
     address: Maybe Text
@@ -225,6 +226,7 @@ apis:
         endStationCode: Text
         location: LatLong
         platformType: PlatformType
+        minimalData: Bool
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 

@@ -263,10 +263,11 @@ castStationToAPI DStation {..} =
   API.FRFSStationAPI
     { API.address = Nothing,
       API.code = stationCode,
+      API.routeCodes = Nothing,
       API.color = Nothing,
       API.lat = stationLat,
       API.lon = stationLon,
-      API.name = stationName,
+      API.name = Just stationName,
       API.stationType = Just stationType,
       API.sequenceNum = stopSequence,
       API.distance = Nothing,
