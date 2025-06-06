@@ -8,7 +8,7 @@ import Screens.RideRequestScreen.Controller
 import Screens.RideRequestScreen.ScreenData
 import Data.Maybe
 import Animation as Anim
-import Common.Types.App 
+import Common.Types.App
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
@@ -59,7 +59,7 @@ screen initialState listItem =
     , globalEvents:
         [ globalOnScroll "RideRequestScreen"
         , ( \push -> do
-                void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRideList push initialState 
+                void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRideList push initialState
                 _ <- HU.storeCallBackForNotification push Notification
                 _ <- JB.getCurrentPosition push UpdateCurrentLocation
                 pure $ pure unit
@@ -100,7 +100,7 @@ view listItem push state =
               , navbarlayout state push
               , dateAndDayLayout state push
               , listLayout push state listItem
-              
+
               ,loadButtonView state push
               ]
           ]
@@ -109,14 +109,14 @@ view listItem push state =
 listLayout :: forall w. (Action -> Effect Unit) -> RideRequestScreenState -> ListItem -> PrestoDOM (Effect Unit) w
 listLayout push state listItm =
   let (ScheduledBookingListResponse response) = state.data.resp
-  
-  in 
+
+  in
   swipeRefreshLayout
     ( [ weight 1.0
       , width MATCH_PARENT
       , onRefresh push (const Refresh)
       , enableRefresh state.data.refreshLoader
-      ] 
+      ]
       <> if state.data.scrollEnable then [setEnable $ false] else []
     )
     [ Keyed.relativeLayout
@@ -155,7 +155,7 @@ listLayout push state listItm =
           , gravity CENTER
           , text $ getString CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE
           , textSize FontSize.a_14
-
+          , color Color.black900
           ] <> FontStyle.h3 TypoGraphy
           ,textView $[
             width $ V 290
@@ -163,10 +163,10 @@ listLayout push state listItm =
           , gravity CENTER
           , text $ getString  PLEASE_TRY_AGAIN
           , textSize FontSize.a_14
-
+          , color Color.black900
           ] <> FontStyle.h3 TypoGraphy
 
-        ] 
+        ]
         , Tuple "NoLocation"
         $ linearLayout[
           height $ WRAP_CONTENT
@@ -176,7 +176,7 @@ listLayout push state listItm =
           , orientation VERTICAL
           , visibility  $ boolToVisibility $ (state.props.noLocationFlag ) && (DA.null state.data.filteredArr )
         ][
-          
+
           textView $[
             width $ V 290
           , height $ V 20
@@ -194,7 +194,7 @@ listLayout push state listItm =
 
           ] <> FontStyle.h3 TypoGraphy
 
-        ] 
+        ]
         ,Tuple "LOADER"
         $ PrestoAnim.animationSet
           [ PrestoAnim.Animation
@@ -224,7 +224,7 @@ listLayout push state listItm =
                     _ -> VISIBLE)
             ]
        ])
-    
+
     ]
 
 headerLayout :: RideRequestScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -286,7 +286,7 @@ navbarlayout state push =
     )
 
 navpillView :: RideRequestScreenState -> PillViewConfig -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
-navpillView state config push idx = 
+navpillView state config push idx =
   linearLayout
     [ height WRAP_CONTENT
     , gravity CENTER
@@ -297,7 +297,7 @@ navpillView state config push idx =
     , onClick push $ const $ RideTypeSelected config.rideType idx
     , background if idx == state.data.activeRideIndex then config.activeColor else Color.white900
     , rippleColor Color.rippleShade
-    , clickable $ idx /= state.data.activeRideIndex  
+    , clickable $ idx /= state.data.activeRideIndex
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -321,7 +321,7 @@ daypillView state config push idx =
     , background if idx == state.data.activeDayIndex then config.activeColor else Color.white900
     , onClick push $ const $ SelectDay idx
     , rippleColor Color.rippleShade
-    , clickable $ idx /= state.data.activeDayIndex  
+    , clickable $ idx /= state.data.activeDayIndex
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -334,7 +334,7 @@ daypillView state config push idx =
     ]
 dateAndDayLayout :: RideRequestScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 dateAndDayLayout state push =
-  let 
+  let
     today = EHC.getCurrentUTC ""
     tommorow = (EHC.convertUTCtoISC (getFutureDate today 1) "DD MMM,YYYY")
   in
@@ -348,7 +348,7 @@ dateAndDayLayout state push =
     [ textView
         $ [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text $ if state.data.activeDayIndex ==1 then  tommorow else (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD MMM,YYYY") 
+          , text $ if state.data.activeDayIndex ==1 then  tommorow else (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD MMM,YYYY")
           , color $ Color.black900
           ]
         <> FontStyle.h3 TypoGraphy
@@ -425,7 +425,7 @@ loadButtonView state push =
 
 getRideList :: (Action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
 getRideList push state = do
-      when state.props.shouldCall $ do 
+      when state.props.shouldCall $ do
         let rideType  =   getRideType state
             tripCategory =  if  rideType == "InterCity" then  rideType<>"_OneWayOnDemandStaticOffer" else if rideType == "Rental" then rideType<>"_OnDemandStaticOffer" else ""
         (scheduledBookingListResponse) <- Remote.rideBooking "10" (show state.data.offset) (state.data.date) (state.data.date) (tripCategory) ( fromMaybe "0.0" state.data.driverLat) ( fromMaybe "0.0" state.data.driverLong)
@@ -467,7 +467,7 @@ shimmerData i =   {
     visible : toPropValue true,
     pillColor : toPropValue "",
     overlayVisiblity :toPropValue  "gone",
-    visiblePill : toPropValue "" , 
+    visiblePill : toPropValue "" ,
     cornerRadius : toPropValue "",
     imageType : toPropValue "",
     estimatedDuration : toPropValue ""

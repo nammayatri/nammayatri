@@ -38,11 +38,11 @@ import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
 import Effect.Uncurried (runEffectFn1, runEffectFn7)
 import Debug
-import ConfigProvider 
+import ConfigProvider
 import Data.Foldable (foldl)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
+view push config =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -63,7 +63,7 @@ chatHeaderView config push =
   , height $ V 80
   , width MATCH_PARENT
   , margin $ MarginTop $ if os == "IOS" then safeMarginTop else 0
-  , visibility $ boolToVisibility $ config.showHeader 
+  , visibility $ boolToVisibility $ config.showHeader
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -181,7 +181,7 @@ headerActionView config push =
        [ text config.mapsText
        , color Color.blue900
        ] <> FontStyle.subHeading2 TypoGraphy)
-    ]  
+    ]
   ]
 
 chatBodyView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -196,7 +196,7 @@ chatView config push =
   linearLayout
   [ height if config.spanParent then MATCH_PARENT else WRAP_CONTENT
   , width MATCH_PARENT
-  , weight 1.0 
+  , weight 1.0
   , orientation VERTICAL
   , margin config.chatMargin
   ] ([ scrollView
@@ -231,11 +231,11 @@ chatFooterView config push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.white900
-  , visibility $ boolToVisibility $ config.showTextEdit 
+  , visibility $ boolToVisibility $ config.showTextEdit
   , margin $ MarginBottom $ if os == "IOS" then 16 else 0
   , adjustViewWithKeyboard "true"
   ][ suggestionsView config push
-    , if config.footerBanner.enable then 
+    , if config.footerBanner.enable then
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -249,7 +249,7 @@ chatFooterView config push =
             , color Color.black900
             ] <> FontStyle.body25 LanguageStyle
         ]
-      else  
+      else
         linearLayout
           [ width (V (screenWidth unit))
           , height $ V 1
@@ -277,6 +277,7 @@ chatFooterView config push =
          , ellipsize true
          , onChange push $ TextChanged
          , pattern "[^\n]*,255"
+         , color Color.black900
          ] <> FontStyle.body1 LanguageStyle
        , linearLayout
          [ height $ V 36
@@ -287,9 +288,9 @@ chatFooterView config push =
          , accessibility ENABLE
          ][ imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET  $ if config.sendMessageActive then "ic_send_blue" else "ic_send"
-            , height $ V 20 
-            , width $ V 20 
-            ] 
+            , height $ V 20
+            , width $ V 20
+            ]
          ]
       ]
   ]
@@ -350,7 +351,7 @@ dummyTextView =
   , height WRAP_CONTENT
   ]
 
-quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quickMessageView config message isLastItem push =
   let value = getMessageFromKey chatSuggestion message config.languageKey
   in
@@ -380,7 +381,7 @@ chatComponentView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponen
 chatComponentView state push config nextConfig isLastItem index =
   let (ChatConfig chatConfig) = getChatConfig state config.sentBy isLastItem (hasTimeStamp config nextConfig) index
       value = getMessageFromKey chatSuggestion config.message state.languageKey
-  in 
+  in
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
@@ -429,7 +430,7 @@ chatComponentView state push config nextConfig isLastItem index =
                                 , width $ V 180
                                 , id $ getNewIDWithTag config.message
                                 , onAnimationEnd (\action -> do
-                                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_CENTER", inSampleSize = 2} 
+                                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_CENTER", inSampleSize = 2}
                                 ) (const NoAction)
                                 , onClick push (const $ OnImageClick config.message)
                                 , height $ V 180
@@ -479,13 +480,13 @@ chatComponentView state push config nextConfig isLastItem index =
                                 , width MATCH_PARENT
                                 , orientation VERTICAL
                                 , gravity chatConfig.gravity
-                                ][ textView $ 
+                                ][ textView $
                                     [ text $ "Here is some information about your ride."
                                     , singleLine false
                                     , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
                                     , color chatConfig.textColor
                                     ] <> FontStyle.body1 TypoGraphy
-                                  , linearLayout 
+                                  , linearLayout
                                     [ color Color.black800
                                     , background Color.white900
                                     , padding $ Padding 12 12 12 0
@@ -493,19 +494,19 @@ chatComponentView state push config nextConfig isLastItem index =
                                     , width MATCH_PARENT
                                     , margin $ MarginTop 12
                                     , orientation VERTICAL
-                                    ][  textView $ 
+                                    ][  textView $
                                         [ textFromHtml $ if state.spanParent then config.message else value
                                         , singleLine false
                                         , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
                                         , color chatConfig.textColor
                                         ] <> FontStyle.body1 TypoGraphy
                                     ]
-                                ] 
+                                ]
         _ -> messageView state push config (ChatConfig chatConfig) isLastItem value
-      ] 
-      , textView $ 
+      ]
+      , textView $
        [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
-       , visibility $ boolToVisibility $ hasTimeStamp config nextConfig 
+       , visibility $ boolToVisibility $ hasTimeStamp config nextConfig
        , color Color.black800
        , margin $ MarginTop 4
        , fontStyle $ FontStyle.regular LanguageStyle
@@ -526,7 +527,7 @@ chatComponentView state push config nextConfig isLastItem index =
         , gravity CENTER
         , weight 1.0
         ][]
-      , textView $ 
+      , textView $
         [ text $ maybe "" (\nextConfig' -> convertUTCtoISC nextConfig'.timeStamp "dddFull, DD/MM/YYYY") nextConfig
         , color Color.black800
         , gravity CENTER
@@ -577,7 +578,7 @@ getChatConfig state sentBy isLastItem hasTimeStamp index =
     , textColor :  Color.white900
     }
   else
-    ChatConfig { 
+    ChatConfig {
       margin : if state.spanParent then Margin 0 (if index == 0 then 27 else 0) ((screenWidth unit)/4)  if (isLastItem && hasTimeStamp) then 18 else 8
                else Margin 0 24 ((screenWidth unit)/4) if (os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0
     , gravity :  LEFT
@@ -587,18 +588,18 @@ getChatConfig state sentBy isLastItem hasTimeStamp index =
     }
 
 hasTimeStamp :: ChatComponentConfig -> Maybe ChatComponentConfig -> Boolean
-hasTimeStamp msgConfig nxtMsgConfig = 
+hasTimeStamp msgConfig nxtMsgConfig =
     maybe (not STR.null msgConfig.timeStamp) (\nxtMsg -> checkNeedTime nxtMsg) nxtMsgConfig
-    where 
+    where
       checkNeedTime nxtMsg = not $ not (STR.null msgConfig.timeStamp) &&
                              not (STR.null nxtMsg.timeStamp) &&
                              convertUTCtoISC msgConfig.timeStamp "hh:mm A" == convertUTCtoISC nxtMsg.timeStamp "hh:mm A" &&
                              msgConfig.sentBy == nxtMsg.sentBy
 
 hasDateFooter :: ChatComponentConfig -> Maybe ChatComponentConfig -> Boolean
-hasDateFooter msgConfig nxtMsgConfig = 
+hasDateFooter msgConfig nxtMsgConfig =
   maybe false (\nxtMsg -> checkNeedTime nxtMsg) nxtMsgConfig
-    where 
+    where
       checkNeedTime nxtMsg = not (STR.null msgConfig.timeStamp) &&
                              not (STR.null nxtMsg.timeStamp) &&
                              (convertUTCtoISC msgConfig.timeStamp "DD:MM:YYYY") /= (convertUTCtoISC nxtMsg.timeStamp "DD:MM:YYYY") &&
@@ -612,15 +613,15 @@ messageView state push config chatConfig isLastMessage value = do
     height MATCH_PARENT,
     orientation VERTICAL
   ][
-    if condition 
-      then detailedMessageView state push config chatConfig value 
+    if condition
+      then detailedMessageView state push config chatConfig value
       else simpleMessageView state config chatConfig value,
     issueOptionView state push isLastMessage
   ]
 
 simpleMessageView :: forall w. Config -> ChatComponentConfig -> ChatConfig -> String -> PrestoDOM (Effect Unit) w
-simpleMessageView state config (ChatConfig chatConfig) value = 
-  let transformedMessage = if state.useSuggestionsView 
+simpleMessageView state config (ChatConfig chatConfig) value =
+  let transformedMessage = if state.useSuggestionsView
     then if state.spanParent then config.message else value
     else reportIssueMessageTransformer value
   in
@@ -643,9 +644,9 @@ simpleMessageView state config (ChatConfig chatConfig) value =
           ]
       in
         foldl (\acc { key, value } -> STR.replaceAll key value acc) message keyValuePairs
-    
+
 detailedMessageView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponentConfig -> ChatConfig -> String -> PrestoDOM (Effect Unit) w
-detailedMessageView state push config (ChatConfig chatConfig) value = 
+detailedMessageView state push config (ChatConfig chatConfig) value =
   linearLayout [
     height WRAP_CONTENT,
     width WRAP_CONTENT,
@@ -658,7 +659,7 @@ detailedMessageView state push config (ChatConfig chatConfig) value =
       margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0,
       color chatConfig.textColor,
       visibility $ boolToVisibility (isJust config.messageTitle)
-    ] <> FontStyle.body1 TypoGraphy, 
+    ] <> FontStyle.body1 TypoGraphy,
     linearLayout [
       color Color.black800,
       background Color.white900,
@@ -702,7 +703,7 @@ issueOptionView config push isLastMessage =
   ) config.chatSuggestionsList)
 
 issueOptionPillView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-issueOptionPillView config optionText isLastOption push = 
+issueOptionPillView config optionText isLastOption push =
   let marginBottom = if isLastOption then MarginBottom 0 else MarginBottom 8
   in
   linearLayout[
