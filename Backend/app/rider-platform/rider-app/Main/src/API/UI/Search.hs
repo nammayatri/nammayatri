@@ -102,6 +102,7 @@ import qualified Tools.MultiModal as TMultiModal
 data MultimodalWarning
   = NoSingleModeRoutes
   | NoUserPreferredFirstJourney
+  | NoPublicTransportRoutes
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data MultimodalSearchResp = MultimodalSearchResp
@@ -236,7 +237,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
   mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
-  (showMultimodalWarningForSingleMode, otpResponse) <- case mbSingleModeRouteDetails of
+  (singleModeWarningType, otpResponse) <- case mbSingleModeRouteDetails of
     Just singleModeRouteDetails -> do
       let fromStopDetails =
             MultiModalTypes.MultiModalStopDetails
@@ -292,7 +293,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
                 toDepartureTime = Just singleModeRouteDetails.toStop.stopArrivalTime
               }
       return $
-        ( False,
+        ( Nothing,
           MInterface.MultiModalResponse
             { routes =
                 [ MultiModalTypes.MultiModalRoute
@@ -334,15 +335,16 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
           case searchRequest.toLocation of
             Just toLocation -> do
               autoLeg <- mkAutoLeg now toLocation
-              return (True, autoLeg)
-            Nothing -> return (False, otpResponse'')
+              return (Just NoPublicTransportRoutes, autoLeg)
+            Nothing -> return (Nothing, otpResponse'')
         else do
           case req' of
             DSearch.PTSearch _ -> do
               let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
               let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
-              return (null onlySingleModeRoutes, MInterface.MultiModalResponse {routes = if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks})
-            _ -> return (False, otpResponse'')
+              let warningType = if null onlySingleModeRoutes then Just NoSingleModeRoutes else Nothing
+              return (warningType, MInterface.MultiModalResponse {routes = if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks})
+            _ -> return (Nothing, otpResponse'')
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
@@ -376,10 +378,10 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
         journeys = fromMaybe [] journeys,
         firstJourney = mbFirstJourney,
         firstJourneyInfo = firstJourneyInfo,
-        showMultimodalWarning = showMultimodalWarningForSingleMode || showMultimodalWarningForFirstJourney,
+        showMultimodalWarning = isJust singleModeWarningType || showMultimodalWarningForFirstJourney,
         multimodalWarning =
-          if showMultimodalWarningForSingleMode
-            then Just NoSingleModeRoutes
+          if isJust singleModeWarningType
+            then singleModeWarningType
             else
               if showMultimodalWarningForFirstJourney
                 then Just NoUserPreferredFirstJourney
