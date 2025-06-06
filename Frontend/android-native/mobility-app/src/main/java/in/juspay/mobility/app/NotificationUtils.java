@@ -267,6 +267,8 @@ public class NotificationUtils {
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
+                    sheetData.putInt("congestionCharges", (entity_payload.has("congestionCharges") && !entity_payload.isNull("congestionCharges") ? entity_payload.getInt("congestionCharges") : 0));
+                    sheetData.putInt("petCharges", (entity_payload.has("petCharges") && !entity_payload.isNull("petCharges") ? entity_payload.getInt("petCharges") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
                     sheetData.putBoolean("isTranslated", (!entity_payload.has("isTranslated") || entity_payload.isNull("isTranslated") || entity_payload.getBoolean("isTranslated")));
                     sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");

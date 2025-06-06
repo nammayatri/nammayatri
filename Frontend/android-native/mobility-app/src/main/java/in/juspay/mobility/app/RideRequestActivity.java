@@ -194,6 +194,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
                     negotiationUnit,
                     rideRequestBundle.getInt("customerExtraFee"),
+                    rideRequestBundle.getInt("congestionCharges"),
+                    rideRequestBundle.getInt("petCharges"),
                     rideRequestBundle.getString("specialLocationTag"),
                     rideRequestBundle.getString("sourcePinCode"),
                     rideRequestBundle.getString("destinationPinCode"),
@@ -255,35 +257,41 @@ public class RideRequestActivity extends AppCompatActivity {
             RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped_in_activity", this);
         });
     }
-    
+
     @SuppressLint("SetTextI18n")
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
 //            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.getCoinsForGoldTierRide() > 0 || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || model.isFavourite() || model.getRoundTrip()) {
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
+boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip() || model.getCoinsForGoldTierRide() > 0 || model.getCongestionCharges() > 0 || model.getPetCharges() > 0;
+            if (updateTags) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
-                }else {
+                } else {
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
+                holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " " + getString(R.string.points));
                 holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
-                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
-                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
-                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
+                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.petTagText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getPetCharges() + " " + getString(R.string.pet));
+                holder.petTag.setVisibility(model.getPetCharges() > 0 ? View.VISIBLE : View.GONE);
+                holder.congestionTagText.setText(model.getCongestionCharges() + " " + getString(R.string.extra));
+                holder.congestionTag.setVisibility(model.getCongestionCharges() > 0 ? View.VISIBLE : View.GONE);
+                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-//                holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
+                // Not required.
+                holder.rideTypeTag.setVisibility(View.GONE);
                 holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
                 holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
                 holder.roundTripRideTypeTag.setVisibility(model.getRoundTrip() ? View.VISIBLE : View.GONE);
@@ -698,10 +706,6 @@ public class RideRequestActivity extends AppCompatActivity {
                     updateTopBarBackground(i);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
-                    boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
-                    if (viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
-                        indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ?  R.color.green100 : R.color.yellow200));
-                    }
                     updateTopBar(i);
                 } else {
                     indicatorTextList.get(i).setText("--");
@@ -728,16 +732,15 @@ public class RideRequestActivity extends AppCompatActivity {
                 case DELIVERY:
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
                     break;
-                default:
-                    indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : R.color.grey900));
+                default: {
+                    indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : sheetArrayList.get(i).getCustomerTip() > 0 ? R.color.yellow200 : sheetArrayList.get(i).getCongestionCharges() > 0 ? R.color.orange100 : R.color.grey900));
                     break;
+                }
             }
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-            shimmerTipList.get(i).stopShimmer();
         } else {
             indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
-            shimmerTipList.get(i).startShimmer();
         }
     }
 
@@ -769,11 +772,11 @@ public class RideRequestActivity extends AppCompatActivity {
                 shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(Color.parseColor("#FEEBB9"), cornerRadii));
                 break;
             default:
-                if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
+                if (sheetArrayList.get(i).getCustomerTip() > 0 || sheetArrayList.get(i).getCongestionCharges() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
+                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : sheetArrayList.get(i).getCongestionCharges() > 0 ? sharedPref.getString("CURRENCY", "₹") + sharedPref.getString("CURRENCY", "₹") : "Favourite"));
                     indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
-                    shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : getColor(R.color.blue800), cornerRadii));
+                    shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : sheetArrayList.get(i).getCongestionCharges() > 0 ? getColor(R.color.orange900) : getColor(R.color.blue800), cornerRadii));
                 } else {
                     indicatorTipBannerList.get(i).setText("Favourite");
                     shimmerTipList.get(i).setVisibility(View.INVISIBLE);

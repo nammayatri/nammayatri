@@ -90,12 +90,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
         Context context;
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText, pointsTagText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText, pointsTagText, congestionTagText, petTagText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
         MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
-        LinearLayout tagsBlock, pointsTag, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag;
+        LinearLayout tagsBlock, pointsTag, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag, petTag, congestionTag;
         
         CardView locationDestinationPinTag;
         
@@ -165,6 +165,10 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             stopsTag = itemView.findViewById(R.id.stopsTag);
             stopsTagText = itemView.findViewById(R.id.stopsTagText);
             roundTripRideTypeTag = itemView.findViewById(R.id.roundTripRideTypeTag);
+            congestionTag = itemView.findViewById(R.id.congestionTag);
+            congestionTagText = itemView.findViewById(R.id.congestionTag_text);
+            petTag = itemView.findViewById(R.id.petTag);
+            petTagText = itemView.findViewById(R.id.pet_text);
         }
 
         private void setTheme(String type,Context context) {
