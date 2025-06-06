@@ -273,6 +273,15 @@ apis:
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]"
 
+  # Select for metro/bus tickets
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/select
+      params:
+        quoteId: Id FRFSQuote
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
   # Confirm quote for metro/bus tickets (return PP sdk params)
   - POST:
       endpoint: /frfs/quote/{quoteId}/confirm

@@ -147,7 +147,7 @@ validateAction expectedAction context = do
 
 validateCoreVersion :: MonadFlow m => Spec.Context -> m ()
 validateCoreVersion context = do
-  let supportedVersion = "2.0.0"
+  let supportedVersion = "2.0.1"
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
   unless (version == supportedVersion) $
     throwError Error.UnsupportedCoreVer

@@ -125,6 +125,16 @@ type API =
       :> Capture
            "quoteId"
            (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+      :> "select"
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "quote"
+      :> Capture
+           "quoteId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
       :> "confirm"
       :> Post
            '[JSON]
@@ -280,7 +290,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
+handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteSelect :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
 
 getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -349,6 +359,15 @@ getFrfsSearchQuote ::
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
   )
 getFrfsSearchQuote a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsSearchQuote (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsQuoteSelect ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+  )
+postFrfsQuoteSelect a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postFrfsQuoteConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
