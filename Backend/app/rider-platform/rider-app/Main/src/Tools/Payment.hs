@@ -252,7 +252,7 @@ instance FromJSON SplitType where
 
 $(mkHttpInstancesForEnum ''SplitType)
 
-data VendorSplitDetails = VendorSplitDetails {splitAmount :: HighPrecMoney, splitType :: SplitType, vendorId :: Text}
+data VendorSplitDetails = VendorSplitDetails {splitAmount :: HighPrecMoney, splitType :: SplitType, vendorId :: Text, ticketId :: Maybe Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
@@ -265,8 +265,8 @@ mkSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> May
 mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
   False -> Nothing
   True -> do
-    let sortedVendorFees = sortBy (compare `on` vendorId) (roundVendorFee <$> vendorFees)
-        groupedVendorFees = groupBy ((==) `on` vendorId) sortedVendorFees
+    let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
+        groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
         mbVendorSplits = map computeSplit groupedVendorFees
         vendorSplits = catMaybes mbVendorSplits
         totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
@@ -286,7 +286,8 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEna
             Split
               { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> splitAmount fee) feesForVendor,
                 merchantCommission = 0,
-                subMid = firstFee.vendorId
+                subMid = firstFee.vendorId,
+                uniqueSplitId = firstFee.ticketId
               }
 
 mkUnaggregatedSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
@@ -300,7 +301,8 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = cas
                  in Split
                       { amount = splitAmount roundedFee,
                         merchantCommission = 0,
-                        subMid = vendorId roundedFee
+                        subMid = vendorId roundedFee,
+                        uniqueSplitId = fee.ticketId
                       }
             )
             vendorFees
