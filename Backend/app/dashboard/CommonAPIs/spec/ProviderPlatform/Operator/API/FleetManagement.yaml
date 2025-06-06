@@ -3,6 +3,10 @@ imports:
   City: Kernel.Types.Beckn.Context
   Summary: Dashboard.Common
   StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  FleetOwnerRegisterReqV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetOwnerRegisterResV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetOwnerLoginReqV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetOwnerLoginResV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 
 module: FleetManagement
 apiPrefix: operator
@@ -40,7 +44,7 @@ apis:
       endpoint: /fleet/create
       auth: ApiAuthV2
       request:
-        type: FleetOwnerCreateReq
+        type: FleetOwnerLoginReqV2
       response:
         type: APISuccess
       helperApi:
@@ -49,15 +53,17 @@ apis:
             auth: ApiAuthV2
             mandatoryQuery:
               - requestorId: Text
+            query:
+              - enabled: Bool
             request:
-              type: FleetOwnerCreateReq
+              type: FleetOwnerLoginReqV2
             response:
-              type: FleetOwnerCreateRes
+              type: FleetOwnerLoginResV2
   - POST:
       endpoint: /fleet/register
       auth: ApiAuthV2
       request:
-        type: FleetOwnerRegisterReq
+        type: FleetOwnerRegisterReqV2
       response:
         type: APISuccess
       helperApi:
@@ -67,9 +73,9 @@ apis:
             mandatoryQuery:
               - requestorId: Text
             request:
-              type: FleetOwnerRegisterReq
+              type: FleetOwnerRegisterReqV2
             response:
-              type: FleetOwnerUpdateRes
+              type: FleetOwnerRegisterResV2
 
   - POST:
       endpoint: /fleet/link/sendOtp
@@ -138,36 +144,6 @@ types:
     - vehicleCount: Int
     - verified: Bool
     - documents: StatusRes
-  FleetOwnerRegisterReq:
-    - firstName: Text
-    - lastName: Text
-    - personId: Id Person
-    - email: Maybe Text
-    - fleetType: Maybe FleetType
-    - panNumber: Maybe Text
-    - gstNumber: Maybe Text
-    - businessLicenseNumber: Maybe Text
-    - panImageId1: Maybe Text
-    - panImageId2: Maybe Text
-    - gstCertificateImage: Maybe Text
-    - businessLicenseImage: Maybe Text
-  FleetOwnerRegisterTReq: # hide secrets
-    - firstName: Text
-    - lastName: Text
-    - personId: Id Person
-    - fleetType: Maybe FleetType
-  FleetType:
-    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
-  FleetOwnerCreateReq:
-    - mobileNumber: Text
-    - mobileCountryCode: Text
-  FleetOwnerCreateRes:
-    - personId: Id Person
-    - recordType: NewType
-    - derive: "'HideSecrets"
-  FleetOwnerUpdateRes:
-    - enabled: Bool
-    - recordType: NewType
   FleetOwnerSendOtpReq:
     - mobileNumber: Text
     - mobileCountryCode: Text
@@ -179,6 +155,3 @@ types:
     - fleetOwnerId: Id Person
     - otp: Text
     - derive: "'HideSecrets"
-
-extraOperations:
-  - EXTRA_API_TYPES_FILE

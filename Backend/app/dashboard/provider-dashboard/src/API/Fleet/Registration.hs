@@ -96,7 +96,7 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
       checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
       enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
   res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) (Just enabled) req
-  void $ registerFleetOwner req' $ Just res.personId
+  void $ registerFleetOwner req' (Id res.personId)
   token <- DR.generateToken (Id res.personId) merchant.id req.city
   pure $ FleetOwnerRegisterResp "Success" (Just token)
 

@@ -7,7 +7,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Operator.FleetManagement as DFleetManagement
+import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
@@ -59,7 +59,7 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
   when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo)
-    . DFleetManagement.createFleetOwnerInfo personId person.merchantId
+    . DRegistrationV2.createFleetOwnerInfo personId person.merchantId
     $ Just False
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success

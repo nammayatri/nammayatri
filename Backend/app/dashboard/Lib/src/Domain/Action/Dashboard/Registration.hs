@@ -309,9 +309,9 @@ registerFleetOwner ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   FleetRegisterReq ->
-  Maybe Text ->
+  Id DP.Person ->
   m APISuccess
-registerFleetOwner req mbPersonId = do
+registerFleetOwner req personId = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
   fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
@@ -319,7 +319,7 @@ registerFleetOwner req mbPersonId = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId
+  createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId
   return Success
   where
     getFleetRole mbFleetType = case mbFleetType of
@@ -328,11 +328,8 @@ registerFleetOwner req mbPersonId = do
       Just BUSINESS_FLEET -> FLEET_OWNER
       Nothing -> FLEET_OWNER
 
-buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Maybe Text -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
-buildFleetOwner req mbPersonId roleId dashboardAccessType = do
-  pid <- case mbPersonId of
-    Just personId -> return $ Id personId
-    Nothing -> generateGUID
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DP.Person -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
+buildFleetOwner req pid roleId dashboardAccessType = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   email <- forM req.email encrypt
@@ -373,12 +370,12 @@ createFleetOwnerDashboardOnly ::
   DRole.Role ->
   DMerchant.Merchant ->
   FleetRegisterReq ->
-  Maybe Text ->
+  Id DP.Person ->
   m ()
-createFleetOwnerDashboardOnly fleetOwnerRole merchant req mbPersonId = do
-  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
+createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
+  fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding))
-  QP.create fleetOwner {verified = mbBoolVerified}
+  QP.create fleetOwner{verified = mbBoolVerified}
   QAccess.create merchantAccess

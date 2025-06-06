@@ -1,0 +1,69 @@
+# access tokens with different roles
+@operator = favorit-operator-token0-000000000000
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name fleetRegister
+
+POST {{bpp-dashboard-host}}/fleet/register
+content-type: application/json
+token: {{newFleetToken}}
+# token: {{operator}}
+# token: {{fleet}}
+
+{ "city": "Kochi",
+  "merchantId": "NAMMA_YATRI_PARTNER",
+  "mobileCountryCode": "+91",
+  "mobileNumber": "3222345689",
+  "businessLicenseImage": null,
+  "businessLicenseNumber": null,
+  "email": "newRentalFleet@nammayatri.in",
+  "firstName": "John",
+  "fleetType": "RENTAL_FLEET",
+  "gstNumber": null,
+  "lastName": "Williams",
+  "operatorReferralCode": null
+}
+
+###
+
+# @name fleetLogin
+
+POST {{bpp-dashboard-host}}/fleet/login/otp
+content-type: application/json
+
+{ "city": "Kochi",
+  "merchantId": "NAMMA_YATRI_PARTNER",
+  "mobileCountryCode": "+91",
+  "mobileNumber": "3222345689"
+}
+
+###
+
+# @name fleetVerify
+
+POST {{bpp-dashboard-host}}/fleet/verify/otp
+content-type: application/json
+
+{ "city": "Kochi",
+  "merchantId": "NAMMA_YATRI_PARTNER",
+  "mobileCountryCode": "+91",
+  "mobileNumber": "3222345689",
+  "otp": "7891"
+}
+
+###
+
+# @name profile
+
+@newFleetToken = {{fleetVerify.response.body.authToken}}
+
+GET {{bpp-dashboard-host}}/user/profile
+content-type: application/json
+token: {{newFleetToken}}

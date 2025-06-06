@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -34,38 +35,6 @@ data FleetInfoRes = FleetInfoRes {listItem :: [FleetInfo], summary :: Dashboard.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetOwnerCreateReq = FleetOwnerCreateReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype FleetOwnerCreateRes = FleetOwnerCreateRes {personId :: Kernel.Types.Id.Id Dashboard.Common.Person}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerCreateRes where
-  hideSecrets = Kernel.Prelude.identity
-
-data FleetOwnerRegisterReq = FleetOwnerRegisterReq
-  { firstName :: Kernel.Prelude.Text,
-    lastName :: Kernel.Prelude.Text,
-    personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
-    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetType :: Kernel.Prelude.Maybe FleetType,
-    panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    panImageId1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    panImageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    gstCertificateImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    businessLicenseImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FleetOwnerRegisterTReq = FleetOwnerRegisterTReq {firstName :: Kernel.Prelude.Text, lastName :: Kernel.Prelude.Text, personId :: Kernel.Types.Id.Id Dashboard.Common.Person, fleetType :: Kernel.Prelude.Maybe FleetType}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data FleetOwnerSendOtpReq = FleetOwnerSendOtpReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -77,23 +46,12 @@ data FleetOwnerSendOtpRes = FleetOwnerSendOtpRes {fleetOwnerId :: Kernel.Types.I
 instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerSendOtpRes where
   hideSecrets = Kernel.Prelude.identity
 
-newtype FleetOwnerUpdateRes = FleetOwnerUpdateRes {enabled :: Kernel.Prelude.Bool}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data FleetOwnerVerifyOtpReq = FleetOwnerVerifyOtpReq {fleetOwnerId :: Kernel.Types.Id.Id Dashboard.Common.Person, otp :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerVerifyOtpReq where
   hideSecrets = Kernel.Prelude.identity
-
-data FleetType
-  = RENTAL_FLEET
-  | NORMAL_FLEET
-  | BUSINESS_FLEET
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type API = ("operator" :> (GetFleetManagementFleetsHelper :<|> PostFleetManagementFleetCreateHelper :<|> PostFleetManagementFleetRegisterHelper :<|> PostFleetManagementFleetLinkSendOtpHelper :<|> PostFleetManagementFleetLinkVerifyOtpHelper :<|> PostFleetManagementFleetUnlinkHelper))
 
@@ -129,22 +87,38 @@ type GetFleetManagementFleetsHelper =
            FleetInfoRes
   )
 
-type PostFleetManagementFleetCreate = ("fleet" :> "create" :> ReqBody '[JSON] FleetOwnerCreateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
-
-type PostFleetManagementFleetCreateHelper =
-  ( "fleet" :> "create" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] FleetOwnerCreateReq
+type PostFleetManagementFleetCreate =
+  ( "fleet" :> "create" :> ReqBody '[JSON] API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginReqV2
       :> Post
            '[JSON]
-           FleetOwnerCreateRes
+           Kernel.Types.APISuccess.APISuccess
   )
 
-type PostFleetManagementFleetRegister = ("fleet" :> "register" :> ReqBody '[JSON] FleetOwnerRegisterReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
-
-type PostFleetManagementFleetRegisterHelper =
-  ( "fleet" :> "register" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] FleetOwnerRegisterReq
+type PostFleetManagementFleetCreateHelper =
+  ( "fleet" :> "create" :> QueryParam "enabled" Kernel.Prelude.Bool :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginReqV2
       :> Post
            '[JSON]
-           FleetOwnerUpdateRes
+           API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginResV2
+  )
+
+type PostFleetManagementFleetRegister =
+  ( "fleet" :> "register" :> ReqBody '[JSON] API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterReqV2
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostFleetManagementFleetRegisterHelper =
+  ( "fleet" :> "register" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterReqV2
+      :> Post
+           '[JSON]
+           API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterResV2
   )
 
 type PostFleetManagementFleetLinkSendOtp = ("fleet" :> "link" :> "sendOtp" :> ReqBody '[JSON] FleetOwnerSendOtpReq :> Post '[JSON] FleetOwnerSendOtpRes)
@@ -177,8 +151,8 @@ type PostFleetManagementFleetUnlinkHelper =
 
 data FleetManagementAPIs = FleetManagementAPIs
   { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetInfoRes,
-    postFleetManagementFleetCreate :: Kernel.Prelude.Text -> FleetOwnerCreateReq -> EulerHS.Types.EulerClient FleetOwnerCreateRes,
-    postFleetManagementFleetRegister :: Kernel.Prelude.Text -> FleetOwnerRegisterReq -> EulerHS.Types.EulerClient FleetOwnerUpdateRes,
+    postFleetManagementFleetCreate :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginResV2,
+    postFleetManagementFleetRegister :: Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterResV2,
     postFleetManagementFleetLinkSendOtp :: Kernel.Prelude.Text -> FleetOwnerSendOtpReq -> EulerHS.Types.EulerClient FleetOwnerSendOtpRes,
     postFleetManagementFleetLinkVerifyOtp :: Kernel.Prelude.Text -> FleetOwnerVerifyOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postFleetManagementFleetUnlink :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
