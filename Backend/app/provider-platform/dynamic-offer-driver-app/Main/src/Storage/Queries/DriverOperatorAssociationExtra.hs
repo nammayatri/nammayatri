@@ -66,7 +66,7 @@ findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset 
                     )
                     do
                       doa <- B.all_ (BeamCommon.driverOperatorAssociation BeamCommon.atlasDB)
-                      person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> doa.driverId B.==. BeamP.id person)
+                      person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamDOA.driverId doa B.==. BeamP.id person)
                       pure (doa, person)
     case res of
       Right doaList ->
