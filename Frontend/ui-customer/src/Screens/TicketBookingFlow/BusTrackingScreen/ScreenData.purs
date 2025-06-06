@@ -60,6 +60,8 @@ initData =
         , routePts : {points : []}
         , previousLatLonsOfVehicle: DM.empty
         , nearestStopFromCurrentLoc : Mb.Nothing
+        , logField : empty
+        , isNoBusAvailable : false
         }
     , props:
         { showRouteDetailsTab: true
@@ -80,6 +82,8 @@ initData =
         , minimumEtaDistance : Nothing
         , isMinimumEtaDistanceAvailable : Nothing
         , fromScreen : getScreen BUS_ROUTE_STOPS_SEARCH_SCREEN
+        , showBikeTaxiPopUp : false
+        , isBikeTaxiCrossClicked : false
         }
     }
 

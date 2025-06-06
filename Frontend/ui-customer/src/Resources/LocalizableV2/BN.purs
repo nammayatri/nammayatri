@@ -1788,4 +1788,11 @@ getBn = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"আপনার প্রথম রাইডের জন্য " <> a <> " রেফারেল বেনিফিট পান!"
     , take_a_ride_now: "এখনই একটি যাত্রা করুন"
     , take_a_ride__claim_50: \a ->  "একটি যাত্রা করুন এবং ₹" <> a <> " দাবি করুন"
+, select_route : "রুট নির্বাচন করুন"
+, ac_bus : "এসি বাস"
+, early_departure : "প্রথম যাত্রা"
+, ticket_price : "টিকিটের দাম"
+, no_incoming_bus : "কোনো আসন্ন বাস নেই"
+, cheapest : "সস্তা"
+, fastest : "দ্রুততম"
 }

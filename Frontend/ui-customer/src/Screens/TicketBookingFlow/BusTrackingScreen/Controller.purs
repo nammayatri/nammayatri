@@ -91,7 +91,8 @@ import Presto.Core.Types.Language.Flow (getLogFields)
 import Control.Monad.Except.Trans (lift)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Engineering.Helpers.LogEvent (firebaseLogEventWithArrayOfKeyValue)
-
+import Engineering.Helpers.Events as Events
+import Components.PopUpModal.Controller as PopUpModal
 
 instance showAction :: Show Action where
   show _ = ""
@@ -107,6 +108,8 @@ data ScreenOutput
   | GoBackToSearchLocationScreen ST.BusTrackingScreenState
   | GoToBusTicketBookingScreen ST.BusTrackingScreenState
   | GoBackToMetroMyTicketsScreen ST.BusTrackingScreenState
+  | GoBackToSelectBusRouteScreen ST.BusTrackingScreenState
+  | GoToHomeScreen ST.BusTrackingScreenState
 
 data Action
   = AfterRender
@@ -121,7 +124,11 @@ data Action
   | ViewTicket
   | UserBoarded (Mb.Maybe String)
   | SaveRoute JB.Locations
-  | UpdateToExpandView 
+  | UpdateToExpandView
+  | BookTicketOnNoBus PrimaryButton.Action
+  | PopUpModalAction PopUpModal.Action
+  | BikeTaxiNudgeClicked
+  | CloseBikeTaxiPopUp 
 
 -- | API.BusTrackingRouteResp
 eval :: Action -> ST.BusTrackingScreenState -> Eval Action ScreenOutput ST.BusTrackingScreenState
@@ -182,6 +189,7 @@ eval BackPressed state =
     case state.props.fromScreen of
       "bus_ticket_booking_screen" -> exit $ GoToBusTicketBookingScreen state
       "metro_my_tickets_screen" -> exit $ GoBackToMetroMyTicketsScreen state
+      "select_bus_route_screen" -> exit $ GoBackToSelectBusRouteScreen state
       _ -> exit $ GoBackToSearchLocationScreen state
 
 eval ViewTicket state = exit $ GoToViewTicket state
@@ -248,6 +256,8 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
               , minimumEtaDistance = calculateMinETADistance trackingData
               , isMinimumEtaDistanceAvailable = 
                   if (count == 0) then Mb.Nothing else Mb.Just $ Mb.isJust $ calculateMinETADistance trackingData
+              , showBikeTaxiPopUp = if (count == 0 ) then false
+                                    else if state.props.isBikeTaxiCrossClicked then false else true
               }
             }
           [ do
@@ -441,6 +451,15 @@ eval (UserBoarded mbVehicleId) state = do
 eval (SaveRoute route) state = continue state {data{routePts = route}}
 
 eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
+
+eval (BookTicketOnNoBus PrimaryButton.OnClick) state = continue state {data{isNoBusAvailable = true}}
+
+eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state
+eval (PopUpModalAction PopUpModal.OnButton2Click) state = continue state {data{isNoBusAvailable = false}}
+
+eval BikeTaxiNudgeClicked state = exit $ GoToHomeScreen state
+
+eval CloseBikeTaxiPopUp state = continue state{props{showBikeTaxiPopUp = false, isBikeTaxiCrossClicked = true}}
 
 eval _ state = update state
 

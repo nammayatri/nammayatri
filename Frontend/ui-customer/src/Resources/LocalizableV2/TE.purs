@@ -1788,4 +1788,11 @@ getTe = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"మీ మొదటి రైడ్ కోసం ₹" <> a <> " రిఫరల్ ప్రయోజనం పొందండి!"
     , take_a_ride_now: "ఇప్పుడే ఒక ప్రయాణం చేయండి"
     , take_a_ride__claim_50: \a ->  "ఒక రైడ్ తీసుకుని ₹" <> a <> " పొందండి"
+, select_route : "రూట్ ఎంచుకోండి"
+, ac_bus : "ఏసీ బస్"
+, early_departure : "ముందస్తు బయలుదేరడం"
+, ticket_price : "టికెట్ ధర"
+, no_incoming_bus : "సమీపంలో బస్సులు లేవు"
+, cheapest : "చెప్పడం"
+, fastest : "త్వరితంగా"
 }

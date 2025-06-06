@@ -1788,4 +1788,11 @@ getKn = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"ನಿಮ್ಮ ಮೊದಲ ಪ್ರಯಾಣಕ್ಕಾಗಿ ₹" <> a <> " ರೆಫರಲ್ ಪ್ರಯೋಜನವನ್ನು ಪಡೆಯಿರಿ!"
     , take_a_ride_now: "ಈಗಲೇ ಪ್ರಯಾಣ ಮಾಡಿ"
     , take_a_ride__claim_50: \a ->  "ಒಂದು ಪ್ರಯಾಣ ಮಾಡಿ ₹" <> a <> " ಪಡೆಯಿರಿ"
+, select_route : "ರೂಟ್ ಆಯ್ಕೆ ಮಾಡಿ"
+, ac_bus : "ಎಸಿ ಬಸ್"
+, early_departure : "ಮೂಡಲ ಪ್ರಯಾಣ" 
+, ticket_price : "ಟಿಕೆಟ್ ಬೆಲೆ"
+, no_incoming_bus : "ಯಾವುದೇ ಬಸ್ ಇಲ್ಲ" 
+, cheapest : "ಚೀಪಸ್ಟ್"
+, fastest : "ಫಾಸ್ಟೆಸ್ಟ್"
 }

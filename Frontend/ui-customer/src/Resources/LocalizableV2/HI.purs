@@ -1788,4 +1788,11 @@ getHi = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"अपनी पहली सवारी के लिए ₹" <> a <> " रेफरल लाभ प्राप्त करें!"
     , take_a_ride_now: "अभी यात्रा करें"
     , take_a_ride__claim_50: \a ->  "एक सवारी करें और ₹" <> a <> " प्राप्त करें"
+, select_route : "मार्ग चुनें"
+, ac_bus : "एसी बस"
+, early_departure : "जल्दी प्रस्थान"
+, ticket_price : "टिकट मूल्य"
+, no_incoming_bus : "कोई आने वाली बस नहीं"
+, cheapest : "सस्ता"
+, fastest : "तेज़"
 }
