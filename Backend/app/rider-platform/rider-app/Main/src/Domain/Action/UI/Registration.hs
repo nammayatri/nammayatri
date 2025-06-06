@@ -37,6 +37,7 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Action.UI.Person as SP
 import Domain.Types.Merchant (Merchant)
@@ -217,9 +218,20 @@ auth ::
   Maybe Version ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
+auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
+  let clientIP = case mbXForwardedFor of
+        Nothing -> "unknown"
+        Just headerValue ->
+          let firstIP = fromMaybe "unknown" . listToMaybe $ T.splitOn "," headerValue
+              ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
+           in if T.null ipWithoutPort then "unknown" else ipWithoutPort
+  logDebug $ "mbXForwardedFor Client Headers --------->" <> fromMaybe "" mbXForwardedFor
+  logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
+  ipBlocked <- SMC.isIPBlocked clientIP
+  when ipBlocked $ throwError TooManyHitsLimitError
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
   now <- getCurrentTime
@@ -260,11 +272,11 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   merchantConfigs <- CQM.findAllByMerchantOperatingCityId merchantOperatingCityId Nothing
   fork "Fraud Auth Check Processing" $ do
     when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
-    SMC.updateCustomerAuthCounters person.id merchantConfigs
-    (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraud merchantConfigs person.id
+    SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
+    (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
     when isFraudDetected $ do
       whenJust mbMerchantConfigId $ \mcId ->
-        SMC.customerAuthBlock person.id (Just mcId) riderConfig.blockedUntilInMins
+        SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
