@@ -73,8 +73,8 @@ findAllActiveByOperatorIdWithLimitOffsetSearch operatorId mbLimit mbOffset mbSea
                   )
                   do
                     foa <- B.all_ (BeamCommon.fleetOperatorAssociation BeamCommon.atlasDB)
-                    person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> foa.operatorId B.==. BeamP.id person)
-                    fleetOwnerInfo <- B.join_ (BeamCommon.fleetOwnerInformation BeamCommon.atlasDB) (\fleetOwnerInfo -> foa.fleetOwnerId B.==. BeamFOI.fleetOwnerPersonId fleetOwnerInfo)
+                    person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamFOA.fleetOwnerId foa B.==. BeamP.id person)
+                    fleetOwnerInfo <- B.join_ (BeamCommon.fleetOwnerInformation BeamCommon.atlasDB) (\fleetOwnerInfo -> BeamFOA.fleetOwnerId foa B.==. BeamFOI.fleetOwnerPersonId fleetOwnerInfo)
                     pure (foa, person, fleetOwnerInfo)
   case res of
     Right foaList ->
