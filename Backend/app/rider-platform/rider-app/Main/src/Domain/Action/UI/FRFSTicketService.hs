@@ -361,12 +361,14 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
           groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
           possibleEndStops =
-            map
-              ( \stops ->
-                  let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
-                   in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
-              )
-              groupedStopsByRouteCode
+            groupBy (\a b -> a.stopCode == b.stopCode) $
+              sortBy (compare `on` (.stopCode)) $
+                concatMap
+                  ( \stops ->
+                      let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
+                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+                  )
+                  groupedStopsByRouteCode
       let endStops =
             concatMap
               ( \routeStops' ->
@@ -377,8 +379,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                               { name = if fromMaybe False minimalData then Nothing else Just routeStop.stopName,
                                 code = routeStop.stopCode,
                                 routeCodes = Just routeCodes',
-                                lat = Just routeStop.stopPoint.lat,
-                                lon = Just routeStop.stopPoint.lon,
+                                lat = if fromMaybe False minimalData then Nothing else Just routeStop.stopPoint.lat,
+                                lon = if fromMaybe False minimalData then Nothing else Just routeStop.stopPoint.lon,
                                 stationType = Nothing,
                                 sequenceNum = Nothing,
                                 address = Nothing,
