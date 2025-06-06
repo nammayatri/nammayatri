@@ -561,6 +561,8 @@ apis:
             params:
               driverId: Id Driver
               fleetOwnerId: Text
+            query:
+              - requestorId: Text
             request:
               type: RCStatusReq
             response:

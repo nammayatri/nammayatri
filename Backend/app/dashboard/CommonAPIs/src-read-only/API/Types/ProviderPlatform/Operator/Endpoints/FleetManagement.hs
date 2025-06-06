@@ -20,6 +20,7 @@ import Servant.Client
 data FleetInfo = FleetInfo
   { id :: Kernel.Types.Id.Id Dashboard.Common.Person,
     name :: Kernel.Prelude.Text,
+    enabled :: Kernel.Prelude.Bool,
     isActive :: Kernel.Prelude.Bool,
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
