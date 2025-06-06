@@ -148,9 +148,9 @@ runWithUnWrap func merchantId merchantOperatingCity serviceName mRoutingId req =
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  return $ case (clientSdkVersion, transporterConfig.aaEnabledClientSdkVersion) of
-    (Just v, Just k)
-      | v >= textToVersionDefault k -> DMSC.PaymentService Payment.AAJuspay
+  return $ case clientSdkVersion of
+    Just v
+      | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
     _ -> paymentServiceName
 
 decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> DPlan.ServiceNames -> m DMSC.ServiceName
