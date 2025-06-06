@@ -265,7 +265,7 @@ MerchantServiceConfig:
       serviceName: Domain.Types.MerchantServiceConfig.ServiceName
       configJSON: Data.Aeson.Value
   sqlType:
-    serviceName: character varying(30)
+    serviceName: character varying(50)
     configJSON: json
   constraints:
     merchantId: PrimaryKey
