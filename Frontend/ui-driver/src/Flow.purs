@@ -40,7 +40,7 @@ import Data.Array as DA
 import Resource.Constants as Const
 import Data.Either (Either(..), either, isRight)
 import Data.Function (on, flip)
-import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn1, runFn2, runFn3)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
@@ -511,7 +511,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
             then do
               if (HU.isParentView FunctionCall) then do
                 void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
-                  $ EventPayload
+                  $ CTA.EventPayload
                       { event: "process_result"
                       , payload:
                           Just
@@ -525,7 +525,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                             }
                       }
                 pure unit
-              else
+              else do
                 deleteValueFromLocalStore ENTERED_RC
                 if getValueToLocalStore IS_DRIVER_ENABLED == "false"
                   then do
