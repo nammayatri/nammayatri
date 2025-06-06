@@ -6,6 +6,7 @@ module Domain.Types.FRFSQuote where
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -25,10 +26,12 @@ data FRFSQuote = FRFSQuote
     childPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareDetails :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSFareDetails,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    integratedBppConfigId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig),
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     oldCacheDump :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

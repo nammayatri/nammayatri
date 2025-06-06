@@ -33,6 +33,7 @@ library
       API.Beckn.FRFS.OnConfirm
       API.Beckn.FRFS.OnInit
       API.Beckn.FRFS.OnSearch
+      API.Beckn.FRFS.OnSelect
       API.Beckn.FRFS.OnStatus
       API.Beckn.FRFS.OnUpdate
       API.Beckn.IGM.Issue
@@ -102,9 +103,11 @@ library
       Beckn.ACL.FRFS.OnConfirm
       Beckn.ACL.FRFS.OnInit
       Beckn.ACL.FRFS.OnSearch
+      Beckn.ACL.FRFS.OnSelect
       Beckn.ACL.FRFS.OnStatus
       Beckn.ACL.FRFS.OnUpdate
       Beckn.ACL.FRFS.Search
+      Beckn.ACL.FRFS.Select
       Beckn.ACL.FRFS.Status
       Beckn.ACL.FRFS.Utils
       Beckn.ACL.IGM.Issue
@@ -139,6 +142,7 @@ library
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch
+      Domain.Action.Beckn.FRFS.OnSelect
       Domain.Action.Beckn.FRFS.OnStatus
       Domain.Action.Beckn.FRFS.OnUpdate
       Domain.Action.Beckn.OnCancel

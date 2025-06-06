@@ -43,7 +43,7 @@ buildCancelReq booking bapConfig bppData mbCancellationReasonId cancellationType
       ttl = diffUTCTime validTill now
   messageId <- generateGUID
 
-  context <- Utils.buildContext Spec.CANCEL bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city
+  context <- Utils.buildContext Spec.CANCEL bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city booking.vehicleType
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

@@ -112,6 +112,12 @@ types:
   JourneyBookingPaymentStatus:
     journeyId: Id Journey
     paymentOrder: Maybe PaymentOrder
+    paymentFareUpdate: Maybe [PaymentFareUpdate]
+
+  PaymentFareUpdate:
+    journeyLegOrder: Int
+    oldFare: PriceAPIEntity
+    newFare: PriceAPIEntity
 
   PaymentOrder:
     sdkPayload: Maybe CreateOrderResp

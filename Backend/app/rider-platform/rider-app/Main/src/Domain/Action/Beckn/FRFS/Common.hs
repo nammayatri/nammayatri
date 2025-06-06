@@ -22,6 +22,16 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
+data DOnSelect = DOnSelect
+  { providerId :: Text,
+    totalPrice :: Price,
+    fareBreakUp :: [DFareBreakUp],
+    bppItemId :: Text,
+    validTill :: Maybe UTCTime,
+    transactionId :: Text,
+    messageId :: Text
+  }
+
 data DFareBreakUp = DFareBreakUp
   { title :: Text,
     price :: HighPrecMoney,

@@ -55,7 +55,11 @@ data ExtendLegReq = ExtendLegReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus {journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey, paymentOrder :: Kernel.Prelude.Maybe PaymentOrder}
+data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
+  { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
+    paymentOrder :: Kernel.Prelude.Maybe PaymentOrder
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -140,6 +144,10 @@ data MultimodalUserPreferences = MultimodalUserPreferences
     journeyOptionsSortingType :: Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType,
     subwayTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PaymentFareUpdate = PaymentFareUpdate {journeyLegOrder :: Kernel.Prelude.Int, newFare :: Kernel.Types.Common.PriceAPIEntity, oldFare :: Kernel.Types.Common.PriceAPIEntity}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

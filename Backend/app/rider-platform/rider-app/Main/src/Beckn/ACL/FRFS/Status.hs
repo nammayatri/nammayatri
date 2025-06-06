@@ -40,7 +40,7 @@ buildStatusReq booking bapConfig bppData city = do
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city
+  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city booking.vehicleType
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

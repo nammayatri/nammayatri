@@ -156,6 +156,23 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
               )
       allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
   journey <- JM.getJourney journeyId
+  let paymentFareUpdate =
+        catMaybes $
+          map
+            ( \booking ->
+                if fromMaybe False booking.isFareChanged
+                  then case booking.journeyLegOrder of
+                    Just journeyLegOrder ->
+                      Just $
+                        ApiTypes.PaymentFareUpdate
+                          { journeyLegOrder,
+                            oldFare = mkPriceAPIEntity booking.estimatedPrice,
+                            newFare = mkPriceAPIEntity booking.price
+                          }
+                    Nothing -> Nothing
+                  else Nothing
+            )
+            allJourneyFrfsBookings
   when (journey.isPaymentSuccess /= Just True) $ do
     let mbPaymentStatus = paymentOrder <&> (.status)
     whenJust mbPaymentStatus $ \pstatus -> when (pstatus == FRFSTicketService.SUCCESS) $ void $ QJourney.updatePaymentStatus (Just True) journeyId
@@ -165,13 +182,15 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
-            paymentOrder
+            paymentOrder,
+            paymentFareUpdate = Just paymentFareUpdate
           }
     else do
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
-            paymentOrder = Nothing
+            paymentOrder = Nothing,
+            paymentFareUpdate = Nothing
           }
 
 postMultimodalPaymentUpdateOrder ::

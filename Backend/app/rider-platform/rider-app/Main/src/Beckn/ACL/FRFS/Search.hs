@@ -40,7 +40,7 @@ buildSearchReq transactionId vehicleType bapConfig mbFromStation mbToStation cit
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing city
+  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing city vehicleType
 
   pure $
     Spec.SearchReq
@@ -59,7 +59,7 @@ tfIntent vehicleType mbFromStation mbToStation =
   Just $
     Spec.Intent
       { intentFulfillment = tfIntentFulfillment vehicleType mbFromStation mbToStation,
-        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing Nothing Nothing Nothing Nothing
+        intentPayment = Just $ Utils.mkPaymentForSearchReq Nothing Nothing Nothing Nothing Nothing Nothing (Just "0")
       }
 
 tfIntentFulfillment :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe DStation.Station -> Maybe Spec.Fulfillment
@@ -100,7 +100,7 @@ tfLocation (Just station) =
   Just $
     Spec.Location
       { locationDescriptor = Utils.tfDescriptor (Just $ station.code) (Just $ station.name),
-        locationGps = Nothing,
+        locationGps = Just (show station.lat <> ", " <> show station.lon),
         locationCity = Nothing,
         locationCountry = Nothing
       }
