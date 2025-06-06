@@ -119,6 +119,7 @@ dependencies {
     implementation "androidx.camera:camera-core:${cameraxVersion}"
     implementation "androidx.camera:camera-camera2:${cameraxVersion}"
     implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
+    compileOnly 'com.facebook.react:react-android:0.79.2'
 
     // GRPC Dependencies
     implementation 'io.grpc:grpc-okhttp:1.61.0' // CURRENT_GRPC_VERSION
