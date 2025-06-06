@@ -115,6 +115,9 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     Just imageId -> do
       aadhaarCard <- QAadhaarCard.findByBackImageId (Just $ Id imageId) >>= fromMaybeM (InvalidRequest ("Aadhaar back image not uploaded " <> imageId))
       unless (aadhaarCard.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "Aadhaar back image not validated"
+  void $ QP.updateByPrimaryKey person{firstName = req.firstName, lastName = Just req.lastName}
+  void $ updateFleetOwnerInfo fleetOwnerInfo{registeredAt = Just now} req
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   mbRequestedOperatorId <- case mbRequestorId of
     Just requestorId -> do
