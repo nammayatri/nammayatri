@@ -91,7 +91,7 @@ data JourneyInfoResp = JourneyInfoResp
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInfoRespWithFare = JourneyInfoRespWithFare {journeyInfoResponse :: JourneyInfoResp, totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}

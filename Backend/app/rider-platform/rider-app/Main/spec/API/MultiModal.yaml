@@ -45,6 +45,7 @@ types:
     endTime: Maybe UTCTime
     merchantOperatingCityName : Maybe Text
     crisSdkToken : Maybe Text
+    derive: "Show"
 
   JourneyInfoRespWithFare:
     journeyInfoResponse: JourneyInfoResp
