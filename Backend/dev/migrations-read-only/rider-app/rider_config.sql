@@ -276,17 +276,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config text ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config json ;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer ;
-
-
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.rider_config ALTER COLUMN user_service_tier_order_config TYPE json;
