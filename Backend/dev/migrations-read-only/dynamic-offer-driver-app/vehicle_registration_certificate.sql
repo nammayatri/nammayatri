@@ -82,3 +82,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN m
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN unencrypted_certificate_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN approved boolean  default false;

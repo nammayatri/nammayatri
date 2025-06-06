@@ -60,6 +60,7 @@ import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCE
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
@@ -121,14 +122,16 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
   now <- getCurrentTime
   Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
     opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
-    unless (opHubReq.requestStatus == PENDING) $ Kernel.Utils.Common.throwError (InvalidRequest "Request already responded")
+    when (opHubReq.requestStatus == APPROVED) $ Kernel.Utils.Common.throwError (InvalidRequest "Request already approved")
+    when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
+      void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
       fork "enable driver after inspection" $ do
         creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
+        rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
         personId <- case creator.role of
           DP.DRIVER -> pure creator.id
           _ -> do
-            rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
             drc <- SQDRA.findAllActiveAssociationByRCId rc.id
             case drc of
               [] -> throwError (InvalidRequest "No driver exist with this RC")
@@ -154,11 +157,14 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         let makeSelfieAadhaarPanMandatory = Nothing
         allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
         allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
-        when (allVehicleDocsVerified && allDriverDocsVerified) $
+        let allDriverVehicleDocsVerified = allVehicleDocsVerified && allDriverDocsVerified
+        when allDriverVehicleDocsVerified $ do
+          QVRC.updateApproved (Just True) rc.id
           void $ postDriverEnable merchantShortId opCity $ cast @DP.Person @Common.Driver personId
-        void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
+        let reqUpdatedStatus = if allDriverVehicleDocsVerified then castReqStatusToDomain req.status else PENDING
+        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
         mbVehicle <- QVehicle.findById personId
-        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified) $
+        when (isNothing mbVehicle && allDriverVehicleDocsVerified) $
           void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
   pure Success
 

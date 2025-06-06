@@ -890,6 +890,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             rejectReason = Nothing,
             createdAt = now,
             unencryptedCertificateNumber = input.registrationNumber,
+            approved = Just False,
             updatedAt = now
           }
     initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures = do
@@ -1037,14 +1038,17 @@ checkIfVehicleAlreadyExists driverId rc = do
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId now rc = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.requiresOnboardingInspection == Just True) $ do
+    unless driverInfo.enabled $ throwError (InvalidRequest "Driver is not enabled")
+    unless (fromMaybe False rc.approved) $ throwError (InvalidRequest "Vehicle is not approved")
   deactivateCurrentRC driverInfo.driverId
-  addVehicleToDriver
+  addVehicleToDriver transporterConfig
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
   return ()
   where
-    addVehicleToDriver = do
+    addVehicleToDriver transporterConfig = do
       rcNumber <- decrypt rc.certificateNumber
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == DV.SUV) $
           DIQuery.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi driverInfo.driverId

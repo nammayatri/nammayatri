@@ -18,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     certificateNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
@@ -68,6 +69,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
     pure
       VehicleRegistrationCertificate
         { airConditioned = airConditioned entity,
+          approved = approved entity,
           certificateNumber = certificateNumber_,
           dateOfRegistration = dateOfRegistration entity,
           documentImageId = documentImageId entity,
@@ -110,6 +112,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
     pure
       ( VehicleRegistrationCertificate
           { airConditioned = airConditioned entity,
+            approved = approved entity,
             certificateNumber = certificateNumber_,
             dateOfRegistration = dateOfRegistration entity,
             documentImageId = documentImageId entity,
