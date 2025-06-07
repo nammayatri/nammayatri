@@ -95,7 +95,8 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
             mobileNumber = decryptedMobileNumber,
             vehicleCount = totalVehicle,
             verified = verified,
-            documents = statusRes
+            documents = statusRes,
+            registeredAt = registeredAt
           }
 
 ---------------------------------------------------------------------

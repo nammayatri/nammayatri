@@ -170,6 +170,7 @@ types:
     - mobileNumber: Text
     - vehicle: Maybe Text
     - vehicleNo: Maybe Text
+    - isRcActive: Bool
     - documents: StatusRes
   VerifyOperatorJoiningOtpReq:
     - mobileCountryCode: Text
