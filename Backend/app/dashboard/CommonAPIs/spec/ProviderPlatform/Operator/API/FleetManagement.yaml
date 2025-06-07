@@ -145,6 +145,7 @@ types:
     - vehicleCount: Int
     - verified: Bool
     - documents: StatusRes
+    - registeredAt: Maybe UTCTime
   FleetOwnerSendOtpReq:
     - mobileNumber: Text
     - mobileCountryCode: Text
