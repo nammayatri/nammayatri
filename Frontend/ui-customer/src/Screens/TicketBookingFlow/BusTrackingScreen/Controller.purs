@@ -469,6 +469,15 @@ eval (SaveRoute route) state = continue state {data{routePts = route}}
 
 eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
 
+eval (BookTicketOnNoBus PrimaryButton.OnClick) state = continue state {data{isNoBusAvailable = true}}
+
+eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state
+eval (PopUpModalAction PopUpModal.OnButton2Click) state = continue state {data{isNoBusAvailable = false}}
+
+eval BikeTaxiNudgeClicked state = exit $ GoToHomeScreen state
+
+eval CloseBikeTaxiPopUp state = continue state{props{showBikeTaxiPopUp = false, isBikeTaxiCrossClicked = true}}
+
 eval _ state = update state
 
 drawDriverRoute :: Array API.FRFSStationAPI -> ST.BusTrackingScreenState -> Flow GlobalState Unit
