@@ -2906,6 +2906,7 @@ eval (BottomNavBarAction id) state = do
     TICKETING_ -> updateAndExit newState $ GoToTicketBookingFlow newState
     BUS_ -> do
       let _ = unsafePerformEffect $ Events.addEventAggregate "bus_ticketing_clicked"
+      void $ pure $ cleverTapCustomEvent "bus_ticketing_clicked"
       let updatedState = newState { props { ticketServiceType = API.BUS } }
       updateAndExit updatedState $ GoToBusTicketBookingFlow state
     MOBILITY -> continue newState 
@@ -3365,6 +3366,7 @@ eval (ServicesOnClick service) state = do
       --   then updateAndExit newState $ GoToBusTicketBookingFlow state
       --   else updateAndExit newState $ GoToSearchLocationScreenForBusRoutes state
       let _ = unsafePerformEffect $ Events.addEventAggregate "bus_ticketing_clicked"
+      void $ pure $ cleverTapCustomEvent "bus_ticketing_clicked"
       updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.AMBULANCE_SERVICE ->

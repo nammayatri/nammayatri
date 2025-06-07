@@ -18,7 +18,7 @@ import PrestoDOM.Core (getPushFn)
 import Engineering.Helpers.Commons as EHC
 import Data.Traversable (traverse, for_, for)
 import JBridge as JB
-import JBridge (firebaseLogEvent)
+import JBridge (firebaseLogEvent, cleverTapCustomEvent, cleverTapCustomEventWithParams)
 import Data.Time.Duration (Milliseconds(..))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import Debug
@@ -128,7 +128,7 @@ data Action
   | BookTicketOnNoBus PrimaryButton.Action
   | PopUpModalAction PopUpModal.Action
   | BikeTaxiNudgeClicked
-  | CloseBikeTaxiPopUp 
+  | CloseBikeTaxiPopUp
 
 -- | API.BusTrackingRouteResp
 eval :: Action -> ST.BusTrackingScreenState -> Eval Action ScreenOutput ST.BusTrackingScreenState
@@ -183,6 +183,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
   let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
+  void $ pure $ cleverTapCustomEvent "ny_bus_user_book_ticket_initiated"
   exit $ GoToSearchLocation state
 
 eval BackPressed state =
@@ -274,6 +275,9 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
                 let vehicleTrackingDataSize = DA.length trackingData
                 let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_tracking_count" (show $ vehicleTrackingDataSize)
                 let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_minimum_eta_distance" (show $ state.props.minimumEtaDistance)
+                let etaToStore = show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
+                void $ pure $ cleverTapCustomEventWithParams "Eta" "ny_bus_user_Eta_seen" etaToStore
+                void $ pure $ cleverTapCustomEventWithParams "busTrackingResponseCount" "ny_bus_tracking_count" (show $ DA.length trackingData)
                 pure unit
               else
                 pure unit
