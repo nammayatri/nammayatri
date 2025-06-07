@@ -31,6 +31,7 @@ data DriverInfo = DriverInfo
     mobileNumber :: Kernel.Prelude.Text,
     vehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isRcActive :: Kernel.Prelude.Bool,
     documents :: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.StatusRes
   }
   deriving stock (Generic)

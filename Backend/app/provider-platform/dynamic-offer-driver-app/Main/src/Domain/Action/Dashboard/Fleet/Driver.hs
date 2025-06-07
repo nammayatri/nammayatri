@@ -822,8 +822,6 @@ postDriverFleetRemoveDriver merchantShortId _ requestorId driverId mbFleetOwnerI
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       FDV.endFleetDriverAssociation entityId personId
     DP.OPERATOR -> do
-      associationList <- QRCAssociation.findAllLinkedByDriverId personId
-      unless (null associationList) $ throwError (InvalidRequest "Driver is linked to Vehicle, first unlink then try")
       DOV.endOperatorDriverAssociation entityId personId
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success

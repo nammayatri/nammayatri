@@ -51,6 +51,7 @@ import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffsetSearch)
+import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Image as IQuery
@@ -240,9 +241,23 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             ( InvalidRequest $
                 "Person do not have a mobile number " <> person.id.getId
             )
-      mblinkedVehicle <- case mbVehicleNo of
-        Just vehicleNo -> QVehicle.findByDriverIdAndRegistrationNo driverId vehicleNo
-        Nothing -> QVehicle.findById driverId
+      (vehicleModel, registrationNo, isRcActive) <- do
+        mbVehicle <- case mbVehicleNo of
+          Just vehicleNo -> QVehicle.findByDriverIdAndRegistrationNo driverId vehicleNo
+          Nothing -> QVehicle.findById driverId
+
+        case mbVehicle of
+          Just vehicle -> pure (Just vehicle.model, Just vehicle.registrationNo, True)
+          Nothing -> do
+            latestAssociation <- QDRC.findLatestLinkedByDriverId driverId now
+            case latestAssociation of
+              Nothing -> pure (Nothing, Nothing, False)
+              Just assoc -> do
+                mbRc <- QVRC.findById assoc.rcId
+                case mbRc of
+                  Nothing -> pure (Nothing, Nothing, False)
+                  Just rc -> pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive)
+
       let merchantOpCityId = person.merchantOperatingCityId
       transporterConfig <-
         findByMerchantOpCityId merchantOpCityId Nothing
@@ -264,8 +279,9 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             isActive = drvOpAsn.isActive,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
-            vehicle = (.model) <$> mblinkedVehicle,
-            vehicleNo = (.registrationNo) <$> mblinkedVehicle,
+            vehicle = vehicleModel,
+            vehicleNo = registrationNo,
+            isRcActive = isRcActive,
             documents = statusRes
           }
 

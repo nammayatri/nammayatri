@@ -27,7 +27,8 @@ data FleetInfo = FleetInfo
     mobileNumber :: Kernel.Prelude.Text,
     vehicleCount :: Kernel.Prelude.Int,
     verified :: Kernel.Prelude.Bool,
-    documents :: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.StatusRes
+    documents :: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.StatusRes,
+    registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

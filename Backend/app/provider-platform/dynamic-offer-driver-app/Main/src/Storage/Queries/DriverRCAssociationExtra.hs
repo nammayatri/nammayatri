@@ -100,6 +100,10 @@ findLatestLinkedByRCId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Vehi
 findLatestLinkedByRCId (Id rcId) now =
   findAllWithOptionsKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]] (Se.Desc BeamDRCA.associatedOn) (Just 1) Nothing <&> listToMaybe
 
+findLatestLinkedByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> m (Maybe DriverRCAssociation)
+findLatestLinkedByDriverId (Id driverId) now =
+  findAllWithOptionsKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]] (Se.Desc BeamDRCA.associatedOn) (Just 1) Nothing <&> listToMaybe
+
 findAllLinkedByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverRCAssociation]
 findAllLinkedByDriverId (Id driverId) = do
   now <- getCurrentTime
