@@ -19,7 +19,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
-  { aadhaarImageResizeConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+  { aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    aadhaarImageResizeConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     aadhaarVerificationRequired :: B.C f Kernel.Prelude.Bool,
     acStatusCheckGap :: B.C f Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
@@ -229,8 +230,7 @@ data TransporterConfigT f = TransporterConfigT
     weeklyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    weeklyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
+    weeklyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 
