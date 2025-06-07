@@ -26,11 +26,13 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
       Just
         Domain.Types.JourneyLeg.JourneyLeg
           { agency = agencyDetails,
+            changedBusesInSequence = changedBusesInSequence,
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
             endLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon,
             estimatedMaxFare = estimatedMaxFare,
             estimatedMinFare = estimatedMinFare,
+            finalBoardedBusNumber = finalBoardedBusNumber,
             fromArrivalTime = fromArrivalTime,
             fromDepartureTime = fromDepartureTime,
             fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId,
@@ -56,13 +58,15 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
 instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   toTType' (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
     Beam.JourneyLegT
-      { Beam.distance = (.value) <$> distance,
+      { Beam.changedBusesInSequence = changedBusesInSequence,
+        Beam.distance = (.value) <$> distance,
         Beam.distanceUnit = (.unit) <$> distance,
         Beam.duration = duration,
         Beam.endLocationLat = endLocation & (.latitude),
         Beam.endLocationLon = endLocation & (.longitude),
         Beam.estimatedMaxFare = estimatedMaxFare,
         Beam.estimatedMinFare = estimatedMinFare,
+        Beam.finalBoardedBusNumber = finalBoardedBusNumber,
         Beam.fromArrivalTime = fromArrivalTime,
         Beam.fromDepartureTime = fromDepartureTime,
         Beam.fromStopCode = fromStopDetails >>= (.stopCode),

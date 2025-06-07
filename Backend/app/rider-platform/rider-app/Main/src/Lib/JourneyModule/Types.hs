@@ -56,6 +56,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Search
+import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -212,7 +213,8 @@ data JourneyLegStateData = JourneyLegStateData
     vehiclePositions :: [VehiclePosition],
     subLegOrder :: Int,
     legOrder :: Int,
-    mode :: DTrip.MultimodalTravelMode
+    mode :: DTrip.MultimodalTravelMode,
+    boardedVehicles :: Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusDataWithoutETA]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1030,7 +1032,9 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
         updatedAt = now,
         legSearchId = Nothing,
         isDeleted = Just False,
-        isSkipped = Just False
+        isSkipped = Just False,
+        changedBusesInSequence = Nothing,
+        finalBoardedBusNumber = Nothing
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

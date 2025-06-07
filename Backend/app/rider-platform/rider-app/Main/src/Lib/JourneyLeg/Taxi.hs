@@ -211,7 +211,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
-                mode = DTrip.Taxi
+                mode = DTrip.Taxi,
+                boardedVehicles = Nothing
               }
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
@@ -227,7 +228,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
-                mode = DTrip.Taxi
+                mode = DTrip.Taxi,
+                boardedVehicles = Nothing
               }
   getState _ = throwError (InternalError "Not Supported")
 
