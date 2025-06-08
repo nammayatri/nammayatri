@@ -290,6 +290,11 @@ getEn =
     , upload_again : "Upload Again"
     , select_operation_hub : "Select Operation Hub"
     , help_centre : "Help Cenre"
+    , all_time: "All-Time"
+    , subscription_amount_spent: "Subscription Amount Spent"
+    , ride_boost_received: "Ride Boost Received"
+    , cancellation_charges_received: "Cancellation Charges Received"
+    , todays: "Today's"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC location is not matching with your location")
     , updated_at: "Map updated at"
     , trip_count: "Trip Count"

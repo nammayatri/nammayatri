@@ -124,6 +124,9 @@ getAllHubs dummyString = (getBaseUrl "") <> "/operation/getAllHubs"
 driverOperationCreateRequest :: String -> String
 driverOperationCreateRequest dummyString = (getBaseUrl "") <> "/operation/createRequest"
 
+getCitySafetyNumbers :: String -> String
+getCitySafetyNumbers city = (getBaseUrl "") <> "/cityConfigs"
+
 getstatsInfo :: String -> String
 getstatsInfo day = (getBaseUrl "") <> "/driver/profile/stats?day="<> day
 
@@ -434,3 +437,6 @@ getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?dr
 
 specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
+
+getEarningPeriodStats :: String -> String -> String -> String
+getEarningPeriodStats fromDate toDate earningType = (getBaseUrl "") <> "/driver/profile/earnings?from=" <> fromDate <> "&to=" <> toDate <> "&earningType=" <> show earningType

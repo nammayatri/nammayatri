@@ -363,6 +363,8 @@ eval (BarViewSelected index) state = do
       , totalEarnings: maybe 0 (\record -> record.earnings) mbSelectedBarData
       , totalRides: maybe 0 (\record -> record.noOfRides) mbSelectedBarData
       , totalDistanceTravelled: maybe 0 (\record -> record.rideDistance) mbSelectedBarData
+      , cancellationCharges: 0
+      , tipAmount: 0
       }
   continue state { props { selectedBarIndex = if state.props.selectedBarIndex == index then -1 else index, totalEarningsData = if state.props.selectedBarIndex == index then getTotalCurrentWeekData state.props.currWeekData else selectedBarData } }
 
@@ -449,6 +451,8 @@ mapSummaryListWithWeeklyEarnings ridesSummaryList =
         , rideDate: rideSummary.rideDate
         , noOfRides: rideSummary.noOfRides
         , percentLength: 0.0
+        , cancellationCharges: 0
+        , tipAmount: 0
         }
     )
     ridesSummaryList
@@ -464,7 +468,7 @@ getEarningForDate earningLst date =
   let
     foundDate = DA.find (\e -> e.rideDate == date) earningLst
   in
-    maybe (Just { earnings: 0, rideDistance: 0, rideDate: date, noOfRides: 0, percentLength: 0.0 }) (\_ -> Nothing) foundDate
+    maybe (Just { earnings: 0, rideDistance: 0, rideDate: date, noOfRides: 0, percentLength: 0.0, cancellationCharges: 0, tipAmount: 0 }) (\_ -> Nothing) foundDate
 
 getEarningsToCache :: Array ST.WeeklyEarning -> Array ST.WeeklyEarning
 getEarningsToCache earningList = do
@@ -475,7 +479,7 @@ getEarningsToCache earningList = do
 getAllWeeksData :: Array ST.WeeklyEarning -> Array ST.WeeklyEarning -> Array String -> Array ST.WeeklyEarning
 getAllWeeksData cachedEarnings earningList dates = do
   let
-    objList = map (\x -> { earnings: 0, rideDistance: 0, rideDate: x, noOfRides: 0, percentLength: 0.0 }) dates
+    objList = map (\x -> { earnings: 0, rideDistance: 0, rideDate: x, noOfRides: 0, percentLength: 0.0, cancellationCharges: 0, tipAmount: 0 }) dates
 
     todaysData = maybe [] (\lastEle -> [ lastEle ]) $ DA.last earningList
   cachedEarnings <> todaysData <> objList
@@ -592,6 +596,8 @@ getTotalCurrentWeekData barGraphData = do
   , totalEarnings: calculateTotals.totalEarnings
   , totalRides: calculateTotals.totalRides
   , totalDistanceTravelled: calculateTotals.totalDistance
+  , cancellationCharges: 0
+  , tipAmount: 0
   }
 
 fetchWeekyEarningData :: KeyStore -> Maybe (Array ST.WeeklyEarning)

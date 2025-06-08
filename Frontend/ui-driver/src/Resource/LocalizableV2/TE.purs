@@ -289,6 +289,11 @@ getTe =
     , upload_again : "మళ్ళీ ఎక్కడి ఎగుమతి చేయండి"
     , select_operation_hub : "ఆపరేటింగ్ హబ్ ఎంచుకోండి"
     , help_centre : "సహాయం సెంట్ర్"
+    , all_time: "ఆల్-టైమ్"
+    , subscription_amount_spent: "సబ్స్క్రిప్షన్ అంతర్ వ్యయ్"
+    , ride_boost_received: "రೈడ్ బూస్ట్ పొందిందా?"
+    , cancellation_charges_received: "రద్దు శుల్కం పొందిందా?"
+    , todays: "ఈరోజు"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "ప్రస్తుతం, మేము కర్ణాటక రిజిస్టర్డ్ నంబర్‌ను మాత్రమే అనుమతిస్తున్నాము")
     , updated_at: "మ్యాప్ అప్‌డేట్ చేయబడిన సమయం"
     , trip_count: "ట్రిప్ కౌంట్"

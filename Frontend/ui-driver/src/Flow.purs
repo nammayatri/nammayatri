@@ -4943,49 +4943,6 @@ driverEarningsFlowV2 _ = do
       driverEarningsFlow
     REFRESH_EARNINGS_SCREEN_V2 state -> driverEarningsFlow
     EARNINGS_HISTORY_V2 _ -> driverEarningsFlow
-    GOTO_TRIP_DETAILS_V2  selectedCard -> do
-      sourceMod <- translateString selectedCard.source 400
-      destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {
-        "data" {
-          tripId = selectedCard.id,
-          date = selectedCard.date,
-          time = selectedCard.time,
-          source = sourceMod,
-          destination = destinationMod,
-          totalAmount = selectedCard.total_amount,
-          distance = selectedCard.rideDistance,
-          status = selectedCard.status,
-          vehicleType = selectedCard.vehicleType,
-          rider = selectedCard.riderName,
-          customerExtraFee = selectedCard.customerExtraFee,
-          purpleTagVisibility = selectedCard.purpleTagVisibility,
-          gotoTagVisibility = selectedCard.gotoTagVisibility,
-          spLocTagVisibility = selectedCard.spLocTagVisibility,
-          specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
-          specialZoneImage = selectedCard.specialZoneImage,
-          specialZoneText = selectedCard.specialZoneText,
-          specialZonePickup = selectedCard.specialZonePickup,
-          tollCharge = selectedCard.tollCharge,
-          goBackTo = ST.Earning,
-          rideType = selectedCard.rideType,
-          tripStartTime = selectedCard.tripStartTime,
-          tripEndTime = selectedCard.tripEndTime,
-          vehicleModel = selectedCard.vehicleModel,
-          acRide = selectedCard.acRide,
-          vehicleServiceTier = selectedCard.vehicleServiceTier,
-          tripType = selectedCard.tripType
-        , parkingCharge = selectedCard.parkingCharge
-        }
-      })
-      tripDetailsScreenFlow
-    GOTO_COINS_EARNING_INFO_V2 _ -> do 
-      (API.CoinInfoRes resp) <- Remote.getCoinInfoBT "lazy"
-      let 
-        filteredResp = filter (\(API.CoinInfo coinInfo) -> checkCoinsInfoConditions coinInfo) resp
-        sortedResp = sortBy (\(API.CoinInfo coinInfo1) (API.CoinInfo coinInfo2) -> compare coinInfo2.coins coinInfo1.coins) filteredResp
-      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{data{coinInfoRes = Just $ [tableTitle] <> sortedResp}})
-      driverEarningsFlow 
   where 
     updateDriverStats state flow = do
       when (state.props.subView == ST.YATRI_COINS_VIEW) $ do

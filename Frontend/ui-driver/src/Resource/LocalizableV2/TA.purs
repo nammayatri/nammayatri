@@ -288,6 +288,11 @@ getTa =
     , upload_again : "மீண்டும் பதிவேற்று"
     , select_operation_hub : "ஆப்பரேடிங் ஹூப் தேர்ந்தெடு"
     , help_centre : "உதவி மையம்"
+    , all_time: "எல்லா நேரமும்"
+    , subscription_amount_spent: "சப்ஸ்கிரிப்ஷன் செலவு"
+    , ride_boost_received: "ரைட் பூஸ்ட் பெற்றது"
+    , cancellation_charges_received: "ரத்து செலவு பெற்றது"
+    , todays: "இன்றைய"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "தற்போது,   கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்")
     , updated_at: "புதுப்பிக்கப்பட்டது"
     , trip_count: "இன்றைய பயணங்கள்"

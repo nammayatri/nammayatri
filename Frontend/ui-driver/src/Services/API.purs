@@ -1636,8 +1636,8 @@ instance encodeMessageReplyReq :: Encode MessageReplyReq where encode = defaultE
 --------------------------------------------------- linkReferral ----------------------------------------------------
 
 newtype LinkReferralCodeReq = LinkReferralCodeReq {
-    referralLinkPassword :: String
-  , referralCode :: String
+    referralLinkPassword :: String,
+    referralCode :: String
 }
 
 
@@ -3242,6 +3242,33 @@ instance standardEncodeDriverOperationCreateRequestReq :: StandardEncode DriverO
 instance decodeDriverOperationCreateRequestReq :: Decode DriverOperationCreateRequestReq where decode = defaultDecode
 instance encodeDriverOperationCreateRequestReq :: Encode DriverOperationCreateRequestReq where encode = defaultEncode
 
+--------------------------------------------------------------------- getCitySafetyNumbers ---------------------------------------------------------------
+
+data GetCitySafetyNumbersReq = GetCitySafetyNumbersReq {}
+
+instance makeGetCitySafetyNumbersReq :: RestEndpoint GetCitySafetyNumbersReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getCitySafetyNumbers "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetCitySafetyNumbersReq :: Generic GetCitySafetyNumbersReq _
+instance showGetCitySafetyNumbersReq :: Show GetCitySafetyNumbersReq where show = genericShow 
+instance standardEncodeGetCitySafetyNumbersReq :: StandardEncode GetCitySafetyNumbersReq where standardEncode _ = standardEncode {}
+instance decodeGetCitySafetyNumbersReq :: Decode GetCitySafetyNumbersReq where decode = defaultDecode
+instance encodeGetCitySafetyNumbersReq :: Encode GetCitySafetyNumbersReq where encode = defaultEncode
+
+newtype GetCitySafetyNumbersResp =  GetCitySafetyNumbersResp {
+  localAmbulanceNumbers :: Array String, 
+  localPoliceNumbers :: Array String, 
+  safetyTeamNumbers :: Array String
+}
+
+derive instance genericGetCitySafetyNumbersResp :: Generic GetCitySafetyNumbersResp _
+derive instance newtypeGetCitySafetyNumbersResp :: Newtype GetCitySafetyNumbersResp _
+instance showGetCitySafetyNumbersResp :: Show GetCitySafetyNumbersResp where show = genericShow
+instance standardEncodeGetCitySafetyNumbersResp :: StandardEncode GetCitySafetyNumbersResp where standardEncode _ = standardEncode {}
+instance decodeGetCitySafetyNumbersResp :: Decode GetCitySafetyNumbersResp where decode = defaultDecode
+instance encodeGetCitySafetyNumbersResp :: Encode GetCitySafetyNumbersResp where encode = defaultEncode
+
 ----------------------------------------------------------------------- getOperationHubRequest ---------------------------------------------------------------
 
 data GetOperationHubReq = GetOperationHubReq String String
@@ -3330,6 +3357,58 @@ instance showGetVehiclePhotosBase64Req :: Show GetVehiclePhotosBase64Req where s
 instance standardEncodeGetVehiclePhotosBase64Req :: StandardEncode GetVehiclePhotosBase64Req where standardEncode _ = standardEncode {}
 instance decodeGetVehiclePhotosBase64Req :: Decode GetVehiclePhotosBase64Req where decode = defaultDecode
 instance encodeGetVehiclePhotosBase64Req :: Encode GetVehiclePhotosBase64Req where encode = defaultEncode
+
+--------------------------------------------------------------- getDriverEarnings ---------------------------------------------------------------
+
+data EarningType = DAILY | WEEKLY | MONTHLY
+
+derive instance genericEarningType :: Generic EarningType _
+instance showEarningType :: Show EarningType where show = genericShow
+instance decodeEarningType :: Decode EarningType where decode = defaultEnumDecode
+instance encodeEarningType :: Encode EarningType where encode = defaultEnumEncode
+instance eqEarningType :: Eq EarningType where eq = genericEq
+instance standardEncodeEarningType :: StandardEncode EarningType
+  where
+    standardEncode _ = standardEncode {}
+
+data EarningPeriodStatsReq = EarningPeriodStatsReq String String String
+
+instance makeEarningPeriodStatsReq :: RestEndpoint EarningPeriodStatsReq where
+    makeRequest reqBody@(EarningPeriodStatsReq fromDate toDate earningType) headers = defaultMakeRequestWithoutLogs GET (EP.getEarningPeriodStats fromDate toDate earningType) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericEarningPeriodStatsReq :: Generic EarningPeriodStatsReq _
+instance standardEncodeEarningPeriodStatsReq :: StandardEncode EarningPeriodStatsReq where standardEncode _ = standardEncode {}
+instance showEarningPeriodStatsReq :: Show EarningPeriodStatsReq where show = genericShow
+instance decodeEarningPeriodStatsReq :: Decode EarningPeriodStatsReq where decode = defaultDecode
+instance encodeEarningPeriodStatsReq :: Encode EarningPeriodStatsReq where encode = defaultEncode
+
+newtype EarningPeriodStats = EarningPeriodStats
+  { periodStart :: String
+  , totalEarnings :: Int
+  , totalDistance :: Int
+  , totalRides :: Int
+  , cancellationCharges :: Int
+  , tipAmount :: Int
+  }
+
+newtype EarningPeriodStatsRes = EarningPeriodStatsRes
+  { earnings :: Array EarningPeriodStats
+  }
+
+derive instance genericEarningPeriodStats :: Generic EarningPeriodStats _
+derive instance newtypeEarningPeriodStats :: Newtype EarningPeriodStats _
+instance standardEncodeEarningPeriodStats :: StandardEncode EarningPeriodStats where standardEncode (EarningPeriodStats resp) = standardEncode resp
+instance showEarningPeriodStats :: Show EarningPeriodStats where show = genericShow
+instance decodeEarningPeriodStats :: Decode EarningPeriodStats where decode = defaultDecode
+instance encodeEarningPeriodStats :: Encode EarningPeriodStats where encode = defaultEncode
+
+derive instance genericEarningPeriodStatsRes :: Generic EarningPeriodStatsRes _
+derive instance newtypeEarningPeriodStatsRes :: Newtype EarningPeriodStatsRes _
+instance standardEncodeEarningPeriodStatsRes :: StandardEncode EarningPeriodStatsRes where standardEncode (EarningPeriodStatsRes resp) = standardEncode resp
+instance showEarningPeriodStatsRes :: Show EarningPeriodStatsRes where show = genericShow
+instance decodeEarningPeriodStatsRes :: Decode EarningPeriodStatsRes where decode = defaultDecode
+instance encodeEarningPeriodStatsRes :: Encode EarningPeriodStatsRes where encode = defaultEncode
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -3911,7 +3990,7 @@ instance makeDetectCityReq :: RestEndpoint DetectCityReq where
 
 derive instance genericDetectCityReq :: Generic DetectCityReq _
 derive instance newtypeDetectCityReq :: Newtype DetectCityReq _
-instance standardDetectCityReq :: StandardEncode DetectCityReq where standardEncode (DetectCityReq id) = standardEncode id
+instance standardEncodeDetectCityReq :: StandardEncode DetectCityReq where standardEncode (DetectCityReq id) = standardEncode id
 instance showDetectCityReq :: Show DetectCityReq where show = genericShow
 instance decodeDetectCityReq :: Decode DetectCityReq where decode = defaultDecode
 instance encodeDetectCityReq :: Encode DetectCityReq where encode = defaultEncode
@@ -4357,8 +4436,8 @@ newtype QuestionConfirmReq = QuestionConfirmReq
 data SelectedOption = SingleSelectedOption String | MultiSelectedOption (Array String)
 
 newtype QuestionConfirmRes = QuestionConfirmRes
-  { validation :: QuestionValidation
-  , validationRes :: SelectedOptionValidation
+  { validation :: QuestionValidation,
+    validationRes :: SelectedOptionValidation
   }
 
 data QuestionValidation = CORRECT_ANSWER | INCORRECT_ANSWER

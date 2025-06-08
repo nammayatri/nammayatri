@@ -82,51 +82,7 @@ genericHeaderConfig state =
         }
       , margin = MarginBottom if enableYatriCoins then 0 else 24
       }
-
-calendarConfig :: ST.DriverEarningsScreenState -> CalendarConfig.Config
-calendarConfig state =
-  CalendarConfig.config
-    { weeks = state.props.calendarState.weeks
-    , startDate = state.props.calendarState.startDate
-    , endDate = state.props.calendarState.endDate
-    , selectedTimeSpan = state.props.calendarState.selectedTimeSpan
-    , primaryButtonConfig = calendarPrimaryButtonConfig state
-    , cancelButtonConfig = calendarCancelButtonConfig state
-    , defaultMessage = getString SELECT_DATE
-    , pastLimit = { date: 1, isInRange: false, isStart: false, isEnd: false, utcDate: "2022-11-01T18:30:00.000Z", shortMonth: "Nov", year: 2022, intMonth: 11 }
-    , futureLimit = getCurrentDay false
-    , selectedDateColor = Color.blue800
-    , dateInRangeColor = Color.blue9000
-    , selectRange = false
-    }
-
-calendarPrimaryButtonConfig :: ST.DriverEarningsScreenState -> PrimaryButtonConfig.Config
-calendarPrimaryButtonConfig state =
-  PrimaryButtonConfig.config
-    { textConfig
-      { text = getString APPLY
-      }
-    , cornerRadius = 6.0
-    , margin = Margin 16 8 16 0
-    , isClickable = isJust state.props.calendarState.startDate
-    , alpha = if isJust state.props.calendarState.startDate then 1.0 else 0.5
-    , enableRipple = isJust state.props.calendarState.startDate
-    }
-
-calendarCancelButtonConfig :: ST.DriverEarningsScreenState -> PrimaryButtonConfig.Config
-calendarCancelButtonConfig state =
-  PrimaryButtonConfig.config
-    { textConfig
-      { text = getString CANCEL
-      , color = Color.black650
-      }
-    , background = Color.white900
-    , stroke = "1," <> Color.white900
-    , margin = Margin 16 0 16 12
-    , isClickable = isJust state.props.calendarState.startDate
-    , alpha = if isJust state.props.calendarState.startDate then 1.0 else 0.5
-    }
-
+      
 errorModalConfig :: ST.DriverEarningsScreenState -> ErrorModal.Config
 errorModalConfig state =
   let vehicleVariantLocalStore = getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys

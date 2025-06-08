@@ -290,6 +290,11 @@ getOd =
     , upload_again : "ପୁଣି ଅପଲୋଡ୍ କରନ୍ତୁ"
     , select_operation_hub : "ଅପାରେଟିଂଗିତ ହାବ ଚୟନ କରନ୍ତୁ"
     , help_centre : "ସହାୟତା କେନ୍ଦ୍ର"
+    , all_time: "ସବୁବେଳେ"
+    , subscription_amount_spent: "ସବ୍ସକ୍ରିପସନ ପରିମାଣ ବ୍ୟଯାବ"
+    , ride_boost_received: "ରାଇଡ୍ ବୁସ୍ଟ ପ୍ରାପ୍ତ"
+    , cancellation_charges_received: "ରଦ୍ଦୀ ଚାର୍ଜ ପ୍ରାପ୍ତ"
+    , todays: "ଆଜିର"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "RC ସ୍ଥାନ ଆପଣଙ୍କ ସ୍ଥାନ ସହିତ ମେଳ ହେଉ ନାହିଁ")
     , updated_at: "ମାନଚିତ୍ର ଅଦ୍ୟତନ ହୋଇଛି"
     , trip_count: "ରାଇଡ୍ ସଂଖ୍ୟା"
