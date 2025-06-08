@@ -69,6 +69,7 @@ import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, 
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (toggleLoader,getAndRemoveLatestNotificationType)
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -670,14 +671,31 @@ driverMapsHeaderView push state =
                     , relativeLayout 
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
-                      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                      , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])
                       , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                       , padding $ PaddingBottom 12
                       ][ todaysEarningModel push state
+                      , linearLayout
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])
+                        , gravity CENTER
+                        ]
+                        [ textView $
+                          [ width WRAP_CONTENT
+                          , height WRAP_CONTENT
+                          , text $ getString TODAYS
+                          , background "#EDF1F8"
+                          , cornerRadius 20.0
+                          , color Color.black700
+                          , padding $ Padding 12 8 12 8
+                          ] <> FontStyle.body3 TypoGraphy
+                        ]
                       ]
                   ]
                 , offlineNavigationLinks push state
               ] <> [gotoRecenterAndSupport state push,
+                    (if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then gotoButton push state else linearLayout[][]),
                     scheduledRideBannerView state push,
                     onRideScreenBannerView state push 
                    ]
@@ -862,8 +880,8 @@ gotoRecenterAndSupport state push =
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
         ][ locationUpdateView push state
-          , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
-            then gotoButton push state else linearLayout[][]
+          -- , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
+          --   then gotoButton push state else linearLayout[][]
           -- , rideRequestButton  push state
           , safetyPillView push state
           , helpAndSupportBtnView push showReportText
@@ -1085,7 +1103,7 @@ seeNearbyHotspots state push =
     ][ imageView
         [ width $ V 15
         , height $ V 15
-        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_hotspots"
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ic_hotspots_blue"
         ]
       , textView $
         [ weight 1.0
@@ -1479,11 +1497,10 @@ driverStatusPill pillConfig push state index =
         [ width $ V 15
         , height $ V 15
         , margin (Margin 3 0 5 0)
-        , visibility GONE
-                -- $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
-                --     ACTIVE -> VISIBLE
-                --     DEMO_ -> VISIBLE
-                --     DEFAULT -> GONE
+        , visibility $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
+                    ACTIVE -> VISIBLE
+                    DEMO_ -> VISIBLE
+                    DEFAULT -> GONE
         , imageWithFallback $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> pillConfig.imageUrl
                     DEMO_ ->   HU.fetchImage HU.FF_ASSET "ic_driver_status_demo"
@@ -1497,7 +1514,6 @@ driverStatusPill pillConfig push state index =
               Online -> if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
               Offline -> (getString OFFLINE)
               Silent -> (getString SILENT)
-              Goto -> "Go To"
           , color $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> pillConfig.textColor
                     DEMO_ -> Color.black900
@@ -1516,8 +1532,9 @@ todaysEarningModel push state =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , background Color.blue600
-    , margin $ Margin 16 2 16 6
+    , margin $ Margin 16 16 16 6
     , cornerRadius 14.0
+    , padding $ PaddingTop 8
     , gravity CENTER_VERTICAL
     ]
     [ linearLayout
@@ -1803,35 +1820,56 @@ clickHereDemoLayout state push =
 
 gotoButton :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 gotoButton push state = 
-  frameLayout
+  linearLayout
   [ height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , orientation VERTICAL
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
   , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) && (not ((RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory))
-  , margin $ MarginTop 3
-  ] [ linearLayout
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , margin $ MarginVertical 5 10
-      , cornerRadius 22.0
-      , gravity CENTER
-      , stroke $ "1,"<> Color.grey900
-      ][ PrimaryButton.view (push <<< GoToButtonClickAC) (gotoButtonConfig state)]
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , layoutGravity "right"
-      ][ textView $
-          [ height $ V 20
-          , width $ V 20
-          , cornerRadius 37.0
-          , text $ show state.data.driverGotoState.gotoCount 
-          , color Color.white900
-          , gravity CENTER
-          , background Color.black900 
-          ] <> FontStyle.body9 TypoGraphy
-        ]
+  , margin $ Margin 16 8 16 8
+  , background $ if (state.data.driverGotoState.isGotoEnabled) then Color.blue800 else Color.white900
+  , cornerRadius 20.0
+  , onClick push $ const GoToPillButtonClick
+  , rippleColor Color.rippleShade
+  ] 
+  [ linearLayout
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
     ]
+    [ imageView
+      [ width $ V 20
+      , height $ V 20
+      , imageWithFallback $ if (state.data.driverGotoState.isGotoEnabled) then HU.fetchImage HU.FF_ASSET "ny_pin_check_white" else HU.fetchImage HU.FF_COMMON_ASSET "ic_pin_check_blue"
+      , margin $ Margin 10 10 10 10
+      ]
+    , textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text $ "Go To"
+      , color $ if state.data.driverGotoState.isGotoEnabled then Color.white900 else Color.black900
+      , gravity CENTER
+      ] <> FontStyle.body4 TypoGraphy
+    , linearLayout
+      [ width $ V 1 
+      , height $ V 20
+      , background Color.grey900
+      , margin $ MarginHorizontal 10 10
+      ][]
+    , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ if state.data.driverGotoState.isGotoEnabled then state.data.driverGotoState.timerInMinutes else ("Trips Remaining : " <> show state.data.driverGotoState.gotoCount)
+        , color $ if state.data.driverGotoState.isGotoEnabled then Color.white900 else Color.black900
+        ] <> FontStyle.body4 TypoGraphy
+    ]
+  , imageView 
+    [ height $ V 20
+    , width $ V 40
+    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET (if state.data.driverGotoState.isGotoEnabled then "ic_goto_toggle_active" else "ic_goto_toggle_inactive")
+    , margin $ Margin 10 10 10 10
+    ]
+  ]
 
 gotoListView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
 gotoListView push state = 
@@ -1877,8 +1915,7 @@ gotoListView push state =
                 [ height $ V 45
                 , width MATCH_PARENT
                 , gravity CENTER
-                , background Color.blue600
-                , stroke $ "1,"<>Color.blue600
+                , background $ EHU.getColorWithOpacity 12 Color.blue900
                 , margin $ Margin 17 0 17 20 
                 , text $ getString GOTO_LOC_LEFT  <> " " <> show state.data.driverGotoState.gotoCount
                 , cornerRadius 6.0 
@@ -2044,8 +2081,7 @@ savedLocationListView push state =
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , padding $ Padding 16 20 16 20
-              , margin $ Margin 16 16 16 0
-              , stroke $ "1," <> Color.grey900
+              , margin $ Margin 8 8 16 0
               , cornerRadius 8.0
               , gravity CENTER_VERTICAL
               , visibility $ boolToVisibility showAddGoto
@@ -2053,7 +2089,7 @@ savedLocationListView push state =
               ][  imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_add_filled"
+                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_plus_blue"
                   ]
                 , textView $
                   [ width MATCH_PARENT
@@ -2417,7 +2453,7 @@ offlineNavigationLinks push state =
       navLinksArray = [ {title : getString LT.SAFETY, icon : "ny_ic_safety_shield", action : SafetyPillClicked},
                         {title : getString HELP_CENTRE, icon : "ny_ic_question_mark_with_circle_blue", action : HelpAndSupportScreen},
                         {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
-                        {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen},
+                        {title : getString HOTSPOTS, icon : "ic_hotspots_blue", action : OpenHotspotScreen},
                         -- {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction},
                         -- {title : getString RIDE_REQUESTS, icon : "ny_ic_location", action : RideRequestsList},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}

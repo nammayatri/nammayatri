@@ -635,9 +635,10 @@ paymentPendingPopupConfig state =
     },
     option1 {
       text = getString CLEAR_DUES <> dues
-    , background = Color.black900
-    , color = Color.yellow900
+    , background = state.data.config.primaryButtonBackground
+    , color = state.data.config.primaryTextColor
     , showShimmer = state.data.paymentState.showShimmer
+    , strokeColor = state.data.config.primaryButtonBackground
     , enableRipple = true
     },
     option2 {
@@ -953,13 +954,7 @@ driverStatusIndicators state = [
         textColor : Color.white900
     },
     {
-        status : ST.Goto,
-        background : Color.blue800,
-        imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
-        textColor : Color.white900
-    },
-    {
-      status : ST.Online,
+        status : ST.Online,
         background : Color.darkMint,
         imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
         textColor : Color.white900
@@ -1988,7 +1983,7 @@ gotoKnowMoreConfig state = PopUpModal.config {
     option1 {
       text = getString GO_BACK,
       margin = MarginHorizontal 16 16,
-      color = "#339DFF",
+      color = Color.blue900,
       background = Color.white900,
       strokeColor = Color.white900,
       width = MATCH_PARENT
@@ -2104,7 +2099,7 @@ gotoLocInRangeConfig _ = PopUpModal.config {
   }
 
 disableGotoConfig :: ST.HomeScreenState-> PopUpModal.Config
-disableGotoConfig _ = PopUpModal.config {
+disableGotoConfig state = PopUpModal.config {
   optionButtonOrientation = "VERTICAL",
   buttonLayoutMargin = Margin 16 0 16 20,
   gravity = CENTER,
@@ -2118,8 +2113,8 @@ disableGotoConfig _ = PopUpModal.config {
   option1 {
     text = getString YES_DISABLE,
     margin = MarginHorizontal 16 16,
-    color = Color.yellow900,
-    background = Color.black900,
+    color = state.data.config.primaryTextColor,
+    background = state.data.config.primaryButtonBackground,
     strokeColor = Color.white900,
     width = MATCH_PARENT
   },
@@ -2198,50 +2193,8 @@ cancelButtonConfig _ = PrimaryButton.config
   , margin = MarginLeft 0
   , stroke = "1," <> Color.grey800
   , background = Color.white900
+  , id = "CancelGotoButton"
   }
-
-gotoButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
-gotoButtonConfig state = PrimaryButton.config
-  { textConfig 
-    { text = if (state.data.driverGotoState.isGotoEnabled) then state.data.driverGotoState.timerInMinutes else getString GO_TO
-    , textStyle = Tags
-    , weight = Just 1.0
-    , gravity = CENTER
-    , color = gotoTimer.textColor
-    }
-  , height = WRAP_CONTENT
-  , gravity = CENTER
-  , cornerRadius = 22.0
-  , width = WRAP_CONTENT
-  , padding = if (state.data.driverGotoState.isGotoEnabled) then Padding 16 11 16 11 else Padding 24 11 24 11
-  , margin = MarginLeft 0
-  , isPrefixImage = true
-  , stroke = "0," <> Color.black900
-  , background = gotoTimer.bgColor
-  , prefixImageConfig
-    { imageUrl = gotoTimer.imageString
-    , height = V 15
-    , width = V 15
-    , margin = MarginRight 5
-    }
-  , id = "GotoClick"
-  , alpha = if state.data.driverGotoState.gotoCount == 0 then 0.3 else 1.0
-  , enableLoader = JB.getBtnLoader "GotoClick"
-  , enableRipple = true
-  , rippleColor = Color.rippleShade
-  , lottieConfig 
-    { lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json"
-    , width = V 100
-    , height = V 35
-    , autoDisableLoader = false
-    }
-  }
-  where gotoTimer = gotoTimerConfig state.data.driverGotoState.isGotoEnabled
-
-gotoTimerConfig :: Boolean -> {bgColor :: String , imageString :: String, textColor :: String }
-gotoTimerConfig enabled 
-  | enabled = {bgColor : Color.green900, imageString : fetchImage FF_ASSET "ny_pin_check_white", textColor : Color.white900}
-  | otherwise = {bgColor : Color.white900, imageString : fetchImage FF_ASSET "ny_ic_goto_icon_map_pin_check", textColor : Color.black800}
 
 sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
 sourceUnserviceableConfig state =

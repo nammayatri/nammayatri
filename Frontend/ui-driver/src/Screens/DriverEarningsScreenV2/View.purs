@@ -53,7 +53,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas)
+import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas, getPastDateFromDate, getPastMonthsFromDate, getFutureDate)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals, getColorWithOpacity)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -69,9 +69,7 @@ import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens.DriverEarningsScreenV2.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions)
-import Screens.DriverEarningsScreen.ScreenData (dummyDateItem)
-import Screens.Types (DriverEarningsScreenState)
+import Screens.DriverEarningsScreenV2.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), GetRidesSummaryListResp(..), DriverProfileSummaryRes(..))
 import Services.API as API
@@ -101,21 +99,12 @@ screen initialState =
                             anyRidesAssignedEver = either (\_ -> false) (\(DriverProfileSummaryRes profileSummaryResponse) -> profileSummaryResponse.totalRidesAssigned > 0) profileSummaryResponse
                           liftFlowBT $ push $ UpdateRidesEver anyRidesAssignedEver
                     case initialState.props.subView of
-                      ST.EARNINGS_VIEW -> do
-                        if initialState.props.callRideSummaryApi then do
-                          let
-                            currentDate = getcurrentdate ""
-
-                            datesList = getDatesList currentDate initialState
-                          (GetRidesSummaryListResp rideSummaryResp) <- Remote.getRideSummaryListReqBT datesList
-                          liftFlowBT $ push $ RideSummaryAPIResponseAction rideSummaryResp.list currentDate datesList
-                        else
-                          pure unit
-                        (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "100" "0" "false" "null" (convertUTCtoISC initialState.props.date "YYYY-MM-DD")
-                        liftFlowBT $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
+                      ST.ALL_TIME_EARNINGS_VIEW -> pure unit
                       _ -> do
-                        -- liftFlowBT $ push $ FaqViewAction
-                        pure unit
+                        let dates = if DS.null initialState.props.toDate then getDates initialState.props.subView initialState else {fromDate: initialState.props.fromDate, toDate: initialState.props.toDate}
+                            period = getPeriodFromSubView initialState.props.subView
+                        (API.EarningPeriodStatsRes earningPeriodStatsRes) <- Remote.getEarningPeriodStatsBT dates.fromDate dates.toDate (show period)
+                        liftFlowBT $ push $ EarningPeriodStatsAPIResponseAction earningPeriodStatsRes.earnings dates.fromDate dates.toDate
             pure $ pure unit
         )
       ]
@@ -129,20 +118,28 @@ screen initialState =
       )
   }
 
-getDatesList :: String -> ST.DriverEarningsScreenState -> Array String
-getDatesList todaysDate state =
-  let
-    storedRideSummaryData = fromMaybe [] (fetchWeekyEarningData RIDE_SUMMARY_DATA)
-  in
-    map (\x -> convertUTCtoISC x.utcDate "YYYY-MM-DD") $ getListofPastDays storedRideSummaryData
-  where
-  getListofPastDays storedRideSummaryData =
-    if not null storedRideSummaryData then
-      maybe pastDays (\x -> getPastDays $ (runFn2 differenceBetweenTwoUTC todaysDate x.rideDate) / (24 * 60 * 60)) (last storedRideSummaryData)
-    else
-      pastDays
+getPeriodFromSubView :: ST.DriverEarningsSubView -> API.EarningType
+getPeriodFromSubView subView =
+  case subView of
+    ST.EARNINGS_VIEW -> API.DAILY
+    ST.WEEKLY_EARNINGS_VIEW -> API.WEEKLY
+    ST.MONTHLY_EARNINGS_VIEW -> API.MONTHLY
+    _ -> API.DAILY
 
-  pastDays = getPastDays (22 + getDayOfWeek (getDayName todaysDate))
+getDates :: ST.DriverEarningsSubView -> ST.DriverEarningsScreenState -> {fromDate :: String, toDate :: String}
+getDates subView state =
+  let todaysDate = getcurrentdate ""
+  in
+  case subView of
+    ST.EARNINGS_VIEW -> {fromDate: (getPastDateFromDate todaysDate 6), toDate: todaysDate}
+    ST.WEEKLY_EARNINGS_VIEW -> do
+      let dayOfWeek = getDayOfWeek (getDayName todaysDate)
+      {fromDate: (getPastDateFromDate todaysDate (42 + dayOfWeek)), toDate: todaysDate}
+    ST.MONTHLY_EARNINGS_VIEW -> do
+      let pastMonths = getPastMonthsFromDate todaysDate 6
+          fromDate = maybe "2025-01-01" (\x -> convertUTCtoISC x.utcDate "YYYY-MM-DD") (head pastMonths)
+      {fromDate: fromDate, toDate: todaysDate}
+    _ -> {fromDate: todaysDate, toDate: todaysDate}
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -165,14 +162,8 @@ view push state =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                -- , visibility $ boolToVisibility (not state.props.showShimmer) -- TODO: Handle shimmer part
                 ]
                 [ headerView push state
-                  -- GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-                  -- case state.props.subView of
-                  --   _ | any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] || (not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins)) -> GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-                  --   _ -> linearLayout [] []
-                -- , if any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] then separatorView true state.props.subView else linearLayout [] []
                 , if not state.data.anyRidesAssignedEver then
                     noRideHistoryView push state
                   else
@@ -181,7 +172,7 @@ view push state =
                       , width MATCH_PARENT
                       , orientation VERTICAL
                       ]
-                      [ Keyed.relativeLayout
+                      [ if state.props.showShimmer then shimmerView push state else Keyed.relativeLayout
                           [ height WRAP_CONTENT
                           , width MATCH_PARENT
                           , orientation VERTICAL
@@ -191,13 +182,9 @@ view push state =
                           <> (if state.props.subView == ST.WEEKLY_EARNINGS_VIEW then [ Tuple "WeeklyEarnings" $ earningsView push state ] else [])
                           <> (if state.props.subView == ST.MONTHLY_EARNINGS_VIEW then [ Tuple "MonthlyEarnings" $ earningsView push state ] else [])
                           <> (if state.props.subView == ST.ALL_TIME_EARNINGS_VIEW then [ Tuple "AllTimeEarnings" $ earningsView push state ] else [])
-                          <> (if state.props.subView == ST.FAQ_VIEW then [ Tuple "FAQView" $ faqView push state ] else [])
-                          <> (if state.props.subView == ST.FAQ_QUESTON_VIEW then [ Tuple "faqQuestionView" $ faqQuestionView push state ] else [])
                       ]
                 ]
-        -- , if state.props.showShimmer then shimmerView push state else dummyView -- TODO: Handle shimmer part
         ]
-    , if state.props.calendarState.calendarPopup then Calendar.view (push <<< CalendarAC) (calendarConfig state) else dummyView
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -250,10 +237,10 @@ tabView push state =
       , margin $ Margin 8 8 8 8
       , gravity CENTER
       ]
-      [ tabItem push (state.props.subView == ST.EARNINGS_VIEW) "Daily" ST.EARNINGS_VIEW
-      , tabItem push (state.props.subView == ST.WEEKLY_EARNINGS_VIEW) "Weekly" ST.WEEKLY_EARNINGS_VIEW
-      , tabItem push (state.props.subView == ST.MONTHLY_EARNINGS_VIEW) "Monthly" ST.MONTHLY_EARNINGS_VIEW
-      , tabItem push (state.props.subView == ST.ALL_TIME_EARNINGS_VIEW) "All-time" ST.ALL_TIME_EARNINGS_VIEW
+      [ tabItem push (state.props.subView == ST.EARNINGS_VIEW) (getString DAILY) ST.EARNINGS_VIEW
+      , tabItem push (state.props.subView == ST.WEEKLY_EARNINGS_VIEW) (getString WEEKLY) ST.WEEKLY_EARNINGS_VIEW
+      , tabItem push (state.props.subView == ST.MONTHLY_EARNINGS_VIEW) (getString MONTHLY) ST.MONTHLY_EARNINGS_VIEW
+      , tabItem push (state.props.subView == ST.ALL_TIME_EARNINGS_VIEW) (getString ALL_TIME) ST.ALL_TIME_EARNINGS_VIEW
       ]
 
 tabItem :: forall w. (Action -> Effect Unit) -> Boolean -> String -> ST.DriverEarningsSubView -> PrestoDOM (Effect Unit) w
@@ -291,48 +278,6 @@ earningsView push state =
     , earningsSummaryView push state
     ]
 
-shimmerView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-shimmerView push state =
-  shimmerFrameLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , background Color.blue600
-    ]
-    [ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        [ linearLayout
-            [ height (V 350)
-            , width MATCH_PARENT
-            , background Color.greyDark
-            , cornerRadius 12.0
-            , orientation VERTICAL
-            ]
-            []
-        , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation VERTICAL
-            , margin $ MarginTop 24
-            ]
-            ( map
-                ( \_ ->
-                    linearLayout
-                      [ width MATCH_PARENT
-                      , height (V 60)
-                      , orientation VERTICAL
-                      , margin $ MarginVertical 10 10
-                      , background Color.greyDark
-                      , cornerRadius 12.0
-                      ]
-                      []
-                )
-                (1 .. 3)
-            )
-        ]
-    ]
 
 totalEarningsView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 totalEarningsView push state =
@@ -356,13 +301,13 @@ totalEarningsView push state =
             , width WRAP_CONTENT
             , weight 1.0
             , gravity LEFT
+            , visibility $ boolToVisibility $ state.props.subView /= ST.ALL_TIME_EARNINGS_VIEW
             ]
             [ imageView
                 $ [ width (V 32)
                   , height (V 32)
-                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 0 then "ny_ic_chevron_left_grey" else "ny_ic_chevron_left_black"
-                  , onClick push $ const $ LeftChevronClicked state.props.weekIndex
-                  , clickable $ state.props.weekIndex > 0
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_black"
+                  , onClick push $ const $ LeftChevronClicked
                   ]
             ]
         , linearLayout
@@ -374,14 +319,7 @@ totalEarningsView push state =
             [ textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ convertUTCtoISC state.props.totalEarningsData.fromDate "DD MMM"
-                      <> ( if DS.null state.props.totalEarningsData.toDate then
-                            ""
-                          else
-                            " - " <> convertUTCtoISC state.props.totalEarningsData.toDate "DD MMM"
-                        )
-                      <> ", "
-                      <> getString EARNINGS
+                  , text $ getDateRangeText state.props.subView state.props.totalEarningsData
                   ]
                 <> FontStyle.paragraphText TypoGraphy
             , textView
@@ -397,14 +335,15 @@ totalEarningsView push state =
             , width WRAP_CONTENT
             , gravity RIGHT
             , weight 1.0
+            , visibility $ boolToVisibility $ state.props.subView /= ST.ALL_TIME_EARNINGS_VIEW
             ]
             [ imageView
                 $ [ width $ V 32
                   , height $ V 32
-                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_grey" else "ny_ic_chevron_right_black"
+                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.graphIndex < 0 then "ny_ic_chevron_right_grey" else "ny_ic_chevron_right_black"
                   , gravity RIGHT
-                  , onClick push $ const $ RightChevronClicked state.props.weekIndex
-                  , clickable $ state.props.weekIndex < 3
+                  , onClick push $ const $ RightChevronClicked
+                  , clickable $ state.props.graphIndex < 0
                   ]
             ]
         ]
@@ -412,7 +351,7 @@ totalEarningsView push state =
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
-        , margin $ MarginTop 16
+        , margin $ if state.props.subView == ST.MONTHLY_EARNINGS_VIEW then MarginTop 0 else MarginTop 16
         , background Color.grey700
         ]
         []
@@ -468,287 +407,18 @@ totalEarningsView push state =
             ]
         ]
     ]
+    where getDateRangeText subView totalEarningsData =
+            case subView of
+              ST.EARNINGS_VIEW -> if DS.null totalEarningsData.toDate then convertUTCtoISC totalEarningsData.fromDate "DD MMM, YYYY" else convertUTCtoISC totalEarningsData.fromDate "DD MMM" <> " - " <> convertUTCtoISC totalEarningsData.toDate "DD MMM, YYYY"
+              ST.WEEKLY_EARNINGS_VIEW ->
+                if DS.null totalEarningsData.toDate
+                  then
+                    convertUTCtoISC totalEarningsData.fromDate "DD MMM" <> " - " <> convertUTCtoISC (getFutureDate totalEarningsData.fromDate 6) "DD MMM, YYYY"
+                  else
+                    convertUTCtoISC totalEarningsData.fromDate "DD MMM" <> " - " <> convertUTCtoISC (getFutureDate totalEarningsData.toDate 6) "DD MMM, YYYY"
+              ST.MONTHLY_EARNINGS_VIEW -> convertUTCtoISC totalEarningsData.fromDate "MMM, YYYY" <> (if DS.null totalEarningsData.toDate then "" else " - " <> convertUTCtoISC totalEarningsData.toDate "MMM, YYYY")
+              _ -> "yyyy-mm-dd"
 
-faqView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-faqView push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.blue600
-    ]
-    [ textView
-        $ [ text $ getString LEARN_ABOUT_YATRI_POINTS
-          , color Color.black700
-          , margin $ Margin 16 12 0 12
-          ]
-        <> FontStyle.subHeading2 TypoGraphy
-    , questionsListView push (dummyQuestions Language) state
-    ]
-
-questionsListView :: forall w. (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-questionsListView push questionsList state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background $ Color.white900
-    ]
-    (map (\item -> individualQuestionListView push item state) questionsList)
-
-individualQuestionListView :: forall w. (Action -> Effect Unit) -> ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-individualQuestionListView push faqQuestion state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding (PaddingHorizontal 16 16)
-    , onClick push $ const $ OpenFaqQuestion faqQuestion
-    ]
-    [ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , gravity CENTER
-        ]
-        [ linearLayout
-            [ height MATCH_PARENT
-            , weight 1.0
-            , gravity CENTER_VERTICAL
-            ]
-            [ textView
-                ( [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , text faqQuestion.question
-                  , padding (PaddingVertical 20 20)
-                  , color Color.black900
-                  , margin $ MarginRight 16
-                  ]
-                    <> FontStyle.subHeading2 TypoGraphy
-                )
-            ]
-        , linearLayout
-            [ height MATCH_PARENT
-            , width $ V 20
-            , gravity CENTER
-            ]
-            [ imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey,"
-                , height $ V 18
-                , width $ V 18
-                , margin $ MarginHorizontal 10 8
-                ]
-            ]
-        ]
-    , horizontalLine
-    ]
-
-faqQuestionView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-faqQuestionView push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.white900
-    , padding (Padding 16 16 16 16)
-    , visibility $ boolToVisibility (state.props.subView == ST.FAQ_QUESTON_VIEW)
-    ]
-    [ textView
-        ( [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text state.props.individualQuestion.question
-          , color Color.black900
-          , margin $ MarginBottom 20
-          ]
-            <> FontStyle.h1 TypoGraphy
-        )
-    , answersListView push state.props.individualQuestion.answer state
-    , tableView state
-    ]
-
-tableView :: forall w. ST.DriverEarningsScreenState ->  PrestoDOM (Effect Unit) w
-tableView state  =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , cornerRadius 5.0
-    , stroke $ "1," <> Color.grey900
-    , orientation VERTICAL
-    , visibility $ boolToVisibility $ state.props.individualQuestion.tag == ST.HowEarnLosePoints
-    ] $ mapWithIndex (\index item -> tableItemView item index state) (fromMaybe [] state.data.coinInfoRes)
-
-tableItemView :: forall w. API.CoinInfo -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-tableItemView (API.CoinInfo item) index state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        ][ linearLayout
-            [
-              height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , orientation VERTICAL
-            ]
-            [ textView
-              ( [ height WRAP_CONTENT
-                , width $ V (((screenWidth unit - 10) * 55) / 100)
-                , text item.title
-                , color Color.black900
-                , padding $ if index == 0 then Padding 16 12 16 12 else Padding 16 8 16 8
-                ]
-                  <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy
-              )
-            , textView 
-                ( [
-                    height WRAP_CONTENT
-                  , width $ V (((screenWidth unit - 10) * 55) / 100)
-                  , text item.description
-                  , color Color.black700
-                  , padding $ Padding 16 0 16 8
-                  , visibility $ boolToVisibility $ not $ DS.null item.description
-                  ] <> FontStyle.body1 TypoGraphy
-                )
-            ]
-          , linearLayout
-              [ height MATCH_PARENT
-              , width $ V 1
-              , background Color.grey900
-              ]
-              []
-          , linearLayout
-              [ height MATCH_PARENT
-              , width $ V (((screenWidth unit - 10) * 45) / 100)
-              , padding $ if index == 0 then Padding 16 12 16 12 else Padding 16 8 16 8
-              , gravity CENTER_VERTICAL
-              ]
-              [ textView
-                  ( [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "-") <> (show item.coins) else getString YATRI_POINTS_STR
-                    , color Color.black900
-                    ]
-                      <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy
-                  )
-              , imageView
-                  $ [ width (V 20)
-                    , height (V 20)
-                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
-                    , padding $ Padding 4 4 0 0
-                    , visibility $ boolToVisibility (index == 0)
-                    ]
-              ]
-          ]
-    , separatorView (not (index == (length $ fromMaybe [] state.data.coinInfoRes) - 1)) state.props.subView
-    ]
-
-faqVideoView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-faqVideoView push state =
-  if isJust state.props.individualQuestion.videoLink then
-    linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , background Color.red600
-      , gravity CENTER
-      , margin $ MarginBottom 4
-      , id $ getNewIDWithTag "faqVideo"
-      , afterRender
-          ( \action -> do
-              let
-                id = getNewIDWithTag "faqVideo"
-              pure $ runFn5 setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY) push YoutubeVideoStatus
-          )
-          (const NoAction)
-      ]
-      []
-  else
-    linearLayout [] []
-
-youtubeData :: ST.DriverEarningsScreenState -> String -> YoutubeData
-youtubeData state mediaType =
-  { videoTitle: "title"
-  , setVideoTitle: false
-  , showMenuButton: false
-  , showDuration: true
-  , showSeekBar: true
-  , videoId: maybe "" (\x -> getVideoID x) state.props.individualQuestion.videoLink
-  , videoType: "VIDEO"
-  , videoHeight: 200
-  , showFullScreen: false
-  , hideFullScreenButton : false
-  }
-
-answersListView :: forall w. (Action -> Effect Unit) -> Array ST.AnswerConfig -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-answersListView push answersList state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    $ [ faqVideoView push state ]
-    <> (map (\item -> if length answersList > 1 then singleAnswerView push item state else multipleAnswerView push item state) answersList)
-
-singleAnswerView :: forall w. (Action -> Effect Unit) -> ST.AnswerConfig -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-singleAnswerView push answer state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , padding $ PaddingVertical 10 10
-    ]
-    [ textView
-        ( [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text "•"
-          , margin $ MarginRight 8
-          , color Color.black900
-          ]
-            <> FontStyle.subHeading2 TypoGraphy
-        )
-    , ansWithHyperLinkView push answer state
-    ]
-
-multipleAnswerView :: forall w. (Action -> Effect Unit) -> ST.AnswerConfig -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-multipleAnswerView push answer state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , padding $ PaddingVertical 12 12
-    ]
-    [ ansWithHyperLinkView push answer state]
-
-
-ansWithHyperLinkView :: forall w. (Action -> Effect Unit) -> ST.AnswerConfig -> ST.DriverEarningsScreenState ->  PrestoDOM (Effect Unit) w
-ansWithHyperLinkView push answer state =
-  let hyperLinkUrl = fromMaybe "" answer.hyperLinkUrl
-      hyperLinkText = fromMaybe "" answer.hyperLinkText
-  in
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , orientation VERTICAL
-    ]
-    [ textView
-        ( [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text answer.answer
-          , color Color.black900
-          ]
-            <> FontStyle.subHeading2 TypoGraphy
-        ),
-        textView
-         ( [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text hyperLinkText
-          , color Color.blue900
-          , gravity CENTER
-          , margin $ Margin 0 0 0 40
-          , visibility $ boolToVisibility $ not ( DS.null hyperLinkUrl || DS.null hyperLinkText)
-          , onClick (\_ -> openUrlInApp $ hyperLinkUrl) (const unit)
-          ] <> FontStyle.subHeading2 TypoGraphy
-        )
-    ]
 
 horizontalLine :: forall w. PrestoDOM (Effect Unit) w
 horizontalLine =
@@ -783,51 +453,6 @@ helpButton push =
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
-
--- calendarView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
--- calendarView push state =
---   let
---     selectedDate = state.props.date
-
---     dateToShow =
---       if DS.null selectedDate || convertUTCtoISC selectedDate "YYYY-MM-DD" == getcurrentdate "" then
---         getString TODAY
---       else
---         convertUTCtoISC selectedDate "Do MMM"
---   in
---     linearLayout
---       [ width WRAP_CONTENT
---       , height WRAP_CONTENT
---       , cornerRadius 100.0
---       , background Color.white900
---       , gravity CENTER_VERTICAL
---       , stroke $ "1," <> Color.grey900
---       , padding $ Padding 12 4 12 4
---       , onClick push $ const $ ShowCalendarPopup
---       ]
---       [ imageView
---           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar_unfilled_blue,"
---           , height $ V 16
---           , width $ V 16
---           , margin $ MarginRight 4
---           ]
---       , textView
---           $ [ text dateToShow
---             , color Color.black700
---             ]
---           <> FontStyle.tags TypoGraphy
---       , imageView
---           [ imageWithFallback
---               $ fetchImage FF_ASSET
---                   if state.props.calendarState.calendarPopup then
---                     "ny_ic_chevron_up"
---                   else
---                     "ny_ic_chevron_down"
---           , height $ V 12
---           , width $ V 12
---           , margin $ MarginLeft 6
---           ]
---       ]
 
 separatorView :: forall w. Boolean -> ST.DriverEarningsSubView -> PrestoDOM (Effect Unit) w
 separatorView isVisible subView =
@@ -888,7 +513,7 @@ earningsSummaryView push state =
         , cornerRadius 10.0
         ]
         [ textView
-            $ [ text $ "Subscription amount spent"
+            $ [ text $ getString SUBSCRIPTION_AMOUNT_SPENT
               , weight 1.0
               , color Color.black700
               ]
@@ -909,13 +534,13 @@ earningsSummaryView push state =
         , cornerRadius 10.0
         ]
         [ textView
-            $ [ text $ "Ride boost received"
+            $ [ text $ getString RIDE_BOOST_RECEIVED
               , weight 1.0
               , color Color.black700
               ]
             <> FontStyle.paragraphText TypoGraphy
         , textView
-            $ [ text $ "₹" <> formatCurrencyWithCommas "2000"
+            $ [ text $ "₹" <> formatCurrencyWithCommas (show state.props.totalEarningsData.tipAmount)
               , color Color.black800
               ]
             <> FontStyle.h2 TypoGraphy
@@ -930,13 +555,13 @@ earningsSummaryView push state =
         , cornerRadius 10.0
         ]
         [ textView
-            $ [ text $ "Cancellation charges received"
+            $ [ text $ getString CANCELLATION_CHARGES_RECEIVED
               , weight 1.0
               , color Color.black700
               ]
             <> FontStyle.paragraphText TypoGraphy
         , textView
-            $ [ text $ "₹" <> formatCurrencyWithCommas "2000"
+            $ [ text $ "₹" <> formatCurrencyWithCommas (show state.props.totalEarningsData.cancellationCharges)
               , color Color.black800
               ]
             <> FontStyle.h2 TypoGraphy
@@ -951,99 +576,18 @@ earningsSummaryView push state =
         , cornerRadius 10.0
         ]
         [ textView
-            $ [ text $ "Earnings per km"
+            $ [ text $ getString EARNINGS_PER_KM
               , weight 1.0
               , color Color.black700
               ]
             <> FontStyle.paragraphText TypoGraphy
         , textView
-            $ [ text $ "₹" <> (formatCurrencyWithCommas "2000") <> "/km"
+            $ [ text $ "₹" <> (formatCurrencyWithCommas (show $ state.props.totalEarningsData.totalEarnings / state.props.totalEarningsData.totalDistanceTravelled)) <> "/km"
               , color Color.black800
               ]
             <> FontStyle.h2 TypoGraphy
         ]
     ]
-
--- transactionViewForEarnings :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
--- transactionViewForEarnings push state =
---   linearLayout
---     [ width MATCH_PARENT
---     , height WRAP_CONTENT
---     , orientation VERTICAL
---     , margin $ MarginTop 24
---     ]
---     [ linearLayout
---         [ width MATCH_PARENT
---         , height WRAP_CONTENT
---         , orientation HORIZONTAL
---         , margin $ Margin 8 0 8 8
---         ]
---         [ textView
---             $ [ text $ getString RIDE_HISTORY
---               , weight 1.0
---               , color Color.black800
---               ]
---             <> FontStyle.h2 TypoGraphy
---         , calendarView push state
---         ]
---     , historyViewForEarnings push state
---     ]
-
--- historyViewForEarnings :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
--- historyViewForEarnings push state =
---   let
---     historyItems = state.data.earningHistoryItems
---   in
---     if null historyItems then
---       noItemsView state
---     else
---       linearLayout
---         [ width MATCH_PARENT
---         , height WRAP_CONTENT
---         , orientation VERTICAL
---         , background Color.white900
---         , cornerRadius 12.0
---         ]
---         [ linearLayout
---             [ width MATCH_PARENT
---             , height WRAP_CONTENT
---             , orientation HORIZONTAL
---             , padding $ Padding 16 12 16 12
---             , background Color.atlantisGreen
---             , cornerRadii $ Corners 12.0 true true false false
---             ]
---             [ textView
---                 $ [ text $ getString RIDES
---                   , weight 0.0
---                   , color Color.black700
---                   , margin $ MarginRight 8
---                   ]
---                 <> FontStyle.paragraphText TypoGraphy
---             , textView
---                 $ [ text $ show (length (filter (\item -> item.status == Just "COMPLETED") state.data.earningHistoryItems))
---                   , color Color.black800
---                   , weight 1.0
---                   ]
---                 <> FontStyle.h2 TypoGraphy
---             , textView
---                 $ [ text $ getString EARNINGS
---                   , color Color.black700
---                   , margin $ MarginRight 8
---                   ]
---                 <> FontStyle.paragraphText TypoGraphy
---             , textView
---                 $ [ text $ "₹" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
---                   , color Color.black800
---                   ]
---                 <> FontStyle.h2 TypoGraphy
---             ]
---         , linearLayout
---             [ width MATCH_PARENT
---             , height WRAP_CONTENT
---             , orientation VERTICAL
---             ]
---             (mapWithIndex (\index item -> historyViewItemForEarnings push item state index) state.data.earningHistoryItems)
---         ]
 
 dottedLineView :: forall w. (Action -> Effect Unit) -> Int -> Int -> PrestoDOM (Effect Unit) w
 dottedLineView push margintop earnings =
@@ -1138,18 +682,27 @@ barView push index item state =
           $ [ height $ WRAP_CONTENT
             , width $ MATCH_PARENT
             , text $ DS.drop 8 item.rideDate
+            , visibility $ boolToVisibility $ any (_ == state.props.subView) [ST.EARNINGS_VIEW, ST.WEEKLY_EARNINGS_VIEW]
             , gravity CENTER
             ]
           <> FontStyle.paragraphText TypoGraphy
       , textView
           $ [ height $ WRAP_CONTENT
             , width $ MATCH_PARENT
-            , text $ (fromMaybe "" (state.props.weekDay !! index))
+            , text $ convertUTCtoISC item.rideDate "MMM"
             , gravity CENTER
             , singleLine true
-            , margin $ if (getLanguageLocale languageKey == "KN_IN") then MarginBottom 0 else MarginBottom 2
+            , margin $ if state.props.subView == ST.MONTHLY_EARNINGS_VIEW then MarginTop 2 else if (getLanguageLocale languageKey == "KN_IN") then MarginBottom 0 else MarginBottom 2
             ]
           <> FontStyle.body9 TypoGraphy
+      , textView
+          $ [ height $ WRAP_CONTENT
+            , width $ MATCH_PARENT
+            , text $ DS.drop 8 item.rideDate
+            , visibility $ if state.props.subView == ST.MONTHLY_EARNINGS_VIEW then INVISIBLE else GONE
+            , gravity CENTER
+            ]
+          <> FontStyle.paragraphText TypoGraphy
       ]
 
 getDailyEarnings :: Array ST.CoinHistoryItem -> Int
@@ -1161,91 +714,6 @@ getDailyEarnings list =
     )
     0
     list
-
--- historyViewItemForEarnings :: forall w. (Action -> Effect Unit) -> ST.CoinHistoryItem -> ST.DriverEarningsScreenState -> Int -> PrestoDOM (Effect Unit) w
--- historyViewItemForEarnings push item state index =
---   let
---     rideStatus = fromMaybe "" item.status
-
---     color' = if rideStatus /= "CANCELLED" then Color.green900 else Color.red
-
---     earnings = fromMaybe 0 item.earnings
---   in
---     linearLayout
---       [ height WRAP_CONTENT
---       , width MATCH_PARENT
---       , orientation VERTICAL
---       ]
---       [ linearLayout
---           [ height WRAP_CONTENT
---           , width MATCH_PARENT
---           , gravity CENTER_VERTICAL
---           , padding $ Padding 16 12 16 10
---           , onClick push $ const $ OpenTripDetails index
---           ]
---           [ linearLayout
---               [ height WRAP_CONTENT
---               , width WRAP_CONTENT
---               , weight 1.0
---               , orientation VERTICAL
---               ]
---               [ textView
---                   $ [ text $ getString DESTINATION <> ":" <> DS.take 30 (fromMaybe "" item.destination) <> "..."
---                     , color Color.black900
---                     ]
---                   <> FontStyle.body3 TypoGraphy
---               , textView
---                   $ [ text $ convertUTCtoISC item.timestamp "DD/MM/YYYY" <> "  " <> "•" <> "  " <> convertUTCtoISC item.timestamp "h:mm A"
---                     , color Color.black700
---                     , margin $ MarginVertical 4 6
---                     ]
---                   <> FontStyle.captions TypoGraphy
---               , linearLayout
---                 [ width WRAP_CONTENT
---                 , height WRAP_CONTENT
---                 ][  imageView
---                     [ width $ V 20
---                     , height $ V 20
---                     , margin $ MarginRight 5
---                     , imageWithFallback $ getVehicleVariantImage item.vehicleVariant
---                     ]
---                   , textView $
---                     [ color Color.black700
---                     , background $ Color.grey900
---                     , text $ getString (BOOKING_FROM item.bapName)
---                     , padding $ Padding 10 4 10 4
---                     , cornerRadius 26.0
---                     , visibility $ boolToVisibility $ not item.isValueAddNP
---                     , margin $ MarginRight 5
---                     ] <> FontStyle.body17 TypoGraphy
---                   , linearLayout
---                     [ height WRAP_CONTENT
---                     , width WRAP_CONTENT
---                     , background $ Color.grey900
---                     , cornerRadius 26.0
---                     , padding $ PaddingHorizontal 5 5
---                     ] (map (\name -> (tagview name)) item.tagImages)
---                 ]
---               ]
---           , linearLayout
---               [ height WRAP_CONTENT
---               , width WRAP_CONTENT
---               , gravity CENTER
---               , background if rideStatus == "CANCELLED" then Color.red600 else Color.white900
---               , cornerRadius 100.0
---               , padding $ Padding 11 3 11 6
---               ]
---               [ textView
---                   $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
---                     , height WRAP_CONTENT
---                     , width WRAP_CONTENT
---                     , color color'
---                     ]
---                   <> FontStyle.body6 TypoGraphy
---               ]
---           ]
---       , separatorView true state.props.subView
---       ]
 
 tagview :: String -> forall w. PrestoDOM (Effect Unit) w
 tagview name =
@@ -1270,3 +738,307 @@ getNotItemsViewText :: ST.DriverEarningsScreenState -> Array String
 getNotItemsViewText state = case state.props.subView of
   ST.EARNINGS_VIEW -> [ getString NO_RIDES, getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_PREFIX <> " " <> convertUTCtoISC state.props.date "DD MMM, YYYY" <> " " <> getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_SUFFIX ]
   _ -> [ getString NO_POINTS_USED, getString USE_THEM_BEFORE_THEY_EXPIRE ]
+
+shimmerView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+shimmerView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.blue600
+    ]
+    [ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , cornerRadius 12.0
+            , orientation VERTICAL
+            , background Color.white900
+            , margin $ Margin 16 0 16 6
+            ]
+            [ linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ]
+              [ totalEarningsShimmerView push state
+              ]
+            ]
+        , shimmerFrameLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , background Color.blue600
+          ][ linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , margin $ MarginTop 12
+              ]
+              ( map
+                  ( \_ ->
+                      linearLayout
+                        [ width MATCH_PARENT
+                        , height (V 50)
+                        , orientation VERTICAL
+                        , margin $ Margin 8 10 8 10
+                        , background Color.greyDark
+                        , cornerRadius 8.0
+                        ]
+                        []
+                  )
+                  (1 .. 4)
+              )
+          ]
+        ]
+    ]
+
+
+totalEarningsShimmerView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+totalEarningsShimmerView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , padding $ Padding 20 20 20 0
+    , cornerRadius 12.0
+    , stroke $ "1," <> Color.grey900
+    , orientation VERTICAL
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , gravity CENTER
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , weight 1.0
+            , gravity LEFT
+            , visibility $ boolToVisibility $ state.props.subView /= ST.ALL_TIME_EARNINGS_VIEW
+            ]
+            [ shimmerFrameLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ]
+                [ linearLayout
+                  [ width (V 32)
+                  , height (V 32)
+                  , background Color.greyDark
+                  , cornerRadius 3.0
+                  ][]
+                ]
+            ]
+        , shimmerFrameLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation VERTICAL
+            , gravity CENTER
+            ]
+            [ linearLayout
+                  [ height $ V 15
+                  , width $ V 100
+                  , background Color.greyDark
+                  , margin $ MarginBottom 8
+                  , cornerRadius 3.0
+                  ][]
+            ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity RIGHT
+            , weight 1.0
+            , visibility $ boolToVisibility $ state.props.subView /= ST.ALL_TIME_EARNINGS_VIEW
+            ]
+            [ shimmerFrameLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ]
+                [ linearLayout
+                  [ width $ V 32
+                  , height $ V 32
+                  , background Color.greyDark
+                  , cornerRadius 3.0
+                  ][] 
+                ]
+            ]
+        ]
+    , barGraphShimmerView push state
+    , linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , margin $ if state.props.subView == ST.MONTHLY_EARNINGS_VIEW then MarginTop 0 else MarginTop 16
+        , background Color.grey700
+        ]
+        []
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , padding $ PaddingVertical 15 15
+        ]
+        [ linearLayout
+            [ height MATCH_PARENT
+            , gravity CENTER
+            , width $ V (((screenWidth unit) - 75) / 2)
+            , gravity CENTER_VERTICAL
+            ]
+            [ textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text $ getString RIDES
+                  , margin $ MarginRight 8
+                  ]
+                <> FontStyle.paragraphText TypoGraphy
+            , shimmerFrameLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ]
+                [ linearLayout
+                  [ height $ V 10
+                  , width $ V 15
+                  , background Color.greyDark
+                  , cornerRadius 3.0
+                  ][]
+                ]
+            ]
+        , linearLayout
+            [ height $ V 24
+            , width $ V 2
+            , background Color.grey900
+            ]
+            []
+        , linearLayout
+            [ height WRAP_CONTENT
+            , gravity CENTER
+            , width $ V (((screenWidth unit) - 75) / 2)
+            , gravity CENTER_VERTICAL
+            ]
+            [ textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text $ getString DISTANCE
+                  , margin $ MarginRight 8
+                  ]
+                <> FontStyle.paragraphText TypoGraphy
+            , shimmerFrameLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ]
+                [ linearLayout
+                  [ height $ V 10
+                  , width $ V 15
+                  , background Color.greyDark
+                  , cornerRadius 3.0
+                  ][]
+                ]
+            ]
+        ]
+    ]
+
+
+barGraphShimmerView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+barGraphShimmerView push state =
+    relativeLayout
+      [ height $ V 150
+      , width MATCH_PARENT
+      , visibility $ boolToVisibility $ any (_ == state.props.subView) [ST.EARNINGS_VIEW, ST.WEEKLY_EARNINGS_VIEW, ST.MONTHLY_EARNINGS_VIEW]
+      ]
+      [ dottedLineShimmerView push 7 
+      , dottedLineShimmerView push 40
+      , dottedLineShimmerView push 73
+      , linearLayout
+          [ height $ V 2
+          , width MATCH_PARENT
+          , background Color.grey900
+          , margin $ MarginTop 114
+          ]
+          []
+      , linearLayout
+          [ height $ V 150
+          , width MATCH_PARENT
+          , background Color.transparent
+          , orientation HORIZONTAL
+          , gravity BOTTOM
+          ]
+          (mapWithIndex (\index item -> (barShimmerView push index item state)) [12, 50, 100, 80, 20, 70, 5])
+      ]
+
+dottedLineShimmerView :: forall w. (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
+dottedLineShimmerView push margintop =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginTop margintop
+    , gravity CENTER
+    ]
+    [ imageView
+        [ height $ V 2
+        , width MATCH_PARENT
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dotted_line"
+        , weight 1.0
+        ]
+    , shimmerFrameLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        ]
+        [ linearLayout
+          [ height $ V 12
+          , width $ V 20
+          , background Color.greyDark
+          , gravity RIGHT
+          ][]
+        ]
+    ]
+
+barShimmerView :: forall w. (Action -> Effect Unit) -> Int -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+barShimmerView push index length state =
+  let
+    setMargin = case index of
+      0 -> MarginHorizontal 3 6
+      6 -> MarginHorizontal 3 (screenWidth unit / 8)
+      _ -> MarginHorizontal 6 6
+  in
+    linearLayout
+      [ height $ WRAP_CONTENT
+      , width $ WRAP_CONTENT
+      , margin setMargin
+      , weight 1.0
+      , orientation VERTICAL
+      ]
+      [ linearLayout
+          [ height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          ]
+          [ shimmerFrameLayout
+            [ height $ WRAP_CONTENT
+            , width $ WRAP_CONTENT
+            ]
+            [ linearLayout
+                [ height $ V $ length
+                , width $ V (screenWidth unit / 16)
+                , background Color.greyDark
+                , cornerRadius 4.0
+                ][]
+            ]
+          ]
+      , textView
+          $ [ height $ WRAP_CONTENT
+            , width $ MATCH_PARENT
+            , text $ "12"
+            , visibility INVISIBLE
+            , gravity CENTER
+            ]
+          <> FontStyle.paragraphText TypoGraphy
+      , textView
+          $ [ height $ WRAP_CONTENT
+            , width $ MATCH_PARENT
+            , text $ "12"
+            , visibility  INVISIBLE
+            , gravity CENTER
+            ]
+          <> FontStyle.paragraphText TypoGraphy
+      ]

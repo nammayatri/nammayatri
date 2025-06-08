@@ -53,10 +53,4 @@ driverEarningsScreenV2 = do
     RefreshScreen updatedState -> do
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_EARNINGS_SCREEN_V2 updatedState)
-    TripDetails updatedState -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GOTO_TRIP_DETAILS_V2 updatedState.data.selectedRideHistoryItem)
-    CoinsEarningInfo updatedState -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GOTO_COINS_EARNING_INFO_V2 updatedState)
 
