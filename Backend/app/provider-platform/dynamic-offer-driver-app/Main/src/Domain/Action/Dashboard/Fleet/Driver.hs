@@ -723,7 +723,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
 
     isVehicleAlreadyAssociatedWithFleetOrDriver :: Text -> Flow () -- checking vehicle present in the system or not
     isVehicleAlreadyAssociatedWithFleetOrDriver vehicleNo = do
-      rc <- RCQuery.findLastVehicleRCWrapper vehicleNo
+      rc <- RCQuery.findLastVehicleRCWrapperWithApproved vehicleNo (Just True)
       case rc of
         Nothing -> throwError $ VehicleDoesNotExist vehicleNo
         Just rcert -> do
