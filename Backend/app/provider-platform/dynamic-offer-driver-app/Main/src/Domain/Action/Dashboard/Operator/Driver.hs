@@ -223,17 +223,14 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
   person <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (person.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
-  driverOperatorAssociationAndPersonLs <- findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString
+  driverOperatorAssociationPersonLsAndVehicleLs <- findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString mbVehicleNo
   now <- getCurrentTime
-  listItemWithoutFilter <- mapM (createDriverInfo now) driverOperatorAssociationAndPersonLs
-  listItem <- case mbVehicleNo of
-    Just vehicleNo -> filterM (\x -> pure $ x.vehicleNo == Just vehicleNo) listItemWithoutFilter
-    Nothing -> pure listItemWithoutFilter
+  listItem <- mapM (createDriverInfo now) driverOperatorAssociationPersonLsAndVehicleLs
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
-    createDriverInfo now (drvOpAsn, person) = do
+    createDriverInfo now (drvOpAsn, person, mbVehicle) = do
       let driverId = drvOpAsn.driverId
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
@@ -242,10 +239,6 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
                 "Person do not have a mobile number " <> person.id.getId
             )
       (vehicleModel, registrationNo, isRcActive) <- do
-        mbVehicle <- case mbVehicleNo of
-          Just vehicleNo -> QVehicle.findByDriverIdAndRegistrationNo driverId vehicleNo
-          Nothing -> QVehicle.findById driverId
-
         case mbVehicle of
           Just vehicle -> pure (Just vehicle.model, Just vehicle.registrationNo, True)
           Nothing -> do

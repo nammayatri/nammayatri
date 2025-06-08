@@ -61,6 +61,10 @@ findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m 
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
+findLastVehicleRCWithApproved :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Maybe Bool -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWithApproved certNumberHash mbApproved = do
+  findAllWithOptionsKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.approved $ Se.Eq mbApproved]] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
+
 updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.VehicleVariant -> Maybe Bool -> Maybe Bool -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone reviewRequired = do
   now <- getCurrentTime
@@ -93,6 +97,11 @@ findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow 
 findLastVehicleRCWrapper certNumber = do
   certNumberHash <- getDbHash certNumber
   runInReplica $ findLastVehicleRC certNumberHash
+
+findLastVehicleRCWrapperWithApproved :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Bool -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWrapperWithApproved certNumber mbApproved = do
+  certNumberHash <- getDbHash certNumber
+  runInReplica $ findLastVehicleRCWithApproved certNumberHash mbApproved
 
 findLastVehicleRCFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCFleet certNumberHash fleetOwnerId = do
