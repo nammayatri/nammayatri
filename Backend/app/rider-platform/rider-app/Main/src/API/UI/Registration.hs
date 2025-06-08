@@ -46,9 +46,9 @@ type API =
            :> Header "x-bundle-version" Version
            :> Header "x-client-version" Version
            :> Header "x-config-version" Version
-           :> Header "x-forwarded-for" Text
            :> Header "x-rn-version" Text
            :> Header "x-device" Text
+           :> Header "x-forwarded-for" Text
            :> Post '[JSON] DRegistration.AuthRes
            :<|> "signature"
              :> SignatureAuth DRegistration.AuthReq "x-sdk-authorization"
@@ -80,8 +80,8 @@ handler =
     :<|> logout
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientIp =
-  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientIp
+auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor =
+  withFlowHandlerAPI $ DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor
 
 signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion =
