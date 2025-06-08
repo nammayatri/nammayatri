@@ -139,7 +139,7 @@ import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_V2_OUTPUT(..), OPERATION_HUB_SCREEN_OUTPUT(..), ONBOARDING_FAQS_SCREEN_OUTPUT(..))
+import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..),DRIVER_EARNINGS_SCREEN_V2_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_V2_OUTPUT(..), OPERATION_HUB_SCREEN_OUTPUT(..), ONBOARDING_FAQS_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Screens.RegistrationScreenV2.View (filterCategories)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
@@ -514,10 +514,10 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
               if permissionsGiven
                 then do
                   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                  onBoardingFlow -- handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide) // TODO :: Shikhar revert this after R1 changes
+                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide) -- TODO :: Shikhar revert this after R1 changes
                 else do
                   modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                  onBoardingFlow -- permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)  // TODO :: Shikhar revert this after R1 changes
+                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)  -- TODO :: Shikhar revert this after R1 changes
             else do
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
@@ -742,9 +742,9 @@ getSdkTokenFromCache = do
 
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
-  let cc = true 
-  case cc of
-    true -> onBoardingFlowV2 "" -- add v1-config
+  config <- getAppConfigFlowBT Constants.appConfig
+  case config.feature.enableV2Registration of
+    true -> onBoardingFlowV2 ""
     _ -> onBoardingFlowV1 ""
 
 onBoardingFlowV1 :: String -> FlowBT String Unit
@@ -4784,7 +4784,14 @@ confirmQuestionFlow state = let moduleId = maybe "" (\selModule -> selModule ^. 
     getMultipleSelectedOptions = (map (\eOption -> eOption.optionId) state.props.currentQuestionSelectedOptionsData.selectedMultipleOptions)
 
 driverEarningsFlow :: FlowBT String Unit
-driverEarningsFlow = do 
+driverEarningsFlow = do
+  let config = getAppConfig appConfig
+  case config.feature.enableV2Earnings of
+    true -> driverEarningsFlowV2 ""
+    _ -> driverEarningsFlowV1 ""
+  
+driverEarningsFlowV1 :: String -> FlowBT String Unit
+driverEarningsFlowV1 _ = do
   (GlobalState globalState) <- getState
   appConfig <- getAppConfigFlowBT Constants.appConfig
   logField_ <- lift $ lift $ getLogFields
@@ -4861,6 +4868,54 @@ driverEarningsFlow = do
         sortedResp = sortBy (\(API.CoinInfo coinInfo1) (API.CoinInfo coinInfo2) -> compare coinInfo2.coins coinInfo1.coins) filteredResp
       modifyScreenState $ DriverEarningsScreenStateType (\state -> state{data{coinInfoRes = Just $ [tableTitle] <> sortedResp}})
       driverEarningsFlow 
+  where 
+    updateDriverStats state flow = do
+      when (state.props.subView == ST.YATRI_COINS_VIEW) $ do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
+      flow
+    
+    checkCoinsInfoConditions :: API.CoinInfoType -> Boolean
+    checkCoinsInfoConditions coinInfo = 
+      let 
+        cond1 = not $ startsWith "BulkUploadEvent" coinInfo.key
+        cond2 = not $ DS.null coinInfo.title
+        cond3 = coinInfo.coins /= 0
+      in 
+        cond1 && cond2 && cond3
+
+    tableTitle :: API.CoinInfo
+    tableTitle = API.CoinInfo {
+      coins : 0
+    , title : getString TASK_COMPLETED
+    , description : ""
+    , key : "TABLE_TITILE"
+    }
+
+driverEarningsFlowV2 :: String -> FlowBT String Unit
+driverEarningsFlowV2 _ = do
+  (GlobalState globalState) <- getState
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
+  let earningScreenState = globalState.driverEarningsScreen
+  modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+  uiAction <- UI.driverEarningsScreenV2
+  case uiAction of
+    EARNINGS_NAV_V2 HomeScreenNav state -> do
+       updateDriverStats state homeScreenFlow  
+    EARNINGS_NAV_V2 GoToSubscription state -> do
+       updateDriverStats state updateAvailableAppsAndGoToSubs  
+    EARNINGS_NAV_V2 GoToContest state -> do
+       updateDriverStats state referralFlow  
+    EARNINGS_NAV_V2 GoToAlerts state -> do
+       updateDriverStats state $ notificationFlow Nothing
+    EARNINGS_NAV_V2 _ state -> do
+       updateDriverStats state driverEarningsFlow
+    CHANGE_SUB_VIEW_V2 subView state -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
+      driverEarningsFlow
+    REFRESH_EARNINGS_SCREEN_V2 state -> driverEarningsFlow
+    EARNINGS_HISTORY_V2 _ -> driverEarningsFlow
   where 
     updateDriverStats state flow = do
       when (state.props.subView == ST.YATRI_COINS_VIEW) $ do
