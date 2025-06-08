@@ -156,8 +156,8 @@ processPointsGroup ih driverId pointsGroup = do
   distanceBefore <- run $ checkTraveledDistance driverId
   pointsBefore <- run $ ih.getWaypointsNumber driverId
   let currentLength = fromIntegral $ length pointsGroup :: Integer
-
-  run $ processWaypoints ih driverId False 0 Nothing True True False False $ NE.fromList pointsGroup
+  let snapToRoadStateExpiry = 21600 :: Int
+  run $ processWaypoints ih driverId False 0 Nothing True True False False $ NE.fromList pointsGroup snapToRoadStateExpiry
 
   distanceAfter <- run $ checkTraveledDistance driverId
   pointsAfter <- run $ ih.getWaypointsNumber driverId

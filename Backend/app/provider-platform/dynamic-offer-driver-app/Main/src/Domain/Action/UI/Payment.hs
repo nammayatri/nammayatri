@@ -359,21 +359,22 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed ::
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   m ()
 notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode fromWebhook (serviceName, subsConfig) = do
-  activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
-  now <- getCurrentTime
-  let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
-  let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
-  when (updateFailure || (not fromWebhook && notifyFailure)) $ do
-    QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
-    case activeExecutionInvoice of
-      Just invoice' -> do
-        QDF.updateAutoPayToManual invoice'.driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
-      Nothing -> pure ()
-    when (subsConfig.sendInAppFcmNotifications) $ do
-      notifyPaymentFailureIfNotNotified paymentMode
-  let toNotify = notifyFailure && isJust mbBankErrorCode && subsConfig.sendInAppFcmNotifications
-  when toNotify $ notifyPaymentFailureIfNotNotified paymentMode
+  Redis.whenWithLockRedis (invoiceProcessingLockKey orderId.getId) 60 $ do
+    activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
+    now <- getCurrentTime
+    let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
+    let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
+    when (updateFailure || (not fromWebhook && notifyFailure)) $ do
+      QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
+      case activeExecutionInvoice of
+        Just invoice' -> do
+          QDF.updateAutoPayToManual invoice'.driverFeeId
+          QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
+        Nothing -> pure ()
+      when (subsConfig.sendInAppFcmNotifications) $ do
+        notifyPaymentFailureIfNotNotified paymentMode
+    let toNotify = notifyFailure && isJust mbBankErrorCode && subsConfig.sendInAppFcmNotifications
+    when toNotify $ notifyPaymentFailureIfNotNotified paymentMode
   where
     notifyPaymentFailureIfNotNotified paymentMode = do
       let key = "driver-offer:FailedNotif-" <> orderId.getId
@@ -384,6 +385,9 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
       case (isActiveExecutionInvoice_, eventName_ == Just Juspay.ORDER_FAILED) of
         (True, False) -> (validStatus, False)
         (_, _) -> (validStatus, validStatus)
+
+invoiceProcessingLockKey :: Text -> Text
+invoiceProcessingLockKey orderId = "driver-offer:InvoiceProc-" <> orderId
 
 sendNotificationIfNotSent :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m () -> m ()
 sendNotificationIfNotSent key expiry actions = do

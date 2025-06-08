@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Extra.TransporterConfig where
 
@@ -7,12 +8,13 @@ import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
 import Data.Hashable
-import Data.Text (Text)
+import Data.Text (Text, pack, unpack)
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import Domain.Types.Trip
 import GHC.Generics (Generic)
 import Prelude
 
@@ -76,3 +78,45 @@ instance ToJSON ExotelMapping where
 
 instance FromJSON ExotelMapping where
   parseJSON = withObject "ExotelMapping" $ \v -> ExotelMapping <$> v .: "exotelMap"
+
+instance ToJSONKey TripCategory where
+  toJSONKey = toJSONKeyText (pack . show)
+
+instance FromJSONKey TripCategory where
+  fromJSONKey = FromJSONKeyText $ \t ->
+    case reads (unpack t) of
+      [(tc, "")] -> tc
+      _ -> error $ "Unknown TripCategory JSON key: " <> unpack t
+
+data TripCategoryMapping = TripCategoryMapping
+  { tripCategoryMap :: HM.HashMap TripCategory Int
+  }
+  deriving (Show, Eq, Ord, Generic)
+
+fromFieldTripCategory ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion TripCategoryMapping
+fromFieldTripCategory f mb = do
+  value <- fromField f mb
+  case fromJSON value of
+    Success mapping -> pure mapping
+    Error errMsg -> DPSF.returnError DPSF.ConversionFailed f ("TripCategoryMapping parse failed: " <> errMsg)
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be TripCategoryMapping where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance FromField TripCategoryMapping where
+  fromField = fromFieldTripCategory
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be TripCategoryMapping
+
+instance FromBackendRow Postgres TripCategoryMapping
+
+instance ToJSON TripCategoryMapping where
+  toJSON (TripCategoryMapping m) =
+    object ["tripCategoryMap" .= m]
+
+instance FromJSON TripCategoryMapping where
+  parseJSON = withObject "TripCategoryMapping" $ \v ->
+    TripCategoryMapping <$> v .: "tripCategoryMap"
