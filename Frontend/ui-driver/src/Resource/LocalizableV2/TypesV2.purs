@@ -365,6 +365,11 @@ newtype Keymap
   , upload_again :: String
   , select_operation_hub :: String
   , help_centre :: String
+  , all_time :: String
+  , subscription_amount_spent :: String
+  , ride_boost_received :: String
+  , cancellation_charges_received :: String
+  , todays :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -2981,6 +2986,21 @@ select_operation_hub = a
 
 help_centre :: Proxy "help_centre"
 help_centre = a
+
+all_time :: Proxy "all_time"
+all_time = a
+
+subscription_amount_spent :: Proxy "subscription_amount_spent"
+subscription_amount_spent = a
+
+ride_boost_received :: Proxy "ride_boost_received"
+ride_boost_received = a
+
+cancellation_charges_received :: Proxy "cancellation_charges_received"
+cancellation_charges_received = a
+
+todays :: Proxy "todays"
+todays = a
 
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a

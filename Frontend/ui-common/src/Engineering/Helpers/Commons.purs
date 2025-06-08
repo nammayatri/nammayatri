@@ -99,6 +99,10 @@ foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import getPastMonths :: Int -> Array CalendarMonth
 foreign import getDayName :: String -> String
 foreign import getFutureDate :: String -> Int -> String
+foreign import getPastDateFromDate :: String -> Int -> String
+foreign import getPastDaysFromDate :: String -> Int -> Array CalendarDate
+foreign import getPastMonthsFromDate :: String -> Int -> Array CalendarMonth
+foreign import getFutureMonthsFromDate :: String -> Int -> Array CalendarMonth
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 foreign import updateIdMap :: EffectFn1 String CarouselHolderData

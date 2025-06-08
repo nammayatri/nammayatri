@@ -426,6 +426,11 @@ getProxy str = case str of
   UPLOAD_AGAIN -> \a -> a @~ upload_again
   SELECT_OPERATION_HUB -> \a -> a @~ select_operation_hub
   HELP_CENTRE -> \a -> a @~ help_centre
+  ALL_TIME -> \a -> a @~ all_time
+  SUBSCRIPTION_AMOUNT_SPENT -> \a -> a @~ subscription_amount_spent
+  RIDE_BOOST_RECEIVED -> \a -> a @~ ride_boost_received
+  CANCELLATION_CHARGES_RECEIVED -> \a -> a @~ cancellation_charges_received
+  TODAYS -> \a -> a @~ todays
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number

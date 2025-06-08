@@ -288,6 +288,11 @@ getMl =
     , upload_again : "വീണ്ടും അപ്‌ലോഡ് ചെയ്യുക"
     , select_operation_hub : "ആപ്രസിദ്ധീകരണങ്ങളുടെ ഹബ് തിരഞ്ഞെടുക്കുക"
     , help_centre : "സഹായക്ഷിപ്പ് സെംട്രൽ"
+    , all_time: "എല്ലാ സമയത്തും"
+    , subscription_amount_spent: "സബ്സ്ക്രിപ്ഷന് അംതര് വ്യയ്"
+    , ride_boost_received: "റൈഡ് ബൂസ്റ്റ് പ്രാപ്തി"
+    , cancellation_charges_received: "രദ്ദു ശുല്കം പ്രാപ്തി"
+    , todays: "ഇന്നത്തെ"
     , currently_we_allow_only_karnataka_registered_number: (\_ -> "നിലവിൽ, കർണാടകയിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ അനുവദനീയമായുള്ളു")
     , updated_at: "മാപ് അപ്ഡേറ്റ്"
     , trip_count: "ഇന്നത്തെ യാത്രകൾ"

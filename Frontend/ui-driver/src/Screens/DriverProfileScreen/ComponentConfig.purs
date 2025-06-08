@@ -26,6 +26,7 @@ import Common.Types.App (LazyCheck)
 import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Engineering.Helpers.Utils as EHU
 import Prelude (unit, (/=), (<>), (==))
 import Screens.Types as ST
 import Font.Size as FontSize
@@ -68,11 +69,11 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_back"
       , height = (V 25)
       , width = (V 25)
       , margin = (Margin 8 8 8 8)
-      , layoutMargin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
       , enableRipple = true
       }
     , padding = (PaddingVertical 5 5)
@@ -456,7 +457,7 @@ addRCButtonConfig state = let
       , color = Color.blue900}
       , margin = (Margin 16 15 16 0)
       , cornerRadius = 10.0
-      , background = Color.blue600
+      , background = EHU.getColorWithOpacity 12 Color.blue900
       , height = (V 60)
       , id = "AddRCPrimaryButton" 
       }
@@ -471,7 +472,7 @@ addRCButtonConfigs state = let
       , color = Color.black700}
       , margin = (Margin 16 12 16 18)
       , cornerRadius = 10.0
-      , background = Color.blue600
+      , background = EHU.getColorWithOpacity 12 Color.blue900
       , height = (V 60)
       , id = "AddRCPrimaryButton" 
       }

@@ -1501,7 +1501,7 @@ instance showPwdType :: Show DisabilityType where show = genericShow
 instance encodePwdType :: Encode DisabilityType where encode = defaultEnumEncode
 instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
-data DriverStatus = Online | Offline | Silent | Goto
+data DriverStatus = Online | Offline | Silent
 
 data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus | NotTriggered | DestinationReachedTriggered
 
@@ -2801,7 +2801,10 @@ type DriverEarningsScreenProps = {
   individualQuestion :: FaqQuestions,
   callRideSummaryApi :: Boolean,
   loadMoreButtonVisibility :: Boolean,
-  offsetValue :: Int
+  offsetValue :: Int,
+  fromDate :: String,
+  toDate :: String,
+  graphIndex :: Int
 }
 
 type CalendarState = { 
@@ -2838,7 +2841,9 @@ type WeeklyEarning = {
   rideDistance :: Int,
   rideDate :: String,
   noOfRides :: Int,
-  percentLength :: Number
+  percentLength :: Number,
+  cancellationCharges :: Int,
+  tipAmount :: Int
 }
 
 type TotalEarningsData = {
@@ -2846,7 +2851,9 @@ type TotalEarningsData = {
   toDate :: String,
   totalEarnings :: Int,
   totalRides :: Int,
-  totalDistanceTravelled :: Int
+  totalDistanceTravelled :: Int,
+  cancellationCharges :: Int,
+  tipAmount :: Int
 }
 
 newtype CachedEarningsForDriver = CachedEarningsForDriver {
