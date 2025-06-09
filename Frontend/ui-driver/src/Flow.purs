@@ -556,6 +556,23 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                     modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
                     permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
             else do
+              if (HU.isParentView FunctionCall) then do
+                void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
+                  $ CTA.EventPayload
+                      { event: "process_result"
+                      , payload:
+                          Just
+                            { action: "update_token"
+                            , trip_amount: Nothing
+                            , ride_status: Nothing
+                            , trip_id: Nothing
+                            , screen: Nothing
+                            , exit_app: true
+                            , registration_token: Just $ getValueToLocalStore REGISTERATION_TOKEN
+                            }
+                      }
+                pure unit
+              else pure unit
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
               if getDriverInfoResp.verified
@@ -657,6 +674,12 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               appConfig <- getAppConfigFlowBT Constants.appConfig              
               modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
               hideSplashAndCallFlow driverEarningsFlow
+            "registration" -> hideSplashAndCallFlow onBoardingFlow
+            "onboarding" -> do
+              isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+              if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
+                  chooseCityFlow event
+                else authenticationFlow "" event
             "profile" -> do
               -- liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
               (GlobalState allState) <- getState
@@ -2550,6 +2573,23 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  if (HU.isParentView FunctionCall) then do
+    void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
+      $ CTA.EventPayload
+          { event: "process_result"
+          , payload:
+              Just
+                { action: "terminate"
+                , trip_amount: Nothing
+                , ride_status: Nothing
+                , trip_id: Nothing
+                , screen: Nothing
+                , exit_app: true
+                , registration_token: Just $ getValueToLocalStore REGISTERATION_TOKEN
+                }
+          }
+    pure unit
+  else do pure unit
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   setValueToLocalStore LOGS_TRACKING "false"
