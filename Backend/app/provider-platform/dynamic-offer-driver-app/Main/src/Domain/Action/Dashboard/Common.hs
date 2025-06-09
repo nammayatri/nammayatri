@@ -155,5 +155,4 @@ checkFleetOwnerVerification :: Text -> Maybe Bool -> Flow ()
 checkFleetOwnerVerification personId mbEnabledCheck = do
   when (mbEnabledCheck == Just True) $ do
     fleetOwnerInfo <- QFI.findByPrimaryKey (Id personId) >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
-    unless (fleetOwnerInfo.verified) $ throwError (InvalidRequest "Fleet owner is not verified or is not enabled")
     unless fleetOwnerInfo.enabled $ throwError (InvalidRequest "Fleet owner is not enabled")
