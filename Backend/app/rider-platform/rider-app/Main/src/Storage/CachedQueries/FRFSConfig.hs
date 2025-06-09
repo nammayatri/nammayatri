@@ -31,7 +31,7 @@ findByMerchantOperatingCityIdAndRouteId :: (CacheFlow m r, EsqDBFlow m r, MonadF
 findByMerchantOperatingCityIdAndRouteId merchantOperatingCityId routeId = do
   Hedis.safeGet (makeIdKey merchantOperatingCityId routeId) >>= \case
     Just a -> return $ Just a
-    Nothing -> flip whenJust cacheFRFSConfig /=<< Queries.findByMerchantOperatingCityIdAndRouteId merchantOperatingCityId routeId |<|>| Queries.findByMerchantOperatingCityIdAndRouteId merchantOperatingCityId Nothing
+    Nothing -> flip whenJust cacheFRFSConfig /=<< Queries.findByMerchantOperatingCityIdAndRouteId merchantOperatingCityId routeId
 
 cacheFRFSConfig :: (CacheFlow m r) => Domain.Types.FRFSConfig.FRFSConfig -> m ()
 cacheFRFSConfig frfsConfig = do
