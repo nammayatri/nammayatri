@@ -50,7 +50,6 @@ import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
-import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffsetSearch)
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -220,17 +219,52 @@ getDriverOperatorList ::
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
 getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString requestorId = do
-  person <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
-  unless (person.role == DP.OPERATOR) $
+  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (requestor.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
-  driverOperatorAssociationPersonLsAndVehicleLs <- findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString mbVehicleNo
   now <- getCurrentTime
-  listItem <- mapM (createDriverInfo now) driverOperatorAssociationPersonLsAndVehicleLs
+  driverOperatorInfoList <- case mbVehicleNo of
+    Nothing -> do
+      driverOperatorAssociationAndPersonLs <- QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString Nothing
+      forM driverOperatorAssociationAndPersonLs \(drvOpAsn, person) -> do
+        let driverId = drvOpAsn.driverId
+        (vehicleModel, registrationNo, isRcActive) <- fetchVehicleDetailsByDriverId now driverId
+        pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
+    Just vehicleNo -> (maybeToList <$>) . runMaybeT $ do
+      (vehicleModel, registrationNo, isRcActive, driverId) <- fetchVehicleDetailsByVehicleNo now vehicleNo
+      (drvOpAsn, person) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId)
+      pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
+
+  listItem <- mapM (buildDriverInfo now) driverOperatorInfoList
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
-    createDriverInfo now (drvOpAsn, person, mbVehicle) = do
+    fetchVehicleDetailsByDriverId now driverId = do
+      mbVehicle <- QVehicle.findById driverId
+      case mbVehicle of
+        Just vehicle -> pure (Just vehicle.model, Just vehicle.registrationNo, True)
+        Nothing -> do
+          latestAssociation <- QDRC.findLatestLinkedByDriverId driverId now
+          case latestAssociation of
+            Nothing -> pure (Nothing, Nothing, False)
+            Just assoc -> do
+              mbRc <- QVRC.findById assoc.rcId
+              case mbRc of
+                Nothing -> pure (Nothing, Nothing, False)
+                Just rc -> pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive)
+
+    fetchVehicleDetailsByVehicleNo now vehicleNo = do
+      mbVehicle <- lift $ QVehicle.findByRegistrationNo vehicleNo
+      case mbVehicle of
+        Just vehicle -> do
+          pure (Just vehicle.model, Just vehicle.registrationNo, True, vehicle.driverId)
+        Nothing -> do
+          rc <- MaybeT $ QVRC.findLastVehicleRCWrapper vehicleNo
+          assoc <- MaybeT $ QDRC.findLatestLinkedByRCId rc.id now
+          pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive, assoc.driverId)
+
+    buildDriverInfo now (drvOpAsn, person, vehicleModel, registrationNo, isRcActive) = do
       let driverId = drvOpAsn.driverId
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
@@ -238,19 +272,6 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             ( InvalidRequest $
                 "Person do not have a mobile number " <> person.id.getId
             )
-      (vehicleModel, registrationNo, isRcActive) <- do
-        case mbVehicle of
-          Just vehicle -> pure (Just vehicle.model, Just vehicle.registrationNo, True)
-          Nothing -> do
-            latestAssociation <- QDRC.findLatestLinkedByDriverId driverId now
-            case latestAssociation of
-              Nothing -> pure (Nothing, Nothing, False)
-              Just assoc -> do
-                mbRc <- QVRC.findById assoc.rcId
-                case mbRc of
-                  Nothing -> pure (Nothing, Nothing, False)
-                  Just rc -> pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive)
-
       let merchantOpCityId = person.merchantOperatingCityId
       transporterConfig <-
         findByMerchantOpCityId merchantOpCityId Nothing
