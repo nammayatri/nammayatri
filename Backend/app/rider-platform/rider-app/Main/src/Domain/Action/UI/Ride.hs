@@ -13,13 +13,11 @@
 -}
 
 module Domain.Action.UI.Ride
-  ( GetDriverLocResp,
-    GetRideStatusResp (..),
+  ( GetRideStatusResp (..),
     PickupStage (..),
     EditLocation,
     EditLocationReq (..),
     EditLocationResp (..),
-    getDriverLoc,
     getRideStatus,
     editLocation,
     getDriverPhoto,
@@ -29,12 +27,10 @@ where
 
 import AWS.S3 as S3
 import qualified Beckn.ACL.Update as ACL
-import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Data.Text as Text
-import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
@@ -54,15 +50,11 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (HasField)
-import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
-import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Types
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.LocationMapping as SLM
@@ -80,17 +72,8 @@ import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import qualified Tools.Maps as MapSearch
-import TransactionLogs.Types
 
 data PickupStage = OnTheWay | Reached | Reaching
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data GetDriverLocResp = GetDriverLocResp
-  { lat :: Double,
-    lon :: Double,
-    pickupStage :: Maybe JourneyLegStatus,
-    lastUpdate :: UTCTime
-  }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data GetRideStatusResp = GetRideStatusResp
@@ -113,45 +96,6 @@ data EditLocationResp = EditLocationResp
     result :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-getDriverLoc ::
-  ( CacheFlow m r,
-    EncFlow m r,
-    EsqDBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasLongDurationRetryCfg r c
-  ) =>
-  Id SRide.Ride ->
-  m GetDriverLocResp
-getDriverLoc rideId = do
-  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  when
-    (ride.status == COMPLETED || ride.status == CANCELLED)
-    $ throwError $ RideInvalidStatus ("Cannot track this ride" <> Text.pack (show ride.status))
-  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-  res <-
-    if isValueAddNP && isJust ride.trackingUrl
-      then CallBPP.callGetDriverLocation ride.trackingUrl
-      else do
-        withLongRetry $ CallBPP.callTrack booking ride
-        trackingLoc :: OnTrack.TrackingLocation <- Redis.get (Common.mkRideTrackingRedisKey ride.id.getId) >>= fromMaybeM (InvalidRequest "Driver location not updated")
-        return $
-          CallBPP.GetLocationRes
-            { currPoint = MapSearch.LatLong {lat = trackingLoc.gps.lat, lon = trackingLoc.gps.lon},
-              lastUpdate = trackingLoc.updatedAt
-            }
-  return $
-    GetDriverLocResp
-      { lat = res.currPoint.lat,
-        lon = res.currPoint.lon,
-        lastUpdate = res.lastUpdate,
-        pickupStage = booking.journeyLegStatus
-      }
 
 getDriverPhoto :: Text -> Flow Text
 getDriverPhoto filePath = S3.get $ Text.unpack filePath

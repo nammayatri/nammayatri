@@ -369,6 +369,7 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
       SharedLogic.Referral
+      SharedLogic.Ride
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras

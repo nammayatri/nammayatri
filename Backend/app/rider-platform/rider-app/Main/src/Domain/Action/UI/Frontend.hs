@@ -22,6 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
+import Data.Ord (comparing)
 import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
@@ -38,6 +39,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
@@ -65,7 +67,15 @@ getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Boo
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   activeJourneys <- DMultimodal.getActiveJourneyIds personId
   if not (null activeJourneys)
-    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys}) Nothing
+    then do
+      let paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) activeJourneys
+      if null paymentSuccessJourneys
+        then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys, currentJourney = Nothing}) Nothing
+        else do
+          let earliestActiveJourney = maximumBy (comparing (.startTime)) paymentSuccessJourneys
+          legs <- getAllLegsInfo earliestActiveJourney.id False
+          journeyInfoResp <- generateJourneyInfoResponse earliestActiveJourney legs
+          return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys, currentJourney = Just journeyInfoResp}) Nothing
     else do
       personStatus' <- QPFS.getStatus personId
       case personStatus' of
