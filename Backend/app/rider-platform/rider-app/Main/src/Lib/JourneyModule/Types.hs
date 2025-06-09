@@ -4,7 +4,6 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.HashMap.Strict as HM
-import qualified Domain.Action.UI.Ride as DARide
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -56,6 +55,7 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Estimate as QEstimate

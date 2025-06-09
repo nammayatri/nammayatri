@@ -3,6 +3,7 @@
 
 module Domain.Types.Extra.PersonFlowStatus where
 
+import qualified API.Types.UI.MultimodalConfirm as APITypes
 import Data.Aeson
 import Data.OpenApi
 import qualified Domain.Types.Booking as DB
@@ -35,7 +36,8 @@ data FlowStatus
       { list :: [SRB.BookingAPIEntity]
       }
   | ACTIVE_JOURNEYS
-      { journeys :: [DJ.Journey]
+      { journeys :: [DJ.Journey],
+        currentJourney :: Maybe APITypes.JourneyInfoResp
       }
   | FEEDBACK_PENDING SRB.BookingAPIEntity
   deriving (Show, Generic)
