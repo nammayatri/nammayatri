@@ -31,11 +31,28 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "frfs" :> "routes" :> QueryParam "endStationCode" Data.Text.Text :> QueryParam "startStationCode" Data.Text.Text
+  ( TokenAuth :> "frfs" :> "booking" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking) :> "feedback" :> "data"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "frfs"
+      :> "routes"
+      :> QueryParam
+           "endStationCode"
+           Data.Text.Text
+      :> QueryParam
+           "startStationCode"
+           Data.Text.Text
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
-      :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
+      :> MandatoryQueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
       :> Get
            '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
@@ -283,7 +300,17 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
+handler = postFrfsBookingFeedbackData :<|> getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
+
+postFrfsBookingFeedbackData ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
+    API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFrfsBookingFeedbackData a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsBookingFeedbackData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
