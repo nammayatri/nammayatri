@@ -1,12 +1,11 @@
 module Storage.Queries.DriverOperatorAssociationExtra where
 
-import Control.Applicative (liftA3)
+import Control.Applicative (liftA2)
 import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVeh
 import Domain.Utils (convertTextToUTC)
 import qualified EulerHS.Language as L
@@ -19,10 +18,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOperatorAssociation as BeamDOA
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.Beam.Vehicle as BeamV
 import Storage.Queries.OrphanInstances.DriverOperatorAssociation ()
 import Storage.Queries.OrphanInstances.Person ()
-import Storage.Queries.OrphanInstances.Vehicle ()
 
 findAllByOperatorIdWithLimitOffsetSearch ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
@@ -31,9 +28,9 @@ findAllByOperatorIdWithLimitOffsetSearch ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-  m [(Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation, DP.Person, Maybe DVeh.Vehicle)]
-findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset mbSearchString mbVehicleNo =
+  Maybe (Id DP.Person) ->
+  m [(Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation, DP.Person)]
+findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset mbSearchString mbDriverId =
   do
     dbConf <- getReplicaBeamConfig
     now <- getCurrentTime
@@ -46,12 +43,12 @@ findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset 
           B.select $
             B.limit_ (fromIntegral limit) $
               B.offset_ (fromIntegral offset) $
-                B.orderBy_ (\(doa', _, _) -> B.desc_ doa'.associatedOn) $
+                B.orderBy_ (\(doa', _) -> B.desc_ doa'.associatedOn) $
                   B.filter_'
-                    ( \(doa, person, vehicle) ->
+                    ( \(doa, person) ->
                         doa.operatorId B.==?. B.val_ operatorId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> person.id B.==?. B.val_ driverId.getId) mbDriverId
                           B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> doa.isActive B.==?. B.val_ isActive) mbIsActive
-                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\vRegNo -> vRegNo B.==?. B.val_ vehicleNo) (BeamV.registrationNo vehicle)) mbVehicleNo
                           B.&&?. B.sqlBool_ (doa.associatedTill B.>=. B.val_ (Just now))
                           B.&&?. ( case mbSearchString of
                                      Nothing -> B.sqlBool_ $ B.val_ True
@@ -72,11 +69,10 @@ findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset 
                     do
                       doa <- B.all_ (BeamCommon.driverOperatorAssociation BeamCommon.atlasDB)
                       person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamDOA.driverId doa B.==. BeamP.id person)
-                      vehicle <- B.leftJoin_ (B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)) (\vehicle -> BeamV.driverId vehicle B.==. BeamDOA.driverId doa)
-                      pure (doa, person, vehicle)
+                      pure (doa, person)
     case res of
       Right doaList ->
-        catMaybes <$> mapM (\(d, p, v) -> liftA3 (,,) <$> fromTType' d <*> fromTType' p <*> (traverse fromTType' v)) doaList
+        catMaybes <$> mapM (\(d, p) -> liftA2 (,) <$> fromTType' d <*> fromTType' p) doaList
       Left _ -> pure []
 
 createDriverOperatorAssociationIfNotExists ::
