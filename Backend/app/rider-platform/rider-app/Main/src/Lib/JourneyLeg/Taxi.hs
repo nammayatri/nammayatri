@@ -67,6 +67,10 @@ instance JT.JourneyLeg TaxiLegRequest m where
 
       mkOneWaySearchReq = do
         (destination, stops') <- lastAndRest stops & fromMaybeM (InvalidRequest "Destination is required!")
+        let startTime =
+              if journeyLegData.sequenceNumber == 0
+                then Nothing
+                else journeyLegData.fromDepartureTime
         return $
           OneWaySearch $
             OneWaySearchReq
@@ -74,7 +78,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 isSourceManuallyMoved = Just False,
                 isDestinationManuallyMoved = Just False,
                 isSpecialLocation = Just False, -- Fix it later
-                startTime = journeyLegData.fromDepartureTime,
+                startTime = startTime,
                 isReallocationEnabled = Just True,
                 fareParametersInRateCard = Just True,
                 quotesUnifiedFlow = Just True,
