@@ -794,12 +794,12 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
     then do
-      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
+      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
           resVerifyRes <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
           case resVerifyRes of
-            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures
+            Left _ -> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
             Right verifyRes -> do
               case verifyRes.verifyRCResp of
                 Verification.AsyncResp res -> do
@@ -810,7 +810,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
                 Verification.SyncResp resp -> do
                   onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
-    else initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures
+    else initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
     createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
@@ -893,7 +893,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             approved = Just False,
             updatedAt = now
           }
-    initiateRCCreation mVehicleRC now mbFleetOwnerId allFailures = do
+    initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
         Just vehicleRC -> do
           -- upsert vehicleRC
@@ -903,19 +903,22 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             Person.FLEET_OWNER -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
               when (isNothing mbFleetAssoc) $ do
-                fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
-                FRCAssoc.create fleetRCAssoc
+                when (transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID) $ do
+                  fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+                  FRCAssoc.create fleetRCAssoc
             _ -> do
               -- linking to driver
               whenJust mbFleetOwnerId $ \fleetOwnerId -> do
                 mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId) rc.id now
                 when (isNothing mbFleetAssoc) $ do
-                  fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId (Id fleetOwnerId :: Id Person.Person) rc.id (convertTextToUTC (Just "2099-12-12"))
-                  FRCAssoc.create fleetRCAssoc
+                  when (transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID) $ do
+                    fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId (Id fleetOwnerId :: Id Person.Person) rc.id (convertTextToUTC (Just "2099-12-12"))
+                    FRCAssoc.create fleetRCAssoc
               mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
               when (isNothing mbAssoc) $ do
-                driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
-                DAQuery.create driverRCAssoc
+                when (transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID) $ do
+                  driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+                  DAQuery.create driverRCAssoc
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
               whenJust mbVehicle $ \vehicle -> do
