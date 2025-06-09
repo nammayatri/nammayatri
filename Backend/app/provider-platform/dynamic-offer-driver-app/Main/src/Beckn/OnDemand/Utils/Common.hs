@@ -286,7 +286,7 @@ parseAddress loc@Spec.Location {..} = do
   let state' = locationState >>= (.stateName)
   let country' = locationCountry >>= (.countryName)
   locationAddress' <- locationAddress & fromMaybeM (InvalidRequest $ "Missing locationAddress:-" <> show loc)
-  address@OS.Address {..} <- buildAddressFromText locationAddress'
+  let address@OS.Address {..} = buildAddressFromText locationAddress' Nothing
   let fullAddress = mkFullAddress address
   pure $
     Just $
@@ -1082,12 +1082,11 @@ mkVehicleAgeTagGroupV2 vehicleAge' =
         }
     ]
 
-buildAddressFromText :: MonadFlow m => Text -> m OS.Address
-buildAddressFromText fullAddress = do
+buildAddressFromText :: Text -> Maybe Bool -> OS.Address
+buildAddressFromText fullAddress isMultimodal =
   let splitedAddress = T.splitOn ", " fullAddress
       totalAddressComponents = List.length splitedAddress
-  logDebug $ "Search Address:-" <> fullAddress
-  let area_code_ = Nothing
+      area_code_ = Nothing
       building_ = splitedAddress !? (totalAddressComponents - 6)
       city_ = splitedAddress !? (totalAddressComponents - 3)
       country_ = splitedAddress !? (totalAddressComponents - 1)
@@ -1102,8 +1101,20 @@ buildAddressFromText fullAddress = do
       street = replaceEmpty street_
       locality = replaceEmpty locality_
       ward_ = Just $ T.intercalate ", " $ catMaybes [locality, street, building]
-      ward = if ward_ == Just "" then city_ else ward_
-  pure $ OS.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward}
+      ward = case ward_ of
+        Just "" -> if isMultimodal == Just True then Just fullAddress else city_
+        _ -> ward_
+   in OS.Address
+        { area_code = area_code_,
+          building = building_,
+          city = city_,
+          country = country_,
+          door = door_,
+          locality = locality_,
+          state = state_,
+          street = street_,
+          ward = ward
+        }
 
 (!?) :: [a] -> Int -> Maybe a
 (!?) xs i
