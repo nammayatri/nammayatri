@@ -1,7 +1,7 @@
 { self, ... }:
 
 let
-  imageName = "ghcr.io/nammayatri/nammayatri";
+  imageName = "ghcr.io/vinit-j13/test-namma";
   # self.rev will be non-null only when the working tree is clean
   # This is equivalent to `git rev-parse --short HEAD`
   imageTag = builtins.substring 0 6 (self.rev or "dev");
@@ -52,8 +52,8 @@ in
             ls opt/app/swagger
           '';
         }).overrideAttrs (lib.addMetaAttrs {
-          description = "Docker image for nammayatri backend";
-          homepage = "https://github.com/nammayatri/nammayatri/pkgs/container/nammayatri";
+          description = "Docker image for test-namma backend";
+          homepage = "https://github.com/vinit-j13/test-namma/pkgs/container/test-namma";
         });
       };
     };
