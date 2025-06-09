@@ -182,7 +182,11 @@ view push state =
                 , orientation VERTICAL
                 , visibility $ boolToVisibility (not state.props.showShimmer)
                 ]
-                [ tabView push state
+                [ linearLayout
+                  [ width MATCH_PARENT
+                  , visibility $ boolToVisibility $ (state.props.subView == ST.EARNINGS_VIEW || state.props.subView == ST.YATRI_COINS_VIEW) ]
+                  [ GenericHeader.view (push <<< GenericHeaderAC) (defaultGenericHeaderConfig state)]
+                , tabView push state
                 , case state.props.subView of
                     ST.USE_COINS_VIEW -> do
                       if (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
