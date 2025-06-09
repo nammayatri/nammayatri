@@ -17,7 +17,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Route as Beam
 import Storage.Queries.RouteExtra as ReExport
-import qualified Storage.Queries.Transformers.ProviderDetails
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Route.Route -> m ())
 create = createWithKV
@@ -73,7 +72,6 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.polyline polyline,
-      Se.Set Beam.configJSON (Storage.Queries.Transformers.ProviderDetails.getProviderDetailsJson <$> providerDetails),
       Se.Set Beam.shortName shortName,
       Se.Set Beam.startLat ((.lat) startPoint),
       Se.Set Beam.startLon ((.lon) startPoint),

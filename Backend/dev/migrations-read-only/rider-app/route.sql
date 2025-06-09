@@ -25,8 +25,3 @@ ALTER TABLE atlas_app.route ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.route ADD COLUMN stop_count integer ;
 ALTER TABLE atlas_app.route ADD COLUMN daily_trip_count integer ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.route ADD COLUMN config_json json ;
