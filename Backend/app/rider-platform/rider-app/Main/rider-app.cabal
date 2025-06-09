@@ -725,6 +725,7 @@ library
       Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingFeedback
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
@@ -861,6 +862,7 @@ library
       Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingFeedback
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
@@ -999,6 +1001,7 @@ library
       Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingFeedback
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier

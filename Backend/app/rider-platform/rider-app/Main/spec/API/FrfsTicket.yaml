@@ -196,7 +196,24 @@ types:
   FRFSTicketVerifyReq:
     qrData: Text
 
+  BookingFareAcceptedReq:
+    isFareAccepted: Bool
+
+  FRFSBookingFeedbackReq:
+    enum: "BookingFareAccepted BookingFareAcceptedReq"
+
 apis:
+  # Booking Fare Accepted
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/feedback
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
   # GET metro/bus routes for the merchant city
   - GET:
       endpoint: /frfs/routes

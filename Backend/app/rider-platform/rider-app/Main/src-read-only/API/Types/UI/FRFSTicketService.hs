@@ -28,6 +28,15 @@ data AutocompleteRes = AutocompleteRes {routes :: [FRFSRouteAPI], stops :: [FRFS
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BookingFareAcceptedReq = BookingFareAcceptedReq {isFareAccepted :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingFeedbackReq
+  = BookingFareAccepted BookingFareAcceptedReq
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
   { paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
     status :: FRFSBookingPaymentStatusAPI,
