@@ -45,6 +45,7 @@ Journey:
     hasPreferredTransitModes: Maybe Bool
     fromLocationAddress: Maybe Text
     toLocationAddress: Maybe Text
+    isPublicTransportIncluded: Maybe Bool
 
   beamType:
     status: Maybe JourneyStatus

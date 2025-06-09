@@ -24,6 +24,7 @@ data JourneyT f = JourneyT
     hasPreferredTransitModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isPublicTransportIncluded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
     recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     relevanceScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
