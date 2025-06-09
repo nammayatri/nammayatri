@@ -21,7 +21,6 @@ data FRFSConfigT f = FRFSConfigT
     customEndTime :: B.C f Kernel.Prelude.Text,
     discount :: B.C f Kernel.Prelude.Int,
     freeTicketInterval :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    id :: B.C f Kernel.Prelude.Text,
     isCancellationAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEventOngoing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxFreeTicketCashback :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -33,7 +32,6 @@ data FRFSConfigT f = FRFSConfigT
     providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     radius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     roundTripTicketLimit :: B.C f Kernel.Prelude.Int,
-    routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     straightLineDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     validTillSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -43,10 +41,10 @@ data FRFSConfigT f = FRFSConfigT
 
 instance B.Table FRFSConfigT where
   data PrimaryKey FRFSConfigT f = FRFSConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = FRFSConfigId . id
+  primaryKey = FRFSConfigId . merchantOperatingCityId
 
 type FRFSConfig = FRFSConfigT Identity
 
-$(enableKVPG ''FRFSConfigT ['id] [])
+$(enableKVPG ''FRFSConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''FRFSConfigT "frfs_config")

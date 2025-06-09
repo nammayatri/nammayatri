@@ -374,9 +374,7 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = do
         fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgIdAndStationId fromStationId' partnerOrg.orgId
         toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgIdAndStationId toStationId' partnerOrg.orgId
         return (fromStation', toStation')
-  routeInfo <- Utils.getRouteByStationIdsAndIntegratedBPPConfigId fromStation'.id toStation'.id (Just fromStation'.integratedBppConfigId)
-  let routeId = routeInfo <&> (.route.id)
-  frfsConfig' <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId fromStation'.merchantOperatingCityId routeId >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
+  frfsConfig' <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation'.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
 
   unless (frfsConfig'.merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId.getId ||+ " not valid for merchantId:" +|| frfsConfig'.merchantId.getId ||+ ""
@@ -446,9 +444,7 @@ getFareV2 :: PartnerOrganization -> Station -> Station -> Maybe (Id PartnerOrgTr
 getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = do
   let merchantId = fromStation.merchantId
       frfsVehicleType = fromStation.vehicleType
-  routeInfo <- Utils.getRouteByStationIdsAndIntegratedBPPConfigId fromStation.id toStation.id (Just fromStation.integratedBppConfigId)
-  let routeId = routeInfo <&> (.route.id)
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId fromStation.merchantOperatingCityId routeId >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bapConfig <-
     CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)
@@ -672,9 +668,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
   fromStation <- CQS.findById quote.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId: " <> quote.fromStationId.getId)
   toStation <- CQS.findById quote.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId: " <> quote.toStationId.getId)
-  routeInfo <- Utils.getRouteByStationIdsAndIntegratedBPPConfigId fromStation.id toStation.id (Just fromStation.integratedBppConfigId)
-  let routeId = routeInfo <&> (.route.id)
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdAndRouteId fromStation.merchantOperatingCityId routeId >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   redisLockSearchId <- Redis.tryLockRedis lockKey 10
   if not redisLockSearchId
     then throwError $ RedisLockStillProcessing lockKey
