@@ -100,7 +100,7 @@ tfLocation (Just station) =
   Just $
     Spec.Location
       { locationDescriptor = Utils.tfDescriptor (Just $ station.code) (Just $ station.name),
-        locationGps = Just (show station.lat <> ", " <> show station.lon),
+        locationGps = Nothing,
         locationCity = Nothing,
         locationCountry = Nothing
       }

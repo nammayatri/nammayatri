@@ -20,6 +20,7 @@ import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson as A
+import qualified Data.UUID as UU
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Domain.Types
@@ -120,13 +121,12 @@ parseTickets item fulfillments = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
   when (null fulfillmentIds) $ throwError $ InvalidRequest "Empty fulfillmentIds"
 
-  -- Find the TICKET type fulfillment
-  let ticketFulfillment = findTicketFulfillment fulfillments
-  when (isNothing ticketFulfillment) $ throwError $ InvalidRequest "No ticket fulfillment found"
-
-  -- Parse the ticket from the TICKET type fulfillment
-  ticket <- parseTicket $ fromJust ticketFulfillment
-  pure [ticket]
+  let ticketFulfillments = filterByIds fulfillmentIds "TICKET"
+      finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds fulfillmentIds "TRIP"
+  when (null finalTicketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
+  traverse parseTicket finalTicketFulfillments
+  where
+    filterByIds fIds fullfillmentType = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds) && f.fulfillmentType == Just fullfillmentType) fulfillments
 
 parseTicket :: (MonadFlow m) => Spec.Fulfillment -> m Domain.DTicket
 parseTicket fulfillment = do
@@ -138,24 +138,25 @@ parseTicket fulfillment = do
   validTill <- startStopAuth.authorizationValidTo & fromMaybeM (InvalidRequest "TicketValidTill not found")
   status <- startStopAuth.authorizationStatus & fromMaybeM (InvalidRequest "TicketStatus not found")
 
-  -- tags <- fulfillment.fulfillmentTags & fromMaybeM (InvalidRequest "FulfillmentTags not found")
-  -- ticketNumber <- Utils.getTag "TICKET_INFO" "NUMBER" tags & fromMaybeM (InvalidRequest "TicketNumber not found")
-
+  let mbTags = fulfillment.fulfillmentTags
+  ticketNumber <- (pure (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") |<|>| getTicketNumber) >>= fromMaybeM (InvalidRequest "TicketNumber not found")
   pure $
     Domain.DTicket
       { qrData,
         vehicleNumber = Nothing,
         validTill,
         bppFulfillmentId = fId,
-        ticketNumber = "123",
+        ticketNumber,
         status,
         description = Nothing,
         qrRefreshAt = Nothing
       }
-
-findTicketFulfillment :: [Spec.Fulfillment] -> Maybe Spec.Fulfillment
-findTicketFulfillment fulfillments =
-  find (\f -> f.fulfillmentType == Just "TICKET") fulfillments
+  where
+    getTicketNumber :: (MonadFlow m) => m (Maybe Text)
+    getTicketNumber = do
+      id <- generateGUID
+      pure $
+        UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
 
 type TxnId = Text
 
