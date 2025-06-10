@@ -39,6 +39,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
+  TripCategoryMapping : Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -1032,6 +1033,7 @@ TransporterConfig:
     liveEKD: Maybe Bool
     deactivateRCOnUnlink: Maybe Bool
     aaEnabledClientSdkVersion : Maybe Text
+    snapToRoadExpiryByCategory: Maybe TripCategoryMapping
 
   beamType:
     currency: Maybe Currency
@@ -1293,6 +1295,8 @@ TransporterConfig:
     allowedReferralEntities: "text[]"
     weekStartMode : int
     earningsWindowSize : int
+    snapToRoadExpiryByCategory : json
+
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'

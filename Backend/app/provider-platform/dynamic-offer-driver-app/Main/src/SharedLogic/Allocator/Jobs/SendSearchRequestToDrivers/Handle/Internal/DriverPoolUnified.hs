@@ -19,7 +19,6 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -234,7 +233,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False
               if length normalDriverPoolBatch < batchSize
                 then do
-                  filledBatch <- fillBatch transporterConfig normalDriverPool normalDriverPoolBatch (mbVersion <|> searchReq.poolingLogicVersion) batchNum
+                  filledBatch <- fillBatch transporterConfig normalDriverPool normalDriverPoolBatch (mbVersion <|> searchReq.poolingLogicVersion)
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   pure (filledBatch, [], Just radiusStep)
                 else do
@@ -291,7 +290,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool = SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum driverPoolCfg
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool = SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum driverPoolCfg searchTry.id
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
           fst $
@@ -340,7 +339,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo
             else pure []
 
-        fillBatch transporterConfig allNearbyDrivers batch mbVersion batchNum_ = do
+        fillBatch transporterConfig allNearbyDrivers batch mbVersion = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
           driversWithValidReqAmount <- filterM (\dpr -> SDP.checkRequestCount searchTry.id (SDP.isBookAny $ tripQuoteDetails <&> (.vehicleServiceTier)) dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier dpr.driverPoolResult.serviceTierDowngradeLevel driverPoolCfg) driversNotInBatch
@@ -352,8 +351,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           let fillSize = batchSize - length batch
           (batch <>)
             <$> do
-              (_, taggedPool) <- SDP.makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags mbVersion batchNum driverPoolCfg -- TODO: Fix isOnRidePool flag
-              pushTaggedPoolToKafka batchNum_ searchTry taggedPool
+              (_, taggedPool) <- SDP.makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags mbVersion batchNum driverPoolCfg searchTry.id -- TODO: Fix isOnRidePool flag
               return taggedPool
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
@@ -370,18 +368,6 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         batchSize = getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
-
-        pushTaggedPoolToKafka batchNum_ searchTry_ taggedPool = do
-          pushToKafka
-            ( SearchTryBatchPoolData
-                { searchTryId = searchTry_.id.getId,
-                  driverPoolData = taggedPool,
-                  filterStage = TaggedPool,
-                  batchNum = batchNum_
-                }
-            )
-            "search-try-driver-pool-batch"
-            searchTry_.id.getId
 
 assignDriverGateTags ::
   ( EncFlow m r,

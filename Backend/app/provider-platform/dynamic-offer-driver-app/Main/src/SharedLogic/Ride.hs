@@ -14,6 +14,7 @@
 
 module SharedLogic.Ride where
 
+import qualified Data.HashMap.Strict as HM
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -33,6 +34,7 @@ import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
 import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.Vehicle as DVeh
 import Domain.Utils
 import Environment
@@ -397,3 +399,11 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.DELIVERY_TRUCK_ULTRA_LARGE -> buffer.deliveryLightGoodsVehicle
     DST.BUS_NON_AC -> buffer.busNonAc
     DST.BUS_AC -> buffer.busAc
+
+getSnapToRoadExpiry :: Maybe DTC.TripCategoryMapping -> Trip.TripCategory -> Int
+getSnapToRoadExpiry tripCategoryMapping tripCategory = do
+  let defaultExpiry = 21600 -- 6 hours in seconds
+  case tripCategoryMapping of
+    Nothing -> defaultExpiry
+    Just (DTC.TripCategoryMapping tripMap) ->
+      fromMaybe defaultExpiry (HM.lookup tripCategory tripMap)

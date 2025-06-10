@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
@@ -45,6 +47,7 @@ data TripCategory
   | Ambulance OneWayMode
   | Delivery OneWayMode
   deriving stock (Eq, Ord, Generic)
+  deriving anyclass (Hashable)
 
 -- deriving anyclass (ToSchema)
 
@@ -202,7 +205,7 @@ data TripOption = TripOption
 
 data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDynamicOffer | MeterRide
   deriving stock (Eq, Show, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving anyclass (Hashable, FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable OneWayMode
 
 type RentalMode = TripMode
@@ -211,7 +214,7 @@ type RideShareMode = TripMode
 
 data TripMode = RideOtp | OnDemandStaticOffer
   deriving stock (Eq, Show, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving anyclass (Hashable, FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable TripMode
 
 instance FromHttpApiData TripMode where

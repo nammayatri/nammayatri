@@ -64,7 +64,8 @@ bulkLocUpdate req = do
   let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
   let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
   logDebug $ "Did we passed through drop yet in bulkLocation  " <> show passedThroughDrop <> " and points: " <> show loc
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) loc
+  let snapToRoadStateExpiry :: Int = SRide.getSnapToRoadExpiry transportConfig.snapToRoadExpiryByCategory ride.tripCategory
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) loc snapToRoadStateExpiry
 
   let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
   when (isJust buffertime' && ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do

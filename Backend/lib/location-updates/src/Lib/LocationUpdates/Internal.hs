@@ -118,15 +118,16 @@ processWaypoints ::
   Bool ->
   Bool ->
   NonEmpty LatLong ->
+  Int ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop isMeterRide waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop isMeterRide waypoints snapToRoadStateExpiry = do
   calculationFailed <- isDistanceCalculationFailed driverId
   when calculationFailed do
     logWarning "Failed to calculate actual distance for this ride, ignoring"
   wrapDistanceCalculation driverId $ do
     addEditDestinationPoints driverId waypoints
     addPoints driverId waypoints
-    recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop isMeterRide
+    recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop isMeterRide snapToRoadStateExpiry
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
@@ -175,15 +176,16 @@ recalcDistanceBatches ::
   Bool ->
   Bool ->
   Bool ->
+  Int ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop isMeterRide = do
+recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop isMeterRide snapToRoadStateExpiry = do
   prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
   let modifiedWaypoints =
         case prevBatchTwoEndPoints of
           Just points -> NE.fromList points <> waypoints
           _ -> waypoints
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
-  Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
+  Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints snapToRoadStateExpiry -- 6 hours
   (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
   when (isTollApplicable && enableTollCrossedNotifications && isTollPresentOnCurrentRoute) $
     fork "Toll Crossed OnUpdate" $ do
@@ -212,7 +214,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
       when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
         currSnapToRoadState <- processSnapToRoadCall
-        Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
+        Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState snapToRoadStateExpiry -- 6 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
     continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
@@ -222,7 +224,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       batchLeft <- continueCondition
       if (batchLeft && not isMeterRide) || (batchLeft && isMeterRide && isFirstCall)
         then do
-          (dist, newReferencePoint, startPatching, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId
+          (dist, newReferencePoint, startPatching, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId snapToRoadStateExpiry
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
               selfTunedCount = SelfTuned `elem` servicesUsed
@@ -251,7 +253,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just passedThroughDrop) (Just False) Nothing)
       let isPassedThroughDrop = bool prevSnapToRoadState.passThroughDropThreshold (Just True) passedThroughDrop
       let currSnapToRoadState = prevSnapToRoadState {passThroughDropThreshold = isPassedThroughDrop}
-      Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
+      Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState snapToRoadStateExpiry -- 6 hours
 
 recalcDistanceBatchStep ::
   (CacheFlow m r, Monad m, Log m, MonadFlow m) =>
@@ -261,8 +263,9 @@ recalcDistanceBatchStep ::
   Maybe MapsServiceConfig ->
   Bool ->
   Id person ->
+  Int ->
   m (HighPrecMeters, Maybe LatLong, Bool, [MapsService], Bool)
-recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId = do
+recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId snapToRoadStateExpiry = do
   (startPatching, distanceCalcReferencePoint') <-
     if isMeterRide
       then do
@@ -274,9 +277,9 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
   batchWaypoints <- getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)
   (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollChargesAndNames) <- interpolatePointsAndCalculateDistanceAndToll distanceCalcReferencePoint' rectifyDistantPointsFailureUsing isTollApplicable driverId batchWaypoints
   whenJust mbTollChargesAndNames $ \(tollCharges, tollNames, _, _) -> do
-    void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
+    void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames snapToRoadStateExpiry
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
-    Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
+    Redis.expire (onRideTollChargesKey driverId) snapToRoadStateExpiry -- 6 hours
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
   when snapToRoadFailed $ do
