@@ -54,11 +54,11 @@ buildSearchReq messageId subscriber req context = do
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
-  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
+  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & flip tfAddress isMultimodalSearch
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
   stopLocations <- Beckn.OnDemand.Utils.Search.getIntermediateStopLocations req
-  stops <- buildLocation `mapM` stopLocations
-  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
+  stops <- mapM (flip buildLocation isMultimodalSearch) stopLocations
+  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (\loc -> tfAddress (Just loc) isMultimodalSearch)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
   transactionId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId context
   pure $
@@ -91,11 +91,11 @@ buildSearchReq messageId subscriber req context = do
       }
 
 -- [door, building, street, area, city, state, areaCode, country]
-tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
-tfAddress Nothing = pure Nothing
-tfAddress (Just location) = do
+tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> Maybe Bool -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
+tfAddress Nothing _ = pure Nothing
+tfAddress (Just location) isMultimodalSearch = do
   fullAddress <- location.locationAddress & fromMaybeM (InvalidRequest $ "Location address is missing, location:-" <> show location)
-  returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
+  let returnData = Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress isMultimodalSearch
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then pure Nothing
@@ -107,9 +107,9 @@ tfLatLong locationGps = do
   lon_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
   pure $ Kernel.External.Maps.LatLong {lat = Kernel.External.Maps.lat lat_, lon = Kernel.External.Maps.lon lon_}
 
-buildLocation :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Spec.Location -> m Domain.Action.Beckn.Search.DSearchReqLocation
-buildLocation location = do
-  address <- tfAddress (Just location)
+buildLocation :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Spec.Location -> Maybe Bool -> m Domain.Action.Beckn.Search.DSearchReqLocation
+buildLocation location isMultimodalSearch = do
+  address <- tfAddress (Just location) isMultimodalSearch
   locationGpsText <- location.locationGps & fromMaybeM (InvalidRequest "Missing Pickup Location")
   latLong <- tfLatLong locationGpsText
   pure $
