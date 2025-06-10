@@ -2595,23 +2595,6 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
-  if (HU.isParentView FunctionCall) then do
-    void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
-      $ CTA.EventPayload
-          { event: "process_result"
-          , payload:
-              Just
-                { action: "terminate"
-                , trip_amount: Nothing
-                , ride_status: Nothing
-                , trip_id: Nothing
-                , screen: Nothing
-                , exit_app: true
-                , registration_token: Just $ getValueToLocalStore REGISTERATION_TOKEN
-                }
-          }
-    pure unit
-  else do pure unit
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   setValueToLocalStore LOGS_TRACKING "false"
