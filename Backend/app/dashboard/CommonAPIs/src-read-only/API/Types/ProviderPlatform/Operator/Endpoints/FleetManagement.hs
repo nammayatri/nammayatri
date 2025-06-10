@@ -23,6 +23,7 @@ data FleetInfo = FleetInfo
     name :: Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     isActive :: Kernel.Prelude.Bool,
+    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType,
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
     vehicleCount :: Kernel.Prelude.Int,
