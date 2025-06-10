@@ -208,7 +208,7 @@ type API =
            API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq
       :> Post
            '[JSON]
-           API.Types.UI.MultimodalConfirm.JourneyInfoRespWithFare
+           API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -431,7 +431,7 @@ postMultimodalOrderSwitchFRFSTier ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoRespWithFare
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 postMultimodalOrderSwitchFRFSTier a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchFRFSTier (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
