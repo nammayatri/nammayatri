@@ -92,7 +92,7 @@ onInit onInitReq merchant booking_ = do
           (orderId, orderShortId) <- getPaymentIds
           ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
           let paymentType = Payment.FRFSMultiModalBooking
-          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings
+          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType
           mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
           case mCreateOrderRes of
             Just _ -> do
