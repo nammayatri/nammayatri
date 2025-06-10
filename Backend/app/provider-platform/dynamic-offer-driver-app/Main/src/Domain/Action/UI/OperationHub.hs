@@ -34,10 +34,14 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
     now <- getCurrentTime
     creatorId <- case mbPersonId of
       Just driverId -> do
-        opsHubReq <- QOHR.findByCreatorStatusAndType driverId PENDING req.requestType
+        opsHubReq <- QOHR.findByRcOrCreatorAndStatusAndType req.registrationNo driverId PENDING req.requestType
         unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
         pure driverId
-      _ -> pure (Id req.creatorId)
+      Nothing -> do
+        let creatorId = Id req.creatorId
+        opsHubReq <- QOHR.findByRcAndStatusAndType req.registrationNo PENDING req.requestType
+        unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
+        pure creatorId
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
           OperationHubRequests

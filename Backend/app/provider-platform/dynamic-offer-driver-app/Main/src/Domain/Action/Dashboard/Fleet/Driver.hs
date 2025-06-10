@@ -55,6 +55,8 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.Driver as OperatorCommon
+import qualified API.Types.UI.OperationHub as OH
 import Control.Applicative (optional)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Csv
@@ -70,6 +72,7 @@ import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBRe
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
+import qualified Domain.Action.UI.OperationHub as DOH
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types.Alert as DTA
@@ -87,6 +90,8 @@ import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHub as DOH
+import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
@@ -189,7 +194,6 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
       whenJust rc $ \rcert -> void $ checkRCAssociationForDriver getEntityData.id rcert True
       void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
-      pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
@@ -200,8 +204,19 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
             _ -> "dashboard -> addVehicleUnderUnknown"
       logTagInfo logTag (show getEntityData.id)
-      pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
+  whenJust req.operationHubId $ \operationHubId -> do
+    let vehicleAlreadyApproved = fromMaybe False $ rc >>= (.approved)
+    unless vehicleAlreadyApproved do
+      let driverOperationHubRequest =
+            OH.DriverOperationHubRequest
+              { creatorId = requestorId,
+                operationHubId = cast @OperatorCommon.OperationHub @DOH.OperationHub operationHubId,
+                registrationNo = req.registrationNo,
+                requestType = DOHR.ONBOARDING_INSPECTION
+              }
+      void $ DOH.postOperationCreateRequest (Nothing, merchant.id, merchantOpCityId) driverOperationHubRequest
+  pure Success
 
 checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Bool -> Flow Bool
 checkRCAssociationForDriver driverId vehicleRC checkFleet = do
@@ -2355,5 +2370,6 @@ convertToAddVehicleReq rcReq =
       mYManufacturing = Nothing,
       vehicleModelYear = Nothing,
       vehicleTags = Nothing,
-      fuelType = Nothing
+      fuelType = Nothing,
+      operationHubId = Nothing
     }

@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.Driver where
 
+import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
@@ -53,7 +54,8 @@ data AddVehicleReq = AddVehicleReq
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Day,
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    fuelType :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    fuelType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operationHubId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id API.Types.ProviderPlatform.Operator.Driver.OperationHub)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
