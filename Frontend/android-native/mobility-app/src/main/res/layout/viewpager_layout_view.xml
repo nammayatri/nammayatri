@@ -34,8 +34,8 @@
 
                     <LinearLayout
                         android:id="@+id/indicator1"
-                        android:layout_width="wrap_content"
                         android:layout_height="match_parent"
+                        android:layout_width="0dp"
                         android:layout_weight="1.0"
                         android:gravity="center"
                         android:orientation="vertical"
@@ -63,7 +63,7 @@
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_1"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginHorizontal="5dp"
                                 android:layout_marginTop="3dp"
@@ -86,7 +86,7 @@
 
                     <LinearLayout
                         android:id="@+id/indicator2"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1.0"
                         android:gravity="center"
@@ -115,7 +115,7 @@
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_2"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginHorizontal="5dp"
                                 android:layout_marginTop="3dp"
@@ -138,7 +138,7 @@
 
                     <LinearLayout
                         android:id="@+id/indicator3"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1.0"
                         android:gravity="center"
@@ -167,7 +167,7 @@
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_3"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginHorizontal="5dp"
                                 android:layout_marginTop="3dp"
@@ -189,7 +189,7 @@
 
                     <LinearLayout
                         android:id="@+id/indicator4"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1.0"
                         android:gravity="center"
@@ -218,7 +218,7 @@
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_4"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginHorizontal="5dp"
                                 android:layout_marginTop="3dp"
@@ -240,7 +240,7 @@
 
                     <LinearLayout
                         android:id="@+id/indicator5"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1.0"
                         android:gravity="center"
@@ -269,7 +269,7 @@
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_5"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginHorizontal="5dp"
                                 android:layout_marginTop="3dp"
@@ -290,7 +290,7 @@
 
                     <LinearLayout
                         android:id="@+id/indicator6"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1.0"
                         android:gravity="center"
@@ -319,7 +319,7 @@
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_6"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginHorizontal="5dp"
                                 android:layout_marginTop="3dp"
