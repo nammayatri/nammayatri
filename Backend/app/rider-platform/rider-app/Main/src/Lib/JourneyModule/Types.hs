@@ -3,6 +3,7 @@ module Lib.JourneyModule.Types where
 import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative (liftA2)
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -329,6 +330,7 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
+    ticketValidityHours :: [Int],
     providerName :: Maybe Text,
     sdkToken :: Maybe Text,
     providerRouteId :: Maybe Text,
@@ -668,9 +670,9 @@ mkLegInfoFromFrfsBooking ::
 mkLegInfoFromFrfsBooking booking distance duration = do
   let journeyRouteDetails' = booking.journeyRouteDetails
   ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
+  let ticketsCreatedAt = ticketsData <&> (.createdAt)
   let qrDataList = ticketsData <&> (.qrData)
   let qrValidity = ticketsData <&> (.validTill)
-
   metroRouteInfo' <- getMetroLegRouteInfo journeyRouteDetails'
   subwayRouteInfo' <- getSubwayLegRouteInfo journeyRouteDetails'
 
@@ -683,7 +685,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity journeyRouteDetails' metroRouteInfo' subwayRouteInfo'
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo'
   return $
     LegInfo
       { skipBooking,
@@ -708,7 +710,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         totalFare = mkPriceAPIEntity <$> booking.finalPrice
       }
   where
-    mkLegExtraInfo qrDataList qrValidity journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
       case booking.vehicleType of
         Spec.METRO -> do
           return $
@@ -752,6 +754,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           mbPerson <- QPerson.findById booking.riderId
           imeiNumber <- decrypt `mapM` (mbPerson >>= (.imeiNumber))
+          let ticketValidityHours = liftA2 (\created validity -> round $ diffUTCTime validity created / 3600) ticketsCreatedAt qrValidity
           return $
             Subway $
               SubwayLegExtraInfo
@@ -759,6 +762,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
+                  ticketValidityHours = ticketValidityHours,
                   providerName = Just booking.providerName,
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
@@ -923,6 +927,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
+                  ticketValidityHours = [],
                   providerName = Nothing,
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for cris sdk initiation
                   deviceId = Nothing, -- not required for cris sdk initiation
