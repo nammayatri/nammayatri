@@ -113,3 +113,8 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN estimated_price double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN integrated_bpp_config_id character varying(36) ;
+
+
+
+------- SQL updates -------
+

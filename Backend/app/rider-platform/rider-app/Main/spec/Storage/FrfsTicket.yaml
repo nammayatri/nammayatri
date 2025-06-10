@@ -1183,3 +1183,30 @@ RouteStopCalender:
         and:
           - in: [tripId]
           - integratedBppConfigId
+
+FRFSTicketBookingFeedback:
+  tableName: frfs_ticket_booking_feedback
+  fields:
+    id: Id FRFSTicketBookingFeedback
+    bookingId: Id FRFSTicketBooking
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    isFareAccepted: Bool
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bookingId]
+    findByMerchantIdAndOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId]
+    updateByBookingId:
+      kvFunction: updateOneWithKV
+      params: [isFareAccepted, updatedAt]
+      where:
+        and: [bookingId]
