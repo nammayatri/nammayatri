@@ -18,12 +18,15 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -65,37 +68,44 @@ createVendorSplitFromBookings ::
     HasField "isMetroTestTransaction" r Bool
   ) =>
   [FTBooking.FRFSTicketBooking] ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentServiceType ->
   m ([Payment.VendorSplitDetails], HighPrecMoney)
-createVendorSplitFromBookings allJourneyBookings = do
+createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType = do
   let (amount, vehicleTypeList) =
         foldl
           (\(accAmt, accVehicles) item -> (accAmt + item.price.amount, item.vehicleType : accVehicles))
           (0.0, [])
           allJourneyBookings
+  isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
   let booking = listToMaybe allJourneyBookings
   case booking of
     Just booking' -> do
-      integratedBPPConfigList <-
-        mapM
-          ( \vehicleType ->
-              QIBP.findByDomainAndCityAndVehicleCategory
-                (show Spec.FRFS)
-                booking'.merchantOperatingCityId
-                (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
-                DIBC.MULTIMODAL
-                >>= fromMaybeM
-                  ( IntegratedBPPConfigNotFound $
-                      "MerchantOperatingCityId:" +|| booking'.merchantOperatingCityId
-                        ||+ "Domain:" +|| Spec.FRFS
-                        ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
-                        ||+ "Platform Type:" +|| DIBC.MULTIMODAL
-                        ||+ ""
-                  )
-          )
-          vehicleTypeList
-      vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) integratedBPPConfigList
-      vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList) allJourneyBookings
-      return (vendorSplitDetails, amount)
+      if isSplitEnabled
+        then do
+          integratedBPPConfigList <-
+            mapM
+              ( \vehicleType ->
+                  QIBP.findByDomainAndCityAndVehicleCategory
+                    (show Spec.FRFS)
+                    booking'.merchantOperatingCityId
+                    (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
+                    DIBC.MULTIMODAL
+                    >>= fromMaybeM
+                      ( IntegratedBPPConfigNotFound $
+                          "MerchantOperatingCityId:" +|| booking'.merchantOperatingCityId
+                            ||+ "Domain:" +|| Spec.FRFS
+                            ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
+                            ||+ "Platform Type:" +|| DIBC.MULTIMODAL
+                            ||+ ""
+                      )
+              )
+              vehicleTypeList
+          vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) integratedBPPConfigList
+          vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList) allJourneyBookings
+          return (vendorSplitDetails, amount)
+        else return ([], amount)
     Nothing -> return ([], 0.0)
 
 convertVendorDetails ::
