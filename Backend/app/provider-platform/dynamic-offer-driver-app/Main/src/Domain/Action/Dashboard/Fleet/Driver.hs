@@ -47,6 +47,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetTripTransactions,
     postDriverFleetAddDriverBusRouteMapping,
     postDriverDashboardFleetTrackDriver,
+    castDriverStatus,
     getDriverFleetWmbRouteDetails,
     postDriverFleetGetNearbyDrivers,
   )

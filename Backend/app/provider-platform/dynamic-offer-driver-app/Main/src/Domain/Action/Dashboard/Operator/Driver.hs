@@ -16,6 +16,7 @@ import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import Domain.Action.Dashboard.RideBooking.Driver
@@ -49,6 +50,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
@@ -281,6 +283,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       driverImages <- IQuery.findAllByPersonId transporterConfig driverId
       let driverImagesInfo = IQuery.DriverImagesInfo {driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+      driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       statusRes <-
         castStatusRes
           <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) -- FXME: Need to change
@@ -290,6 +293,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
+            status = Just $ DFDriver.castDriverStatus driverInfo.mode,
             isActive = drvOpAsn.isActive,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
