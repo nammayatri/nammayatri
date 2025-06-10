@@ -2,7 +2,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
   ( postRegistrationV2LoginOtp,
     postRegistrationV2VerifyOtp,
     postRegistrationV2Register,
-    castFleetType,
+    castFleetTypeToDomain,
     buildFleetOwnerAuthReq,
     createFleetOwnerDetails,
     createFleetOwnerInfo,
@@ -182,6 +182,12 @@ castFleetType = \case
   Common.RENTAL_FLEET -> FOI.RENTAL_FLEET
   Common.NORMAL_FLEET -> FOI.NORMAL_FLEET
   Common.BUSINESS_FLEET -> FOI.BUSINESS_FLEET
+
+castFleetTypeToDomain :: FOI.FleetType -> Common.FleetType
+castFleetTypeToDomain = \case
+  FOI.RENTAL_FLEET -> Common.RENTAL_FLEET
+  FOI.NORMAL_FLEET -> Common.NORMAL_FLEET
+  FOI.BUSINESS_FLEET -> Common.BUSINESS_FLEET
 
 getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
 getOperatorIdFromReferralCode Nothing = return Nothing

@@ -94,6 +94,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             vehicleCount = totalVehicle,
+            fleetType = Just $ DRegistrationV2.castFleetTypeToDomain fleetType,
             verified = verified,
             documents = statusRes,
             registeredAt = registeredAt

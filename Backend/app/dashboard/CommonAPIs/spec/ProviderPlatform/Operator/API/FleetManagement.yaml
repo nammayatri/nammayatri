@@ -7,6 +7,7 @@ imports:
   FleetOwnerRegisterResV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
   FleetOwnerLoginReqV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
   FleetOwnerLoginResV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetType: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 
 module: FleetManagement
 apiPrefix: operator
@@ -140,6 +141,7 @@ types:
     - name: Text
     - enabled: Bool
     - isActive: Bool
+    - fleetType: Maybe FleetType
     - mobileCountryCode: Text
     - mobileNumber: Text
     - vehicleCount: Int
