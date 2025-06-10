@@ -16,8 +16,11 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
+import androidx.annotation.Keep;
+
 import java.util.List;
 
+@Keep
 public class CheckPermissionAutoStart {
 
     /***
