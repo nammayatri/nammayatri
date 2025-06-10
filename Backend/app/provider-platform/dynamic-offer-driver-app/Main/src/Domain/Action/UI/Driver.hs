@@ -124,6 +124,7 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFee as DDF
@@ -784,7 +785,6 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     let merchantLocalDate = utctDay localTime
     mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
-  --  whenJust mbDailyStats $ \dailyStats -> do
     when (driverInfo.mode == Just DriverInfo.ONLINE) $ do
       let lastOnlineTo = Just localTime
           startDayTime = Just $ UTCTime (utctDay localTime) 0
@@ -796,9 +796,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             lastOnlineFrom' <- lastOnlineFrom
             onlineDuration' <- onlineDuration
             pure $ onlineDuration' + Seconds (floor $ diffUTCTime lastOnlineTo' lastOnlineFrom')
-      if isJust mbDailyStats
-        then SQDSE.updateOnlineDurationByDriverId driverId merchantLocalDate lastOnlineFrom lastOnlineTo newOnlineDuration
-        else createNewDailyStats merchantLocalDate lastOnlineFrom lastOnlineTo onlineDuration
+      addDataToDailyStats mbDailyStats driverId merchantLocalDate lastOnlineFrom lastOnlineTo newOnlineDuration
 
       when (mbLastOnlineFrom < startDayTime) $ do
         let yesterdayMerchantLocalDate = addDays (-1) merchantLocalDate
@@ -806,7 +804,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         mbYesterdayDailyStats <- SQDS.findByDriverIdAndDate driverId yesterdayMerchantLocalDate
         when (isNothing mbYesterdayDailyStats) . throwError . InternalError $ "OnlineDuration more than 24 hours. DriverId: " <> driverId.getId
         SQDSE.updateOnlineDurationByDriverId driverId yesterdayMerchantLocalDate Nothing yesterdaylastOnlineTo $ do
-          yesterdaylastOnlineTo' <- yesterdaylastOnlineTo          
+          yesterdaylastOnlineTo' <- yesterdaylastOnlineTo
           yesterdayDailyStats <- mbYesterdayDailyStats
           yesterdaylastOnlineFrom <- yesterdayDailyStats.lastOnlineFrom
           yesterdayOnlineDuration <- yesterdayDailyStats.onlineDuration
@@ -815,14 +813,19 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     when (mode == Just DriverInfo.ONLINE) $ do
       let lastOnlineFrom = Just localTime
           lastOnlineTo = Nothing
-      SQDSE.updateOnlineDurationByDriverId driverId merchantLocalDate lastOnlineFrom lastOnlineTo Nothing
+      addDataToDailyStats mbDailyStats driverId merchantLocalDate lastOnlineFrom lastOnlineTo Nothing
 
   pure APISuccess.Success
   where
+    addDataToDailyStats mbDailyStats driverId =
+      if isJust mbDailyStats
+        then SQDSE.updateOnlineDurationByDriverId driverId
+        else createNewDailyStats
     createNewDailyStats merchantLocalDate lastOnlineFrom lastOnlineTo onlineDuration = do
       id <- generateGUIDText
       now <- getCurrentTime
-      QDailyStats.create $
+      merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      SQDS.create $
         DDS.DailyStats
           { id = id,
             driverId = cast personId,
@@ -832,12 +835,12 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             tollCharges = 0.0,
             bonusEarnings = 0.0,
             merchantLocalDate = merchantLocalDate,
-            currency = Nothing,
-            distanceUnit = Nothing,
+            currency = merchantOpCity.currency,
+            distanceUnit = merchantOpCity.distanceUnit,
             activatedValidRides = 0,
             referralEarnings = 0,
             referralCounts = 0,
-            payoutStatus = Nothing,
+            payoutStatus = DDS.Initialized,
             payoutOrderId = Nothing,
             payoutOrderStatus = Nothing,
             createdAt = now,
@@ -847,12 +850,12 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             totalRideTime = 0,
             numDriversOnboarded = 0,
             numFleetsOnboarded = 0,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOpCityId,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
             lastOnlineFrom = lastOnlineFrom,
             lastOnlineTo = lastOnlineTo,
             onlineDuration = onlineDuration
-          }       
+          }
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
 activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocationId driverLocation = do
