@@ -47,10 +47,6 @@ types:
     crisSdkToken : Maybe Text
     derive: "Show"
 
-  JourneyInfoRespWithFare:
-    journeyInfoResponse: JourneyInfoResp
-    totalFare: Maybe HighPrecMoney
-
   LegStatus:
     legOrder: Int
     subLegOrder: Int
@@ -319,7 +315,7 @@ apis:
       request:
         type: SwitchFRFSTierReq
       response:
-        type: JourneyInfoRespWithFare
+        type: JourneyInfoResp
 
   - POST:
       endpoint: multimodal/{journeyId}/journeyFeedback
