@@ -85,7 +85,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
-import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -728,7 +727,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
         )
 
   let fetchData bppConfig = do
-        stations <- QStation.findAllByBppConfigId bppConfig.id
+        stations <- OTPRest.findAllByBppConfigId bppConfig
         routes <-
           try @_ @SomeException (OTPRest.getRoutesByGtfsId bppConfig) >>= \case
             Left _ -> QRoute.findAllByBppConfigId bppConfig.id

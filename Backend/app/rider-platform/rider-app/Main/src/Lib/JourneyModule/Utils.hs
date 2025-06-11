@@ -38,7 +38,6 @@ import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
 import qualified Storage.Queries.RouteStopMapping as QRSM
-import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
 import Tools.Maps (LatLong (..))
@@ -558,8 +557,8 @@ getSingleModeRouteDetails ::
   Enums.VehicleCategory ->
   m (Maybe SingleModeRouteDetails)
 getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfig mid mocid vc = do
-  mbFromStop <- QStation.findByStationCode originStopCode integratedBppConfig.id
-  mbToStop <- QStation.findByStationCode destinationStopCode integratedBppConfig.id
+  mbFromStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId originStopCode integratedBppConfig
+  mbToStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
