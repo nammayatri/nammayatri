@@ -98,10 +98,11 @@ view push config =
   where
     getPeekHeight :: Config -> Int
     getPeekHeight config =
-      let variantBasedList = filterVariantAndEstimate config.quoteList
+      let configLen = length if config.showMultiProvider then variantBasedList else topProviderList
+          variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
-          currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
-      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if EHC.os /= "IOS" && config.fareProductType == DELIVERY then 100 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
+          currentPeekHeight = getQuoteListViewHeight config configLen
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if EHC.os /= "IOS" && config.fareProductType == DELIVERY then 100 + (if configLen == 1 then 30 else 0) + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
 
 bottomLayoutView :: forall w. (Action -> Effect Unit) -> Config -> Visibility -> String -> PrestoDOM (Effect Unit) w
 bottomLayoutView push config visibility' id' =
