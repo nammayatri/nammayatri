@@ -81,7 +81,6 @@ import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
-import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
@@ -399,7 +398,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
     -- Return all the Stops
     _ -> do
-      stations <- B.runInReplica $ QStation.findAllByVehicleType Nothing Nothing vehicleType_ integratedBPPConfig.id
+      stations <- B.runInReplica $ OTPRest.findAllByVehicleType Nothing Nothing vehicleType_ integratedBPPConfig
       let stops =
             map
               ( \Station {..} ->
@@ -469,8 +468,8 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType_ ||+ "Platform Type:" +|| platformType ||+ "")
   (fromStation, toStation) <- do
-    fromStationInfo <- QStation.findByStationCode fromStationCode integratedBPPConfig.id >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    toStationInfo <- QStation.findByStationCode toStationCode integratedBPPConfig.id >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+    fromStationInfo <- OTPRest.findByStationCodeAndIntegratedBPPConfigId fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+    toStationInfo <- OTPRest.findByStationCodeAndIntegratedBPPConfigId toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
     return (fromStationInfo, toStationInfo)
   route <-
     maybe
@@ -1104,7 +1103,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicle ||+ "Platform Type:" +|| platformType ||+ "")
   case mbInput of
     Nothing -> do
-      allStops <- QStation.findAllByVehicleType Nothing Nothing vehicle integratedBPPConfig.id
+      allStops <- OTPRest.findAllByVehicleType Nothing Nothing vehicle integratedBPPConfig
       currentTime <- getCurrentTime
       let serviceableStops = DTB.findBoundedDomain allStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) allStops
           stopsWithinRadius =
@@ -1126,7 +1125,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
     Just userInput -> do
       let mbLimitInteger = fmap toInteger mbLimit
           mbOffsetInteger = fmap toInteger mbOffset
-      matchingStops <- QStation.findAllMatchingStations (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
+      matchingStops <- OTPRest.findAllMatchingStations (Just userInput) mbLimit mbOffset merchantOpCity.id vehicle integratedBPPConfig
       matchingRoutes <-
         try @_ @SomeException (OTPRest.getRouteByFuzzySearch integratedBPPConfig userInput) >>= \case
           Left _ -> QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
