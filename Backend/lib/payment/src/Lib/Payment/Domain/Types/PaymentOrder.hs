@@ -61,9 +61,6 @@ data PaymentOrderE e = PaymentOrder
   }
   deriving (Generic)
 
-instance Show (PaymentOrderE 'AsEncrypted) where
-  show = show
-
 data PaymentOrderAPIEntity = PaymentOrderAPIEntity
   { id :: Id PaymentOrder,
     shortId :: ShortId PaymentOrder,
