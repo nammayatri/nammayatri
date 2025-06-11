@@ -448,3 +448,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN cancellation_
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_aa_enabled_for_recurring boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN aa_enabled_client_sdk_version text  default '999.999.999';
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_cache_driver_flow_status boolean  default false;
+
