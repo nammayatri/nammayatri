@@ -34,6 +34,9 @@ import Screens.Types as ST
 import Services.API as API
 import RemoteConfig.Utils
 import Debug
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Common.Types.App
+
 
 getEventName :: DriverEarningsScreenState -> API.DriverCoinsFunctionType -> Maybe API.BulkCoinTitleTranslations -> String
 getEventName state event bulkUploadTitle = do 
@@ -89,33 +92,37 @@ checkPopupShowToday popupType appConfig hsState = do
       coinBalance = hsState.data.coinBalance
       vehicleVariant = hsState.data.vehicleType 
       isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
+      isCab = RC.getCategoryFromVariant vehicleVariant == Just ST.CarCategory
+      isYatriSathi = case getMerchant FunctionCall of
+        YATRISATHI -> true
+        _ -> false
   case popupType of
     ST.EIGHT_RIDE_COMPLETED ->
-      if isPopupShownToday coinPopupInfo.eightRideCompleted && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+      if isPopupShownToday coinPopupInfo.eightRideCompleted && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi)) && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.EIGHT_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.SIX_RIDE_COMPLETED ->
-      if isPopupShownToday coinPopupInfo.sixRideCompleted && checkCoinIsEnabled && coinsConfig.sixRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+      if isPopupShownToday coinPopupInfo.sixRideCompleted && checkCoinIsEnabled && coinsConfig.sixRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi)) && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.SIX_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.FIVE_RIDE_COMPLETED ->
-      if isPopupShownToday coinPopupInfo.fiveRideCompleted && checkCoinIsEnabled && coinsConfig.fiveRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+      if isPopupShownToday coinPopupInfo.fiveRideCompleted && checkCoinIsEnabled && coinsConfig.fiveRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi)) && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.FIVE_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.TEN_RIDE_COMPLETED ->
-      if isPopupShownToday coinPopupInfo.tenRideCompleted && checkCoinIsEnabled && coinsConfig.tenRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+      if isPopupShownToday coinPopupInfo.tenRideCompleted && checkCoinIsEnabled && coinsConfig.tenRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi)) && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.TEN_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.TWO_RIDE_COMPLETED ->
-      if isPopupShownToday coinPopupInfo.twoRideCompleted && checkCoinIsEnabled && coinsConfig.twoRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+      if isPopupShownToday coinPopupInfo.twoRideCompleted && checkCoinIsEnabled && coinsConfig.twoRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi)) && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.TWO_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.ONE_MORE_RIDE ->
-      if isPopupShownToday coinPopupInfo.oneMoreRide && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && isAutoRicksaw
+      if isPopupShownToday coinPopupInfo.oneMoreRide && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi))
         then ST.ONE_MORE_RIDE
         else ST.NO_COIN_POPUP
     ST.TWO_MORE_RIDES ->
-      if isPopupShownToday coinPopupInfo.twoMoreRides && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && isAutoRicksaw
+      if isPopupShownToday coinPopupInfo.twoMoreRides && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && (isAutoRicksaw || (isCab && isYatriSathi))
         then ST.TWO_MORE_RIDES
         else ST.NO_COIN_POPUP
     ST.REFER_AND_EARN_COIN ->
