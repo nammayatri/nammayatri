@@ -58,6 +58,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -214,7 +215,8 @@ data JourneyLegStateData = JourneyLegStateData
     vehiclePositions :: [VehiclePosition],
     subLegOrder :: Int,
     legOrder :: Int,
-    mode :: DTrip.MultimodalTravelMode
+    mode :: DTrip.MultimodalTravelMode,
+    boardedVehicles :: Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusDataWithoutETA]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1042,7 +1044,9 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
         updatedAt = now,
         legSearchId = Nothing,
         isDeleted = Just False,
-        isSkipped = Just False
+        isSkipped = Just False,
+        changedBusesInSequence = Nothing,
+        finalBoardedBusNumber = Nothing
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

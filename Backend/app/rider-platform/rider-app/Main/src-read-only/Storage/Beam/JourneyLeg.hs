@@ -14,13 +14,15 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data JourneyLegT f = JourneyLegT
-  { distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+  { changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     endLocationLat :: B.C f Kernel.Prelude.Double,
     endLocationLon :: B.C f Kernel.Prelude.Double,
     estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

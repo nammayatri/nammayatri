@@ -284,6 +284,8 @@ JourneyLeg:
     serviceTypes: Maybe [ServiceTierType]
     legSearchId: Maybe Text
     isDeleted: Maybe Bool
+    changedBusesInSequence: "Maybe [Text]"
+    finalBoardedBusNumber: Maybe Text
     isSkipped: Maybe Bool
 
   sqlType:

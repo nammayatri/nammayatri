@@ -28,6 +28,7 @@ data RiderConfig = RiderConfig
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
     blockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     collectMMIRouteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -105,6 +106,19 @@ data RiderConfig = RiderConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, Eq)
+
+data BusTrackingConfig = BusTrackingConfig
+  { fairScore :: Kernel.Prelude.Double,
+    fairScoreDistanceInMeters :: Kernel.Prelude.Double,
+    goodScore :: Kernel.Prelude.Double,
+    goodScoreDistanceInMeters :: Kernel.Prelude.Double,
+    maxScore :: Kernel.Prelude.Double,
+    maxScoreDistanceInMeters :: Kernel.Prelude.Double,
+    movementThresholdInMeters :: Kernel.Prelude.Double,
+    thresholdFactor :: Kernel.Prelude.Double,
+    thresholdSeconds :: Kernel.Prelude.Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

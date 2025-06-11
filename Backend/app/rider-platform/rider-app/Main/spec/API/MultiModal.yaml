@@ -28,6 +28,7 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
+  BusData: Storage.CachedQueries.Merchant.MultiModalBus
 
 module: MultimodalConfirm
 
@@ -54,6 +55,7 @@ types:
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
+    boardedVehicles: Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusDataWithoutETA]
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
