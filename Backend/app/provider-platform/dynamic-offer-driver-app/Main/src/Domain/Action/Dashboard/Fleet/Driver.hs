@@ -1600,8 +1600,8 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   validateFleetDriverAssociation fleetOwnerId driver
   isValidAssociation <- checkRCAssociationForDriver driver.id rc False
   when (not isValidAssociation) $ do
-    driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id (convertTextToUTC (Just "2099-12-12"))
-    QRCAssociation.create driverRCAssoc
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    createDriverRCAssociationIfPossible transporterConfig driver.id rc
   return Success
 
 ---------------------------------------------------------------------

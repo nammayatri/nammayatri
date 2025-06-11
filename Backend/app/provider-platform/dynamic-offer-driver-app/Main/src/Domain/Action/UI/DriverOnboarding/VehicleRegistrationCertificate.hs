@@ -903,22 +903,16 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             Person.FLEET_OWNER -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
               when (isNothing mbFleetAssoc) $ do
-                when (transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID) $ do
-                  fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
-                  FRCAssoc.create fleetRCAssoc
+                createFleetRCAssociationIfPossible transporterConfig person.id rc
             _ -> do
               -- linking to driver
               whenJust mbFleetOwnerId $ \fleetOwnerId -> do
                 mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId) rc.id now
                 when (isNothing mbFleetAssoc) $ do
-                  when (transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID) $ do
-                    fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId (Id fleetOwnerId :: Id Person.Person) rc.id (convertTextToUTC (Just "2099-12-12"))
-                    FRCAssoc.create fleetRCAssoc
+                  createFleetRCAssociationIfPossible transporterConfig (Id fleetOwnerId :: Id Person.Person) rc
               mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
               when (isNothing mbAssoc) $ do
-                when (transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID) $ do
-                  driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
-                  DAQuery.create driverRCAssoc
+                createDriverRCAssociationIfPossible transporterConfig person.id rc
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
               whenJust mbVehicle $ \vehicle -> do
