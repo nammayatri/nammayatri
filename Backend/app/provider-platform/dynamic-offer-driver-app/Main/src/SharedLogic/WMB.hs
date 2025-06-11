@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -443,8 +444,8 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
     createRCAssociation = do
-      driverRCAssoc <- makeRCAssociation merchantId merchantOperatingCityId driverId vehicleRC.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
-      DAQuery.create driverRCAssoc
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      createDriverRCAssociationIfPossible transporterConfig driverId vehicleRC
 
 -- forceCancelAllActiveTripTransaction vehicleDriverId = do
 --   tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus (Just 10) vehicleDriverId
