@@ -5,6 +5,7 @@ module Domain.Types.DriverInformation where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -47,6 +48,7 @@ data DriverInformationE e = DriverInformation
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     dlNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverFlowStatus :: Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     drunkAndDriveViolationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -137,6 +139,7 @@ instance EncryptedItem DriverInformation where
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           dlNumber = dlNumber_,
           driverDob = driverDob entity,
+          driverFlowStatus = driverFlowStatus entity,
           driverId = driverId entity,
           driverTripEndLocation = driverTripEndLocation entity,
           drunkAndDriveViolationCount = drunkAndDriveViolationCount entity,
@@ -219,6 +222,7 @@ instance EncryptedItem DriverInformation where
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             dlNumber = dlNumber_,
             driverDob = driverDob entity,
+            driverFlowStatus = driverFlowStatus entity,
             driverId = driverId entity,
             driverTripEndLocation = driverTripEndLocation entity,
             drunkAndDriveViolationCount = drunkAndDriveViolationCount entity,
