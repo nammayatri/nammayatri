@@ -56,7 +56,6 @@ library
       API.Internal.FRFS
       API.Internal.Rating
       API.Internal.StopEvents
-      API.Internal.ViolationDetectionBAP
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.UI
@@ -192,7 +191,6 @@ library
       Domain.Action.Internal.Payout
       Domain.Action.Internal.Rating
       Domain.Action.Internal.StopEvents
-      Domain.Action.Internal.ViolationDetectionBAP
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.AttractionRecommend
