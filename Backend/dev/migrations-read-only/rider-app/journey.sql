@@ -107,3 +107,7 @@ ALTER TABLE atlas_app.journey ADD COLUMN from_location_address text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey ADD COLUMN is_public_transport_included boolean ;
+
+
+------- SQL updates -------
+

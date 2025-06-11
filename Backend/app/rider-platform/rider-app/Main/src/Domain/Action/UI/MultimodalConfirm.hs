@@ -531,7 +531,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
                     )
         return $ paymentOrder <&> (.status)
       else return (Just FRFSTicketService.SUCCESS)
-  return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
+  return $ ApiTypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
   where
     transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
     transformLeg legState =
@@ -546,7 +546,8 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
               status = legData.status,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
-              mode = legData.mode
+              mode = legData.mode,
+              boardedVehicles = legData.boardedVehicles
             }
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess

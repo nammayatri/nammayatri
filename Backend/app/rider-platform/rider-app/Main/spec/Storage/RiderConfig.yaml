@@ -24,6 +24,17 @@ RiderConfig:
       radiusInMeters: Meters
       vehVariant: VehicleVariant
       size: Int
+    BusTrackingConfig:
+      derive: "Eq"
+      maxScoreDistanceInMeters: Double
+      goodScoreDistanceInMeters: Double
+      fairScoreDistanceInMeters: Double
+      maxScore: Double
+      goodScore: Double
+      fairScore: Double
+      thresholdFactor: Double
+      thresholdSeconds: Double
+      movementThresholdInMeters: Double
 
   tableName: rider_config
 
@@ -108,6 +119,7 @@ RiderConfig:
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
+    busTrackingConfig: "Maybe BusTrackingConfig"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -141,6 +153,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
+    busTrackingConfig: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -181,6 +194,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
+    busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -214,6 +228,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
+    busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -245,6 +260,7 @@ RiderConfig:
     payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
     multimodalTesting: "false"
     blockedUntilInMins: "1440"
+    busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
 
   queries:
     findByMerchantOperatingCityId:
@@ -277,6 +293,7 @@ RiderConfig:
     userServiceTierOrderConfig : "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
+    busTrackingConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
