@@ -40,8 +40,8 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
-import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
+import Storage.Queries.Station as QStation
 import Tools.Error
 
 getProviderName :: IntegratedBPPConfig -> Text
@@ -73,7 +73,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
         Just frfsFare -> return frfsFare
         Nothing -> do
           sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
-          intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig START END
+          intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig.id START END
           let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == INTERMEDIATE) intermediateStations
           let request =
                 CRISRouteFare.CRISFareRequest
@@ -153,12 +153,13 @@ getStationList integrationBPPConfig = do
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
 
-buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
-buildStations routeCode startStationCode endStationCode integratedBPPConfig startStopType endStopType = do
-  fromStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-  toStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
-  stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
-  mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
+buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Id IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
+buildStations routeCode startStationCode endStationCode integratedBPPConfigId startStopType endStopType = do
+  fromStation <- QStation.findByStationCode startStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound startStationCode)
+  toStation <- QStation.findByStationCode endStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound endStationCode)
+  stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfigId
+  stations <- mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
+  return stations
 
 mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
 mkStations fromStation toStation stops startStopType endStopType =

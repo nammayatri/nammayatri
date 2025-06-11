@@ -789,7 +789,6 @@ library
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.Station
-      Domain.Types.StationsExtraInformation
       Domain.Types.StopInformation
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
@@ -922,7 +921,6 @@ library
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.Station
-      Storage.Beam.StationsExtraInformation
       Storage.Beam.StopInformation
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
@@ -1110,7 +1108,6 @@ library
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Station
-      Storage.Queries.StationsExtraInformation
       Storage.Queries.StopInformation
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory

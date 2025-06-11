@@ -9,8 +9,6 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Route as Route
 import Domain.Types.RouteStopMapping
-import qualified Domain.Types.Station as Station
-import GHC.Num (integerFromInt)
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -22,11 +20,8 @@ import qualified SharedLogic.External.Nandi.Flow as Flow
 import SharedLogic.External.Nandi.Types
 import Storage.CachedQueries.GTFSFeedInfo (findByVehicleTypeAndCity)
 import Storage.CachedQueries.RouteStopTimeTable (castVehicleType)
-import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RoutePolylines as QRoutePolylines
-import qualified Storage.Queries.Station as QStation
-import qualified Storage.Queries.StationsExtraInformation as QStationsExtraInformation
 import Tools.Error
 import Tools.MultiModal as MM
 
@@ -121,108 +116,6 @@ getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
-
-fromMaybe' :: Int -> Maybe Int -> Integer
-fromMaybe' a b = fromMaybe (integerFromInt a) (integerFromInt <$> b)
-
-getStationsByGtfsId ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
-  IntegratedBPPConfig ->
-  m [Station.Station]
-getStationsByGtfsId integratedBPPConfig = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  stations <- Flow.getStationsByGtfsId baseUrl feedInfo.feedId.getId
-  parseStationsFromInMemoryServer stations integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-
-getStationsByGtfsIdAndStopCode ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
-  IntegratedBPPConfig ->
-  Text ->
-  m (Maybe Station.Station)
-getStationsByGtfsIdAndStopCode integratedBPPConfig stopCode = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  stations <- try @_ @SomeException (Flow.getStationsByGtfsIdAndStopCode baseUrl feedInfo.feedId.getId stopCode)
-  case stations of
-    Right stations' -> do
-      listToMaybe <$> parseStationsFromInMemoryServer [stations'] integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-    Left err -> do
-      logError $ "Error getting stations by gtfs id and stop code: " <> show err
-      pure Nothing
-
-findByStationCodeAndIntegratedBPPConfigId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Text -> IntegratedBPPConfig -> m (Maybe Station.Station)
-findByStationCodeAndIntegratedBPPConfigId stationCode integratedBPPConfig = do
-  station <- getStationsByGtfsIdAndStopCode integratedBPPConfig stationCode
-  case station of
-    Nothing -> CQStation.findByStationCodeAndIntegratedBPPConfigId stationCode integratedBPPConfig.id
-    _ -> pure station
-
-findAllByBppConfigId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> m [Station.Station]
-findAllByBppConfigId integratedBPPConfig = do
-  stations <- try @_ @SomeException (getStationsByGtfsId integratedBPPConfig)
-  case stations of
-    Right stations' -> pure stations'
-    Left err -> do
-      logError $ "Error getting stations by gtfs id: " <> show err
-      QStation.findAllByBppConfigId integratedBPPConfig.id
-
-findAllByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
-findAllByVehicleType limit offset vehicleType integratedBPPConfig = do
-  stations <- try @_ @SomeException (getStationsByGtfsId integratedBPPConfig)
-  case stations of
-    Right stations' -> pure $ take (fromMaybe (length stations') limit) $ drop (fromMaybe 0 offset) $ filter (\station -> station.vehicleType == vehicleType) stations'
-    Left err -> do
-      logError $ "Error getting stations by gtfs id: " <> show err
-      QStation.findAllByVehicleType limit offset vehicleType integratedBPPConfig.id
-
-findAllMatchingStations :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Int -> Maybe Int -> Id MerchantOperatingCity -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
-findAllMatchingStations mbSearchStr mbLimit mbOffset merchantOperatingCityId vehicle integratedBPPConfig = do
-  if isNothing mbSearchStr
-    then return []
-    else do
-      (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-      stations <- try @_ @SomeException (Flow.getStationsByGtfsIdFuzzySearch baseUrl feedInfo.feedId.getId (fromMaybe "" mbSearchStr))
-      case stations of
-        Right stations' -> do
-          parsedStations <- parseStationsFromInMemoryServer stations' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-          pure $ take (fromMaybe (length parsedStations) mbLimit) $ drop (fromMaybe 0 mbOffset) $ filter (\station -> station.vehicleType == vehicle) parsedStations
-        Left err -> do
-          logError $ "Error getting stations by gtfs id fuzzy search: " <> show err
-          QStation.findAllMatchingStations mbSearchStr (integerFromInt <$> mbLimit) (integerFromInt <$> mbOffset) merchantOperatingCityId vehicle integratedBPPConfig.id
-
-parseStationsFromInMemoryServer ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
-  [RouteStopMappingInMemoryServer] ->
-  Id IntegratedBPPConfig ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  m [Station.Station]
-parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchantOperatingCityId = do
-  now <- getCurrentTime
-  mapM
-    ( \station -> do
-        stationsExtraInformation <- QStationsExtraInformation.findByStationIdAndCity station.stopCode merchantOperatingCityId
-        return $
-          Station.Station
-            { address = stationsExtraInformation >>= (.address),
-              code = station.stopCode,
-              hindiName = Nothing,
-              id = Id station.stopCode,
-              integratedBppConfigId = integratedBPPConfig,
-              lat = Just station.stopPoint.lat,
-              lon = Just station.stopPoint.lon,
-              merchantId = merchantId,
-              merchantOperatingCityId = merchantOperatingCityId,
-              name = station.stopName,
-              possibleTypes = Nothing,
-              regionalName = Nothing,
-              suggestedDestinations = Nothing,
-              timeBounds = Unbounded,
-              vehicleType = station.vehicleType,
-              createdAt = now,
-              updatedAt = now
-            }
-    )
-    stations
 
 parseRouteStopMapping ::
   [RouteStopMappingNandi] ->
