@@ -149,7 +149,7 @@ getMultimodalBookingPaymentStatus ::
 getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-  frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+  frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
   let anyFirstBooking = listToMaybe frfsBookingStatusArr
       paymentOrder =
         anyFirstBooking >>= (.payment)
@@ -522,7 +522,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
       then do
         personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
         allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
         let anyFirstBooking = listToMaybe frfsBookingStatusArr
             paymentOrder =
               anyFirstBooking >>= (.payment)
