@@ -247,9 +247,12 @@ function getNammaYatriConfig() {
       , "cityConfig" : [
         {
           "cityName" : "Bangalore",
-          "enableNammaMeter" : {
-            "AUTO_RICKSHAW": true,
-            "AutoCategory" : true,
+          "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : false
           },
           "mapImage" : "ny_ic_bangalore_map",
           "cityCode" : "std:080",
