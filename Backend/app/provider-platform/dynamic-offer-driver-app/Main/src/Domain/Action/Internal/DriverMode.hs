@@ -40,5 +40,5 @@ setDriverMode apiKey req = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  void $ QDriverInformation.updateActivity isActive (Just mode) driverId
+  void $ QDriverInformation.updateActivity isActive (Just mode) Nothing driverId
   pure Success
