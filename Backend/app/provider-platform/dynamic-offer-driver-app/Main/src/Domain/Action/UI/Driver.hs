@@ -787,7 +787,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
             else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-  when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
+  when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) Nothing driverId
   pure APISuccess.Success
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess

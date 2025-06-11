@@ -6,6 +6,7 @@ imports:
   UTCTime: Kernel.Prelude
   LatLong: Kernel.External.Maps
   DriverMode: Domain.Types.Common
+  DriverFlowStatus: Domain.Types.DriverFlowStatus
   TripCategory: Domain.Types.Common
   BlockReasonFlag: Tools.Error
   SpecialLocationWarrior: Lib.Queries.SpecialLocation
@@ -115,7 +116,7 @@ DriverInformation:
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
-
+    driverFlowStatus: Maybe DriverFlowStatus
   default:
     active: "false"
     verified: "false"
@@ -265,7 +266,7 @@ DriverInformation:
       where: driverId
     updateActivity:
       kvFunction: updateOneWithKV
-      params: [active, mode]
+      params: [active, mode, driverFlowStatus]
       where: driverId
     addReferralCode: #check
       kvFunction: updateOneWithKV

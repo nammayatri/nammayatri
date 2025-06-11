@@ -1,0 +1,127 @@
+# @name insertDriverInformationSUV
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.driver_information
+(id, driver_id, driver_flow_status)
+VALUES
+('driver-info-suv-1', 'favorit-suv-000000000000000000000002',null);
+
+###
+# @name insertDriverInformationSedan
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.driver_information
+(id, driver_id, driver_flow_status)
+VALUES
+('driver-info-sedan-1', 'favorit-sedan-0000000000000000000000', 'OFFLINE');
+
+###
+# @name insertDriverOperatorAssociationSUV
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.driver_operator_association
+(id, driver_id, operator_id, is_active)
+VALUES
+('assoc-suv-3', 'favorit-suv-000000000000000000000002', 'favorit-operator-0-0000-000000000000', 1);
+
+###
+# @name insertDriverOperatorAssociationSedan
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.driver_operator_association
+(id, driver_id, operator_id, is_active)
+VALUES
+('assoc-sedan-1', 'favorit-sedan-0000000000000000000000', 'favorit-operator-0-0000-000000000000', 1);
+
+###
+# @name selectDriverInformation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT driver_id, driver_flow_status FROM atlas_driver_offer_bpp.driver_information
+WHERE driver_id IN ('favorit-suv-000000000000000000000000', 'favorit-sedan-0000000000000000000000')
+FORMAT JSON
+
+###
+# @name selectDriverOperatorAssociation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT driver_id, operator_id, is_active FROM atlas_driver_offer_bpp.driver_operator_association
+WHERE operator_id = 'favorit-operator-0-0000-000000000000' and is_active = '1'
+FORMAT JSON
+
+###
+# @name deleteDriverInformation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+DELETE FROM atlas_driver_offer_bpp.driver_information
+WHERE driver_id IN ('favorit-suv-000000000000000000000000', 'favorit-sedan-0000000000000000000000')
+
+###
+# @name deleteDriverOperatorAssociation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+DELETE FROM atlas_driver_offer_bpp.driver_operator_association
+WHERE driver_id IN ('favorit-suv-000000000000000000000000', 'favorit-sedan-0000000000000000000000')
+  AND operator_id = 'favorit-operator-0-0000-000000000000'
+
+###
+
+# @name selectTable
+
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT (*) from atlas_driver_offer_bpp.driver_operator_association
+FORMAT JSON
+
+###
+
+# @name selectTable
+
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT driver_id from atlas_driver_offer_bpp.driver_operator_association where operator_id = 'favorit-operator-0-0000-000000000000'
+FORMAT JSON
+
+###
+
+# @name groupByWithDriverFlowStatus
+
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT driver_flow_status, count(*) as countStatus FROM atlas_driver_offer_bpp.driver_information
+where driver_id IN ('favorit-suv-000000000000000000000000', 'favorit-sedan-0000000000000000000000','favorit-suv-000000000000000000000001','favorit-suv-000000000000000000000002')
+GROUP BY driver_flow_status
+FORMAT JSON
+
+###
+
+# @name updateDriverInformation
+
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+DELETE FROM atlas_driver_offer_bpp.driver_information
+WHERE driver_id = 'favorit-suv-000000000000000000000002'

@@ -54,6 +54,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    getDriverFleetStatus,
   )
 where
 
@@ -412,6 +413,12 @@ getDriverFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> I
 getDriverFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerInfo) driverId
+
+getDriverFleetStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Flow Common.DriverStatusRes
+getDriverFleetStatus merchantShortId opCity apiTokenInfo mbFleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatus) requestorId mbFleetOwnerId'
 
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
