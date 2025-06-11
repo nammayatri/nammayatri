@@ -157,7 +157,7 @@ onSearch onSearchReq validatedReq = do
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
       else do
-        routeCodes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) (catMaybes ((map (.routeId) validatedReq.search.journeyRouteDetails) <> [validatedReq.search.routeId]))
+        routeCodes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) (catMaybes ((map (\x -> (.getId) <$> x.routeId) validatedReq.search.journeyRouteDetails) <> [fmap (.getId) validatedReq.search.routeId]))
         pure $ case routeCodes of
           [] -> onSearchReq.quotes
           routesCodes' -> filter (\quote -> quote.routeCode `elem` map (.code) routesCodes') onSearchReq.quotes

@@ -525,7 +525,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
                 routeLongName = EMTypes.longName rd,
                 fromStationId = fmap (.id) fromStation,
                 toStationId = fmap (.id) toStation,
-                routeId = fmap (.code) route
+                routeId = fmap (.id) route
               }
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> m [FRFSRouteDetails]

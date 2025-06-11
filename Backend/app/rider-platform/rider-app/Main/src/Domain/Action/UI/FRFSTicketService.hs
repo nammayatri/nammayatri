@@ -494,7 +494,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             updatedAt = now,
             fromStationId = fromStation.id,
             toStationId = toStation.id,
-            routeId = route <&> (.code),
+            routeId = route <&> (.id),
             riderId = personId,
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
