@@ -3,12 +3,12 @@ module Domain.Action.Internal.ViolationDetection where
 import Data.Aeson hiding (Success)
 import Data.OpenApi (ToSchema)
 import Domain.Types.Alert
-import Domain.Types.Alert.DetectionData as DTD
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -21,9 +21,95 @@ data ViolationDetectionReq = ViolationDetectionReq
   { rideId :: Id DRide.Ride,
     driverId :: Id DP.Person,
     isViolated :: Bool,
-    detectionData :: DTD.DetectionData
+    detectionData :: DetectionData
   }
   deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema)
+
+data DetectionData
+  = OverSpeedingDetection OverSpeedingDetectionData
+  | StoppedDetection StoppedDetectionData
+  | SkippedWaitingStopDetection SkippedWaitingStopDetectionData
+  | MissedStopDetection MissedStopDetectionData
+  | RouteDeviationDetection RouteDeviationDetectionData
+  | OppositeDirectionDetection OppositeDirectionDetectionData
+  | TripNotStartedDetection TripNotStartedDetectionData
+  deriving (Show, Eq, Ord, Read, Generic, ToSchema)
+
+data OverSpeedingDetectionData = OverSpeedingDetectionData {location :: LatLong, speed :: Double}
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data StoppedDetectionData = StoppedDetectionData
+  { location :: LatLong
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SkippedWaitingStopDetectionData = SkippedWaitingStopDetectionData
+  { location :: LatLong,
+    stopName :: Text
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data MissedStopDetectionData = MissedStopDetectionData
+  { location :: LatLong,
+    stopName :: Text
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data WrongStartStopDetectionData = WrongStartStopDetectionData
+  { location :: LatLong,
+    stopName :: Text
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RouteDeviationDetectionData = RouteDeviationDetectionData
+  { location :: LatLong,
+    distance :: Double
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data OppositeDirectionDetectionData = OppositeDirectionDetectionData
+  { location :: LatLong
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data TripNotStartedDetectionData = TripNotStartedDetectionData
+  { location :: LatLong
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromJSON DetectionData where
+  parseJSON = withObject "DetectionData" $ \obj ->
+    ( OverSpeedingDetection <$> obj .: "overSpeedingDetection"
+    )
+      <|> ( StoppedDetection <$> obj .: "stoppedDetection"
+          )
+      <|> ( SkippedWaitingStopDetection <$> obj .: "skippedWaitingStopDetection"
+          )
+      <|> ( MissedStopDetection <$> obj .: "missedStopDetection"
+          )
+      <|> ( RouteDeviationDetection <$> obj .: "routeDeviationDetection"
+          )
+      <|> ( OppositeDirectionDetection <$> obj .: "oppositeDirectionDetection"
+          )
+      <|> ( TripNotStartedDetection <$> obj .: "tripNotStartedDetection"
+          )
+
+instance ToJSON DetectionData where
+  toJSON = \case
+    OverSpeedingDetection data' ->
+      object ["overSpeedingDetection" .= data']
+    StoppedDetection data' ->
+      object ["stoppedDetection" .= data']
+    SkippedWaitingStopDetection data' ->
+      object ["skippedWaitingStopDetection" .= data']
+    MissedStopDetection data' ->
+      object ["missedStopDetection" .= data']
+    RouteDeviationDetection data' ->
+      object ["routeDeviationDetection" .= data']
+    OppositeDirectionDetection data' ->
+      object ["oppositeDirectionDetection" .= data']
+    TripNotStartedDetection data' ->
+      object ["tripNotStartedDetection" .= data']
 
 violationDetection :: ViolationDetectionReq -> Flow APISuccess
 violationDetection ViolationDetectionReq {..} = do
@@ -35,7 +121,7 @@ violationDetection ViolationDetectionReq {..} = do
   void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
   pure Success
   where
-    getAlertRequestData :: Text -> Maybe Text -> DTD.DetectionData -> Flow (Text, Text, AlertRequestData)
+    getAlertRequestData :: Text -> Maybe Text -> DetectionData -> Flow (Text, Text, AlertRequestData)
     getAlertRequestData driverName driverMobileNumber = \case
       OverSpeedingDetection OverSpeedingDetectionData {..} -> do
         let requestTitle = "Over Speeding"
@@ -71,9 +157,4 @@ violationDetection ViolationDetectionReq {..} = do
         let requestTitle = "Trip Not Started"
         let requestBody = "Trip Not Started Detected"
         let requestData = TripNotStarted TripNotStartedData {..}
-        return (requestTitle, requestBody, requestData)
-      SafetyCheckDetection SafetyCheckDetectionData {..} -> do
-        let requestTitle = "Safety Check"
-        let requestBody = "Safety Check Detected"
-        let requestData = SafetyCheck SafetyCheckData {..}
         return (requestTitle, requestBody, requestData)
