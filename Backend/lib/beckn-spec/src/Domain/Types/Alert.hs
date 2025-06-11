@@ -15,3 +15,4 @@ castAlertRequestDataToRequestType = \case
   RouteDeviation _ -> RouteDeviationAlert
   OppositeDirection _ -> OppositeDirectionAlert
   TripNotStarted _ -> TripNotStartedAlert
+  SafetyCheck _ -> SafetyCheckAlert
