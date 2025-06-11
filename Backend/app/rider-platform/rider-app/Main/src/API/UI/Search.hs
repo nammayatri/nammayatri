@@ -565,6 +565,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
                   intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig.id Station.START Station.END
 
                   let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
+                      viaPoints = if T.null viaStations then " " else viaStations
 
                   let routeFareReq =
                         CRISRouteFare.CRISFareRequest
@@ -574,7 +575,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
                             sourceCode = fromCode,
                             changeOver = " ",
                             destCode = toCode,
-                            via = viaStations
+                            via = viaPoints
                           }
 
                   fares <- CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq <&> listToMaybe
