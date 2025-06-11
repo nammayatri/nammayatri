@@ -946,6 +946,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
       mbTotalRidesConsideredForFareIssues = Yudhishthira.accessTagKey (LYT.TagName "TotalRidesConsideredForFareIssues") driverTags
       mbRidesWithFareIssues = Yudhishthira.accessTagKey (LYT.TagName "RidesWithFareIssue") driverTags
       mbOverchargingBlockedTill = Yudhishthira.accessTagKey (LYT.TagName "OverchargingBlockedTill") driverTags
+  currentLocalTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let (overchargingBlocked, blockedTill, driverOverchargingTag) =
         case (mbDriverOverchargingTag, mbOverchargingBlockedTill) of
           (Just driverOverchargingTag', Just overchargingBlockedTillV) | transporterConfig.enableOverchargingBlocker -> do
@@ -953,8 +954,11 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
             case bt of
               DA.Success bt' -> do
                 let bt'' = epochToUTCTime (bt' - fromIntegral transporterConfig.timeDiffFromUtc)
-                let highOC = highOverchargingTag driverOverchargingTag'
-                (highOC, bool Nothing (Just bt'') highOC, Just driverOverchargingTag')
+                let isInBlockedTimeRange = currentLocalTime < bt''
+                let highOC = highOverchargingTag driverOverchargingTag' && isInBlockedTimeRange
+                if highOC
+                  then (highOC, Just bt'', Just driverOverchargingTag')
+                  else (False, Nothing, Nothing)
               _ -> (False, Nothing, Nothing)
           _ -> (False, Nothing, Nothing)
   return $
