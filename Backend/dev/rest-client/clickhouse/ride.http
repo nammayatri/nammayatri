@@ -44,7 +44,7 @@ POST {{clickhouse-driver-offer-bpp}}
 Authorization: Basic default:{{clickhouse-password}}
 content-type: text/html
 
-SELECT (*) from {{dbName}}.ride
+SELECT (*) from {{dbName}}.daily_stats
 FORMAT JSON
 
 ###

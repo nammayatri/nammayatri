@@ -31,6 +31,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     acStatusCheckGap :: Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
+    allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

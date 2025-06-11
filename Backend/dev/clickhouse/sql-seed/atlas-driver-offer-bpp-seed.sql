@@ -39,5 +39,41 @@ CREATE TABLE atlas_driver_offer_bpp.daily_stats (
     `total_distance` Float64,
     `num_rides` Int64,
     `cancellation_charges` Float64,
-    `bonus_earnings` Float64
-) ENGINE = MergeTree() PRIMARY KEY (id);
+    `bonus_earnings` Float64,
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (merchant_local_date, driver_id, id);
+
+CREATE TABLE atlas_driver_offer_bpp.driver_information (
+    `driver_id` String,
+    `driver_flow_status` Nullable(String),
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (driver_id);
+
+create table atlas_driver_offer_bpp.driver_operator_association (
+    `id` String,
+    `driver_id` String,
+    `operator_id` String,
+    `is_active` Boolean,
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (operator_id, driver_id);
+
+create table atlas_driver_offer_bpp.fleet_driver_association (
+    `id` String,
+    `driver_id` String,
+    `fleet_owner_id` String,
+    `is_active` Boolean,
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (fleet_owner_id, driver_id);
+
+create table atlas_driver_offer_bpp.fleet_operator_association (
+    `id` String,
+    `fleet_owner_id` String,
+    `operator_id` String,
+    `is_active` Boolean,
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (operator_id, fleet_owner_id);
