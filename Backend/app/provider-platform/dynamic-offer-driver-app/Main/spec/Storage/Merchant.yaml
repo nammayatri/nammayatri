@@ -1044,6 +1044,7 @@ TransporterConfig:
     allowDuplicatePan : Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
+    allowCacheDriverFlowStatus : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1452,6 +1453,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion : "'999.999.999'"
     isAAEnabledForRecurring : "false"
     disableDriverWhenUnlinkingVehicle : "true"
+    allowCacheDriverFlowStatus : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

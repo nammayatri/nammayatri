@@ -41,8 +41,6 @@ data EstimateT f = EstimateT
 
 deriving instance Show Estimate
 
-instance CH.ClickhouseValue Common.Meters
-
 instance CH.ClickhouseValue Common.Seconds
 
 estimateTTable :: EstimateT (FieldModification EstimateT)

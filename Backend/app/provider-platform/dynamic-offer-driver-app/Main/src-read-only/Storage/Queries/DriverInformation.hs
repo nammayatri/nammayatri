@@ -5,6 +5,7 @@
 module Storage.Queries.DriverInformation (module Storage.Queries.DriverInformation, module ReExport) where
 
 import qualified Domain.Types.Common
+import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Person
@@ -78,10 +79,18 @@ updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore driver
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateActivity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Common.DriverMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateActivity active mode driverId = do
+updateActivity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Common.DriverMode -> Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateActivity active mode driverFlowStatus driverId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.active active, Se.Set Beam.mode mode, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+  updateOneWithKV
+    [ Se.Set Beam.active active,
+      Se.Set Beam.mode mode,
+      Se.Set Beam.driverFlowStatus driverFlowStatus,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateAirConditionScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateAirConditionScore airConditionScore driverId = do
@@ -349,6 +358,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.dlNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber),
       Se.Set Beam.dlNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber),
       Se.Set Beam.driverDob driverDob,
+      Se.Set Beam.driverFlowStatus driverFlowStatus,
       Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
       Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
       Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount,
