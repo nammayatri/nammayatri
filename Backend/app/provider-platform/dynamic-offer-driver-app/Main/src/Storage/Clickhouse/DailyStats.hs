@@ -25,8 +25,6 @@ data DailyStatsT f = DailyStatsT
 
 deriving instance Show DailyStats
 
-instance CH.ClickhouseValue Kernel.Types.Common.Meters
-
 dailyStatsTTable :: DailyStatsT (FieldModification DailyStatsT)
 dailyStatsTTable =
   DailyStatsT

@@ -286,6 +286,7 @@ library
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
+      Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
@@ -521,7 +522,10 @@ library
       Storage.Clickhouse.DailyStats
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
+      Storage.Clickhouse.DriverInformation
+      Storage.Clickhouse.DriverOperatorAssociation
       Storage.Clickhouse.Estimate
+      Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails

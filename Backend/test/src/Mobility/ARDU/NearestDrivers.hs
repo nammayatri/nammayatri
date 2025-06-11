@@ -120,4 +120,4 @@ setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
 setDriversActive isActive mode = do
   -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity isActive mode (Id driver))
+  forM_ drivers (\driver -> Q.updateActivity isActive mode Nothing (Id driver))
