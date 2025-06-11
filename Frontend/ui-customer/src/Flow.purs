@@ -7858,7 +7858,8 @@ busTicketBookingFlow = do
           void $ lift $ lift $ liftFlow $ showToast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           busTicketBookingFlow
       --------------------------------
-    BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
+    BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) updatedState -> do
+      modifyScreenState $ BusTicketBookingScreenStateType (\state -> updatedState )
       removePollingAndMapCache
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
           routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FRFSRouteAPI)) of
