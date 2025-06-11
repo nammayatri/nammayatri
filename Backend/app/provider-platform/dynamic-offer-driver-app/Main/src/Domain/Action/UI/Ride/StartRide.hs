@@ -25,10 +25,12 @@ where
 
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -39,6 +41,7 @@ import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -105,7 +108,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
 type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int])
 
 driverStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -116,7 +119,7 @@ driverStartRide handle rideId req =
     pure result
 
 dashboardStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -127,7 +130,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -195,6 +198,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
       whenWithLocationUpdatesLock driverId $ do
+        logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
+        DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus driverInfo.active driverInfo.mode DDFS.ON_RIDE (Just driverInfo)
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
 

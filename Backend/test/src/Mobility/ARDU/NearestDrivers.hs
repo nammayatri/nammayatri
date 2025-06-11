@@ -15,7 +15,7 @@
 module Mobility.ARDU.NearestDrivers (spec) where
 
 -- import qualified Kernel.Storage.Esqueleto as Esq
-
+import qualified "dynamic-offer-driver-app" Domain.Action.Internal.DriverMode as DDriverMode
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DI
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
@@ -23,7 +23,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
 import Test.Hspec
@@ -120,4 +119,10 @@ setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
 setDriversActive isActive mode = do
   -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity isActive mode (Id driver))
+  let allowCacheDriverFlowStatus = Nothing -- TODO: Need to discuss this
+  let newFlowStatus = DDriverMode.getDriverFlowStatus mode isActive
+  forM_
+    drivers
+    ( \driver -> do
+        DDriverMode.updateDriverModeAndFlowStatus (Id driver) allowCacheDriverFlowStatus isActive mode newFlowStatus Nothing
+    )

@@ -9,6 +9,7 @@ import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import qualified Dashboard.Common as Common
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Operator.FleetManagement as DFleetManagement
+import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverReferral as DR
@@ -104,6 +105,8 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     when (null fleetAssocs) $ do
       fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId (personId.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFOA.create fleetOperatorAssocData
+      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+        DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId
       DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
   when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
     fleetReferral <- QDR.findById person.id
