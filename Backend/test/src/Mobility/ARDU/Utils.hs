@@ -20,6 +20,7 @@ import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "rider-app" API.UI.Search as AppSearch
 import qualified API.UI.Select as AppSelect
 import Common
+import qualified "dynamic-offer-driver-app" Domain.Action.Internal.DriverMode as DDriverMode
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
 import qualified "rider-app" Domain.Action.UI.Estimate as AppEstimate
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.MerchantServiceConfig as TDMSC
@@ -135,7 +136,9 @@ resetDriver driver = runARDUFlow "" $ do
     TQRB.updateStatus booking.id TRB.CANCELLED
   forM_ activeQuotes $ \activeQuote ->
     TDQ.setInactiveBySTId activeQuote.searchTryId
-  QTDrInfo.updateActivity False (Just TDrInfo.OFFLINE) (cast driver.driverId)
+  let newFlowStatus = DDriverMode.getDriverFlowStatus (Just TDrInfo.OFFLINE) False
+  let allowCacheDriverFlowStatus = Nothing -- TODO: Need to discuss this
+  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) allowCacheDriverFlowStatus False (Just TDrInfo.OFFLINE) newFlowStatus Nothing
   QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives

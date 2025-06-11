@@ -213,3 +213,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN drunk_and_drive
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_pet_mode_enabled boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_status text ;

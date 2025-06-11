@@ -1024,6 +1024,24 @@ apis:
         - mbFleetOwnerId: Text
       response:
         type: "[(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
+
+  - GET:
+      endpoint: /fleet/status
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: DriverStatusRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/fleet/status
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+            response:
+              type: DriverStatusRes
 types:
   NearbyDriverReq:
     - point: LatLong
@@ -1450,6 +1468,14 @@ types:
     - waypoints: Maybe [LatLong]
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
+  DriverStatusRes:
+    - online: Int
+    - offline: Int
+    - silent: Int
+    - toPickup: Int
+    - onRide: Int
+    - active: Int
+    - inactive: Int
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

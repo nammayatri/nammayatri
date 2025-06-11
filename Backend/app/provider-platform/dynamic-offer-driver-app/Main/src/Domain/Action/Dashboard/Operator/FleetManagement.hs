@@ -14,6 +14,7 @@ where
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Control.Monad.Extra (mapMaybeM)
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
+import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -28,7 +29,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Environment
-import EulerHS.Prelude hiding (any, id, length, null, whenJust)
+import EulerHS.Prelude hiding (any, forM_, id, length, null, whenJust)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.SMS as Sms
@@ -382,20 +383,29 @@ postFleetManagementFleetUnlink ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId = do
   operator <- checkOperator requestorId
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  fleetOperatorAssocList <- QFOA.findAllByFleetIdAndOperatorId (Id fleetOwnerId :: Id DP.Person) operator.id
+  when (null fleetOperatorAssocList) $ throwError (InvalidRequest $ "Fleet id " <> fleetOwnerId <> " is not associated with operator")
 
   fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
   unless (fleetOwner.role == DP.FLEET_OWNER) $
     throwError (InvalidRequest "Invalid fleet owner")
 
+  let activeAssociations = filter (\assoc -> assoc.isActive) fleetOperatorAssocList
+
   QFOA.endFleetOperatorAssociation fleetOwner.id operator.id
+
+  when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+    forM_ activeAssociations $ \assoc ->
+      DriverMode.decrementOperatorStatusKeyForFleetOwner assoc.operatorId assoc.fleetOwnerId
 
   decryptedMobileNumber <-
     mapM decrypt fleetOwner.mobileNumber
       >>= fromMaybeM (InvalidRequest $ "Person does not have a mobile number " <> getId fleetOwner.id)
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   (mbSender, message) <-
     buildFleetUnlinkSuccessMessage merchantOpCityId $
       BuildFleetLinkUnlinkSuccessMessageReq
@@ -468,6 +478,9 @@ postFleetManagementFleetLinkVerifyOtp ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = do
   operator <- checkOperator requestorId
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fleetOwner <- B.runInReplica $ QP.findById (cast req.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound (getId req.fleetOwnerId))
   unless (fleetOwner.role == DP.FLEET_OWNER) $
     throwError (InvalidRequest "Invalid fleet owner")
@@ -480,11 +493,11 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   storedOtp <- Redis.get key >>= fromMaybeM OtpNotFound
   unless (storedOtp == req.otp) $ throwError InvalidOtp
 
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  SA.endFleetAssociationsIfAllowed merchant merchantOpCityId fleetOwner
+  SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
   fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
   QFOA.create fleetOperatorAssociation
+  when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+    DriverMode.incrementOperatorStatusKeyForFleetOwner operator.id.getId fleetOwner.id.getId
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
