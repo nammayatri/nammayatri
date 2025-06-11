@@ -24,6 +24,7 @@ import Components.LocationListItem.Controller (locationListStateObj, dummyAddres
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Prelude (negate)
 import Common.Types.App (City(..))
+import Foreign.Object (empty)
 
 initData :: SearchLocationScreenState 
 initData = {
@@ -68,6 +69,7 @@ initData = {
         , predictionSelectedFromHome : locationListStateObj
         , quotesList : []
         , searchRideType : BUS_ROUTE
+        , logField : empty
   } ,
   props : {
     searchLocStage : PredictionsStage ,
