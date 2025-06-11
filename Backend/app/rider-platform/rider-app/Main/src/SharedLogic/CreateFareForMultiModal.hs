@@ -16,6 +16,7 @@ module SharedLogic.CreateFareForMultiModal where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import qualified Data.Map as Map
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
@@ -118,10 +119,19 @@ convertVendorDetails ::
   [VendorSplitDetails.VendorSplitDetails] ->
   [FTBooking.FRFSTicketBooking] ->
   m [Payment.VendorSplitDetails]
-convertVendorDetails vendorDetails bookings
-  | length vendorDetails /= length bookings = throwError $ InternalError "Number of vendor details does not match number of bookings"
-  | otherwise = return $ zipWith toPaymentVendorDetails vendorDetails bookings
+convertVendorDetails vendorDetails bookings = do
+  let vendorDetailsMap = Map.fromList [(vd.integratedBPPConfigId, vd) | vd <- vendorDetails]
+      validVendorSplitDetails = mapMaybe (createVendorSplitForBooking vendorDetailsMap) bookings
+  return validVendorSplitDetails
   where
+    createVendorSplitForBooking vendorDetailsMap booking = do
+      case booking.integratedBppConfigId of
+        Just integratedBppConfigId -> do
+          case Map.lookup integratedBppConfigId vendorDetailsMap of
+            Just vd -> Just $ toPaymentVendorDetails vd booking
+            Nothing -> Nothing
+        Nothing -> Nothing
+
     toPaymentVendorDetails vd booking =
       Payment.VendorSplitDetails
         { splitAmount = booking.price.amount,
