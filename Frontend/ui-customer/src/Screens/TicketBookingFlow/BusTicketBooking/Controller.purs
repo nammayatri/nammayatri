@@ -54,6 +54,9 @@ import Data.Foldable (for_)
 import JBridge (firebaseLogEvent)
 import MapUtils as MU
 import Data.String as DS
+import Engineering.Helpers.Events as Events
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 
 instance showAction :: Show Action where
@@ -106,7 +109,8 @@ eval GoBack state =
     else exit $ GoToHomeScreen state
 
 eval SearchButtonClick state = do
-  void $ pure $ JB.firebaseLogEvent "ny_bus_user_clicked_search_Location_bus"
+  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_clicked_search_Location_bus"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_clicked_search_Location_bus"
   updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 
 eval (BusTicketBookingListRespAC bookingList) state =

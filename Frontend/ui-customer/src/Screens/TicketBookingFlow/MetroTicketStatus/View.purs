@@ -78,6 +78,9 @@ import Engineering.Helpers.Commons (screenHeight)
 import Language.Strings
 import Language.Types
 import Domain.Payments as PP
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.BackTrack (liftFlowBT)
 
 screen :: ST.MetroTicketStatusScreenState -> Screen Action ST.MetroTicketStatusScreenState ScreenOutput
 screen initialState =
@@ -152,6 +155,10 @@ metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state p
                 doAff do liftEffect $ push $ action resp
               else if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED"])) then do
                   void $ pure $ spy "case 2" statusResp.status
+                  if statusResp.status == "CONFIRMED" then do
+                    void $ pure $ liftFlowBT $ logEvent state.data.logField "ny_bus_user_booked_ticket"
+                  else
+                    pure $ unit
                   _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
                   doAff do liftEffect $ push $ action resp
               else do
