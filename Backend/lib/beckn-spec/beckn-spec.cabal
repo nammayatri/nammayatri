@@ -216,6 +216,7 @@ library
       Domain.Types.Alert.AlertRequestData
       Domain.Types.Alert.AlertRequestStatus
       Domain.Types.Alert.AlertRequestType
+      Domain.Types.Alert.DetectionData
       Domain.Types.EmptyDynamicParam
       Domain.Types.FareProductType
       Domain.Types.FleetBadgeType
