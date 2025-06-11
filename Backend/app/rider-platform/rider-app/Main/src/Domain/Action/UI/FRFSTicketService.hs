@@ -715,6 +715,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   frfsBookingStatus (personId, merchantId_) False booking
 
+-- pass isMultiModalBooking = True in case of multimodal flow
 frfsBookingStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Bool -> DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
   let bookingId = booking'.id
