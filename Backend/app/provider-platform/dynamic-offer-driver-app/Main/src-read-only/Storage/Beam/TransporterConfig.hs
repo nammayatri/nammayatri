@@ -230,7 +230,8 @@ data TransporterConfigT f = TransporterConfigT
     weeklyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
+    aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    isAAEnabledForRecurring :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)
   }
   deriving (Generic, B.Beamable)
 

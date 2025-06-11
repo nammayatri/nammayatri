@@ -234,7 +234,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     weeklyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    aaEnabledClientSdkVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    aaEnabledClientSdkVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isAAEnabledForRecurring :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, Eq)
 

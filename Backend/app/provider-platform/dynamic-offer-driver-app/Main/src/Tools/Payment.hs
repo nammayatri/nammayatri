@@ -153,17 +153,21 @@ decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
       | v >= textToVersionDefault k -> DMSC.PaymentService Payment.AAJuspay
     _ -> paymentServiceName
 
-decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> DPlan.ServiceNames -> m DMSC.ServiceName
-decidePaymentServiceForRecurring paymentServiceName driverId serviceName = do
-  mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
-  case mDriverPlan of
-    Just driverPlan -> do
-      now <- getCurrentTime
-      let mandateSetupTime = fromMaybe now driverPlan.mandateSetupDate
-          elapsed = diffUTCTime now mandateSetupTime
-          sixHours = 6 * 60 * 60
-      pure $
-        if elapsed > sixHours
-          then DMSC.PaymentService Payment.AAJuspay
-          else paymentServiceName
-    Nothing -> pure paymentServiceName
+decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> m DMSC.ServiceName
+decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId serviceName = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  case transporterConfig.isAAEnabledForRecurring of
+    Just True -> do
+      mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
+      case mDriverPlan of
+        Just driverPlan -> do
+          now <- getCurrentTime
+          let mandateSetupTime = fromMaybe now driverPlan.mandateSetupDate
+              elapsed = diffUTCTime now mandateSetupTime
+              sixHours = 6 * 60 * 60
+          pure $
+            if elapsed > sixHours
+              then DMSC.PaymentService Payment.AAJuspay
+              else paymentServiceName
+        Nothing -> pure paymentServiceName
+    _ -> pure paymentServiceName

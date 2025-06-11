@@ -181,7 +181,7 @@ asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-  paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id subscriptionConfig.serviceName
+  paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id merchantOperatingCityId subscriptionConfig.serviceName
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
       exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))

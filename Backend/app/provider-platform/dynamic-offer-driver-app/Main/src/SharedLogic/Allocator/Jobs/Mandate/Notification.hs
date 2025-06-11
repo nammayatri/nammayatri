@@ -211,7 +211,7 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
   req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
   driver <- QP.findById driverToNotify.driverId >>= fromMaybeM (PersonDoesNotExist driverToNotify.driverId.getId)
   QNTF.create $ buildNotificationEntity notificationId req driverToNotify.driverFeeId driverToNotify.mandateId now
-  paymentServiceName <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id subscriptionConfig.serviceName
+  paymentServiceName <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id driver.merchantOperatingCityId subscriptionConfig.serviceName
   exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId paymentServiceName (Just driver.id.getId)))
   case exec of
     Left err -> do

@@ -1032,6 +1032,7 @@ TransporterConfig:
     liveEKD: Maybe Bool
     deactivateRCOnUnlink: Maybe Bool
     aaEnabledClientSdkVersion : Maybe Text
+    isAAEnabledForRecurring : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1435,6 +1436,8 @@ TransporterConfig:
     earningsWindowSize : "7"
     deactivateRCOnUnlink: "true"
     aaEnabledClientSdkVersion : "999.999.999"
+    isAAEnabledForRecurring : "false"
+    aaEnabled
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
