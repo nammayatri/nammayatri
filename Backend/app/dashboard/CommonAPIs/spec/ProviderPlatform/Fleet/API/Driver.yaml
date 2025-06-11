@@ -18,6 +18,8 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   ActionSource: Dashboard.Common
   FleetBadgeType: Domain.Types.FleetBadgeType
+  OperationHub: API.Types.ProviderPlatform.Operator.Driver
+
 module: Driver
 
 apis:
@@ -1051,6 +1053,7 @@ types:
     - vehicleModelYear: Maybe Int
     - vehicleTags: Maybe [Text]
     - fuelType: Maybe Text
+    - operationHubId: Maybe (Id OperationHub)
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType
