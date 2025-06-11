@@ -21,7 +21,6 @@ import Kernel.Prelude hiding (show)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Lib.Payment.Domain.Types.Common
-import Prelude (Show (..))
 
 data PaymentOrderE e = PaymentOrder
   { id :: Id PaymentOrder,
