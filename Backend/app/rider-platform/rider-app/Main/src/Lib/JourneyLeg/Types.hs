@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types where
 
+import Domain.Types.Route
 import Domain.Types.Station
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -52,7 +53,7 @@ data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
     subLegOrder :: Kernel.Prelude.Maybe Int,
     platformNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeId :: Kernel.Prelude.Maybe Text,
+    routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     fromStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station),
     toStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station)
   }

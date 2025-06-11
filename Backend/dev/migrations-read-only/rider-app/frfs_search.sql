@@ -85,8 +85,3 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN recent_location_id character varyin
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_search ADD COLUMN on_search_failed boolean ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_search ALTER COLUMN route_id TYPE text;

@@ -466,7 +466,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
 
     createStationIfRequired :: JT.SearchRequestFlow m r c => Maybe Text -> Text -> Double -> Double -> MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> m (Maybe Station)
     createStationIfRequired name code lat lon merchantOpCity integratedBPPConfig = do
-      mbStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId code integratedBPPConfig
+      mbStation <- QStation.findByStationCode code integratedBPPConfig.id
       case mbStation of
         Just station -> return (Just station)
         Nothing -> do
@@ -525,7 +525,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
                 routeLongName = EMTypes.longName rd,
                 fromStationId = fmap (.id) fromStation,
                 toStationId = fmap (.id) toStation,
-                routeId = fmap (.code) route
+                routeId = fmap (.id) route
               }
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> m [FRFSRouteDetails]

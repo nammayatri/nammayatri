@@ -562,7 +562,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
             (Just fromCode, Just toCode, Just routeCode) -> do
               case integratedBPPConfig.providerConfig of
                 DIBC.CRIS config' -> do
-                  intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig Station.START Station.END
+                  intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig.id Station.START Station.END
 
                   let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
                       viaPoints = if T.null viaStations then " " else viaStations

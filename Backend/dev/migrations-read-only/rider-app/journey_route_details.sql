@@ -35,8 +35,3 @@ ALTER TABLE atlas_app.journey_route_details ADD COLUMN journey_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_route_details ADD COLUMN alternate_short_names text[] ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.journey_route_details ALTER COLUMN route_id TYPE text;

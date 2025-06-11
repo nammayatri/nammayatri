@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.Route
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -32,7 +33,7 @@ data FRFSSearch = FRFSSearch
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    routeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
