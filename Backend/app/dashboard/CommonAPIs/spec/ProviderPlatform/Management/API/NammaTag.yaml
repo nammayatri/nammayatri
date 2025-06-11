@@ -30,6 +30,7 @@ imports:
   ConfigDetailsResp: Lib.Yudhishthira.Types
   TableDataResp: Lib.Yudhishthira.Types
   ActionChangeRequest: Lib.Yudhishthira.Types
+  UiDevicePlatformReq: Lib.Yudhishthira.Types
 
 
 module: NammaTag
@@ -254,6 +255,33 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         tableName: ConfigType
+      response:
+        type: TableDataResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/allUiConfigs
+      auth: ApiAuthV2
+      query:
+        underExperiment: Bool
+      response:
+        type: "[LogicDomain]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/uiConfigDetails
+      auth: ApiAuthV2
+      request:
+        type: UiDevicePlatformReq
+      response:
+        type: "[ConfigDetailsResp]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/getUiTableData
+      auth: ApiAuthV2
+      request:
+        type: UiDevicePlatformReq
       response:
         type: TableDataResp
       migrate:

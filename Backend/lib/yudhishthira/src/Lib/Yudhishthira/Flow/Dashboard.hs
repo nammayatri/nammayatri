@@ -487,64 +487,54 @@ callWebHook req = do
   CPFC.callConfigPilotFrontend req cfg
 
 -- This updates on going release flag in TS Service
--- callTheFrontEndHook ::
---   BeamFlow m r =>
---   Kernel.Types.Beckn.Context.City ->
---   Lib.Yudhishthira.Types.LogicDomain ->
---   m Kernel.Types.APISuccess.APISuccess
--- callTheFrontEndHook opCity domain = do
---   case domain of
---     Lib.Yudhishthira.Types.DRIVER_CONFIG cfg -> do
---       case cfg of
---         Lib.Yudhishthira.Types.UiConfig os pt -> do
---           let req = makeReq opCity os pt
---           res <- callWebHook req
---           logDebug $ "Response from Frontend Logic: " <> show res
---           return Kernel.Types.APISuccess.Success
---         _ -> return Kernel.Types.APISuccess.Success
---     Lib.Yudhishthira.Types.RIDER_CONFIG cfg -> do
---       case cfg of
---         Lib.Yudhishthira.Types.UiConfig os pt -> do
---           let req = makeReq opCity os pt
---           res <- callWebHook req
---           logDebug $ "Response from Frontend Logic: " <> show res
---           return Kernel.Types.APISuccess.Success
---         _ -> return Kernel.Types.APISuccess.Success
---     _ -> return Kernel.Types.APISuccess.Success
---   where
---     makeReq city os pt =
---       CPFC.ConfigPilotFrontendReq
---         { city = T.pack (show city),
---           os = T.pack (show os),
---           platform = T.pack (show pt),
---           isOnGoingRelease = True
---         }
+callTheFrontEndHook ::
+  BeamFlow m r =>
+  Kernel.Types.Beckn.Context.City ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m Kernel.Types.APISuccess.APISuccess
+callTheFrontEndHook opCity domain = do
+  case domain of
+    Lib.Yudhishthira.Types.UI_DRIVER os pt -> do
+      let req = makeReq opCity os pt
+      res <- callWebHook req
+      logDebug $ "Response from Frontend Logic: " <> show res
+      return Kernel.Types.APISuccess.Success
+    Lib.Yudhishthira.Types.UI_RIDER os pt -> do
+      let req = makeReq opCity os pt
+      res <- callWebHook req
+      logDebug $ "Response from Frontend Logic: " <> show res
+      return Kernel.Types.APISuccess.Success
+    _ -> return Kernel.Types.APISuccess.Success
+  where
+    makeReq city os pt =
+      CPFC.ConfigPilotFrontendReq
+        { city = T.pack (show city),
+          os = T.pack (show os),
+          platform = T.pack (show pt),
+          isOnGoingRelease = True
+        }
 
 upsertLogicRollout ::
   (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   [Lib.Yudhishthira.Types.LogicRolloutObject] ->
-  (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) ->
+  (LYT.LogicDomain -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) ->
   Kernel.Types.Beckn.Context.City ->
   m Kernel.Types.APISuccess.APISuccess
 upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity = do
   unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
   domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
   now <- getCurrentTime
-  if isDriverOrRiderConfig domain
+  if isDriverOrRiderConfig domain || isUIConfig domain
     then do
-      version <- handleDriverOrRiderConfig domain merchantOpCityId now rolloutReq
+      version <- handleDriverOrRiderConfigOrUiConfig domain merchantOpCityId now rolloutReq
       fork "Pushing Config History" $ do
-        configType <- case domain of
-          LYT.DRIVER_CONFIG ct -> return ct
-          LYT.RIDER_CONFIG ct -> return ct
-          _ -> throwError $ InternalError "Unsupported logic domain"
         when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
-        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
+        configsJson <- (.configs) <$> giveConfigs domain (cast merchantOpCityId) (fromJust mbMerchantId) opCity
         pushConfigHistory domain version merchantOpCityId configsJson
-      -- when (isUIConfig domain) $ do
-      --   void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
+      when (isUIConfig domain) $ do
+        void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
       return Kernel.Types.APISuccess.Success
     else handleOtherDomain merchantOpCityId now rolloutReq domain
   where
@@ -552,8 +542,8 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
     getDomain = listToMaybe $ map (.domain) rolloutReq
 
     -- Driver or Rider Config Domain Handling
-    handleDriverOrRiderConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> m Int
-    handleDriverOrRiderConfig domain merchantOpCityId' now rolloutReq' = do
+    handleDriverOrRiderConfigOrUiConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> m Int
+    handleDriverOrRiderConfigOrUiConfig domain merchantOpCityId' now rolloutReq' = do
       configRolloutObjectsArr <- mapM (mkAppDynamicLogicRolloutDomain merchantOpCityId' now) rolloutReq'
       let configRolloutObjects = concat configRolloutObjectsArr
       when (length configRolloutObjects > 1) $ throwError $ InvalidRequest "Only one version can be set to experiment at a time"
@@ -620,10 +610,10 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
     mkAppDynamicLogicRolloutDomain merchantOperatingCityId now Lib.Yudhishthira.Types.LogicRolloutObject {..} = do
       when (timeBounds /= "Unbounded") $
         void $ CQTBC.findByPrimaryKey merchantOperatingCityId timeBounds domain >>= fromMaybeM (InvalidRequest $ "Time bound not found: " <> timeBounds)
-      unless (isDriverOrRiderConfig domain) $ do
+      unless (isDriverOrRiderConfig domain || isUIConfig domain) $ do
         let rolloutSum = sum $ map (.rolloutPercentage) rollout
         when (rolloutSum /= 100) $ throwError $ InvalidRequest "Sum of rollout percentage should be 100"
-      mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds (if isDriverOrRiderConfig domain then Just Lib.Yudhishthira.Types.RUNNING else Nothing) modifiedBy) rollout
+      mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds (if isDriverOrRiderConfig domain || isUIConfig domain then Just Lib.Yudhishthira.Types.RUNNING else Nothing) modifiedBy) rollout
 
     mkAppDynamicLogicRollout ::
       BeamFlow m r =>
@@ -738,6 +728,30 @@ getNammaTagConfigPilotAllConfigs merchantOpCityId mbUnderExp configChoice = do
       let configTypes :: [Lib.Yudhishthira.Types.ConfigType] = Lib.Yudhishthira.Types.allValues
       return configTypes
 
+getNammaTagConfigPilotAllUiConfigs :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Bool -> Lib.Yudhishthira.Types.ConfigTypeChoice -> m [Lib.Yudhishthira.Types.LogicDomain]
+getNammaTagConfigPilotAllUiConfigs merchantOpCityId mbUnderExp configChoice = do
+  case mbUnderExp of
+    Just True -> do
+      allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+      let configRollouts =
+            filter
+              ( \rollout -> case configChoice of
+                  Lib.Yudhishthira.Types.DriverCfg -> case rollout.domain of
+                    Lib.Yudhishthira.Types.UI_DRIVER _ _ -> True
+                    _ -> False
+                  Lib.Yudhishthira.Types.RiderCfg -> case rollout.domain of
+                    Lib.Yudhishthira.Types.UI_RIDER _ _ -> True
+                    _ -> False
+              )
+              allRollouts
+          configsInExperiment :: [Lib.Yudhishthira.Types.LogicDomain] =
+            nub $
+              map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) configRollouts
+      return configsInExperiment
+    _ -> do
+      let configTypes :: [Lib.Yudhishthira.Types.LogicDomain] = filter isUIConfig Lib.Yudhishthira.Types.allValues
+      return configTypes
+
 getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
 getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
   allConfigRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain'
@@ -757,7 +771,26 @@ getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
             isBasePatch = isBaseVersion == Just True
           }
 
-postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()) -> (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) -> Kernel.Types.Beckn.Context.City -> m Kernel.Types.APISuccess.APISuccess
+getNammaTagConfigPilotUiConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
+getNammaTagConfigPilotUiConfigDetails merchantOpCityId domain' = do
+  allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+  let configRollouts = filter (\rollout -> rollout.domain == domain') allRollouts
+  mapM makeConfigDetailResp configRollouts
+  where
+    makeConfigDetailResp :: BeamFlow m r => AppDynamicLogicRollout -> m Lib.Yudhishthira.Types.ConfigDetailsResp
+    makeConfigDetailResp (AppDynamicLogicRollout {..}) = do
+      logicsObject <- CADLE.findByDomainAndVersion domain' version
+      let logics = map (.logic) logicsObject
+      return $
+        Lib.Yudhishthira.Types.ConfigDetailsResp
+          { modifiedBy = modifiedBy,
+            percentageRollout = percentageRollout,
+            version = version,
+            configPatch = logics,
+            isBasePatch = isBaseVersion == Just True
+          }
+
+postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()) -> (LYT.LogicDomain -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) -> Kernel.Types.Beckn.Context.City -> m Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConfigDBUpdate' giveConfigs opCity = do
   case req of
     LYT.Conclude concludeReq -> do
@@ -829,12 +862,8 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
   where
     makeConfigHistory domain version = do
       fork "pushing config history" $ do
-        configType <- case domain of
-          LYT.DRIVER_CONFIG ct -> return ct
-          LYT.RIDER_CONFIG ct -> return ct
-          _ -> throwError $ InternalError "Unsupported logic domain"
         when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
-        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
+        configsJson <- (.configs) <$> giveConfigs domain (cast merchantOpCityId) (fromJust mbMerchantId) opCity
         case req of
           LYT.Abort _ -> do
             pushConfigHistory domain version merchantOpCityId configsJson
@@ -884,10 +913,10 @@ isDriverOrRiderConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG _) = True
 isDriverOrRiderConfig (Lib.Yudhishthira.Types.RIDER_CONFIG _) = True
 isDriverOrRiderConfig _ = False
 
--- isUIConfig :: LYT.LogicDomain -> Bool
--- isUIConfig (LYT.DRIVER_CONFIG (LYT.UiConfig _ _)) = True
--- isUIConfig (LYT.RIDER_CONFIG (LYT.UiConfig _ _)) = True
--- isUIConfig _ = False
+isUIConfig :: LYT.LogicDomain -> Bool
+isUIConfig (LYT.UI_DRIVER _ _) = True
+isUIConfig (LYT.UI_RIDER _ _) = True
+isUIConfig _ = False
 
 extractDriverConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
 extractDriverConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG config) = Just config
