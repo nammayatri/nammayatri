@@ -429,3 +429,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_ambulance
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN live_ekd boolean  default false;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_cache_driver_flow_status boolean  default false;
+

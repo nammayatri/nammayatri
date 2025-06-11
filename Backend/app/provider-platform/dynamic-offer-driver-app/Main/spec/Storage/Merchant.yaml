@@ -1030,6 +1030,7 @@ TransporterConfig:
     localPoliceNumbers: Maybe [Text]
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
+    allowCacheDriverFlowStatus : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1425,7 +1426,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     onboardingDocsCountLimit: "50"
-
+    allowCacheDriverFlowStatus : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
