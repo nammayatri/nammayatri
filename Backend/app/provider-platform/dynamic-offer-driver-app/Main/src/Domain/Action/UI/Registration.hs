@@ -35,6 +35,7 @@ import Data.Text hiding (elem)
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverFlowStatus as DriverFlowStatus
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
@@ -312,7 +313,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             softBlockStiers = Nothing,
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
-            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION]
+            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            driverFlowStatus = Just DriverFlowStatus.OFFLINE
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
@@ -577,5 +579,5 @@ logout (personId, _, _) = do
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken Nothing uperson.id
   QR.deleteByPersonId personId.getId
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
+  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) Nothing (cast uperson.id))
   pure Success

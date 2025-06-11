@@ -41,3 +41,16 @@ CREATE TABLE atlas_driver_offer_bpp.daily_stats (
     `cancellation_charges` Float64,
     `bonus_earnings` Float64
 ) ENGINE = MergeTree() PRIMARY KEY (id);
+
+create table atlas_driver_offer_bpp.driver_information (
+    `id` String,
+    `driver_id` String,
+    `driver_flow_status` Nullable(String)
+) ENGINE = MergeTree() PRIMARY KEY (id);
+
+create table atlas_driver_offer_bpp.driver_operator_association (
+    `id` String,
+    `driver_id` String,
+    `operator_id` String,
+    `is_active` Boolean
+) ENGINE = MergeTree() PRIMARY KEY (id);

@@ -52,6 +52,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    getDriverFleetStatus,
   )
 where
 
@@ -80,6 +81,7 @@ import qualified Domain.Types.Alert as DTA
 import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
+import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverRCAssociation
@@ -127,6 +129,8 @@ import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.DriverInformation as CDI
+import qualified Storage.Clickhouse.DriverOperatorAssociation as CDOA
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -1023,6 +1027,37 @@ castDriverStatus = \case
   Just DrInfo.OFFLINE -> Common.OFFLINE
   Just DrInfo.SILENT -> Common.SILENT
   Nothing -> Common.OFFLINE
+
+---------------------------------------------------------------------
+getDriverFleetStatus :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow Common.DriverStatusRes
+getDriverFleetStatus _merchantShortId _opCity requestorId mbFleetOwnerId = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  (_, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  getDriverFlowStatusCountsByOperatorId entityId
+  where
+    getDriverFlowStatusCountsByOperatorId :: Text -> Flow Common.DriverStatusRes
+    getDriverFlowStatusCountsByOperatorId entityId = do
+      driverIds <- CDOA.getDriverIdsByOperatorId entityId
+      driverModeInfo <- CDI.getModeCountsByDriverIds driverIds
+      pure $ toDriverStatusRes driverModeInfo
+
+    toDriverStatusRes :: [(Maybe DDF.DriverFlowStatus, Int)] -> Common.DriverStatusRes
+    toDriverStatusRes xs =
+      let m = toStatusMap xs
+          get s = Map.findWithDefault 0 (Just s) m
+          getInactive = get DDF.INACTIVE + Map.findWithDefault 0 Nothing m
+       in Common.DriverStatusRes
+            { online = get DDF.ONLINE,
+              offline = get DDF.OFFLINE,
+              silent = get DDF.SILENT,
+              toPickup = get DDF.ON_PICKUP,
+              onRide = get DDF.ON_RIDE,
+              active = get DDF.ACTIVE,
+              inactive = getInactive
+            }
+
+    toStatusMap :: [(Maybe DDF.DriverFlowStatus, Int)] -> Map.Map (Maybe DDF.DriverFlowStatus) Int
+    toStatusMap = Map.fromListWith (+)
 
 ---------------------------------------------------------------------
 getDriverFleetDriverVehicleAssociation ::
