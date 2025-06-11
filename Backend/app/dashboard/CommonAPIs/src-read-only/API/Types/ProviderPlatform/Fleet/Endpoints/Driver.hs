@@ -1069,11 +1069,11 @@ type PostDriverFleetVehicleDriverRcStatus =
 type PostDriverFleetVehicleDriverRCstatusHelper =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> Capture
-           "fleetOwnerId"
+           "requestorId"
            Kernel.Prelude.Text
       :> "fleet"
       :> "vehicleDriverRCstatus"
-      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
       :> ReqBody '[JSON] RCStatusReq
       :> Post
            '[JSON]

@@ -571,13 +571,13 @@ apis:
         type: APISuccess
       helperApi:
         - POST:
-            endpoint: /{driverId}/{fleetOwnerId}/fleet/vehicleDriverRCstatus
+            endpoint: /{driverId}/{requestorId}/fleet/vehicleDriverRCstatus
             auth: ApiAuthV2
             params:
               driverId: Id Driver
-              fleetOwnerId: Text
+              requestorId: Text
             query:
-              - requestorId: Text
+              - fleetOwnerId: Text
             request:
               type: RCStatusReq
             response:

@@ -1326,24 +1326,38 @@ postDriverFleetVehicleDriverRcStatus ::
   Maybe Text ->
   Common.RCStatusReq ->
   Flow APISuccess
-postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId mbRequestorId req = do
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requestorId mbFleetOwnerId req = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
-  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
-  when (isNothing isFleetDriver) $ throwError DriverNotPartOfFleet
-  -- merchant access checking
-  let merchantId = driver.merchantId
-  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  vehicle <- RCQuery.findLastVehicleRCWrapper req.rcNo >>= fromMaybeM (VehicleDoesNotExist req.rcNo)
-  unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
-  Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) fleetOwnerId
+  case entityRole of
+    DP.FLEET_OWNER -> do
+      DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
+      validateFleetOwnerWithDriverAndVehicle personId entityId merchant.id merchantOpCityId req.rcNo
+      Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) entityId
+    DP.OPERATOR -> validateOperatorWithDriver personId entityId
+    _ -> throwError (InvalidRequest "Invalid Data")
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
-  logTagInfo "dashboard -> addVehicle : " (show driver.id)
+  logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
+  where
+    validateFleetOwnerWithDriverAndVehicle :: Id DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Flow ()
+    validateFleetOwnerWithDriverAndVehicle personId fleetOwnerId merchantId merchantOpCityId rcNo = do
+      driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
+      when (isNothing isFleetDriver) $ throwError DriverNotPartOfFleet
+      unless (merchantId == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
+        throwError (PersonDoesNotExist personId.getId)
+      vehicle <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (VehicleDoesNotExist rcNo)
+      unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $
+        throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
+
+    validateOperatorWithDriver :: Id DP.Person -> Text -> Flow ()
+    validateOperatorWithDriver personId operatorId = do
+      isDriverOperator <- DOV.checkDriverOperatorAssociation personId (Id operatorId)
+      when (not isDriverOperator) $ throwError DriverNotPartOfOperator
 
 ---------------------------------------------------------------------
 postDriverUpdateFleetOwnerInfo ::
