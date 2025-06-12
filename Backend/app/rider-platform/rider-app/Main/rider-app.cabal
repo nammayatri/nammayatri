@@ -496,14 +496,12 @@ library
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
       Storage.Queries.RouteExtra
-      Storage.Queries.RoutePolylinesExtra
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
       Storage.Queries.StationExtra
-      Storage.Queries.StationsExtraInformationExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
       Storage.Queries.TicketBookingServiceCategoryExtra
@@ -1056,14 +1054,12 @@ library
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Route
-      Storage.Queries.OrphanInstances.RoutePolylines
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
       Storage.Queries.OrphanInstances.Station
-      Storage.Queries.OrphanInstances.StationsExtraInformation
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
       Storage.Queries.OrphanInstances.TicketBookingService

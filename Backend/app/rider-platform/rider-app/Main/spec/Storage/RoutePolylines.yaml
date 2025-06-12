@@ -29,8 +29,6 @@ RoutePolylines:
       kvFunction: findOneWithKV
       where:
         and: [routeId, vehicleType]
-  extraOperations:
-    - EXTRA_QUERY_FILE
 
 StationsExtraInformation:
   tableName: stations_extra_information
@@ -45,9 +43,6 @@ StationsExtraInformation:
 
   constraints:
     id: PrimaryKey
-
-  extraOperations:
-    - EXTRA_QUERY_FILE
 
   queries:
     findByStationIdAndCity:
