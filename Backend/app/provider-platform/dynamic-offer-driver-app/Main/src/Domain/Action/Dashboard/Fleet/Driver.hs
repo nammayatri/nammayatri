@@ -69,6 +69,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -562,7 +563,7 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
           unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
       unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.FLEET_OWNER
     DP.OPERATOR -> do
-      isDriverOperator <- DOV.checkDriverOperatorAssociation personId (Id entityId)
+      isDriverOperator <- DDriver.checkDriverOperatorAssociation personId (Id entityId)
       when (not isDriverOperator) $ throwError DriverNotPartOfOperator
       unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.OPERATOR
     _ -> throwError $ InvalidRequest "Invalid Data"
@@ -1356,7 +1357,7 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
 
     validateOperatorWithDriver :: Id DP.Person -> Text -> Flow ()
     validateOperatorWithDriver personId operatorId = do
-      isDriverOperator <- DOV.checkDriverOperatorAssociation personId (Id operatorId)
+      isDriverOperator <- DDriver.checkDriverOperatorAssociation personId (Id operatorId)
       when (not isDriverOperator) $ throwError DriverNotPartOfOperator
 
 ---------------------------------------------------------------------
@@ -2246,7 +2247,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToOperator merchant moc operator req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
-      (if isNew then pure False else QDOA.checkDriverOperatorAssociation person.id operator.id)
+      (if isNew then pure False else DDriver.checkDriverOperatorAssociation person.id operator.id)
         >>= \isAssociated -> unless isAssociated $ do
           unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
           fork "Sending Operator Consent SMS to Driver" $ do
