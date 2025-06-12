@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.StationsExtraInformation where
+module Storage.Queries.StationsExtraInformation (module Storage.Queries.StationsExtraInformation, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.StationsExtraInformation
@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.StationsExtraInformation as Beam
+import Storage.Queries.StationsExtraInformationExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StationsExtraInformation.StationsExtraInformation -> m ())
 create = createWithKV
@@ -50,29 +51,3 @@ updateByPrimaryKey (Domain.Types.StationsExtraInformation.StationsExtraInformati
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInformation.StationsExtraInformation where
-  fromTType' (Beam.StationsExtraInformationT {..}) = do
-    pure $
-      Just
-        Domain.Types.StationsExtraInformation.StationsExtraInformation
-          { address = address,
-            createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            stationId = stationId,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInformation.StationsExtraInformation where
-  toTType' (Domain.Types.StationsExtraInformation.StationsExtraInformation {..}) = do
-    Beam.StationsExtraInformationT
-      { Beam.address = address,
-        Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.stationId = stationId,
-        Beam.updatedAt = updatedAt
-      }
