@@ -130,6 +130,7 @@ data KeyStore
   | CUSTOMER_FIRST_SIGNUP
   | ONBOARDED_VEHICLE_INFO
   | CAN_HAVE_ACTIVE_TICKETS
+  | PUSH_SDK_TS
 
 derive instance genericKeyStore :: Generic KeyStore _
 

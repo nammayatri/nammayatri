@@ -56,6 +56,7 @@ library
       API.Internal.FRFS
       API.Internal.Rating
       API.Internal.StopEvents
+      API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.UI
@@ -191,6 +192,7 @@ library
       Domain.Action.Internal.Payout
       Domain.Action.Internal.Rating
       Domain.Action.Internal.StopEvents
+      Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.AttractionRecommend
@@ -771,6 +773,7 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteDetails
+      Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
@@ -788,6 +791,7 @@ library
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.Station
+      Domain.Types.StationsExtraInformation
       Domain.Types.StopInformation
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
@@ -902,6 +906,7 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteDetails
+      Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
@@ -919,6 +924,7 @@ library
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.Station
+      Storage.Beam.StationsExtraInformation
       Storage.Beam.StopInformation
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
@@ -1088,6 +1094,7 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteDetails
+      Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
@@ -1105,6 +1112,7 @@ library
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Station
+      Storage.Queries.StationsExtraInformation
       Storage.Queries.StopInformation
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory

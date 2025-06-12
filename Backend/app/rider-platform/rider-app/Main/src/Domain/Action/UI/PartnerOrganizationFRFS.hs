@@ -85,6 +85,7 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
@@ -97,7 +98,6 @@ import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import qualified Storage.Queries.Route as QRoute
 import Tools.Error
 import qualified Tools.SMS as Sms
 
@@ -455,7 +455,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          route' <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
           return $ Just route'
       )
       routeCode
@@ -501,7 +501,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             quantity = 1,
             fromStationId = fromStation'.id,
             toStationId = toStation'.id,
-            routeId = route <&> (.id),
+            routeId = route <&> (.code),
             riderId = Utils.partnerOrgRiderId,
             partnerOrgTransactionId = partnerOrgTransactionId',
             partnerOrgId = Just partnerOrg'.orgId,

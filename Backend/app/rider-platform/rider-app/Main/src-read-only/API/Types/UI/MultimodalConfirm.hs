@@ -25,6 +25,7 @@ import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.Types
 import qualified Lib.JourneyModule.Utils
 import Servant
+import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
 data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
@@ -98,10 +99,6 @@ data JourneyInfoResp = JourneyInfoResp
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyInfoRespWithFare = JourneyInfoRespWithFare {journeyInfoResponse :: JourneyInfoResp, totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data JourneyStatusResp = JourneyStatusResp
   { journeyChangeLogCounter :: Kernel.Prelude.Int,
     journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
@@ -116,7 +113,8 @@ data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.Jour
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegStatus = LegStatus
-  { legOrder :: Kernel.Prelude.Int,
+  { boardedVehicles :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusDataWithoutETA],
+    legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,

@@ -126,6 +126,7 @@ goToTripDetailsHandler state = do
         , rideEndTimeUTC = state.data.rideEndTimeUTC
         , rideId = state.data.rideId
         , vehicleNumber = state.data.vehicleNumber
+        , vehicleVariant = state.data.vehicleVariant
         , time = state.data.time
         , source = state.data.source
         , destination = state.data.destination 

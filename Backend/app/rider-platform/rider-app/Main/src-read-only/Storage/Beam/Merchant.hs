@@ -63,7 +63,8 @@ data MerchantT f = MerchantT
     signatureExpiry :: B.C f Kernel.Prelude.Int,
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
     subscriberId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    whiteListedIpsForAuth :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])
   }
   deriving (Generic, B.Beamable)
 

@@ -28,6 +28,7 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
+  BusData: Storage.CachedQueries.Merchant.MultiModalBus
 
 module: MultimodalConfirm
 
@@ -47,10 +48,6 @@ types:
     crisSdkToken : Maybe Text
     derive: "Show"
 
-  JourneyInfoRespWithFare:
-    journeyInfoResponse: JourneyInfoResp
-    totalFare: Maybe HighPrecMoney
-
   LegStatus:
     legOrder: Int
     subLegOrder: Int
@@ -58,6 +55,7 @@ types:
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
+    boardedVehicles: Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusDataWithoutETA]
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
@@ -319,7 +317,7 @@ apis:
       request:
         type: SwitchFRFSTierReq
       response:
-        type: JourneyInfoRespWithFare
+        type: JourneyInfoResp
 
   - POST:
       endpoint: multimodal/{journeyId}/journeyFeedback

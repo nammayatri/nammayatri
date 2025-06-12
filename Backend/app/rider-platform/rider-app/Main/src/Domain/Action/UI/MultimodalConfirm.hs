@@ -69,6 +69,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuote as QQuote
@@ -84,7 +85,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
-import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -148,7 +148,7 @@ getMultimodalBookingPaymentStatus ::
 getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-  frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+  frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
   let anyFirstBooking = listToMaybe frfsBookingStatusArr
       paymentOrder =
         anyFirstBooking >>= (.payment)
@@ -234,8 +234,8 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
       )
       frfsBookingsArr
   frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
-  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty
   let paymentType = TPayment.FRFSMultiModalBooking
+  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType
   isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
   let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
   let flattenedPayments = concat frfsBookingsPaymentArr
@@ -359,7 +359,7 @@ postMultimodalOrderSwitchFRFSTier ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
-    Environment.Flow ApiTypes.JourneyInfoRespWithFare
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
@@ -370,48 +370,40 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   let mbBooking = find (\booking -> booking.searchId == Id journeyLegInfo.searchId) allJourneyFrfsBookings
-  mbUpdatedTotalPrice <- case mbBooking of
-    Nothing -> return Nothing
-    Just booking -> do
-      quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
-      let quantity = booking.quantity
-          childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
-          quantityRational = fromIntegral quantity :: Rational
-          childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
-          childPrice = fromMaybe quote.price quote.childPrice
-          totalPriceForSwitchLeg =
-            Price
-              { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
-                amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
-                currency = quote.price.currency
-              }
-          updatedBooking =
-            booking
-              { DFRFSB.quoteId = req.quoteId,
-                DFRFSB.price = totalPriceForSwitchLeg,
-                DFRFSB.estimatedPrice = totalPriceForSwitchLeg
-              }
-          updatedTotalPrice =
-            foldl'
-              ( \acc booking' ->
-                  if booking'.id == booking.id
-                    then acc + totalPriceForSwitchLeg.amount
-                    else acc + booking'.price.amount
-              )
-              (HighPrecMoney 0)
-              allJourneyFrfsBookings
-      payments <- QFRFSTicketBookingPayment.findAllTicketBookingId booking.id
-      whenJust (listToMaybe payments) $ \payment -> updateFRFSBookingAndPayment person updatedBooking updatedTotalPrice payment
-      return $ Just updatedTotalPrice
+  whenJust mbBooking $ \booking -> do
+    quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
+    let quantity = booking.quantity
+        childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
+        quantityRational = fromIntegral quantity :: Rational
+        childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+        childPrice = fromMaybe quote.price quote.childPrice
+        totalPriceForSwitchLeg =
+          Price
+            { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
+              amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
+              currency = quote.price.currency
+            }
+        updatedBooking =
+          booking
+            { DFRFSB.quoteId = req.quoteId,
+              DFRFSB.price = totalPriceForSwitchLeg,
+              DFRFSB.estimatedPrice = totalPriceForSwitchLeg
+            }
+        updatedTotalPrice =
+          foldl'
+            ( \acc booking' ->
+                if booking'.id == booking.id
+                  then acc + totalPriceForSwitchLeg.amount
+                  else acc + booking'.price.amount
+            )
+            (HighPrecMoney 0)
+            allJourneyFrfsBookings
+    payments <- QFRFSTicketBookingPayment.findAllTicketBookingId booking.id
+    whenJust (listToMaybe payments) $ \payment -> updateFRFSBookingAndPayment person updatedBooking updatedTotalPrice payment
   alternateShortNames <- getAlternateShortNames
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId False
-  journeyInfoResponse <- generateJourneyInfoResponse journey updatedLegs
-  return $
-    ApiTypes.JourneyInfoRespWithFare
-      { journeyInfoResponse = journeyInfoResponse,
-        totalFare = mbUpdatedTotalPrice
-      }
+  generateJourneyInfoResponse journey updatedLegs
   where
     getAlternateShortNames :: Flow (Maybe [Text])
     getAlternateShortNames = do
@@ -529,7 +521,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
       then do
         personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
         allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
         let anyFirstBooking = listToMaybe frfsBookingStatusArr
             paymentOrder =
               anyFirstBooking >>= (.payment)
@@ -538,7 +530,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
                     )
         return $ paymentOrder <&> (.status)
       else return (Just FRFSTicketService.SUCCESS)
-  return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
+  return $ ApiTypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
   where
     transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
     transformLeg legState =
@@ -553,7 +545,8 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
               status = legData.status,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
-              mode = legData.mode
+              mode = legData.mode,
+              boardedVehicles = legData.boardedVehicles
             }
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -734,8 +727,11 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
         )
 
   let fetchData bppConfig = do
-        stations <- QStation.findAllByBppConfigId bppConfig.id
-        routes <- QRoute.findAllByBppConfigId bppConfig.id
+        stations <- OTPRest.findAllByBppConfigId bppConfig
+        routes <-
+          try @_ @SomeException (OTPRest.getRoutesByGtfsId bppConfig) >>= \case
+            Left _ -> QRoute.findAllByBppConfigId bppConfig.id
+            Right routes -> pure routes
         -- routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
         pure
           ApiTypes.PublicTransportData

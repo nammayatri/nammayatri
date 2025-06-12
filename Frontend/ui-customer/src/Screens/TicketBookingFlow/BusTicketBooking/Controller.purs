@@ -54,6 +54,7 @@ import Data.Foldable (for_)
 import JBridge (firebaseLogEvent)
 import MapUtils as MU
 import Data.String as DS
+import LocalStorage.Cache (removeValueFromCache)
 
 
 instance showAction :: Show Action where
@@ -89,7 +90,7 @@ data ScreenOutput
   | GoToConfirmgDelivery ST.BusTicketBookingState
   | GoToSearchLocationScreenForRoutes ST.BusTicketBookingState ST.LocationActionId
   | GoToMetroTicketDetailsFlow String
-  | GoToMetroTicketDetailsScreen API.FRFSTicketBookingStatusAPIRes
+  | GoToMetroTicketDetailsScreen API.FRFSTicketBookingStatusAPIRes ST.BusTicketBookingState
 
 updateCurrentLocation :: ST.BusTicketBookingState -> String -> String -> Eval Action  ScreenOutput ST.BusTicketBookingState
 updateCurrentLocation state lat lng = 
@@ -101,6 +102,8 @@ eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTic
 eval GoBack state =
   if isParentView FunctionCall 
     then do 
+      void $ pure $ removeValueFromCache "POLLING_ID" 
+      void $ pure $ removeValueFromCache "MAP_READY"
       void $ pure $ emitTerminateApp Nothing true
       continue state
     else exit $ GoToHomeScreen state
@@ -125,7 +128,7 @@ eval (TicketPressed (API.FRFSTicketBookingStatusAPIRes ticketApiResp)) state = d
   updateAndExit state $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
 
 eval (RepeatRideClicked ticketApiResp) state = 
-  updateAndExit state $ GoToMetroTicketDetailsScreen ticketApiResp
+  updateAndExit state $ GoToMetroTicketDetailsScreen ticketApiResp state
 
 eval (ViewMoreClicked) state =
   continue state { props { showAllTickets = not state.props.showAllTickets }}

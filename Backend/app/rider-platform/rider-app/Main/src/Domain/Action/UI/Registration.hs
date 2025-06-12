@@ -230,7 +230,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
            in if T.null ipWithoutPort then "unknown" else ipWithoutPort
   logDebug $ "mbXForwardedFor Client Headers --------->" <> fromMaybe "" mbXForwardedFor
   logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
-  ipBlocked <- SMC.isIPBlocked clientIP
+  ipBlocked <- SMC.isIPBlocked clientIP req.merchantId
   when ipBlocked $ throwError TooManyHitsLimitError
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType

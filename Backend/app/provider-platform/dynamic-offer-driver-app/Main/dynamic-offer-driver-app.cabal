@@ -393,6 +393,7 @@ library
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
+      SharedLogic.Fleet
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.KaalChakra.Actions
@@ -583,6 +584,7 @@ library
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
       Storage.Queries.FleetDriverAssociationExtra
+      Storage.Queries.FleetMemberAssociationExtra
       Storage.Queries.FleetOperatorAssociationExtra
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
@@ -857,6 +859,7 @@ library
       Domain.Types.FleetBadgeAssociation
       Domain.Types.FleetConfig
       Domain.Types.FleetDriverAssociation
+      Domain.Types.FleetMemberAssociation
       Domain.Types.FleetOperatorAssociation
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
@@ -1003,6 +1006,7 @@ library
       Storage.Beam.FleetBadgeAssociation
       Storage.Beam.FleetConfig
       Storage.Beam.FleetDriverAssociation
+      Storage.Beam.FleetMemberAssociation
       Storage.Beam.FleetOperatorAssociation
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
@@ -1152,6 +1156,7 @@ library
       Storage.Queries.FleetBadgeAssociation
       Storage.Queries.FleetConfig
       Storage.Queries.FleetDriverAssociation
+      Storage.Queries.FleetMemberAssociation
       Storage.Queries.FleetOperatorAssociation
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
@@ -1225,6 +1230,7 @@ library
       Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
       Storage.Queries.OrphanInstances.FleetDriverAssociation
+      Storage.Queries.OrphanInstances.FleetMemberAssociation
       Storage.Queries.OrphanInstances.FleetOperatorAssociation
       Storage.Queries.OrphanInstances.FleetOwnerInformation
       Storage.Queries.OrphanInstances.FleetRCAssociation

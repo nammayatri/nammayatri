@@ -1,7 +1,9 @@
 module Storage.CachedQueries.Merchant.MultiModalBus
   ( BusStopETA (..),
     BusData (..),
+    BusDataWithoutETA (..),
     RouteWithBuses (..),
+    FullBusData (..),
     getRoutesBuses,
     getBusesForRoutes,
     mkRouteKey,
@@ -60,9 +62,23 @@ data BusData = BusData
     timestamp :: Int,
     speed :: Double,
     device_id :: Text,
-    eta_data :: Maybe [BusStopETA]
+    eta_data :: Maybe [BusStopETA],
+    route_id :: Text,
+    vehicle_number :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+-- Type for bus data without ETA
+data BusDataWithoutETA = BusDataWithoutETA
+  { latitude :: Double,
+    longitude :: Double,
+    timestamp :: Int,
+    speed :: Double,
+    device_id :: Text,
+    route_id :: Text,
+    vehicle_number :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data FullBusData = FullBusData
   { vehicleNumber :: Text,

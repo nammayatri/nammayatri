@@ -25,7 +25,8 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     pure $
       Just
         Domain.Types.TransporterConfig.TransporterConfig
-          { aadhaarImageResizeConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< aadhaarImageResizeConfig,
+          { aaEnabledClientSdkVersion = fromMaybe "99999999999" aaEnabledClientSdkVersion,
+            aadhaarImageResizeConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< aadhaarImageResizeConfig,
             aadhaarVerificationRequired = aadhaarVerificationRequired,
             acStatusCheckGap = acStatusCheckGap,
             actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
@@ -137,6 +138,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             generateReferralCodeForOperator = generateReferralCodeForOperator,
             graceTimeForScheduledRidePickup = Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> graceTimeForScheduledRidePickup),
             includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
+            isAAEnabledForRecurring = isAAEnabledForRecurring,
             isAvoidToll = isAvoidToll,
             isDeviceIdChecksRequired = isDeviceIdChecksRequired,
             isDynamicPricingQARCalEnabled = isDynamicPricingQARCalEnabled,
@@ -233,14 +235,14 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
             weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
             weeklyMinRidesForNudging = weeklyMinRidesForNudging,
-            weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours,
-            aaEnabledClientSdkVersion = aaEnabledClientSdkVersion
+            weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
           }
 
 instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.TransporterConfig where
   toTType' (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
     Beam.TransporterConfigT
-      { Beam.aadhaarImageResizeConfig = Kernel.Prelude.toJSON <$> aadhaarImageResizeConfig,
+      { Beam.aaEnabledClientSdkVersion = Just aaEnabledClientSdkVersion,
+        Beam.aadhaarImageResizeConfig = Kernel.Prelude.toJSON <$> aadhaarImageResizeConfig,
         Beam.aadhaarVerificationRequired = aadhaarVerificationRequired,
         Beam.acStatusCheckGap = acStatusCheckGap,
         Beam.actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
@@ -354,6 +356,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.generateReferralCodeForOperator = generateReferralCodeForOperator,
         Beam.graceTimeForScheduledRidePickup = Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds graceTimeForScheduledRidePickup,
         Beam.includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
+        Beam.isAAEnabledForRecurring = isAAEnabledForRecurring,
         Beam.isAvoidToll = isAvoidToll,
         Beam.isDeviceIdChecksRequired = isDeviceIdChecksRequired,
         Beam.isDynamicPricingQARCalEnabled = isDynamicPricingQARCalEnabled,
@@ -450,6 +453,5 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
         Beam.weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
         Beam.weeklyMinRidesForNudging = weeklyMinRidesForNudging,
-        Beam.weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours,
-        Beam.aaEnabledClientSdkVersion = aaEnabledClientSdkVersion
+        Beam.weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
       }

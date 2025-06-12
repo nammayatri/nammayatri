@@ -1414,7 +1414,7 @@ homeScreenFlow = do
               }
         )
   flow <- UI.homeScreen
-  void $ lift $ lift $ fork $ Remote.pushSDKEvents
+  callPushSdkEventsAfterCheckingInterval FunctionCall
   case flow of
     HybridAppExit -> pure unit
     STAY_IN_HOME_SCREEN -> do
@@ -4884,11 +4884,13 @@ placeDetailsFlow = do
       }
   })
   (GlobalState state) <- getState
+  logField_ <- lift $ lift $ getLogFields
   action <- lift $ lift $ runScreen $ PlaceDetailsS.screen state.ticketBookingScreen
   case action of
-    PlaceDetailsC.GoToHomeScreen state -> do
+    PlaceDetailsC.GoToHomeScreen updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
-      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> goToHomeScreenWithHybridCheck state)
+      if updatedState.props.navigateToHome then void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_place_list_page" else  void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_dropped_from_individual_place"
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> goToHomeScreenWithHybridCheck updatedState)
     PlaceDetailsC.GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> ticketPaymentFlow state.data)
@@ -7858,7 +7860,8 @@ busTicketBookingFlow = do
           void $ lift $ lift $ liftFlow $ showToast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           busTicketBookingFlow
       --------------------------------
-    BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
+    BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) updatedState -> do
+      modifyScreenState $ BusTicketBookingScreenStateType (\state -> updatedState )
       removePollingAndMapCache
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
           routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FRFSRouteAPI)) of
@@ -7990,6 +7993,14 @@ busTrackingScreenFlow = do
       updateMapReady true
       busTicketBookingFlow
     BusTrackingScreen.GoBackToMetroMyTicketsScreen state -> metroMyTicketsFlow
+    BusTrackingScreen.GoBackToSelectBusRouteScreen state -> do
+      let srcCode = maybe "" (\item-> item.stationCode) state.data.sourceStation
+          destCode = maybe "" (\item-> item.stationCode) state.data.destinationStation
+      modifyScreenState $ BusTrackingScreenStateType (\state -> state { data { busRouteCode = state.data.busRouteCode, sourceStation = state.data.sourceStation, destinationStation = state.data.destinationStation } })
+      selectBusRouteScreenFlow srcCode destCode
+    BusTrackingScreen.GoToHomeScreen state -> do 
+      modifyScreenState $ HomeScreenStateType (\state -> state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= getString STR.CURRENT_LOCATION}})
+      homeScreenFlow   
     _ -> busTrackingScreenFlow
 
 updateScheduledRides :: Boolean -> Boolean -> FlowBT String Unit
@@ -8215,3 +8226,15 @@ updateMapReady :: Boolean -> FlowBT String Unit
 updateMapReady isActive = do
   void $ pure $ runFn2 setInCache "MAP_READY" $ show isActive
   void $ pure $ JB.removeAllMarkers ""
+
+callPushSdkEventsAfterCheckingInterval :: LazyCheck -> FlowBT String Unit
+callPushSdkEventsAfterCheckingInterval _ =
+  let pushEventsConfig = RC.pushEventsConfig FunctionCall
+      currentTimeStamp = EHC.getCurrentUTC ""
+      lastAPICallTimeStamp = getValueFromWindow (show PUSH_SDK_TS)
+      intervalConfigCheck = (lastAPICallTimeStamp == "__failed" || (EHC.compareUTCDate currentTimeStamp lastAPICallTimeStamp) > pushEventsConfig.loggingIntervalInS)
+  in
+    if intervalConfigCheck then do
+      void $ lift $ lift $ fork $ Remote.pushSDKEvents
+      void $ pure $ setValueInWindow (show PUSH_SDK_TS) currentTimeStamp
+    else pure unit  

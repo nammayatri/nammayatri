@@ -6,6 +6,7 @@ imports:
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
+  DriverMode: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 
 module: Driver
 
@@ -165,6 +166,7 @@ types:
     - firstName: Text
     - middleName: Maybe Text
     - lastName: Maybe Text
+    - status: Maybe DriverMode
     - isActive: Bool
     - mobileCountryCode: Text
     - mobileNumber: Text

@@ -45,7 +45,7 @@ FRFSSearch:
     id: Id FRFSSearch
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe (Id Route)
+    routeId: Maybe Text
     quantity: Int
     vehicleType: VehicleCategory
     riderId: Id Person
@@ -131,7 +131,7 @@ JourneyRouteDetails:
     alternateShortNames: Maybe [Text]
     fromStationId: Maybe (Id Station)
     toStationId: Maybe (Id Station)
-    routeId: Maybe (Id Route)
+    routeId: Maybe Text
     journeyStatus: Maybe JourneyLegStatus
 
   queries:

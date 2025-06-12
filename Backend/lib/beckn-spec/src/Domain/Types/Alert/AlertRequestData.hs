@@ -15,6 +15,7 @@ data AlertRequestData
   | RouteDeviation RouteDeviationData
   | OppositeDirection OppositeDirectionData
   | TripNotStarted TripNotStartedData
+  | SafetyCheck SafetyCheckData
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data EndRideData = EndRideData
@@ -80,6 +81,13 @@ data OppositeDirectionData = OppositeDirectionData
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TripNotStartedData = TripNotStartedData
+  { driverMobileNumber :: Maybe Text,
+    driverName :: Text,
+    location :: LatLong
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SafetyCheckData = SafetyCheckData
   { driverMobileNumber :: Maybe Text,
     driverName :: Text,
     location :: LatLong

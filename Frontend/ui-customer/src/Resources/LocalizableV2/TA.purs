@@ -1788,4 +1788,11 @@ getTa = Keymap {
     , get_50_referral_benefit_for_your_first_ride: \a ->"உங்கள் முதல் பயணத்திற்கு ₹" <> a <> " பரிந்துரை நன்மையைப் பெறுங்கள்!"
     , take_a_ride_now: "உடனே ஒரு பயணம் செய்யுங்கள்"
     , take_a_ride__claim_50: \a ->  "ஒரு பயணத்தை எடுத்து ₹" <> a <> " பெறுங்கள்"
+, select_route : "வழியைத் தேர்ந்தெடுக்கவும்"
+, ac_bus : "ஏ.சி. பஸ்"
+, early_departure : "முன்னணி புறப்படும்"
+, ticket_price : "டிக்கெட் விலை"
+, no_incoming_bus : "எந்த வரவிருக்கும் பஸ்களும் இல்லை"
+, cheapest : "சிறந்த விலை"
+, fastest : "மிகவும் வேகமாக"
 }

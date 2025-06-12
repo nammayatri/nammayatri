@@ -3,11 +3,14 @@ module Lib.JourneyModule.Base where
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
@@ -15,6 +18,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.Extra.Ride as DRide
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -24,14 +28,17 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
+import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import EulerHS.Prelude (safeHead)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import qualified Kernel.External.MultiModal.Interface.Types as KEMIT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -65,6 +72,7 @@ import qualified Sequelize as Se
 import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
+import Storage.CachedQueries.Merchant.MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
@@ -229,6 +237,242 @@ getAllLegsInfo journeyId skipAddLegFallback = do
         DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
         DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
 
+trackBuses :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => Maybe APITypes.RiderLocationReq -> DJourney.Journey -> [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> m ([(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
+trackBuses Nothing _ journeyStates = pure journeyStates
+trackBuses (Just userPos) journey journeyStates = do
+  routeCodeToTrack <- trackNearby userPos journey journeyStates
+  writeTracked journeyStates
+  returnTopVehicleNumbers journeyStates routeCodeToTrack
+  where
+    trackNearby :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => APITypes.RiderLocationReq -> DJourney.Journey -> [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> m (Maybe Text)
+    trackNearby userPos' journey' journeyStates' = do
+      case getValidBusTrackLeg journeyStates' of
+        Nothing -> pure Nothing
+        Just (leg, _) -> do
+          logDebug $ "validBusTrackLeg is: " <> show leg
+          case getRouteCodeToTrack leg of
+            Nothing -> pure Nothing
+            Just routeCodeToTrack -> do
+              logDebug $ "routeCodeToTrack is: " <> show routeCodeToTrack
+              riderConfig <- getRiderConfig journey'
+              let busTrackingConfig = fromMaybe defaultBusTrackingConfig riderConfig.busTrackingConfig
+              nearbyBuses <- getNearbyBuses userPos'.latLong riderConfig
+              logDebug $ "nearByBuses obtained are:" <> show nearbyBuses
+              let matchingBuses = filter (\x -> x.route_id == routeCodeToTrack) nearbyBuses
+              logDebug $ "matchingBuses obtained are:" <> show matchingBuses
+              let nearbyFilteredBuses = filter (\bus -> highPrecMetersToMeters (distanceBetweenInMeters userPos'.latLong (LatLong bus.latitude bus.longitude)) < 100) matchingBuses
+              logDebug $ "nearByFilteredBuses obtained are:" <> show nearbyFilteredBuses
+              let scoresForBuses = scoreBusesByDistance userPos' busTrackingConfig nearbyFilteredBuses
+              logDebug $ "scoresForBuses obtained are:" <> show scoresForBuses
+              votingSystem scoresForBuses leg busTrackingConfig
+              pure $ Just routeCodeToTrack
+
+    returnTopVehicleNumbers :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> Maybe Text -> m ([(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
+    returnTopVehicleNumbers journeyStates' Nothing = pure journeyStates'
+    returnTopVehicleNumbers journeyStates' (Just routeCode) = do
+      case getValidBusTrackLeg journeyStates' of
+        Nothing -> pure journeyStates'
+        Just (leg, legStateData) -> do
+          topCandidatesRaw <- Hedis.zRangeWithScores (topVehicleCandidatesKey (leg.id.getId)) 0 (-1)
+          routesWithBuses <- CQMMB.getRoutesBuses routeCode
+          let busDataList = map (\x -> x.busData) routesWithBuses.buses
+          let busDataWithoutETA =
+                map
+                  ( \bd ->
+                      BusDataWithoutETA
+                        { latitude = bd.latitude,
+                          longitude = bd.longitude,
+                          timestamp = bd.timestamp,
+                          speed = bd.speed,
+                          device_id = bd.device_id,
+                          route_id = bd.route_id,
+                          vehicle_number = bd.vehicle_number
+                        }
+                  )
+                  busDataList
+          let topCandidates = [TE.decodeUtf8 bs | (bs, _) <- topCandidatesRaw]
+          let filteredBuses = filter (\bus -> fromMaybe "" bus.vehicle_number `elem` topCandidates) busDataWithoutETA
+          let updatedLegState = legStateData {JL.boardedVehicles = Just filteredBuses}
+          let updatedJourneyStates =
+                map
+                  (\(l, s) -> if l.id == leg.id then (l, JL.Single updatedLegState) else (l, s))
+                  journeyStates'
+          pure updatedJourneyStates
+
+    votingSystem :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => [(BusDataWithoutETA, Double)] -> DJourneyLeg.JourneyLeg -> Domain.Types.RiderConfig.BusTrackingConfig -> m ()
+    votingSystem scoredBuses leg busTrackingConfig = do
+      addAllScores scoredBuses leg
+      Hedis.expire (topVehicleCandidatesKey leg.id.getId) 3600
+      bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKey leg.id.getId) 0 0
+      case bestCandidateResult of
+        [] -> pure ()
+        ((bestVehicleNumber, bestScore) : _) -> do
+          let busesChanged = leg.changedBusesInSequence
+          case busesChanged of
+            Nothing -> QJourneyLeg.updateByPrimaryKey leg {DJourneyLeg.changedBusesInSequence = Just [bestVehicleNumber]}
+            Just changedBusesInSequence ->
+              case safeTailEnd changedBusesInSequence of
+                Nothing -> QJourneyLeg.updateByPrimaryKey leg {DJourneyLeg.changedBusesInSequence = Just [bestVehicleNumber]}
+                Just x ->
+                  if x == bestVehicleNumber
+                    then pure ()
+                    else QJourneyLeg.updateByPrimaryKey leg {DJourneyLeg.changedBusesInSequence = Just $ changedBusesInSequence <> [bestVehicleNumber]}
+          allCandidatesRaw <- Hedis.zRangeWithScores (topVehicleCandidatesKey leg.id.getId) 0 (-1)
+          let allCandidates = [(TE.decodeUtf8 bs, score) | (bs, score) <- allCandidatesRaw]
+          currentResultMembers :: [Text] <- Hedis.sMembers (resultKey leg.id.getId)
+          Hedis.expire (resultKey leg.id.getId) 3600
+          removeWorstMembers currentResultMembers allCandidates leg bestScore busTrackingConfig
+          addBetterMembers allCandidates leg bestScore busTrackingConfig
+
+    removeWorstMembers :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => [Text] -> [(Text, Double)] -> DJourneyLeg.JourneyLeg -> Double -> Domain.Types.RiderConfig.BusTrackingConfig -> m ()
+    removeWorstMembers currentResultMembers allCandidates leg bestScore busTrackingConfig = do
+      let membersToRemove =
+            filter
+              ( \m ->
+                  let scoreM = lookup m allCandidates
+                   in maybe False (\score -> isWorseThanThreshold score bestScore busTrackingConfig.thresholdFactor) scoreM
+              )
+              currentResultMembers
+      forM_ membersToRemove $ \m -> Redis.srem (resultKey leg.id.getId) [m]
+
+    addBetterMembers :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => [(Text, Double)] -> DJourneyLeg.JourneyLeg -> Double -> Domain.Types.RiderConfig.BusTrackingConfig -> m ()
+    addBetterMembers allCandidates leg bestScore busTrackingConfig = do
+      forM_ allCandidates $ \(candidate, score) -> do
+        unless (isWorseThanThreshold score bestScore busTrackingConfig.thresholdFactor) $
+          Redis.sAddExp (resultKey leg.id.getId) [candidate] 3600
+
+    addAllScores :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => [(BusDataWithoutETA, Double)] -> DJourneyLeg.JourneyLeg -> m ()
+    addAllScores scoredBuses leg = do
+      forM_ scoredBuses $ \(bus, points) -> do
+        let vehicle = bus.vehicle_number
+        Hedis.zIncrBy (topVehicleCandidatesKey leg.id.getId) (round points) vehicle
+
+    writeTracked :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> m ()
+    writeTracked journeyStates' = do
+      forM_ (getValidBusWriteLegs journeyStates') $ \(validWriteLeg, _) -> do
+        bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKey validWriteLeg.id.getId) 0 0
+        case bestCandidateResult of
+          [] -> pure ()
+          ((bestVehicleNumber, _) : _) -> do
+            logDebug $ "vehicleNumber for the write leg " <> show validWriteLeg.id <> "is " <> show bestVehicleNumber
+            if isNothing validWriteLeg.finalBoardedBusNumber
+              then QJourneyLeg.updateByPrimaryKey (validWriteLeg {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber})
+              else pure ()
+
+    getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
+    getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((gtfsId :: KEMIT.MultiModalRouteDetails -> Maybe Text) >=> (pure . gtfsIdtoDomainCode))
+
+    flattenLegStates :: [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> [(DJourneyLeg.JourneyLeg, JL.JourneyLegStateData)]
+    flattenLegStates =
+      foldr
+        ( \(leg, legState) acc ->
+            case legState of
+              JL.Single legData -> (leg, legData) : acc
+              JL.Transit legDatas -> map (leg,) legDatas ++ acc
+        )
+        []
+
+    findNextTo :: (a -> Bool) -> [a] -> Maybe a
+    findNextTo fn (x : y : rest) = if fn x then Just y else findNextTo fn (y : rest)
+    findNextTo _ [_] = Nothing
+    findNextTo _ _ = Nothing
+
+    getValidBusTrackLeg :: [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> Maybe (DJourneyLeg.JourneyLeg, JL.JourneyLegStateData)
+    getValidBusTrackLeg journeyStates' = do
+      let flattenedLegStates = flattenLegStates journeyStates'
+      let ongoingLeg = find (\(_, legState) -> legState.status == JL.Ongoing && legState.mode == DTrip.Bus) flattenedLegStates
+      let fallbackLeg = do
+            (finishingLeg, finishingState) <- findNextTo (\(_, s) -> s.status == JL.Finishing) flattenedLegStates
+            if finishingState.mode == DTrip.Bus then Just (finishingLeg, finishingState) else Nothing
+      ongoingLeg <|> fallbackLeg
+
+    getValidBusWriteLegs :: [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> [(DJourneyLeg.JourneyLeg, JL.JourneyLegStateData)]
+    getValidBusWriteLegs =
+      mapMaybe extractValidBusLeg
+      where
+        extractValidBusLeg (leg, JL.Single legState)
+          | legState.mode == DTrip.Bus && legState.status `elem` [JL.Finishing, JL.Completed] =
+            Just (leg, legState)
+        extractValidBusLeg _ = Nothing
+
+    getNearbyBuses :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => LatLong -> Domain.Types.RiderConfig.RiderConfig -> m [BusDataWithoutETA]
+    getNearbyBuses userPos' riderConfig = do
+      let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
+      vehicleData :: [BusDataWithoutETA] <-
+        CQMMB.withCrossAppRedisNew $
+          Hedis.geoSearchDecoded nearbyBusKey (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
+      pure vehicleData
+
+    scoreByDistance :: Double -> Domain.Types.RiderConfig.BusTrackingConfig -> Double
+    scoreByDistance distance busTrackingConfig
+      | distance <= busTrackingConfig.maxScoreDistanceInMeters = busTrackingConfig.maxScore
+      | distance <= busTrackingConfig.goodScoreDistanceInMeters = busTrackingConfig.goodScore
+      | distance <= busTrackingConfig.fairScoreDistanceInMeters = busTrackingConfig.fairScore
+      | otherwise = 0
+
+    scoreBusesByDistance :: APITypes.RiderLocationReq -> Domain.Types.RiderConfig.BusTrackingConfig -> [BusDataWithoutETA] -> [(BusDataWithoutETA, Double)]
+    scoreBusesByDistance passengerLoc busTrackingConfig = map assignScore . filter isRecent
+      where
+        now = passengerLoc.currTime
+
+        isRecent :: BusDataWithoutETA -> Bool
+        isRecent bus =
+          let pingTime = posixSecondsToUTCTime (fromIntegral bus.timestamp)
+              timeDiff = abs (diffUTCTime now pingTime)
+           in timeDiff < (realToFrac busTrackingConfig.thresholdSeconds)
+
+        assignScore :: BusDataWithoutETA -> (BusDataWithoutETA, Double)
+        assignScore bus =
+          let busLoc = LatLong bus.latitude bus.longitude
+              distance = distanceBetweenInMeters passengerLoc.latLong busLoc
+              dist :: Double = realToFrac distance.getHighPrecMeters.getCenti
+              score = scoreByDistance dist busTrackingConfig
+           in (bus, score)
+
+    isWorseThanThreshold :: Double -> Double -> Double -> Bool
+    isWorseThanThreshold candidateScore bestScore worseThreshold = candidateScore < (worseThreshold * bestScore)
+
+    nearbyBusKey :: Text
+    nearbyBusKey = "bus_locations_metadata"
+
+    topVehicleCandidatesKey :: Text -> Text
+    topVehicleCandidatesKey journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
+
+    resultKey :: Text -> Text
+    resultKey journeyLegId = "journeyLegResult:" <> journeyLegId
+
+    safeTailEnd :: [a] -> Maybe a
+    safeTailEnd (_ : xs@(_ : _)) = Just (last xs)
+    safeTailEnd _ = Nothing
+
+hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool
+hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
+  let d1 = highPrecMetersToMeters $ distanceBetweenInMeters p1 p2
+   in d1 > (round busTrackingConfig.movementThresholdInMeters)
+hasSignificantMovement _ _ = False
+
+getRiderConfig :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJourney.Journey -> m Domain.Types.RiderConfig.RiderConfig
+getRiderConfig journey' = do
+  case journey'.merchantOperatingCityId of
+    Just merchantOperatingCityId ->
+      QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+        >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    _ -> fromMaybeM (RiderConfigDoesNotExist "") Nothing
+
+defaultBusTrackingConfig :: Domain.Types.RiderConfig.BusTrackingConfig
+defaultBusTrackingConfig =
+  Domain.Types.RiderConfig.BusTrackingConfig
+    { fairScore = 4.0,
+      fairScoreDistanceInMeters = 45.0,
+      goodScore = 7.0,
+      goodScoreDistanceInMeters = 30.0,
+      maxScore = 10.0,
+      maxScoreDistanceInMeters = 15.0,
+      thresholdFactor = 0.5,
+      thresholdSeconds = 30.0,
+      movementThresholdInMeters = 25.0
+    }
+
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
@@ -236,7 +480,15 @@ getAllLegsStatus ::
 getAllLegsStatus journey = do
   allLegsRawData <- getJourneyLegs journey.id
   riderLastPoints <- getLastThreePoints journey.id
-  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
+  (_, legPairs) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
+  let riderLastPoint = safeHead riderLastPoints
+  riderConfig <- getRiderConfig journey
+  let busTrackingConfig = fromMaybe defaultBusTrackingConfig riderConfig.busTrackingConfig
+  legPairsWithBoardedVehicles <-
+    if hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
+      then trackBuses riderLastPoint journey legPairs
+      else pure legPairs
+  let allLegsState = map snd legPairsWithBoardedVehicles
   when
     ( all
         ( \st -> case st of
@@ -253,9 +505,9 @@ getAllLegsStatus journey = do
     processLeg ::
       (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
       [APITypes.RiderLocationReq] ->
-      (Bool, [JL.JourneyLegState]) ->
+      (Bool, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)]) ->
       DJourneyLeg.JourneyLeg ->
-      m (Bool, [JL.JourneyLegState])
+      m (Bool, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
     processLeg riderLastPoints (isLastCompleted, legsState) leg = do
       case leg.legSearchId of
         Just legSearchIdText -> do
@@ -271,7 +523,7 @@ getAllLegsStatus journey = do
             ( case legState of
                 JL.Single legData -> legData.status == JL.Completed
                 JL.Transit legDataList -> all (\legData -> legData.status == JL.Completed) legDataList,
-              legsState <> [legState]
+              legsState <> [(leg, legState)]
             )
         Nothing -> do
           logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
@@ -1032,7 +1284,9 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         updatedAt = now,
         isDeleted = Just False,
         legSearchId = Nothing,
-        isSkipped = Just False
+        isSkipped = Just False,
+        changedBusesInSequence = journeyLeg.changedBusesInSequence,
+        finalBoardedBusNumber = journeyLeg.finalBoardedBusNumber
       }
 
 extendLeg ::

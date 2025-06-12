@@ -16,8 +16,8 @@ import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
-import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
@@ -49,10 +49,10 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
-import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
@@ -135,16 +135,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
             drc <- SQDRA.findAllActiveAssociationByRCId rc.id
             case drc of
               [] -> throwError (InvalidRequest "No driver exist with this RC")
-              (assoc : _) -> do
-                isAssociated <- DDriver.checkDriverOperatorAssociation assoc.driverId opHubReq.creatorId
-                unless isAssociated $ do
-                  mbFleetAssoc <- QFDA.findByDriverId (cast assoc.driverId) True
-                  case mbFleetAssoc of
-                    Just fAssoc -> do
-                      isFleetAssociated <- DDriver.checkFleetOperatorAssociation (Id fAssoc.fleetOwnerId) opHubReq.creatorId
-                      unless isFleetAssociated $ throwError (InvalidRequest ("Driver id " <> show assoc.driverId <> " not associated with operator"))
-                    _ -> throwError (InvalidRequest ("Driver id " <> show assoc.driverId <> " not associated with operator"))
-                pure assoc.driverId
+              (assoc : _) -> pure assoc.driverId
         merchant <- findMerchantByShortId merchantShortId
         merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
         transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
@@ -281,6 +272,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       driverImages <- IQuery.findAllByPersonId transporterConfig driverId
       let driverImagesInfo = IQuery.DriverImagesInfo {driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+      driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       statusRes <-
         castStatusRes
           <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) -- FXME: Need to change
@@ -290,6 +282,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
+            status = Just $ DFDriver.castDriverStatus driverInfo.mode,
             isActive = drvOpAsn.isActive,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,

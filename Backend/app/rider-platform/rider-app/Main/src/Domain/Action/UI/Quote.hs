@@ -25,6 +25,7 @@ module Domain.Action.UI.Quote
     QuoteAPIEntity (..),
     QuoteBreakupAPIEntity (..),
     JourneyData (..),
+    JourneyLeg (..),
     getJourneys,
   )
 where

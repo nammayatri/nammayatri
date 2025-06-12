@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Operator.Endpoints.Driver where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified Dashboard.Common
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
@@ -26,6 +27,7 @@ data DriverInfo = DriverInfo
     firstName :: Kernel.Prelude.Text,
     middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode,
     isActive :: Kernel.Prelude.Bool,
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,

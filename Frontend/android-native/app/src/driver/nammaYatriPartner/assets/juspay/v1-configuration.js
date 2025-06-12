@@ -976,7 +976,7 @@ function getNammaYatriConfig() {
               "AutoCategory" : true,
             },
             "addDestination" : true,
-            "shareRideTracking" : true
+            "shareRideTracking" : false
           },
           "chatFooterBanner": {
             "enable": true,
