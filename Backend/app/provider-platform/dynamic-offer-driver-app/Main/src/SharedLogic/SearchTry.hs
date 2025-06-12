@@ -81,7 +81,7 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
   case scheduleTryTimes of
     [] -> return Nothing
     (scheduleTryTime : rest) -> do
-      if (diffUTCTime searchRequest.startTime now <= scheduleTryTime)
+      if diffUTCTime searchRequest.startTime now <= scheduleTryTime
         then do
           setKey rest
           case rest of
@@ -242,9 +242,9 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
   transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then do
-      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, (TE.encodeUtf8 (id_.getId)))]
+      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (id_.getId))]
       void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 3600
-      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, (TE.encodeUtf8 (id_.getId)))]
+      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (id_.getId))]
       void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) 3600
       void $ Redis.withCrossAppRedis $ Redis.incr (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId)
       void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
@@ -294,8 +294,9 @@ buildTripQuoteDetail ::
   Text ->
   [DAC.ConditionalCharges] ->
   Bool ->
+  Maybe HighPrecMoney ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
