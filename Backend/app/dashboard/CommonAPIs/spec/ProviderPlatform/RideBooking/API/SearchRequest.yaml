@@ -1,0 +1,45 @@
+imports:
+  Person: Domain.Types.Person
+  Id: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  SearchRequestForDriver: Domain.Types.SearchRequestForDriver
+  SearchRequest: Domain.Types.SearchRequest
+  Location: Domain.Types.Location
+
+module: SearchRequest
+
+types:
+  SearchRequestOfDriver:
+    id: Id SearchRequestForDriver
+    createdAt: UTCTime
+    requestId: Id SearchRequest
+    tripEstimatedDistance: Maybe Meters
+    tripEstimatedDuration: Maybe Seconds
+    fromLocation: Location
+    toLocation: Maybe Location
+
+  SearchRequestsReq:
+  - driverId: Id Person
+  - fromDate: UTCTime
+  - toDate: UTCTime
+  - mbLimit: Maybe Int
+  - mbOffset: Maybe Int
+  - mbOnlyActive: Maybe Bool
+  - derive: "'HideSecrets"
+
+  SearchRequestsRes:
+    searchrequests: [SearchRequestOfDriver]
+
+# SearchRequest is different from SearchRequestForDriver
+# mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+
+apis:
+  - POST:
+      endpoint: /searchrequests/
+      auth: ApiAuthV2
+      request:
+        type: SearchRequestsReq
+      response:
+        type: SearchRequestsRes

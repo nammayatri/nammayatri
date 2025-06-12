@@ -265,3 +265,75 @@ VALUES
         '2024-01-22 07:02:42',
         '2024-01-22 07:02:42'
     );
+
+INSERT INTO
+    atlas_driver_offer_bpp.search_request_for_driver (
+        id,
+        driver_id,
+        search_request_id,
+        created_at,
+        updated_at,
+        status,
+        trip_estimated_duration,
+        trip_estimated_distance
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000000',
+        'favorit-auto1-0000000000000000000000',
+        'favorit-auto1-0000000000000000000001',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42',
+        'PENDING',
+        300,
+        5123
+    );
+
+
+INSERT INTO
+    atlas_driver_offer_bpp.search_request_for_driver (
+        id,
+        driver_id,
+        search_request_id,
+        created_at,
+        updated_at,
+        status,
+        trip_estimated_duration,
+        trip_estimated_distance
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000003',
+        'favorit-auto1-0000000000000000000000',
+        'SearchReq-2',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42',
+        'PENDING',
+        55,
+        122
+    );
+
+INSERT INTO
+    atlas_driver_offer_bpp.search_request_for_driver (
+        id,
+        driver_id,
+        search_request_id,
+        created_at,
+        updated_at,
+        status,
+        trip_estimated_duration,
+        trip_estimated_distance
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000002',
+        'favorit-auto1-0000000000000000000002',
+        'favorit-auto1-0000000000000000000002',
+        '2025-01-10 07:02:42',
+        '2025-01-10 07:02:42',
+        'PENDING',
+        350,
+        1290
+    );
+
+
