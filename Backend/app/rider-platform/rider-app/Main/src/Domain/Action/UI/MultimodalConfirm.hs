@@ -69,7 +69,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+-- import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuote as QQuote
@@ -729,10 +729,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
 
   let fetchData bppConfig = do
         stations <- QStation.findAllByBppConfigId bppConfig.id
-        routes <-
-          try @_ @SomeException (OTPRest.getRoutesByGtfsId bppConfig) >>= \case
-            Left _ -> QRoute.findAllByBppConfigId bppConfig.id
-            Right routes -> pure routes
+        routes <- QRoute.findAllByBppConfigId bppConfig.id
         -- routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
         pure
           ApiTypes.PublicTransportData
