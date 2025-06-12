@@ -64,6 +64,7 @@ data RideAPIEntity = RideAPIEntity
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    isSafetyPlus :: Kernel.Prelude.Bool
+    isSafetyPlus :: Kernel.Prelude.Bool,
+    isInsured :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

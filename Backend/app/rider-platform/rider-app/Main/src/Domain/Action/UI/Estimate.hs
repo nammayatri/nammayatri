@@ -73,7 +73,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleIconUrl :: Maybe Text,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
-    isReferredRide :: Bool
+    isReferredRide :: Bool,
+    isInsured :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -124,6 +125,7 @@ mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
         vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
         serviceTierType = vehicleServiceTierType,
         vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
+        isInsured = Just isInsured,
         ..
       }
   where

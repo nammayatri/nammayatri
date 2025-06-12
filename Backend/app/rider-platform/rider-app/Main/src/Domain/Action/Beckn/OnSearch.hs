@@ -72,6 +72,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
+import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -370,7 +371,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
@@ -381,6 +382,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
+  insuranceConfig <- CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)
   pure
     DEstimate.Estimate
       { id = uid,
@@ -430,6 +432,15 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
+        isInsured =
+          maybe
+            False
+            ( \inc ->
+                case inc.allowedVehicleServiceTiers of
+                  Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers
+                  Nothing -> True
+            )
+            insuranceConfig,
         ..
       }
 

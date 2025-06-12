@@ -117,6 +117,7 @@ Ride:
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     rideTags: Maybe [TagNameValue]
     isPickupOrDestinationEdited: Maybe Bool
+    isInsured: Bool
 
   sqlType:
     id: character(36)
@@ -204,6 +205,7 @@ Ride:
     isDriverSpecialLocWarrior: Kernel.Prelude.fromMaybe False isDriverSpecialLocWarrior|E
     estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+    isInsured: Kernel.Prelude.fromMaybe False isInsured|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -237,6 +239,7 @@ Ride:
     estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    isInsured: Kernel.Prelude.Just|I
 
   beamType:
     trackingUrl: Text
@@ -253,6 +256,7 @@ Ride:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     rideTags: "Maybe [Text]"
+    isInsured: Maybe Bool
 
   constraints:
     id: PrimaryKey

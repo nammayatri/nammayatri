@@ -4,6 +4,7 @@ module API.Internal
   )
 where
 
+import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
@@ -24,6 +25,7 @@ type API =
            :<|> FrequentLocUser.API
            :<|> DriverArrivalNotf.API
            :<|> MeterRideInternal.API
+           :<|> InsuranceInternal.API
        )
 
 handler :: FlowServer API
@@ -35,3 +37,4 @@ handler =
     :<|> FrequentLocUser.handler
     :<|> DriverArrivalNotf.handler
     :<|> MeterRideInternal.handler
+    :<|> InsuranceInternal.handler

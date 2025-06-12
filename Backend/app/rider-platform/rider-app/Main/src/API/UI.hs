@@ -28,6 +28,7 @@ import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
+import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
@@ -137,6 +138,7 @@ type API =
            :<|> Places.API
            :<|> CRIS.API
            :<|> TicketKapture.API
+           :<|> Insurance.API
        )
 
 handler :: FlowServer API
@@ -198,3 +200,4 @@ handler =
     :<|> Places.handler
     :<|> CRIS.handler
     :<|> TicketKapture.handler
+    :<|> Insurance.handler

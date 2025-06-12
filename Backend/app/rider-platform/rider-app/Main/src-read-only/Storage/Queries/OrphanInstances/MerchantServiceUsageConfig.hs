@@ -6,6 +6,7 @@ module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Insurance.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Payment.Types
@@ -47,6 +48,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getRoutes = getRoutes,
             getTripRoutes = getTripRoutes,
             initiateCall = initiateCall,
+            insuranceService = fromMaybe Kernel.External.Insurance.Types.Acko insuranceService,
             issueTicketService = issueTicketService,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -89,6 +91,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getRoutes = getRoutes,
         Beam.getTripRoutes = getTripRoutes,
         Beam.initiateCall = initiateCall,
+        Beam.insuranceService = Kernel.Prelude.Just insuranceService,
         Beam.issueTicketService = issueTicketService,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
