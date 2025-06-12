@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.RoutePolylines where
+module Storage.Queries.RoutePolylines (module Storage.Queries.RoutePolylines, module ReExport) where
 
 import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.MerchantOperatingCity
@@ -16,6 +16,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RoutePolylines as Beam
+import Storage.Queries.RoutePolylinesExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RoutePolylines.RoutePolylines -> m ())
 create = createWithKV
@@ -53,31 +54,3 @@ updateByPrimaryKey (Domain.Types.RoutePolylines.RoutePolylines {..}) = do
       Se.Set Beam.vehicleType vehicleType
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.RoutePolylines Domain.Types.RoutePolylines.RoutePolylines where
-  fromTType' (Beam.RoutePolylinesT {..}) = do
-    pure $
-      Just
-        Domain.Types.RoutePolylines.RoutePolylines
-          { createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            polyline = polyline,
-            routeId = routeId,
-            updatedAt = updatedAt,
-            vehicleType = vehicleType
-          }
-
-instance ToTType' Beam.RoutePolylines Domain.Types.RoutePolylines.RoutePolylines where
-  toTType' (Domain.Types.RoutePolylines.RoutePolylines {..}) = do
-    Beam.RoutePolylinesT
-      { Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.polyline = polyline,
-        Beam.routeId = routeId,
-        Beam.updatedAt = updatedAt,
-        Beam.vehicleType = vehicleType
-      }
