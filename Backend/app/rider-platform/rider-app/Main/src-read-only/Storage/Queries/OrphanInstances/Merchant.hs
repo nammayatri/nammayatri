@@ -67,8 +67,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             signatureExpiry = signatureExpiry,
             signingPublicKey = signingPublicKey,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
-            updatedAt = updatedAt,
-            whiteListedIpsForAuth = whiteListedIpsForAuth
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
@@ -121,6 +120,5 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.signatureExpiry = signatureExpiry,
         Beam.signingPublicKey = signingPublicKey,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
-        Beam.updatedAt = updatedAt,
-        Beam.whiteListedIpsForAuth = whiteListedIpsForAuth
+        Beam.updatedAt = updatedAt
       }
