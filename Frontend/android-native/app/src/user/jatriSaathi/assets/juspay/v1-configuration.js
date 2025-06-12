@@ -249,15 +249,15 @@ window.getMerchantConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subTitle": "ইংরেজি"
+      "subtitle": "ইংরেজি"
     }, {
       "name": "বাংলা",
       "value": "BN_IN",
-      "subTitle": "Bengali"
+      "subtitle": "Bengali"
     }, {
       "name": "हिंदी",
       "value": "HI_IN",
-      "subTitle": "Hindi"
+      "subtitle": "Hindi"
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
