@@ -603,7 +603,6 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
                     else return Nothing
               )
               driverEligibleForRentals
-          setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOperatingCityId False
           return $ maybe driverFees (\limit -> take limit driverFees) transporterConfig.driverFeeCalculatorBatchSize
         else QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
 
