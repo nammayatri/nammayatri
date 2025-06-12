@@ -176,6 +176,7 @@ library
       Domain.Action.Dashboard.RideBooking.Maps
       Domain.Action.Dashboard.RideBooking.MeterRide
       Domain.Action.Dashboard.RideBooking.Ride
+      Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
@@ -732,6 +733,7 @@ library
       API.Action.Dashboard.RideBooking.Maps
       API.Action.Dashboard.RideBooking.MeterRide
       API.Action.Dashboard.RideBooking.Ride
+      API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
@@ -773,10 +775,12 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.Maps
       API.Types.Dashboard.RideBooking.Endpoints.MeterRide
       API.Types.Dashboard.RideBooking.Endpoints.Ride
+      API.Types.Dashboard.RideBooking.Endpoints.SearchRequest
       API.Types.Dashboard.RideBooking.Endpoints.Volunteer
       API.Types.Dashboard.RideBooking.Maps
       API.Types.Dashboard.RideBooking.MeterRide
       API.Types.Dashboard.RideBooking.Ride
+      API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
       API.Types.UI.CallFeedback
       API.Types.UI.DemandHotspots
