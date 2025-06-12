@@ -52,7 +52,6 @@ Merchant:
     bapId: Text
     bapUniqueKeyId: Text
     driverOfferBaseUrl: BaseUrl
-    whiteListedIpsForAuth: "Maybe [Text]"
     driverOfferApiKey: Text
     driverOfferMerchantId: Text
     geoHashPrecisionValue: Int
@@ -197,7 +196,6 @@ Merchant:
     arrivingPickupThreshold: double precision
     driverOnTheWayNotifyExpiry: integer
     gatewayAndRegistryPriorityList: "text[]"
-    whiteListedIpsForAuth: "text[]"
 
   default:
     arrivedPickupThreshold: "50"
@@ -219,7 +217,6 @@ Merchant:
     city: "'Kochi'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: "'{\"NY\"}'"
-    whiteListedIpsForAuth: "'{}'"
     enableForMultipleSearchIssue: "true"
 
   constraints:

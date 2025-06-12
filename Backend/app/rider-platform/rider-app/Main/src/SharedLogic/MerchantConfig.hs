@@ -33,7 +33,6 @@ where
 
 import Data.Foldable.Extra
 import qualified Domain.Types.Booking as BT
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -45,14 +44,12 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Person as CHP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
-import Tools.Error
 
 data Factors = MoreCancelling | MoreSearching | MoreCancelledByDriver | TotalRides | TotalRidesInWindow
 
@@ -227,12 +224,13 @@ blockCustomerByIP clientIP _mcId blockDurationMinutes = Redis.withNonCriticalCro
       void $ Redis.setExp blockKey ("true" :: Text) ttlSeconds
   logInfo $ "IP " <> clientIP <> " has been blocked for " <> show blockDurationMinutes <> " minutes"
 
-isIPBlocked :: (CacheFlow m r, MonadFlow m, CacheFlow m r, ClickhouseFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> ShortId DMerchant.Merchant -> m Bool
-isIPBlocked clientIP merchantShortId = Redis.withNonCriticalCrossAppRedis $ do
-  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound $ getShortId merchantShortId)
-  case merchant.whiteListedIpsForAuth of
-    Just whitelistedIPs | clientIP `elem` whitelistedIPs -> return False
-    _ -> do
+isIPBlocked :: (CacheFlow m r, MonadFlow m) => Text -> m Bool
+isIPBlocked clientIP = Redis.withNonCriticalCrossAppRedis $ do
+  let whitelistKey = "whitelisted_ip:" <> clientIP
+  whitelistResult <- Redis.get whitelistKey
+  case whitelistResult of
+    Just (_ :: Text) -> return False
+    Nothing -> do
       let blockKey = "Customer:IPBlocked:" <> clientIP
-      result <- Redis.get blockKey
-      return $ isJust (result :: Maybe Text)
+      blockResult <- Redis.get blockKey
+      return $ isJust (blockResult :: Maybe Text)
