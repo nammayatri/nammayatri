@@ -51,6 +51,8 @@ import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import JBridge as JB
 import Engineering.Helpers.Events as EHE
+import Helpers.Utils (isParentView, emitLogoutApp)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show (BackPressed _) = "BackPressed"
@@ -340,9 +342,16 @@ eval SelectDateOfBirthAction state = continue state { props {isDateClickable = f
 eval SelectDateOfIssueAction state = continue state { props {isDateClickable = false}} 
 
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutPopupModal= false}})
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = 
+  continue $ (state {props {logoutPopupModal= false}})
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = do  
+  if isParentView FunctionCall
+    then do
+      void $ pure $ emitLogoutApp Nothing
+      continue state
+    else do
+      exit LogoutAccount 
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutPopupModal= false}}
 

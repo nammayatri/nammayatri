@@ -74,6 +74,9 @@ import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
 import Data.Tuple
 import Control.Bind (join)
+import Helpers.Utils (isParentView, emitLogoutApp)
+import Data.Maybe (Maybe(..))
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -115,7 +118,7 @@ instance loggableAction :: Loggable Action where
       trackAppEndScreen appId (getScreen REGISTRATION_SCREEN)
     NoAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "no_action"
     UpdateApkAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "update_apk_action"
-    AppOnboardingNavBarAC act -> case act of
+    AppOnboardingNavBarAC act -> case act of 
       AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
         GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "generic_header_on_click"
         GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "generic_header_on_click"
@@ -263,7 +266,13 @@ eval (CallWorkFlow flowId) state =
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit LogoutAccount
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = do  
+  if isParentView FunctionCall
+    then do
+      void $ pure $ emitLogoutApp Nothing
+      continue state
+    else do
+      exit LogoutAccount 
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 
