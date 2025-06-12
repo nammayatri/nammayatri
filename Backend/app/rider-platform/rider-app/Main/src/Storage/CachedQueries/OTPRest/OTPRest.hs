@@ -356,7 +356,7 @@ getRouteByRouteCodeWithFallback integratedBPPConfig routeCode = do
   try @_ @SomeException (getRouteByRouteId integratedBPPConfig routeCode) >>= \case
     Left err -> do
       logError $ "Error getting route by route code: " <> show err
-      B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
+      B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= maybe (QRoute.findByRouteId (Id routeCode)) (pure . Just) >>= fromMaybeM (RouteNotFound routeCode)
     Right route'' -> case route'' of
       Just route' -> pure route'
-      Nothing -> B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
+      Nothing -> B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= maybe (QRoute.findByRouteId (Id routeCode)) (pure . Just) >>= fromMaybeM (RouteNotFound routeCode)
