@@ -152,7 +152,7 @@ onSearch ::
   m ()
 onSearch onSearchReq validatedReq = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) validatedReq.search.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType) DIBC.PARTNERORG >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| validatedReq.search.merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType ||+ "Platform Type:" +|| DIBC.PARTNERORG ||+ "")
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) validatedReq.search.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| validatedReq.search.merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
   filteredQuotes <-
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
