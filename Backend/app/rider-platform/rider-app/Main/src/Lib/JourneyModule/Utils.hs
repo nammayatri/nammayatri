@@ -302,6 +302,7 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   routeStopTimings <- case vc of
     Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
     Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
+    Enums.METRO -> hardcodedMetroTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
     _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
   return routeStopTimings
 
@@ -431,6 +432,54 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Only return service tiers that have available routes
   return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes)) results)
+
+hardcodedMetroTimings ::
+  (Monad m) =>
+  [Text] ->
+  Text ->
+  UTCTime ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m [RouteStopTimeTable]
+hardcodedMetroTimings (routeCode : _) stopCode currentTime integratedBppConfig mid mocid =
+  return
+    [ RouteStopTimeTable
+        { integratedBppConfigId = integratedBppConfig.id,
+          routeCode = routeCode,
+          stopCode = stopCode,
+          timeOfArrival = localTimeOfDay $ utcToLocalTime (minutesToTimeZone 330) $ addUTCTime (60 * 10) currentTime,
+          timeOfDeparture = localTimeOfDay $ utcToLocalTime (minutesToTimeZone 330) $ addUTCTime (60 * 20) currentTime,
+          tripId = Id "Metro123",
+          merchantId = Just mid,
+          merchantOperatingCityId = Just mocid,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          serviceTierType = Spec.ORDINARY,
+          delay = Nothing,
+          source = LIVE,
+          stage = Nothing
+        }
+    ]
+hardcodedMetroTimings _ stopCode currentTime integratedBppConfig mid mocid =
+  return
+    [ RouteStopTimeTable
+        { integratedBppConfigId = integratedBppConfig.id,
+          routeCode = "M1",
+          stopCode = stopCode,
+          timeOfArrival = localTimeOfDay $ utcToLocalTime (minutesToTimeZone 330) $ addUTCTime (60 * 10) currentTime,
+          timeOfDeparture = localTimeOfDay $ utcToLocalTime (minutesToTimeZone 330) $ addUTCTime (60 * 20) currentTime,
+          tripId = Id "Metro123",
+          merchantId = Just mid,
+          merchantOperatingCityId = Just mocid,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          serviceTierType = Spec.ORDINARY,
+          delay = Nothing,
+          source = LIVE,
+          stage = Nothing
+        }
+    ]
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
