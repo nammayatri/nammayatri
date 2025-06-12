@@ -58,6 +58,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Components.RequestInfoCard as RequestInfoCard
 import Engineering.Helpers.Events as EHE
+import Helpers.Utils (isParentView, emitLogoutApp)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show (WhatsAppSupport) = "WhatsAppSupport"
@@ -463,9 +465,16 @@ eval DatePickerAction state = continue state {props {isDateClickable = false}}
 
 eval PreviewImageAction state = continue state
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = do      
+  continue $ (state {props {logoutModalView= false}})
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = do    
+  if isParentView FunctionCall
+    then do
+      void $ pure $ emitLogoutApp Nothing
+      continue state
+    else do
+      exit LogoutAccount  
 
 eval (AgreePopUp (PopUpModal.OnButton2Click)) state = continue $ (state {props {agreeTermsModal= false}})
 
