@@ -758,6 +758,20 @@ emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode 
   }
 }
 
+emitLogoutApp :: Maybe String -> Unit
+emitLogoutApp screen = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "process_result"
+  , payload : Just {
+    action : "logout"
+  , trip_amount : Nothing
+  , ride_status : Nothing
+  , trip_id : Nothing
+  , screen : screen
+  , exit_app : true
+  , registration_token: Nothing
+  }
+}
+
 getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
 getDeepLinkOptions _ =
   let mBPayload = getGlobalPayload globalPayload
