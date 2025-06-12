@@ -1401,3 +1401,17 @@ mkSafetyNotificationKey code =
     Just BecknEnums.DEVIATION -> "SAFETY_ALERT_DEVIATION"
     Just BecknEnums.RIDE_STOPPAGE -> "SAFETY_ALERT_RIDE_STOPPAGE"
     Nothing -> code
+
+notifyAboutDeletedPerson :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> m ()
+notifyAboutDeletedPerson personId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product person.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "ACCOUNT_DELETED" identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    []
+    Nothing
+    Nothing
