@@ -42,7 +42,7 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId _ status) = do
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
     DRIVER_REACHING -> do
       QRBE.updateJourneyLegStatus (Just LJT.Arriving) booking.id
-      Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+      Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
     DRIVER_REACHED -> do
       QRBE.updateJourneyLegStatus (Just LJT.Arrived) booking.id
       Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
