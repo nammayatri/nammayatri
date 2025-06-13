@@ -273,7 +273,8 @@ data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroL
 
 data WalkLegExtraInfo = WalkLegExtraInfo
   { origin :: Location,
-    destination :: Location
+    destination :: Location,
+    id :: Id DWalkLeg.WalkLegMultimodal
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -650,7 +651,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         merchantOperatingCityId,
         personId = riderId,
         status = getWalkLegStatusFromWalkLeg legData journeyLegInfo',
-        legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'},
+        legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation', id = id},
         actualDistance = estimatedDistance,
         totalFare = Nothing
       }

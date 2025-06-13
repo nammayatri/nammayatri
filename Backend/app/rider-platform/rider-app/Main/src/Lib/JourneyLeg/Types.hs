@@ -4,30 +4,32 @@ import Domain.Types.Station
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import qualified Tools.Beam.UtilsTH
 
 data JourneyLegStatus
   = InPlan
-  | -- | Booking
-    -- | RetryBooking
-    Assigning
-  | -- | ReAssigning
-    Booked
-  | OnTime
+  | Assigning
+  | Booked
   | AtRiskOfMissing
-  | Departed
   | Missed
   | Delayed
   | Arriving
   | Arrived
   | OnTheWay
-  | Skipped -- we might need this
+  | Skipped
   | Ongoing
   | Finishing
   | Cancelled
   | Completed
   deriving stock (Eq, Ord, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData JourneyLegStatus where
+  parseQueryParam = readEither
+
+instance ToHttpApiData JourneyLegStatus where
+  toUrlPiece = show
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyLegStatus)
 
