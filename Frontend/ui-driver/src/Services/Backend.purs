@@ -638,6 +638,7 @@ mkUpdateDriverInfoReq dummy
     , canDowngradeToSedan: Nothing
     , canDowngradeToHatchback: Nothing
     , canDowngradeToTaxi: Nothing
+    , isPetModeEnabled: Nothing
     , language:
         Just case getLanguageLocale languageKey of
           "EN_US" -> "ENGLISH"

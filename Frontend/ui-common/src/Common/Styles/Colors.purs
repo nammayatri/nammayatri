@@ -439,3 +439,6 @@ argent = "#888888"
 
 lightOrange400 :: Color
 lightOrange400 = "#FAEBDE"
+
+brown :: Color
+brown = "#844E00"

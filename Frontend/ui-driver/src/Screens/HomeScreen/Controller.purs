@@ -255,6 +255,8 @@ instance showAction :: Show Action where
   show (BannerChanged _) = "BannerChanged"
   show (BannerStateChanged _) = "BannerStateChanged"
   show (CoinsPopupAC var1) = "CoinsPopupAC_" <> show var1
+  show (PetRidesPopupAC var1) = "PetRidesPopupAC_" <> show var1
+  show (OptOutPetRidesPopupAC var1) = "OptOutPetRidesPopupAC" <> show var1
   show (ToggleStatsModel) = "ToggleStatsModel"
   show (ToggleBonusPopup) = "ToggleBonusPopup"
   show (GoToEarningsScreen _) = "GoToEarningsScreen"
@@ -512,6 +514,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | UpdateStopsStatus ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
+                    | EnablePetRides ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -613,6 +616,8 @@ data Action = NoAction
             | BannerChanged String
             | BannerStateChanged String
             | CoinsPopupAC PopUpModal.Action
+            | PetRidesPopupAC PopUpModal.Action
+            | OptOutPetRidesPopupAC PopUpModal.Action
             | ToggleStatsModel
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
@@ -1867,6 +1872,22 @@ eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = do
   void $ pure $ incrementValueOfLocalStoreKey INTRODUCING_YATRI_POINTS_POPUP_LIMIT
   continue state {props {showCoinsPopup = false}}
 
+eval (PetRidesPopupAC PopUpModal.OnButton1Click) state = do
+  void $ pure $ setValueToLocalNativeStore PET_RIDES_POPUP_SHOWN "true"
+  let updatedState = state {props {showPetRidesPopup = false}}
+  updateAndExit updatedState $ EnablePetRides updatedState
+
+eval (PetRidesPopupAC PopUpModal.OnButton2Click) state = do
+  void $ pure $ setValueToLocalNativeStore PET_RIDES_POPUP_SHOWN "true"
+  continue state {props {showOptOutPetRidesPopup = true, showPetRidesPopup = false}}
+
+eval (OptOutPetRidesPopupAC PopUpModal.OnButton1Click) state = do
+  continue state {props {showPetRidesPopup = false, showOptOutPetRidesPopup = false}}
+
+eval (OptOutPetRidesPopupAC PopUpModal.OnButton2Click) state = do
+  let updatedState = state {props {showOptOutPetRidesPopup = false}}
+  updateAndExit updatedState $ EnablePetRides updatedState
+
 eval (CoinEarnedPopupAC PopUpModal.OnButton1Click) state = do
   void $ pure $ updateCoinPopupLocalStoreVal state
   let newState = state { props { coinPopupType = ST.NO_COIN_POPUP}}
@@ -2205,7 +2226,8 @@ activeRideDetail state (RidesInfo ride) =
                             case s1.stopInfo, s2.stopInfo of
                               Just (API.StopInformation s1stopInfo), Just (API.StopInformation s2stopInfo) -> compare s1stopInfo.stopOrder s2stopInfo.stopOrder
                               _,_ -> LT
-                            ) $ fromMaybe [] ride.stops
+                            ) $ fromMaybe [] ride.stops,
+  isPetRide : ride.isPetRide
 }
   where
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

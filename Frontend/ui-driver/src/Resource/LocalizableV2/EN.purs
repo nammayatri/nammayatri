@@ -1853,4 +1853,6 @@ getEn =
     , good : "Good"
     , poor : "Poor"
     , open_meter : "Open Meter"
+    , this_ride_includes_a_pet : "This ride includes a pet"
+    , pet_rides : "Pet Rides"
     }

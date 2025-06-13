@@ -1459,7 +1459,7 @@ driverProfileFlow = do
                                                                                             , vehicleName = state.data.vehicleModelName
                                                                                             , vehicleCapacity = state.data.capacity
                                                                                             , downgradeOptions = downgradeOptions}
-                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) , canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity}
+                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) , canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity, isPetModeEnabled = state.props.isPetModeEnabled}
                                                                                      })
       bookingOptionsFlow
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
@@ -1941,9 +1941,9 @@ bookingOptionsFlow = do
         bookingOptionsFlow
       else
         driverProfileFlow
-    ENABLE_RENTAL_INTERCITY_RIDE state -> do
+    ENABLE_RENTAL_INTERCITY_PET_RIDE state -> do
       let initialData = mkUpdateDriverInfoReq ""
-          requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity}
+          requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity, isPetModeEnabled = state.props.isPetModeEnabled}
       (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity, canSwitchToIntraCity = updateDriverResp.canSwitchToIntraCity} })
       bookingOptionsFlow
@@ -3066,6 +3066,13 @@ homeScreenFlow = do
       void $ lift $ lift $ doAff $ makeAff \cb -> (JB.startOpenMeterActivity startOpenMeterConfig) (cb <<< Right) $> nonCanceler
       void $ liftFlowBT $HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
       void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+    ENABLE_PET_RIDES updatedState -> do
+      let initialData = mkUpdateDriverInfoReq ""
+          requiredData = initialData {isPetModeEnabled = Just true}
+      (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
+      (GlobalState globalState) <- getState
+      void $ getDriverInfoDataFromCache (GlobalState globalState) true
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props { isPetModeEnabled = Just false } })
   homeScreenFlow
 
 handleFcm :: String -> HomeScreenState -> NotificationBody -> FlowBT String Unit
@@ -4082,6 +4089,13 @@ updateBannerAndPopupFlags = do
         && fromMaybe 0 (fromString $ getValueToLocalStore INTRODUCING_YATRI_POINTS_POPUP_LIMIT) < coinsConfig.rideMoreEarnCoinPopupMaxLimit
         && isCoinPopupNotShownToday
 
+    showPetRidesPopup =
+      let petRidesFeatureConfig = getPetRidesFeatureConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+      in
+      fromMaybe false (not <$> getDriverInfoResp.isPetModeEnabled)
+        && getValueToLocalStore PET_RIDES_POPUP_SHOWN == "__failed"
+        && petRidesFeatureConfig.enablePetRidesFeature
+
     hsState = allState.homeScreen
     coinPopupType_ = case allState.homeScreen.data.totalValidRidesOfDay of
                       10 -> checkPopupShowToday ST.TEN_RIDE_COMPLETED appConfig hsState
@@ -4149,6 +4163,7 @@ updateBannerAndPopupFlags = do
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
                 , showCoinsPopup = showCoinPopup
+                , showPetRidesPopup = showPetRidesPopup
                 , coinPopupType = coinPopupType
                 , showReferNowPopUp = showReferNowPopUp
                 , showAddUPIPopUp = showAddUPIPopUp
