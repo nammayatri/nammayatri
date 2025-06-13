@@ -1706,5 +1706,6 @@ generateJourneyInfoResponse journey legs = do
         startTime = journey.startTime,
         endTime = journey.endTime,
         merchantOperatingCityName,
-        crisSdkToken = Nothing
+        crisSdkToken = Nothing,
+        paymentOrderShortId = journey.paymentOrderShortId
       }

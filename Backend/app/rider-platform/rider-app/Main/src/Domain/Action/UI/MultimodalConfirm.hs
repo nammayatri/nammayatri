@@ -606,7 +606,7 @@ getMultimodalFeedback (mbPersonId, _) journeyId = do
     Nothing -> return Nothing
   where
     mkFeedbackFormData :: JFB.JourneyFeedback -> [ApiTypes.RateMultiModelTravelModes] -> ApiTypes.JourneyFeedBackForm
-    mkFeedbackFormData feedBackForjourney ratingForLegs = do
+    mkFeedbackFormData feedBackForjourney ratingForLegs =
       ApiTypes.JourneyFeedBackForm
         { rating = feedBackForjourney.rating,
           additionalFeedBack = feedBackForjourney.additionalFeedBack,

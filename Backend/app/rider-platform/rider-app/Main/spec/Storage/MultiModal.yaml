@@ -86,6 +86,10 @@ Journey:
         kvFunction: updateOneWithKV
         params: [isPaymentSuccess]
         where: id
+    updatePaymentOrderShortId:
+        kvFunction: updateOneWithKV
+        params: [paymentOrderShortId]
+        where: id
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <JourneyStatus>
