@@ -32,7 +32,7 @@
               "script": {
                 "exec": [
                   "// Assert if request was successful",
-                  "pm.test(\"Expect response code w be 200\", () => {",
+                  "pm.test(\"Expect response code to be 200\", () => {",
                   "    if (pm.response.code !== 200) {",
                   "        console.log('req', pm.request),",
                   "        console.log('res', pm.response.text())",
