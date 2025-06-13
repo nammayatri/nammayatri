@@ -257,7 +257,8 @@ data DriverRideRes = DriverRideRes
     receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
     extraFareMitigationFlag :: Maybe Bool,
     parcelType :: Maybe DParcel.ParcelType,
-    parcelQuantity :: Maybe Int
+    parcelQuantity :: Maybe Int,
+    isInsured :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -435,7 +436,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
         extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag),
         parcelType = booking.parcelType,
-        parcelQuantity = booking.parcelQuantity
+        parcelQuantity = booking.parcelQuantity,
+        isInsured = Just $ ride.isInsured
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop

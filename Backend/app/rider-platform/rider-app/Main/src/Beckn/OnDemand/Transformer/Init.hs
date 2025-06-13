@@ -136,7 +136,8 @@ mkItemTags :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
 mkItemTags res =
   let itemTags = if maybe False Trip.isDeliveryTrip res.booking.tripCategory then mkDeliveryTagGroup res else []
       itemTags' = mkAdvancedBookingEnabledTagGroup res : itemTags
-   in itemTags'
+      itemTags'' = mkInsuranceTagGroup res : itemTags'
+   in itemTags''
 
 mkAdvancedBookingEnabledTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkAdvancedBookingEnabledTagGroup res =
@@ -161,6 +162,33 @@ mkAdvancedBookingEnabledTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = Just $ show res.isAdvanceBookingEnabled
+              }
+          ]
+    }
+
+mkInsuranceTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
+mkInsuranceTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.INSURANCE_INFO,
+              descriptorName = Just "Insurance Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.IS_INSURED,
+                        descriptorName = Just "Is Insured",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show $ fromMaybe False res.isInsured
               }
           ]
     }

@@ -171,3 +171,38 @@ getCustomerReferralInfo ::
 getCustomerReferralInfo apiKey internalUrl request = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCustomerReferralInfoClient (Just apiKey) request) "StopEvents" getCustomerReferralInfoAPI
+
+type GetInsuranceInfoAPI =
+  "internal"
+    :> "insurance"
+    :> Capture "rideId" Text
+    :> Header "token" Text
+    :> Get '[JSON] InsuranceAPIEntity
+
+data InsuranceAPIEntity = InsuranceAPIEntity
+  { certificateUrl :: Maybe Text,
+    plan :: Maybe Text,
+    policyId :: Maybe Text,
+    policyNumber :: Maybe Text,
+    message :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getInsuranceInfo ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m InsuranceAPIEntity
+getInsuranceInfo apiKey internalUrl rideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getInsuranceInfoClient rideId (Just apiKey)) "GetInsuranceInfo" getInsuranceInfoAPI
+
+getInsuranceInfoClient :: Text -> Maybe Text -> EulerClient InsuranceAPIEntity
+getInsuranceInfoClient = client (Proxy @GetInsuranceInfoAPI)
+
+getInsuranceInfoAPI :: Proxy GetInsuranceInfoAPI
+getInsuranceInfoAPI = Proxy
