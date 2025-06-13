@@ -16,6 +16,7 @@ imports:
   MultiModalAgency: Kernel.External.MultiModal.Interface.Types
   RecentLocation: Domain.Types.RecentLocation
   ServiceTierType: BecknV2.FRFS.Enums
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -46,6 +47,7 @@ Journey:
     fromLocationAddress: Maybe Text
     toLocationAddress: Maybe Text
     isPublicTransportIncluded: Maybe Bool
+    paymentOrderShortId: Maybe (ShortId PaymentOrder)
 
   beamType:
     status: Maybe JourneyStatus
