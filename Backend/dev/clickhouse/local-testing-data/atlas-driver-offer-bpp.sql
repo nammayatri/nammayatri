@@ -336,4 +336,49 @@ VALUES
         1290
     );
 
+INSERT INTO
+    atlas_driver_offer_bpp.search_request_for_driver (
+        id,
+        driver_id,
+        search_request_id,
+        created_at,
+        updated_at,
+        status,
+        trip_estimated_duration,
+        trip_estimated_distance
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000005',
+        'favorit-auto1-0000000000000000000000',
+        '94e02ed5-2a43-4b38-ac25-28bb0fabfbcc',
+        '2024-02-22 07:02:42',
+        '2024-02-22 07:02:42',
+        'PENDING',
+        150,
+        1789
+    );
 
+
+INSERT INTO
+    atlas_driver_offer_bpp.search_request_for_driver (
+        id,
+        driver_id,
+        search_request_id,
+        created_at,
+        updated_at,
+        status,
+        trip_estimated_duration,
+        trip_estimated_distance
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000006',
+        'favorit-auto1-0000000000000000000000',
+        '47631264-4a19-41b3-b5bf-93db9def816b',
+        '2024-02-22 07:02:42',
+        '2024-02-22 07:02:42',
+        'PENDING',
+        150,
+        1789
+    );
