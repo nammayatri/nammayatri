@@ -331,16 +331,16 @@ getState mode searchId riderLastPoints isLastCompleted = do
         pure []
 
     isOngoingJourneyLeg :: JPT.JourneyLegStatus -> Bool
-    isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.Ongoing]
+    isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.Ongoing, JPT.Finishing]
 
     isUpcomingJourneyLeg :: JPT.JourneyLegStatus -> Bool
-    isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.InPlan]
+    isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.Booked, JPT.InPlan, JPT.OnTheWay, JPT.Arriving, JPT.Arrived]
 
     processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JPT.JourneyLegStatus -> Id Station -> Bool -> m (Bool, JPT.JourneyLegStatus)
     processOldStatus mbOldStatus toStationId isLastCompleted' = do
       mbToStation <- QStation.findById toStationId
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
-      let oldStatus = fromMaybe (if isLastCompleted' then JPT.Ongoing else JPT.InPlan) mbOldStatus
+      let oldStatus = fromMaybe (if isLastCompleted' then JPT.OnTheWay else JPT.InPlan) mbOldStatus
       return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted') mbToLatLong
 
     getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [JPT.MultiModalJourneyRouteDetails] -> Id Domain.Types.FRFSSearch.FRFSSearch -> Bool -> m [(JPT.MultiModalJourneyRouteDetails, Bool, JPT.JourneyLegStatus)]

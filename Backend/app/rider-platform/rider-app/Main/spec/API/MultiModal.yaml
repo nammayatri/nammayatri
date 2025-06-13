@@ -369,3 +369,12 @@ apis:
         legOrder: Int
       response:
         type: LegServiceTierOptionsResp
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/setStatus/{status}
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+        status: JourneyLegStatus
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

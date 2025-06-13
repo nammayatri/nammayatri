@@ -54,7 +54,7 @@ updateJourneyLegStatus travelMode recentLocations endLatLang currentStatus isLas
   case currentStatus of
     JLT.Ongoing -> checkThreshold finishingThreshold JLT.Finishing
     JLT.Finishing -> checkThreshold arrivedThreshold JLT.Completed
-    JLT.InPlan -> if isLastCompleted then (True, JLT.Ongoing) else (False, currentStatus)
+    cs | cs `elem` [JLT.InPlan, JLT.Booked] -> if isLastCompleted then (True, bool JLT.OnTheWay JLT.Ongoing (travelMode == Walk)) else (False, currentStatus)
     JLT.Completed -> (False, currentStatus) -- No change once the leg is completed
     _ -> (False, currentStatus)
   where
