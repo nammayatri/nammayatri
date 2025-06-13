@@ -249,18 +249,22 @@ findByDriverId ::
   Id DP.Person ->
   UTCTime ->
   UTCTime ->
+  Int ->
+  Int ->
   m [(CH.DateTime, Id DSRD.SearchRequestForDriver, Id DSR.SearchRequest, Maybe Common.Meters, Maybe Common.Seconds)]
-findByDriverId driverId from to = do
+findByDriverId driverId from to limit offset = do
   CH.findAll $
     CH.select_ (\srfd -> CH.notGrouped (srfd.createdAt, srfd.id, srfd.requestId, srfd.tripEstimatedDistance, srfd.tripEstimatedDuration)) $
-      CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
-        CH.filter_
-          ( \srfd _ ->
-              srfd.driverId CH.==. driverId
-                CH.&&. srfd.createdAt >=. CH.DateTime from
-                CH.&&. srfd.createdAt <=. CH.DateTime to
-          )
-          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+      CH.limit_ limit $
+        CH.offset_ offset $
+          CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+            CH.filter_
+              ( \srfd _ ->
+                  srfd.driverId CH.==. driverId
+                    CH.&&. srfd.createdAt >=. CH.DateTime from
+                    CH.&&. srfd.createdAt <=. CH.DateTime to
+              )
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
 concatFun :: [(Maybe Text, Int, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory)]
 concatFun [] _ = []
