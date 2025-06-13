@@ -27,6 +27,7 @@ initData =
       , acExplanationPopup: false
       , canSwitchToInterCity : Nothing
       , canSwitchToIntraCity : Nothing
+      , isPetModeEnabled : Nothing
       , fromDeepLink : false
       , showRateCard : false
       , rateCardLoaded : false

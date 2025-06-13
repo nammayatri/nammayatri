@@ -1853,4 +1853,10 @@ getOd =
     , good : "ଭାଲୋ"
     , poor : "ଖାରାପ"
     , open_meter : "ମିଟର୍ ଖୋଲନ୍ତୁ"
+    , earn_additional_money_with_pet_autos : "ପେଟ୍ ଅଟୋ ସହିତ ଅତିରିକ୍ତ ଟଙ୍କା ଉପାର୍ଜନ କରନ୍ତୁ!"
+    , get_rides_from_users_travelling_with_pets : "ପ୍ରାଣୀ ସହିତ ଯାତ୍ରା କରୁଥିବା ବ୍ୟବହାରକାରୀଙ୍କଠାରୁ ରାଇଡ୍ ପାଆନ୍ତୁ।<br><br> ଯଦି ଆପଣ ପେଟ୍-ଫ୍ରେଣ୍ଡଲି ଯାତ୍ରା ପାଇଁ ରାଜି ଅଛନ୍ତି, <br> ତେବେ ଅପ୍ଟ-ଇନ୍ କରନ୍ତୁ।"
+    , opt_out : "ଅପ୍ଟ ଆଉଟ୍ କରନ୍ତୁ"
+    , are_you_sure_you_want_to_opt_out : "ଆପଣ ସତରେ ଅପ୍ଟ ଆଉଟ୍ କରିବାକୁ ଚାହୁଁଛନ୍ତି କି?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "ଆପଣ ଯେବେ ଚାହିଁବେ ତେବେ ଆପଣଙ୍କର ରାଇଡ୍ ପସନ୍ଦରୁ ଏହା ପୁଣି ବଦଳାଇପାରିବେ।"
+    , this_ride_includes_a_pet : "ଏହି ଯାତ୍ରାରେ ଗୋଟିଏ ପାଳିତ ପଶୁ ଅନ୍ତର୍ଭୁକ୍ତ"
   }

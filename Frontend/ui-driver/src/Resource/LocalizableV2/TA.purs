@@ -1853,4 +1853,10 @@ getTa =
     , good: "நல்லது"
     , poor: "மோசமானது"
     , open_meter: "ஓப்பன் மீட்டர்"
+    , earn_additional_money_with_pet_autos : "பெட் ஆட்டோக்களுடன் கூடுதல் பணம் சம்பாதிக்கவும்!"
+    , get_rides_from_users_travelling_with_pets : "மிருகங்களுடன் பயணம் செய்யும் பயனர்களிடமிருந்து பயணங்களைப் பெறுங்கள்.<br><br> நீங்கள் மிருகங்களுக்கு உகந்த பயணங்களை ஏற்கிறீர்கள் என்றால் <br> சேரவும்."
+    , opt_out : "விலகவும்"
+    , are_you_sure_you_want_to_opt_out : "நீங்கள் உண்மையாகவே விலக விரும்புகிறீர்களா?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "நீங்கள் உண்மையாகவே விலக விரும்புகிறீர்களா?"
+    , this_ride_includes_a_pet : "இந்த சவாரியில் ஒரு செல்லப்பிராணியும் அடங்கும்."
     }

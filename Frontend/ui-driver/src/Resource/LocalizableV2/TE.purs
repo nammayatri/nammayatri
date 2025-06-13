@@ -1853,4 +1853,10 @@ getTe =
     , good : "ఉత్తమంగా"
     , poor : "ఖారాబిస్తుంది"
     , open_meter : "మీటర్ తెరవండి"
+    , earn_additional_money_with_pet_autos : "పెట్ ఆటోలతో అదనపు డబ్బు సంపాదించండి!"
+    , get_rides_from_users_travelling_with_pets : "పిల్లలతో ప్రయాణించే వినియోగదారుల నుండి రైడ్‌లను పొందండి.<br><br> మీరు పెట్ ఫ్రెండ్లీ ట్రిప్స్‌కు ఓకే అయితే <br> ఆప్ట్ ఇన్ చేయండి."
+    , opt_out : "ఓప్ట్ అవుట్ చేయండి"
+    , are_you_sure_you_want_to_opt_out : "మీరు నిజంగా ఓప్ట్ అవుట్ చేయాలనుకుంటున్నారా?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "మీరు మీ రైడ్ ప్రిఫరెన్సెస్ నుండి దీన్ని ఎప్పుడైనా మార్చవచ్చు."
+    , this_ride_includes_a_pet : "ఈ రైడ్‌లో ఒక పెంపుడు జంతువు కూడా ఉంది"
     }

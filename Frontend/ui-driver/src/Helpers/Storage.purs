@@ -179,6 +179,7 @@ data KeyStore = USER_NAME
                 | LOCATION_MAX_TIME_THRESHOLD
                 | LOCATION_PRIORITY
                 | METER_RIDE_ACTIVE
+                | PET_RIDES_POPUP_SHOWN
 
 
 derive instance genericKeyStore :: Generic KeyStore _

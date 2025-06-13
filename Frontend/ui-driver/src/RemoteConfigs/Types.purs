@@ -207,3 +207,6 @@ type RideEndAudioConfig = {
 , rideEndAudioUrl :: Maybe String
 }
 
+type PetRidesFeatureConfig = {
+  enablePetRidesFeature :: Boolean
+}
