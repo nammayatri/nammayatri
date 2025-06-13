@@ -926,6 +926,10 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "ESTIMATED_FARE" -> show estimatedFare
         "FINAL_FARE" -> show finalFare
         "FARE_DIFFERENCE" -> show fareDifference
+        "FARE_CORRELATION" -> bool "remained same" (bool ("was decreased by ₹" <> show fareDifference) ("was increased by ₹" <> show fareDifference) (finalFare > estimatedFare)) (finalFare == estimatedFare)
+        "DISTANCE_CORRELATION" -> bool "no change" (bool ("a " <> show distanceDifference <> " km decrease") ("a " <> show distanceDifference <> " km increase") (chargeableDistance > estimatedDistance)) (chargeableDistance == estimatedDistance)
+        "FARE_ARROW" -> bool (bool " ↓" " ↑" (finalFare > estimatedFare)) "" (finalFare == estimatedFare)
+        "DISTANCE_ARROW" -> bool (bool " ↓" " ↑" (chargeableDistance > estimatedDistance)) "" (chargeableDistance == estimatedDistance)
         "DRIVER_PICKUP_CHARGE" -> show driverPickupCharges
         "TOLL_CHARGES" -> show tollCharges
         "TIP_ADDED" -> show tipAdded

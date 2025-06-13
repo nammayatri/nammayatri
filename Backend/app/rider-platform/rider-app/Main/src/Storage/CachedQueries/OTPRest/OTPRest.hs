@@ -1,7 +1,6 @@
 module Storage.CachedQueries.OTPRest.OTPRest where
 
 import BecknV2.FRFS.Enums
-import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy)
 import Data.Text (splitOn)
 import qualified Domain.Types.GTFSFeedInfo as GTFSFeedInfo
@@ -53,7 +52,7 @@ getRouteByFuzzySearch ::
 getRouteByFuzzySearch integratedBPPConfig query = do
   (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
   routes <- Flow.getRouteByFuzzySearch baseUrl feedInfo.feedId.getId query
-  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  mapM (\route -> parseRouteFromInMemoryServer route integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) routes
 
 getRoutesByGtfsId ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -62,7 +61,7 @@ getRoutesByGtfsId ::
 getRoutesByGtfsId integratedBPPConfig = do
   (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
   routes <- Flow.getRoutesByGtfsId baseUrl feedInfo.feedId.getId
-  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  mapM (\route -> parseRouteFromInMemoryServer route integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId) routes
 
 getRoutesByVehicleType ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -199,14 +198,12 @@ parseStationsFromInMemoryServer ::
   m [Station.Station]
 parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchantOperatingCityId = do
   now <- getCurrentTime
-  stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) merchantOperatingCityId
-  let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, info.address)) stationsExtraInformation
-
   mapM
     ( \station -> do
+        stationsExtraInformation <- QStationsExtraInformation.findByStationIdAndCity station.stopCode merchantOperatingCityId
         return $
           Station.Station
-            { address = join $ HM.lookup station.stopCode stationAddressMap,
+            { address = stationsExtraInformation >>= (.address),
               code = station.stopCode,
               hindiName = Nothing,
               id = Id station.stopCode,
@@ -256,43 +253,6 @@ parseRouteStopMapping routeStopMappingNandi integratedBppConfig merchantId merch
     )
     routeStopMappingNandi
 
-parseRoutesFromInMemoryServer ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
-  [RouteInfoNandi] ->
-  Id IntegratedBPPConfig ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  m [Route.Route]
-parseRoutesFromInMemoryServer routes integratedBppConfig merchantId merchantOperatingCityId = do
-  let routeIds = map (.id) routes
-  routePolylines <- QRoutePolylines.getByRouteIdsAndCity routeIds merchantOperatingCityId
-  let polylineMap = HM.fromList $ map (\polyline -> (polyline.routeId, polyline.polyline)) routePolylines
-  now <- getCurrentTime
-  return $
-    map
-      ( \route ->
-          Route.Route
-            { code = route.id,
-              color = Nothing,
-              dailyTripCount = route.tripCount,
-              endPoint = route.endPoint,
-              startPoint = route.startPoint,
-              id = Id $ route.id,
-              integratedBppConfigId = integratedBppConfig,
-              merchantId = merchantId,
-              merchantOperatingCityId = merchantOperatingCityId,
-              polyline = join $ HM.lookup route.id polylineMap,
-              longName = fromMaybe "" route.longName,
-              shortName = fromMaybe "" route.shortName,
-              vehicleType = route.mode,
-              stopCount = route.stopCount,
-              timeBounds = Unbounded,
-              createdAt = now,
-              updatedAt = now
-            }
-      )
-      routes
-
 parseRouteFromInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   RouteInfoNandi ->
@@ -301,10 +261,28 @@ parseRouteFromInMemoryServer ::
   Id MerchantOperatingCity ->
   m Route.Route
 parseRouteFromInMemoryServer routeInfoNandi integratedBppConfig merchantId merchantOperatingCityId = do
-  routes <- parseRoutesFromInMemoryServer [routeInfoNandi] integratedBppConfig merchantId merchantOperatingCityId
-  case routes of
-    (route : _) -> pure route
-    _ -> throwError $ InternalError "Failed to parse route"
+  routePolyline <- QRoutePolylines.findByRouteIdAndCity routeInfoNandi.id merchantOperatingCityId
+  now <- getCurrentTime
+  return $
+    Route.Route
+      { code = routeInfoNandi.id,
+        color = Nothing,
+        dailyTripCount = routeInfoNandi.tripCount,
+        endPoint = routeInfoNandi.endPoint,
+        startPoint = routeInfoNandi.startPoint,
+        id = Id $ routeInfoNandi.id,
+        integratedBppConfigId = integratedBppConfig,
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
+        polyline = routePolyline >>= (.polyline),
+        longName = fromMaybe "" routeInfoNandi.longName,
+        shortName = fromMaybe "" routeInfoNandi.shortName,
+        vehicleType = routeInfoNandi.mode,
+        stopCount = routeInfoNandi.stopCount,
+        timeBounds = Unbounded,
+        createdAt = now,
+        updatedAt = now
+      }
 
 parseRouteStopMappingInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
