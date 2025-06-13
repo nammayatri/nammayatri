@@ -320,6 +320,7 @@ data DriverInformationRes = DriverInformationRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    isPetModeEnabled :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -403,6 +404,7 @@ data DriverEntityRes = DriverEntityRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    isPetModeEnabled :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -455,6 +457,7 @@ data UpdateDriverReq = UpdateDriverReq
     canSwitchToRental :: Maybe Bool,
     canSwitchToInterCity :: Maybe Bool,
     canSwitchToIntraCity :: Maybe Bool,
+    isPetModeEnabled :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -989,6 +992,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         active = driverInfo.active,
         onRide = onRideFlag,
         enabled = driverInfo.enabled,
+        isPetModeEnabled = driverInfo.isPetModeEnabled,
         blocked = driverInfo.blocked || overchargingBlocked,
         blockExpiryTime = driverInfo.blockExpiryTime <|> blockedTill,
         blockedReasonFlag = driverInfo.blockReasonFlag,
@@ -1099,6 +1103,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           canSwitchToInterCity = fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity
           canSwitchToIntraCity = fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity
           availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
+          isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
           selectedServiceTiers =
             case vehicle.variant of
               DV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
@@ -1129,7 +1134,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
@@ -1266,7 +1271,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

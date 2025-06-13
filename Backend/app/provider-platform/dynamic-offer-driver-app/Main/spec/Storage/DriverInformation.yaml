@@ -70,6 +70,7 @@ DriverInformation:
     lastEnabledOn: Maybe UTCTime
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
+    isPetModeEnabled: Bool
     canDowngradeToTaxi: Bool
     canSwitchToRental: Bool
     canSwitchToInterCity: Bool
@@ -128,6 +129,7 @@ DriverInformation:
     subscribed: "true"
     canDowngradeToSedan: "false"
     canDowngradeToHatchback: "false"
+    isPetModeEnabled: "false"
     canDowngradeToTaxi: "false"
     canSwitchToRental: "false"
     canSwitchToInterCity: "false"
@@ -153,6 +155,7 @@ DriverInformation:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
+    isPetModeEnabled: Maybe Bool
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
     hasAdvanceBooking: Maybe Bool
     forwardBatchingEnabled: Maybe Bool
@@ -173,6 +176,7 @@ DriverInformation:
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToIntraCity: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
     isSpecialLocWarrior: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    isPetModeEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -188,6 +192,7 @@ DriverInformation:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
     canSwitchToIntraCity: Kernel.Prelude.Just|I
+    isPetModeEnabled: Kernel.Prelude.Just|I
     isSpecialLocWarrior: Kernel.Prelude.Just|I
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
@@ -240,6 +245,7 @@ DriverInformation:
           canSwitchToInterCity,
           canSwitchToIntraCity,
           availableUpiApps,
+          isPetModeEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

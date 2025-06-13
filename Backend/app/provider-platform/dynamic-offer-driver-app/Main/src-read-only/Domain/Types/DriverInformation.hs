@@ -55,6 +55,7 @@ data DriverInformation = DriverInformation
     hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedForReferralPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
+    isPetModeEnabled :: Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
     issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

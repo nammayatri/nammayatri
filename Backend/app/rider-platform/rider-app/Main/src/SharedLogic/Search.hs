@@ -106,6 +106,7 @@ data OneWaySearchReq = OneWaySearchReq
     driverIdentifier :: Maybe DRL.DriverIdentifier,
     isMeterRideSearch :: Maybe Bool,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    isPetRide :: Maybe Bool,
     platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -181,6 +182,7 @@ data SearchDetails = SearchDetails
     fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,
+    isPetRide :: Maybe Bool,
     driverIdentifier_ :: Maybe DRL.DriverIdentifier,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     routeCode :: Maybe Text,

@@ -316,6 +316,7 @@ calculateFareParameters params = do
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
+          + fromMaybe 0.0 fp.petCharges
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -336,6 +337,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
+            petCharges = fp.petCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,

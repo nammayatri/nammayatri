@@ -29,6 +29,7 @@ data FarePolicyT f = FarePolicyT
     serviceChargeAmount :: B.C f (Maybe HighPrecMoney),
     parkingCharge :: B.C f (Maybe HighPrecMoney),
     perStopCharge :: B.C f (Maybe HighPrecMoney),
+    petCharges :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
     tipOptions :: B.C f (Maybe [Int]),
     currency :: B.C f (Maybe Currency),

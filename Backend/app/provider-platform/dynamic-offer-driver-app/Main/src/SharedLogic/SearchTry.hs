@@ -295,8 +295,9 @@ buildTripQuoteDetail ::
   [DAC.ConditionalCharges] ->
   Bool ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
