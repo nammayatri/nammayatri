@@ -22,7 +22,7 @@ import Servant.Client
 
 data SearchRequestOfDriver = SearchRequestOfDriver
   { createdAt :: Kernel.Prelude.UTCTime,
-    fromLocation :: Domain.Types.Location.Location,
+    fromLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,

@@ -17,7 +17,7 @@ types:
     requestId: Id SearchRequest
     tripEstimatedDistance: Maybe Meters
     tripEstimatedDuration: Maybe Seconds
-    fromLocation: Location
+    fromLocation: Maybe Location
     toLocation: Maybe Location
 
   SearchRequestsReq:
