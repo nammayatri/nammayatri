@@ -92,3 +92,19 @@ updateDisabilityTag searchRequestId disabilityTag isScheduled =
    in if isScheduled
         then updateOneWithKVWithOptions Nothing True updates condition
         else updateOneWithKV updates condition
+
+findSearchRequestById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequest] -> m [SearchRequest]
+findSearchRequestById srIds =
+  findAllWithKV
+    [ Se.And
+        [Se.Is BeamSR.id $ Se.In $ getId <$> srIds]
+    ]
+
+-- findSearchRequestById ::
+--   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+--   [Id SearchRequest] ->
+--   m [(Maybe DL.Location, Maybe DL.Location)]
+-- findSearchRequestById srIds =
+--   findAllWithKVSelect
+--     [ Se.And [Se.Is BeamSR.id $ Se.In $ getId <$> srIds] ]
+--     (\row -> (BeamSR.fromLocationId row, BeamSR.toLocationId row))

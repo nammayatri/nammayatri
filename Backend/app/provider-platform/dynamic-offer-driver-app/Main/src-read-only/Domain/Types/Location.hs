@@ -24,7 +24,7 @@ data Location = Location
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, Eq, Read, Kernel.External.Maps.HasCoordinates.HasCoordinates, ToJSON, FromJSON, ToSchema)
 
 data Location' = Location'
   { address :: Domain.Types.Location.LocationAddress,
@@ -67,4 +67,4 @@ data LocationAddress = LocationAddress
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON, Data.OpenApi.ToSchema)
+  deriving (Generic, Show, Eq, Read, ToJSON, FromJSON, Data.OpenApi.ToSchema)
