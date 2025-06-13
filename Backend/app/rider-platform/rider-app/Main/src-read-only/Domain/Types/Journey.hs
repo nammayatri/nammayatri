@@ -14,6 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data Journey = Journey
@@ -28,6 +29,7 @@ data Journey = Journey
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPublicTransportIncluded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
+    paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     relevanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
