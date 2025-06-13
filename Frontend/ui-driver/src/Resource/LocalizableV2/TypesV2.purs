@@ -1867,6 +1867,12 @@ newtype Keymap = Keymap {
     , good :: String
     , poor :: String
     , open_meter :: String
+    , earn_additional_money_with_pet_autos :: String
+    , get_rides_from_users_travelling_with_pets :: String
+    , opt_out :: String
+    , are_you_sure_you_want_to_opt_out :: String
+    , you_can_always_go_back_and_change_this_from_ride_preferences :: String
+    , this_ride_includes_a_pet :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7410,3 +7416,24 @@ poor = a
 
 open_meter :: Proxy "open_meter"
 open_meter = a
+
+earn_additional_money_with_pet_autos :: Proxy "earn_additional_money_with_pet_autos"
+earn_additional_money_with_pet_autos = a
+
+get_rides_from_users_travelling_with_pets :: Proxy "get_rides_from_users_travelling_with_pets"
+get_rides_from_users_travelling_with_pets = a
+
+opt_in_pet_friendly_trips :: Proxy "opt_in_pet_friendly_trips"
+opt_in_pet_friendly_trips = a
+
+opt_out :: Proxy "opt_out"
+opt_out = a
+
+are_you_sure_you_want_to_opt_out :: Proxy "are_you_sure_you_want_to_opt_out"
+are_you_sure_you_want_to_opt_out = a
+
+you_can_always_go_back_and_change_this_from_ride_preferences :: Proxy "you_can_always_go_back_and_change_this_from_ride_preferences"
+you_can_always_go_back_and_change_this_from_ride_preferences = a
+
+this_ride_includes_a_pet :: Proxy "this_ride_includes_a_pet"
+this_ride_includes_a_pet = a

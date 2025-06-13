@@ -1853,4 +1853,10 @@ getEn =
     , good : "Good"
     , poor : "Poor"
     , open_meter : "Open Meter"
+    , earn_additional_money_with_pet_autos : "Earn additional money with pet autos!"
+    , get_rides_from_users_travelling_with_pets : "Get rides from users traveling with pets. <br><br> Opt in if you're okay with <br> pet-friendly trips."
+    , opt_out : "Opt out"
+    , are_you_sure_you_want_to_opt_out : "Are you sure you want to opt out?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "You can always go back and change this anytime from your ride preferences."
+    , this_ride_includes_a_pet : "This ride includes a pet"
     }

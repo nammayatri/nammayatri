@@ -168,6 +168,7 @@ rideActionModalConfig state =
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   , stops = rideData.stops
+  , isPetRide = state.data.activeRide.isPetRide
   }
   in rideActionModalConfig'
   where
@@ -2581,6 +2582,92 @@ introducingCoinsPopup state = PopUpModal.config {
     },
   dismissPopup = false
     }
+
+petRidesPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+petRidesPopupConfig state =
+  PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = Margin 0 10 0 5
+    , margin = MarginHorizontal 16 16
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "VERTICAL"
+    , primaryText {
+        text = getString EARN_ADDITIONAL_MONEY_WITH_PET_AUTOS
+      , color = Color.black800
+      , textStyle = Heading2
+      , margin = Margin 16 16 16 10
+    }
+    , secondaryText {
+        text = getString GET_RIDES_FROM_USERS_TRAVELLING_WITH_PETS
+      , textStyle = SubHeading2
+      , color = Color.black700
+      , margin = Margin 16 2 16 15
+    }
+    , option1 {
+        text = getString OKAY
+      , color = Color.yellow900
+      , background = Color.black900
+      , width = MATCH_PARENT
+    }
+    , option2 {
+        text = getString OPT_OUT
+      , color = Color.black900
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginTop 5
+      , strokeColor = Color.white900
+    }
+    , coverImageConfig {
+        imageUrl = fetchImage FF_ASSET "ny_ic_pet_rides"
+      , visibility = VISIBLE
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+    , dismissPopup = false
+  }
+
+optOutPetRidesPopup :: ST.HomeScreenState -> PopUpModal.Config
+optOutPetRidesPopup state =
+  PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = Margin 0 10 0 5
+    , margin = MarginHorizontal 16 16
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "VERTICAL"
+    , primaryText {
+        text = getString ARE_YOU_SURE_YOU_WANT_TO_OPT_OUT
+      , color = Color.black800
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10
+    }
+    , secondaryText {
+        text = getString YOU_CAN_ALWAYS_GO_BACK_AND_CHANGE_THIS_FROM_RIDE_PREFERENCES
+      , textStyle = SubHeading2
+      , color = Color.black700
+      , margin = Margin 16 2 16 15
+    }
+    , option1 {
+        text = getString OPT_OUT
+      , color = Color.yellow900
+      , background = Color.black900
+      , width = MATCH_PARENT
+    }
+    , option2 {
+        text = getString CANCEL
+      , color = Color.black900
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginTop 5
+      , strokeColor = Color.white900
+    }
+    , dismissPopup = false
+  }
 
 coinEarnedPopup :: ST.HomeScreenState -> PopUpModal.Config
 coinEarnedPopup state =

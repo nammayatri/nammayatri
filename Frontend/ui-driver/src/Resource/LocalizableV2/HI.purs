@@ -1853,4 +1853,10 @@ getHi =
     , good : "अच्छा"
     , poor : "खराब"
     , open_meter : "मीटर खोलें"
+    , earn_additional_money_with_pet_autos :  "पेट ऑटो से अतिरिक्त कमाई करें!"
+    , get_rides_from_users_travelling_with_pets : "पालतू जानवरों के साथ यात्रा करने वाले उपयोगकर्ताओं से राइड पाएं।<br><br> अगर आप पालतू-अनुकूल यात्राओं के लिए तैयार हैं तो <br> शामिल हों।"
+    , opt_out : "बाहर निकलें"
+    , are_you_sure_you_want_to_opt_out : "क्या आप वाकई बाहर निकलना चाहते हैं?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "आप कभी भी अपनी राइड प्राथमिकताओं से इसे बदल सकते हैं।"
+    , this_ride_includes_a_pet : "इस सवारी में एक पालतू जानवर भी शामिल है"
     }

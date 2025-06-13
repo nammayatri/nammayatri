@@ -807,5 +807,6 @@ dummyRideHistoryItem = RidesInfo {
       senderDetails : Nothing,
       receiverDetails : Nothing,
       coinsEarned : Nothing,
-      stops : Nothing
+      stops : Nothing,
+      isPetRide : Nothing
 }

@@ -122,7 +122,8 @@ type Config = {
   delivery :: Mb.Maybe DeliveryDetails,
   isSourceDetailsExpanded :: Boolean,
   isDestinationDetailsExpanded :: Boolean,
-  stops :: Array API.Stop
+  stops :: Array API.Stop,
+  isPetRide :: Maybe Boolean
 }
 
 type DeliveryDetails = {
@@ -203,7 +204,8 @@ config = {
   delivery : Nothing,
   isSourceDetailsExpanded : false,
   isDestinationDetailsExpanded : false,
-  stops : []
+  stops : [],
+  isPetRide : Nothing
 }
 
 stopActionButtonConfig :: Config -> PB.Config

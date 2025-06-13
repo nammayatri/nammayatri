@@ -232,3 +232,6 @@ homeScreen = do
     MeterRideScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METER_RIDE_SCREEN)
+    DisablePetRides updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DISABLE_PET_RIDES updatedState)
