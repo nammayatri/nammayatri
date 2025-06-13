@@ -27,6 +27,7 @@ import com.google.android.material.card.MaterialCardView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHolder> {
@@ -37,10 +38,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     @Nullable
     public SheetViewHolder getHolder(int index) {
         if (index >= holders.size()) return null;
-        return holders.get(index).get();
+        WeakReference<SheetViewHolder> weakReference = holders.get(index);
+        if(weakReference == null) return null;
+        return weakReference.get();
     }
 
-    private final ArrayList<WeakReference<SheetViewHolder>> holders = new ArrayList<>(6);
+    private final HashMap<Integer, WeakReference<SheetViewHolder>> holders = new HashMap<>(6);
 
     public void setViewPager(ViewPager2 viewPager) {
         this.viewPager = viewPager;
@@ -65,7 +68,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position) {
-        this.holders.add(position,new WeakReference<>(holder));
+        this.holders.put(position,new WeakReference<>(holder));
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, null);
     }
@@ -73,12 +76,11 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     @Override
     public void onViewRecycled(@NonNull SheetViewHolder holder) {
         super.onViewRecycled(holder);
-        holders.removeIf(innerHolder -> innerHolder.get() == holder);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position, @NonNull List<Object> payloads) {
-        this.holders.add(position,new WeakReference<>(holder));
+        this.holders.put(position,new WeakReference<>(holder));
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, payloads);
     }
