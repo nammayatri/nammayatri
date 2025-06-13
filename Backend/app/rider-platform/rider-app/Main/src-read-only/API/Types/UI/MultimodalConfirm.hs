@@ -24,6 +24,7 @@ import qualified Kernel.Types.Id
 import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.Types
 import qualified Lib.JourneyModule.Utils
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
@@ -94,7 +95,8 @@ data JourneyInfoResp = JourneyInfoResp
     legs :: [Lib.JourneyModule.Types.LegInfo],
     merchantOperatingCityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
+    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR,
+    paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
