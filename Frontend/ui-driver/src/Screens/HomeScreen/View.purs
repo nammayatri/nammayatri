@@ -521,6 +521,8 @@ view push state =
         else linearLayout[visibility GONE][]
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
       , if state.props.showCoinsPopup then PopUpModal.view (push <<< CoinsPopupAC) (introducingCoinsPopup state) else dummyTextView
+      , if state.props.showPetRidesPopup then PopUpModal.view (push <<< PetRidesPopupAC) (petRidesPopupConfig state petRidesFeatureConfig) else dummyTextView
+      , if state.props.showOptOutPetRidesPopup then PopUpModal.view (push <<< OptOutPetRidesPopupAC) (optOutPetRidesPopup state petRidesFeatureConfig) else dummyTextView
       , if state.props.coinPopupType /= ST.NO_COIN_POPUP then PopUpModal.view (push <<< CoinEarnedPopupAC) (coinEarnedPopup state) else dummyTextView
       , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
       , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
@@ -571,6 +573,7 @@ view push state =
     isCar = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
     cugUser = fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Nothing Just
     dateDiff = runFn2 JB.differenceBetweenTwoUTC currentDate lastDate
+    petRidesFeatureConfig = RC.getPetRidesFeatureConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
 
 favPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favPopUpView push state =

@@ -207,3 +207,27 @@ type RideEndAudioConfig = {
 , rideEndAudioUrl :: Maybe String
 }
 
+type LanguageTextMapping = {
+  en :: String,
+  hi :: String,
+  bn :: String,
+  kn :: String,
+  ta :: String,
+  te :: String,
+  ml :: String
+}
+
+type PetRidesPopupConfig = {
+  primaryText :: LanguageTextMapping,
+  secondaryText :: LanguageTextMapping,
+  option1Text :: LanguageTextMapping,
+  option2Text :: LanguageTextMapping,
+  popupImage :: Maybe String
+}
+
+type PetRidesFeatureConfig = {
+  enablePetRidesFeature :: Boolean,
+  basePetRidesPopupConfig :: PetRidesPopupConfig,
+  optOutPetRidesPopupConfig :: PetRidesPopupConfig,
+  petRidesPopupDismissableUntil :: String
+}

@@ -54,7 +54,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
+import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>), (#))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
@@ -94,6 +94,7 @@ import Resource.Localizable.StringsV2 as StringsV2
 import Foreign.Object (lookup, empty)
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
+import Helpers.Utils as HU
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -168,6 +169,7 @@ rideActionModalConfig state =
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   , stops = rideData.stops
+  , isPetRide = state.data.activeRide.isPetRide
   }
   in rideActionModalConfig'
   where
@@ -2581,6 +2583,117 @@ introducingCoinsPopup state = PopUpModal.config {
     },
   dismissPopup = false
     }
+
+petRidesPopupConfig :: ST.HomeScreenState -> RemoteConfig.PetRidesFeatureConfig -> PopUpModal.Config
+petRidesPopupConfig state petRidesFeatureConfig =
+  let primaryText = fetchTextFromLanguage petRidesFeatureConfig.basePetRidesPopupConfig (_.primaryText)
+      secondaryText = fetchTextFromLanguage petRidesFeatureConfig.basePetRidesPopupConfig (_.secondaryText)
+      option1Text = fetchTextFromLanguage petRidesFeatureConfig.basePetRidesPopupConfig (_.option1Text)
+      option2Text = fetchTextFromLanguage petRidesFeatureConfig.basePetRidesPopupConfig (_.option2Text)
+      isDismissable = not $ HU.isDateGreaterThan petRidesFeatureConfig.petRidesPopupDismissableUntil
+      popupImage = fromMaybe "ny_ic_pet_rides" petRidesFeatureConfig.basePetRidesPopupConfig.popupImage
+  in
+  PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = Margin 0 10 0 5
+    , margin = MarginHorizontal 16 16
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "VERTICAL"
+    , primaryText {
+        text = primaryText
+      , color = Color.black800
+      , textStyle = Heading2
+      , margin = Margin 16 16 16 10
+    }
+    , secondaryText {
+        text = secondaryText
+      , textStyle = SubHeading2
+      , color = Color.black700
+      , margin = Margin 16 2 16 15
+    }
+    , option1 {
+        text = option1Text
+      , color = Color.yellow900
+      , background = Color.black900
+      , width = MATCH_PARENT
+    }
+    , option2 {
+        text = option2Text
+      , color = Color.black900
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginTop 5
+      , strokeColor = Color.white900
+    }
+    , coverImageConfig {
+        imageUrl = fetchImage FF_ASSET popupImage
+      , visibility = VISIBLE
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+    , dismissPopup = isDismissable
+  }
+
+optOutPetRidesPopup :: ST.HomeScreenState -> RemoteConfig.PetRidesFeatureConfig -> PopUpModal.Config
+optOutPetRidesPopup state petRidesFeatureConfig =
+  let primaryText = fetchTextFromLanguage petRidesFeatureConfig.optOutPetRidesPopupConfig (_.primaryText)
+      secondaryText = fetchTextFromLanguage petRidesFeatureConfig.optOutPetRidesPopupConfig (_.secondaryText)
+      option1Text = fetchTextFromLanguage petRidesFeatureConfig.optOutPetRidesPopupConfig (_.option1Text)
+      option2Text = fetchTextFromLanguage petRidesFeatureConfig.optOutPetRidesPopupConfig (_.option2Text)
+  in
+  PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = Margin 0 10 0 5
+    , margin = MarginHorizontal 16 16
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "VERTICAL"
+    , primaryText {
+        text = primaryText
+      , color = Color.black800
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10
+    }
+    , secondaryText {
+        text = secondaryText
+      , textStyle = SubHeading2
+      , color = Color.black700
+      , margin = Margin 16 2 16 15
+    }
+    , option1 {
+        text = option1Text
+      , color = Color.yellow900
+      , background = Color.black900
+      , width = MATCH_PARENT
+    }
+    , option2 {
+        text = option2Text
+      , color = Color.black900
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginTop 5
+      , strokeColor = Color.white900
+    }
+    , dismissPopup = false
+  }
+
+fetchTextFromLanguage :: RemoteConfig.PetRidesPopupConfig -> (RemoteConfig.PetRidesPopupConfig -> RemoteConfig.LanguageTextMapping) -> String
+fetchTextFromLanguage petRidePopupConfig fieldModifier =
+  let languageKey = JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"
+  in
+    case languageKey of
+      "BN_IN" -> petRidePopupConfig # fieldModifier # (_.bn)
+      "HI_IN" -> petRidePopupConfig # fieldModifier # (_.hi)
+      "KN_IN" -> petRidePopupConfig # fieldModifier # (_.kn)
+      "ML_IN" -> petRidePopupConfig # fieldModifier # (_.ml)
+      "TA_IN" -> petRidePopupConfig # fieldModifier # (_.ta)
+      "TE_IN" -> petRidePopupConfig # fieldModifier # (_.te)
+      _ -> petRidePopupConfig # fieldModifier # (_.en)
 
 coinEarnedPopup :: ST.HomeScreenState -> PopUpModal.Config
 coinEarnedPopup state =

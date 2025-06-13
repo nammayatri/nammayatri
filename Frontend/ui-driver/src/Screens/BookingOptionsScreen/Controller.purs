@@ -40,6 +40,7 @@ instance showAction :: Show Action where
   show (OpenLink _) = "OpenLink"
   show (ToggleRentalRide) = "ToggleRentalRide"
   show (ToggleIntercityRide) = "ToggleIntercityRide"
+  show (TogglePetRide) = "TogglePetRide"
   show (UpdateRateCard var1) = "UpdateRateCard_" <> show var1
   show (ShowRateCard var1) = "ShowRateCard_" <> show var1
   show (RateCardAction var1) = "RateCardAction_" <> show var1
@@ -66,6 +67,7 @@ data Action
   | ToggleRentalRide 
   | ToggleIntercityRide
   | ToggleLocalRide
+  | TogglePetRide
   | UpdateRateCard API.GetDriverRateCardRes
   | ShowRateCard ST.RidePreference
   | RateCardAction RateCard.Action
@@ -76,7 +78,7 @@ data ScreenOutput
   = GoBack BookingOptionsScreenState
   | ChangeRidePreference BookingOptionsScreenState RidePreference
   | ToggleACAvailability BookingOptionsScreenState Boolean
-  | ToggleRentalIntercityRide BookingOptionsScreenState
+  | ToggleRentalIntercityPetRide BookingOptionsScreenState
   | ExitToRateCardScreen BookingOptionsScreenState
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
@@ -91,11 +93,13 @@ eval (ToggleRidePreference service) state =
   else if show service.serviceTierType == show API.AMBULANCE_TAXI_TIER then continue state
   else updateAndExit state $ ChangeRidePreference state service
 
-eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} }
+eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} } $ ToggleRentalIntercityPetRide state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} }
 
-eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}} $ ToggleRentalIntercityRide state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}}
+eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}} $ ToggleRentalIntercityPetRide state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}}
 
-eval ToggleLocalRide state = updateAndExit state {props {canSwitchToIntraCity = not <$> state.props.canSwitchToIntraCity}} $ ToggleRentalIntercityRide state {props {canSwitchToIntraCity = not <$> state.props.canSwitchToIntraCity}}
+eval ToggleLocalRide state = updateAndExit state {props {canSwitchToIntraCity = not <$> state.props.canSwitchToIntraCity}} $ ToggleRentalIntercityPetRide state {props {canSwitchToIntraCity = not <$> state.props.canSwitchToIntraCity}}
+
+eval TogglePetRide state = updateAndExit state {props {isPetModeEnabled = not <$> state.props.isPetModeEnabled}} $ ToggleRentalIntercityPetRide state {props {isPetModeEnabled = not <$> state.props.isPetModeEnabled}}
 
 eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
 

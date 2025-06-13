@@ -1853,4 +1853,6 @@ getBn =
     , good : "ভালো"
     , poor : "খারাপ"
     , open_meter : "মিটার খোলুন"
+    , this_ride_includes_a_pet : "এই যাত্রায় একটি পোষা প্রাণী অন্তর্ভুক্ত রয়েছে"
+    , pet_rides : "পেট রাইডস"
     }

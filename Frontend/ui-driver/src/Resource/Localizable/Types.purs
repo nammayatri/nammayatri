@@ -1821,3 +1821,5 @@ data STR = LETS_GET_STARTED
         | NAMMA_METER
         | OUT_OF_RIDES String String
         | SUSPENDED_TILL String String
+        | THIS_RIDE_INCLUDES_A_PET
+        | PET_RIDES
