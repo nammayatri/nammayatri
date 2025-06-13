@@ -12,7 +12,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
 import Common.Types.App  as CTA
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Helpers.Utils (getVehicleVariantImage, contactSupportNumber)
+import Helpers.Utils (getVehicleVariantImage, contactSupportNumber, emitTerminateApp, isParentView)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Unsafe (unsafePerformEffect)
@@ -83,7 +83,11 @@ eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingO
 eval BackPressed state = 
   if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false } }
   else if state.props.showRateCard then continue state { props { showRateCard = false }}
-  else exit $ GoBack state
+  else if isParentView CTA.FunctionCall 
+    then do 
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+    else exit $ GoBack state
 eval (ToggleRidePreference service) state = 
   if service.isUsageRestricted then do
     void $ pure $ JB.toast $ getString $ SET_THE_AC_ON_TO_ENABLE service.name

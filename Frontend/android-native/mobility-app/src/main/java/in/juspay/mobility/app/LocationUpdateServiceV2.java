@@ -46,6 +46,12 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.location.LocationManagerCompat;
 
+import com.facebook.react.ReactApplication;
+import com.facebook.react.ReactHost;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.ReadableMap;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -70,6 +76,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1215,8 +1222,27 @@ public class LocationUpdateServiceV2 extends Service {
                         "SUCCESS"
                 );
             }
+            Map<String,Object> payload = new HashMap<>();
+            payload.put("lat",lastLatitudeValue);
+            payload.put("lon",lastLongitudeValue);
+            payload.put("timestamp",timestamp);
+            notifyReact("onLocationUpdateSuccess", Arguments.makeNativeMap(payload));
         }
         Log.d(TAG, "notifyLocationUpdateSuccess() complete");
+    }
+
+
+    public void notifyReact(String event, Object payload) {
+        ReactApplication reactApplication= (ReactApplication) context.getApplicationContext();
+        if (reactApplication != null) {
+            ReactHost host = reactApplication.getReactHost();
+            if (host != null) {
+                ReactContext reactContext = host.getCurrentReactContext();
+                if (reactContext != null){
+                    reactContext.getJSModule(ReactContext.RCTDeviceEventEmitter.class).emit(event, payload);
+                }
+            }
+        }
     }
 
     /**
@@ -2312,6 +2338,26 @@ public class LocationUpdateServiceV2 extends Service {
 
             return locationObject;
         }
+
+        Map<String, Object> toMap () {
+            Map<String, Object> locationObject = new HashMap<>();
+            Map<String, Object> point = new HashMap<>();
+            point.put("lat", latitude);
+            point.put("lon", longitude);
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            String formattedTime = sdf.format(new Date(timestamp));
+
+            locationObject.put("pt", point);
+            locationObject.put("ts", formattedTime);
+            locationObject.put("acc", accuracy);
+            locationObject.put("bear", bearing);
+            locationObject.put("source", source);
+            locationObject.put("v", speed);
+            return locationObject;
+        }
+
     }
 
     /**
@@ -2344,10 +2390,10 @@ public class LocationUpdateServiceV2 extends Service {
                             // Emit the location object to react application
                             if (locationEmitter != null) {
                                 String locationEmitterPayload = buildLocationEmitterPayload(locationData);
-
                                 emitReactEvent(locationEmitterPayload);
                                 Log.i(TAG_LOCATION, "Emitted locationPayload " + locationEmitterPayload);
                             }
+                            notifyReact("onLocationFetch", Arguments.makeNativeMap(locationData.toMap()));
                             boolean sendDueToTime = shouldSendBatchDueToTime();
 
 
