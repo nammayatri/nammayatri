@@ -24,8 +24,8 @@ types:
   - driverId: Id Person
   - fromDate: UTCTime
   - toDate: UTCTime
-  - mbLimit: Maybe Int
-  - mbOffset: Maybe Int
+  - mbLimit: Int
+  - mbOffset: Int
   - mbOnlyActive: Maybe Bool
   - derive: "'HideSecrets"
 

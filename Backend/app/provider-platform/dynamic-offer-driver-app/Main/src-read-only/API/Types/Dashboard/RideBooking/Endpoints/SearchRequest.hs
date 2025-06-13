@@ -36,8 +36,8 @@ data SearchRequestsReq = SearchRequestsReq
   { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fromDate :: Kernel.Prelude.UTCTime,
     toDate :: Kernel.Prelude.UTCTime,
-    mbLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    mbOffset :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    mbLimit :: Kernel.Prelude.Int,
+    mbOffset :: Kernel.Prelude.Int,
     mbOnlyActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)

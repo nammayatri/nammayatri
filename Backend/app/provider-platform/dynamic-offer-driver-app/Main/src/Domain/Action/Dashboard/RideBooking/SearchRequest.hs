@@ -11,6 +11,7 @@ import Data.Time.Clock (UTCTime (..))
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.ClickhouseV2.ClickhouseValue (DateTime (..))
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Storage.Clickhouse.SearchRequestForDriver as SCSRD
@@ -18,17 +19,17 @@ import Storage.Queries.SearchRequestExtra as SQSR
 
 postSearchRequestSearchrequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SRType.SearchRequestsReq -> Environment.Flow SRType.SearchRequestsRes)
 postSearchRequestSearchrequests _merchantShortId _opCity req = do
-  reqs <- SCSRD.findByDriverId req.driverId req.fromDate req.toDate
+  reqs <- SCSRD.findByDriverId req.driverId req.fromDate req.toDate req.mbLimit req.mbOffset
   let requestIds = map (\(_, _, requestId, _, _) -> requestId) reqs
   sreqs <- SQSR.findSearchRequestById requestIds
   let sreqMap = Map.fromList [(sr.id, sr) | sr <- sreqs]
   let filteredReqs = filter (\(_, _, requestId, _, _) -> Map.member requestId sreqMap) reqs
   let modifiedreq =
         map
-          ( \(_dt, srfdId, requestId, dist, dur) ->
+          ( \(dt, srfdId, requestId, dist, dur) ->
               let searchRequest = sreqMap Map.! requestId
                in SRType.SearchRequestOfDriver
-                    { createdAt = UTCTime (fromGregorian 2025 1 1) 0,
+                    { createdAt = getDateTime dt,
                       id = srfdId,
                       requestId = requestId,
                       tripEstimatedDistance = dist,
