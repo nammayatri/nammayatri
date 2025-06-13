@@ -708,13 +708,6 @@ webhookHandlerFRFSTicket paymentOrderId merchantId = do
   bookingByOrderId <- QFRFSTicketBookingPayment.findByPaymentOrderId order.id >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingByOrderId.frfsTicketBookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
 
-  -- Update journey with paymentOrderShortId if payment is charged
-  when (order.status == Payment.CHARGED) $ do
-    case booking.journeyId of
-      Just journeyId -> do
-        void $ QJourney.updatePaymentOrderShortId (Just paymentOrderId) journeyId
-      Nothing -> pure ()
-
   void $ frfsBookingStatus (booking.riderId, merchantId) False booking
 
 getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -839,6 +832,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                   let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                   mRiderNumber <- mapM decrypt person.mobileNumber
                   void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
+                  whenJust booking.journeyId $ \journeyId -> do
+                    void $ QJourney.updatePaymentOrderShortId (Just (ShortId paymentOrder.id.getId)) journeyId
                   void $ CallExternalBPP.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
