@@ -218,7 +218,7 @@ blockCustomerByIP :: (CacheFlow m r, MonadFlow m) => Text -> Maybe (Id DMC.Merch
 blockCustomerByIP clientIP _mcId blockDurationMinutes = Redis.withNonCriticalCrossAppRedis $ do
   let blockKey = "Customer:IPBlocked:" <> clientIP
   case blockDurationMinutes of
-    Nothing -> void $ Redis.set blockKey ("true" :: Text)
+    Nothing -> return ()
     Just mins -> do
       let ttlSeconds = fromIntegral mins * 60
       void $ Redis.setExp blockKey ("true" :: Text) ttlSeconds
