@@ -545,7 +545,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
       (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams Nothing
-      destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> (pure tripEndTime) <*> ride.destinationReachedAt))
+      destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> pure tripEndTime <*> ride.destinationReachedAt))
   vehicleAge <-
     if DTC.isAmbulanceTrip booking.tripCategory
       then do
@@ -577,6 +577,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               driverSelectedFare = booking.fareParams.driverSelectedFare,
               customerExtraFee = booking.fareParams.customerExtraFee,
               nightShiftCharge = booking.fareParams.nightShiftCharge,
+              petCharges = booking.fareParams.petCharges,
               estimatedCongestionCharge = booking.estimatedCongestionCharge,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,

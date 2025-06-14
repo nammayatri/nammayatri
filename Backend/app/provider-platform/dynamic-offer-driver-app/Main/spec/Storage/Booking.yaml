@@ -89,6 +89,7 @@ Booking:
     initiatedAs: Maybe TripParty
     isReferredRide: Maybe Bool
     isSafetyPlus : Bool
+    isPetRide: Bool
     configInExperimentVersions: "[ConfigVersionMap]"
     coinsRewardedOnGoldTierRide: Maybe Int
 
@@ -110,6 +111,7 @@ Booking:
     isDashboardRequest: Maybe Bool
     configInExperimentVersions: Maybe Value
     isSafetyPlus : Maybe Bool
+    isPetRide: Maybe Bool
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -155,6 +157,7 @@ Booking:
     receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     isSafetyPlus : Just isSafetyPlus|E
+    isPetRide: Just isPetRide|E
 
   intermediateTransformers:
     fromTType:
@@ -181,6 +184,7 @@ Booking:
     receiverDetails: snd <$> senderAndReceiverDetails|E
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
     isSafetyPlus: fromMaybe False isSafetyPlus|E
+    isPetRide: fromMaybe False isPetRide|E
   sqlType:
     status: character varying(255)
     bapId: character varying(255)

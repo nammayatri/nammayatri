@@ -106,6 +106,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.WAITING_OR_PICKUP_CHARGES),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                      --  Just (show Enums.NIGHT_SHIFT_CHARGE)
@@ -126,6 +127,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         DFParams.Rental ->
@@ -142,6 +144,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         DFParams.InterCity ->
@@ -159,6 +162,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.EXTRA_DISTANCE_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         _ -> True

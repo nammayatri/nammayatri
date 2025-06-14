@@ -253,6 +253,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             numOfLocks = 0,
             verified = False,
             subscribed = True,
+            isPetModeEnabled = False,
             paymentPending = False,
             autoPayStatus = Nothing,
             referralCode = Nothing,

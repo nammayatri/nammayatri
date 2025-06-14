@@ -197,6 +197,7 @@ Booking:
     roundTrip: Maybe Bool
     hasStops: Maybe Bool
     riderId: Id Person
+    isPetRide: Bool
     fromLocation: Location
     initialPickupLocation: Location|NoRelation
     estimatedFare: Price
@@ -298,6 +299,8 @@ Booking:
     vehicleIconUrl: Maybe Text
     configInExperimentVersions: Maybe Value
     preferSafetyPlus: Maybe Bool
+    isPetRide: Maybe Bool
+
 
   sqlType:
     id: character(36)
@@ -391,6 +394,7 @@ Booking:
     parcelType: getParcelType
     parcelQuantity: getParcelQuantity
     preferSafetyPlus : Kernel.Prelude.Just|I
+    isPetRide: Kernel.Prelude.Just|I
 
   intermediateTransformers:
     toTType:
@@ -421,6 +425,7 @@ Booking:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
     preferSafetyPlus : fromMaybe False preferSafetyPlus | E
+    isPetRide: fromMaybe False isPetRide | E
 
   extraOperations:
     - EXTRA_QUERY_FILE
