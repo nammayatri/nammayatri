@@ -155,7 +155,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> ((.driverExtraFeeBounds) =<< (quote.farePolicy))) <&> uncurry DFP.findDriverExtraFeeBoundsByDistance
           driverPickUpCharge = USRD.extractDriverPickupCharges . (.farePolicyDetails) =<< (quote.farePolicy)
           driverParkingCharge = (.parkingCharge) =<< (quote.farePolicy)
-      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge newQuote.id.getId [] False booking.fareParams.congestionCharge
+      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge newQuote.id.getId [] False booking.fareParams.congestionCharge booking.fareParams.petCharges
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       QQuote.create newQuote
       QRB.createBooking newBooking
@@ -218,7 +218,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId conditionalCharges False ((.congestionCharge) =<< estimate.fareParams)
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges) (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId conditionalCharges False ((.congestionCharge) =<< estimate.fareParams) searchTry.petCharges
     cancelRideTransactionForNonReallocation ::
       ( MonadFlow m,
         Redis.HedisFlow m r,

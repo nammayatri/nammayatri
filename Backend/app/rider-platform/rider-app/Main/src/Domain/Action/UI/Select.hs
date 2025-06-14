@@ -114,6 +114,7 @@ data DSelectReq = DSelectReq
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
+    isPetRide :: Maybe Bool,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool,
@@ -158,6 +159,7 @@ data DSelectRes = DSelectRes
     merchant :: DM.Merchant,
     city :: Context.City,
     autoAssignEnabled :: Bool,
+    isPetRide :: Maybe Bool,
     phoneNumber :: Maybe Text,
     isValueAddNP :: Bool,
     isAdvancedBookingEnabled :: Bool,
@@ -288,6 +290,8 @@ select2 personId estimateId req@DSelectReq {..} = do
       _ -> pure Nothing
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
+  when (isJust req.isPetRide) $ do
+    QSearchRequest.updatePetRide req.isPetRide searchRequest.id
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0

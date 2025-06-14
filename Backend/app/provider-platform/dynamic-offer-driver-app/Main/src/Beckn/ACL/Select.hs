@@ -64,6 +64,7 @@ buildSelectReqV2 subscriber req = do
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
+      isPetRide = fromMaybe False $ buildPetRideTag item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
       parcelDetails = getParcelDetails item.itemTags
@@ -82,7 +83,7 @@ buildSelectReqV2 subscriber req = do
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
-        estimateIds = [Id estimateIdText] <> (maybe [] (map Id) bookAnyEstimates),
+        estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
@@ -117,6 +118,14 @@ buildDisableDisabilityTag tagGroups = do
         Just "False" -> Just False
         _ -> Nothing
 
+buildPetRideTag :: Maybe [Spec.TagGroup] -> Maybe Bool
+buildPetRideTag tagGroups = do
+  let tagValue = Utils.getTagV2 Tag.PET_ORDER_INFO Tag.IS_PET_RIDE tagGroups
+   in case tagValue of
+        Just "True" -> Just True
+        Just "False" -> Just False
+        _ -> Nothing
+
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =
   let tagValue = Utils.getTagV2 Tag.FORWARD_BATCHING_REQUEST_INFO Tag.IS_FORWARD_BATCH_ENABLED tagGroups
@@ -135,11 +144,11 @@ getPeferSafetyPlus tagGroups =
 
 getDeviceIdInfo :: Maybe [Spec.TagGroup] -> (Bool, Maybe Bool)
 getDeviceIdInfo tagGroups = do
-  let isMultipleDeviceIdExist = case (Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.DEVICE_ID_FLAG tagGroups) of
+  let isMultipleDeviceIdExist = case Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.DEVICE_ID_FLAG tagGroups of
         Just "True" -> Just True
         Just "False" -> Just False
         _ -> Nothing
-  let toUpdateDeviceIdInfo = case (Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.TO_UPDATE_DEVICE_ID tagGroups) of
+  let toUpdateDeviceIdInfo = case Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.TO_UPDATE_DEVICE_ID tagGroups of
         Just "True" -> True
         Just "False" -> False
         _ -> False
@@ -167,4 +176,4 @@ getParcelDetails :: Maybe [Spec.TagGroup] -> (Maybe Text, Maybe Int)
 getParcelDetails tagGroups = (parcelType, parcelQuantity)
   where
     parcelType = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_TYPE tagGroups
-    parcelQuantity = (Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_QUANTITY tagGroups) >>= \pq -> readMaybe @Int $ T.unpack pq
+    parcelQuantity = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_QUANTITY tagGroups >>= \pq -> readMaybe @Int $ T.unpack pq

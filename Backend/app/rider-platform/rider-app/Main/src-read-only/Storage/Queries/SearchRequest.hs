@@ -30,6 +30,9 @@ updateHasMultimodalSearch hasMultimodalSearch id = do updateOneWithKV [Se.Set Be
 updateInitiatedBy :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateInitiatedBy initiatedBy id = do updateOneWithKV [Se.Set Beam.initiatedBy initiatedBy] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePetRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updatePetRide isPetRide id = do updateOneWithKV [Se.Set Beam.isPetRide isPetRide] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateRiderPreferredOption :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequest.RiderPreferredOption -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption (Just riderPreferredOption)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
