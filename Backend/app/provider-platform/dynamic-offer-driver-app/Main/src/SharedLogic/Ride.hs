@@ -226,6 +226,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
         previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
+        isPetRide = booking.isPetRide,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct

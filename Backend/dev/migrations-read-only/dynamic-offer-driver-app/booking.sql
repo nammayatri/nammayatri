@@ -150,3 +150,4 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_insured boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN insured_amount text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_pet_ride boolean ;

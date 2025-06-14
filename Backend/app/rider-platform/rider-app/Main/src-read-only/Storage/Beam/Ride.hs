@@ -68,6 +68,7 @@ data RideT f = RideT
     isAlreadyFav :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

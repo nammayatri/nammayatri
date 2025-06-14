@@ -287,6 +287,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   actualRideDuration = Nothing,
                   avgSpeedOfVehicle = Nothing,
                   driverSelectedFare = Nothing,
+                  petCharges = Nothing,
                   customerExtraFee = Nothing,
                   nightShiftCharge = Nothing,
                   customerCancellationDues = Nothing,

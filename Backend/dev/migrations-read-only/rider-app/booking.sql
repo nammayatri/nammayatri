@@ -324,3 +324,4 @@ ALTER TABLE atlas_app.booking ADD COLUMN insured_amount text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN driver_insured_amount text ;
+ALTER TABLE atlas_app.booking ADD COLUMN is_pet_ride boolean ;

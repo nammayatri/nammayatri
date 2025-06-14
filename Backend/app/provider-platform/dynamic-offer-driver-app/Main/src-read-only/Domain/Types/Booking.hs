@@ -54,6 +54,7 @@ data Booking = Booking
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
     isInsured :: Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Bool,
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSafetyPlus :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,

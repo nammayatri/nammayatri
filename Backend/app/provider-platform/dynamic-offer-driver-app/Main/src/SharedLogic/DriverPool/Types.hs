@@ -244,6 +244,7 @@ data TripQuoteDetail = TripQuoteDetail
     driverParkingCharge :: Maybe HighPrecMoney,
     conditionalCharges :: [DAC.ConditionalCharges],
     congestionCharges :: Maybe HighPrecMoney,
+    petCharges :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text,
     eligibleForUpgrade :: Bool
   }

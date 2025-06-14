@@ -68,6 +68,7 @@ Ride:
     previousRideTripEndTime: Maybe UTCTime
     isDriverSpecialLocWarrior: Bool
     isAdvanceBooking : Bool
+    isPetRide: Bool
     fromLocation: Location
     stops : "[Location]"
     toLocation: Maybe Location
@@ -199,6 +200,7 @@ Ride:
     fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     isAdvanceBooking: Kernel.Prelude.fromMaybe False|I
+    isPetRide: Kernel.Prelude.fromMaybe False|I
     tripCategory: Storage.Queries.Transformers.Ride.getTripCategory bookingId |IM
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
@@ -230,6 +232,7 @@ Ride:
     fare: Kernel.Prelude.fmap roundToIntegral|I
     currency: Kernel.Prelude.Just|I
     isAdvanceBooking: Kernel.Prelude.Just|I
+    isPetRide: Kernel.Prelude.Just|I
     tripCategory: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
     onlinePayment: Kernel.Prelude.Just|I
@@ -251,6 +254,7 @@ Ride:
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
     isAdvanceBooking: Maybe Bool
+    isPetRide: Maybe Bool
     tripCategory: Maybe TripCategory
     onlinePayment: Maybe Bool
     isDriverSpecialLocWarrior: Maybe Bool

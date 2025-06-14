@@ -217,8 +217,10 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -320,6 +322,7 @@ data DriverInformationRes = DriverInformationRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    isPetModeEnabled :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -403,6 +406,7 @@ data DriverEntityRes = DriverEntityRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    isPetModeEnabled :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -455,6 +459,7 @@ data UpdateDriverReq = UpdateDriverReq
     canSwitchToRental :: Maybe Bool,
     canSwitchToInterCity :: Maybe Bool,
     canSwitchToIntraCity :: Maybe Bool,
+    isPetModeEnabled :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -991,6 +996,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         active = driverInfo.active,
         onRide = onRideFlag,
         enabled = driverInfo.enabled,
+        isPetModeEnabled = driverInfo.isPetModeEnabled,
         blocked = driverInfo.blocked || overchargingBlocked,
         blockExpiryTime = driverInfo.blockExpiryTime <|> blockedTill,
         blockedReasonFlag = driverInfo.blockReasonFlag,
@@ -1090,6 +1096,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               }
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
   whenJust mVehicle $ \vehicle -> do
     when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
       -- deprecated logic, moved to driver service tier options
@@ -1131,9 +1138,23 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
+
+  let petTag = Yudhishthira.TagNameValue "PetDriver"
+  when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
+    logInfo "Tag already exists, update expiry"
+  mbNammTag <- Yudhishthira.verifyTag petTag
+  now <- getCurrentTime
+  let tag =
+        if isPetModeEnabled
+          then do
+            let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
+            Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
+          else Yudhishthira.removeTagNameValue person.driverTag petTag
+  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
+    QPerson.updateDriverTag (Just tag) personId
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
@@ -1268,7 +1289,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -1474,6 +1495,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               avgSpeedOfVehicle = Nothing,
               driverSelectedFare = reqOfferedValue,
               customerExtraFee = searchTry.customerExtraFee,
+              petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
