@@ -312,6 +312,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       fare = Nothing
       totalFare = Nothing
       chargeableDistance = Nothing
+      isPetRide = booking.isPetRide
       traveledDistance = Nothing
       driverArrivalTime = Nothing
       rideStartTime = Nothing

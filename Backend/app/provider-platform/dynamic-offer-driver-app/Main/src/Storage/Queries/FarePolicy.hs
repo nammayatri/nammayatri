@@ -218,6 +218,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               parkingCharge = parkingCharge,
               perStopCharge = perStopCharge,
               tollCharges = tollCharges,
+              petCharges = petCharges,
               tipOptions = tipOptions,
               currency = fromMaybe INR currency,
               distanceUnit = fromMaybe Meter distanceUnit,

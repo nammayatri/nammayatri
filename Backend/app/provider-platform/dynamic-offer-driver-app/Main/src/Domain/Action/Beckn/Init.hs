@@ -210,6 +210,7 @@ handler merchantId req validatedReq = do
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,
             updatedAt = now,
+            isPetRide = isJust driverQuote.fareParams.petCharges,
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,

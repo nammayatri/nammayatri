@@ -64,6 +64,7 @@ data Ride = Ride
     isDriverSpecialLocWarrior :: Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isInsured :: Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Bool,
     isPickupOrDestinationEdited :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
