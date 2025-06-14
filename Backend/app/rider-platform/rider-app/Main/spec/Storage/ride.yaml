@@ -92,6 +92,7 @@ Ride:
     endOdometerReading: Maybe Centesimal
     vehicleAge: Maybe Months
     isFreeRide: Maybe Bool
+    isPetRide: Bool
     createdAt: UTCTime
     updatedAt: UTCTime
     clientDevice: Maybe Device
@@ -212,6 +213,7 @@ Ride:
     estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     tipAmount: fmap (Kernel.Types.Common.mkPrice currency) tipAmount|E
     isSafetyPlus: Kernel.Prelude.fromMaybe False isSafetyPlus| E
+    isPetRide: Kernel.Prelude.fromMaybe False isPetRide|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -246,6 +248,7 @@ Ride:
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
     tipAmount: Kernel.Prelude.fmap (.amount)|I
     isSafetyPlus:  Kernel.Prelude.Just isSafetyPlus|E
+    isPetRide: Kernel.Prelude.Just isPetRide|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -262,6 +265,7 @@ Ride:
     tipAmount: Maybe HighPrecMoney
     feedbackSkipped: Maybe Bool
     isSafetyPlus: Maybe Bool
+    isPetRide: Maybe Bool
 
   constraints:
     id: PrimaryKey

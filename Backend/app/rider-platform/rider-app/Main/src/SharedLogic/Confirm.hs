@@ -313,6 +313,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           estimatedDuration = searchRequest.estimatedRideDuration,
           estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
           bookingDetails,
+          isPetRide = fromMaybe False searchRequest.isPetRide,
           tripTerms = quote.tripTerms,
           merchantId = searchRequest.merchantId,
           merchantOperatingCityId = searchRequest.merchantOperatingCityId,

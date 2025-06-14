@@ -320,6 +320,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         safetyCheckStatus = Nothing,
         isFreeRide = Just isFreeRide,
         endOtp = Nothing,
+        isPetRide = booking.isPetRide,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         clientBundleVersion = booking.clientBundleVersion,
@@ -1112,7 +1113,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
         dailyPayoutCount_ <- Redis.get dailyPayoutCountKey
         monthlyPayoutCount <- fromIntegral <$> SWC.getCurrentWindowCount monthlyPayoutCountKey SW.SlidingWindowOptions {period = 1, periodType = SW.Months}
         let dailyPayoutCount = fromMaybe 0 dailyPayoutCount_ -- for referredBy customer
-            isDeviceIdValid = (length personsWithSameDeviceId == 1) -- deviceId of new customer should be unique
+            isDeviceIdValid = length personsWithSameDeviceId == 1 -- deviceId of new customer should be unique
             deviceIdCheck = fromMaybe False riderConfig.isDeviceIdCheckDisabled || isDeviceIdValid
             isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
             payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (monthlyPayoutCount < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
@@ -1250,7 +1251,7 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
       fare = show booking.estimatedTotalFare.amount
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [(Just driverNumber), (Just ride.vehicleNumber), (Just fare), (Just ride.otp), (Just "N/A"), (Just riderConfig.appUrl)] Nothing Nothing) -- Accepts at most 7 variables using GupShup
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just driverNumber, Just ride.vehicleNumber, Just fare, Just ride.otp, Just "N/A", Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Ride Booking Details Whatsapp message")
 
 sendBookingCancelledMessageViaWhatsapp ::
@@ -1270,7 +1271,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   let phoneNumber = countryCode <> mobileNumber
       messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [(Just riderConfig.appUrl)] Nothing Nothing) -- Accepts at most 7 variables using GupShup
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 
 notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> m ()

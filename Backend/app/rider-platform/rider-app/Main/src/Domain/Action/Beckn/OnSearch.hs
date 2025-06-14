@@ -138,6 +138,7 @@ data EstimateInfo = EstimateInfo
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
     tipOptions :: Maybe [Int],
+    -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text
   }
@@ -195,6 +196,7 @@ data QuoteInfo = QuoteInfo
     specialLocationName :: Maybe Text,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
+    -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl
   }
@@ -295,6 +297,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       let selectReq =
             DSelect.DSelectReq
               { customerExtraFee = Nothing,
+                isPetRide = Nothing,
                 customerExtraFeeWithCurrency = Nothing,
                 autoAssignEnabled = True,
                 autoAssignEnabledV2 = Just True,

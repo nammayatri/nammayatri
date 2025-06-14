@@ -61,6 +61,7 @@ SearchRequest:
     language: Maybe Language
     disabilityTag: Maybe Text
     customerExtraFee: Maybe Price
+    isPetRide: Maybe Bool
     autoAssignEnabled: Maybe Bool
     autoAssignEnabledV2: Maybe Bool
     selectedPaymentMethodId: Maybe PaymentMethodId
@@ -250,6 +251,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       where: id
       params: [hasMultimodalSearch]
+
+    updatePetRide:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [isPetRide]
 
   constraints:
     id: PrimaryKey

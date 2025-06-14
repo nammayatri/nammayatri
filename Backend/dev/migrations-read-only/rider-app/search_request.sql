@@ -256,3 +256,18 @@ ALTER TABLE atlas_app.search_request ADD COLUMN vehicle_category text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN on_search_failed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN is_pet_ride boolean ;
+
+
+------- SQL updates -------
+

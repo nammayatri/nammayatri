@@ -970,6 +970,7 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             govtCharges = req.govtCharges <|> govtCharges,
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             tollCharges = req.tollCharges <|> tollCharges,
+            petCharges = req.petCharges <|> petCharges,
             farePolicyDetails = fPDetails,
             congestionChargeMultiplier = FarePolicy.mkCongestionChargeMultiplier <$> req.congestionChargeMultiplier <|> congestionChargeMultiplier,
             description = req.description <|> description,
@@ -1028,6 +1029,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     maxAllowedTripDistance :: Text,
     serviceCharge :: Text,
     tollCharges :: Text,
+    petCharges :: Text,
     tipOptions :: Text,
     govtCharges :: Text,
     farePolicyType :: Text,
@@ -1114,6 +1116,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "max_allowed_trip_distance"
       <*> r .: "service_charge"
       <*> r .: "toll_charges"
+      <*> r .: "pet_charges"
       <*> r .: "tip_options"
       <*> r .: "govt_charges"
       <*> r .: "fare_policy_type"
@@ -1383,6 +1386,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
+      let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
@@ -1739,7 +1743,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     runValidationOnSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     runValidationOnSpecialLocationAndGatesGroup merchantOpCity (x : _) = do
       let (city, _locationName, (specialLocation, _)) = x
-      if (city /= opCity)
+      if city /= opCity
         then throwError $ InvalidRequest ("Can't process special location for different city: " <> show city <> ", please login with this city in dashboard")
         else do
           -- TODO :: Add Validation for Overlapping Geometries
