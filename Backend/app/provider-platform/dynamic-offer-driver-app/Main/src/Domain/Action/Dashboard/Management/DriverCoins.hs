@@ -85,9 +85,9 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
       vehCategory <-
-        QVeh.findById driverId
-          >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
-          <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
+        QVeh.findById driverId >>= \case
+          Just vehicle -> pure $ Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
+          Nothing -> pure Nothing
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -103,7 +103,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                 coinsUsed = 0,
                 bulkUploadTitle = Just bulkUploadTitle,
                 entityId = entityId,
-                vehicleCategory = Just vehCategory
+                vehicleCategory = vehCategory
               }
       CHistory.updateCoinEvent driverCoinEvent
       Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
@@ -147,9 +147,9 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
       vehCategory <-
-        QVeh.findById driverId
-          >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
-          <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
+        QVeh.findById driverId >>= \case
+          Just vehicle -> pure $ Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
+          Nothing -> pure Nothing
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -165,7 +165,7 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
                 coinsUsed = 0,
                 bulkUploadTitle = Just bulkUploadTitle,
                 entityId = entityId,
-                vehicleCategory = Just vehCategory
+                vehicleCategory = vehCategory
               }
       CHistory.updateCoinEvent driverCoinEvent
       Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
