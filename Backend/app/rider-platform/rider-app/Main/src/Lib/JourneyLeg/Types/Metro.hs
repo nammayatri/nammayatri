@@ -59,7 +59,8 @@ data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
-    duration :: Maybe Seconds
+    duration :: Maybe Seconds,
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data MetroLegRequest

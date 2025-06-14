@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.JourneyLeg where
 
+import qualified Data.Aeson
 import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions
@@ -14,6 +15,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.RouteDetails
 import qualified Storage.Queries.Transformers.RouteDetails
@@ -30,8 +32,10 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
             endLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon,
+            entrance = entrance >>= Kernel.Utils.JSON.valueToMaybe,
             estimatedMaxFare = estimatedMaxFare,
             estimatedMinFare = estimatedMinFare,
+            exit = exit >>= Kernel.Utils.JSON.valueToMaybe,
             finalBoardedBusNumber = finalBoardedBusNumber,
             fromArrivalTime = fromArrivalTime,
             fromDepartureTime = fromDepartureTime,
@@ -64,8 +68,10 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.duration = duration,
         Beam.endLocationLat = endLocation & (.latitude),
         Beam.endLocationLon = endLocation & (.longitude),
+        Beam.entrance = entrance >>= Just . Data.Aeson.toJSON,
         Beam.estimatedMaxFare = estimatedMaxFare,
         Beam.estimatedMinFare = estimatedMinFare,
+        Beam.exit = exit >>= Just . Data.Aeson.toJSON,
         Beam.finalBoardedBusNumber = finalBoardedBusNumber,
         Beam.fromArrivalTime = fromArrivalTime,
         Beam.fromDepartureTime = fromDepartureTime,

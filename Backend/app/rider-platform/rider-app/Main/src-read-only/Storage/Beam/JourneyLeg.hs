@@ -4,6 +4,7 @@
 module Storage.Beam.JourneyLeg where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -20,8 +21,10 @@ data JourneyLegT f = JourneyLegT
     duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     endLocationLat :: B.C f Kernel.Prelude.Double,
     endLocationLon :: B.C f Kernel.Prelude.Double,
+    entrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    exit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
