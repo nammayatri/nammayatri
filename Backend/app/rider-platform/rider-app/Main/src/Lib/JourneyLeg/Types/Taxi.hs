@@ -5,7 +5,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Extra.Ride as DR
-import qualified Domain.Types.JourneyLeg as DJourenyLeg
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -19,7 +19,7 @@ import SharedLogic.Search
 
 data TaxiLegRequestSearchData = TaxiLegRequestSearchData
   { parentSearchReq :: DSR.SearchRequest,
-    journeyLegData :: DJourenyLeg.JourneyLeg,
+    journeyLegData :: DJourneyLeg.JourneyLeg,
     origin :: SearchReqLocation,
     stops :: [SearchReqLocation]
   }
@@ -64,8 +64,9 @@ data TaxiLegRequestIsCancellableData = TaxiLegRequestIsCancellableData
   { searchId :: Id DSR.SearchRequest
   }
 
-newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
-  { searchId :: Id DSR.SearchRequest
+data TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
+  { searchId :: Id DSR.SearchRequest,
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
