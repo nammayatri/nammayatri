@@ -41,3 +41,10 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN service_tier_array text
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN prefer_safety_plus boolean ;
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN vehicle_category text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN pet_charges_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN pet_charges integer ;

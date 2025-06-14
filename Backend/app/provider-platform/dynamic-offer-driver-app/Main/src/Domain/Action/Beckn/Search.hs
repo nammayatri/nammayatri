@@ -591,6 +591,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           avgSpeedOfVehicle = Nothing,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
+          petCharges = Nothing,
           nightShiftCharge = Nothing,
           estimatedCongestionCharge = Nothing,
           customerCancellationDues = Nothing,
@@ -674,6 +675,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               avgSpeedOfVehicle = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
+              petCharges = Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = Nothing,
               estimatedCongestionCharge = Nothing,
@@ -811,7 +813,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           then (dsReq.pickupTime, True)
           else (now, False)
       tripCategories =
-        if (checkIfMeterRideSearch dsReq.isMeterRideSearch)
+        if checkIfMeterRideSearch dsReq.isMeterRideSearch
           then [OneWay MeterRide]
           else do
             case dsReq.dropLocation of

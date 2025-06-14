@@ -146,6 +146,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 customerCancellationDues = customerCancellationDues,
                 congestionCharge = mkAmountWithDefault congestionChargeAmount <$> congestionCharge,
                 tollCharges = tollCharges,
+                petCharges = petCharges,
                 insuranceCharge,
                 cardCharge =
                   Just $

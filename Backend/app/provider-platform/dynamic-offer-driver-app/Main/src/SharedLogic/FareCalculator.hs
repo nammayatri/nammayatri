@@ -97,6 +97,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       tollChargesCaption = show Enums.TOLL_CHARGES
       mbTollChargesItem = mkBreakupItem tollChargesCaption . mkPrice <$> fareParams.tollCharges
 
+      petChargesCaption = show Enums.PET_CHARGES
+      mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
+
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
@@ -115,6 +118,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbParkingChargeItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
+      mbPetChargesItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
       mkCustomerExtraFareItem,
@@ -226,6 +230,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.nightShiftCharge
     + fromMaybe 0.0 fareParams.rideExtraTimeFare
     + fromMaybe 0.0 fareParams.congestionCharge
+    + fromMaybe 0.0 fareParams.petCharges
     + fromMaybe 0.0 fareParams.stopCharges
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
@@ -276,6 +281,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit,
+    petCharges :: Maybe HighPrecMoney,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories]
   }
@@ -311,11 +317,13 @@ calculateFareParameters params = do
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
       finalCongestionCharge = fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
+      -- petCharges = if params.isPetRide then fp.petCharges else Nothing
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
+          + fromMaybe 0.0 params.petCharges
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -336,6 +344,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
+            petCharges = params.petCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,

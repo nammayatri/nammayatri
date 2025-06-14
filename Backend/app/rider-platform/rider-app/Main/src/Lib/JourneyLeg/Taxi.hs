@@ -114,6 +114,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             let selectReq =
                   DSelect.DSelectReq
                     { customerExtraFee = Nothing,
+                      isPetRide = Nothing,
                       customerExtraFeeWithCurrency = Nothing,
                       autoAssignEnabled = True,
                       autoAssignEnabledV2 = Just True,

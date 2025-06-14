@@ -49,6 +49,8 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.messageId messageId,
+      Se.Set Beam.petCharges (Kernel.Prelude.roundToIntegral <$> petCharges),
+      Se.Set Beam.petChargesAmount petCharges,
       Se.Set Beam.preferSafetyPlus (Kernel.Prelude.Just preferSafetyPlus),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.searchRepeatCounter searchRepeatCounter,

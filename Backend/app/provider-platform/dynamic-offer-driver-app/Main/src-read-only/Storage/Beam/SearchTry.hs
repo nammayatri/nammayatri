@@ -29,6 +29,8 @@ data SearchTryT f = SearchTryT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f Kernel.Prelude.Text,
+    petCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
+    petChargesAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requestId :: B.C f Kernel.Prelude.Text,
     searchRepeatCounter :: B.C f Kernel.Prelude.Int,

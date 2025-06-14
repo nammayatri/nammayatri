@@ -204,7 +204,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
                   alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
-                  let currentPoint = if (snapToRoadFailed || null editDestinationPoints) then currentLocPoint else fst $ last editDestinationPoints
+                  let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst $ last editDestinationPoints
                       alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
                     addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
@@ -261,6 +261,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     actualRideDuration = Nothing,
                     avgSpeedOfVehicle = Nothing,
                     driverSelectedFare = booking.fareParams.driverSelectedFare,
+                    petCharges = booking.fareParams.petCharges,
                     customerExtraFee = booking.fareParams.customerExtraFee,
                     nightShiftCharge = booking.fareParams.nightShiftCharge,
                     customerCancellationDues = booking.fareParams.customerCancellationDues,

@@ -145,3 +145,4 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN coins_rewarded_on_gold_tie
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_insured boolean ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_pet_ride boolean ;

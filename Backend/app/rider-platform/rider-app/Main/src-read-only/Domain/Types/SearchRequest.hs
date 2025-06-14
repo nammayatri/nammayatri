@@ -57,6 +57,7 @@ data SearchRequest = SearchRequest
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMeterRideSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

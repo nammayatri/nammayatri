@@ -271,6 +271,7 @@ calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatin
             estimatedRideDuration = mbDuration,
             estimatedCongestionCharge = Nothing,
             timeDiffFromUtc = Nothing,
+            petCharges = Nothing, ----------check
             tollCharges = Nothing, ------fix it in future
             noOfStops = 0, ------fix it in future
             currency,
@@ -303,6 +304,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
 
       perStopChargesCaption = show Tags.PER_STOP_CHARGES
       perStopChargeItem = mkBreakupItem perStopChargesCaption . (mkValue . show) <$> farePolicy.perStopCharge
+
+      petChargesCaption = show Tags.PET_CHARGES
+      petChargesItem = mkBreakupItem petChargesCaption . (mkValue . show) <$> farePolicy.petCharges
 
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.serviceCharge
@@ -354,6 +358,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
       governmentChargeItem,
       driverMinExtraFeeItem,
       driverMaxExtraFeeItem,
+      petChargesItem,
       nightShiftStartItem,
       nightShiftEndItem,
       nightShiftStartInSecondsItem,

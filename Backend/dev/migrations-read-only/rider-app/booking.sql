@@ -308,3 +308,4 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_insured boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.booking ADD COLUMN is_pet_ride boolean ;
