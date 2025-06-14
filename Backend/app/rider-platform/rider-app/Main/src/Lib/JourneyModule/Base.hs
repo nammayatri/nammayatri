@@ -231,11 +231,11 @@ getAllLegsInfo journeyId skipAddLegFallback = do
     getLegInfo leg legSearchIdText = do
       let legSearchId = Id legSearchIdText
       case leg.mode of
-        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
-        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
-        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
+        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = leg}
+        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
 
 trackBuses :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => Maybe APITypes.RiderLocationReq -> DJourney.Journey -> [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> m ([(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
 trackBuses Nothing _ journeyStates = pure journeyStates
@@ -1286,7 +1286,9 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         legSearchId = Nothing,
         isSkipped = Just False,
         changedBusesInSequence = journeyLeg.changedBusesInSequence,
-        finalBoardedBusNumber = journeyLeg.finalBoardedBusNumber
+        finalBoardedBusNumber = journeyLeg.finalBoardedBusNumber,
+        entrance = journeyLeg.entrance,
+        exit = journeyLeg.exit
       }
 
 extendLeg ::

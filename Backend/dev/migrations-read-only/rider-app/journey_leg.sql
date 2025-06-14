@@ -67,3 +67,9 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN service_types text[] ;
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_number text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN changed_buses_in_sequence text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN exit json ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN entrance json ;
