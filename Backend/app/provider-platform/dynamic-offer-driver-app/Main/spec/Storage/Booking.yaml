@@ -92,6 +92,7 @@ Booking:
     configInExperimentVersions: "[ConfigVersionMap]"
     coinsRewardedOnGoldTierRide: Maybe Int
     isInsured: Bool
+    insuredAmount: Maybe Text
 
   excludedFields:
     - merchantId

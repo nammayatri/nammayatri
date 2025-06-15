@@ -50,6 +50,7 @@ data Booking = Booking
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initiatedAs :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
+    insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
     isInsured :: Kernel.Prelude.Bool,

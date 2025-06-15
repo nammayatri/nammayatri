@@ -277,3 +277,10 @@ SELECT
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 FROM atlas_app.merchant_operating_city m;
+
+
+update atlas_app.insurance_config set insured_amount = '₹ 2,00,000' where vehicle_category = 'CAR' and plan = 'yatri_sathi_taxi';
+update atlas_app.insurance_config set driver_insured_amount = '₹ 2,00,000' where vehicle_category = 'CAR' and plan = 'yatri_sathi_taxi';
+
+update atlas_app.insurance_config set insured_amount = '₹ 50,000' where vehicle_category = 'MOTORCYCLE' and plan = 'yatri_sathi_taxi';
+update atlas_app.insurance_config set driver_insured_amount = '₹ 50,000' where vehicle_category = 'MOTORCYCLE' and plan = 'yatri_sathi_taxi';

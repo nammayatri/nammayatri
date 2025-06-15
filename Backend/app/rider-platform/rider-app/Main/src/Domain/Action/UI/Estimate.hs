@@ -74,7 +74,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
     isReferredRide :: Bool,
-    isInsured :: Maybe Bool
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

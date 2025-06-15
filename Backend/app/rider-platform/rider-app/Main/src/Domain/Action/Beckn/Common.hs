@@ -350,6 +350,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         talkedWithDriver = Nothing,
         isSafetyPlus = isSafetyPlus,
         isInsured = booking.isInsured,
+        insuredAmount = booking.insuredAmount,
         ..
       }
 

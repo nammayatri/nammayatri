@@ -243,6 +243,8 @@ Booking:
     preferSafetyPlus: Bool
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
 
   beamFields:
     estimatedDistance:

@@ -29,6 +29,8 @@ Insurance:
     driverName: Maybe Text
     driverPhone: Maybe Text
     fairBreakup: Maybe Value
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -59,6 +61,8 @@ InsuranceConfig:
     state: Text
     partnerId: Text
     hours: Int
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 

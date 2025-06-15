@@ -118,6 +118,7 @@ Estimate:
     smartTipSuggestion: Maybe HighPrecMoney
     smartTipReason: Maybe Text
     isInsured: Bool
+    insuredAmount: Maybe Text
 
   constraints:
     id: PrimaryKey

@@ -464,6 +464,7 @@ data BecknTag
   | IS_SAFETY_PLUS
   | IS_MULTIMODAL_SEARCH
   | IS_INSURED
+  | INSURED_AMOUNT
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -512,6 +513,7 @@ instance CompleteTag BecknTag where
     IS_SAFETY_PLUS -> (Just "is safety plus", Nothing)
     NO_CHARGES -> (Just "no conditional charges", Nothing)
     IS_INSURED -> (Just "is insured", Nothing)
+    INSURED_AMOUNT -> (Just "insured amount", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -558,6 +560,7 @@ instance CompleteTag BecknTag where
     IS_SAFETY_PLUS -> GENERAL_INFO
     SAFETY_PLUS_CHARGES -> GENERAL_INFO
     IS_INSURED -> INSURANCE_INFO
+    INSURED_AMOUNT -> INSURANCE_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

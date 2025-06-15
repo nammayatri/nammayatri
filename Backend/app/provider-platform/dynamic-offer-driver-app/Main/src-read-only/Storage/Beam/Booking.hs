@@ -44,6 +44,7 @@ data BookingT f = BookingT
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     initiatedAs :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
+    insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

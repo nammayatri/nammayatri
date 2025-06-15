@@ -197,3 +197,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ALTER COLUMN client_id TYPE text;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_insured boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN insured_amount text ;
