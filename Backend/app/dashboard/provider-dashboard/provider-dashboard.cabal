@@ -69,6 +69,7 @@ library
       Domain.Action.ProviderPlatform.RideBooking.Maps
       Domain.Action.ProviderPlatform.RideBooking.MeterRide
       Domain.Action.ProviderPlatform.RideBooking.Ride
+      Domain.Action.ProviderPlatform.RideBooking.SearchRequest
       Domain.Action.ProviderPlatform.RideBooking.Volunteer
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
@@ -115,6 +116,7 @@ library
       API.Action.ProviderPlatform.RideBooking.Maps
       API.Action.ProviderPlatform.RideBooking.MeterRide
       API.Action.ProviderPlatform.RideBooking.Ride
+      API.Action.ProviderPlatform.RideBooking.SearchRequest
       API.Action.ProviderPlatform.RideBooking.Volunteer
       API.Client.ProviderPlatform.AppManagement
       API.Client.ProviderPlatform.Fleet
