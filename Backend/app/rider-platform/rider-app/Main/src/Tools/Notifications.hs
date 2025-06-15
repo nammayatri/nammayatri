@@ -253,7 +253,7 @@ notifyOnRideAssigned booking ride = do
                   liveActivityNotificationType = "DRIVER_ASSIGNMENT",
                   liveActivityContentState =
                     FCMType.LiveActivityContentState
-                      { activityStatus = "ARRIVING",
+                      { activityStatus = "ASSIGNED",
                         driverInfo =
                           Just $
                             FCMType.DriverInfo
@@ -346,7 +346,7 @@ notifyOnRideStarted booking ride = do
       toLocationDestination = do
         loc <- ride.toLocation
         let addr = loc.address
-        addr.building
+        addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
   -- finding other booking parties for delivery --
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
@@ -375,9 +375,9 @@ notifyOnRideStarted booking ride = do
                         bookingInfo =
                           Just $
                             FCMType.BookingInfo
-                              { vehicleColor = Nothing,
-                                vehicleName = Nothing,
-                                vehicleNumber = Nothing,
+                              { vehicleColor = ride.vehicleColor,
+                                vehicleName = Just ride.vehicleModel,
+                                vehicleNumber = Just ride.vehicleNumber,
                                 vehicleVariant = Just (show ride.vehicleVariant),
                                 source = Nothing,
                                 destination = toLocationDestination,
@@ -418,7 +418,7 @@ notifyOnRideCompleted booking ride otherParties = do
       toLocationDestination = do
         loc <- ride.toLocation
         let addr = loc.address
-        addr.building
+        addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
   forM_ (person : otherParties) $ \person' -> do
@@ -447,13 +447,13 @@ notifyOnRideCompleted booking ride otherParties = do
                         bookingInfo =
                           Just $
                             FCMType.BookingInfo
-                              { vehicleColor = Nothing,
-                                vehicleName = Nothing,
-                                vehicleNumber = Nothing,
-                                vehicleVariant = Nothing,
+                              { vehicleColor = ride.vehicleColor,
+                                vehicleName = Just ride.vehicleModel,
+                                vehicleNumber = Just ride.vehicleNumber,
+                                vehicleVariant = Just (show ride.vehicleVariant),
                                 source = Nothing,
                                 destination = toLocationDestination,
-                                estimatedFare = Just (showPriceWithRoundingWithoutCurrency totalFare)
+                                estimatedFare = Just (show totalFare.amountInt)
                               },
                         timerDuration = Nothing,
                         customMessage = Nothing
@@ -593,6 +593,18 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
         Nothing -> "BOOKING_CANCEL_WITH_NO_RIDE"
       entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id)
       dynamicParams = RideCancelParam booking.startTime booking.id
+      toLocationDestination = do
+        destinationAdd <- case booking.bookingDetails of
+          SRB.RentalDetails _ -> Nothing
+          SRB.OneWayDetails details -> Just details.toLocation
+          SRB.DriverOfferDetails details -> Just details.toLocation
+          SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+          SRB.InterCityDetails details -> Just details.toLocation
+          SRB.AmbulanceDetails details -> Just details.toLocation
+          SRB.DeliveryDetails details -> Just details.toLocation
+          SRB.MeterRideDetails details -> details.toLocation
+        let addr = destinationAdd.address
+        addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
   forM_ (person : otherParties) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
@@ -625,7 +637,17 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
                     FCMType.LiveActivityContentState
                       { activityStatus = "CANCELLED",
                         driverInfo = Nothing,
-                        bookingInfo = Nothing,
+                        bookingInfo =
+                          Just $
+                            FCMType.BookingInfo
+                              { vehicleColor = Nothing,
+                                vehicleName = Nothing,
+                                vehicleNumber = Nothing,
+                                vehicleVariant = Nothing,
+                                source = Nothing,
+                                destination = toLocationDestination,
+                                estimatedFare = Nothing
+                              },
                         timerDuration = Nothing,
                         customMessage = liveActivityCustomMessage
                       },
@@ -747,6 +769,18 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   let entity = Notification.Entity Notification.Product estOrQuoteId (BookingReallocatedParam booking.startTime booking.id)
       subCategory = cancellationSourceToSubCategory cancellationSource
+      toLocationDestination = do
+        destinationAdd <- case booking.bookingDetails of
+          SRB.RentalDetails _ -> Nothing
+          SRB.OneWayDetails details -> Just details.toLocation
+          SRB.DriverOfferDetails details -> Just details.toLocation
+          SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+          SRB.InterCityDetails details -> Just details.toLocation
+          SRB.AmbulanceDetails details -> Just details.toLocation
+          SRB.DeliveryDetails details -> Just details.toLocation
+          SRB.MeterRideDetails details -> details.toLocation
+        let addr = destinationAdd.address
+        addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
   dynamicNotifyPerson
     person
     (createNotificationReq "EST_OR_QUOTE_REALLOCATED" (\r -> r {soundTag = tag, subCategory = Just subCategory}))
@@ -766,7 +800,17 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
                   FCMType.LiveActivityContentState
                     { activityStatus = "REALLOCATION",
                       driverInfo = Nothing,
-                      bookingInfo = Nothing,
+                      bookingInfo =
+                        Just $
+                          FCMType.BookingInfo
+                            { vehicleColor = Nothing,
+                              vehicleName = Nothing,
+                              vehicleNumber = Nothing,
+                              vehicleVariant = Nothing,
+                              source = Nothing,
+                              destination = toLocationDestination,
+                              estimatedFare = Nothing
+                            },
                       timerDuration = batchConfig,
                       customMessage = Nothing
                     },
@@ -981,8 +1025,9 @@ notifyDriverReaching ::
   Maybe TripCategory ->
   Text ->
   Text ->
+  SRide.Ride ->
   m ()
-notifyDriverReaching personId tripCategory otp vehicleNumber = do
+notifyDriverReaching personId tripCategory otp vehicleNumber ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product personId.getId ()
       dynamicParams = DriverReachedParam vehicleNumber otp
@@ -994,7 +1039,44 @@ notifyDriverReaching personId tripCategory otp vehicleNumber = do
     tripCategory
     []
     Nothing
-    Nothing
+    ( case person.liveActivityToken of
+        Just _liveActivityToken ->
+          Just $
+            FCMType.LiveActivityReq
+              { liveActivityToken = _liveActivityToken,
+                liveActivityReqType = "update",
+                liveActivityNotificationType = "DRIVER_ARRIVING",
+                liveActivityContentState =
+                  FCMType.LiveActivityContentState
+                    { activityStatus = "ARRIVING",
+                      driverInfo =
+                        Just $
+                          FCMType.DriverInfo
+                            { rideOtp = Just ride.otp,
+                              driverName = Nothing,
+                              distanceLeft = Nothing,
+                              totalDistance = Nothing,
+                              driverNumber = Nothing,
+                              driverProfile = Nothing
+                            },
+                      bookingInfo =
+                        Just $
+                          FCMType.BookingInfo
+                            { vehicleColor = ride.vehicleColor,
+                              vehicleName = Just ride.vehicleModel,
+                              vehicleNumber = Just ride.vehicleNumber,
+                              vehicleVariant = Just (show ride.vehicleVariant),
+                              source = Nothing,
+                              destination = Nothing,
+                              estimatedFare = Nothing
+                            },
+                      timerDuration = Nothing,
+                      customMessage = Nothing
+                    },
+                liveActivityApnsPriority = "10"
+              }
+        _ -> Nothing
+    )
 
 -- title = T.pack "Driver Arriving Now!"
 -- body =
@@ -1329,7 +1411,7 @@ notifyOnTripUpdate booking ride err = do
       toLocationDestination = do
         loc <- ride.toLocation
         let addr = loc.address
-        addr.building
+        addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
       liveActivityReq =
         ( case person.liveActivityToken of
             Just _liveActivityToken ->
@@ -1345,9 +1427,9 @@ notifyOnTripUpdate booking ride err = do
                           bookingInfo =
                             Just $
                               FCMType.BookingInfo
-                                { vehicleColor = Nothing,
-                                  vehicleName = Nothing,
-                                  vehicleNumber = Nothing,
+                                { vehicleColor = ride.vehicleColor,
+                                  vehicleName = Just ride.vehicleModel,
+                                  vehicleNumber = Just ride.vehicleNumber,
                                   vehicleVariant = Just (show ride.vehicleVariant),
                                   source = Nothing,
                                   destination = toLocationDestination,
