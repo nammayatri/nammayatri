@@ -40,6 +40,7 @@ data EstimateT f = EstimateT
     estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     id :: B.C f Kernel.Prelude.Text,
+    insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isCustomerPrefferedSearchRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

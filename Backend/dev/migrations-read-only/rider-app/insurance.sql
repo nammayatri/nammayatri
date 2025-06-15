@@ -22,3 +22,10 @@ ALTER TABLE atlas_app.insurance ADD COLUMN start_date timestamp with time zone ;
 ALTER TABLE atlas_app.insurance ADD COLUMN trip_category text ;
 ALTER TABLE atlas_app.insurance ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.insurance ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.insurance ADD COLUMN insured_amount text ;
+ALTER TABLE atlas_app.insurance ADD COLUMN driver_insured_amount text ;

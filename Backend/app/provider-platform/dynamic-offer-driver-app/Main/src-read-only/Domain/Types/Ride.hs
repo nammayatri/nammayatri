@@ -58,6 +58,7 @@ data Ride = Ride
     fromLocation :: Domain.Types.Location.Location,
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAdvanceBooking :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDriverSpecialLocWarrior :: Kernel.Prelude.Bool,

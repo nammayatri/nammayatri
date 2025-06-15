@@ -118,6 +118,7 @@ Ride:
     talkedWithDriver: Maybe Bool
     isSafetyPlus : Bool
     isInsured : Bool
+    insuredAmount: Maybe Text
 
   sqlType:
     allowedEditLocationAttempts: int

@@ -77,7 +77,8 @@ data InitReq = InitReq
     estimateId :: Text,
     initReqDetails :: Maybe InitReqDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
-    isInsured :: Maybe Bool
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -239,6 +240,7 @@ handler merchantId req validatedReq = do
             parcelQuantity = searchRequest.parcelQuantity,
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
             isInsured = fromMaybe False req.isInsured,
+            insuredAmount = req.insuredAmount,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

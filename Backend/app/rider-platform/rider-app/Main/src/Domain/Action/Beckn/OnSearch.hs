@@ -383,6 +383,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   insuranceConfig <- CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)
+  let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
   pure
     DEstimate.Estimate
       { id = uid,
@@ -432,15 +433,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
-        isInsured =
-          maybe
-            False
-            ( \inc ->
-                case inc.allowedVehicleServiceTiers of
-                  Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers
-                  Nothing -> True
-            )
-            insuranceConfig,
+        insuredAmount = insuranceConfig >>= (.insuredAmount),
         ..
       }
 

@@ -64,6 +64,7 @@ data RideT f = RideT
     feedbackSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
+    insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAlreadyFav :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

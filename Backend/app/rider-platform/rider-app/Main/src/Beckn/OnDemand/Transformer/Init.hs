@@ -189,6 +189,17 @@ mkInsuranceTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = Just $ show $ fromMaybe False res.isInsured
+              },
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.INSURED_AMOUNT,
+                        descriptorName = Just "Insured Amount",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = res.insuredAmount
               }
           ]
     }

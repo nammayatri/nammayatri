@@ -116,7 +116,8 @@ data BookingAPIEntity = BookingAPIEntity
     cancellationReason :: Maybe BookingCancellationReasonAPIEntity,
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     isSafetyPlus :: Bool,
-    isInsured :: Maybe Bool
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -318,7 +319,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
         vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
         isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
-        isInsured = Just booking.isInsured
+        isInsured = Just booking.isInsured,
+        insuredAmount = booking.insuredAmount
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

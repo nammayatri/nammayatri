@@ -118,6 +118,7 @@ Ride:
     rideTags: Maybe [TagNameValue]
     isPickupOrDestinationEdited: Maybe Bool
     isInsured: Bool
+    insuredAmount: Maybe Text
 
   sqlType:
     id: character(36)

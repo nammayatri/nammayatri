@@ -85,7 +85,7 @@ createInsurance ride = do
               partnerId = insuranceConfig.partnerId
             }
     res <- TI.createInsurance booking.merchantId booking.merchantOperatingCityId insuranceRequest
-    createInsuranceEntry ride booking insuranceConfig.partnerId insuranceConfig.plan (personName, personPhone) res
+    createInsuranceEntry ride booking insuranceConfig.partnerId insuranceConfig.plan (personName, personPhone) (insuranceConfig.insuredAmount, insuranceConfig.driverInsuredAmount) res
   where
     addHours :: NominalDiffTime -> UTCTime -> UTCTime
     addHours hrs time = addUTCTime (hrs * 3600) time
@@ -99,8 +99,8 @@ vehicleCategoryToInsuranceMode = \case
   DVC.FLIGHT -> "flight"
   _ -> "others"
 
-createInsuranceEntry :: (MonadFlow m, MonadReader r m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DRide.Ride -> DBooking.Booking -> Text -> Text -> (Text, Text) -> Insurance.InsuranceResponse -> m ()
-createInsuranceEntry ride booking partnerId plan (personName, personPhone) insuranceResponse = do
+createInsuranceEntry :: (MonadFlow m, MonadReader r m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DRide.Ride -> DBooking.Booking -> Text -> Text -> (Text, Text) -> (Maybe Text, Maybe Text) -> Insurance.InsuranceResponse -> m ()
+createInsuranceEntry ride booking partnerId plan (personName, personPhone) (insuredAmount, driverInsuredAmount) insuranceResponse = do
   now <- getCurrentTime
   let insurance =
         DI.Insurance
@@ -120,6 +120,8 @@ createInsuranceEntry ride booking partnerId plan (personName, personPhone) insur
             customerPhone = personPhone,
             driverName = Just ride.driverName,
             driverPhone = Just ride.driverMobileNumber,
+            insuredAmount = insuredAmount,
+            driverInsuredAmount = driverInsuredAmount,
             fairBreakup = Nothing,
             merchantId = booking.merchantId,
             merchantOperatingCityId = booking.merchantOperatingCityId,

@@ -96,7 +96,8 @@ data DConfirmRes = DConfirmRes
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     confirmResDetails :: Maybe DConfirmResDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
-    isInsured :: Maybe Bool
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -192,6 +193,7 @@ confirm DConfirmReq {..} = do
         confirmResDetails,
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         isInsured = Just $ booking.isInsured,
+        insuredAmount = booking.driverInsuredAmount,
         ..
       }
   where
@@ -287,7 +289,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   let (skipBooking, journeyId) = fromMaybe (Nothing, Nothing) $ (\j -> (Just j.skipBooking, Just (Id j.journeyId))) <$> searchRequest.journeyLegInfo
-  isInsured <- isBookingInsured
+  (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
   return $
     ( DRB.Booking
         { id = Id id,
@@ -423,16 +425,18 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
         )
         allSearchReqParties
 
-    isBookingInsured :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m Bool
+    isBookingInsured :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m (Bool, Maybe Text, Maybe Text)
     isBookingInsured = do
       insuranceConfig <- maybeM (pure Nothing) (\tp -> CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tp (DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType)) (pure quote.tripCategory)
       pure $
         maybe
-          False
+          (False, Nothing, Nothing)
           ( \inc ->
               case inc.allowedVehicleServiceTiers of
-                Just allowedTiers -> quote.vehicleServiceTierType `elem` allowedTiers
-                Nothing -> True
+                Just allowedTiers -> case quote.vehicleServiceTierType `elem` allowedTiers of
+                  True -> (True, inc.insuredAmount, inc.driverInsuredAmount)
+                  False -> (False, inc.insuredAmount, inc.driverInsuredAmount)
+                Nothing -> (True, inc.insuredAmount, inc.driverInsuredAmount)
           )
           insuranceConfig
 

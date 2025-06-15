@@ -512,3 +512,18 @@ ALTER TABLE atlas_app.estimate ADD COLUMN is_insured boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN insured_amount text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
