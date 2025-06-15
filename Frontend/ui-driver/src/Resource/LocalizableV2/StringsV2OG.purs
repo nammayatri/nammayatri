@@ -1882,7 +1882,12 @@ getProxy str = case str of
   DRIVER_UNSUBSCRIBED -> \a -> a @~ driver_unsubscribed
   OUT_OF_RIDES arg1 arg2 -> \a -> (a @~ out_of_rides)  arg1 arg2
   SUSPENDED_TILL arg1 arg2 -> \a -> (a @~ suspended_till)  arg1 arg2
-
+  EARN_ADDITIONAL_MONEY_WITH_PET_AUTOS -> \a -> a @~ earn_additional_money_with_pet_autos
+  GET_RIDES_FROM_USERS_TRAVELLING_WITH_PETS -> \a -> a @~ get_rides_from_users_travelling_with_pets
+  OPT_OUT -> \a -> a @~ opt_out
+  ARE_YOU_SURE_YOU_WANT_TO_OPT_OUT -> \a -> a @~ are_you_sure_you_want_to_opt_out
+  YOU_CAN_ALWAYS_GO_BACK_AND_CHANGE_THIS_FROM_RIDE_PREFERENCES -> \a -> a @~ you_can_always_go_back_and_change_this_from_ride_preferences
+  THIS_RIDE_INCLUDES_A_PET -> \a -> a @~ this_ride_includes_a_pet
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1

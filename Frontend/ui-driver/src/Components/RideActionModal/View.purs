@@ -158,9 +158,16 @@ callButton push config =
   
 rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithLabel push config =
-  let tagConfig = if config.bookingFromOtherPlatform then 
+  let tagConfig = if config.bookingFromOtherPlatform then
                     dummyLabelConfig{ text = (getString THIRD_PARTY_BOOKING) <> ": " <> config.bapName, textColor = Color.black700, backgroundColor = Color.grey900 }
-                  else if config.rideType == ST.Rental then 
+                  else if true then
+                    dummyLabelConfig
+                      { text = getString THIS_RIDE_INCLUDES_A_PET
+                      , textColor = Color.white900
+                      , backgroundColor = Color.brown
+                      , imageUrl = fetchImage FF_ASSET "ny_ic_pet_rides_label"
+                      }
+                  else if config.rideType == ST.Rental then
                   
                     dummyLabelConfig
                       { label = "Rental Ride",

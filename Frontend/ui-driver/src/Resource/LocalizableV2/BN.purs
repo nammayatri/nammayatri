@@ -1853,4 +1853,10 @@ getBn =
     , good : "ভালো"
     , poor : "খারাপ"
     , open_meter : "মিটার খোলুন"
+    , earn_additional_money_with_pet_autos : "পেট অটো দিয়ে অতিরিক্ত আয় করুন!"
+    , get_rides_from_users_travelling_with_pets : "পোষ্য নিয়ে ভ্রমণকারী ব্যবহারকারীদের কাছ থেকে রাইড পান।<br><br> আপনি যদি পোষ্য-বান্ধব ট্রিপে রাজি থাকেন তবে <br> অপ্ট ইন করুন।"
+    , opt_out : "অপ্ট আউট করুন"
+    , are_you_sure_you_want_to_opt_out : "আপনি কি সত্যিই অপ্ট আউট করতে চান?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "আপনি আপনার রাইড পছন্দ থেকে এটি যে কোনো সময় পরিবর্তন করতে পারেন।"
+    , this_ride_includes_a_pet : "এই যাত্রায় একটি পোষা প্রাণী অন্তর্ভুক্ত রয়েছে"
     }

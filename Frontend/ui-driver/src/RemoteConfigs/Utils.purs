@@ -488,3 +488,15 @@ getExtraChargeConfig city =
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultExtraChargeConfig
     cityValue = getCityBasedConfig value $ toLower city
   in getCityBasedConfig value $ toLower city
+
+defaultPetRidesFeatureConfig :: PetRidesFeatureConfig
+defaultPetRidesFeatureConfig = {
+  enablePetRidesFeature : false
+}
+
+getPetRidesFeatureConfig :: String -> PetRidesFeatureConfig
+getPetRidesFeatureConfig city =
+  let
+    config = fetchRemoteConfigString "pet_rides_feature_config"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultPetRidesFeatureConfig
+  in getCityBasedConfig value $ toLower city

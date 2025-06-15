@@ -1853,4 +1853,10 @@ getKn =
     , good : "ಉತ್ತಮ"
     , poor : "ಖಾರಾಬಿಸ್ತು"
     , open_meter : "ತೆರೆಯಿರಿ ಮೀಟರ್"
+    , earn_additional_money_with_pet_autos : "ಪೆಟ್ ಆಟೊಗಳಿಂದ ಹೆಚ್ಚುವರಿ ಹಣವನ್ನು ಗಳಿಸಿ!"
+    , get_rides_from_users_travelling_with_pets : "ಪಾಲ್ತು ಪ್ರಾಣಿಗಳೊಂದಿಗೆ ಪ್ರಯಾಣಿಸುವ ಬಳಕೆದಾರರಿಂದ ರೈಡ್‌ಗಳನ್ನು ಪಡೆಯಿರಿ.<br><br> ನೀವು ಪೆಟ್ ಫ್ರೆಂಡ್ಲಿ ಟ್ರಿಪ್‌ಗಳಿಗೆ ಒಪ್ಪಿದ್ದರೆ <br> ಆಪ್ಟ್ ಇನ್ ಮಾಡಿ."
+    , opt_out : "ಆಪ್ಟ್ ಔಟ್ ಮಾಡಿ"
+    , are_you_sure_you_want_to_opt_out : "ನೀವು ನಿಜವಾಗಲೂ ಆಪ್ಟ್ ಔಟ್ ಮಾಡಲು ಇಚ್ಛಿಸುತ್ತೀರಾ?"
+    , you_can_always_go_back_and_change_this_from_ride_preferences : "ನೀವು ಈ ಆಯ್ಕೆಯನ್ನು ನಿಮ್ಮ ರೈಡ್ ಆದ್ಯತೆಗಳಿಂದ ಯಾವಾಗ ಬೇಕಾದರೂ ಬದಲಾಯಿಸಬಹುದು."
+    , this_ride_includes_a_pet : "ಈ ಸವಾರಿಯಲ್ಲಿ ಸಾಕುಪ್ರಾಣಿಯೂ ಸೇರಿದೆ."
     }
