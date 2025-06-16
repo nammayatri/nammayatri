@@ -193,8 +193,10 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  mbFleetConfig <- QFC.findByPrimaryKey getEntityData.id
-  let isTrustedFleet = (mbFleetConfig >>= (.fleetType)) == Just "TRUSTED"
+  mbFleetConfig <- case (getEntityData.role, getMbFleetOwnerId) of
+    (DP.DRIVER, Just fleetOwnerId) -> QFC.findByPrimaryKey (Id fleetOwnerId)
+    _ -> QFC.findByPrimaryKey getEntityData.id
+  let isTrustedFleet = (mbFleetConfig >>= (.fleetType)) == Just DFC.TRUSTED
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
@@ -1216,7 +1218,8 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
                           vehicleFitness = Nothing,
                           vehiclePermit = Nothing,
                           vehiclePUC = Nothing,
-                          vehicleInsurance = Nothing
+                          vehicleInsurance = Nothing,
+                          ..
                         },
                   ..
                 }
