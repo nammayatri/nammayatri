@@ -3,7 +3,6 @@
 
 module API.Types.Dashboard.RideBooking.Endpoints.SearchRequest where
 
-import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types.Location
@@ -50,27 +49,39 @@ data SearchRequestsRes = SearchRequestsRes {searchrequests :: [SearchRequestOfDr
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("searchRequest" :> PostSearchRequestSearchrequests)
+type API = ("searchRequest" :> (PostSearchRequestSearchrequests :<|> GetSearchRequestList))
 
 type PostSearchRequestSearchrequests = ("searchrequests" :> ReqBody ('[JSON]) SearchRequestsReq :> Post ('[JSON]) SearchRequestsRes)
 
-newtype SearchRequestAPIs = SearchRequestAPIs {postSearchRequestSearchrequests :: (SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes)}
+type GetSearchRequestList =
+  ( "list" :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> MandatoryQueryParam
+           "fromDate"
+           Kernel.Prelude.UTCTime
+      :> MandatoryQueryParam "toDate" Kernel.Prelude.UTCTime
+      :> MandatoryQueryParam "limit" Kernel.Prelude.Int
+      :> MandatoryQueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           ('[JSON])
+           SearchRequestsRes
+  )
+
+data SearchRequestAPIs = SearchRequestAPIs
+  { postSearchRequestSearchrequests :: (SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes),
+    getSearchRequestList :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes)
+  }
 
 mkSearchRequestAPIs :: (Client EulerHS.Types.EulerClient API -> SearchRequestAPIs)
 mkSearchRequestAPIs searchRequestClient = (SearchRequestAPIs {..})
   where
-    postSearchRequestSearchrequests = searchRequestClient
+    postSearchRequestSearchrequests :<|> getSearchRequestList = searchRequestClient
 
 data SearchRequestUserActionType
   = POST_SEARCH_REQUEST_SEARCHREQUESTS
+  | GET_SEARCH_REQUEST_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
-  deriving anyclass (ToSchema)
-
-instance ToJSON SearchRequestUserActionType where
-  toJSON (POST_SEARCH_REQUEST_SEARCHREQUESTS) = Data.Aeson.String "POST_SEARCH_REQUEST_SEARCHREQUESTS"
-
-instance FromJSON SearchRequestUserActionType where
-  parseJSON (Data.Aeson.String "POST_SEARCH_REQUEST_SEARCHREQUESTS") = pure POST_SEARCH_REQUEST_SEARCHREQUESTS
-  parseJSON _ = fail "POST_SEARCH_REQUEST_SEARCHREQUESTS expected"
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(Data.Singletons.TH.genSingletons [(''SearchRequestUserActionType)])
