@@ -25,10 +25,12 @@ module Dashboard.Common
 where
 
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Csv as Csv
 import Data.OpenApi
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -36,7 +38,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Servant (FromHttpApiData, ToHttpApiData)
+import Servant
 
 data Customer
 
@@ -74,7 +76,19 @@ data CoinsConfig
 
 data Person
 
-data Role
+data Role = DRIVER | FLEET
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData Role where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData Role where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data Operator
 

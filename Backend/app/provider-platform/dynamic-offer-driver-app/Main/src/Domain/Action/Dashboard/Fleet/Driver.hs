@@ -179,16 +179,20 @@ postDriverFleetAddVehicle ::
   Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Common.Role ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode req = do
+postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode mbRole req = do
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
-  entityDetails <- QPerson.findByMobileNumberAndMerchantAndRoles mobileCountryCode phoneNumberHash merchant.id [DP.DRIVER, DP.FLEET_OWNER] >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+  let role = case mbRole of
+        Just Common.FLEET -> DP.FLEET_OWNER
+        _ -> DP.DRIVER
+  entityDetails <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id role >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   let merchantId = entityDetails.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails
@@ -663,8 +667,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               case decryptedMobileNumber of
                 Just mobileNumber -> do
                   currProcessEntity <- case (mbFleetNo, mbDriverNo) of
-                    (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing -- Add vehicles under requested Fleet
-                    (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) -- Map driver <-> vehicle under requested fleet
+                    (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) -- Add vehicles under requested Fleet
+                    (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just Common.DRIVER) -- Map driver <-> vehicle under requested fleet
                     (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
                   case currProcessEntity of
                     Left err -> return $ unprocessedEntities <> [err]
@@ -680,9 +684,9 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
           ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
               currProcessEntity <- case (mbFleetNo, mbDriverNo) of
                 (Nothing, Nothing) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
-                (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) -- Add vehicles under Fleet
-                (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing -- Add vehicles under DCO
-                (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) -- Map driver <-> vehicle under fleer
+                (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) -- Add vehicles under Fleet
+                (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just Common.DRIVER) -- Add vehicles under DCO
+                (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just Common.DRIVER) -- Map driver <-> vehicle under fleer
               case currProcessEntity of
                 Left err -> return $ unprocessedEntities <> [err]
                 Right _ -> return unprocessedEntities
@@ -700,8 +704,9 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       Common.RegisterRCReq ->
       Text ->
       Maybe Text ->
+      Maybe Common.Role ->
       Flow (Either Text ())
-    handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo = do
+    handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo mbRole = do
       result <- try @_ @SomeException $ do
         when transporterConfig.enableExistingVehicleInBulkUpload $
           isVehicleAlreadyAssociatedWithFleetOrDriver registerRcReq.vehicleRegistrationCertNumber
@@ -715,7 +720,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
 
         let addVehicleReq = convertToAddVehicleReq registerRcReq
 
-        postDriverFleetAddVehicle merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode addVehicleReq
+        postDriverFleetAddVehicle merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
 
       case result of
         Left e -> return $ Left $ "Error: " <> T.pack (displayException e)

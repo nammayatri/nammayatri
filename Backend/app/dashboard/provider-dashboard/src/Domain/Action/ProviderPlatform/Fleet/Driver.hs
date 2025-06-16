@@ -216,13 +216,13 @@ getDriverFleetAccessList merchantShortId opCity apiTokenInfo _ = do
 ----------------------------------- WRITE LAYER (Single Fleet Level) ---------------------------------
 -------------------------------------------------------------------------------------------------------------
 
-postDriverFleetAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Maybe Text -> Common.AddVehicleReq -> Flow APISuccess
-postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId req = do
+postDriverFleetAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Maybe Text -> Maybe Common.Role -> Common.AddVehicleReq -> Flow APISuccess
+postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId mbRole req = do
   checkFleetOwnerVerification apiTokenInfo.personId
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode req -- apiTokenInfo may contain opertaor or fleet
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode mbRole req -- apiTokenInfo may contain opertaor or fleet
 
 postDriverFleetAddRCWithoutDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Registration.RegisterRCReq -> Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
