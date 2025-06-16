@@ -32,6 +32,7 @@ import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
@@ -81,6 +82,7 @@ handler merchant sReq searchReq estimates = do
       return Nothing
   QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
   QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
+  when sReq.isPetRide $ QSR.updateSearchTags (Just (LYT.TagNameValue "PetRide#true" : fromMaybe [] searchReq.searchTags)) searchReq.id
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
