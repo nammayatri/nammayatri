@@ -473,3 +473,57 @@ ALTER TABLE atlas_app.estimate ADD COLUMN smart_tip_reason text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN tip_options integer[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN is_insured boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN insured_amount text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

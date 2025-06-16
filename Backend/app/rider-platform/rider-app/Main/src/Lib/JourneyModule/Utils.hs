@@ -33,6 +33,8 @@ import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModal
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
+import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
+import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
@@ -302,6 +304,7 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   routeStopTimings <- case vc of
     Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
     Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
+    Enums.METRO -> hardcodedMetroTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
     _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
   return routeStopTimings
 
@@ -431,6 +434,49 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Only return service tiers that have available routes
   return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes)) results)
+
+hardcodedMetroTimings ::
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, Monad m, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r) =>
+  [Text] ->
+  Text ->
+  UTCTime ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m [RouteStopTimeTable]
+hardcodedMetroTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
+  let routeCode = listToMaybe routeCodes
+  serviceTierType <- case routeCode of
+    Just rc -> do
+      routeFareProducts <- QFRFSRouteFareProduct.findByRouteCode rc integratedBppConfig.id
+      case listToMaybe routeFareProducts of
+        Just routeFareProduct -> do
+          mbServiceTier <- QFRFSVehicleServiceTier.findById routeFareProduct.vehicleServiceTierId
+          return $ fromMaybe Spec.EXPRESS $ mbServiceTier <&> (._type)
+        Nothing -> return Spec.EXPRESS
+    Nothing -> return Spec.EXPRESS
+
+  let createRouteStopTimeTable rc =
+        RouteStopTimeTable
+          { integratedBppConfigId = integratedBppConfig.id,
+            routeCode = rc,
+            stopCode = stopCode,
+            timeOfArrival = localTimeOfDay $ utcToLocalTime (minutesToTimeZone 330) $ addUTCTime (60 * 10) currentTime,
+            timeOfDeparture = localTimeOfDay $ utcToLocalTime (minutesToTimeZone 330) $ addUTCTime (60 * 20) currentTime,
+            tripId = Id "Metro123",
+            merchantId = Just mid,
+            merchantOperatingCityId = Just mocid,
+            createdAt = currentTime,
+            updatedAt = currentTime,
+            serviceTierType = serviceTierType,
+            delay = Nothing,
+            source = LIVE,
+            stage = Nothing
+          }
+
+  return $ case routeCode of
+    Just rc -> [createRouteStopTimeTable rc]
+    Nothing -> [createRouteStopTimeTable "M1"]
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type

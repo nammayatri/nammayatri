@@ -58,8 +58,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     signatureExpiry :: Kernel.Prelude.Int,
     signingPublicKey :: Kernel.Types.Base64.Base64,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    whiteListedIpsForAuth :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
 

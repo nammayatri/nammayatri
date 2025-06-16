@@ -28,6 +28,7 @@ import EulerHS.Prelude (comparing, (+||), (||+))
 import ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Maps.Types
+import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
 import qualified Kernel.External.MultiModal.Interface.Types as EMTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -331,16 +332,16 @@ getState mode searchId riderLastPoints isLastCompleted = do
         pure []
 
     isOngoingJourneyLeg :: JPT.JourneyLegStatus -> Bool
-    isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.Ongoing]
+    isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.Ongoing, JPT.Finishing]
 
     isUpcomingJourneyLeg :: JPT.JourneyLegStatus -> Bool
-    isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.InPlan]
+    isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.Booked, JPT.InPlan, JPT.OnTheWay, JPT.Arriving, JPT.Arrived]
 
     processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JPT.JourneyLegStatus -> Id Station -> Bool -> m (Bool, JPT.JourneyLegStatus)
     processOldStatus mbOldStatus toStationId isLastCompleted' = do
       mbToStation <- QStation.findById toStationId
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
-      let oldStatus = fromMaybe (if isLastCompleted' then JPT.Ongoing else JPT.InPlan) mbOldStatus
+      let oldStatus = fromMaybe (if isLastCompleted' then JPT.OnTheWay else JPT.InPlan) mbOldStatus
       return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted') mbToLatLong
 
     getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [JPT.MultiModalJourneyRouteDetails] -> Id Domain.Types.FRFSSearch.FRFSSearch -> Bool -> m [(JPT.MultiModalJourneyRouteDetails, Bool, JPT.JourneyLegStatus)]
@@ -423,15 +424,15 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
     selectMaxFare [] = Nothing
     selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
 
-getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
-getInfo searchId fallbackFare distance duration = do
+getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m JT.LegInfo
+getInfo searchId fallbackFare distance duration entrance exit = do
   mbBooking <- QTBooking.findBySearchId searchId
   case mbBooking of
     Just booking -> do
-      JT.mkLegInfoFromFrfsBooking booking distance duration
+      JT.mkLegInfoFromFrfsBooking booking distance duration entrance exit
     Nothing -> do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-      JT.mkLegInfoFromFrfsSearchRequest searchReq fallbackFare distance duration
+      JT.mkLegInfoFromFrfsSearchRequest searchReq fallbackFare distance duration entrance exit
 
 search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId = do

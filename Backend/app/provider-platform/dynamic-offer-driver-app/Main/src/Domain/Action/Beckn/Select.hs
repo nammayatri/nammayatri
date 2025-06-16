@@ -32,6 +32,7 @@ import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
@@ -52,6 +53,7 @@ data DSelectReq = DSelectReq
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe HighPrecMoney,
+    isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
@@ -80,6 +82,7 @@ handler merchant sReq searchReq estimates = do
       return Nothing
   QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
   QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
+  when sReq.isPetRide $ QSR.updateSearchTags (Just (LYT.TagNameValue "PetRide#true" : fromMaybe [] searchReq.searchTags)) searchReq.id
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
@@ -87,8 +90,9 @@ handler merchant sReq searchReq estimates = do
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
           driverAdditionalCharges = filterChargesByApplicability $ fromMaybe [] ((.conditionalCharges) <$> estimate.farePolicy)
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False
-  let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @(DParcel.ParcelType) $ unpack rpt
+          petCharges' = if sReq.isPetRide then (.petCharges) =<< estimate.farePolicy else Nothing
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 petCharges') Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges'
+  let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @DParcel.ParcelType $ unpack rpt
   when (isJust parcelType) $ QSR.updateParcelDetails parcelType (snd sReq.parcelDetails) searchReq.id
   let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId, DSR.preferSafetyPlus = sReq.preferSafetyPlus}
   let driverSearchBatchInput =
@@ -105,7 +109,7 @@ handler merchant sReq searchReq estimates = do
   initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
   where
-    mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then (Just DRD.MultipleDeviceIdExists) else Nothing) isMultipleOrNoDeviceIdExist
+    mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then Just DRD.MultipleDeviceIdExists else Nothing) isMultipleOrNoDeviceIdExist
     filterChargesByApplicability conditionalCharges = do
       let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
       catMaybes $ [safetyCharges]

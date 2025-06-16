@@ -312,6 +312,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       fare = Nothing
       totalFare = Nothing
       chargeableDistance = Nothing
+      isPetRide = booking.isPetRide
       traveledDistance = Nothing
       driverArrivalTime = Nothing
       rideStartTime = Nothing
@@ -352,6 +353,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       pickupRouteCallCount = Just 0
       talkedWithDriver = Nothing
       isSafetyPlus = booking.preferSafetyPlus
+      isInsured = booking.isInsured
+      insuredAmount = booking.insuredAmount
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

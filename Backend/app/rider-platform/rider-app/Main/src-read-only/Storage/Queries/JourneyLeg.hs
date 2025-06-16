@@ -4,6 +4,7 @@
 
 module Storage.Queries.JourneyLeg (module Storage.Queries.JourneyLeg, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey
@@ -89,8 +90,10 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.duration duration,
       Se.Set Beam.endLocationLat (endLocation & (.latitude)),
       Se.Set Beam.endLocationLon (endLocation & (.longitude)),
+      Se.Set Beam.entrance (entrance >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.estimatedMaxFare estimatedMaxFare,
       Se.Set Beam.estimatedMinFare estimatedMinFare,
+      Se.Set Beam.exit (exit >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
       Se.Set Beam.fromArrivalTime fromArrivalTime,
       Se.Set Beam.fromDepartureTime fromDepartureTime,

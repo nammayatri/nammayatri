@@ -231,11 +231,11 @@ getAllLegsInfo journeyId skipAddLegFallback = do
     getLegInfo leg legSearchIdText = do
       let legSearchId = Id legSearchIdText
       case leg.mode of
-        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
-        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
-        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
+        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = leg}
+        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
 
 trackBuses :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => Maybe APITypes.RiderLocationReq -> DJourney.Journey -> [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)] -> m ([(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
 trackBuses Nothing _ journeyStates = pure journeyStates
@@ -633,7 +633,7 @@ startJourney confirmElements forcedBookedLegOrder journeyId = do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
             ticketQuantity = mElement >>= (.ticketQuantity)
             childTicketQuantity = mElement >>= (.childTicketQuantity)
-        let forcedBooking = if leg.order == 0 then True else Just leg.order == forcedBookedLegOrder
+        let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         when (leg.status /= JL.Skipped) $ do
           JLI.confirm forcedBooking ticketQuantity childTicketQuantity leg crisSdkResponse
@@ -1286,7 +1286,9 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         legSearchId = Nothing,
         isSkipped = Just False,
         changedBusesInSequence = journeyLeg.changedBusesInSequence,
-        finalBoardedBusNumber = journeyLeg.finalBoardedBusNumber
+        finalBoardedBusNumber = journeyLeg.finalBoardedBusNumber,
+        entrance = journeyLeg.entrance,
+        exit = journeyLeg.exit
       }
 
 extendLeg ::
@@ -1415,7 +1417,9 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             fromArrivalTime = Just newStartTime,
             fromDepartureTime = Just newStartTime,
             toArrivalTime = Nothing,
-            toDepartureTime = Nothing
+            toDepartureTime = Nothing,
+            entrance = Nothing,
+            exit = Nothing
           }
 
     mkExtendLegKey = "Extend:Leg:For:JourneyId-" <> journeyId.getId
@@ -1612,7 +1616,9 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           fromArrivalTime = Nothing,
           fromDepartureTime = Nothing,
           toArrivalTime = Nothing,
-          toDepartureTime = Nothing
+          toDepartureTime = Nothing,
+          entrance = Nothing,
+          exit = Nothing
         }
 
     getAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}
@@ -1702,5 +1708,6 @@ generateJourneyInfoResponse journey legs = do
         startTime = journey.startTime,
         endTime = journey.endTime,
         merchantOperatingCityName,
-        crisSdkToken = Nothing
+        crisSdkToken = Nothing,
+        paymentOrderShortId = journey.paymentOrderShortId
       }

@@ -226,6 +226,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
         previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
+        isPetRide = booking.isPetRide,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct
@@ -274,7 +275,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         estimatedEndTimeRange = Nothing,
         rideTags = Nothing,
         hasStops = booking.hasStops,
-        isPickupOrDestinationEdited = Just False
+        isPickupOrDestinationEdited = Just False,
+        isInsured = booking.isInsured,
+        insuredAmount = booking.insuredAmount
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

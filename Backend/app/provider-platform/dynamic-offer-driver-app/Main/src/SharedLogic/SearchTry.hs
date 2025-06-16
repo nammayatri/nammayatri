@@ -81,7 +81,7 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
   case scheduleTryTimes of
     [] -> return Nothing
     (scheduleTryTime : rest) -> do
-      if (diffUTCTime searchRequest.startTime now <= scheduleTryTime)
+      if diffUTCTime searchRequest.startTime now <= scheduleTryTime
         then do
           setKey rest
           case rest of
@@ -190,7 +190,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId estimateOrQuoteServiceTierNames serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -201,7 +201,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId estimateOrQuoteServiceTierNames serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -231,20 +231,21 @@ buildSearchTry ::
   DST.SearchRepeatType ->
   DTC.TripCategory ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Text ->
   [Text] ->
   DVST.ServiceTierType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId estimateOrQuoteServTierNames serviceTier = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
   transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then do
-      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, (TE.encodeUtf8 (id_.getId)))]
+      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (id_.getId))]
       void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 3600
-      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, (TE.encodeUtf8 (id_.getId)))]
+      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (id_.getId))]
       void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) 3600
       void $ Redis.withCrossAppRedis $ Redis.incr (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId)
       void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
@@ -294,8 +295,10 @@ buildTripQuoteDetail ::
   Text ->
   [DAC.ConditionalCharges] ->
   Bool ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name

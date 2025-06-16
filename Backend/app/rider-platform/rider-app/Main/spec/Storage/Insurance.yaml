@@ -1,0 +1,90 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  DbHash: Kernel.External.Encryption
+  TripCategory: Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.ServiceTierType
+  Value: Data.Aeson
+
+Insurance:
+  tableName: insurance
+
+  fields:
+    id: Id Insurance
+    policyId: Text
+    category: Text
+    entityType: EntityType
+    tripCategory: Maybe TripCategory
+    certificateUrl: Maybe Text
+    partnerId: Text
+    plan: Text
+    policyNumber: Text
+    startDate: Maybe UTCTime
+    endDate: Maybe UTCTime
+    customerId: Id Person
+    customerName: Text
+    customerPhone: Text
+    driverName: Maybe Text
+    driverPhone: Maybe Text
+    fairBreakup: Maybe Value
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    EntityType:
+      enum: RIDE,TICKET
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+InsuranceConfig:
+  tableName: insurance_config
+
+  fields:
+    id: Id InsuranceConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: TripCategory
+    allowedVehicleServiceTiers: "Maybe [ServiceTierType]|NoRelation"
+    vehicleCategory: VehicleCategory|NoRelation
+    plan: Text
+    planType: Maybe Int
+    city: Text
+    state: Text
+    partnerId: Text
+    hours: Int
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    allowedVehicleServiceTiers: "text[]"
+
+  extraIndexes:
+    - columns: [merchantId, merchantOperatingCityId, tripCategory, vehicleCategory]
+      unique: true
+
+  extraOperations:
+    - GENERATE_INDEXES
+
+  queries:
+    findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId, tripCategory, vehicleCategory]
+
+  cachedQueries:
+    getInsuranceConfig:
+      keyParams: [merchantId, merchantOperatingCityId, tripCategory, vehicleCategory]
+      dbQuery: findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory
+      dbQueryParams: [merchantId, merchantOperatingCityId, tripCategory, vehicleCategory]
+      queryType: FindAndCache

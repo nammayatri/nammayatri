@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.Journey as Beam
 import Storage.Queries.JourneyExtra as ReExport
@@ -25,6 +26,13 @@ createMany = traverse_ create
 
 findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Journey.Journey])
 findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)]
+
+updatePaymentOrderShortId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
+updatePaymentOrderShortId paymentOrderShortId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePaymentStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
 updatePaymentStatus isPaymentSuccess id = do
@@ -52,6 +60,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.isPublicTransportIncluded isPublicTransportIncluded,
       Se.Set Beam.modes modes,
+      Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId),
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.relevanceScore relevanceScore,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),

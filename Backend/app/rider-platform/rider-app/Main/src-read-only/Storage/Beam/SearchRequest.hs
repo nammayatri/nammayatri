@@ -59,6 +59,7 @@ data SearchRequestT f = SearchRequestT
     isAdvanceBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMeterRideSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

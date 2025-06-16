@@ -114,6 +114,8 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           searchTryId = Id fromLocData.dummyId,
           startTime = now,
           distance = Just fromLocData.distance,
+          congestionCharges = Nothing,
+          petCharges = Nothing,
           distanceWithUnit = Just $ convertMetersToDistance Meter fromLocData.distance,
           distanceToPickup = Meters 149,
           distanceToPickupWithUnit = Distance 149.0 Meter,

@@ -29,6 +29,8 @@ import Domain.Types.MerchantServiceConfig
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.Insurance.Interface.Types as Insurance
+import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.MultiModal.Interface.Types as MultiModal
@@ -137,6 +139,8 @@ cacheMerchantServiceConfig merchantServiceConfig = do
       MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
         MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
         MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
+      InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
+        Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName

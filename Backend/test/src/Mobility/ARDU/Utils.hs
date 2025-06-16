@@ -161,6 +161,7 @@ select bapToken quoteId =
       { customerExtraFee = Just 10,
         customerExtraFeeWithCurrency = Just $ PriceAPIEntity 10.0 INR,
         otherSelectedEstimates = Nothing,
+        isPetRide = Nothing,
         autoAssignEnabled = False,
         autoAssignEnabledV2 = Nothing,
         isAdvancedBookingEnabled = Nothing,

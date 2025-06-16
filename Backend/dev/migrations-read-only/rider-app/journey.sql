@@ -111,3 +111,13 @@ ALTER TABLE atlas_app.journey ADD COLUMN is_public_transport_included boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN payment_order_short_id character varying(36) ;
+
+
+------- SQL updates -------
+

@@ -14,7 +14,7 @@
 
 module SharedLogic.Confirm where
 
-import Control.Monad.Extra (anyM)
+import Control.Monad.Extra (anyM, maybeM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -53,6 +53,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
@@ -94,7 +95,9 @@ data DConfirmRes = DConfirmRes
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     confirmResDetails :: Maybe DConfirmResDetails,
-    isAdvanceBookingEnabled :: Maybe Bool
+    isAdvanceBookingEnabled :: Maybe Bool,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -189,6 +192,8 @@ confirm DConfirmReq {..} = do
         paymentMethodInfo = Nothing, -- can be removed later
         confirmResDetails,
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
+        isInsured = Just $ booking.isInsured,
+        insuredAmount = booking.driverInsuredAmount,
         ..
       }
   where
@@ -284,6 +289,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   let (skipBooking, journeyId) = fromMaybe (Nothing, Nothing) $ (\j -> (Just j.skipBooking, Just (Id j.journeyId))) <$> searchRequest.journeyLegInfo
+  (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
   return $
     ( DRB.Booking
         { id = Id id,
@@ -313,6 +319,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           estimatedDuration = searchRequest.estimatedRideDuration,
           estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
           bookingDetails,
+          isPetRide = fromMaybe False searchRequest.isPetRide,
           tripTerms = quote.tripTerms,
           merchantId = searchRequest.merchantId,
           merchantOperatingCityId = searchRequest.merchantOperatingCityId,
@@ -418,6 +425,21 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
                 }
         )
         allSearchReqParties
+
+    isBookingInsured :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m (Bool, Maybe Text, Maybe Text)
+    isBookingInsured = do
+      insuranceConfig <- maybeM (pure Nothing) (\tp -> CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tp (DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType)) (pure quote.tripCategory)
+      pure $
+        maybe
+          (False, Nothing, Nothing)
+          ( \inc ->
+              case inc.allowedVehicleServiceTiers of
+                Just allowedTiers -> case quote.vehicleServiceTierType `elem` allowedTiers of
+                  True -> (True, inc.insuredAmount, inc.driverInsuredAmount)
+                  False -> (False, inc.insuredAmount, inc.driverInsuredAmount)
+                Nothing -> (True, inc.insuredAmount, inc.driverInsuredAmount)
+          )
+          insuranceConfig
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do

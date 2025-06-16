@@ -140,6 +140,7 @@ import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
 import qualified Domain.Types.DriverStats as DStats
+import Domain.Types.Estimate
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
@@ -216,8 +217,10 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -265,6 +268,7 @@ import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
@@ -318,6 +322,7 @@ data DriverInformationRes = DriverInformationRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    isPetModeEnabled :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -401,6 +406,7 @@ data DriverEntityRes = DriverEntityRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    isPetModeEnabled :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -453,6 +459,7 @@ data UpdateDriverReq = UpdateDriverReq
     canSwitchToRental :: Maybe Bool,
     canSwitchToInterCity :: Maybe Bool,
     canSwitchToIntraCity :: Maybe Bool,
+    isPetModeEnabled :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -504,7 +511,9 @@ data BookingAPIEntity = BookingAPIEntity
     returnTime :: Maybe UTCTime,
     distanceToPickup :: Maybe Meters,
     isScheduled :: Bool,
-    coinsRewardedOnGoldTierRide :: Maybe Int
+    coinsRewardedOnGoldTierRide :: Maybe Int,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -987,6 +996,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         active = driverInfo.active,
         onRide = onRideFlag,
         enabled = driverInfo.enabled,
+        isPetModeEnabled = driverInfo.isPetModeEnabled,
         blocked = driverInfo.blocked || overchargingBlocked,
         blockExpiryTime = driverInfo.blockExpiryTime <|> blockedTill,
         blockedReasonFlag = driverInfo.blockReasonFlag,
@@ -1086,6 +1096,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               }
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
   whenJust mVehicle $ \vehicle -> do
     when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
       -- deprecated logic, moved to driver service tier options
@@ -1127,9 +1138,23 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
+
+  let petTag = Yudhishthira.TagNameValue "PetDriver#true"
+  when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
+    logInfo "Tag already exists, update expiry"
+  mbNammTag <- Yudhishthira.verifyTag petTag
+  now <- getCurrentTime
+  let tag =
+        if isPetModeEnabled
+          then do
+            let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
+            Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
+          else Yudhishthira.removeTagNameValue person.driverTag petTag
+  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
+    QPerson.updateDriverTag (Just tag) personId
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
@@ -1255,6 +1280,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let searchTryId = nearbyReq.searchTryId
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+      (estimate :: Maybe Estimate) <- runInReplica $ QEst.findById (Id searchTry.estimateId)
       bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
       farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchRequest.fromLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion (Just (TransactionId (Id searchRequest.transactionId))) searchRequest.configInExperimentVersions
@@ -1263,7 +1289,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -1379,9 +1405,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
       if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
         then do
-          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, (TE.encodeUtf8 (sd.searchTryId.getId)))]
+          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (sd.searchTryId.getId))]
           void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 3600
-          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategory now sd.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, (TE.encodeUtf8 (sd.searchTryId.getId)))]
+          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategory now sd.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (sd.searchTryId.getId))]
           void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategory now sd.vehicleCategory) 3600
           void $ Redis.withCrossAppRedis $ Redis.incr (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId)
           void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
@@ -1469,6 +1495,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               avgSpeedOfVehicle = Nothing,
               driverSelectedFare = reqOfferedValue,
               customerExtraFee = searchTry.customerExtraFee,
+              petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
@@ -1582,7 +1609,7 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
       when (daysBetween > transporterConfig.earningsWindowSize) $
         throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " days (inclusive)."
       driverStats <- runInReplica $ SQDS.findAllInRangeByDriverId_ driverId from to
-      let dailyEarningData = CHDS.mkEarningsBar <$> (map (\d -> (driverId, d.merchantLocalDate, d.totalEarnings, d.totalDistance, d.numRides, d.cancellationCharges, d.bonusEarnings)) driverStats)
+      let dailyEarningData = CHDS.mkEarningsBar <$> map (\d -> (driverId, d.merchantLocalDate, d.totalEarnings, d.totalDistance, d.numRides, d.cancellationCharges, d.bonusEarnings)) driverStats
       pure $ mkEarningPeriodStatsRes dailyEarningData
     DCommon.WEEKLY -> do
       when (weeksBetween > transporterConfig.earningsWindowSize) $
@@ -1603,7 +1630,7 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
     daysBetween :: Int
     daysBetween =
       let days_diff = diffDays to from
-       in (fromIntegral days_diff) + 1
+       in fromIntegral days_diff + 1
 
     weeksBetween :: Int
     weeksBetween =
@@ -1618,7 +1645,7 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
     monthsBetween =
       let (fromYear, fromMonth, _) = toGregorian from
           (toYear, toMonth, _) = toGregorian to
-       in (fromIntegral (toYear - fromYear)) * 12 + (toMonth - fromMonth + 1)
+       in fromIntegral (toYear - fromYear) * 12 + (toMonth - fromMonth + 1)
 
     totalWeeksOfYear :: Integer -> Int
     totalWeeksOfYear year =
@@ -2424,7 +2451,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
               let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
-              let mbScheduleBookingListEligibilityTags = (listToMaybe availableServiceTierItems) >>= (.scheduleBookingListEligibilityTags)
+              let mbScheduleBookingListEligibilityTags = listToMaybe availableServiceTierItems >>= (.scheduleBookingListEligibilityTags)
               let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
               if scheduleEnabled
                 then do
@@ -2500,7 +2527,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           pure Nothing
         Just quote -> do
           let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing estimatedFare quote.fareParams.congestionChargeViaDp) quote.farePolicy
-          return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', ..} (catMaybes farePolicyBreakups)
+          return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
     mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
     mkBreakupItem title valueInText = do
@@ -2883,4 +2910,4 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
       isEnabledForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.subscriptionEnabledForVehicleCategories))
   return $ DriverSpecificSubscriptionData {..}
   where
-    isFreeTrialEnabled subscriptionConfig = ((subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True)
+    isFreeTrialEnabled subscriptionConfig = (subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True

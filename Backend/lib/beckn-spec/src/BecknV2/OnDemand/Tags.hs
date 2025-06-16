@@ -68,6 +68,7 @@ data BecknTagGroup
   | FARE_PARAMETERS_IN_RATECARD_INFO
   | DRIVER_IDENTIFIER
   | CUSTOMER_INFO
+  | PET_ORDER_INFO
   | ESTIMATIONS
   | CURRENT_LOCATION
   | DRIVER_DETAILS
@@ -94,6 +95,7 @@ data BecknTagGroup
   | ESTIMATED_END_TIME_RANGE
   | RIDE_DETAILS_INFO
   | SAFETY_PLUS_INFO
+  | INSURANCE_INFO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -286,6 +288,7 @@ data BecknTag
   | NIGHT_SHIFT_START_TIME
   | NIGHT_SHIFT_END_TIME
   | PER_STOP_CHARGES
+  | PET_CHARGES
   | NIGHT_SHIFT_START_TIME_IN_SECONDS
   | NIGHT_SHIFT_END_TIME_IN_SECONDS
   | NIGHT_SHIFT_CHARGE_PERCENTAGE
@@ -454,6 +457,7 @@ data BecknTag
   | ESTIMATED_END_TIME_RANGE_END
   | PARCEL_IMAGE_UPLOADED
   | CUSTOMER_DISABILITY_DISABLE
+  | IS_PET_RIDE
   | IS_VALID_RIDE
   | PARCEL_TYPE
   | PARCEL_QUANTITY
@@ -462,6 +466,8 @@ data BecknTag
   | NO_CHARGES
   | IS_SAFETY_PLUS
   | IS_MULTIMODAL_SEARCH
+  | IS_INSURED
+  | INSURED_AMOUNT
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -509,6 +515,8 @@ instance CompleteTag BecknTag where
     SAFETY_PLUS_CHARGES -> (Just "safety plus charges", Nothing)
     IS_SAFETY_PLUS -> (Just "is safety plus", Nothing)
     NO_CHARGES -> (Just "no conditional charges", Nothing)
+    IS_INSURED -> (Just "is insured", Nothing)
+    INSURED_AMOUNT -> (Just "insured amount", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -550,10 +558,13 @@ instance CompleteTag BecknTag where
     SPECIAL_LOCATION_TAG -> GENERAL_INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
+    IS_PET_RIDE -> PET_ORDER_INFO
     PARCEL_TYPE -> DELIVERY
     PARCEL_QUANTITY -> DELIVERY
     IS_SAFETY_PLUS -> GENERAL_INFO
     SAFETY_PLUS_CHARGES -> GENERAL_INFO
+    IS_INSURED -> INSURANCE_INFO
+    INSURED_AMOUNT -> INSURANCE_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

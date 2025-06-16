@@ -100,6 +100,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item currency
+      -- petCharges <-
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item currency
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
