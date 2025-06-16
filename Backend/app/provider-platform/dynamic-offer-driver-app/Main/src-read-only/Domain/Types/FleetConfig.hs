@@ -23,7 +23,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FleetType = PUBLIC | TRUSTED | PRIVATE
   deriving stock (Show, Read, Eq, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance BS.HasSqlValueSyntax be Text => BS.HasSqlValueSyntax be FleetType where
   sqlValueSyntax = BS.sqlValueSyntax . Data.Text.pack . show
@@ -65,4 +65,4 @@ data FleetConfig = FleetConfig
     updatedAt :: Kernel.Prelude.UTCTime,
     fleetType :: FleetType
   }
-  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
