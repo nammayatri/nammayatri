@@ -118,3 +118,4 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_ge
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash_distance_past double precision ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash_distance double precision ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city_past double precision ;
+

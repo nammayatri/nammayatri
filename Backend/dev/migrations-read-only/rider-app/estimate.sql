@@ -527,3 +527,13 @@ ALTER TABLE atlas_app.estimate ADD COLUMN insured_amount text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

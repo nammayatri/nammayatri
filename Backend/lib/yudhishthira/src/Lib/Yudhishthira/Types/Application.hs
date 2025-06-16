@@ -18,6 +18,7 @@ data NammaTagApplication = NammaTagApplication
 
 data ApplicationEvent
   = Search
+  | Select
   | RideAssign
   | RideStart
   | RideEnd
