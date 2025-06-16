@@ -39,7 +39,7 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.fleetType fleetType
+      Se.Set Beam.fleetType (Just fleetType)
     ]
     [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId)]]
 
@@ -60,7 +60,7 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            fleetType = fleetType
+            fleetType = fromMaybe Domain.Types.FleetConfig.PUBLIC fleetType
           }
 
 instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
@@ -78,5 +78,5 @@ instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt,
-        Beam.fleetType = fleetType
+        Beam.fleetType = Just fleetType
       }

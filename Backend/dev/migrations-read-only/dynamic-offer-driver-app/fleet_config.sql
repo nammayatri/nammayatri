@@ -27,3 +27,7 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN unlink_driver_and_veh
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ALTER COLUMN unlink_driver_and_vehicle_on_trip_termination SET DEFAULT true;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN fleet_type text DEFAULT 'PUBLIC';

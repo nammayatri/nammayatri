@@ -193,13 +193,13 @@ FleetConfig:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
-    fleetType: fromMaybe "PUBLIC" fleetType|E
+    fleetType: fromMaybe PUBLIC fleetType|E
   sqlType:
     endRideDistanceThreshold: double precision
   default:
     endRideDistanceThreshold: "100"
     directlyStartFirstTripAssignment: "true"
     unlinkDriverAndVehicleOnTripTermination: "true"
-    fleetType: "PUBLIC"
+    fleetType: PUBLIC
   constraints:
     fleetOwnerId: PrimaryKey

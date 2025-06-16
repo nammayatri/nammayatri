@@ -5,7 +5,10 @@ module Storage.Beam.FleetConfig where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import qualified Database.Beam.Backend.SQL as BS
+import qualified Database.Beam.Postgres as BP
 import Domain.Types.Common ()
+import qualified Domain.Types.FleetConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -25,7 +28,7 @@ data FleetConfigT f = FleetConfigT
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    fleetType :: (B.C f (Maybe Data.Text.Text))
+    fleetType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.FleetConfig.FleetType))
   }
   deriving (Generic, B.Beamable)
 
