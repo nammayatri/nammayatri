@@ -196,7 +196,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   mbFleetConfig <- case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Just fleetOwnerId) -> QFC.findByPrimaryKey (Id fleetOwnerId)
     _ -> QFC.findByPrimaryKey getEntityData.id
-  let isTrustedFleet = (mbFleetConfig >>= (.fleetType)) == Just DFC.TRUSTED
+  let isTrustedFleet = maybe False (== DFC.TRUSTED) (mbFleetConfig <&> (.fleetType))
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
