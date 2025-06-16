@@ -45,7 +45,8 @@ buildConfirmReq rider booking bapConfig txnId bppData city = do
       messageId = booking.id.getId
 
   now <- getCurrentTime
-  let ttl = diffUTCTime booking.validTill now
+  let confirmTtl = maybe booking.validTill (\ttlSec -> addUTCTime (intToNominalDiffTime ttlSec) now) bapConfig.confirmTTLSec
+      ttl = diffUTCTime confirmTtl now
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
   context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city booking.vehicleType

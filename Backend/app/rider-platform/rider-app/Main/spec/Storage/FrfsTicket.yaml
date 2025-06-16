@@ -253,7 +253,7 @@ FRFSQuote:
     discountedTickets: Maybe Int
     bppDelayedInterest: Maybe Int
     oldCacheDump: Maybe Text
-
+    childTicketQuantity: Maybe Int
   beamFields:
     price:
       currency: Maybe Currency

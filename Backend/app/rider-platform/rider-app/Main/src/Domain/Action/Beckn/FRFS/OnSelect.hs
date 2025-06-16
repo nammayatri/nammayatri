@@ -57,6 +57,7 @@ validateRequest DOnSelect {..} = do
 
 onSelect :: FRFSConfirmFlow m r => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> m ()
 onSelect onSelectReq merchant quote = do
+  whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   Qquote.updatePriceById quote.id onSelectReq.totalPrice
   platformType <- case quote.integratedBppConfigId of
     Just integratedBppConfigId' -> do
@@ -64,4 +65,4 @@ onSelect onSelectReq merchant quote = do
       return $ DIBC.platformType ibppConfig
     Nothing -> return DIBC.APPLICATION
   let req = FRFSQuoteConfirmReq {discounts = []}
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id req Nothing Nothing platformType Nothing
+  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id req platformType Nothing

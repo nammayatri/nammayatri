@@ -24,7 +24,8 @@ buildSelectReq quote bapConfig bppData city = do
   now <- getCurrentTime
   let transactionId = quote.searchId.getId
   let messageId = quote.id.getId
-      ttl = diffUTCTime quote.validTill now
+  let validTill = addUTCTime (intToNominalDiffTime (fromMaybe 120 bapConfig.selectTTLSec)) now
+      ttl = diffUTCTime validTill now
 
   let mSettlementType = bapConfig.settlementType
   context <- Utils.buildContext Spec.SELECT bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city quote.vehicleType
