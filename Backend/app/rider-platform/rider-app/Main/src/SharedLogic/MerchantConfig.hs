@@ -23,9 +23,11 @@ module SharedLogic.MerchantConfig
     mkCancellationByDriverKey,
     blockCustomer,
     getRidesCountInWindow,
-    updateCustomerAuthCounters,
-    checkAuthFraud,
+    checkAuthFraudByIP,
     customerAuthBlock,
+    blockCustomerByIP,
+    updateCustomerAuthCountersByIP,
+    isIPBlocked,
   )
 where
 
@@ -84,11 +86,11 @@ updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCross
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
 
-updateCustomerAuthCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCustomerAuthCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+updateCustomerAuthCountersByIP :: (CacheFlow m r, MonadFlow m) => Text -> [DMC.MerchantConfig] -> m ()
+updateCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   mapM_ (\mc -> whenJust mc.fraudAuthCountWindow $ \window -> incrementCount mc.id.getId window) merchantConfigs
   where
-    incrementCount ind = SWC.incrementWindowCount (mkAuthCounterKey ind riderId.getId)
+    incrementCount ind = SWC.incrementWindowCount (mkAuthCounterKey ind clientIP)
 
 updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
 updateTotalRidesCounters rider = do
@@ -165,21 +167,21 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSear
           let totalRideCount = sum rideCount
           return $ totalRideCount <= mc.fraudRideCountThreshold
 
-checkAuthFraud :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => [DMC.MerchantConfig] -> Id Person.Person -> m (Bool, Maybe (Id DMC.MerchantConfig))
-checkAuthFraud mc riderId = Redis.withNonCriticalCrossAppRedis $ do
+checkAuthFraudByIP :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => [DMC.MerchantConfig] -> Text -> m (Bool, Maybe (Id DMC.MerchantConfig))
+checkAuthFraudByIP mc clientIP = Redis.withNonCriticalCrossAppRedis $ do
   let configsWithThreshold = filter (\mc' -> isJust mc'.fraudAuthCountThreshold) mc
 
   results <- forM configsWithThreshold $ \selectedMc -> do
     fraudDetected <- case selectedMc.fraudAuthCountWindow of
       Nothing -> pure False
       Just window -> do
-        authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId riderId.getId) window
+        authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId clientIP) window
         let threshold = selectedMc.fraudAuthCountThreshold
         let isOverThreshold = maybe False (authCount >=) threshold
 
         when isOverThreshold $ do
-          logInfo $ "Auth fraud detected for user " <> riderId.getId <> " with count " <> show authCount
-          SWC.deleteCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId riderId.getId) window
+          logInfo $ "Auth fraud detected for IP " <> clientIP <> " with count " <> show authCount
+          SWC.deleteCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId clientIP) window
 
         pure isOverThreshold
 
@@ -208,8 +210,27 @@ customerAuthBlock riderId mcId blockDurationMinutes = do
 
   blockedUntil <- case blockDurationMinutes of
     Nothing -> pure Nothing
-    Just mins -> do
-      now <- getCurrentTime
-      pure $ Just $ addUTCTime (fromIntegral (mins * 60)) now
+    Just mins -> Just . addUTCTime (fromIntegral (mins * 60)) <$> getCurrentTime
   _ <- RT.deleteByPersonId riderId
   void $ QP.updatingAuthEnabledAndBlockedState riderId mcId (Just True) blockedUntil
+
+blockCustomerByIP :: (CacheFlow m r, MonadFlow m) => Text -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
+blockCustomerByIP clientIP _mcId blockDurationMinutes = Redis.withNonCriticalCrossAppRedis $ do
+  let blockKey = "Customer:IPBlocked:" <> clientIP
+  case blockDurationMinutes of
+    Nothing -> return ()
+    Just mins -> do
+      let ttlSeconds = fromIntegral mins * 60
+      void $ Redis.setExp blockKey ("true" :: Text) ttlSeconds
+  logInfo $ "IP " <> clientIP <> " has been blocked for " <> show blockDurationMinutes <> " minutes"
+
+isIPBlocked :: (CacheFlow m r, MonadFlow m) => Text -> m Bool
+isIPBlocked clientIP = Redis.withNonCriticalCrossAppRedis $ do
+  let whitelistKey = "whitelisted_ip:" <> clientIP
+  whitelistResult <- Redis.get whitelistKey
+  case whitelistResult of
+    Just (_ :: Text) -> return False
+    Nothing -> do
+      let blockKey = "Customer:IPBlocked:" <> clientIP
+      blockResult <- Redis.get blockKey
+      return $ isJust (blockResult :: Maybe Text)
