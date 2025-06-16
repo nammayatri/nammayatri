@@ -126,6 +126,7 @@ apis:
         - mbDriverId: Text
         - mbBadgeName: Text
         - mbFleetOwnerId: Text
+        - mbalertStatus: Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus
         - mbLimit: Int
         - mbOffset: Int
       response:

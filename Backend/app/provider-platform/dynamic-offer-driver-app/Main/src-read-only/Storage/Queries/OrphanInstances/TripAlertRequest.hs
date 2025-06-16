@@ -19,6 +19,7 @@ instance FromTType' Beam.TripAlertRequest Domain.Types.TripAlertRequest.TripAler
         Domain.Types.TripAlertRequest.TripAlertRequest
           { alertRequestId = Kernel.Types.Id.Id alertRequestId,
             alertRequestType = alertRequestType,
+            alertStatus = alertStatus,
             conductorFleetBadgeId = Kernel.Types.Id.Id <$> conductorFleetBadgeId,
             createdAt = createdAt,
             driverFleetBadgeId = Kernel.Types.Id.Id <$> fleetBadgeId,
@@ -38,6 +39,7 @@ instance ToTType' Beam.TripAlertRequest Domain.Types.TripAlertRequest.TripAlertR
     Beam.TripAlertRequestT
       { Beam.alertRequestId = Kernel.Types.Id.getId alertRequestId,
         Beam.alertRequestType = alertRequestType,
+        Beam.alertStatus = alertStatus,
         Beam.conductorFleetBadgeId = Kernel.Types.Id.getId <$> conductorFleetBadgeId,
         Beam.createdAt = createdAt,
         Beam.fleetBadgeId = Kernel.Types.Id.getId <$> driverFleetBadgeId,

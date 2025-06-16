@@ -24,3 +24,8 @@ ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN fleet_badge_id 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN conductor_fleet_badge_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN alert_status text ;

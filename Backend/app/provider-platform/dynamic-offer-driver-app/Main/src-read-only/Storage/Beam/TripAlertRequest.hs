@@ -5,6 +5,7 @@ module Storage.Beam.TripAlertRequest where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Alert.AlertRequestType
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -15,6 +16,7 @@ import Tools.Beam.UtilsTH
 data TripAlertRequestT f = TripAlertRequestT
   { alertRequestId :: B.C f Data.Text.Text,
     alertRequestType :: B.C f Domain.Types.Alert.AlertRequestType.AlertRequestType,
+    alertStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus),
     conductorFleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     fleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),

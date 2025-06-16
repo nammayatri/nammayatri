@@ -585,7 +585,8 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
             createdAt = now,
             updatedAt = now,
             merchantId = tripTransaction.merchantId,
-            merchantOperatingCityId = tripTransaction.merchantOperatingCityId
+            merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
+            alertStatus = Just $ AWAITING_APPROVAL
           }
       TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
       pure alertRequest.id

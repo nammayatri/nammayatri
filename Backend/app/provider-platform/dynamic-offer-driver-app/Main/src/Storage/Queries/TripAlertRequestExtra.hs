@@ -4,6 +4,7 @@
 module Storage.Queries.TripAlertRequestExtra where
 
 import Domain.Types.Alert
+import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TripAlertRequest
@@ -44,8 +45,8 @@ findLatestTripAlertRequest merchantOpCityId fleetOwnerId alertRequestType driver
 
 ------------------------- multiple fleet owners -------------------------
 
-findTripAlertRequestsByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [Text] -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe [Id DFB.FleetBadge] -> Maybe Text -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
-findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId mbFleetBadgeIds mbRouteCode mbLimit mbOffset = do
+findTripAlertRequestsByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [Text] -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe [Id DFB.FleetBadge] -> Maybe Text -> Maybe AlertRequestStatus -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
+findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId mbFleetBadgeIds mbRouteCode mbalertStatus mbLimit mbOffset = do
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
@@ -56,6 +57,7 @@ findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo 
             <> [Se.Is Beam.fleetBadgeId $ Se.In fleetBadgeIds | isJust mbFleetBadgeIds]
             <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
             <> [Se.Is Beam.routeCode $ Se.Eq (fromJust mbRouteCode) | isJust mbRouteCode]
+            <> [Se.Is Beam.alertStatus $ Se.Eq mbalertStatus | isJust mbalertStatus]
         )
     ]
     (Se.Desc Beam.createdAt)

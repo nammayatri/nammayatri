@@ -148,6 +148,7 @@ TripAlertRequest:
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    alertStatus: Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus
 
   constraints:
     id: "PrimaryKey"
