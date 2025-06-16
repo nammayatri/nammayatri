@@ -51,8 +51,6 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
 
 deriving instance Show SearchRequestForDriver
 
-instance CH.ClickhouseValue Common.Meters
-
 instance CH.ClickhouseValue Common.Seconds
 
 instance Hashable DVC.VehicleCategory
