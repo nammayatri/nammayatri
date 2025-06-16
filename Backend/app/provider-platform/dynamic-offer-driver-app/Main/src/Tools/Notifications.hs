@@ -90,6 +90,12 @@ data CancellationRateBaseNudgeData = CancellationRateBaseNudgeData
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data DrunkAndDriveViolationWarningData = DrunkAndDriveViolationWarningData
+  { driverId :: Text,
+    drunkAndDriveViolationCount :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 -- FIXME is it correct?
 data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   { rideId :: Id DRide.Ride,
@@ -938,6 +944,33 @@ sendCancellationRateNudgeOverlay mOpCityId person fcmType req entityData = do
           fcmEntityIds = entityData.driverId,
           fcmEntityData = Just entityData,
           fcmNotificationJSON = FCM.createAndroidNotification notifTitle body fcmType Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
+    body = FCMNotificationBody $ fromMaybe "Description" req.description
+
+drunkAndDriveViolationWarningOverlay ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FCM.FCMOverlayReq ->
+  DrunkAndDriveViolationWarningData ->
+  m ()
+drunkAndDriveViolationWarningOverlay mOpCityId person req entityData = do
+  transporterConfig <- findByMerchantOpCityId mOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.DRUNK_AND_DRIVE_VIOLATION_WARNING,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.driverId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.DRUNK_AND_DRIVE_VIOLATION_WARNING Nothing,
           fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
           fcmNotificationId = Nothing
         }

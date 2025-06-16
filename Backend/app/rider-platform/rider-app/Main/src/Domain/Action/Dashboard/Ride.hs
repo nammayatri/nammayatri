@@ -420,7 +420,8 @@ rideInfo merchantId reqRideId = do
         rideCreatedAt = ride.createdAt,
         roundTrip = booking.roundTrip,
         mobileCountryCode = person.mobileCountryCode,
-        isSafetyPlus = ride.isSafetyPlus
+        isSafetyPlus = ride.isSafetyPlus,
+        isAirConditioned = fromMaybe False booking.isAirConditioned
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup

@@ -20,12 +20,14 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
 import Tools.Auth
 import Tools.Error
+import Tools.Notifications (notifyAboutDeletedPerson)
 
 postDeletedPerson :: ((Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.DeletedPerson.DeletedPersonReq -> Environment.Flow APISuccess.APISuccess)
 postDeletedPerson (mbPersonId, merchantId) (API.Types.UI.DeletedPerson.DeletedPersonReq {reasonToDelete}) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
+  void $ notifyAboutDeletedPerson personId
   QD.create (createDeletedPerson person now)
   _ <- QP.deleteById personId
   _ <- QSRL.deleteAllByRiderId personId
