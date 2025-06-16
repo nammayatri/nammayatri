@@ -810,7 +810,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") $ map (.ptcv) transportDataList
+            ptcv = T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs
           }
   return transportData
 
