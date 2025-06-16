@@ -24,6 +24,7 @@ data FRFSQuote = FRFSQuote
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     childPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,

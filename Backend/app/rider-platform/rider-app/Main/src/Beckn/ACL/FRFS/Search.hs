@@ -37,7 +37,7 @@ buildSearchReq ::
 buildSearchReq transactionId vehicleType bapConfig mbFromStation mbToStation city = do
   now <- getCurrentTime
   messageId <- generateGUID
-  let validTill = addUTCTime (intToNominalDiffTime 30) now
+  let validTill = addUTCTime (intToNominalDiffTime (fromMaybe 30 bapConfig.searchTTLSec)) now
       ttl = diffUTCTime validTill now
 
   context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing city vehicleType

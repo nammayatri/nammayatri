@@ -42,7 +42,8 @@ buildInitReq rider tBooking bapConfig bppData city = do
   now <- getCurrentTime
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
-      ttl = diffUTCTime tBooking.validTill now
+  let initTtl = maybe tBooking.validTill (\ttlSec -> addUTCTime (intToNominalDiffTime ttlSec) now) bapConfig.initTTLSec
+      ttl = diffUTCTime initTtl now
 
   let mSettlementType = bapConfig.settlementType
   context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city tBooking.vehicleType

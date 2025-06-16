@@ -622,6 +622,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.eventDiscountAmount = Nothing,
                 DFRFSQuote.integratedBppConfigId = Just fromStation'.integratedBppConfigId,
                 DFRFSQuote.fareDetails = Nothing,
+                DFRFSQuote.childTicketQuantity = Nothing,
                 DFRFSQuote.oldCacheDump = Nothing
               }
       return $ Just quote
@@ -694,7 +695,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
           (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id Nothing Nothing DIBC.PARTNERORG Nothing
+      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id DIBC.PARTNERORG Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

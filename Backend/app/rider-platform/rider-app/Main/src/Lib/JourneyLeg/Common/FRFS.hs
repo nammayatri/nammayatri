@@ -550,14 +550,15 @@ confirm personId merchantId searchId mbQuoteId ticketQuantity childTicketQuantit
   mbBooking <- QTBooking.findBySearchId searchId -- if booking already there no need to confirm again
   when (not skipBooking && bookingAllowed && isNothing mbBooking) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
+    quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
+    void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quoteId ticketQuantity childTicketQuantity
     if vehicleType == Spec.BUS
       then do
-        quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
         void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote DIBC.MULTIMODAL vehicleType
-      else void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId ticketQuantity childTicketQuantity DIBC.MULTIMODAL crisSdkResponse
+      else void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId DIBC.MULTIMODAL crisSdkResponse
   where
     processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> m ()
     processOnSelect onSelectReq = do
