@@ -13,6 +13,7 @@ import qualified Data.Singletons.TH
 import qualified Data.Time
 import qualified Domain.Types.Alert
 import qualified Domain.Types.Alert.AlertRequestData
+import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Alert.AlertRequestType
 import qualified Domain.Types.FleetBadgeType
 import EulerHS.Prelude hiding (id, state)
@@ -691,6 +692,9 @@ type GetDriverFleetGetDriverRequests =
            "mbFleetOwnerId"
            Kernel.Prelude.Text
       :> QueryParam
+           "mbalertStatus"
+           Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus
+      :> QueryParam
            "mbLimit"
            Kernel.Prelude.Int
       :> QueryParam
@@ -1354,7 +1358,7 @@ data DriverAPIs = DriverAPIs
     postDriverFleetV2AccessSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetAddVehicles :: (Data.ByteString.Lazy.ByteString, CreateVehiclesReq) -> EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
     postDriverFleetAddVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.Role -> AddVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverFleetGetDriverRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient DriverRequestRespT,
+    getDriverFleetGetDriverRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient DriverRequestRespT,
     postDriverFleetRespondDriverRequest :: Kernel.Prelude.Text -> RequestRespondReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetAddRCWithoutDriver :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetGetAllVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ListVehicleResT,

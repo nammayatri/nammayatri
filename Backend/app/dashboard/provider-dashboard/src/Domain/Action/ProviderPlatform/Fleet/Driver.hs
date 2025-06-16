@@ -66,6 +66,7 @@ import Data.Text hiding (elem, filter, find, length, map, null)
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
 import Domain.Types.Alert
+import Domain.Types.Alert.AlertRequestStatus ()
 import Domain.Types.FleetBadgeType as DFBT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
@@ -461,11 +462,11 @@ getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset
       hasFleetMemberHierarchy = apiTokenInfo.merchant.hasFleetMemberHierarchy
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId (Just requestorId) hasFleetMemberHierarchy (Just isRequestorFleerOwner)
 
-getDriverFleetGetDriverRequests :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestRespT
-getDriverFleetGetDriverRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName _ mbLimit mbOffset = do
+getDriverFleetGetDriverRequests :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe AlertRequestStatus -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestRespT
+getDriverFleetGetDriverRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName _ mbalertStatus mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetDriverRequests) mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName (Just memberPersonId) mbLimit mbOffset
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetDriverRequests) mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName (Just memberPersonId) mbalertStatus mbLimit mbOffset
 
 postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.NearbyDriverReq -> Flow Common.NearbyDriverRespT
 postDriverFleetGetNearbyDrivers merchantShortId opCity apiTokenInfo req = do

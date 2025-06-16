@@ -77,6 +77,7 @@ import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types.Alert as DTA
+import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
@@ -311,8 +312,8 @@ checkRCAssociationForFleet fleetOwnerId vehicleRC = do
 
 ---------------------------------------------------------------------
 
-getDriverFleetGetDriverRequests :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Maybe DTA.AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestRespT
-getDriverFleetGetDriverRequests merchantShortId opCity mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName mbFleetOwnerId mbLimit mbOffset = do
+getDriverFleetGetDriverRequests :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Maybe DTA.AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe AlertRequestStatus -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestRespT
+getDriverFleetGetDriverRequests merchantShortId opCity mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName mbFleetOwnerId mbalertStatus mbLimit mbOffset = do
   memberPersonId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "Member person id is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -324,8 +325,8 @@ getDriverFleetGetDriverRequests merchantShortId opCity mbFrom mbTo mbAlertReques
       Just badgeName -> do
         badges <- QFB.findAllBadgesByNameAndBadgeTypeAndFleetOwnerIds (Id <$> fleetOwnerIds) badgeName DFBT.DRIVER
         let fleetBadgeIds = map (.id) badges
-        B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId (Just fleetBadgeIds) mbRouteCode mbLimit mbOffset
-      Nothing -> B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId Nothing mbRouteCode mbLimit mbOffset
+        B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId (Just fleetBadgeIds) mbRouteCode mbalertStatus mbLimit mbOffset
+      Nothing -> B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId Nothing mbRouteCode mbalertStatus mbLimit mbOffset
   driverRequestList <-
     mapM
       ( \tripAlertRequest -> do
