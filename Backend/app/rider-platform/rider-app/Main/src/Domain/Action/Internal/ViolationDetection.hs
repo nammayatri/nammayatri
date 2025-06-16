@@ -57,5 +57,7 @@ violationDetection ViolationDetectionReq {..} = do
             else do
               logDebug $ "Anti-Violation detected for ride with id" <> rideId.getId
         _ -> logDebug $ "Skipping safety alert for ride with id" <> rideId.getId
+    RideStopReachedDetection _ -> do
+      logDebug $ "Ride stop reached detected for ride:" <> rideId.getId
 
   pure Success

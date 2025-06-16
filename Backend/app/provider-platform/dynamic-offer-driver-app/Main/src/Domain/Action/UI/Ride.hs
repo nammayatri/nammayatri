@@ -40,6 +40,7 @@ import qualified Data.Text as T hiding (count, map)
 import qualified Data.Text as Text
 import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
+import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Location as DLoc
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types as DTC
@@ -75,6 +76,7 @@ import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -569,6 +571,15 @@ stopAction rideId pt stopLocId action = do
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      let currentPassStop = LatLong stopInfo.stopStartLatLng.lat stopInfo.stopStartLatLng.lon
+      existingStops <- Redis.get (VID.mkReachedStopKey rideId)
+      case existingStops of
+        Just reachedStopList -> do
+          unless (currentPassStop `elem` reachedStopList) $ do
+            let updatedList = reachedStopList ++ [currentPassStop]
+            Redis.setExp (VID.mkReachedStopKey rideId) updatedList 86400
+        Nothing -> do
+          Redis.setExp (VID.mkReachedStopKey rideId) [currentPassStop] 86400
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)

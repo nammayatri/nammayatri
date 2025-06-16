@@ -14,6 +14,7 @@ data DetectionData
   | OppositeDirectionDetection OppositeDirectionDetectionData
   | TripNotStartedDetection TripNotStartedDetectionData
   | SafetyCheckDetection SafetyCheckDetectionData
+  | RideStopReachedDetection RideStopReachedDetectionData
   deriving (Show, Eq, Ord, Read, Generic, ToSchema)
 
 data OverSpeedingDetectionData = OverSpeedingDetectionData {location :: LatLong, speed :: Double}
@@ -63,6 +64,15 @@ data SafetyCheckDetectionData = SafetyCheckDetectionData
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data RideStopReachedDetectionData = RideStopReachedDetectionData
+  { location :: LatLong,
+    stopName :: Text,
+    stopCode :: Text,
+    stopIndex :: Int,
+    reachedAt :: UTCTime
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 instance FromJSON DetectionData where
   parseJSON = withObject "DetectionData" $ \obj ->
     ( OverSpeedingDetection <$> obj .: "overSpeedingDetection"
@@ -80,6 +90,8 @@ instance FromJSON DetectionData where
       <|> ( TripNotStartedDetection <$> obj .: "tripNotStartedDetection"
           )
       <|> ( SafetyCheckDetection <$> obj .: "safetyCheckDetection"
+          )
+      <|> ( RideStopReachedDetection <$> obj .: "rideStopReachedDetection"
           )
 
 instance ToJSON DetectionData where
@@ -100,3 +112,5 @@ instance ToJSON DetectionData where
       object ["tripNotStartedDetection" .= data']
     SafetyCheckDetection data' ->
       object ["safetyCheckDetection" .= data']
+    RideStopReachedDetection data' ->
+      object ["rideStopReachedDetection" .= data']

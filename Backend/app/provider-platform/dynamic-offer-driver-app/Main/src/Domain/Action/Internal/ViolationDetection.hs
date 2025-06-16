@@ -9,6 +9,7 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,6 +33,18 @@ violationDetection ViolationDetectionReq {..} = do
   let driverName = driver.firstName <> " " <> (fromMaybe "" driver.lastName)
   driverMobileNumber <- mapM decrypt driver.mobileNumber
   (requestTitle, requestBody, requestData) <- getAlertRequestData driverName driverMobileNumber detectionData
+  case detectionData of
+    RideStopReachedDetection RideStopReachedDetectionData {..} -> do
+      when isViolated $ do
+        existingStops <- Redis.safeGet (mkReachedStopKey rideId)
+        case existingStops of
+          Just existingList -> do
+            unless (location `elem` existingList) $ do
+              let updatedList = existingList ++ [location]
+              Redis.setExp (mkReachedStopKey rideId) updatedList 86400
+          Nothing -> do
+            Redis.setExp (mkReachedStopKey rideId) [location] 86400
+    _ -> pure ()
   void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
   pure Success
   where
@@ -77,3 +90,13 @@ violationDetection ViolationDetectionReq {..} = do
         let requestBody = "Safety Check Detected"
         let requestData = SafetyCheck SafetyCheckData {..}
         return (requestTitle, requestBody, requestData)
+      RideStopReachedDetection RideStopReachedDetectionData {..} -> do
+        -- NEW
+        let requestTitle = "Ride Stop Reached"
+        let requestBody = "Driver has reached ride stop: " <> stopName
+        let requestData = RideStopReached RideStopReachedData {..}
+        -- You'll need to define this in Alert types
+        return (requestTitle, requestBody, requestData)
+
+mkReachedStopKey :: Id DRide.Ride -> Text
+mkReachedStopKey rideId = "add_stop_ride_reached_stop:" <> rideId.getId

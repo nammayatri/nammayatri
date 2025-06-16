@@ -152,7 +152,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           whenJust (booking.toLocation) $ \toLoc -> do
                             QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
                           void $ QRide.updateStatus ride.id DRide.NEW
-                          void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing}))
+                          void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
                           void $ sendRideAssignedUpdateToBAP booking ride driver vehicle True -- TODO: handle error
                           return Complete
                 _ -> do

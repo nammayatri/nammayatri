@@ -519,11 +519,11 @@ pickNWayPoints number waypoints
               (zip [1 ..] waypoints)
     pickedPoints ++ [last waypoints]
 
-pickedWaypointsForEditDestination :: [(LatLong, Bool)] -> [LatLong]
-pickedWaypointsForEditDestination waypoints =
+pickedWaypointsForEditDestination :: [(LatLong, Bool)] -> Int -> [LatLong]
+pickedWaypointsForEditDestination waypoints numPointsToAdd =
   let n = length waypoints -- Total number of waypoints
       chunks = breakOnTrueInclude waypoints
-      remainingPicks = 7 :: Int
+      remainingPicks = numPointsToAdd :: Int
       weightedChunks =
         [pickNWayPoints (max 1 (remainingPicks * length chunk `div` n)) chunk | chunk <- chunks]
    in concat weightedChunks

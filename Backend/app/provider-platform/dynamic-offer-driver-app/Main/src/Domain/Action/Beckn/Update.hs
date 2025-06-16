@@ -22,6 +22,7 @@ import Data.List.Split (chunksOf)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text as Text
+import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
 import Domain.Action.UI.Ride.EndRide.Internal
@@ -190,6 +191,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         QL.create dropLocation
         let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
         let srcPt = Maps.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+        let bookedsStops = booking.stops
+        let stopLatLongs = map (\stop -> Maps.LatLong {lat = stop.lat, lon = stop.lon}) bookedsStops
         merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
         case status of
           Enums.SOFT_UPDATE -> do
@@ -209,8 +212,17 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
                     addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
                   deleteEditDestinationWaypoints ride.driverId
-                  return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
-                else return (srcPt :| [dropLatLong], Nothing, Nothing)
+                  reachedStopLocations <- Redis.get (VID.mkReachedStopKey ride.id)
+                  let filteredStops = case reachedStopLocations of
+                        Just reachedStops -> filter (\stop -> not (any (\reachedStop -> stop.lat == reachedStop.lat && stop.lon == reachedStop.lon) reachedStops)) stopLatLongs
+                        Nothing -> stopLatLongs
+                  let reachedStopLocationsWithTrue = case reachedStopLocations of
+                        Just reachedStops -> map (\stop -> (stop, True)) reachedStops
+                        Nothing -> []
+                  case bookedsStops of
+                    [] -> return (srcPt :| ((pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) 7) ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                    _ -> return (srcPt :| ((pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints <> reachedStopLocationsWithTrue) (7 - length filteredStops)) ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                else return (srcPt :| (stopLatLongs ++ [dropLatLong]), Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
               Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id (Just ride.id.getId) $
