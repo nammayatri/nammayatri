@@ -1,0 +1,563 @@
+# Tech Context
+
+_This document lists the technologies used, development setup, technical constraints, dependencies, and tool usage patterns._ 
+
+## Build System and Dependency Management
+- **Nix Flakes**: For reproducible builds (`flake.nix`).
+
+## Core Technologies and Languages
+- **Haskell**: Primary backend language.
+- **PureScript**: Likely for frontend.
+- **Nix**: Build system language.
+- **YAML**: For Namma DSL.
+- **Dhall**: For configuration.
+- **GraphQL**: `rider-app` uses `morpheus-graphql-client`.
+
+## Key Data Stores & Messaging Systems
+- **PostgreSQL**: Persistent store (Beam ORM).
+- **Redis**: Caching/transient data (`hedis`), likely used for OTPs, `RegistrationToken`, rate limiting, distributed locks, and potentially geospatial queries for nearby drivers.
+- **Apache Kafka**: Event streaming.
+
+## Key Development Tools and Methodologies
+- **Namma DSL (`alchemist`)**: YAML-based DSL for API/storage, `run-generator` for code-gen.
+- **`beckn-cli`**: Load testing (K6), Beckn key manage
+ment.
+- **Service Templating (`example-service`)**.
+- **Mocking Framework**: `mocks/google`, `mocks/rider-platform`, `mock-registry`.
+- **Monitoring**: Prometheus.
+
+## Key Haskell Libraries & Frameworks (examples from various services):
+- **Core Rider Application (`rider-app` from `Backend/app/rider-platform/rider-app/Main/`):
+    - **API/Storage Definition**: Namma DSL for many Action modules.
+    - **API Implementation**: Servant, with modular API structure.
+        - `API.UI.Registration`: Handles OTP/signature/token-based user authentication.
+            - **Endpoints**: `/v2/auth` (initiate with OTP), `/v2/auth/signature` (initiate with client signature via `x-sdk-authorization`), `/v2/auth/{authId}/verify` (verify OTP), `/v2/auth/otp/{authId}/resend` (resend OTP), `/v2/auth/logout` (logout).
+            - **Process**: Creates `RegistrationToken` (stores OTP, expiry, user ID, likely in DB/Redis). Validates OTP against token. Generates session token (Passetto via `Tools.Auth`) on successful verification.
+            - **Client Context**: Processes headers like `x-bundle-version`, `x-client-version`, `x-config-version`, `x-rn-version`, `x-device`, `x-forwarded-for`.
+            - **Delegation**: Core logic in `Domain.Action.UI.Registration`.
+            - **External Calls (Implied)**: SMS gateway for OTP dispatch (e.g., via `external` library).
+        - `API.UI.Search`: Manages standard and multimodal ride searches.
+            - **Endpoints**: `POST /v2/rideSearch` (standard taxi/on-demand), `POST /v2/multimodalSearch`.
+            - **Request Data**: `DSearch.SearchReq` (origin, destination, time, preferences). Processes client context headers (versions, device, client ID, IMEI for multimodal).
+            - **Core Logic Delegation**: Initial search request creation via `Domain.Action.UI.Search.search` (persists `SearchRequest.SearchRequest` entity).
+            - **Standard Search Specifics**: 
+                - Uses `TaxiACL.buildSearchReqV2` for Beckn V2 request payload.
+                - Asynchronously calls BPPs via `CallBPP.searchV2`.
+                - Conditional logic for cancelling previous active searches (interacts with `Estimate`, `Booking` entities, `API.UI.Select.cancelSearch'`, `Domain.Action.UI.Cancel`).
+            - **Multimodal Search Specifics**: 
+                - Orchestrates calls to external multimodal routing engines (via `Kernel.External.MultiModal.Interface.getTransitRoutes`) and potentially direct FRFS lookups (`JMU.getSingleModeRouteDetails`).
+                - Uses `Lib.JourneyModule` (`JM.init`, `JM.filterTransitRoutes`, `JMU.*`) for processing routes into `Journey.Journey` entities and `DQuote.JourneyData` for API responses.
+                - Integrates with CRIS for subway legs via `ExternalBPP.ExternalAPI.CallAPI.buildStations` and `CRISRouteFare.getRouteFare` (using `CRISFareRequest` which includes encrypted IMEI, mobile number, session ID).
+                - Handles user preferences (`DMC.getMultimodalUserPreferences`) and platform configs (`DRC.RiderConfig`, `DIBC.IntegratedBPPConfig`).
+                - May initiate first journey leg (`DMC.postMultimodalInitiate`).
+            - **Supporting Technologies**: Redis for rate limiting (`Kernel.Storage.Hedis.slidingWindowLimiter`), `Kernel.External.Encryption` for IMEI, `EulerHS.Prelude.fork` for async operations, `Kernel.Tools.Metrics.CoreMetrics` and `JMU.measureLatency` for performance.
+        - `API.UI.Quote`: Fetches aggregated ride quotes post-search.
+            - **Endpoint**: `GET /v2/rideSearch/{searchId}/results` (token authenticated).
+            - **Request Params**: `searchId` (path), `allowMultiple` (optional query Bool).
+            - **Functionality**: Delegates to `Domain.Action.UI.Quote.getQuotes`.
+            - **Core Logic**: `Domain.Action.UI.Quote.getQuotes` retrieves stored quotes/offers (e.g., `Estimate` entities or processed `Journey` data) associated with the `searchId` from the database/cache. It may filter/rank based on `allowMultiple` and ensures only valid (non-expired) quotes are returned.
+            - **Response**: `DQuote.GetQuotesRes` containing a list of `DQuote.OfferRes` (provider, vehicle, fare, ETA, `estimateId`).
+            - **Data Models**: `SSR.SearchRequest` (context), `Estimate.Estimate` (implied storage for BPP quotes), `DQuote.GetQuotesRes`, `DQuote.OfferRes`.
+        - `API.UI.Select`: Handles user's selection of a quote, sends Beckn "select" to BPP.
+        - `API.UI.Confirm`: Manages user's confirmation of a selected quote (Beckn "init" phase).
+        - `API.UI.Booking`: Handles final ride booking (Beckn "confirm" phase) and post-booking management.
+        - `API.Action.UI.RidePayment`: Manages user payment methods, payment intent creation, and ride-specific payment settings like tips.
+        - `API.UI.Payment`: Handles creation of payment orders for rides and status polling, using `Lib.Payment.API` structure.
+        - `API.UI.Ride`: Provides endpoints for active ride management and information.
+        - `API.UI.Rating`: Handles post-ride feedback (ratings, Know Your Driver).
+        - `API.UI.FeedbackForm`: Handles detailed, structured feedback.
+        - `API.Action.UI.Invoice` (mounted in `API.UI.hs` context): Handles retrieval of ride invoices.
+        - `API.Action.UI.PriceBreakup` (mounted in `API.UI.hs` context): Handles retrieval of fare breakdowns.
+        - `API.UI.Profile`: Manages user profile information including emergency contacts.
+        - `API.Action.UI.Sos` (mounted in `API.UI.hs` context, Namma DSL generated): Handles core SOS functionalities.
+            - `POST /v2/sos/create`: Creates an SOS alert. Delegates to `Domain.Action.UI.Sos.postSosCreate`.
+            - `GET /v2/sos/getDetails/{rideId}`: Fetches SOS details. Delegates to `Domain.Action.UI.Sos.getSosGetDetails`.
+            - `POST /v2/sos/{sosId}/status`: Updates SOS status. Delegates to `Domain.Action.UI.Sos.postSosStatus`.
+            - `POST /v2/sos/{sosId}/markRideAsSafe`: Marks ride as safe. Delegates to `Domain.Action.UI.Sos.postSosMarkRideAsSafe`.
+            - `POST /v2/sos/callPolice`: Initiates call police action. Delegates to `Domain.Action.UI.Sos.postSosCallPolice`.
+            - `GET /sos/IvrOutcome`: Unauthenticated webhook for IVR call outcomes. Delegates to `Domain.Action.UI.Sos.getSosIvrOutcome`.
+            - `POST /v2/sos/createMockSos`: Creates a mock SOS for testing.
+        - `API.UI.Sos` (actual source file in `src/API/UI/Sos.hs`):
+            - `POST /v2/sos/{sosId}/upload`: Handles SOS media (video) upload using `MultipartForm`. Delegates to `Domain.Action.UI.Sos.uploadMedia`.
+        - `API.UI.Issue` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/Issue.hs`):
+            - **Shared Component**: Leverages API structure from `IssueManagement.API.UI.Issue` (`IA.IssueAPI`).
+            - **Adapter**: Uses `customerIssueHandle` to provide `rider-app` specific implementations for data fetching (e.g., `castPersonById`, `castRideById` using `Storage.Queries.*`, `getRideInfo` with Redis caching) and actions (e.g., `Tools.Ticket` for external ticketing, `SharedLogic.CallBPPInternal` for internal reporting, `Domain.Action.UI.Sos.sendUnattendedSosTicketAlert`).
+            - **Endpoints**: Exposes functionality for creating, listing, viewing, updating (including status, customer responses, ratings), and deleting issue reports; managing media attachments; and fetching dynamic issue categories/options.
+            - **Beckn IGM**: 
+                - Constructs Beckn IGM `issue` payloads using `Beckn.ACL.IGM.Issue.buildIssueReq` (validating subcategories against `IGM.Enums.Spec.*`).
+                - Sends IGM `issue` messages (create/update) to BPPs via `SharedLogic.CallIGMBPP.issue` (asynchronously).
+                - Constructs and sends Beckn `issue_status` polling requests via `SharedLogic.CallIGMBPP.issueStatus` (for `GET /v2/issue/igm/status` admin endpoint).
+                - Manages local `DIGM.IGMIssue` entities (persisted via `QIGM.*` queries) and general `IssueReport` entities.
+            - **Data Models**: Uses types from `IssueManagement.Common.UI.Issue`, `IssueManagement.Domain.Types.Issue.*`, and transforms `rider-app` entities for compatibility.
+        - `API.UI.Support` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/Support.hs`):
+            - **Endpoints & Purpose**:
+                - `POST /v2/support/sendIssue`: For submitting general issues (`DSupport.SendIssueReq`), returns `DSupport.SendIssueRes`.
+                - `POST /v2/support/callbackRequest`: For users to request a callback from support, returns `APISuccess.APISuccess`.
+                - `POST /v2/support/safetyCheckSupport`: For submitting support requests related to safety checks (`DSupport.SafetyCheckSupportReq`), returns `DSupport.SendIssueRes`.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: All handlers delegate core logic to respective functions in `Domain.Action.UI.Support` (e.g., `DSupport.sendIssue`, `DSupport.callbackRequest`, `DSupport.safetyCheckSupport`).
+        - `API.UI.Cancel` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/Cancel.hs`):
+            - **Endpoints & Purpose**:
+                - `POST /v2/rideBooking/{rideBookingId}/softCancel`: Initiates a soft cancellation.
+                - `POST /v2/rideBooking/{rideBookingId}/cancel`: Initiates a hard cancellation, takes `DCancel.CancelReq` (with reason, `reallocate` flag).
+                - `GET /v2/rideBooking/cancellationDues`: Fetches potential cancellation fees (`DCancel.CancellationDuesDetailsRes`), `rideBookingId` is optional.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: All handlers delegate core logic to respective functions in `Domain.Action.UI.Cancel` (e.g., `DCancel.softCancel`, `DCancel.cancel`, `DCancel.getCancellationDuesDetails`).
+            - **Beckn Integration**: For cancellations, constructs Beckn cancel request (`ACL.buildCancelReqV2`) and sends to BPP via `CallBPP.cancelV2` (asynchronously with retry).
+            - **Database Interaction**: Involves fetching `Booking` and `Ride` details to process cancellations.
+        - `API.Action.UI.TriggerFCM` (mounted in `API.UI.hs` context, Namma DSL generated from `src-read-only/API/Action/UI/TriggerFCM.hs`):
+            - **Endpoint & Purpose**: `POST /v2/triggerFCM/message` for sending targeted FCM push notifications to riders.
+            - **Request**: `API.Types.UI.TriggerFCM.TriggerFcmReq` (includes target user/device, title, body, data payload).
+            - **Authentication**: Requires `TokenAuth` (likely for internal service-to-service calls or admin-initiated actions, not direct user calls to trigger messages to themselves).
+            - **Delegation**: Handler `postTriggerFCMMessage` delegates to `Domain.Action.UI.TriggerFCM.postTriggerFCMMessage`.
+            - **FCM Dispatch**: The domain action is responsible for constructing the FCM payload and using an FCM client to send the notification. This client could be a direct HTTP client to FCM servers or an abstraction via the `external` library (e.g., using AWS SNS which can fan out to FCM, APNS, etc.). Requires FCM server key/credentials configured in the environment.
+        - `API.Beckn` and `API.BecknAPIV2` (located in `Backend/app/rider-platform/rider-app/Main/src/API/Beckn.hs`):
+            - **Purpose**: Serve as the BAP listener for asynchronous callbacks from BPPs/Gateway.
+            - **Endpoints**: Define routes like `/cab/v1/...` and `/beckn/cab/v1/{merchantId}/...` for various Beckn `on_action` callbacks.
+            - **Security**: All callback endpoints are protected by `SignatureAuth` (from `Kernel.Utils.Servant.SignatureAuth`) verifying BPP/Gateway message signatures.
+            - **Modular Delegation**: Each specific `on_action` is routed to its dedicated handler module.
+            - **Specific Callback Handlers**:
+                - `API.Beckn.OnSearch` (handler for `on_search`):
+                    - **Input**: Beckn `OnSearch.OnSearchReqV2`.
+                    - **Processing**: Validates context against original `SearchRequest`. Transforms payload to internal `DOnSearch.DOnSearchReq` via `TaxiACL.buildOnSearchReqV2`. Uses Redis locks (`onSearchLockKey`, `onSearchProcessingLockKey`) for idempotency. Validates offers via `Domain.Action.Beckn.OnSearch.validateRequest`. Asynchronously persists validated offers as `Estimate` entities via `Domain.Action.Beckn.OnSearch.onSearch`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnSelect` (handler for `on_select`):
+                    - **Input**: Beckn `OnSelect.OnSelectReqV2`.
+                    - **Processing**: Validates context. Transforms payload to internal `DOnSelect.DOnSelectReq` via `Beckn.ACL.OnSelect.ACL.buildOnSelectReqV2`. Uses Redis locks (`onSelectLockKey`, `onSelectProcessingLockKey`) for idempotency. Validates BPP's confirmed offer against original selection via `Domain.Action.Beckn.OnSelect.validateRequest`. Asynchronously updates the `Estimate` entity with confirmed details via `Domain.Action.Beckn.OnSelect.onSelect`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnInit` (handler for `on_init`):
+                    - **Input**: Beckn `OnInit.OnInitReqV2`.
+                    - **Processing**: Validates context. Transforms payload via `TaxiACL.buildOnInitReqV2` into a sum type `DOnInit.DOnInitReq` (then `DOnInit.ValidatedOnInitReq` with constructors like `OUValidatedRideAssignedReq`, `OUValidatedRideCompletedReq`, `OUValidatedBookingCancelledReq`, `OUValidatedFarePaidReq`, `OUValidatedEditDestConfirmUpdateReq`, etc.). Uses Redis locks (`onInitLockKey`, `onInitProcessingLockKey`) for idempotency. Validates specific update type via `Domain.Action.Beckn.OnInit.validateRequest`. Asynchronously applies the update to `Booking`/`Ride` entities using a pattern match in `Domain.Action.Beckn.OnInit.onInit`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnConfirm` (handler for `on_confirm`):
+                    - **Input**: Beckn `OnConfirm.OnConfirmReqV2`.
+                    - **Processing**: Validates context. Transforms payload via `TaxiACL.buildConfirmReqV2` into a sum type `DOnConfirm.DOnConfirmReq` (then `DOnConfirm.ValidatedOnConfirmReq` with constructors like `OUValidatedRideAssignedReq`, `OUValidatedRideCompletedReq`, `OUValidatedBookingCancelledReq`, `OUValidatedFarePaidReq`, `OUValidatedEditDestConfirmUpdateReq`, etc.). Uses Redis locks (`onConfirmLockKey`, `onConfirmProcessingLockKey`) for idempotency. Validates specific update type via `Domain.Action.Beckn.OnConfirm.validateRequest`. Asynchronously applies the update to `Booking`/`Ride` entities using a pattern match in `Domain.Action.Beckn.OnConfirm.onConfirm`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnStatus` (handler for `on_status`):
+                    - **Input**: Beckn `OnStatus.OnStatusReqV2`.
+                    - **Processing**: Validates context. Transforms payload via `TaxiACL.buildOnStatusReqV2` into a sum type `DOnStatus.DOnStatusReq` (then `DOnStatus.ValidatedOnStatusReq` with constructors like `OUValidatedRideAssignedReq`, `OUValidatedRideCompletedReq`, `OUValidatedBookingCancelledReq`, `OUValidatedFarePaidReq`, `OUValidatedEditDestConfirmUpdateReq`, etc.). Uses Redis locks (`onStatusLockKey`, `onStatusProcessingLockKey`) for idempotency. Validates specific update type via `Domain.Action.Beckn.OnStatus.validateRequest`. Asynchronously applies the update to `Booking`/`Ride` entities using a pattern match in `Domain.Action.Beckn.OnStatus.onStatus`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnTrack` (handler for `on_track`):
+                    - **Input**: Beckn `OnTrack.OnTrackReqV2`.
+                    - **Processing**: Validates context. Transforms payload via `TaxiACL.buildOnTrackReqV2` into a sum type `DOnTrack.DOnTrackReq` (then `DOnTrack.ValidatedOnTrackReq` with constructors like `OUValidatedRideAssignedReq`, `OUValidatedRideCompletedReq`, `OUValidatedBookingCancelledReq`, `OUValidatedFarePaidReq`, `OUValidatedEditDestConfirmUpdateReq`, etc.). Uses Redis locks (`onTrackLockKey`, `onTrackProcessingLockKey`) for idempotency. Validates specific update type via `Domain.Action.Beckn.OnTrack.validateRequest`. Asynchronously applies the update to `Booking`/`Ride` entities using a pattern match in `Domain.Action.Beckn.OnTrack.onTrack`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnCancel` (handler for `on_cancel`):
+                    - **Input**: Beckn `OnCancel.OnCancelReqV2`.
+                    - **Processing**: Validates context. Transforms payload via `TaxiACL.buildOnCancelReqV2` into a sum type `DOnCancel.DOnCancelReq` (then `DOnCancel.ValidatedOnCancelReq` with constructors like `OUValidatedRideAssignedReq`, `OUValidatedRideCompletedReq`, `OUValidatedBookingCancelledReq`, `OUValidatedFarePaidReq`, `OUValidatedEditDestConfirmUpdateReq`, etc.). Uses Redis locks (`onCancelLockKey`, `onCancelProcessingLockKey`) for idempotency. Validates specific update type via `Domain.Action.Beckn.OnCancel.validateRequest`. Asynchronously applies the update to `Booking`/`Ride` entities using a pattern match in `Domain.Action.Beckn.OnCancel.onCancel`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+                - `API.Beckn.OnUpdate` (handler for `on_update`):
+                    - **Input**: Beckn `OnUpdate.OnUpdateReqV2`.
+                    - **Processing**: Validates context. Transforms payload via `Beckn.ACL.OnUpdate.ACL.buildOnUpdateReqV2` into a sum type `DOnUpdate.DOnUpdateReq` (then `DOnUpdate.ValidatedOnUpdateReq` with constructors like `OUValidatedRideAssignedReq`, `OUValidatedRideCompletedReq`, `OUValidatedBookingCancelledReq`, `OUValidatedFarePaidReq`, `OUValidatedEditDestConfirmUpdateReq`, etc.). Uses Redis locks (`onUpdateLockKey`, `onUpdateProcessngLockKey`) for idempotency. Validates specific update type via `Domain.Action.Beckn.OnUpdate.validateRequest`. Asynchronously applies the update to `Booking`/`Ride` entities using a pattern match in `Domain.Action.Beckn.OnUpdate.onUpdate`. Logs to `TransactionLogs.pushLogs`.
+                    - **Response to BPP**: `Ack`.
+        - `API.UI.Call` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/Call.hs`):
+            - **Purpose**: Manages in-app voice calls (rider-driver), likely via Exotel.
+            - **API Groups**:
+                - `BackendBasedCallAPI` (rider initiates call via `rider-app`):
+                    - `POST /v2/ride/{rideId}/call/driver`: Rider initiates call to driver. Returns `DCall.CallRes`. Delegates to `Domain.Action.UI.Call.initiateCallToDriver`.
+                    - `GET /v2/ride/{rideId}/call/{callId}/status`: Rider polls for status of backend-initiated call. Returns `DCall.GetCallStatusRes`. Delegates to `Domain.Action.UI.Call.getCallStatus`.
+                    - `POST /v2/ride/call/statusCallback`: Webhook for telephony provider to post status updates for backend-initiated calls (`DCall.CallCallbackReq`). Returns `DCall.CallCallbackRes`. Delegates to `Domain.Action.UI.Call.callStatusCallback`.
+                - `FrontendBasedCallAPI` (telephony provider/IVR drives flow):
+                    - `GET /v2/exotel/call/driver/number`: Exotel fetches driver number. Query params include `CallSid`, `CallFrom`, `CallTo`, `CallStatus` (Exotel specific). Returns `DCall.GetDriverMobileNumberResp`. Delegates to `Domain.Action.UI.Call.getDriverMobileNumber`.
+                    - `GET /v2/exotel/call/alternate/driver/number`: Similar, for alternate driver number.
+                    - `GET /v2/exotel/call/statusCallback`: Exotel posts final call status directly. Query params include `CallSid`, `DialCallStatus`, `RecordingUrl`. Returns `DCall.CallCallbackRes`. Delegates to `Domain.Action.UI.Call.directCallStatusCallback`.
+            - **Authentication**: Backend-initiated call endpoints require `TokenAuth`. Exotel-facing callbacks are unauthenticated but rely on data in query params for context.
+            - **Key Data Types**: `DCall.CallStatus` (DB entity), `ExotelCallStatus`.
+            - **Core Logic**: `Domain.Action.UI.Call` handles interactions with the telephony provider, number masking, and `CallStatus` DB updates.
+        - `API.UI.CallEvent` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/CallEvent.hs`):
+            - **Purpose**: Manages in-app call events (rider-driver), likely via Exotel.
+            - **API Groups**:
+                - `BackendBasedCallAPI` (rider initiates call via `rider-app`):
+                    - `POST /v2/ride/{rideId}/call/driver`: Rider initiates call to driver. Returns `DCall.CallRes`. Delegates to `Domain.Action.UI.Call.initiateCallToDriver`.
+                    - `GET /v2/ride/{rideId}/call/{callId}/status`: Rider polls for status of backend-initiated call. Returns `DCall.GetCallStatusRes`. Delegates to `Domain.Action.UI.Call.getCallStatus`.
+                    - `POST /v2/ride/call/statusCallback`: Webhook for telephony provider to post status updates for backend-initiated calls (`DCall.CallCallbackReq`). Returns `DCall.CallCallbackRes`. Delegates to `Domain.Action.UI.Call.callStatusCallback`.
+                - `FrontendBasedCallAPI` (telephony provider/IVR drives flow):
+                    - `GET /v2/exotel/call/driver/number`: Exotel fetches driver number. Query params include `CallSid`, `CallFrom`, `CallTo`, `CallStatus` (Exotel specific). Returns `DCall.GetDriverMobileNumberResp`. Delegates to `Domain.Action.UI.Call.getDriverMobileNumber`.
+                    - `GET /v2/exotel/call/alternate/driver/number`: Similar, for alternate driver number.
+                    - `GET /v2/exotel/call/statusCallback`: Exotel posts final call status directly. Query params include `CallSid`, `DialCallStatus`, `RecordingUrl`. Returns `DCall.CallCallbackRes`. Delegates to `Domain.Action.UI.Call.directCallStatusCallback`.
+            - **Authentication**: Backend-initiated call endpoints require `TokenAuth`. Exotel-facing callbacks are unauthenticated but rely on data in query params for context.
+            - **Key Data Types**: `DCall.CallStatus` (DB entity), `ExotelCallStatus`.
+            - **Core Logic**: `Domain.Action.UI.Call` handles interactions with the telephony provider, number masking, and `CallStatus` DB updates.
+        - `API.UI.SavedReqLocation` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/SavedReqLocation.hs`):
+            - **Purpose**: Manages a rider's saved locations (e.g., "Home", "Work").
+            - **Endpoints**:
+                - `POST /savedLocation`: Creates/saves a new location. Requires `CreateSavedReqLocationReq` in body.
+                - `GET /savedLocation/list`: Lists all saved locations for the user. Returns `SavedReqLocationsListRes`.
+                - `DELETE /savedLocation/{tag}`: Deletes a saved location identified by its `tag`.
+            - **Authentication**: All endpoints use `TokenAuth`.
+            - **Delegation**: Business logic is handled by functions in `Domain.Action.UI.SavedReqLocation`.
+            - **Storage Interaction (via Domain Layer)**: The domain logic in `Domain.Action.UI.SavedReqLocation` relies on `Storage.Queries.SavedReqLocation` (specifically functions from `Storage.Queries.SavedReqLocationExtra.hs`) for database operations:
+                - `QSavedReqLocation.create`: To persist new saved locations.
+                - `QSavedReqLocation.findAllByRiderId`: To list all locations for a user (ordered by `updatedAt` desc).
+                - `QSavedReqLocation.findAllByRiderIdAndTag`: To check for tag uniqueness before creation.
+                - `QSavedReqLocation.deleteByRiderIdAndTag`: To delete a specific saved location.
+                - Other queries like `findByLatLonAndRiderId` and `countAllByRiderId` are also available for more specific lookups.
+        - `API.UI.RentalsIntercityCache` (located in `Backend/app/rider-platform/rider-app/Main/src/API/UI/RentalsIntercityCache.hs`):
+            - **Endpoint & Purpose**: `POST /v2/fetchFareCache` for retrieving cached fare information for rental/intercity services.
+            - **Request/Response**: Uses `RIC.FareCacheReq` and `RIC.FareCacheResp` (types defined in `Domain.Types.RentalsIntercityCache`).
+            - **Authentication**: Requires `TokenAuth`.
+            - **Delegation**: Handler `rentalsIntercityCache` delegates to `Domain.Action.UI.RentalsIntercityCache.rentalsIntercityCache`.
+            - **Caching Mechanism**: The domain action interacts with a cache (details of implementation - Redis, DB table - would be within the domain/storage layer) to store and retrieve these fares.
+        - `API.Action.UI.MultimodalConfirm` (Namma DSL generated from `src-read-only/API/Action/UI/MultimodalConfirm.hs`, mounted in `API.UI.hs` context likely under `/multimodal/`):
+            - **Purpose**: Manages the full lifecycle of a selected multimodal journey.
+            - **Endpoints**: Provides numerous authenticated endpoints for: initiating (`/{journeyId}/initiate`), confirming (`/{journeyId}/confirm`), getting info/status (various `/booking/info`, `/booking/paymentStatus`, `/journey/status`), managing payments (`/{journeyId}/payment/updateOrder`), modifying journey legs (switch, skip, add, extend, getLegTierOptions, switchTaxi, switchFRFSTier, setStatus - under `/{journeyId}/leg/` or `/{journeyId}/order/{legOrder}/`), cancelling (`/journey/{journeyId}/cancel`), updating rider location (`/{journeyId}/rider/location`), managing journey feedback, and user multimodal preferences (`/user/preferences`). Also includes `/transitOptions/lite` and `/publicTransport/data`.
+            - **Request/Response Types**: Uses various types from `API.Types.UI.MultimodalConfirm` (e.g., `JourneyInfoResp`, `JourneyConfirmReq`, `UpdatePaymentOrderReq`, `SwitchLegReq`, `ExtendLegReq`, `JourneyFeedBackForm`, `MultimodalUserPreferences`).
+            - **Delegation**: All handlers delegate to corresponding functions in `Domain.Action.UI.MultimodalConfirm`.
+            - **Core Logic**: The domain module orchestrates state for `Domain.Types.Journey.Journey` and `Lib.JourneyLeg.Types.JourneyLegStatus`, interacts with BPPs for individual legs (likely via Beckn), and manages payments/preferences.
+        - `API.Action.UI.BBPS` (Namma DSL generated, mounted in `API.UI.hs` context, likely under `/bbps/`):
+            - **Purpose**: Manages specialized interactions with CRIS for metro/subway services.
+            - **Endpoints & Purpose**:
+                - `POST /v2/cris/getSDKData`: Fetches data for CRIS SDK. Takes `API.Types.UI.CRIS.GetSDKDataRequest`, returns `API.Types.UI.CRIS.GetSDKDataResponse`.
+                - `GET /v2/cris/otp/generation`: Requests CRIS OTP generation.
+                - `POST /v2/cris/change/device`: Manages device registration with CRIS. Takes `API.Types.UI.CRIS.CrisChangeDeviceRequest`.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to corresponding functions in `Domain.Action.UI.CRIS` (e.g., `postCrisGetSDKData`, `getCrisOtpGeneration`, `postCrisChangeDevice`).
+            - **CRIS Communication**: The domain actions handle direct HTTP client communication with external CRIS APIs.
+        - `API.Action.UI.CRIS` (Namma DSL generated from `src-read-only/API/Action/UI/CRIS.hs`, mounted in `API.UI.hs` context, likely under `/cris/`):
+            - **Purpose**: Manages specialized interactions with CRIS for metro/subway services.
+            - **Endpoints & Purpose**:
+                - `POST /v2/cris/getSDKData`: Fetches data for CRIS SDK. Takes `API.Types.UI.CRIS.GetSDKDataRequest`, returns `API.Types.UI.CRIS.GetSDKDataResponse`.
+                - `GET /v2/cris/otp/generation`: Requests CRIS OTP generation.
+                - `POST /v2/cris/change/device`: Manages device registration with CRIS. Takes `API.Types.UI.CRIS.CrisChangeDeviceRequest`.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to corresponding functions in `Domain.Action.UI.CRIS` (e.g., `postCrisGetSDKData`, `getCrisOtpGeneration`, `postCrisChangeDevice`).
+            - **CRIS Communication**: The domain actions handle direct HTTP client communication with external CRIS APIs.
+        - `API.Action.UI.TicketService` (Namma DSL generated from `src-read-only/API/Action/UI/TicketService.hs`, mounted in `API.UI.hs` context, likely under `/ticket/`):
+            - **Purpose**: Manages the lifecycle for public transport ticketing.
+            - **Endpoints & Purpose**:
+                - `GET /v2/ticket/places`: Lists ticketable places.
+                - `GET /v2/ticket/places/{placeId}/services`: Lists services at a place (query by `date`).
+                - `POST /v2/ticket/places/{placeId}/book`: Books a ticket (takes `API.Types.UI.TicketService.TicketBookingReq`), returns `Kernel.External.Payment.Interface.Types.CreateOrderResp` for payment processing.
+                - `GET /v2/ticket/bookings`: Lists user's ticket bookings (filters: `limit`, `offset`, `status`).
+                - `GET /v2/ticket/bookings/{ticketBookingShortId}/details`: Gets details of a specific booking.
+                - `POST /v2/ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify`: Verifies a ticket.
+                - `GET /v2/ticket/bookings/{ticketBookingShortId}/status`: Gets booking status.
+                - `POST /v2/ticket/booking/cancel`: Cancels a ticket booking (`API.Types.UI.TicketService.TicketBookingCancelReq`).
+                - `POST /v2/ticket/bookings/update/seats`: Updates seats for a booking (`API.Types.UI.TicketService.TicketBookingUpdateSeatsReq`).
+                - `POST /v2/ticket/service/cancel`: Cancels a ticket service (`API.Types.UI.TicketService.TicketServiceCancelReq`).
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to corresponding functions in `Domain.Action.UI.TicketService`.
+            - **Key Data Types**: `Domain.Types.TicketPlace.TicketPlace`, `API.Types.UI.TicketService.TicketServiceResp`, `API.Types.UI.TicketService.TicketBookingReq`, `API.Types.UI.TicketService.TicketBookingAPIEntity`, `Domain.Types.TicketBooking.BookingStatus`.
+            - **Payment Integration**: Ticket booking uses the platform's standard payment order creation mechanism.
+        - `API.Action.UI.FRFSTicketService` (Namma DSL generated from `src-read-only/API/Action/UI/FRFSTicketService.hs`, mounted in `API.UI.hs` context, likely under `/frfs/`):
+            - **Purpose**: Manages full lifecycle for FRFS-based public transport ticketing (e.g., buses).
+            - **Endpoints & Purpose (all `/v2/frfs/...` and TokenAuth)**:
+                - Route/Station Discovery: `GET /routes`, `GET /stations` (with various filters like city, vehicleType, location), `GET /route/{routeCode}`, `GET /autocomplete`.
+                - Search & Quoting: `POST /search` (takes `FRFSSearchAPIReq`, returns `FRFSSearchAPIRes`), `POST /discovery/search` (takes `FRFSDiscoverySearchAPIReq`), `GET /search/{searchId}/quote` (returns `[FRFSQuoteAPIRes]`).
+                - Booking: `POST /quote/{quoteId}/confirm` (and a `/v2` version with `FRFSQuoteConfirmReq`), returns `FRFSTicketBookingStatusAPIRes`. This step involves payment order creation.
+                - Payment Retry: `POST /quote/{quoteId}/payment/retry`.
+                - Booking Management: `GET /booking/{bookingId}/status`, `GET /booking/list`, `POST /booking/{bookingId}/canCancel`, `GET /booking/{bookingId}/canCancel/status`, `POST /booking/{bookingId}/cancel`, `GET /booking/cancel/{bookingId}/status`.
+                - Ticket Verification: `POST /ticket/verify` (takes `FRFSTicketVerifyReq`).
+                - Configuration: `GET /config` (for a city, returns `FRFSConfigAPIRes`).
+            - **Delegation**: All handlers delegate to `Domain.Action.UI.FRFSTicketService`.
+            - **Key Data Types**: Uses types from `API.Types.UI.FRFSTicketService`, `Domain.Types.FRFSQuote`, `Domain.Types.FRFSSearch`, `Domain.Types.FRFSTicketBooking`, `BecknV2.FRFS.Enums.VehicleCategory`.
+            - **Payment Integration**: Booking confirmation returns `Kernel.External.Payment.Interface.Types.CreateOrderResp`, indicating use of the standard platform payment flow.
+            - **FRFS Data Sources**: Domain layer interacts with external FRFS data (GTFS, operator APIs, Beckn BPPs for FRFS).
+        - `API.Action.UI.TicketKapture` (Namma DSL generated from `src-read-only/API/Action/UI/TicketKapture.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Facilitates integration with Kapture CRM/Support system.
+            - **Endpoint**: `POST /v2/kaptureCustomerLogin`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes no explicit request body in API definition, but handler receives auth info. Returns `API.Types.UI.TicketKapture.TicketKaptureResp` (likely containing Kapture session details or user context).
+            - **Delegation**: Handler `postKaptureCustomerLogin` delegates to `Domain.Action.UI.TicketKapture.postKaptureCustomerLogin`.
+            - **Kapture Communication**: The domain action handles direct HTTP client communication with external Kapture APIs.
+        - `API.Action.UI.Insurance` (Namma DSL generated from `src-read-only/API/Action/UI/Insurance.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Retrieves details of an insurance policy.
+            - **Endpoint**: `GET /v2/insurance/{referenceId}`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `referenceId` (Id `Domain.Types.Insurance.Insurance`). Returns `API.Types.UI.Insurance.InsuranceAPIEntity`.
+            - **Delegation**: Handler `getInsurance` delegates to `Domain.Action.UI.Insurance.getInsurance`.
+            - **Logic**: Domain action fetches policy details from DB, performs authorization checks.
+        - `API.Action.UI.CustomerReferral` (Namma DSL generated from `src-read-only/API/Action/UI/CustomerReferral.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Manages the customer referral program.
+            - **Endpoints & Purpose**:
+                - `GET /v2/CustomerRefferal/count`: Get count of referred customers.
+                - `POST /v2/person/applyReferral`: Apply a referral code (`API.Types.UI.CustomerReferral.ApplyCodeReq`). Returns `API.Types.UI.CustomerReferral.ReferrerInfo`.
+                - `GET /v2/referral/verifyVpa?vpa={vpaText}`: Verify a VPA for payouts. Returns `API.Types.UI.CustomerReferral.VpaResp`.
+                - `GET /v2/referralPayout/history`: View referral payout history. Returns `API.Types.UI.CustomerReferral.PayoutHistory`.
+                - `POST /v2/payoutVpa/upsert`: Add/update VPA for payouts (`API.Types.UI.CustomerReferral.UpdatePayoutVpaReq`).
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to corresponding functions in `Domain.Action.UI.CustomerReferral`.
+            - **Key Data Types**: Uses types from `API.Types.UI.CustomerReferral`.
+            - **Payment Integration (Implied)**: VPA verification and payout processing likely involves the `payment` shared library or direct integration with a UPI payment gateway.
+        - `API.Action.UI.SocialLogin` (Namma DSL generated from `src-read-only/API/Action/UI/SocialLogin.hs`, mounted in `API.UI.hs` context, likely under `/social/`):
+            - **Purpose**: Enables user login/signup via third-party social media providers and linking social profiles.
+            - **Endpoints & Purpose**:
+                - `POST /v2/social/login`: For social sign-in or sign-up. Unauthenticated. Takes `API.Types.UI.SocialLogin.SocialLoginReq` (provider name, social token/code). Returns `API.Types.UI.SocialLogin.SocialLoginRes` (NammaYatri session token, user profile).
+                - `POST /v2/social/update/profile`: For linking/updating social profile for an authenticated NammaYatri user. Requires `TokenAuth`. Takes `API.Types.UI.SocialLogin.SocialUpdateProfileReq`.
+            - **Delegation**: Handlers delegate to `Domain.Action.UI.SocialLogin.postSocialLogin` and `Domain.Action.UI.SocialLogin.postSocialUpdateProfile`.
+            - **Social Provider Communication**: Domain actions perform server-to-server validation of social tokens with the respective providers (e.g., Google, Facebook via their APIs) and fetch user details.
+            - **Account Logic**: Handles NammaYatri user account lookup, creation (if new social user), and linking of social ID to NammaYatri profile.
+        - `API.Action.UI.FavouriteDriver` (Namma DSL generated from `src-read-only/API/Action/UI/FavouriteDriver.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Manages a rider's list of favorite drivers.
+            - **Endpoints & Purpose**:
+                - `GET /v2/driver/favorites`: Lists the authenticated rider's favorite drivers. Returns `[API.Types.UI.FavouriteDriver.FavouriteDriverResp]`.
+                - `POST /v2/favorites/{driverId}/remove`: Removes a driver (by `driverId` Text) from the user's favorites.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to `Domain.Action.UI.FavouriteDriver.getDriverFavorites` and `Domain.Action.UI.FavouriteDriver.postFavoritesRemove` respectively.
+            - **Logic**: Domain actions handle database queries to retrieve or delete favorite driver associations for the user.
+        - `API.Action.UI.EstimateBP` (Namma DSL generated from `src-read-only/API/Action/UI/EstimateBP.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Retrieves a detailed fare estimate breakup for a specific ride.
+            - **Endpoint**: `GET /v2/ride/{rideId}/estimateBreakup`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `rideId` (Id `Domain.Types.Ride.Ride`) as path parameter. Returns `API.Types.UI.EstimateBP.EstimateDetailsRes` (containing detailed fare components).
+            - **Delegation**: Handler `getRideEstimateBreakup` delegates to `Domain.Action.UI.EstimateBP.getRideEstimateBreakup`.
+            - **Logic**: Domain action fetches ride details and calculates/retrieves its fare component breakdown (base, distance, time, taxes, tolls, surge, discounts).
+        - `API.Action.UI.NearbyDrivers` (Namma DSL generated from `src-read-only/API/Action/UI/NearbyDrivers.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Fetches information about nearby available drivers.
+            - **Endpoint**: `POST /v2/nearbyDrivers`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `API.Types.UI.NearbyDrivers.NearbyDriverReq` (containing rider location, radius, filters). Returns `API.Types.UI.NearbyDrivers.NearbyDriverRes` (list of nearby drivers with location, vehicle type, etc.).
+            - **Delegation**: Handler `postNearbyDrivers` delegates to `Domain.Action.UI.NearbyDrivers.postNearbyDrivers`.
+            - **Logic**: Domain action performs geospatial queries against a real-time driver location store (potentially Redis geo commands or a geospatial DB) and filters by availability/criteria.
+        - `API.Action.UI.NearbyBuses` (Namma DSL generated from `src-read-only/API/Action/UI/NearbyBuses.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Provides real-time information about nearby public transport (buses) and upcoming vehicle details.
+            - **Endpoints & Purpose**:
+                - `POST /v2/nearbyBusBooking`: Fetches nearby buses based on `API.Types.UI.NearbyBuses.NearbyBusesRequest` (containing user location, criteria). Returns `API.Types.UI.NearbyBuses.NearbyBusesResponse`.
+                - `GET /v2/nextVehicleDetails/{routeCode}/{stopCode}`: Gets upcoming vehicle details for a specific route/stop. Query param `vehicleType` (`BecknV2.FRFS.Enums.VehicleCategory`). Returns `Lib.JourneyModule.Utils.UpcomingTripInfo`.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to `Domain.Action.UI.NearbyBuses.postNearbyBusBooking` and `Domain.Action.UI.NearbyBuses.getNextVehicleDetails`.
+            - **Data Sources**: Domain actions query real-time public transport data feeds (e.g., GTFS-RT, transit agency APIs).
+            - **Integration**: `UpcomingTripInfo` suggests integration with multimodal journey planning via `Lib.JourneyModule.Utils`.
+        - `API.Action.UI.Places` (Namma DSL generated from `src-read-only/API/Action/UI/Places.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Fetches information about specific places or Points of Interest (POIs).
+            - **Endpoint**: `POST /v2/places`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `API.Types.UI.Places.PlacesRequest` (containing location context, query, filters). Returns `API.Types.UI.Places.PlacesResponse` (list of places with details).
+            - **Delegation**: Handler `postPlaces` delegates to `Domain.Action.UI.Places.postPlaces`.
+            - **Logic**: Domain action queries an external POI database or place search API (e.g., Google Places, Foursquare, possibly via `external` library).
+        - `API.Action.UI.TrackRoute` (Namma DSL generated from `src-read-only/API/Action/UI/TrackRoute.hs`, mounted in `API.UI.hs` context, likely under `/track/`):
+            - **Purpose**: Provides live tracking of public transport vehicles (e.g., buses) on a specific route.
+            - **Endpoint**: `GET /v2/track/{routeCode}/vehicles`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `routeCode` (Text) as path parameter, and optional query params `platformType` (`Domain.Types.IntegratedBPPConfig.PlatformType`) and `vehicleType` (`BecknV2.FRFS.Enums.VehicleCategory`). Returns `API.Types.UI.TrackRoute.TrackingResp` (list of vehicle locations/details on the route).
+            - **Delegation**: Handler `getTrackVehicles` delegates to `Domain.Action.UI.TrackRoute.getTrackVehicles`.
+            - **Data Sources**: Domain action queries real-time public transport data feeds (e.g., GTFS-RT, transit agency APIs) for the specified route.
+        - `API.UI.Route` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/Route.hs`):
+            - **Purpose**: Fetches static route geometry and details (polyline, distance, time) from an external mapping service.
+            - **Endpoints & Purpose**:
+                - `POST /route`: General route request. Takes `Maps.GetRoutesReq` (origin, destination, waypoints, mode).
+                - `POST /pickup/route`: Route from driver to rider pickup. Takes `DRoute.GetPickupRoutesReq` (ride/booking identifiers).
+                - `POST /trip/route`: Route for an ongoing or completed trip. Takes `Maps.GetRoutesReq`.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Response (Common)**: `Maps.GetRoutesResp` (polyline, distance, time, maneuvers).
+            - **Delegation**: Handlers (`getRoute`, `getPickupRoute`, `getTripRoute`) delegate to `Domain.Action.UI.Route` (e.g., `DRoute.getRoutes`, `DRoute.getPickupRoutes`, `DRoute.getTripRoutes`).
+            - **External Mapping Service**: Domain actions use `Kernel.External.Maps.Interface` to call an external service (e.g., OSRM, Google Maps).
+        - `API.UI.Serviceability` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/Serviceability.hs`):
+            - **Purpose**: Checks serviceability of locations and identifies intercity trips.
+            - **Endpoints & Purpose**:
+                - `POST /serviceability/origin`: Checks if origin `LatLong` (in `ServiceabilityReq`) is serviceable. Returns `DServiceability.ServiceabilityRes`.
+                - `POST /serviceability/destination`: Checks if destination `LatLong` (in `ServiceabilityReq`) is serviceable. Returns `DServiceability.ServiceabilityRes`.
+                - `POST /serviceability/isInterCity`: Checks if trip is intercity. Takes `BPPInternal.IsIntercityReq`. Returns `BPPInternal.IsIntercityResp`.
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation & Logic**:
+                - Origin/Destination: `Domain.Action.UI.Serviceability.checkServiceability` (uses `GeofencingConfig` and `GeoRestriction`).
+                - Intercity Check: `SharedLogic.CallBPPInternal.getIsInterCity` (uses merchant configs from `CQM.findById` and BPP/platform-specific logic).
+        - `API.UI.HotSpot` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/HotSpot.hs`):
+            - **Purpose**: Identifies and returns relevant "hotspots" (popular or designated locations) near a user-provided location.
+            - **Endpoint**: `GET /v2/getHotSpot` (takes `Maps.LatLong` in request body).
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `Maps.LatLong`. Returns `HotSpot.HotSpotResponse` (list of `HotSpotInfo` and `blockRadius`).
+            - **Logic**: Handler `getHotspot` fetches `HotSpotConfig` (from `QHotSpotConfig`), uses geohashing (`Data.Geohash`) and custom geospatial math to find nearby geohashes. Retrieves pre-aggregated `HotSpot` frequency data (counts for various user activities like pickups, saved locations, trip starts/ends, special designations) from Redis (`Hedis.get` with `makeHotSpotKey`). Filters by frequency, groups by precision, ranks by weighted activity frequencies (weights from `HotSpotConfig`), and limits results.
+            - **Key Data Types**: `Maps.LatLong`, `HotSpot.HotSpotResponse`, `HotSpot.HotSpotInfo`, `Domain.Types.HotSpot.HotSpot`, `Domain.Types.HotSpotConfig.HotSpotConfig`.
+            - **Dependencies**: `Data.Geohash`, `Storage.CachedQueries.HotSpotConfig`, `Kernel.Storage.Hedis`.
+        - `API.UI.Maps` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/Maps.hs`):
+             - **Purpose**: Provides proxy access to external mapping services for autocomplete, place details, and reverse geocoding.
+             - **Endpoints & Purpose (all under `/v2/maps/` and require `TokenAuth`)**:
+                 - `POST /autoComplete`: Address/place autocomplete. Takes `DMaps.AutoCompleteReq` (input text, optional location). Returns `DMaps.AutoCompleteResp` (list of suggestions).
+                 - `POST /getPlaceDetails`: Fetches details for a place ID. Takes `DMaps.GetPlaceDetailsReq` (`placeId`). Returns `DMaps.GetPlaceDetailsResp` (formatted address, coordinates, etc.).
+                 - `POST /getPlaceName`: Reverse geocoding. Takes `DMaps.GetPlaceNameReq` (latitude, longitude). Returns `DMaps.GetPlaceNameResp` (formatted address(es)).
+             - **Delegation**: Handlers (`autoComplete`, `getPlaceDetails`, `getPlaceName`) call respective functions in `Domain.Action.UI.Maps` (e.g., `DMaps.autoComplete`, `DMaps.getPlaceDetails`, `DMaps.getPlaceName`), which then interact with an external mapping service via `Kernel.External.Maps.Interface`.
+             - **Logging**: Wraps domain calls with `withPersonIdLogTag` for contextual logging.
+        - `API.UI.Frontend` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/Frontend.hs`):
+            - **Purpose**: Manages user flow status within the application and handles event notifications from the frontend.
+            - **Endpoints & Purpose (all under `/v2/frontend/` and require `TokenAuth`)**:
+                - `GET /flowStatus`: Queries the user's current application flow status. Optional query params `isPolling` (Bool) and `checkForActiveBooking` (Bool). Returns `DFrontend.GetPersonFlowStatusRes`.
+                - `POST /notifyEvent`: Allows frontend to send notifications about UI events. Takes `DFrontend.NotifyEventReq` (containing `DFrontend.FrontendEvent` and optional data). Returns `DFrontend.NotifyEventResp`.
+            - **Delegation**: Handlers delegate to `Domain.Action.UI.Frontend.getPersonFlowStatus` and `Domain.Action.UI.Frontend.notifyEvent`.
+            - **Logic**: Domain actions assess/update user state or log events based on the request.
+        - `API.Action.UI.EditLocation` (Namma DSL generated from `src-read-only/API/Action/UI/EditLocation.hs`, mounted in `API.UI.hs` context, likely under `/edit/`):
+            - **Purpose**: Manages the rider confirmation part of an asynchronous location edit process for an active ride.
+            - **Endpoints & Purpose (all `/v2/edit/...` and require `TokenAuth`)**:
+                - `GET /{bookingUpdateRequestId}/result`: Polls/retrieves the outcome of a pending location edit request (e.g., new fare, BPP approval status). Returns `API.Types.UI.EditLocation.EditLocationResultAPIResp`.
+                - `POST /result/{bookingUpdateRequestId}/confirm`: Rider confirms acceptance of the proposed edit. Returns `Kernel.Types.APISuccess.APISuccess`.
+            - **Delegation**: Handlers delegate to `Domain.Action.UI.EditLocation.getEditResult` and `Domain.Action.UI.EditLocation.postEditResultConfirm`.
+            - **Core Logic**: Domain actions interact with `Domain.Types.BookingUpdateRequest.BookingUpdateRequest` entities (which are populated/updated by BPP `on_update` callbacks in response to an initial edit request probably made via `API.UI.Ride`). The confirmation step finalizes the update.
+        - `API.Action.UI.FollowRide` (Namma DSL generated from `src-read-only/API/Action/UI/FollowRide.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Manages ride sharing and tracking for safety/convenience.
+            - **Endpoints & Purpose (all `/v2/...` and require `TokenAuth`)**:
+                - `GET /follow/ride`: Lists who is following the user's ride(s). Returns `[API.Types.UI.FollowRide.Followers]`.
+                - `POST /share/ride`: Initiates ride sharing. Takes `API.Types.UI.FollowRide.ShareRideReq`.
+                - `GET /followRide/ECStatus/{rideId}`: For followers to check emergency contact status for a specific ride. Returns `API.Types.UI.FollowRide.EmergencyContactsStatusRes`.
+                - `GET /followRide/{rideId}/customerDetails`: For followers to get basic rider details. Returns `API.Types.UI.FollowRide.FollowRideCustomerDetailsRes`.
+            - **Delegation**: Handlers delegate to corresponding functions in `Domain.Action.UI.FollowRide`.
+            - **Logic**: Domain actions manage sharing permissions, record follower data, and retrieve relevant ride/rider information for authorized followers.
+        - `API.UI.AadhaarVerification` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/AadhaarVerification.hs`):
+            - **Purpose**: Supports Aadhaar-based eKYC for identity verification.
+            - **Endpoints & Purpose (all `/v2/verifyAadhaar/...` and require `TokenAuth`)**:
+                - `POST /generateOtp`: Initiates Aadhaar OTP generation. Takes `Tools.AadhaarVerification.AadhaarOtpReq` (Aadhaar number). Returns `Tools.AadhaarVerification.AadhaarVerificationResp` (e.g., transaction ID).
+                - `POST /verifyOtp`: Verifies the received OTP. Takes `Domain.Action.UI.AadhaarVerification.VerifyAadhaarOtpReq` (OTP, transaction ID). Returns `Tools.AadhaarVerification.AadhaarOtpVerifyRes` (verification status, potentially KYC data).
+            - **Delegation**: Handlers delegate to `Domain.Action.UI.AadhaarVerification.generateAadhaarOtp` and `Domain.Action.UI.AadhaarVerification.verifyAadhaarOtp`.
+            - **External Service**: Domain actions interact with an external Aadhaar verification service, likely via client logic in `Tools.AadhaarVerification`.
+        - `API.UI.AppInstalls` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/AppInstalls.hs`):
+            - **Purpose**: Tracks app installation details.
+            - **Endpoint**: `POST /v2/appInstalls/create`.
+            - **Authentication**: Unauthenticated.
+            - **Request/Response**: Takes `DAppInstalls.AppInstallsReq` (app version, device ID, OS, platform). Returns `APISuccess.APISuccess`.
+            - **Delegation**: Handler `createAppInstallsDetails` delegates to `Domain.Action.UI.AppInstalls.createAppInstallsDetails`.
+            - **Logic**: Domain action validates and stores app/device information for analytics and tracking.
+        - `API.UI.CancellationReason` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/CancellationReason.hs`):
+            - **Purpose**: Provides a list of standardized cancellation reasons.
+            - **Endpoint**: `GET /v2/cancellationReason/list`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes mandatory query param `cancellationStage` (`DCR.CancellationStage`). Returns `[DCancellationReason.CancellationReasonAPIEntity]`.
+            - **Delegation**: Handler `list` delegates to `Domain.Action.UI.CancellationReason.list`.
+            - **Logic**: Domain action fetches context-specific cancellation reasons from a configured source (DB/config).
+        - `API.UI.GoogleTranslate` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/GoogleTranslate.hs`):
+            - **Purpose**: Acts as a backend proxy for Google Translate API.
+            - **Endpoint**: `GET /v2/language/translate`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes query params `source` (`Maps.Language`), `target` (`Maps.Language`), and `q` (Text to translate). Returns `GoogleTranslate.TranslateResp` (containing translated text).
+            - **Delegation**: Handler `translate` delegates to `SharedLogic.GoogleTranslate.translate`.
+            - **External Service**: `SharedLogic.GoogleTranslate.translate` constructs and sends the request to the external Google Translate API, handling the API key and response.
+        - `API.UI.Disability` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/Disability.hs`):
+            - **Purpose**: Lists supported disability types or accessibility options.
+            - **Endpoint**: `GET /v2/disability/list`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Response**: `[Domain.Types.Disability.Disability]`.
+            - **Delegation**: Handler `listDisabilities` delegates to `Domain.Action.UI.Disability.listDisabilities`.
+            - **Logic**: Domain action fetches predefined disability types from configuration or DB.
+        - `API.UI.PartnerOrganizationFRFS` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/PartnerOrganizationFRFS.hs`):
+            - **Purpose**: Provides B2B FRFS ticketing integration for partner organizations.
+            - **Partner Endpoints (API Key Auth, under `/frfs/partnerOrganization/{apiKey}/`)**: `POST /upsertPersonAndGetFare`, `GET /getConfig/...`, `POST /getFareV2`, `POST /upsertPersonAndQuoteConfirm`.
+            - **User/Ticket Endpoints (under `/frfs/`)**: `GET /shareTicketInfo/{ticketBookingId}`, `POST /auth/{ticketBookingId}`, `POST /authVerify`.
+            - **Request/Response Types**: Uses types from `API.Types.UI.FRFSTicketService` and `Domain.Types.PartnerOrganizationFRFS` (e.g., `DPOFRFS.GetFareReq`, `DPOFRFS.GetFareResp`, `DPOFRFS.UpsertPersonAndQuoteConfirmReq`).
+            - **Delegation**: Handlers delegate to functions in `Domain.Action.UI.PartnerOrganizationFRFS`.
+            - **Logic**: Manages partner API key validation, rate limiting (`PartnerOrgConfig`, Redis), end-user upsertion (`DPOFRFS.upsertPersonAndGetToken`), and reuses core FRFS logic from `Domain.Action.UI.FRFSTicketService`.
+        - `API.UI.PersonStats` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/PersonStats.hs`):
+            - **Purpose**: Retrieves personal usage statistics for the authenticated user.
+            - **Endpoint**: `GET /v2/personStats`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Response**: `DPersonStats.PersonStatsRes` (containing aggregated metrics like total rides, distance, spending).
+            - **Delegation**: Handler `getPersonStats` delegates to `Domain.Action.UI.PersonStats.getPersonStats`.
+            - **Logic**: Domain action queries and aggregates data from various database tables (rides, bookings, payments) to compute user-specific statistics.
+        - `API.UI.Whatsapp` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/UI/Whatsapp.hs`):
+            - **Purpose**: Manages user opt-in/opt-out preferences for WhatsApp communications.
+            - **Endpoint**: `POST /v2/whatsapp/opt`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `Whatsapp.OptAPIRequest` (likely with an opt-in/out boolean). Returns `APISuccess.APISuccess`.
+            - **Delegation**: Handler `whatsAppOptAPI` delegates to `Domain.Action.UI.Whatsapp.whatsAppOptAPI`.
+            - **Logic**: Domain action updates user preferences in the database and may interact with a WhatsApp Business API provider to register/deregister the user.
+        - `API.Action.UI.Cac` (Namma DSL generated from `src-read-only/API/Action/UI/Cac.hs`, mounted in `API.UI.hs` context):
+            - **Purpose**: Manages the lifecycle for public transport ticketing.
+            - **Endpoints & Purpose**:
+                - `GET /v2/ticket/places`: Lists ticketable places.
+                - `GET /v2/ticket/places/{placeId}/services`: Lists services at a place (query by `date`).
+                - `POST /v2/ticket/places/{placeId}/book`: Books a ticket (takes `API.Types.UI.TicketService.TicketBookingReq`), returns `Kernel.External.Payment.Interface.Types.CreateOrderResp` for payment processing.
+                - `GET /v2/ticket/bookings`: Lists user's ticket bookings (filters: `limit`, `offset`, `status`).
+                - `GET /v2/ticket/bookings/{ticketBookingShortId}/details`: Gets details of a specific booking.
+                - `POST /v2/ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify`: Verifies a ticket.
+                - `GET /v2/ticket/bookings/{ticketBookingShortId}/status`: Gets booking status.
+                - `POST /v2/ticket/booking/cancel`: Cancels a ticket booking (`API.Types.UI.TicketService.TicketBookingCancelReq`).
+                - `POST /v2/ticket/bookings/update/seats`: Updates seats for a booking (`API.Types.UI.TicketService.TicketBookingUpdateSeatsReq`).
+                - `POST /v2/ticket/service/cancel`: Cancels a ticket service (`API.Types.UI.TicketService.TicketServiceCancelReq`).
+            - **Authentication**: All endpoints require `TokenAuth`.
+            - **Delegation**: Handlers delegate to corresponding functions in `Domain.Action.UI.TicketService`.
+            - **Key Data Types**: `Domain.Types.TicketPlace.TicketPlace`, `API.Types.UI.TicketService.TicketServiceResp`, `API.Types.UI.TicketService.TicketBookingReq`, `API.Types.UI.TicketService.TicketBookingAPIEntity`, `Domain.Types.TicketBooking.BookingStatus`.
+            - **Payment Integration**: Ticket booking uses the platform's standard payment order creation mechanism.
+        - `API.Action.UI.DeletedPerson` (Namma DSL generated from `src-read-only/API/Action/UI/DeletedPerson.hs`, mounted in `API.UI.hs` context, likely under `/deleted/person/`):
+            - **Purpose**: Handles requests for user account deletion.
+            - **Endpoint**: `POST /v2/deleted/person`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `API.Types.UI.DeletedPerson.DeletedPersonReq` (content may include confirmation/reason). Returns `Kernel.Types.APISuccess.APISuccess`.
+            - **Delegation**: Handler `postDeletedPerson` delegates to `Domain.Action.UI.DeletedPerson.postDeletedPerson`.
+            - **Logic**: Domain action initiates the account deletion process: marking account, anonymizing/deleting PII (respecting data retention policies via `Storage.Beam.DeletedPerson` or similar), invalidating sessions, and logging. May be immediate or scheduled.
+        - `API.Action.UI.Miscellaneous` (Namma DSL generated from `src-read-only/API/Action/UI/Miscellaneous.hs`, mounted in `API.UI.hs` context, likely under `/misc/`):
+            - **Purpose**: Currently provides a QR Scan Test Utility.
+            - **Endpoint**: `POST /v2/misc/testScanQR`.
+            - **Authentication**: Requires `TokenAuth`.
+            - **Request/Response**: Takes `API.Types.UI.Miscellaneous.QRScanTestReq`. Returns `API.Types.UI.Miscellaneous.QRScanTestResp`.
+            - **Delegation**: Handler `postMiscTestScanQR` delegates to `Domain.Action.UI.Miscellaneous.postMiscTestScanQR`.
+            - **Logic**: Domain action parses QR data and performs test logic.
+        - (Other API modules listed in `API.UI.hs` yet to be detailed: `API.Action.UI.Miscellaneous`).
+    - **Internal APIs (`API.Internal.hs` - mounted under `/internal/`)**:
+        - `API.Internal.Rating` (Source file at `Backend/app/rider-platform/rider-app/Main/src/API/Internal/Rating.hs`):
+            - **Purpose**: Internal submission of ride feedback/ratings.
+            - **Endpoint**: `POST /internal/feedback/rateRide`.
+            - **Authentication**: Optional header `token` (Text).
+            - **Request/Response**: Takes `Domain.FeedbackReq`. Returns `Kernel.Types.APISuccess.APISuccess`.
+            - **Delegation**: Handler `rating` delegates to `Domain.Action.Internal.Rating.rating`.
+            - **Logic**: Domain action processes and stores the feedback, potentially interacting with BPPs.
+    - **Database**: Beam for PostgreSQL.
+    - **Authentication**: `passetto-client` for user sessions; custom token for some internal APIs.
+    - **Beckn Integration**: Uses `beckn-spec` and `beckn-services`.
+    - **Service Consumption**: Integrates with various shared libraries.
+    - **Email**: `amazonka-ses`.
+    - **GraphQL Client**: `morpheus-graphql-client`.
+    - **Metrics**: `prometheus-client`, `wai-middleware-prometheus`.
+    - **Executable**: `rider-app-exe` (entry point `server/Main.hs`).
+- **Beckn Integration**:
+    - **`beckn-spec` library**: Defines Beckn protocol specifications, data types, core Servant API structures.
+    - **`beckn-services` library**: Provides client implementations for interacting with external Beckn APIs (Servant client, `http-client`).
+    - **`Beckn.ACL.IGM.*` modules**: Part of `beckn-spec` or a related ACL library, used for constructing Beckn IGM message payloads.
+    - **`Beckn.ACL.Cancel` module**: (Part of `beckn-spec` or related ACL library) Used for constructing Beckn `cancel` message payloads (e.g., `ACL.buildCancelReqV2`).
+    - **`Beckn.ACL.OnSearch` module**: (Part of `beckn-spec` or related ACL library) Contains `TaxiACL.buildOnSearchReqV2` for parsing `on_search` Beckn payloads.
+    - **`Beckn.ACL.OnSelect` module**: (Part of `beckn-spec` or related ACL library) Contains `ACL.buildOnSelectReqV2` for parsing `on_select` Beckn payloads.
+    - **`Beckn.ACL.OnInit` module**: (Part of `beckn-spec` or related ACL library) Contains `TaxiACL.buildOnInitReqV2` for parsing `on_init` and `ACL.buildConfirmReqV2` for building `confirm`.
+    - **`Beckn.ACL.OnConfirm` module**: (Part of `beckn-spec` or related ACL library) Contains `ACL.buildOnConfirmReqV2` for parsing `on_confirm` Beckn payloads.
+    - **`Beckn.ACL.OnStatus` module**: (Part of `beckn-spec` or related ACL library) Contains `ACL.buildOnStatusReqV2` for parsing `on_status` Beckn payloads.
+    - **`Beckn.ACL.OnTrack` module**: (Part of `beckn-spec` or related ACL library) Contains `ACL.buildOnTrackReqV2` for parsing `on_track` Beckn payloads.
+    - **`Beckn.ACL.OnUpdate` module**: (Part of `beckn-spec` or related ACL library) Contains `ACL.buildOnUpdateReqV2` for parsing the versatile `on_update` Beckn payloads into specific domain types.
+    - **`Kernel.Utils.Servant.SignatureAuth`**: Provides the mechanism for verifying Beckn callback signatures.
+- **Rule Engine & Policy Enforcement (`yudhishthira` library)**:
+    - Central hub for evaluating complex business rules and policies. Uses `json-logic-hs`, Namma DSL, `haskell-cac`, `passetto-client`.
+- **External Service Integrations (`external` library)**:
+    - Manages integrations with third-party services including Telephony Providers, AWS SES/SNS, Slack, Chat AI, external logging, SMS gateways, Kapture CRM, Social Media Providers, Real-time Public Transport Data Feeds, POI/Place Search APIs, Mapping Services, Aadhaar Verification Services, Google Translate API, and **WhatsApp Business API Providers** (interfaced by `Domain.Action.UI.Whatsapp`).
+- **Metrics Collection (`sessionizer-metrics` library)**:
+    - Collects and exposes session-based operational metrics via Prometheus. Depends on `mobility-core`.
+- **Inbound Webhook Handling (`webhook` library)**:
+    - Receives, validates, and processes incoming webhook notifications. Namma DSL for API/storage, Servant, Beam for PostgreSQL, `cryptohash`, `mobility-core`.
+- **Message Production (`producer` library & `producer-exe`)**:
+    - Generates messages (likely for Kafka) for asynchronous processing. Uses Beam for PostgreSQL, Redis, and depends on `mobility-core`.
+- **Shared Platform Services (`shared-services` library)**:
+    - Common functionalities (Registry, Issue Management, URL Shortener, ConfigPilotFrontend).
+    - Servant APIs, Beam for PostgreSQL, `http-client`, Namma DSL.
+    - **`IssueManagement` library (Shared Component)**: Provides generic issue management API structure (`IssueManagement.API.UI.Issue`) and common domain logic (`IssueManagement.Common.UI.Issue`, `IssueManagement.Domain.Action.UI.Issue`). Relies on an adapter (`ServiceHandle`) for context-specific data and actions.
+- **Location Processing (`location-updates` library)**:
+    - // ... (existing content) ...
+- **Geographic Zone Management (`special-zone-a` library)**:
+    - // ... (existing content) ...
+- **Payment Processing (`payment` library)**:
+    - // ... (existing content) ...
+- **Task Scheduling (`scheduler` library)**:
+    - // ... (existing content) ...
+- **General Utilities (`utils` library)**:
+    - // ... (existing content) ...
+- **Internal Communication Logic**:
+    - `SharedLogic.GoogleTranslate`: Contains the `translate` function which directly interacts with the Google Translate API.
+    - `Domain.Action.Internal.Rating`: Contains logic for internal rating submission.
+    - // ... (other existing content) ...
+- **External System Interface Modules**: 
+    - `Kernel.External.GoogleTranslate.Types`: Defines types like `TranslateResp` for Google Translate API interactions.
+    - // ... (other existing content) ...
+- **Kafka Consumers (`kafka-consumers` service)**:
+    - // ... (existing content) ...
+- **General Backend & API Development**:
+    - // ... (existing content) ...
+- **Core & Shared Logic (dependencies of various libs/services)**:
+    - `Maps.Language`: Type used for specifying languages in Google Translate requests, likely shared with mapping functionalities.
+    - `Domain.Types.Disability`: Defines the `Disability` type used by `API.UI.Disability`.
+    - `Domain.Types.CancellationReason`: Defines `CancellationStage` and `CancellationReasonAPIEntity` used by `API.UI.CancellationReason`.
+    - `Domain.Action.UI.PersonStats`: Contains types like `PersonStatsRes`.
+    - `Domain.Action.UI.Whatsapp`: Contains the type `OptAPIRequest` and the core logic for WhatsApp opt-in/out.
+    - `Domain.Types.DeletedPerson`: (Namma DSL generated) Defines the type for deleted person records, used by `Storage.Beam.DeletedPerson`.
+    - `Storage.Beam.DeletedPerson`: (Namma DSL generated) Defines the database schema and queries for managing deleted person records.
+    - // ... (other existing content) ...
+
+## Key Dependencies and Integrations (from `flake.nix` and package files)
+// ... (existing content) ...
+- **External Services/Protocols**: Beckn (including IGM protocol), OSRM (routing), AWS (SES, SNS for push notifications), Google Services (via mocks or direct for maps, Places API for POI search, Google Translate API, potentially Google Maps for routing), Payment Gateways (may send webhooks, used for VPA verification/payouts), Slack, Chat AI Services, CAC, Prometheus, GraphQL APIs, IVR systems, SMS Gateways, Multimodal Routing Engines (OTP-like), CRIS (Indian Railways - direct API interactions and via `ExternalBPP` modules), External Ticketing Systems, Firebase Cloud Messaging (FCM), Telephony Providers (e.g., Exotel), BBPS, FRFS data sources (GTFS, PT operator APIs), Kapture CRM, UPI (for VPA in referrals), Social Media Provider APIs (for login), Real-time Public Transport Data Feeds (GTFS-RT, etc.), POI Databases/Place Search APIs (e.g., Foursquare), various Mapping Services for polylines, Aadhaar Verification Services (UIDAI or intermediaries), WhatsApp Business API.
+// ... (existing content) ...
+
+## Project Structure (High-Level)
+// ... (existing content) ...
+
+_This document will be updated with more detailed patterns as individual services and libraries are analyzed._
