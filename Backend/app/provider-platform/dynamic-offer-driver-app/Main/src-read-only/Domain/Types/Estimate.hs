@@ -60,4 +60,4 @@ data Estimate = Estimate
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
