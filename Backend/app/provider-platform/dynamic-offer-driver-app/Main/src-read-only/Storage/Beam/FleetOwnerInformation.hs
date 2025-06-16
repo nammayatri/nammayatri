@@ -30,6 +30,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     panImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

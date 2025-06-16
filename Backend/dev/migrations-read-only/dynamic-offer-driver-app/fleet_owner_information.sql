@@ -65,3 +65,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_l
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_license_number_encrypted character varying (255) ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_number_hash bytea ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_number_encrypted character varying (255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ALTER COLUMN referred_by_operator_id TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_eligible_for_subscription boolean ;
