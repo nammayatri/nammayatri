@@ -1326,7 +1326,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           JL.Taxi taxiLegExtraInfo -> return taxiLegExtraInfo.origin.address
           _ -> do
             frfsSearchReq <- QFRFSSearch.findById (Id currentLeg.searchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> currentLeg.searchId)
-            fromStation <- QStation.findById frfsSearchReq.fromStationId >>= fromMaybeM (InvalidRequest $ "from station not found")
+            fromStation <- QStation.findById frfsSearchReq.fromStationId >>= fromMaybeM (InvalidRequest $ "from station not found in extendLeg: " <> show frfsSearchReq.fromStationId)
             return $ mkAddressFromStation fromStation.name
       withJourneyUpdateInProgress journeyId $ do
         forM_ legsToCancel $ \currLeg -> do

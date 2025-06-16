@@ -228,8 +228,8 @@ createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlo
 createOrder config booking = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbMobileNumber <- decrypt `mapM` person.mobileNumber
-  fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "From station not found")
-  toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError "To station not found")
+  fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError $ "From station not found in createOrder: " <> show booking.fromStationId)
+  toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError $ "To station not found in createOrder: " <> show booking.toStationId)
   quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
 
   (osBuildVersion, osType, bookAuthCode) <- case (booking.osBuildVersion, booking.osType, booking.bookingAuthCode) of
