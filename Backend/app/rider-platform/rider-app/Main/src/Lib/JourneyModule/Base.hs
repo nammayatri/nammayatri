@@ -691,7 +691,7 @@ addAllLegs journeyId journeyLegs = do
     mkAddress (Just stopDetails) _ =
       LA.LocationAddress
         { street = Nothing,
-          door = Nothing,
+          door = stopDetails.name,
           city = Nothing,
           state = Nothing,
           country = Nothing,
