@@ -3835,6 +3835,88 @@ function getKeralaSavaariConfig() {
         }
       },
       {
+        "cityName" : "Ballari",
+        "mapImage" : "ny_ic_ballari_map",
+        "cityCode" : "std:08392",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : true,
+        "enableGullak": true,
+        "advancedRidePopUpYoutubeLink" : "" ,
+        "callDriverInfoPost": false,
+        "cityLat" : 15.1347637,
+        "cityLong" : 76.8683478,
+        "supportNumber" : "08069724919",
+        "languageKey" : "KN_IN",
+        "showScheduledRides" : true,
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList": ["AutoCategory", "CarCategory"],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://nammayatri.in"
+          , "customerAppId" : "in.juspay.nammayatri"
+          , "driverAppId" : "in.juspay.nammayatripartner"
+        },
+        "waitingCharges" : 1.50,
+        "waitingChargesConfig" : defWaitingChargesConfig,
+        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "gstPercentage" : "18",
+        "assets" :{
+          "auto_image" : "ic_auto_rickshaw",
+          "onboarding_auto_image" : "ny_ic_auto_side",
+          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+        },
+        "enableHvSdk" : true,
+        "purpleRideConfig" : {
+          "purpleRideConfigForAuto" : {
+            "vehicleVariant" : "Auto",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForCabs" : {
+            "vehicleVariant" : "Cab",
+            "showVideo" : true,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=ZnA9uM8pLPc"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=SZ3NtePrLpM"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=ZJ-aRfkxYtI"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForBikes" : {
+            "vehicleVariant" : "Bike",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          }
+        },
+        "rideStartAudio" : {
+          "acCab" : {
+            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+            "acAudio" : "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+          },
+          "nonAcCab" : {
+            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+            "acAudio" : "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
+          },
+
+          "auto" : {},
+          "bike" : {}
+        }
+      },
+      {
         "cityName": "Thrissur",
         "mapImage": "ny_ic_thrissur_map",
         "cityCode": "std:0487",
