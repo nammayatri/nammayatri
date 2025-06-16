@@ -66,7 +66,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -76,6 +76,8 @@ library
     , cryptohash
     , euler-hs
     , exceptions
+    , fdep
+    , fieldInspector
     , http-client
     , http-types
     , mobility-core
@@ -140,7 +142,7 @@ test-suite location-updates-tests
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Werror
   build-depends:
       QuickCheck
     , aeson
@@ -152,6 +154,8 @@ test-suite location-updates-tests
     , cryptohash
     , euler-hs
     , exceptions
+    , fdep
+    , fieldInspector
     , hspec
     , http-client
     , http-types

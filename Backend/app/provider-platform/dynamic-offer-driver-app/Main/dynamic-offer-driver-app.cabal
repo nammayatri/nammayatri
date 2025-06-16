@@ -1366,7 +1366,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -1393,6 +1393,8 @@ library
     , exceptions
     , external
     , extra
+    , fdep
+    , fieldInspector
     , generic-lens
     , geohash ==1.0.1
     , hashable
@@ -1503,7 +1505,7 @@ executable dynamic-offer-driver-app-exe
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -1529,6 +1531,8 @@ executable dynamic-offer-driver-app-exe
     , euler-hs
     , exceptions
     , extra
+    , fdep
+    , fieldInspector
     , generic-lens
     , geohash ==1.0.1
     , hashable

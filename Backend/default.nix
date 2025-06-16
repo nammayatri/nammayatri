@@ -8,6 +8,7 @@
     ./nix/arion-configuration.nix
     ./nix/osrm.nix
     ./load-test
+    ./nix/nammayatriMetadata.nix
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:
     let
@@ -49,11 +50,19 @@
       ];
 
       haskellProjects.default = {
+        defaults.settings.all = {
+          imports = [
+            ./nix/build-analysis.nix
+          ];
+        };
         projectRoot = ./.;
         imports = [
           inputs.beckn-gateway.haskellFlakeProjectModules.output
           # inputs.namma-dsl.haskellFlakeProjectModules.output
           inputs.haskell-cac.haskellFlakeProjectModules.output
+          inputs.references.haskellFlakeProjectModules.output
+          inputs.classyplate.haskellFlakeProjectModules.output
+          inputs.spider.haskellFlakeProjectModules.output
         ];
         autoWire = [ "packages" "checks" "apps" ];
         devShell.tools = _: {
@@ -79,6 +88,15 @@
           unicode-data.source = "0.3.1";
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
           json-logic-hs.source = inputs.json-logic-hs;
+          # fdep.source = inputs.spider + /fdep;
+          # fieldInspector.source = inputs.spider + /fieldInspector;
+          # api-contract.source = inputs.spider + /api-contract;
+          # large-records.source = inputs.large-records + /large-records;
+          # large-generics.source = inputs.large-records + /large-generics;
+          # large-anon.source = inputs.large-records + /large-anon;
+          # typelet.source = inputs.large-records + /typelet;
+          # ghc-tcplugin-api.source = "0.7.1.0";
+          # ghc-hasfield-plugin.source = inputs. ghc-hasfield-plugin;
         };
         settings = {
           alchemist.custom = cacConfig;
@@ -110,7 +128,7 @@
 
           namma-dsl.libraryProfiling = false;
           location-updates.check = false;
-          beckn-test.check = false;
+          beckn-test = { check = false; buildAnalysis = true; };
           singletons-th.jailbreak = true;
           singletons-base = {
             jailbreak = true;
@@ -121,8 +139,50 @@
             jailbreak = true;
           };
           base32.jailbreak = true;
+          references.jailbreak = true;
           amazonka-core.check = false;
           cryptostore.check = false;
+          alchemist.buildAnalysis = true;
+          safety-dashboard.buildAnalysis = true;
+          lib-dashboard.buildAnalysis = true;
+          rider-dashboard.buildAnalysis = true;
+          provider-dashboard.buildAnalysis = true;
+          dashboard-helper-api.buildAnalysis = true;
+          special-zone.buildAnalysis = true;
+          image-api-helper.buildAnalysis = true;
+          route-extractor.buildAnalysis = true;
+          rider-app-scheduler.buildAnalysis = true;
+          search-result-aggregator.buildAnalysis = true;
+          rider-app.buildAnalysis = true;
+          rider-app-drainer.buildAnalysis = true;
+          public-transport-rider-platform.buildAnalysis = true;
+          public-transport-search-consumer.buildAnalysis = true;
+          beckn-cli.buildAnalysis = true;
+          kafka-consumers.buildAnalysis = true;
+          sdk-event-pipeline.buildAnalysis = true;
+          example-service.buildAnalysis = true;
+          dynamic-offer-driver-drainer.buildAnalysis = true;
+          driver-offer-allocator.buildAnalysis = true;
+          dynamic-offer-driver-app.buildAnalysis = true;
+          mock-google.buildAnalysis = true;
+          mock-sms.buildAnalysis = true;
+          mock-fcm.buildAnalysis = true;
+          mock-rider-platform.buildAnalysis = true;
+          mock-public-transport-provider-platform.buildAnalysis = true;
+          mock-idfy.buildAnalysis = true;
+          beckn-services.buildAnalysis = true;
+          scheduler.buildAnalysis = true;
+          yudhishthira.buildAnalysis = true;
+          external.buildAnalysis = true;
+          special-zone-a.buildAnalysis = true;
+          utils.buildAnalysis = true;
+          payment.buildAnalysis = true;
+          location-updates.buildAnalysis = true;
+          webhook.buildAnalysis = true;
+          producer.buildAnalysis = true;
+          shared-services.buildAnalysis = true;
+          sessionizer-metrics.buildAnalysis = true;
+          beckn-spec.buildAnalysis = true;
         };
       };
 
@@ -148,6 +208,8 @@
               done
               cp -r ${./dhall-configs} $out/opt/app/dhall-configs
               cp -r ${./swagger} $out/opt/app/swagger
+              # Add symlink to joinNammayatriMetadata
+              ln -s ${config.packages.joinNammayatriMetadata} $out/opt/app/nammayatri-metadata
             '';
           };
       };
