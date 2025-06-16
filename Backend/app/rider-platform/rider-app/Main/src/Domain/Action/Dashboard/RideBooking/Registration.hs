@@ -25,7 +25,7 @@ postRegistrationAuth ::
   Environment.Flow Domain.Action.UI.Registration.AuthRes
 postRegistrationAuth merchantShortId _opCity req = do
   let authReq = buildAuthReq merchantShortId req
-  Domain.Action.UI.Registration.auth authReq Nothing Nothing Nothing Nothing Nothing
+  Domain.Action.UI.Registration.auth authReq Nothing Nothing Nothing Nothing Nothing Nothing
 
 postRegistrationVerify ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
