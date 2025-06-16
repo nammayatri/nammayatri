@@ -43,3 +43,16 @@ apis:
         type: SearchRequestsReq
       response:
         type: SearchRequestsRes
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - driverId: Id Person
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: SearchRequestsRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SEARCH_REQUESTS LIST_SEARCH_REQUESTS
