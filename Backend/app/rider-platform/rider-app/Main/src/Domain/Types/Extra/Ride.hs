@@ -45,6 +45,7 @@ data RideAPIEntity = RideAPIEntity
     talkedWithDriver :: Kernel.Prelude.Bool,
     onlinePayment :: Kernel.Prelude.Bool,
     feedbackSkipped :: Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Bool,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideOtp :: Kernel.Prelude.Text,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
