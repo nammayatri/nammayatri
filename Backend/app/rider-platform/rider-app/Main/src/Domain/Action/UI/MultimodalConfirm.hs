@@ -32,6 +32,7 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.Select as Select
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -88,6 +89,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -730,13 +732,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
             QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vType DIBC.MULTIMODAL
         )
 
-  let fetchData bppConfig = do
-        stations <- OTPRest.findAllByBppConfigId bppConfig
-        routes <-
-          try @_ @SomeException (OTPRest.getRoutesByGtfsId bppConfig) >>= \case
-            Left _ -> QRoute.findAllByBppConfigId bppConfig.id
-            Right routes -> pure routes
-        -- routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
+  let mkResponse stations routes bppConfig =
         pure
           ApiTypes.PublicTransportData
             { ss =
@@ -773,19 +769,42 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                   )
                   routes,
               rsm = [],
-              -- map
-              --   ( \rs ->
-              --       ApiTypes.TransportRouteStopMapping
-              --         { rc = rs.routeCode,
-              --           sc = rs.stopCode,
-              --           sn = rs.sequenceNum
-              --         }
-              --   )
-              --   routeStops,
               ptcv = bppConfig.id.getId
             }
 
-  transportDataList <- mapM fetchData integratedBPPConfigs
+  let fetchData bppConfig = do
+        stations <- OTPRest.getStationsByGtfsId bppConfig
+        routes <- OTPRest.getRoutesByGtfsId bppConfig
+        mkResponse stations routes bppConfig
+
+  let fetchDataDb bppConfig = do
+        routes <- QRoute.findAllByBppConfigId bppConfig.id
+        stations <- QStation.findAllByBppConfigId bppConfig.id
+        mkResponse stations routes bppConfig
+
+  transportDataList <-
+    try @_ @SomeException
+      ( mapM
+          ( \config -> do
+              (feedInfo, baseUrl) <- OTPRest.getFeedInfoVehicleTypeAndBaseUrl config
+              return (config, (feedInfo, baseUrl))
+          )
+          integratedBPPConfigs
+      )
+      >>= \case
+        Left _ -> mapM fetchData integratedBPPConfigs
+        Right configsWithFeedInfo -> do
+          -- Group configs by feed_id and take first config for each feed_id
+          let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedInfo, _)) -> (feedInfo.feedId.getId, [config])) configsWithFeedInfo
+              uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
+
+          -- Process only unique configs
+          try @_ @SomeException (mapM fetchData uniqueConfigs) >>= \case
+            Left error' -> do
+              logError $ "Error fetching data from OTPRest all public transport data: " <> show error'
+              mapM fetchDataDb integratedBPPConfigs
+            Right dataList -> pure dataList
+
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
