@@ -1132,19 +1132,19 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
-  let petTag = Yudhishthira.TagNameValue "PetDriver#true"
-  when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
-    logInfo "Tag already exists, update expiry"
-  mbNammTag <- Yudhishthira.verifyTag petTag
-  now <- getCurrentTime
-  let tag =
-        if isPetModeEnabled
-          then do
-            let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
-            Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
-          else Yudhishthira.removeTagNameValue person.driverTag petTag
-  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
-    QPerson.updateDriverTag (Just tag) personId
+    let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
+    when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
+      logInfo "Tag already exists, update expiry"
+    tag <-
+      if isPetModeEnabled
+        then do
+          mbNammTag <- Yudhishthira.verifyTag petTag
+          now <- getCurrentTime
+          let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
+          return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
+        else return $ Yudhishthira.removeTagNameValue person.driverTag petTag
+    unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
+      QPerson.updateDriverTag (Just tag) personId
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId

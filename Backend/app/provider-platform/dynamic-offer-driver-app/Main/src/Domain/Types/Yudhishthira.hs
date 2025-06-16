@@ -5,6 +5,7 @@ module Domain.Types.Yudhishthira where
 import qualified Data.Aeson as A
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+-- import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
@@ -37,14 +38,22 @@ data EndRideTagData = EndRideTagData
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data SelectTagData = SelectTagData
+  { isPetRide :: Bool --,
+  -- estimates :: [DEst.Estimate] -------uncomment this line if you want to use estimates in select tag data
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 $(YTH.generateGenericDefault ''TagData)
 $(YTH.generateGenericDefault ''EndRideTagData)
 $(YTH.generateGenericDefault ''CancelRideTagData)
+$(YTH.generateGenericDefault ''SelectTagData)
 
 instance YTC.LogicInputLink YA.ApplicationEvent where
   getLogicInputDef a =
     case a of
       YA.Search -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @TagData)
+      YA.Select -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @SelectTagData)
       YA.RideEnd -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @EndRideTagData)
       YA.RideCancel -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @CancelRideTagData)
       _ -> Nothing
