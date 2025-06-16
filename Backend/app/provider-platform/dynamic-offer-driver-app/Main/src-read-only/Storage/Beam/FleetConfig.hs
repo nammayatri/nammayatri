@@ -24,7 +24,8 @@ data FleetConfigT f = FleetConfigT
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    fleetType :: (B.C f (Maybe Data.Text.Text))
   }
   deriving (Generic, B.Beamable)
 

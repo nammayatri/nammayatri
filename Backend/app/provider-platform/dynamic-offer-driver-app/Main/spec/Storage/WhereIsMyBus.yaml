@@ -178,23 +178,28 @@ FleetConfig:
     allowAutomaticRoundTripAssignment: Bool
     directlyStartFirstTripAssignment: Bool
     unlinkDriverAndVehicleOnTripTermination: Bool
+    fleetType: Text
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
     directlyStartFirstTripAssignment: Maybe Bool
     unlinkDriverAndVehicleOnTripTermination: Maybe Bool
+    fleetType: Maybe Text
   toTType:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
+    fleetType: Just fleetType|E
   fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
+    fleetType: fromMaybe "PUBLIC" fleetType|E
   sqlType:
     endRideDistanceThreshold: double precision
   default:
     endRideDistanceThreshold: "100"
     directlyStartFirstTripAssignment: "true"
     unlinkDriverAndVehicleOnTripTermination: "true"
+    fleetType: "PUBLIC"
   constraints:
     fleetOwnerId: PrimaryKey
