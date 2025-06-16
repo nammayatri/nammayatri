@@ -1142,7 +1142,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
-  let petTag = Yudhishthira.TagNameValue "PetDriver"
+  let petTag = Yudhishthira.TagNameValue "PetDriver#true"
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
     logInfo "Tag already exists, update expiry"
   mbNammTag <- Yudhishthira.verifyTag petTag
