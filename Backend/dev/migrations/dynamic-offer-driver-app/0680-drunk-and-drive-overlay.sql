@@ -1,3 +1,4 @@
+--  run in master
 INSERT INTO atlas_driver_offer_bpp.merchant_overlay
     (id, language, overlay_key, image_url, title, description, ok_button_text, merchant_id, merchant_operating_city_id)
 SELECT
@@ -17,7 +18,7 @@ FROM
         ('KANNADA', 'DRUNK_AND_DRIVE_WARNING', '', 'ಮದ್ಯಪಾನ ಮತ್ತು ಡ್ರೈವ್ ಎಚ್ಚರಿಕೆ', 'ಮದ್ಯಪಾನ ಮಾಡಿ ವಾಹನ ಓಡಿಸಬೇಡಿ.', 'ಸರಿ'),
         ('TAMIL', 'DRUNK_AND_DRIVE_WARNING', '', 'மது மற்றும் ஓட்டம் எச்சரிக்கை', 'மது அருந்தி வண்டி ஓட்டாதீர்கள்.', 'சரி'),
         ('MALAYALAM', 'DRUNK_AND_DRIVE_WARNING', '', 'മദ്യപാനം & ഡ്രൈവ് മുന്നറിയിപ്പ്', 'മദ്യപിച്ച് വാഹനം ഓടിക്കരുത്.', 'ശരി'),
-        ('TELUGU', 'DRUNK_AND_DRIVE_WARNING', '', 'మద్యం మరియు డ్రైవ్ హెచ్చరిక', 'మద్యం తాగి వాహనం నడపవద్దు.', 'సరే')
+        ('TELUGU', 'DRUNK_AND_DRIVE_WARNING', '', 'మద్యం మరియు డ్రైవ్ హెచ్చరిక', 'మద్యం తాగి వాహనం నడపవద్దు.', 'సరే'),
         ('BENGALI', 'DRUNK_AND_DRIVE_WARNING', '', 'মদ্যপান এবং ড্রাইভ সতর্কতা', 'মদ্যপান করে গাড়ি চালাবেন না।', 'ঠিক আছে')
     ) AS event(language, overlay_key, image_url, title, description, ok_button_text),
     atlas_driver_offer_bpp.merchant_operating_city AS city;
