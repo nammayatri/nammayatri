@@ -126,7 +126,8 @@ data BusRideInfo = BusRideInfo
 
 data CarRideInfo = CarRideInfo
   { pickupLocation :: LatLong,
-    minDistanceBetweenTwoPoints :: Maybe Int
+    minDistanceBetweenTwoPoints :: Maybe Int,
+    rideStops :: Maybe [LatLong]
   }
   deriving (Show, Eq, Generic, ToSchema)
 
@@ -150,6 +151,7 @@ instance FromJSON RideInfo where
               <$> ( obj .: "car" >>= \carObj ->
                       CarRideInfo <$> carObj .: "pickupLocation"
                         <*> carObj .:? "minDistanceBetweenTwoPoints"
+                        <*> carObj .:? "rideStops"
                   )
           )
 
@@ -168,11 +170,12 @@ instance ToJSON RideInfo where
                 "groupId" .= groupId
               ]
         ]
-    Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints) ->
+    Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints rideStops) ->
       object
         [ "car"
             .= object
               [ "pickupLocation" .= pickupLocation,
-                "minDistanceBetweenTwoPoints" .= minDistanceBetweenTwoPoints
+                "minDistanceBetweenTwoPoints" .= minDistanceBetweenTwoPoints,
+                "rideStops" .= rideStops
               ]
         ]

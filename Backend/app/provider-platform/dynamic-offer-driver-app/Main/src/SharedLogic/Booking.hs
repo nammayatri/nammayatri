@@ -2,7 +2,7 @@ module SharedLogic.Booking where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
-import Data.Text
+import Data.Text hiding (map)
 import Data.Time (UTCTime (..), defaultTimeLocale, formatTime, utctDay)
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -72,7 +72,7 @@ cancelBooking booking mbDriver transporter = do
     void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id SRide.CANCELLED
     updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
-    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing}))
+    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
 
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing

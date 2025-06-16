@@ -16,3 +16,4 @@ castAlertRequestDataToRequestType = \case
   OppositeDirection _ -> OppositeDirectionAlert
   TripNotStarted _ -> TripNotStartedAlert
   SafetyCheck _ -> SafetyCheckAlert
+  RideStopReached _ -> RideStopReachedAlert
