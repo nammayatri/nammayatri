@@ -18,6 +18,7 @@ module Domain.Action.Beckn.Select
   )
 where
 
+import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
@@ -27,12 +28,14 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
@@ -82,7 +85,16 @@ handler merchant sReq searchReq estimates = do
       return Nothing
   QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
   QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
-  when sReq.isPetRide $ QSR.updateSearchTags (Just (LYT.TagNameValue "PetRide#true" : fromMaybe [] searchReq.searchTags)) searchReq.id
+
+  when sReq.isPetRide $
+    fork "Add Namma Tags" $ do
+      let tagData =
+            Y.SelectTagData
+              { isPetRide = sReq.isPetRide
+              -- ,estimates = estimates uncomment this line if you want to use estimates in select tag data
+              }
+      addNammaTags tagData searchReq
+
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
@@ -124,3 +136,9 @@ validateRequest merchantId sReq = do
     (estimate : xs) -> do
       searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
       return (merchant, searchReq, [estimate] <> xs)
+
+addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
+addNammaTags tagData sReq = do
+  newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Select tagData)
+  let tags = sReq.searchTags <> eitherToMaybe newSearchTags
+  QSR.updateSearchTags tags sReq.id
