@@ -18,6 +18,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   ActionSource: Dashboard.Common
   FleetBadgeType: Domain.Types.FleetBadgeType
+  Role: Dashboard.Common
 module: Driver
 
 apis:
@@ -89,6 +90,7 @@ apis:
       query:
         - countryCode: Text
         - fleetOwnerId: Text
+        - mbRole: Role
       request:
         type: AddVehicleReq
       response:
@@ -106,6 +108,7 @@ apis:
             query:
               - mobileCountryCode: Text
               - fleetOwnerId : Text
+              - mbRole: Role
             request:
               type: AddVehicleReq
             response:
