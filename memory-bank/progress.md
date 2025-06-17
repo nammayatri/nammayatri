@@ -5,7 +5,7 @@ _This document tracks what works, what's left to build, current status, known is
 ## Current Status (as of Initial Analysis)
 - **Core Infrastructure**: The foundational elements (Nix build, Haskell backend, Purescript frontend, key service integrations like Beckn, OSRM, AWS) seem to be defined in `flake.nix`.
 - **Service Skeleton**: A modular structure for various services (rider, provider, payment, safety, etc.) is in place.
-- **Memory Bank**: Initial setup and population with high-level information is complete.
+- **Memory Bank**: Initial setup and population with high-level information is complete. Task 'initialize memory-bank for this repo' confirmed this state.
 
 ## What Works (Assumed based on setup)
 - The Nix environment can likely build the project components.
@@ -21,4 +21,4 @@ _This document tracks what works, what's left to build, current status, known is
 ## Known Issues (from Memory Bank perspective)
 - The current Memory Bank content is high-level and requires significant detail to be added from deeper codebase analysis.
 
-_This document should be updated regularly as the project evolves and features are developed/analyzed._ 
+_This document should be updated regularly as the project evolves and features are developed/analyzed._
