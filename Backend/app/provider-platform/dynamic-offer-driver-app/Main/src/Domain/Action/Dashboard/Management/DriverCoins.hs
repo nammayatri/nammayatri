@@ -86,30 +86,35 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
       uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
-      QVeh.findById driverId >>= \case
-        Just vehicle -> do
-          Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
-          let driverCoinEvent =
-                DTCC.CoinHistory
-                  { id = Id uuid,
-                    driverId = driverId.getId,
-                    merchantId = merchantId.getId,
-                    merchantOptCityId = merchantOpCityId.getId,
-                    eventFunction = eventFunction,
-                    coins = coinsValue,
-                    status = status_,
-                    createdAt = now,
-                    updatedAt = now,
-                    expirationAt = expiryTime,
-                    coinsUsed = 0,
-                    bulkUploadTitle = Just bulkUploadTitle,
-                    entityId = entityId,
-                    vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
-                  }
-          CHistory.updateCoinEvent driverCoinEvent
-          Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
-          pure Nothing
-        Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
+      driverExists <- Person.findById driverId
+      if isNothing driverExists
+        then do
+          pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Driver not found"}
+        else do
+          QVeh.findById driverId >>= \case
+            Just vehicle -> do
+              Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
+              let driverCoinEvent =
+                    DTCC.CoinHistory
+                      { id = Id uuid,
+                        driverId = driverId.getId,
+                        merchantId = merchantId.getId,
+                        merchantOptCityId = merchantOpCityId.getId,
+                        eventFunction = eventFunction,
+                        coins = coinsValue,
+                        status = status_,
+                        createdAt = now,
+                        updatedAt = now,
+                        expirationAt = expiryTime,
+                        coinsUsed = 0,
+                        bulkUploadTitle = Just bulkUploadTitle,
+                        entityId = entityId,
+                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
+                      }
+              CHistory.updateCoinEvent driverCoinEvent
+              Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
+              pure Nothing
+            Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
 
 postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReqV2 -> Flow Common.BulkUploadCoinRes
 postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity Common.BulkUploadCoinsReqV2 {..} = do
@@ -150,30 +155,35 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
       uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
-      QVeh.findById driverId >>= \case
-        Just vehicle -> do
-          Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
-          let driverCoinEvent =
-                DTCC.CoinHistory
-                  { id = Id uuid,
-                    driverId = driverId.getId,
-                    merchantId = merchantId.getId,
-                    merchantOptCityId = merchantOpCityId.getId,
-                    eventFunction = eventFunction,
-                    coins = coinsValue,
-                    status = status_,
-                    createdAt = now,
-                    updatedAt = now,
-                    expirationAt = expiryTime,
-                    coinsUsed = 0,
-                    bulkUploadTitle = Just bulkUploadTitle,
-                    entityId = entityId,
-                    vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
-                  }
-          CHistory.updateCoinEvent driverCoinEvent
-          Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
-          pure Nothing
-        Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
+      driverExists <- Person.findById driverId
+      if isNothing driverExists
+        then do
+          pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Driver not found"}
+        else do
+          QVeh.findById driverId >>= \case
+            Just vehicle -> do
+              Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
+              let driverCoinEvent =
+                    DTCC.CoinHistory
+                      { id = Id uuid,
+                        driverId = driverId.getId,
+                        merchantId = merchantId.getId,
+                        merchantOptCityId = merchantOpCityId.getId,
+                        eventFunction = eventFunction,
+                        coins = coinsValue,
+                        status = status_,
+                        createdAt = now,
+                        updatedAt = now,
+                        expirationAt = expiryTime,
+                        coinsUsed = 0,
+                        bulkUploadTitle = Just bulkUploadTitle,
+                        entityId = entityId,
+                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
+                      }
+              CHistory.updateCoinEvent driverCoinEvent
+              Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
+              pure Nothing
+            Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
     otherEventFunction -> throwError $ NonBulkUploadCoinFunction $ show otherEventFunction
 
 getDriverCoinsCoinHistory :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> Flow Common.CoinHistoryRes
