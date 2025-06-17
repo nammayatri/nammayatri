@@ -4,6 +4,7 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
 import Data.List (sortBy)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Text
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Alert
 import Domain.Types.AlertRequest
@@ -594,6 +595,11 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
       tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)
       QTAR.updateIsViolated False tripAlertRequest.id
       pure tripAlertRequest.alertRequestId
+
+updateAlertRequestStatus :: AlertRequestStatus -> Kernel.Prelude.Maybe Data.Text.Text -> Id AlertRequest -> Flow ()
+updateAlertRequestStatus status reason alertRequestId = do
+  QAR.updateStatusWithReason status reason alertRequestId
+  QTAR.updateStatusWithReason status alertRequestId
 
 assignUpcomingTripTransaction :: TripTransaction -> LatLong -> Flow TripTransaction
 assignUpcomingTripTransaction tripTransaction currentLocation = do

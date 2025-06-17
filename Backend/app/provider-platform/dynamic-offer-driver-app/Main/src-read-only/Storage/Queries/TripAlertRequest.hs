@@ -4,6 +4,9 @@
 
 module Storage.Queries.TripAlertRequest (module Storage.Queries.TripAlertRequest, module ReExport) where
 
+import qualified Data.Text
+import qualified Domain.Types.Alert.AlertRequestStatus
+import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.TripAlertRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -48,3 +51,10 @@ updateByPrimaryKey (Domain.Types.TripAlertRequest.TripAlertRequest {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+updateStatusWithReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus -> Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest -> m ())
+updateStatusWithReason alertStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.alertStatus (Just alertStatus), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
