@@ -1338,6 +1338,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         updateJourneyChangeLogCounter journeyId
         searchResp <- addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation)
         QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
+        when (currentLeg.status /= JL.InPlan) $
+          fork "Start journey thread" $ withShortRetry $ startJourney [] Nothing journeyId
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.order == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
       case (currentLeg.travelMode, currentLeg.skipBooking) of
