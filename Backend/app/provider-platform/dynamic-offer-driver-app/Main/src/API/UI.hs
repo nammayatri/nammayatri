@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
@@ -121,6 +122,7 @@ type API =
            :<|> ReferralPayout.API
            :<|> SpecialLocationWarrior.API
            :<|> WMB.API
+           :<|> CallFeedback.API
            :<|> OH.API
            :<|> Operator.API
        )
@@ -174,5 +176,6 @@ handler =
     :<|> ReferralPayout.handler
     :<|> SpecialLocationWarrior.handler
     :<|> WMB.handler
+    :<|> CallFeedback.handler
     :<|> OH.handler
     :<|> Operator.handler
