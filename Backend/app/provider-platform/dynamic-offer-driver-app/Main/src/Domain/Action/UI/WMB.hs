@@ -389,7 +389,7 @@ postWmbRequestsCancel (mbPersonId, _, _) alertRequestId = do
       Just personId -> unless (alertRequest.requestorId == personId) $ throwError NotAnExecutor
       _ -> pure ()
     unless (alertRequest.status == AWAITING_APPROVAL) $ throwError (RequestAlreadyProcessed alertRequest.id.getId)
-    QAR.updateStatusWithReason REVOKED (Just "Cancelled by driver") alertRequestId
+    WMB.updateAlertRequestStatus REVOKED (Just "Cancelled by driver") alertRequestId
   pure Success
 
 getWmbRequestsStatus ::

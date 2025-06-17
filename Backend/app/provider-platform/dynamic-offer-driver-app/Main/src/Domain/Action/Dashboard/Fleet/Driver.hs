@@ -363,7 +363,7 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
     driverRequest <- B.runInReplica $ QAR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
     driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
-      DTA.AWAITING_APPROVAL -> QAR.updateStatusWithReason req.status (Just req.reason) (Id req.approvalRequestId)
+      DTA.AWAITING_APPROVAL -> WMB.updateAlertRequestStatus req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
       DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTA.REJECTED, reason = Just req.reason}
