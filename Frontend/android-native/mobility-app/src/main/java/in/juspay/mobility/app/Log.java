@@ -22,6 +22,8 @@ import java.util.concurrent.Executors;
 public class Log {
     private static final String LOG_DIR_NAME = ".logs";
     private static final Object lock = new Object();
+
+    private static boolean enabled = false;
     private static Context appContext;
     private static int logRetentionDays = 7; // Default retention
     private static final ExecutorService logExecutor;
@@ -128,7 +130,7 @@ public class Log {
      * @param logTimestamp The timestamp when the log event occurred.
      */
     private static void writeLog(String level, String tag, String message, Throwable throwable, Date logTimestamp) {
-        if (appContext == null) {
+        if (appContext == null || !enabled) {
             android.util.Log.e("CustomLog", "Logger not initialized: appContext is null");
             return;
         }
@@ -172,7 +174,7 @@ public class Log {
      * Non-date directories are skipped.
      */
     private static void clearOldLogs() {
-        if (appContext == null) {
+        if (appContext == null && !enabled) {
             android.util.Log.e("CustomLog", "Logger not initialized: appContext is null (clearOldLogs)");
             return;
         }

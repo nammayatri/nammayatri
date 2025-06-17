@@ -1200,9 +1200,6 @@ public class LocationUpdateServiceV2 extends Service {
      */
     private void notifyLocationUpdateSuccess() {
         Log.d(TAG, "notifyLocationUpdateSuccess() called");
-        if (updateTimeCallbacks.isEmpty()) {
-            return;
-        }
 
         // Create formatted timestamp
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
@@ -1233,16 +1230,7 @@ public class LocationUpdateServiceV2 extends Service {
 
 
     public void notifyReact(String event, Object payload) {
-        ReactApplication reactApplication= (ReactApplication) context.getApplicationContext();
-        if (reactApplication != null) {
-            ReactHost host = reactApplication.getReactHost();
-            if (host != null) {
-                ReactContext reactContext = host.getCurrentReactContext();
-                if (reactContext != null){
-                    reactContext.getJSModule(ReactContext.RCTDeviceEventEmitter.class).emit(event, payload);
-                }
-            }
-        }
+        ReactUtils.emitReactEvent(context,event,payload);
     }
 
     /**
