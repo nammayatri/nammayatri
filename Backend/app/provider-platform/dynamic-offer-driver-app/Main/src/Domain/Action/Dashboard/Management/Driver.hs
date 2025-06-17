@@ -55,6 +55,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverStats,
     checkDriverOperatorAssociation,
     checkFleetOperatorAssociation,
+    checkFleetDriverAssociation,
     getDriverEarnings,
   )
 where

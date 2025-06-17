@@ -67,8 +67,11 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> City.City -> ApiT
 postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  let mbRequestorId = case apiTokenInfo.merchant.hasFleetMemberHierarchy of
+        Just False -> Just apiTokenInfo.personId.getId
+        _ -> Nothing
   T.withResponseTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId req {Common.requestorId = mbRequestorId}
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity apiTokenInfo driverId req = do

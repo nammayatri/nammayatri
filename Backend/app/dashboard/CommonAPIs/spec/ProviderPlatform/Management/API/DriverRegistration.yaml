@@ -205,6 +205,7 @@ types:
     - imageBase64: Text
     - imageType: DocumentType
     - rcNumber: Maybe Text
+    - requestorId: Maybe Text
   UploadDocumentTReq:
     - imageType: DocumentType
     - rcNumber: Maybe Text
