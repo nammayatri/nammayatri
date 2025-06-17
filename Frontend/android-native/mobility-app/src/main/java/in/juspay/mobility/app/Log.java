@@ -134,8 +134,7 @@ public class Log {
      * @param logTimestamp The timestamp when the log event occurred.
      */
     private static void writeLog(String level, String tag, String message, Throwable throwable, Date logTimestamp) {
-        if (!isFileLoggingEnabled) return;
-        if (appContext == null) {
+        if (appContext == null || !enabled) {
             android.util.Log.e("CustomLog", "Logger not initialized: appContext is null");
             return;
         }
