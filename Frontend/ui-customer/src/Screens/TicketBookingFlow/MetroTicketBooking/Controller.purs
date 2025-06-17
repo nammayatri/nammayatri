@@ -212,7 +212,7 @@ updateQuotes quotes state = do
       void $ pure $ EHU.showToast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (FrfsQuote quoteData) -> do
-      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote, isButtonActive = true }}
+      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote, isButtonActive = (quoteData.quantity == state.data.ticketCount) }}
       updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType
