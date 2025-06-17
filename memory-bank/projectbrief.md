@@ -334,4 +334,99 @@ NammaYatri appears to be a comprehensive mobility platform, likely focused on ri
 - To provide a technology platform for booking and managing rides, with `rider-app` serving as the core backend for rider interactions, including a secure and flexible user registration and authentication system capable of handling OTPs, signed requests, and session tokens.
 - (Other goals remain largely the same but are now supported by a more detailed understanding of `rider-app` capabilities)
 
-_This brief will be refined as more information is gathered from the codebase._
+_
+// --- Appended details for Dashboard API Structure (`API.Dashboard`) (from a previous turn) ---
+            - **Dashboard API Structure (`API.Dashboard`)**: This module (`API/Dashboard.hs`) aggregates various dashboard-facing API endpoints, generally under the `/dashboard/` base path (often further contextualized by `{merchantId}/{city}`). These are typically authenticated using `DashboardTokenAuth`.
+                - **Management APIs (`API.Action.Dashboard.Management`)**: A sub-aggregator for various entity management dashboard functions.
+                    - **Booking Management (`API.Action.Dashboard.Management.Booking`)**: ... (details as previously added) ...
+                    - **Customer Management (`API.Action.Dashboard.Management.Customer`)**: Offers dashboard endpoints for listing/searching customers (`GET .../list`), deleting (`DELETE .../{customerId}`), blocking/unblocking (`POST .../{customerId}/block`, `POST .../{customerId}/unblock`), getting customer info (`GET .../{customerId}/info`), managing cancellation dues, updating safety center blocking status, and looking up customers by phone or ID. Delegates to `Domain.Action.Dashboard.Customer`.
+// ... (ensure other existing API Structure list items, particularly for other API.Dashboard and API.Action.Dashboard.Management sub-modules when they are analyzed, are preserved below this) ...
+
+### Key Components & Services (Deep Dive)
+
+This section will be populated with detailed summaries of key services and their flows as they are analyzed.
+
+*   **`rider-app` (`Backend/app/rider-platform/rider-app/Main/`)**: The primary backend application serving rider-facing UIs and orchestrating the rider journey. It handles:
+    *   // ... (all previously detailed rider-app flows) ...
+
+*   **`dynamic-offer-driver-app` (`Backend/app/provider-platform/dynamic-offer-driver-app/Main/`)**: A core backend application for drivers, acting as a Beckn Provider Platform (BPP). It enables drivers to participate in services, particularly those involving dynamic offers. Key responsibilities include:
+    *   **Driver Authentication & Onboarding (via `API.UI.Registration`, `API.Action.UI.DriverOnboardingV2`)**:
+        *   **Initial Registration/Login (`API.UI.Registration`)**: Handles driver login and initial registration via an OTP-based flow (`POST /ui/auth`, `POST /ui/auth/{authId}/verify`). Manages `RegistrationToken`s and issues session tokens (Passetto) upon successful OTP verification. Also handles OTP resend and logout. Captures client/device context from headers.
+        *   **Detailed Onboarding (`API.Action.UI.DriverOnboardingV2`)**: After initial authentication, drivers go through a comprehensive onboarding process including:
+            *   Fetching onboarding configurations (e.g., mandatory documents).
+            *   Viewing applicable rate cards.
+            *   Managing vehicle details: submitting/viewing vehicle photos, updating AC status, managing selected service tiers.
+            *   Submitting identity and regulatory documents: SSN/equivalent, PAN card, Aadhaar card.
+            *   Initiating/checking background verification.
+            *   Linking and verifying bank accounts for payouts.
+            *   Performing liveness checks (e.g., submitting a live selfie, logging calls to an HV SDK for KYC).
+    *   **Core Driver Operations & Ride Lifecycle Management (via `API.UI.Driver`)**: After onboarding, drivers use these authenticated APIs (under `/ui/driver/`) for daily operations:
+        *   **Activity & Availability**: Setting online/offline status (`/setActivity`), managing "Go Home" mode (CRUD and activate/deactivate under `/goHome/`).
+        *   **Ride Offer Interaction**: Fetching nearby ride requests (`/nearbyRideRequest`), proactively offering quotes (`/searchRequest/quote/offer`), responding to allocated ride offers (`/searchRequest/quote/respond`).
+        *   **Active Ride Management**: Starting OTP-based rides (`/otpRide/start`), managing standard ride lifecycle events for a given `rideId` (listing rides, arrived at pickup, start ride with OTP, arrived at/departed from intermediate stops, arrived at destination, end ride with OTP/details), cancelling rides, and uploading odometer/delivery images.
+        *   **Profile & Performance**: Viewing/updating profile, stats, earnings, managing profile photos.
+        *   **Financials**: Managing alternate phone numbers, VPA verification, viewing payment history, clearing dues, downloading invoices.
+        *   **Scheduled Bookings**: Listing and accepting pre-scheduled bookings.
+        *   All logic delegated to `Domain.Action.UI.Driver` and its sub-modules (`RideStart`, `RideEnd`, `RideCancel`).
+    *   **Driver-Specific UI Features (via various `API.UI.*` and `API.Action.UI.*` modules)**:
+        *   **Demand Hotspots (`API.Action.UI.DemandHotspots`)**: // ... (details as previously added) ...
+        *   **Profile Summary (`API.UI.DriverProfileSummary`)**: // ... (details as previously added) ...
+        *   **Driver Referral Program (`API.UI.DriverReferral`)**: // ... (details as previously added) ...
+        *   **Driver-Side Payment Operations (`API.UI.Payment`)**: // ... (details as previously added) ...
+        *   **Driver Referral Payout Management (`API.Action.UI.ReferralPayout`)**: // ... (details as previously added) ...
+        *   **Performance Metrics (`API.UI.Performance`)**: Allows authenticated drivers (`GET /ui/driver/performance`) to fetch their performance statistics (e.g., ride counts, ratings, earnings). Delegates to `Domain.Action.UI.Performance`.
+        *   **Driver Messaging (`API.UI.Message`)**: Enables drivers to manage and interact with platform messages.
+            *   Endpoints (under `/ui/message/`): `GET /list` (list messages), `GET /{messageId}` (view message), `PUT /{messageId}/seen` (mark seen), `PUT /{messageId}/like` (like message), `PUT /{messageId}/response` (reply to message, takes `MessageReplyReq`), `GET /media` (fetch message media).
+            *   Delegates to `Domain.Action.UI.Message`.
+        *   **Exotel-Triggered End Ride (`API.UI.ExotelEndRide`)**: Provides an unauthenticated endpoint (`GET /ui/exotel/ride/end`) for drivers to end rides by calling a designated Exotel number. The system identifies the driver and ride based on `CallFrom` and `CallTo` parameters and the `Exophone` configuration. Delegates to `Domain.Action.UI.ExotelEndRide`.
+        *   **Merchant-Specific City Listing (`API.UI.City`)**: Allows authenticated drivers (or other UI clients) to fetch a list of cities associated with a given `merchantId` (`GET /ui/city/{merchantId}/list`). Delegates to `Domain.Action.UI.City`.
+        *   **Kiosk Location Listing (`API.UI.KioskLocation`)**: Allows authenticated drivers (`GET /ui/kioskLocation/list`) to fetch a list of designated kiosk locations relevant to their operational context (merchant, city). Delegates to `Domain.Action.UI.KioskLocation`.
+        *   **Driver Leaderboards (`API.UI.LeaderBoard`)**: // ... (details as previously added) ...
+        *   **FCM Notification Trigger (OnMessage) (`API.UI.OnMessage`)**: Allows triggering FCM push notifications (`POST /ui/onMessage` with `FCMReq`), likely based on specific messaging events or conditions to alert drivers. Delegates to `Domain.Action.UI.OnMessage`.
+        *   **Ride-Specific Route Info for Drivers (`API.UI.RideRoute`)**: Allows authenticated drivers (`POST /ui/{rideId}/route`) to fetch route geometry and details for their current assigned ride (e.g., to pickup, to destination). Delegates to `Domain.Action.UI.RideRoute` which uses an external mapping service.
+        *   **Driver Plan Management (`API.UI.Plan`)**: Allows authenticated drivers to manage their subscription plans.
+            *   Endpoints (under `/ui/plan/`): `GET /list` (list available plans), `PUT /suspend` & `PUT /resume` (manage plan status), `GET /currentPlan` (view active plan), `POST /{planId}/subscribe` (subscribe to a new plan, handles autopay status and dues), `PUT /{planId}/select` (switch plans), `GET /services` (list available service names for plans).
+            *   Delegates to `Domain.Action.UI.Plan` and interacts with `Domain.Action.UI.Driver` for dues management.
+        *   **Driver Coins/Rewards Management (`API.UI.DriverCoins`)**: Allows authenticated drivers to manage their earned coins/rewards.
+            *   Endpoints (under `/ui/coins/`): `GET /transactions` (view coin history for a date), `GET /usageHistory` (paginated coin usage), `POST /convertCoinToCash` (redeem coins for cash), `GET /rideStatusPastDays` (get ride history relevant to coin earning), `GET /info` (get current coin balance and program info).
+            *   Delegates to `Domain.Action.UI.DriverCoin`.
+        *   **Driver Ride Summaries (`API.UI.RideSummary`)**: Allows authenticated drivers (`POST /ui/rideSummary/list` with a list of `[Day]`) to fetch summaries of their rides for specified dates. Delegates to `Domain.Action.UI.RideSummary`.
+        *   **General Route Calculation for Drivers (`API.UI.Route`)**: Provides general route calculation (`POST /ui/route`), pickup route (`POST /ui/pickup/route`), and trip route (`POST /ui/trip/route`) services for authenticated drivers, taking `Maps.GetRoutesReq` and returning `Maps.GetRoutesResp`. Delegates to `Domain.Action.UI.Route` which uses an external mapping service.
+        *   **Driver Issue Reporting (including SOS/Emergency) (`API.UI.Issue`)**: Allows authenticated drivers to report issues (including safety/SOS via specific categories) using a shared `IssueManagement` library. Endpoints include issue creation, listing, media upload, category/option fetching. Delegates to `IssueManagement.Common.UI.Issue` handlers, using a `driverIssueHandle` for context-specific data.
+        *   **Driver Vehicle Details Management (`API.Action.UI.VehicleDetails`)**: Allows authenticated drivers to manage their vehicle information.
+            *   Endpoints include: `GET /ui/vehicleMakes` (fetch makes), `POST /ui/vehicleModels` (fetch models for a make, takes `VehicleModelsReq`), `POST /ui/vehicleDetails` (submit/update full vehicle details, takes `VehicleDetailsReq`).
+            *   Delegates to `Domain.Action.UI.VehicleDetails`.
+        *   **Dynamic UI Configuration Retrieval (CaC) (`API.Action.UI.Cac`)**: // ... (details as previously added) ...
+        *   **Driver Call Feedback Submission (`API.Action.UI.CallFeedback`)**: Allows authenticated drivers (`POST /ui/driver/call/feedback` with `CallFeedbackReq`) to submit feedback on calls made through the platform. Delegates to `Domain.Action.UI.CallFeedback`.
+        *   **Dynamic Driver Profile Questions (`API.Action.UI.DriverProfileQuestions`)**: Allows fetching dynamic questions for drivers (`GET /ui/DriverProfileQues`) and submitting their answers (`POST /ui/DriverProfileQues` with `DriverProfileQuesReq`). Used for flexible data collection during onboarding/updates. Delegates to `Domain.Action.UI.DriverProfileQuestions`.
+        *   **Driver Response to Booking Edits (`API.Action.UI.EditBooking`)**: Allows authenticated drivers (`POST /ui/edit/result/{bookingUpdateRequestId}` with `EditBookingRespondAPIReq`) to accept/reject proposed in-ride booking modifications (e.g., destination change). Delegates to `Domain.Action.UI.EditBooking`.
+        *   **Fare Calculation/Estimation for Drivers (`API.Action.UI.FareCalculator`)**: Allows authenticated drivers (`GET /ui/calculateFare`) to estimate fares based on pickup/drop locations and a `distanceWeightage` parameter. Delegates to `Domain.Action.UI.FareCalculator`.
+        *   **Driver-Side Insurance Details Retrieval (`API.Action.UI.Insurance`)**: // ... (details as previously added) ...
+        *   **Driver Invoice Retrieval (Filtered) (`API.Action.UI.Invoice`)**: Allows authenticated drivers (`GET /ui/invoice`) to fetch their invoices, filterable by date range (`fromDate`, `toDate`) and vehicle registration number (`rcNo`). Delegates to `Domain.Action.UI.Invoice`.
+        *   **Driver Learning Management System (LMS) (`API.Action.UI.LmsModule`)**: // ... (details as previously added) ...
+        *   **Driver-Contextual City Configurations Retrieval (`API.Action.UI.Merchant`)**: Allows authenticated drivers (`GET /ui/cityConfigs`) to fetch configurations specific to their current merchant and operating city. Delegates to `Domain.Action.UI.Merchant`.
+        *   **Meter Ride Management (`API.Action.UI.MeterRide`)**: Allows drivers to manage meter-based rides, including adding a destination (`POST /ui/meterRide/{rideId}/addDestination`) and sharing a receipt (`POST /ui/meterRide/{rideId}/shareReceipt`). Delegates to `Domain.Action.UI.MeterRide`.
+        *   **Driver Interaction with Operation Hubs (`API.Action.UI.OperationHub`)**: Allows drivers to list operation hubs (`GET /ui/operation/getAllHubs`), create requests to these hubs (`POST /ui/operation/createRequest` with `DriverOperationHubRequest`), and view their request history (`GET /ui/operation/getRequests` with filters including `rcNo`). Delegates to `Domain.Action.UI.OperationHub`.
+        *   **Driver Consent to Operator Association (`API.Action.UI.Operator`)**: Allows authenticated drivers (`POST /ui/operator/consent`) to consent to an association with a fleet operator. Delegates to `Domain.Action.UI.Operator`.
+        *   **Driver Fare Details (Meter Pricing & Price Breakup) (`API.Action.UI.PriceBreakup`)**: Allows drivers to finalize meter ride prices (`POST /ui/meterRide/price`) and get detailed fare breakdowns for any ride (`GET /ui/priceBreakup`). Delegates to `Domain.Action.UI.PriceBreakup`.
+        *   **Driver "Reels" (Short Video Content) Retrieval (`API.Action.UI.Reels`)**: Allows authenticated drivers (`GET /ui/reels/getAllReelVideos`) to fetch short video content based on a `reelsKey` and optional `language`. Delegates to `Domain.Action.UI.Reels`.
+        *   **Driver Social Login & Profile Linking (`API.Action.UI.SocialLogin`)**: Enables drivers to sign-up/login via social media (`POST /ui/social/login`) or link social accounts to existing profiles (`POST /ui/social/update/profile`). Delegates to `Domain.Action.UI.SocialLogin`.
+        *   **Driver Special Location Listing (`API.Action.UI.SpecialLocation`)**: Allows authenticated drivers (`GET /ui/specialLocation/list`) to fetch a list of special locations (e.g., airports, malls) with an optional `isOrigin` filter. Delegates to `Domain.Action.UI.SpecialLocation`.
+        *   **Special Location "Warrior" Operations (`API.Action.UI.SpecialLocationWarrior`)**: Allows authorized personnel ("Warriors") to list special locations by category (`GET /ui/specialLocation/list/category`), and get/update operational info for other drivers at these locations (`GET /ui/getInfo/specialLocWarrior`, `POST /ui/updateInfo/specialLocWarrior`). Delegates to `Domain.Action.UI.SpecialLocationWarrior`.
+        *   **Driver SDK Token for Payment Tokenization (`API.Action.UI.Tokenization`)**: Allows authenticated drivers (`GET /ui/driver/sdkToken`) to obtain an SDK token for a specified tokenization `service` with a given `expiry`. Used by client to securely tokenize payment details. Delegates to `Domain.Action.UI.Tokenization`.
+        *   **WMB/Fleet Operations & Managed Trips (`API.Action.UI.WMB`)**: Allows drivers in fleet/managed operations to: list fleet badges, discover/get details for available WMB routes, manage WMB trips (QR start, active trip, list, start/end), handle trip-related requests/alerts, consent to fleet association, and get fleet configurations. Delegates to `Domain.Action.UI.WMB`.
+        *   **Driver Call Management (`API.UI.Call`)**: Enables drivers to initiate masked calls to customers (for a `rideId`), get call status, and supports telephony provider (Exotel, Twilio) webhooks and IVR interactions for number lookup and status updates. Includes SDK token generation for Twilio. Delegates to `Domain.Action.UI.Call`.
+        *   **Driver Call Event Logging (`API.UI.CallEvent`)**: Allows authenticated drivers/app (`POST /ui/callEvent` with `CallEventReq`) to log specific granular events related to calls (e.g., answered, hangup, DTMF input). Delegates to `Domain.Action.UI.CallEvent`.
+        *   **Organization Administrator Profile Management (`API.UI.OrgAdmin`)**: Provides profile management (get/update) for authenticated Organization Administrators (`GET /ui/orgAdmin/profile`, `POST /ui/orgAdmin/profile` using `AdminTokenAuth`). Delegates to `Domain.Action.UI.OrgAdmin`.
+        *   **Driver Submits Feedback for Ride (`API.UI.Rating`)**: Allows authenticated drivers (`POST /ui/feedback/rateRide` with `CallBAPInternal.FeedbackReq`) to submit ratings and comments for completed rides. Delegates to `Domain.Action.UI.Rating`.
+        *   **Driver Cancellation Reasons Retrieval (`API.UI.CancellationReason`)**: Allows authenticated drivers (`GET /ui/cancellationReason/list`) to fetch a list of standardized reasons for cancelling a ride. Delegates to `Domain.Action.UI.CancellationReason`.
+        *   **Driver WhatsApp Opt-in/Opt-out (`API.UI.Whatsapp`)**: Allows authenticated drivers (`POST /ui/whatsapp/opt` with `OptAPIRequest`) to manage their preferences for receiving WhatsApp communications. Delegates to `Domain.Action.UI.Whatsapp`.
+        *   **Driver Fetches Associated Transporter/Merchant Details (`API.UI.Transporter`)**: Allows authenticated drivers (`GET /ui/transporter`) to fetch details about their associated transporter/merchant. Delegates to `Domain.Action.UI.Transporter`.
+    *   **Handling Beckn BPP Requests (via `API.Beckn.hs` aggregator)**:
+        *   // ... (all previously detailed Beckn BPP flows) ...
+    *   Processing driver location updates (via `location-updates` library).
+    *   Integrating with payment systems for driver earnings/payouts.
+    *   Exposing metrics via Prometheus.
+    *   Utilizing shared platform services for configuration (CAC), specialized geographic zones, webhooks, and scheduling.
+
+// ... (Placeholder for other services like kafka-consumers, provider-dashboard etc.) ...
