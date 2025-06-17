@@ -922,19 +922,19 @@ instance IsHTTPError FRFSSBookingError where
 
 instance IsAPIError FRFSSBookingError
 
-data CustomAuthError = TooManyHitsLimitError deriving (Eq, Show, IsBecknAPIError)
+data CustomAuthError = IpHitsLimitExceeded deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''CustomAuthError
 
 instance IsBaseError CustomAuthError where
   toMessage = \case
-    TooManyHitsLimitError -> Just "Rate Limit Exceed, Too Many Requests In Short Duration"
+    IpHitsLimitExceeded -> Just "IP Rate Limit Exceed, Too Many Requests In Short Duration"
 
 instance IsHTTPError CustomAuthError where
   toErrorCode = \case
-    TooManyHitsLimitError -> "HITS_LIMIT_EXCEED"
+    IpHitsLimitExceeded -> "IP_HITS_LIMIT_EXCEED"
   toHttpCode = \case
-    TooManyHitsLimitError -> E429
+    IpHitsLimitExceeded -> E429
 
 instance IsAPIError CustomAuthError
 

@@ -222,15 +222,16 @@ auth ::
   m AuthRes
 auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
-  let clientIP = case mbXForwardedFor of
-        Nothing -> "unknown"
-        Just headerValue ->
-          let firstIP = fromMaybe "unknown" . listToMaybe $ T.splitOn "," headerValue
-              ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
-           in if T.null ipWithoutPort then "unknown" else ipWithoutPort
-  logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
-  ipBlocked <- SMC.isIPBlocked clientIP
-  when ipBlocked $ throwError TooManyHitsLimitError
+  let mbClientIP =
+        mbXForwardedFor
+          >>= \headerValue ->
+            (listToMaybe $ T.splitOn "," headerValue) >>= \firstIP ->
+              let ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
+               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+  whenJust mbClientIP $ \clientIP -> do
+    logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
+    ipBlocked <- SMC.isIPBlocked clientIP
+    when ipBlocked $ throwError IpHitsLimitExceeded
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
   now <- getCurrentTime
@@ -264,18 +265,19 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         return (person, EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
 
-  when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError TooManyHitsLimitError
+  when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
   void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   merchantConfigs <- CQM.findAllByMerchantOperatingCityId merchantOperatingCityId Nothing
   fork "Fraud Auth Check Processing" $ do
     when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
-    SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
-    (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
-    when isFraudDetected $ do
-      whenJust mbMerchantConfigId $ \mcId ->
-        SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
+    whenJust mbClientIP $ \clientIP -> do
+      SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
+      (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
+      when isFraudDetected $ do
+        whenJust mbMerchantConfigId $ \mcId ->
+          SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
