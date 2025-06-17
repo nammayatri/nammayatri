@@ -833,7 +833,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                   mRiderNumber <- mapM decrypt person.mobileNumber
                   void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
                   whenJust booking.journeyId $ \journeyId -> do
-                    void $ QJourney.updatePaymentOrderShortId (Just (ShortId paymentOrder.id.getId)) journeyId
+                    void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) journeyId
                   void $ CallExternalBPP.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
