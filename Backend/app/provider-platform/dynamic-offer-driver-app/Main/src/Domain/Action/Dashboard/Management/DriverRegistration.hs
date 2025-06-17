@@ -31,6 +31,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Tuple.Extra as TE
+import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
@@ -42,6 +43,7 @@ import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
 import qualified Domain.Types.VehicleNOC as DNOC
@@ -235,6 +237,13 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> I
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  whenJust req.requestorId $ \requestorId -> do
+    requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+    validAssociation <- case requestedPerson.role of
+      DP.FLEET_OWNER -> DDriver.checkFleetDriverAssociation requestedPerson.id (cast driverId_)
+      DP.OPERATOR -> DDriver.checkDriverOperatorAssociation (cast driverId_) requestedPerson.id
+      _ -> throwError (InvalidRequest "Entity is not a fleet owner or operator")
+    unless validAssociation $ throwError (InvalidRequest "Driver is not associated with the entity")
   res <-
     validateImage
       True
