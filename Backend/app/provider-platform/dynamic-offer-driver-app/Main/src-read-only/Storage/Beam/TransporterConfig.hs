@@ -140,6 +140,7 @@ data TransporterConfigT f = TransporterConfigT
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     languagesToBeTranslated :: B.C f [Kernel.External.Types.Language],
     lastNdaysToCheckForPayoutOrderStatus :: B.C f Kernel.Prelude.Int,
+    liveEKD :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     localAmbulanceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     localPoliceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     mandateExecutionRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
@@ -235,8 +236,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))

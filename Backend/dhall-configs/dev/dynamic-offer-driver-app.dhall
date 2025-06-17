@@ -287,6 +287,8 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
+
 let cacConfig =
       { host = "http://localhost:8080"
       , interval = 10
@@ -418,4 +420,5 @@ in  { esqDBCfg
     , meterRideReferralLink =
         "https://nammayatri.in/refer?referrer=utm_source%3DChennai%26utm_medium%3Dqrcode%26utm_term%3Dreferral%26utm_content%3Dcoins%26utm_campaign%{referralCode}%26anid%3Dadmob&id=in.juspay.nammayatri"
     , minDistanceBetweenTwoPoints = +25
+    , vocalyticsCnfg = VocaliticsConfig
     }

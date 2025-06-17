@@ -30,4 +30,4 @@ data CallStatus = CallStatus
 
 data CallAttemptStatus = Attempted | Resolved | Failed | Pending deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallAttemptStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CallAttemptStatus))

@@ -18,6 +18,7 @@ import Data.Aeson
 import Data.Default.Class
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.CallFeedbackFCM as CallFeedbackFCM
 import Domain.Action.UI.SearchRequestForDriver
 import Domain.Types.AlertRequest as DAR
 import Domain.Types.Booking (Booking)
@@ -1430,3 +1431,25 @@ sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToke
     title = FCM.FCMNotificationTitle notificationTitle
     body =
       FCMNotificationBody message
+
+sendDriverEKDLiveFCM ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  CallFeedbackFCM.CallFeedbackEntity ->
+  m ()
+sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language entityData =
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    mbDeviceToken
+    language
+    Nothing
+    (createFCMReq "EKD_LIVE_CALL_FEEDBACK" driverId.getId FCM.Person (\r -> r {showType = FCM.DO_NOT_SHOW}))
+    (pure entityData)
+    []
+    Nothing
