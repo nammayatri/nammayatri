@@ -50,6 +50,7 @@ import androidx.annotation.Nullable;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -71,6 +72,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -421,6 +423,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         for (int i = 0; i < callBack.size(); i++) {
                             callBack.get(i).driverCallBack("RIDE_REQUESTED","{}");
                         }
+                        ReactUtils.emitReactEvent(context,"onRideRequested", Arguments.makeNativeMap(new HashMap<>()));
                         String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                         firebaseLogEvent(logEvent);
                         RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, logEvent, OverlaySheetService.this);

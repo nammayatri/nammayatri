@@ -24,6 +24,8 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 public class Log {
     private static final String LOG_DIR_NAME = ".logs";
     private static final Object lock = new Object();
+
+    private static boolean enabled = false;
     private static Context appContext;
     private static int logRetentionDays = 7; // Default retention
     private static final ExecutorService logExecutor;
@@ -177,7 +179,7 @@ public class Log {
      * Non-date directories are skipped.
      */
     private static void clearOldLogs() {
-        if (appContext == null) {
+        if (appContext == null && !enabled) {
             android.util.Log.e("CustomLog", "Logger not initialized: appContext is null (clearOldLogs)");
             return;
         }
