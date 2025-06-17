@@ -15,7 +15,7 @@
 
 module Screens.TripDetailsScreen.Controller where
 
-import Prelude (class Show, pure, unit, not, bind, ($), discard, show, (<>))
+import Prelude (class Show, pure, unit, not, bind, ($), discard, show, (<>), void)
 import Screens.Types as ST
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, update, exit, continue, continueWithCmd)
@@ -28,6 +28,9 @@ import Language.Strings (getString)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils as HU
+import Common.Types.App as App
+import Data.Maybe as Mb
 
 instance showAction :: Show Action where
   show (PrimaryButtonActionController _ var1) = "PrimaryButtonActionController_" <> show var1
@@ -90,7 +93,11 @@ eval AfterRender state = continue state
 
 eval BackPressed state = 
     case state.data.goBackTo of
-        ST.Home -> exit GoToHome
+        ST.Home ->  if (HU.isParentView App.FunctionCall) 
+                    then do 
+                        void $ pure $ HU.emitTerminateApp Mb.Nothing true
+                        exit GoToHome
+                    else continue state
         ST.Earning -> exit GoToEarning
 
 eval ReportIssue state = continue state { props { reportIssue = not state.props.reportIssue}}
