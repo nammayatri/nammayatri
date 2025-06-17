@@ -261,7 +261,7 @@ MultimodalPreferences:
       where: personId
 
   sqlType:
-    allowedTransitModes: text
+    allowedTransitModes: text[]
     journeyOptionsSortingType: text
     busTransitTypes: text[]
     subwayTransitTypes: text[]
