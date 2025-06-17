@@ -247,10 +247,6 @@ function getNammaYatriConfig() {
       , "cityConfig" : [
         {
           "cityName" : "Bangalore",
-          "enableNammaMeter" : {
-            "AUTO_RICKSHAW": true,
-            "AutoCategory" : true,
-          },
           "mapImage" : "ny_ic_bangalore_map",
           "cityCode" : "std:080",
           "showSubscriptions" : true,
