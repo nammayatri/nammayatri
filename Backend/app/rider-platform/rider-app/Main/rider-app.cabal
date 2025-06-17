@@ -55,6 +55,7 @@ library
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.Rating
+      API.Internal.RideSearchExpired
       API.Internal.StopEvents
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
@@ -191,6 +192,7 @@ library
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.Payout
       Domain.Action.Internal.Rating
+      Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification

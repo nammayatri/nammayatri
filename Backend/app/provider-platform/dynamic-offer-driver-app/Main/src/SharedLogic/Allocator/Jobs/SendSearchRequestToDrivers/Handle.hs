@@ -20,16 +20,19 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
+import SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverPool
 
-type HandleMonad m r = (MonadClock m, Log m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools])
+type HandleMonad m r = (MonadClock m, Log m, CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl])
 
 data MetricsHandle m = MetricsHandle
   { incrementTaskCounter :: m (),
@@ -52,8 +55,8 @@ data Handle m r = Handle
     isScheduledBooking :: Bool
   }
 
-handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
-handler h@Handle {..} goHomeCfg = do
+handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
+handler h@Handle {..} goHomeCfg transactionId = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms (_, _, _) -> metrics.putTaskDuration ms) $ do
@@ -68,11 +71,12 @@ handler h@Handle {..} goHomeCfg = do
           then do
             logInfo "Received enough quotes from drivers."
             return (Complete, NormalPool, Nothing)
-          else processRequestSending h goHomeCfg
+          else processRequestSending h goHomeCfg transactionId
 
-processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
-processRequestSending Handle {..} goHomeCfg = do
+processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
+processRequestSending Handle {..} goHomeCfg transactionId = do
   isBatchNumExceedLimit' <- isBatchNumExceedLimit
+  logInfo $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
   if isBatchNumExceedLimit'
     then do
       if isScheduledBooking
@@ -82,6 +86,9 @@ processRequestSending Handle {..} goHomeCfg = do
         else do
           metrics.incrementFailedTaskCounter
           logInfo "No driver accepted"
+          appBackendBapInternal <- asks (.appBackendBapInternal)
+          let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
+          void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
           cancelSearchTry
           cancelBookingIfApplies
           return (Complete, NormalPool, Nothing)

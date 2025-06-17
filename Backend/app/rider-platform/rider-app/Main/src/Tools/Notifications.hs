@@ -46,6 +46,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Types as FCMType
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.Prelude (getField)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (count, runInReplica)
@@ -213,6 +214,69 @@ notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList 
 
 -- title = "New driver offers incoming!"
 -- body = "There are new driver offers! Check the app for details"
+
+notifyOnRideSearchExpired ::
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  SearchRequest ->
+  m ()
+notifyOnRideSearchExpired searchReq = do
+  logDebug "Sending ride search expired notification"
+  let searchRequestId = searchReq.id
+  person <- Person.findById searchReq.riderId
+  case person of
+    Just personObj -> do
+      let entity = Notification.Entity Notification.SearchRequest searchRequestId.getId ()
+          dynamicParams = EmptyDynamicParam
+          destination = do
+            loc <- getField @"toLocation" searchReq
+            let addr = getField @"address" loc
+            getField @"building" addr
+              <|> getField @"title" addr
+              <|> getField @"area" addr
+              <|> getField @"street" addr
+              <|> getField @"city" addr
+          liveActivityCustomMessage = Just "Your ride search has expired!!"
+      dynamicNotifyPerson
+        personObj
+        (createNotificationReq "EXPIRED_CASE" identity)
+        dynamicParams
+        entity
+        Nothing
+        []
+        (Just searchReq.configInExperimentVersions)
+        ( case personObj.liveActivityToken of
+            Just _liveActivityToken ->
+              Just $
+                FCMType.LiveActivityReq
+                  { liveActivityToken = _liveActivityToken,
+                    liveActivityReqType = "end",
+                    liveActivityNotificationType = "CANCELLED_PRODUCT",
+                    liveActivityContentState =
+                      FCMType.LiveActivityContentState
+                        { activityStatus = "CANCELLED",
+                          driverInfo = Nothing,
+                          bookingInfo =
+                            Just $
+                              FCMType.BookingInfo
+                                { vehicleColor = Nothing,
+                                  vehicleName = Nothing,
+                                  vehicleNumber = Nothing,
+                                  vehicleVariant = Nothing,
+                                  source = Nothing,
+                                  destination = destination,
+                                  estimatedFare = Nothing
+                                },
+                          timerDuration = Nothing,
+                          customMessage = liveActivityCustomMessage
+                        },
+                    liveActivityApnsPriority = "10"
+                  }
+            _ -> Nothing
+        )
+    _ -> pure ()
+
+-- title = "Ride search expired!"
+-- body = "Your ride search has expired. Please retry"
 
 data RideAssignedParam = RideAssignedParam
   { driverName :: Text,
@@ -453,7 +517,7 @@ notifyOnRideCompleted booking ride otherParties = do
                                 vehicleVariant = Just (show ride.vehicleVariant),
                                 source = Nothing,
                                 destination = toLocationDestination,
-                                estimatedFare = Just (show totalFare.amountInt)
+                                estimatedFare = Just (showPriceWithRounding totalFare)
                               },
                         timerDuration = Nothing,
                         customMessage = Nothing
