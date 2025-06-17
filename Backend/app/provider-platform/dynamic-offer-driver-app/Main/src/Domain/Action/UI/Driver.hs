@@ -1088,7 +1088,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled) $ do
       -- deprecated logic, moved to driver service tier options
       checkIfCanDowngrade vehicle
       let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
