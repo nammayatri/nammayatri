@@ -41,6 +41,7 @@ import Lib.Scheduler (SchedulerType)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.Types as SDT
@@ -89,7 +90,8 @@ reAllocateBookingIfPossible ::
     Redis.HedisFlow m r,
     HasKafkaProducer r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
   ) =>
   Bool ->
   Bool ->
