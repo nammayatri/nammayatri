@@ -699,7 +699,76 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
             "benefits" -> do
               hideSplashAndCallFlow benefitsScreenFlow
+            "goTo" -> do
+              resp <- lift $ lift $ Remote.getDriverHomeLocation ""
+              case resp of
+                Right response -> modifyScreenState $ HomeScreenStateType (\state -> state { data { driverGotoState { showGoto = true, savedLocationsArray = getLocationArray response } } })
+                Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+              hideSplashAndCallFlow homeScreenFlow
+            "helpAndSupport" -> do
+              let
+                language =
+                  ( case getLanguageLocale languageKey of
+                      "HI_IN" -> "hi"
+                      "KN_IN" -> "kn"
+                      "TA_IN" -> "ta"
+                      "TE_IN" -> "te"
+                      _ -> "en"
+                  )
+              categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
+              modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } })
+              hideSplashAndCallFlow helpAndSupportFlow
+
+            "rideDetails" -> do
+              (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "COMPLETED" "null"
+              let _ = spy "rideHistoryResponse" rideHistoryResponse
+              case (head rideHistoryResponse.list) of
+                Nothing -> pure unit
+                Just (RidesInfo response) -> do
+                  let
+                    specialZoneConfig = HU.getRideLabelData response.specialLocationTag
+
+                    isSpecialPickUpZone = HU.checkSpecialPickupZone response.specialLocationTag
+                  modifyScreenState
+                    $ TripDetailsScreenStateType
+                        ( \tripDetailsScreen ->
+                            tripDetailsScreen
+                              { data
+                                { tripId = response.shortRideId
+                                , date = (convertUTCtoISC (response.createdAt) "D MMM")
+                                , time = (convertUTCtoISC (response.createdAt) "h:mm A")
+                                , source = (decodeAddress response.fromLocation false)
+                                , destination = if (RC.rideTypeConstructor response.tripCategory) == ST.Rental then "" else maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation
+                                , vehicleType = response.vehicleVariant
+                                , totalAmount = fromMaybe response.estimatedBaseFare response.computedFare
+                                , distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2
+                                , status = response.status
+                                , rider = (fromMaybe "" response.riderName)
+                                , customerExtraFee = response.customerExtraFee
+                                , purpleTagVisibility = isJust response.disabilityTag
+                                , gotoTagVisibility = isJust response.driverGoHomeRequestId
+                                , spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag)
+                                , specialZoneLayoutBackground = specialZoneConfig.backgroundColor
+                                , specialZoneImage = specialZoneConfig.imageUrl
+                                , specialZoneText = specialZoneConfig.text
+                                , specialZonePickup = isSpecialPickUpZone
+                                , tollCharge = fromMaybe 0.0 response.tollCharges
+                                , vehicleModel = response.vehicleModel
+                                , rideType = response.vehicleServiceTierName
+                                , tripStartTime = response.tripStartTime
+                                , tripEndTime = response.tripEndTime
+                                , acRide = response.isVehicleAirConditioned
+                                , vehicleServiceTier = response.vehicleServiceTier
+                                , tripType = RC.rideTypeConstructor response.tripCategory
+                                , parkingCharge = fromMaybe 0.0 response.parkingCharge
+                                , stops = (fst <<< HU.getStopName) <$> (fromMaybe [] response.stops)
+                                , goBackTo = ST.Home
+                                }
+                              }
+                        )
+                  hideSplashAndCallFlow $ tripDetailsScreenFlow
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
+            
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
