@@ -1025,10 +1025,6 @@ public class NotificationUtils {
                     NotificationUtils.showNotification(context, title, body, payload, imageUrl, null);
                     sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
-
-                    System.out.println("openMeterActive "+ openMeterActive);
-                    System.out.println("openMeterActive "+ openMeterActive.isActive());
-
                     if(openMeterActive != null && openMeterActive.isActive()){
                         Intent meterAcitvityIntent = new Intent(context,Class.forName("in.juspay.mobility.OpenMeterActivity"));
                         context.startActivity(meterAcitvityIntent);
