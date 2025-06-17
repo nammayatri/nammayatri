@@ -86,14 +86,13 @@ handler merchant sReq searchReq estimates = do
   QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
   QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
 
-  when sReq.isPetRide $
-    fork "Add Namma Tags" $ do
-      let tagData =
-            Y.SelectTagData
-              { isPetRide = sReq.isPetRide
-              -- ,estimates = estimates uncomment this line if you want to use estimates in select tag data
-              }
-      addNammaTags tagData searchReq
+  when sReq.isPetRide $ do
+    let tagData =
+          Y.SelectTagData
+            { isPetRide = sReq.isPetRide
+            -- ,estimates = estimates uncomment this line if you want to use estimates in select tag data
+            }
+    addNammaTags tagData searchReq
 
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
