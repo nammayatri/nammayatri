@@ -6,7 +6,7 @@ _This document provides a high-level overview of the project, its core requireme
 NammaYatri appears to be a comprehensive mobility platform, likely focused on ride-hailing and public transport solutions. The name itself (if related to "Namma" meaning "Our" in some South Indian languages and "Yatri" meaning "Traveler") suggests a community-focused or regional transportation service. It aims to connect users (riders) with various transportation providers.
 
 ## Core Components (Inferred and Documented)
-- **Backend Services**: A suite of applications and libraries managing various aspects of the platform.
+- **Backend Services**: A suite of applications and libraries managing various aspects of the platform, supported by a comprehensive toolkit for local development, building, testing (integration, load), code generation, documentation, and service management via CLI commands (utilizing tools like Cabal, Nix, hpack, hlint, ghcid, Newman, K6, Docker for auxiliary services like Prometheus, Grafana, and PgAdmin).
     - **`rider-app` (Main Rider Application)**: Located in `Backend/app/rider-platform/rider-app/Main/`, this is the primary Haskell service handling all core rider-facing functionalities.
         - **Key Flows Handled**:
             - **User Registration & Authentication**: Manages user sign-up/login via OTP, signature-based auth, and token-based sessions (endpoints in `API.UI.Registration`, logic in `Domain.Action.UI.Registration`).

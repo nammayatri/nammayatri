@@ -25,6 +25,27 @@ ment.
 - **Service Templating (`example-service`)**.
 - **Mocking Framework**: `mocks/google`, `mocks/rider-platform`, `mock-registry`.
 - **Monitoring**: Prometheus.
+- **Command-Line Interface (CLI) for Development Workflow**: The project provides a suite of CLI commands to streamline common development and operational tasks:
+    - **`apply-hlint-staged`**: Applies `hlint` (Haskell linter) suggestions, specifically for redundant parentheses, to Git-staged files, aiding in code style consistency.
+    - **`backend-new-service`**: Scaffolds a new Haskell backend service package, likely following project conventions and providing a basic structure.
+    - **`docs`**: Runs a local Hoogle server, providing searchable documentation for the project's Haskell packages and dependencies.
+    - **`ghcid`**: Uses `ghcid` for continuous, fast recompilation of a specified local Haskell package during development, improving the feedback loop.
+    - **`hpack`**: Executes `hpack` to generate `.cabal` files from `package.yaml` files, a standard practice in Haskell projects for managing package build information.
+    - **`kill-svc-ports`**: A utility to stop external services (likely run locally, e.g., in Docker) and free up their network ports, useful for environment resets or resolving port conflicts.
+    - **`latest-docs`**: Similar to `docs`, runs a local Hoogle replica, potentially with a broader or more up-to-date documentation set.
+    - **`run-generator`**: Executes the project's code generation process (likely for Namma DSL using `alchemist`), ensuring generated code (e.g., API types, DB schemas) is synchronized with specifications.
+    - **`run-integration-tests`**: Runs integration tests using Newman (Postman's command-line runner), indicating API-level testing of service interactions.
+    - **`run-load-test-dev`**: Executes load tests (likely using K6, as seen in `beckn-cli`) against the development environment to assess performance and scalability.
+    - **`run-mobility-stack-dev`**: Starts the NammaYatri backend services locally using `cabal run`, suitable for iterative development due to faster recompilation compared to Nix full builds.
+    - **`run-mobility-stack-nix`**: Starts the NammaYatri backend services locally using Nix, ensuring a reproducible build and runtime environment, though typically slower for initial builds.
+    - **`run-monitoring`**: Starts a local monitoring stack (Prometheus and Grafana) in Docker containers, allowing developers to observe service metrics.
+    - **`run-pgadmin`**: Starts PgAdmin (PostgreSQL administration tool) in a Docker container, providing a GUI for local database management.
+    - **`stop-all-containers`**: A utility to stop all running Docker containers, useful for cleaning up the local development environment.
+- **Haskell Service Compilation Workflow**:
+    - **Environment**: Compiling and developing Haskell backend services is performed within a Nix-managed environment to ensure consistency and reproducibility.
+    - **Setup**: Developers must first be in the `nammayatri/Backend` directory.
+    - **Entering Nix Shell**: If not already in the correct Nix environment, execute `nix develop .#backend` from the `nammayatri/Backend` directory. This command loads all dependencies and tools defined in the `flake.nix` for the backend development.
+    - **Compiling/Loading Services**: Once inside the Nix shell, individual Haskell services are compiled and loaded into GHCi (Haskell's interactive environment) using the command `cabal repl <service-cabal-name>`. The `<service-cabal-name>` corresponds to the package name specified in the service's Cabal file (e.g., `rider-app`, `dynamic-offer-driver-app`). This allows for interactive development, testing, and debugging of the service.
 
 ## Key Haskell Libraries & Frameworks (examples from various services):
 - **Core Rider Application (`rider-app` from `Backend/app/rider-platform/rider-app/Main/`):
