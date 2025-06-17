@@ -10,12 +10,15 @@ import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
-import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+
+data BulkUploadCoinRes = BulkUploadCoinRes {success :: Kernel.Prelude.Int, failed :: Kernel.Prelude.Int, failedItems :: [BulkUploadFailedItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BulkUploadCoinsReq = BulkUploadCoinsReq {driverIdListWithCoins :: [DriverIdListWithCoins], bulkUploadTitle :: Translations, expirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
@@ -27,6 +30,10 @@ data BulkUploadCoinsReqV2 = BulkUploadCoinsReqV2
     expirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eventFunction :: Dashboard.Common.DriverCoins.DriverCoinsFunctionType
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BulkUploadFailedItem = BulkUploadFailedItem {driverId :: Kernel.Prelude.Text, errorMessage :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -93,22 +100,22 @@ data Translations = Translations
 
 type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkUploadCoinsV2 :<|> GetDriverCoinsCoinHistory))
 
-type PostDriverCoinsBulkUploadCoins = ("bulkUploadCoins" :> ReqBody '[JSON] BulkUploadCoinsReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverCoinsBulkUploadCoins = ("bulkUploadCoins" :> ReqBody ('[JSON]) BulkUploadCoinsReq :> Post ('[JSON]) BulkUploadCoinRes)
 
-type PostDriverCoinsBulkUploadCoinsV2 = ("bulkUploadCoinsV2" :> ReqBody '[JSON] BulkUploadCoinsReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverCoinsBulkUploadCoinsV2 = ("bulkUploadCoinsV2" :> ReqBody ('[JSON]) BulkUploadCoinsReqV2 :> Post ('[JSON]) BulkUploadCoinRes)
 
 type GetDriverCoinsCoinHistory =
   ( "coinHistory" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> QueryParam "limit" Kernel.Prelude.Integer
       :> QueryParam
            "offset"
            Kernel.Prelude.Integer
-      :> Get '[JSON] CoinHistoryRes
+      :> Get ('[JSON]) CoinHistoryRes
   )
 
 data DriverCoinsAPIs = DriverCoinsAPIs
-  { postDriverCoinsBulkUploadCoins :: BulkUploadCoinsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverCoinsBulkUploadCoinsV2 :: BulkUploadCoinsReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverCoinsCoinHistory :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> EulerHS.Types.EulerClient CoinHistoryRes
+  { postDriverCoinsBulkUploadCoins :: (BulkUploadCoinsReq -> EulerHS.Types.EulerClient BulkUploadCoinRes),
+    postDriverCoinsBulkUploadCoinsV2 :: (BulkUploadCoinsReqV2 -> EulerHS.Types.EulerClient BulkUploadCoinRes),
+    getDriverCoinsCoinHistory :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> EulerHS.Types.EulerClient CoinHistoryRes)
   }
 
 mkDriverCoinsAPIs :: (Client EulerHS.Types.EulerClient API -> DriverCoinsAPIs)
@@ -123,4 +130,4 @@ data DriverCoinsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''DriverCoinsUserActionType])
+$(Data.Singletons.TH.genSingletons [(''DriverCoinsUserActionType)])

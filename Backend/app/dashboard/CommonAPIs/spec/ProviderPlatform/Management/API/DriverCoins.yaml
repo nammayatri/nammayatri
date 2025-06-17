@@ -12,7 +12,7 @@ apis:
       request:
         type: BulkUploadCoinsReq
       response:
-        type: APISuccess
+        type: BulkUploadCoinRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
   - POST: # BulkUploadCoinsAPIV2
@@ -21,7 +21,7 @@ apis:
       request:
         type: BulkUploadCoinsReqV2
       response:
-        type: APISuccess
+        type: BulkUploadCoinRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
   - GET: # CoinHistoryAPI
@@ -89,6 +89,13 @@ types:
   CoinStatus:
     - enum: "Used, Remaining"
     - derive: "Read, Ord"
+  BulkUploadFailedItem:
+    - driverId: Text
+    - errorMessage: Text
+  BulkUploadCoinRes:
+    - success: Int
+    - failed: Int
+    - failedItems: [BulkUploadFailedItem]
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
