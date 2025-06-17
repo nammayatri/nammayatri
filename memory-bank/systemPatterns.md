@@ -422,3 +422,254 @@ _This document will be updated with more detailed patterns as individual service
 // --- Existing Key Technical Decisions section ---
 // ... (ensure all previous Key Technical Decisions are preserved) ...
 - **Internal Feedback Channel**: `rider-app` (`API.Internal.Rating`) provides a separate, internally authenticated endpoint for submitting ride feedback, enabling comprehensive feedback collection from various sources.
+
+// --- Appended details for Internal Driver Arrival Notification Trigger flow ---
+        - **Internal Driver Arrival Notification Trigger (`API.Internal.DriverArrivalNotf`)**: This internal endpoint (`POST /internal/driverArrivalNotification`) allows other backend services to trigger driver arrival notifications to riders.
+            - **Purpose**: To ensure timely communication with riders about their driver's approach or arrival at the pickup location.
+            - **Functionality**: Receives a `Domain.DANTypeValidationReq` (identifying the ride/booking). Delegates to `Domain.Action.Internal.DriverArrivalNotf.driverArrivalNotfHandler` for constructing and sending the appropriate notification (e.g., push, SMS), likely via the `external` library or `API.Action.UI.TriggerFCM`.
+            - **Authentication**: No explicit token auth in the API definition; likely network-level or other internal mechanism.
+
+- **BPP Beckn Search Request Handling (`dynamic-offer-driver-app`)**:
+    - **Asynchronous Processing**: Upon receiving a `/search` request (via `API.Beckn.Search`), the BPP sends an immediate `Ack` and forks the core offer generation logic to a separate thread. This ensures responsiveness to the BAP.
+    - **Idempotency**: Uses Redis locks (`searchLockKey`, `searchProcessingLockKey`) based on message ID and transporter ID to prevent duplicate processing of the same search request and to ensure the offer generation logic runs only once.
+    - **Dynamic Offer Generation**: The core logic (`Domain.Action.Beckn.Search.handler`) involves finding available drivers, applying dynamic pricing rules (leveraging `yudhishthira` rule engine and `special-zone-a` configurations), calculating ETAs, and constructing quotes.
+    - **Conditional Quote Dispatch**: Differentiates BAPs based on whether they are "Value Add NPs." Full quote details in the `on_search` callback are typically sent only to Value Add NPs. Others might receive minimal responses.
+    - **Callback Mechanism**: Uses a generic callback utility (`Callback.withCallback`) to send the `on_search` response message to the BAP's registered URI.
+    - **Interaction with `rider-app` (BAP)**: This flow is the direct counterpart to `rider-app`'s search initiation. `dynamic-offer-driver-app` acts as a provider, generating offers that `rider-app` consumes and presents to the end-user.
+
+- **BPP Beckn Select Request Handling (`dynamic-offer-driver-app`)**:
+    - **Asynchronous Confirmation**: On receiving a `/select` request (via `API.Beckn.Select`), the BPP sends an immediate `Ack` and forks the core selection confirmation logic.
+    - **Idempotency**: Uses Redis locks (`selectLockKey`, `selectProcessingLockKey`) based on `messageId` to prevent duplicate processing.
+    - **Offer Validation & Resource Confirmation**: The domain logic (`DSelect.validateRequest` then `DSelect.handler`) re-validates the chosen `Estimate` against the original `SearchRequest` and current driver/vehicle availability. It may provisionally assign/lock the resource.
+    - **`on_select` Callback**: If the selection is confirmed, an `on_select` message is constructed (containing the finalized offer details) and sent asynchronously to the BAP via `Callback.withCallback` (invoked within `DSelect.handler`).
+    - **Interaction with `rider-app` (BAP)**: This flow processes the BAP's choice. The `on_select` callback allows the BAP to inform the rider and proceed to the `init` phase.
+
+- **BPP Beckn Init Request Handling (`dynamic-offer-driver-app`)**:
+    - **Asynchronous Processing & Ack**: On receiving an `/init` request (via `API.Beckn.Init`), the BPP immediately sends an `Ack` and forks the core processing to a separate thread.
+    - **Idempotency & State Management**: Uses Redis locks (`initLockKey`, `initProcessingLockKey`, `initProcessedKey` based on `fulfillmentId` from the selected offer) to prevent duplicate processing and to track if an `on_init` has already been sent for this fulfillment.
+    - **Validation**: The domain logic (`DInit.validateRequest`) validates the `/init` request against the previously confirmed offer (`Estimate`) and merchant status.
+    - **Preliminary Booking Creation**: If valid, `DInit.handler` creates a preliminary internal booking record on the BPP side, finalizing all terms, including fare policy lookup (`SFP.getFarePolicyByEstOrQuoteIdWithoutFallback`).
+    - **`on_init` Callback Generation**: Constructs an `on_init` message (`OnInit.OnInitReq` with `Spec.OnInitMessage`) using `ACL.mkOnInitMessageV2`. This payload contains the BPP's confirmed booking details, payment terms, fulfillment info (e.g., driver details if available or pending assignment), and a TTL.
+    - **Callback Dispatch**: Sends the `on_init` message asynchronously to the BAP using `Callback.withCallback`.
+    - **Error Handling**: Includes logic to attempt cancellation of the BPP-side preliminary booking if sending the `on_init` callback fails critically.
+    - **Trigger for BAP Confirm**: The `on_init` sent by the BPP is the trigger for the BAP (e.g., `rider-app`) to automatically send a `/confirm` request back to the BPP.
+
+- **BPP Beckn Status Request Handling (`dynamic-offer-driver-app`)**:
+    - // ... (details as previously added) ...
+
+- **Driver Platform UI APIs (`dynamic-offer-driver-app`)**:
+    - **Driver Registration and Authentication (`API.UI.Registration`)**: Provides a secure OTP-based mechanism for drivers to register and log in. 
+        - **Flow**: Similar to rider registration: `POST /ui/auth` (with phone, client context headers) initiates OTP and creates a `RegistrationToken`. `POST /ui/auth/{authId}/verify` validates OTP against the token. Successful verification issues a Passetto session token. Handles OTP resend and authenticated logout.
+        - **Purpose**: Establishes an authenticated session for drivers to interact with the `dynamic-offer-driver-app` (e.g., manage availability, accept rides).
+        - **Domain Logic**: Core logic in `Domain.Action.UI.Registration` (driver-specific version).
+    - **Detailed Driver Onboarding (`API.Action.UI.DriverOnboardingV2`)**: // ... (details as previously added, likely uses DriverProfileQuestions API) ...
+    - **Core Driver Operations (`API.UI.Driver`)**: // ... (details as previously added) ...
+    - **Demand Hotspot Retrieval (`API.Action.UI.DemandHotspots`)**: // ... (details as previously added) ...
+    - **Driver Profile Summary Retrieval (`API.UI.DriverProfileSummary`)**: Provides drivers with a concise overview of their profile.
+        - **Endpoint**: Authenticated endpoint `GET /ui/driver/profile/summary`.
+        - **Purpose**: To allow drivers to quickly view key aspects of their profile, such as name, status, overall rating, vehicle, and optionally fleet information.
+        - **Functionality**: The API handler takes an optional `fleetInfo` boolean query parameter. It delegates to `Domain.Action.UI.DriverProfileSummary.getDriverProfileSummary`, which fetches and aggregates the relevant driver and (if requested) fleet data from the database.
+        - **Authentication**: Requires `TokenAuth` (driver session), providing driver, merchant, and merchant operating city context.
+    - **Driver Referral Program Management (`API.UI.DriverReferral`)**: // ... (details as previously added) ...
+    - **Driver-Side Payment Operations (`API.UI.Payment`)**: // ... (details as previously added) ...
+    - **Driver Referral Payout Management (`API.Action.UI.ReferralPayout`)**: // ... (details as previously added) ...
+    - **Driver Performance Retrieval (`API.UI.Performance`)**: Provides drivers with a summary of their performance metrics.
+        - **Endpoint**: Authenticated endpoint `GET /ui/driver/performance`.
+        - **Purpose**: To allow drivers to track their activity, earnings, ratings, and other Key Performance Indicators (KPIs).
+        - **Functionality**: The API handler, using the driver's authenticated context, delegates to `Domain.Action.UI.Performance.getDriverPerformance`. This domain action queries and aggregates data from various sources (e.g., ride history, ratings table, earnings records) to compute the performance summary.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Messaging (`API.UI.Message`)**: // ... (details as previously added) ...
+    - **Exotel-Triggered End Ride (`API.UI.ExotelEndRide`)**: // ... (details as previously added) ...
+    - **Merchant-Specific City Listing (`API.UI.City`)**: // ... (details as previously added) ...
+    - **Kiosk Location Listing (`API.UI.KioskLocation`)**: Provides drivers with a list of designated kiosk locations.
+        - **Endpoint**: Authenticated endpoint `GET /ui/kioskLocation/list`.
+        - **Purpose**: To help drivers find and operate from specific pre-defined locations (e.g., airport stands, support centers) relevant to their merchant and operating city.
+        - **Functionality**: The API handler, using the driver's authenticated context, delegates to `Domain.Action.UI.KioskLocation.listKioskLocations`. This domain action queries a database or configuration store for kiosk locations associated with the driver's merchant and city.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Leaderboard Retrieval (`API.UI.LeaderBoard`)**: Provides drivers with access to performance-based leaderboards.
+        - **Endpoints**: Authenticated `GET` endpoints under `/ui/driver/leaderBoard/` for `daily` (takes `date`), `weekly` (takes `fromDate`, `toDate`), and `monthly` (takes `month`) leaderboards.
+        - **Purpose**: To gamify the driver experience and motivate performance by allowing drivers to see their ranking relative to peers within their operational context.
+        - **Functionality**: API handlers, using the driver's authenticated context (merchant, city), delegate to corresponding functions in `Domain.Action.UI.LeaderBoard`. These domain actions query and aggregate driver performance data (rides, earnings, ratings, etc.) for the specified period and context, rank the drivers, and return the leaderboard data (`DLeaderBoard.LeaderBoardRes`).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **FCM Notification Trigger (OnMessage) (`API.UI.OnMessage`)**: Provides a mechanism to send FCM push notifications to drivers, often triggered by specific message events.
+        - **Endpoint**: Authenticated endpoint `POST /ui/onMessage`.
+        - **Purpose**: To alert drivers via push notification about important events or messages if they are not actively using the app.
+        - **Functionality**: Receives an `FCMReq` (containing notification details and context). Delegates to `Domain.Action.UI.OnMessage.sendMessageFCM`, which constructs and dispatches the FCM message via an external FCM service.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Ride-Specific Route Information for Drivers (`API.UI.RideRoute`)**: Provides drivers with navigational route details for their assigned/active rides.
+        - **Endpoint**: Authenticated endpoint `POST /ui/{rideId}/route`.
+        - **Purpose**: To deliver route polylines and details (distance, ETA) for a specific ride, enabling in-app navigation for drivers (to pickup and then to destination/stops).
+        - **Functionality**: The API handler takes a `rideId` and the driver's authenticated context. It delegates to `Domain.Action.UI.RideRoute.rideRoute`. This domain action fetches the ride's waypoints (from DB) and potentially the driver's current location, then calls an external mapping service (via `Kernel.External.Maps.Interface`) to compute and return the route (`RouteInfo`).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Plan Management (`API.UI.Plan`)**: // ... (details as previously added) ...
+    - **Driver Coins/Rewards Management (`API.UI.DriverCoins`)**: // ... (details as previously added) ...
+    - **Driver Ride Summaries (for specific dates) (`API.UI.RideSummary`)**: Provides drivers with summarized ride activity for requested dates.
+        - **Endpoint**: Authenticated endpoint `POST /ui/rideSummary/list`.
+        - **Purpose**: To allow drivers to review their ride history and earnings for specific past dates.
+        - **Functionality**: The API handler receives a list of `[Day]` in the request body. It delegates to `Domain.Action.UI.RideSummary.listDailyRidesSummary`, which queries the database for all rides completed by the authenticated driver on those dates (within their merchant/city context) and returns an aggregated summary (e.g., total rides, earnings per day, or list of summaries).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **General Route Calculation for Drivers (`API.UI.Route`)**: // ... (details as previously added) ...
+    - **Driver Issue Reporting (including SOS/Emergency) (`API.UI.Issue`)**: Provides comprehensive issue reporting for drivers by integrating a shared `IssueManagement` library.
+        - **Endpoint**: Authenticated endpoints under `/ui/issue/` (e.g., create, list, get categories/options, upload media), defined by the shared `IssueManagement.API.UI.Issue` (`IA.IssueAPI`).
+        - **Purpose**: To allow drivers to report various issues, including safety concerns or emergencies (SOS), through a structured system.
+        - **Functionality**: API handlers in `API.UI.Issue` delegate to `IssueManagement.Common.UI.Issue` handlers. A `driverIssueHandle` is provided to this shared logic, which contains functions to fetch `dynamic-offer-driver-app`-specific data (e.g., `Person`, `Ride`, `Merchant`, `Booking`) and to interact with its own ticketing system (`Tools.Ticket`). SOS/Emergency is managed by selecting specific, critically configured issue categories/options, which are then processed by the shared `IssueManagement` domain logic for appropriate alerting and escalation.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Vehicle Details Management (`API.Action.UI.VehicleDetails`)**: Provides a structured way for drivers to submit and manage their vehicle information.
+        - **Endpoints**: Authenticated endpoints: `GET /ui/vehicleMakes` (list manufacturers), `POST /ui/vehicleModels` (list models for a make, takes `VehicleModelsReq`), `POST /ui/vehicleDetails` (submit/update full vehicle details, takes `VehicleDetailsReq`).
+        - **Purpose**: To facilitate accurate collection of vehicle data during onboarding and for subsequent updates, ensuring compliance and proper service matching.
+        - **Functionality**: API handlers delegate to corresponding functions in `Domain.Action.UI.VehicleDetails`. These domain actions fetch make/model lists from configured data sources and process the submission of comprehensive vehicle attributes (registration, insurance, etc.), storing them against the driver's profile.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Dynamic UI Configuration Retrieval (CaC) (`API.Action.UI.Cac`)**: Enables remote management of driver app UI and features.
+        - **Endpoint**: Authenticated endpoint `POST /ui/driver/getUiConfigs`.
+        - **Purpose**: To allow the driver application to fetch dynamic UI configurations (feature flags, themes, text, element visibility) tailored to its context.
+        - **Functionality**: The API handler receives contextual information (optional `toss` for A/B testing, `tenant`, and a generic JSON object `Data.Aeson.Object` for client state) from the driver app. It delegates to `Domain.Action.UI.Cac.postDriverGetUiConfigs`. This domain action interacts with a configuration management system (potentially using `ConfigPilotFrontend` from shared services) to determine and return the appropriate UI configurations as a `Data.Aeson.Object`.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Call Feedback Submission (`API.Action.UI.CallFeedback`)**: Allows drivers to submit feedback on platform-mediated calls.
+        - **Endpoint**: Authenticated endpoint `POST /ui/driver/call/feedback`.
+        - **Purpose**: To gather driver feedback on call quality and experience for calls made via the platform (e.g., to riders, support).
+        - **Functionality**: The API handler receives `CallFeedbackReq` (containing call ID, rating, category, comments). It delegates to `Domain.Action.UI.CallFeedback.postDriverCallFeedback`, which validates and stores the feedback, linking it to the relevant call record.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Dynamic Driver Profile Questions (`API.Action.UI.DriverProfileQuestions`)**: Enables flexible data collection from drivers through dynamic questions.
+        - **Endpoints**: Authenticated endpoints under `/ui/DriverProfileQues`:
+            - `GET /`: Fetches a list of dynamic profile questions (optional `isImages` query param).
+            - `POST /`: Submits driver's answers to the profile questions (takes `DriverProfileQuesReq`).
+        - **Purpose**: To gather varied and evolving information for driver onboarding, compliance, or profile enrichment without client-side form changes.
+        - **Functionality**: API handlers delegate to `Domain.Action.UI.DriverProfileQuestions`. The domain logic fetches questions based on driver context (from a configuration source) and processes/stores submitted answers.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Response to Booking Edits (`API.Action.UI.EditBooking`)**: Facilitates driver consent for in-ride booking modifications.
+        - **Endpoint**: Authenticated endpoint `POST /ui/edit/result/{bookingUpdateRequestId}`.
+        - **Purpose**: To allow drivers to accept or reject proposed changes to an ongoing ride (e.g., destination change initiated by the rider).
+        - **Functionality**: The API handler receives the driver's response (`EditBookingRespondAPIReq`) for a specific `bookingUpdateRequestId`. It delegates to `Domain.Action.UI.EditBooking.postEditResult`, which updates the status of the `BookingUpdateRequest` and, if accepted, the `Ride` details. It also likely triggers notifications back to the BAP/rider regarding the outcome.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Fare Calculation/Estimation for Drivers (`API.Action.UI.FareCalculator`)**: Provides a tool for drivers to estimate fares.
+        - **Endpoint**: Authenticated endpoint `GET /ui/calculateFare`.
+        - **Purpose**: To allow drivers to get fare estimates for potential trips based on origin, destination, and a `distanceWeightage` parameter.
+        - **Functionality**: The API handler receives pickup/drop-off coordinates and `distanceWeightage`. It delegates to `Domain.Action.UI.FareCalculator.getCalculateFare`. This domain action may use a mapping service for distance/time, then applies pricing rules (rate cards, potentially `yudhishthira` rule engine) considering the driver's vehicle/service context and the `distanceWeightage` to compute and return the estimated fare (`FareResponse`).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver-Side Insurance Details Retrieval (`API.Action.UI.Insurance`)**: Allows drivers to fetch insurance details for a reference ID.
+        - **Endpoint**: Authenticated endpoint `GET /ui/insurance/{referenceId}`.
+        - **Purpose**: To enable drivers to view insurance policy information relevant to their rides or operations.
+        - **Functionality**: The API handler takes a `referenceId` and delegates to `Domain.Action.UI.Insurance.getInsurance`. This domain action likely interacts with an internal service (possibly a BAP internal endpoint or a shared insurance module, as suggested by `SharedLogic.CallBAPInternal.InsuranceAPIEntity` response type) to fetch and return the insurance details.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Invoice Retrieval (Filtered) (`API.Action.UI.Invoice`)**: Enables drivers to fetch their invoices with filtering.
+        - **Endpoint**: Authenticated endpoint `GET /ui/invoice`.
+        - **Purpose**: To allow drivers to retrieve a list of their invoices (e.g., for rides, periodic earnings), with options to filter by date range and vehicle registration number (RC No.).
+        - **Functionality**: The API handler receives optional `fromDate`, `toDate`, and `rcNo` query parameters. It delegates to `Domain.Action.UI.Invoice.getInvoice`. This domain action queries the database for invoices matching the driver's ID and the provided filters, then returns a list of detailed invoice information (`InvoiceRes`).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Learning Management System (LMS) (`API.Action.UI.LmsModule`)**: Provides a comprehensive learning platform for drivers.
+        - **Endpoints**: Authenticated endpoints under `/ui/lms/` for: listing all modules (filterable: language, limit, section, offset, vehicle variant), listing videos per module (`/{moduleId}/listAllVideos`), listing quizzes per module (`/{moduleId}/listAllQuiz`), marking video progress (`/markVideoAsStarted`, `/markVideoAsCompleted`), confirming quiz answers (`/question/confirm`), getting certificates (`/{moduleId}/getCertificate`, `/getAllCertificates`), and getting bonus coins (`/{moduleId}/getBonusCoins`).
+        - **Purpose**: To facilitate driver onboarding, continuous training, compliance, and skill enhancement through structured learning content.
+        - **Functionality**: API handlers delegate to corresponding functions in `Domain.Action.UI.LmsModule`. The domain logic manages learning modules, content (videos, quizzes), tracks driver progress, and handles the issuance of certificates and bonus coins (integrating with the coin/reward system).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver-Contextual City Configurations Retrieval (`API.Action.UI.Merchant`)**: Provides city-specific operational configurations to the driver app.
+        - **Endpoint**: Authenticated endpoint `GET /ui/cityConfigs`.
+        - **Purpose**: To allow the driver application to fetch configurations (operational parameters, UI settings, local feature flags) specific to the driver's current merchant and operating city.
+        - **Functionality**: The API handler uses the driver's authenticated context (especially `MerchantOperatingCityId`). It delegates to `Domain.Action.UI.Merchant.getCityConfigs`, which queries a configuration store (DB, CaC system) for settings relevant to that merchant and city, returning them as `CityConfigs`.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Meter Ride Management (`API.Action.UI.MeterRide`)**: Provides specific functionalities for meter-based rides.
+        - **Endpoints**: Authenticated `POST` endpoints under `/ui/meterRide/{rideId}/`:
+            - `/addDestination`: Allows driver to add/update destination for an ongoing meter ride. Takes `MeterRideAddDestinationReq`, returns `MeterRideAddDestinationResp`.
+            - `/shareReceipt`: Allows driver to trigger sharing of a receipt for a completed meter ride. Takes `SendReceiptRequest`, returns `APISuccess`.
+        - **Purpose**: To handle unique aspects of meter rides like in-trip destination changes and receipt dispatch.
+        - **Functionality**: API handlers delegate to `Domain.Action.UI.MeterRide.postMeterRideAddDestination` and `Domain.Action.UI.MeterRide.postMeterRideShareReceipt`. These domain actions update ride details (potentially recalculating fare for destination change) and manage receipt generation/sending.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Interaction with Operation Hubs (`API.Action.UI.OperationHub`)**: Manages driver interactions with operational hubs.
+        - **Endpoints**: Authenticated endpoints under `/ui/operation/`:
+            - `GET /getAllHubs`: Lists available operation hubs.
+            - `POST /createRequest`: Submits a driver's request to an operation hub (takes `DriverOperationHubRequest`).
+            - `GET /getRequests`: Retrieves a driver's request history with filters (date range, status, type, mandatory `rcNo`).
+        - **Purpose**: To provide a structured channel for drivers to seek operational support, manage vehicle-related tasks, or make other service requests to designated hubs.
+        - **Functionality**: API handlers delegate to `Domain.Action.UI.OperationHub`. The domain logic manages information about operation hubs, processes new requests (linking them to drivers and vehicles), and retrieves request history with status updates.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Consent to Operator Association (`API.Action.UI.Operator`)**: Formalizes the relationship between a driver and a managing operator.
+        - **Endpoint**: Authenticated endpoint `POST /ui/operator/consent`.
+        - **Purpose**: To allow an authenticated driver to give their explicit consent to be associated with a fleet operator (e.g., taxi company).
+        - **Functionality**: The API handler, using the driver's authenticated context, delegates to `Domain.Action.UI.Operator.postOperatorConsent`. This domain action identifies a pending operator association for the driver, activates it (e.g., updates `DriverOperatorAssociation` table), potentially updates the driver's onboarding status based on operator validation, and notifies relevant parties.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Fare Details (Meter Pricing & Price Breakup) (`API.Action.UI.PriceBreakup`)**: Provides functionalities for finalizing meter ride prices and viewing detailed fare breakdowns.
+        - **Meter Ride Pricing Endpoint**: Authenticated endpoint `POST /ui/meterRide/price` (takes `rideId` as query param and `MeterRidePriceReq` body).
+        - **General Price Breakup Endpoint**: Authenticated endpoint `GET /ui/priceBreakup` (takes `rideId` as query param).
+        - **Purpose**: To allow drivers to finalize prices for meter rides based on actual parameters and to view detailed fare components for any ride, ensuring financial transparency.
+        - **Functionality**: API handlers delegate to `Domain.Action.UI.PriceBreakup.postMeterRidePrice` (for meter pricing, using submitted parameters) and `Domain.Action.UI.PriceBreakup.getPriceBreakup` (for fetching fare components as `RateCardItem`s). These domain actions perform calculations and retrieve stored fare information.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver "Reels" (Short Video Content) Retrieval (`API.Action.UI.Reels`)**: // ... (details as previously added) ...
+    - **Driver Social Login & Profile Linking (`API.Action.UI.SocialLogin`)**: Provides social media based authentication and account linking for drivers.
+        - **Social Login/Sign-up Endpoint**: Unauthenticated endpoint `POST /ui/social/login`.
+        - **Profile Linking Endpoint**: Authenticated endpoint `POST /ui/social/update/profile` (requires `TokenAuth`).
+        - **Purpose**: To offer drivers convenient sign-up/login using social media credentials and to link existing platform accounts with social profiles.
+        - **Functionality**: API handlers receive `SocialLoginReq` or `SocialUpdateProfileReq` (containing social provider name and token). They delegate to `Domain.Action.UI.SocialLogin.postSocialLogin` or `Domain.Action.UI.SocialLogin.postSocialUpdateProfile`. These domain actions validate the social token with the provider, fetch user info, then create a new platform user or link to/log in an existing user, returning platform session tokens for login, or `APISuccess` for linking.
+        - **Authentication**: Unauthenticated for `/social/login`; `TokenAuth` for `/social/update/profile`.
+    - **Driver Special Location Listing (`API.Action.UI.SpecialLocation`)**: Provides drivers with a list of relevant special operational zones.
+        - **Endpoint**: Authenticated endpoint `GET /ui/specialLocation/list`.
+        - **Purpose**: To allow drivers to discover special locations (e.g., airports, malls) within their operational context, with options to filter (e.g., by `isOrigin` for pickup-allowed zones).
+        - **Functionality**: The API handler, using the driver's authenticated context, delegates to `Domain.Action.UI.SpecialLocation.getSpecialLocationList`. This domain action queries for configured special locations (likely using `special-zone` library capabilities) based on merchant, city, and the `isOrigin` flag, returning detailed information for each (`SpecialLocationFull`).
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Special Location "Warrior" Operations (`API.Action.UI.SpecialLocationWarrior`)**: // ... (details as previously added) ...
+    - **Driver SDK Token for Payment Tokenization (`API.Action.UI.Tokenization`)**: Facilitates secure handling of driver payment information by providing temporary SDK tokens for client-side tokenization.
+        - **Endpoint**: Authenticated endpoint `GET /ui/driver/sdkToken`.
+        - **Purpose**: To enable driver applications to securely tokenize payment card details directly with a specified payment provider, minimizing backend exposure to sensitive data.
+        - **Functionality**: The API handler receives the target tokenization `service` and desired `expiry` as query parameters. It delegates to `Domain.Action.UI.Tokenization.getDriverSdkToken`, which interacts with the external tokenization service (defined in `Kernel.External.Tokenize`) to generate and return a short-lived SDK token (`GetTokenRes`). The client app then uses this token with the provider's SDK.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **WMB/Fleet Operations & Managed Trips (`API.Action.UI.WMB`)**: Provides a suite of tools for drivers operating in a fleet or managed service context ("WMB").
+        - **Endpoints**: Authenticated endpoints under `/ui/wmb/` and `/ui/fleet/` for:
+            - Listing fleet badges (`GET /wmb/fleetBadges`).
+            - Discovering available WMB routes (`POST /wmb/availableRoutes`) and getting route details (`GET /wmb/route/{routeCode}/details`).
+            - Managing WMB trips: QR start (`POST /wmb/qr/start`), get active trip (`GET /wmb/trip/active`), list trips (`GET /wmb/trip/list`), start/end specific trip transactions.
+            - Handling trip-related requests/alerts (`POST /wmb/trip/{tripId}/request`, get/cancel request status).
+            - Consenting to fleet association (`POST /fleet/consent`) and getting fleet configurations (`GET /fleet/config`).
+        - **Purpose**: To streamline operations for drivers in managed fleets, providing specific tools for route/task management, communication, and fleet association.
+        - **Functionality**: API handlers delegate to corresponding functions in `Domain.Action.UI.WMB`. The domain logic manages fleet-specific data, trip lifecycles for WMB operations, and associated operational requests.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Call Management (`API.UI.Call`)**: Facilitates various voice call interactions for drivers.
+        - **Backend-Initiated Masked Calls to Customer**: Authenticated driver app uses `POST /driver/ride/{rideId}/call/customer` to request backend to initiate a masked call (via Exotel) to the customer. Call status is polled via `GET /driver/ride/{rideId}/call/{callId}/status` and updated by webhook (`POST /driver/ride/call/statusCallback`).
+        - **Exotel IVR-Driven Calls**: Unauthenticated endpoints (`GET /exotel/call/customer/number`, `GET /exotel/call/statusCallback`) allow Exotel to fetch actual customer numbers for masked connections and report call status.
+        - **SDK-Based VoIP Calling (Twilio)**: Unauthenticated endpoints provide Twilio SDK access tokens (`GET /call/twillio/accessToken`) and TwiML for call control (`GET /call/twillio/connectedEntityTwiml`), enabling in-app VoIP.
+        - **Driver Registration Call**: Authenticated endpoint `GET /driver/register/call/driver` likely for driver self-verification or registration-related calls.
+        - **Functionality**: `Domain.Action.UI.Call` orchestrates interactions with telephony providers (Exotel, Twilio), manages call state, and ensures number masking.
+    - **Driver Call Event Logging (`API.UI.CallEvent`)**: Enables granular logging of specific events during platform-mediated calls.
+        - **Endpoint**: Authenticated endpoint `POST /ui/callEvent`.
+        - **Purpose**: To allow the driver application to log detailed events (e.g., call answered, hangup, DTMF input, call failed) related to a call session for analytics and troubleshooting.
+        - **Functionality**: The API handler receives `CallEventReq` (containing event type, timestamp, associated data). It delegates to `Domain.Action.UI.CallEvent.logCallEvent`, which validates and stores the event, linking it to the relevant call record.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Organization Administrator Profile Management (`API.UI.OrgAdmin`)**: Provides profile management for Organization Administrators.
+        - **Endpoints**: Authenticated endpoints under `/ui/orgAdmin/profile`:
+            - `GET /profile`: Fetches the authenticated Org Admin's profile.
+            - `POST /profile`: Updates the authenticated Org Admin's profile (takes `UpdateOrgAdminProfileReq`).
+        - **Purpose**: To allow administrative users (e.g., fleet managers, merchant staff) associated with the `dynamic-offer-driver-app` to manage their own account details.
+        - **Functionality**: API handlers delegate to `Domain.Action.UI.OrgAdmin.getProfile` and `Domain.Action.UI.OrgAdmin.updateProfile`. These domain actions retrieve or update the administrator's `Person` record.
+        - **Authentication**: Requires `AdminTokenAuth` (distinct from driver token, provides admin's `Person` context).
+    - **Driver Submits Feedback for Ride (`API.UI.Rating`)**: Enables drivers to rate riders and provide feedback on rides.
+        - **Endpoint**: Authenticated endpoint `POST /ui/feedback/rateRide`.
+        - **Purpose**: To allow drivers to submit ratings and comments for completed rides/riders, complementing the rider's ability to rate drivers.
+        - **Functionality**: The API handler receives `CallBAPInternal.FeedbackReq` (containing ride ID, rating, comments, feedback categories). It delegates to `Domain.Action.UI.Rating.rating`, which validates and stores the feedback, associating it with the ride and rider.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Cancellation Reasons Retrieval (`API.UI.CancellationReason`)**: Provides drivers with a standardized list of cancellation reasons.
+        - **Endpoint**: Authenticated endpoint `GET /ui/cancellationReason/list`.
+        - **Purpose**: To allow drivers to select from a predefined list of reasons when cancelling an assigned ride, ensuring data consistency for analytics and policy enforcement.
+        - **Functionality**: The API handler, using the driver's authenticated context, delegates to `Domain.Action.UI.CancellationReason.list`. This domain action fetches the list of `CancellationReasonAPIEntity` objects from a configuration or database.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+    - **Driver Fetches Associated Transporter/Merchant Details (`API.UI.Transporter`)**: Allows drivers to view details of their affiliated transporter/merchant.
+        - **Endpoint**: Authenticated endpoint `GET /ui/transporter`.
+        - **Purpose**: To provide drivers with information about the organization they are operating under (e.g., name, contact, policies).
+        - **Functionality**: The API handler uses the driver's authenticated context (which includes their `MerchantId` and `MerchantOperatingCityId`). It delegates to `Domain.Action.UI.Transporter.getTransporter`, which queries the database for the merchant's details and returns them as `DTransporter.TransporterRec`.
+        - **Authentication**: Requires `TokenAuth` (driver session).
+
+// ... (ensure other system patterns are preserved) ...
+
+// --- Existing Key Technical Decisions section ---
+// ... (ensure all previous Key Technical Decisions are preserved) ...
+- **Integrated Learning Management System (LMS) for Drivers**: `dynamic-offer-driver-app` (`API.Action.UI.LmsModule`) includes a full LMS with module/content discovery, progress tracking, quizzes, certifications, and bonus coin integration, supporting driver training and engagement.
+- **City-Specific Operational Configurations for Drivers**: `dynamic-offer-driver-app` (`API.Action.UI.Merchant` via `/cityConfigs` endpoint) provides configurations tailored to the driver's current operating city and merchant, enabling localized app behavior and compliance.
+- **Specific Handling for Meter Rides**: `dynamic-offer-driver-app` (`API.Action.UI.MeterRide`) provides dedicated endpoints for managing meter-based rides, including in-trip destination updates and receipt sharing, acknowledging their distinct operational needs.
+- **Structured Driver Requests via Operation Hubs**: `dynamic-offer-driver-app` (`API.Action.UI.OperationHub`) enables drivers to discover operation hubs, submit formal requests (e.g., for maintenance, document issues), and track their status, streamlining operational support.
+- **Driver Consent for Operator Association**: `dynamic-offer-driver-app` (`API.Action.UI.Operator`) provides an endpoint for drivers to formally consent to associations with fleet operators, a key step for managed drivers.
+- **Fare Transparency for Drivers (Meter Pricing and Breakdowns)**: `dynamic-offer-driver-app` (`API.Action.UI.PriceBreakup`) offers dedicated endpoints for drivers to finalize meter ride prices using submitted parameters and to retrieve detailed, component-wise fare breakdowns for any ride, promoting financial clarity.
+- **Social Authentication for Drivers**: `dynamic-offer-driver-app` (`API.Action.UI.SocialLogin`) supports driver sign-up/login via social media providers (e.g., Google) and linking of social accounts to existing platform profiles, involving server-side validation of social tokens.
+- **Information on Special Operational Locations for Drivers**: `dynamic-offer-driver-app` (`API.Action.UI.SpecialLocation`) allows drivers to fetch lists of special locations (e.g., airports), filterable by origin capability, aiding in compliance with zone-specific rules.
+- **Secure Payment Tokenization for Drivers**: `dynamic-offer-driver-app` (`API.Action.UI.Tokenization`) provides SDK tokens to driver apps for client-side tokenization of payment details with external services, enhancing security and aiding PCI compliance.
+- **Support for Fleet Operations & Managed Trips (WMB)**: `dynamic-offer-driver-app` (`API.Action.UI.WMB`) provides a dedicated set of APIs for drivers in fleet/managed contexts, covering route/task discovery, trip lifecycle management (including QR start), operational requests, and fleet association/configuration.
+- **Multi-Modal Call Management for Drivers**: `dynamic-offer-driver-app` (`API.UI.Call`) supports diverse call flows including backend-initiated masked calls (Exotel), IVR-driven connections (Exotel), and SDK-based in-app VoIP (Twilio), ensuring flexible communication options for drivers.
+- **Granular Call Event Logging for Drivers**: `dynamic-offer-driver-app` (`API.UI.CallEvent`) supports logging specific events (e.g., answered, hangup, DTMF) during calls for detailed analytics and troubleshooting of telephony interactions.
+- **Profile Management for Organization Administrators**: `dynamic-offer-driver-app` (`API.UI.OrgAdmin`) provides dedicated, `AdminTokenAuth`-secured endpoints for organization administrators to manage their own profiles, separate from driver functionalities.
+- **Two-Way Rating System (Driver Feedback on Ride/Rider)**: `dynamic-offer-driver-app` (`API.UI.Rating`) allows drivers to submit feedback (ratings, comments) on completed rides/riders, complementing the rider's ability to rate drivers.
+- **Standardized Cancellation Reasons for Drivers**: `dynamic-offer-driver-app` (`API.UI.CancellationReason`) provides an endpoint for drivers to fetch a list of predefined cancellation reasons, promoting data consistency for analytics and policy management.
