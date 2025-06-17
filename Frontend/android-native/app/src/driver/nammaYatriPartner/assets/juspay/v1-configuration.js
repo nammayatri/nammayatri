@@ -2742,6 +2742,13 @@ function getNammaYatriConfig() {
           "cityName" : "Hubli",
           "mapImage" : "ny_ic_hubli_map",
           "cityCode" : "std:0836",
+          "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : false
+          },
           "showSubscriptions" : false,
           "enableAdvancedBooking" : true,
           "advancedRidePopUpYoutubeLink" : "" ,
@@ -6216,6 +6223,13 @@ function getKeralaSavaariConfig() {
         "cityName" : "Hubli",
         "mapImage" : "ny_ic_hubli_map",
         "cityCode" : "std:0836",
+        "openMeter" : {
+            "enable" : {
+              "AutoCategory" : true,
+            },
+            "addDestination" : true,
+            "shareRideTracking" : false
+          },
         "showSubscriptions" : false,
         "enableAdvancedBooking" : true,
         "advancedRidePopUpYoutubeLink" : "" ,
