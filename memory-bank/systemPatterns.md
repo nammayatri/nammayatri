@@ -673,3 +673,12 @@ _This document will be updated with more detailed patterns as individual service
 - **Profile Management for Organization Administrators**: `dynamic-offer-driver-app` (`API.UI.OrgAdmin`) provides dedicated, `AdminTokenAuth`-secured endpoints for organization administrators to manage their own profiles, separate from driver functionalities.
 - **Two-Way Rating System (Driver Feedback on Ride/Rider)**: `dynamic-offer-driver-app` (`API.UI.Rating`) allows drivers to submit feedback (ratings, comments) on completed rides/riders, complementing the rider's ability to rate drivers.
 - **Standardized Cancellation Reasons for Drivers**: `dynamic-offer-driver-app` (`API.UI.CancellationReason`) provides an endpoint for drivers to fetch a list of predefined cancellation reasons, promoting data consistency for analytics and policy management.
+
+## Development and Operational Patterns
+- **CLI-Driven Development Lifecycle**: The project utilizes a comprehensive set of command-line interface (CLI) commands to manage various aspects of the development lifecycle. This includes:
+    - **Code Generation & Building**: Commands for `hpack` (cabal file generation), `run-generator` (Namma DSL code generation), and compilation (e.g., `ghcid` for local packages).
+    - **Local Service Management**: Scripts to run the backend stack locally using Cabal (`run-mobility-stack-dev`) or Nix (`run-mobility-stack-nix`), and to manage auxiliary services (e.g., `kill-svc-ports`, `run-monitoring`, `run-pgadmin`, `stop-all-containers` for Dockerized dependencies).
+    - **Testing**: Commands for running integration tests (`run-integration-tests` via Newman) and load tests (`run-load-test-dev` via K6).
+    - **Code Quality & Documentation**: Tools for linting (`apply-hlint-staged`) and local documentation serving (`docs`, `latest-docs` via Hoogle).
+    - **Scaffolding**: Utilities for creating new backend services (`backend-new-service`).
+    This pattern centralizes common development tasks, promoting consistency and efficiency.
