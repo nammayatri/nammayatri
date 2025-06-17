@@ -78,6 +78,8 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Tools.Utils as YUtils
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Cac
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
@@ -137,7 +139,8 @@ data ProfileRes = ProfileRes
     referralAmountPaid :: Maybe HighPrecMoney,
     cancellationRate :: Maybe Int,
     isPayoutEnabled :: Maybe Bool,
-    publicTransportVersion :: Maybe Text
+    publicTransportVersion :: Maybe Text,
+    isMultimodalRider :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -225,6 +228,13 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+-- Helper function to check if a tag is a MultimodalRider tag
+isMultimodalRiderTag :: LYT.TagName -> LYT.TagNameValueExpiry -> Bool
+isMultimodalRiderTag targetTagName customerTag =
+  case YUtils.parseTagName customerTag of
+    Just tagName -> tagName == targetTagName
+    Nothing -> False
+
 getPersonDetails ::
   (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -287,9 +297,14 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
         ( \vType ->
             QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
         )
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs
+  -- Check if MultimodalRider tag is present in user's tags
+  let multimodalTagName = LYT.TagName "MultimodalRider"
+  let currentTags = fromMaybe [] decPerson.customerNammaTags
+  let isMultimodalRider = any (isMultimodalRiderTag multimodalTagName) currentTags
+
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -316,6 +331,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           cancellationRate = cancellationPerc,
           publicTransportVersion = if null integratedBPPConfigs then Nothing else Just (T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs),
+          isMultimodalRider = isMultimodalRider && not (null integratedBPPConfigs),
           ..
         }
 
