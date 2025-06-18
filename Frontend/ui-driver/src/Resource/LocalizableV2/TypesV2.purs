@@ -1869,6 +1869,8 @@ newtype Keymap = Keymap {
     , open_meter :: String
     , this_ride_includes_a_pet :: String
     , pet_rides :: String
+    , please_resume_ride_to_continue :: String
+    , you_are_too_far_from_the_stop :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7418,3 +7420,9 @@ this_ride_includes_a_pet = a
 
 pet_rides :: Proxy "pet_rides"
 pet_rides = a
+
+please_resume_ride_to_continue :: Proxy "please_resume_ride_to_continue"
+please_resume_ride_to_continue = a
+
+you_are_too_far_from_the_stop :: Proxy "you_are_too_far_from_the_stop"
+you_are_too_far_from_the_stop = a

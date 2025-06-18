@@ -1855,4 +1855,6 @@ getBn =
     , open_meter : "মিটার খোলুন"
     , this_ride_includes_a_pet : "এই যাত্রায় একটি পোষা প্রাণী অন্তর্ভুক্ত রয়েছে"
     , pet_rides : "পেট রাইডস"
+    , you_are_too_far_from_the_stop : "আপনি স্টপ থেকে অনেক দূরে রয়েছেন। স্টপে আসুন"
+    , please_resume_ride_to_continue : "যাত্রা পুনরায় শুরু করুন যাত্রা পুনরায় শুরু করুন"
     }

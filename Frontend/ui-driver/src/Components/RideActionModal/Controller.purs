@@ -123,6 +123,7 @@ type Config = {
   isSourceDetailsExpanded :: Boolean,
   isDestinationDetailsExpanded :: Boolean,
   stops :: Array API.Stop,
+  enableMapButton :: Boolean,
   isPetRide :: Maybe Boolean
 }
 
@@ -205,6 +206,7 @@ config = {
   isSourceDetailsExpanded : false,
   isDestinationDetailsExpanded : false,
   stops : [],
+  enableMapButton : false,
   isPetRide : Nothing
 }
 

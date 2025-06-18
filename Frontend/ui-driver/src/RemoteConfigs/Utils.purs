@@ -579,3 +579,23 @@ getPetRidesFeatureConfig city =
     config = fetchRemoteConfigString "pet_rides_feature_config"
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultPetRidesFeatureConfig
   in getCityBasedConfig value $ toLower city
+
+
+---------------------------------- stop_validation_distance_threshold ----------------------------------
+type StopValidationDistanceThreshold = {
+  distance :: Number,
+  enableStopValidation :: Boolean
+}
+getStopValidationDistanceThreshold :: StopValidationDistanceThreshold
+getStopValidationDistanceThreshold =
+  let
+    config = fetchRemoteConfigString "stop_validation_distance_threshold"
+    value = decodeForeignObject (parseJSON config) defaultStopValidationDistanceThreshold
+  in
+    value
+
+defaultStopValidationDistanceThreshold :: StopValidationDistanceThreshold
+defaultStopValidationDistanceThreshold = {
+    distance : 200.0 -- in meters
+  , enableStopValidation : true
+}

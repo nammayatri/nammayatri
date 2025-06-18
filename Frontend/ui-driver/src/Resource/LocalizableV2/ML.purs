@@ -1855,4 +1855,6 @@ getMl =
     , open_meter : "മೀറ്റർ ഓപ്പൺ"
     , this_ride_includes_a_pet : "ഈ യാത്രയിൽ ഒരു വളർത്തുമൃഗവും ഉൾപ്പെടുന്നു"
     , pet_rides : "പെറ്റ് റൈഡ്സ്"
+    , please_resume_ride_to_continue : "യാത്ര പുനരാരംഭിക്കുക"
+    , you_are_too_far_from_the_stop : "നിങ്ങളുടെ സ്ടോപ്പ് മുകളിൽ അത್യംത ദೂരത്തിൽ ഉണ്ട്. അടുത്ത സ്ടോപ്പ് പോകുക"
     }

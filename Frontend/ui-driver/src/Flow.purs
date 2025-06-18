@@ -108,7 +108,7 @@ import Screens.Handlers (chooseCityScreen, homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion, getCoinPopupStatus, getExoPhoneNumber)
-import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
+import Screens.HomeScreen.ScreenData (dummyDriverRideStats, createDummyStop)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.DocumentCaptureScreen.ScreenData (initData) as DocumentCaptureData
 import Screens.AcknowledgementScreen.ScreenData (initData) as AckScreenInitData
@@ -186,6 +186,8 @@ import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 import Screens (ScreenName(..)) as Screen
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2 as LT2
 
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
@@ -3021,6 +3023,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_METRO_WARRIOR state -> metroWarriorsScreenFlow
     UPDATE_STOPS_STATUS state -> do
+      let stopValidationDistanceThreshold = getStopValidationDistanceThreshold
       let driverLocation =
             API.LatLong
             { lat : state.data.currentDriverLat
@@ -3031,31 +3034,41 @@ homeScreenFlow = do
           locationId = case stopToDepart of
                           Just (API.Stop stop) -> fromMaybe "" (unwrap stop.location).id
                           Nothing -> maybe "" (\(API.Stop stop) -> fromMaybe "" (unwrap stop.location).id) upcomingStop
-      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
-      void $ lift $ lift $ toggleLoader true
-      (resp :: (Either ErrorResponse API.ApiSuccessResult)) <- lift $ lift $ HelpersAPI.callApi $ API.UpdateStopStatusReq state.data.activeRide.id locationId (isNothing stopToDepart) driverLocation
-      case resp of
-        Right _ -> do
-          void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
-          case stopToDepart of
-            Just (API.Stop stop) -> do
-              let (API.LocationInfo stopLocation) = stop.location
-                  markerId = "stop" <> show stopLocation.lat <> show stopLocation.lon
-              pure $ removeMarker markerId
-              pure $ removeMarker $ markerId <> "label"
-            Nothing -> pure unit
-          (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-          case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
-            Just ride -> do
-              let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
-                  currActiveRideDetails = activeRideDetail state ride
-                  advancedRideDetails = activeRideDetail state <$> advancedRide
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{triggerGMapsIntent = isJust stopToDepart}})
-            Nothing -> do
-              setValueToLocalStore IS_RIDE_ACTIVE "false"
-              pure unit
-        Left err -> pure unit
-      void $ lift $ lift $ toggleLoader false
+          (API.Stop currentStop) = fromMaybe (fromMaybe (createDummyStop state.data.currentDriverLat state.data.currentDriverLon) upcomingStop) stopToDepart
+          (API.LocationInfo currentStopLocation) = currentStop.location
+          currentStopDistanceInKms = HU.getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon currentStopLocation.lat currentStopLocation.lon
+          currentStopDistance = currentStopDistanceInKms * 1000.0
+          isUpcomingStopCase = isNothing stopToDepart
+          distanceThreshold = stopValidationDistanceThreshold.distance
+      if isUpcomingStopCase &&  stopValidationDistanceThreshold.enableStopValidation && currentStopDistance > distanceThreshold
+        then do
+          void $ pure $ toast $ getStringV2 LT2.you_are_too_far_from_the_stop
+        else do
+          void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT) 
+          void $ lift $ lift $ toggleLoader true
+          (resp :: (Either ErrorResponse API.ApiSuccessResult)) <- lift $ lift $ HelpersAPI.callApi $ API.UpdateStopStatusReq state.data.activeRide.id locationId isUpcomingStopCase driverLocation
+          case resp of
+            Right _ -> do
+              void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
+              case stopToDepart of
+                Just (API.Stop stop) -> do
+                  let (API.LocationInfo stopLocation) = stop.location
+                      markerId = "stop" <> show stopLocation.lat <> show stopLocation.lon
+                  pure $ removeMarker markerId
+                  pure $ removeMarker $ markerId <> "label"
+                Nothing -> pure unit
+              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+              case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
+                Just ride -> do
+                  let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
+                      currActiveRideDetails = activeRideDetail state ride
+                      advancedRideDetails = activeRideDetail state <$> advancedRide
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{triggerGMapsIntent = isJust stopToDepart}})
+                Nothing -> do
+                  setValueToLocalStore IS_RIDE_ACTIVE "false"
+                  pure unit
+            Left err -> pure unit
+          void $ lift $ lift $ toggleLoader false
     GO_TO_METER_RIDE_SCREEN -> do
       (GlobalState globalstate) <- getState
       when (globalstate.homeScreen.props.driverStatusSet == ST.Offline) $ changeDriverStatus ST.Online
