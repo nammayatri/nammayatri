@@ -7,11 +7,25 @@ apis:
   - GET:
       endpoint: /drivers
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       response:
         type: "[MapDriverInfoRes]"
+      helperApi:
+        - GET:
+            endpoint: /drivers/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+            response:
+              type: "[MapDriverInfoRes]"        
 
 types:
   MapDriverInfoRes:
+    - enum: FleetMapDriverInfo FleetMapDriverInfoRes, OperatorMapDriverInfo OperatorMapDriverInfoRes
+  FleetMapDriverInfoRes:
     - driverName: Text
     - driverStatus: Status
     - todaySummary: TodaySummary
@@ -20,8 +34,16 @@ types:
     - destination: Text
     - mobileCountryCode: Text
     - mobileNumber: Text
+  OperatorMapDriverInfoRes:
+    - driverName: Text
+    - driverStatus: Status
+    - vehicleNumber: Text
+    - vehicleStatus: Status
+    - position: LatLong
+    - source: Text
+    - destination: Text
   Status:
-    - enum: "TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE"
+    - enum: TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE
   TodaySummary:
     - tripStatus: Status
     - tripsCompletedCount: Int

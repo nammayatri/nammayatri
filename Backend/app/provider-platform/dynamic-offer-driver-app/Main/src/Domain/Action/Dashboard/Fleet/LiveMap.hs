@@ -43,15 +43,20 @@ import Storage.Queries.DriverInformationExtra (findAllWithLimitOffsetByMerchantI
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Error (DriverInformationError (..), TransporterError (TransporterConfigNotFound))
+-- import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)
 
 getLiveMapDrivers ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Text -> 
+  Kernel.Prelude.Maybe Text -> 
   Environment.Flow [Common.MapDriverInfoRes]
-getLiveMapDrivers merchantShortId _opCity = do
+getLiveMapDrivers merchantShortId _opCity requestorId mbFleetOwnerId = do
   merchant <- findMerchantByShortId merchantShortId
   driverAndDriverInfoLs <- findAllWithLimitOffsetByMerchantId Nothing Nothing Nothing Nothing merchant.id
   catMaybes <$> mapM buildMapDriverInfo driverAndDriverInfoLs
+
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
 
 buildMapDriverInfo :: (DP.Person, DDI.DriverInformation) -> Environment.Flow (Kernel.Prelude.Maybe Common.MapDriverInfoRes)
 buildMapDriverInfo (driver, driverInformation) = do
@@ -157,3 +162,20 @@ countTrips (rd : rds) trips =
           { chargeableDistance = trips.chargeableDistance + fromMaybe 0 rd.chargeableDistance,
             fare = trips.fare + fromMaybe 0 rd.fare
           }
+
+-- Will import from Domain.Action.Dashboard.Fleet.Driver after rebase
+validateRequestorRoleAndGetEntityId :: DP.Person -> Maybe Text -> Flow (DP.Role, Text)
+validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId = do
+  case requestedPerson.role of
+    DP.FLEET_OWNER -> do
+      -- Fleet Owner tries to do operation
+      fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
+      pure (DP.FLEET_OWNER, fleetOwnerid)
+    DP.OPERATOR -> do
+      case mbFleetOwnerId of
+        Just fleetOwnerId -> do
+          -- Operator tries to do operation on behalf of the fleet
+          validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+          pure (DP.FLEET_OWNER, fleetOwnerId)
+        Nothing -> pure (DP.OPERATOR, requestedPerson.id.getId) -- Operator tries to do operation
+    _ -> throwError (InvalidRequest "Invalid Data")

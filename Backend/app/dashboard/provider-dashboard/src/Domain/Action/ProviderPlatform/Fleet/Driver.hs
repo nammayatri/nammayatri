@@ -50,6 +50,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
     postDriverFleetGetNearbyDrivers,
+    getMbFleetOwnerAndRequestorIdMerchantBased,
   )
 where
 

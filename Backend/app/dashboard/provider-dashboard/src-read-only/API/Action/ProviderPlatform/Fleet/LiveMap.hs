@@ -13,6 +13,7 @@ import qualified Domain.Action.ProviderPlatform.Fleet.LiveMap
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
@@ -27,11 +28,11 @@ handler merchantId city = getLiveMapDrivers merchantId city
 
 type GetLiveMapDrivers =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.LIVE_MAP) / ('API.Types.ProviderPlatform.Fleet.LiveMap.GET_LIVE_MAP_DRIVERS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.LIVE_MAP / 'API.Types.ProviderPlatform.Fleet.LiveMap.GET_LIVE_MAP_DRIVERS)
       :> API.Types.ProviderPlatform.Fleet.LiveMap.GetLiveMapDrivers
   )
 
-getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
-getLiveMapDrivers merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.LiveMap.getLiveMapDrivers merchantShortId opCity apiTokenInfo
+getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
+getLiveMapDrivers merchantShortId opCity apiTokenInfo fleetOwnerId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.LiveMap.getLiveMapDrivers merchantShortId opCity apiTokenInfo fleetOwnerId

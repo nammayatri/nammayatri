@@ -15,7 +15,7 @@ import qualified Kernel.Types.Common
 import Servant
 import Servant.Client
 
-data MapDriverInfoRes = MapDriverInfoRes
+data FleetMapDriverInfoRes = FleetMapDriverInfoRes
   { driverName :: Kernel.Prelude.Text,
     driverStatus :: Status,
     todaySummary :: TodaySummary,
@@ -24,6 +24,24 @@ data MapDriverInfoRes = MapDriverInfoRes
     destination :: Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MapDriverInfoRes
+  = FleetMapDriverInfo FleetMapDriverInfoRes
+  | OperatorMapDriverInfo OperatorMapDriverInfoRes
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OperatorMapDriverInfoRes = OperatorMapDriverInfoRes
+  { driverName :: Kernel.Prelude.Text,
+    driverStatus :: Status,
+    vehicleNumber :: Kernel.Prelude.Text,
+    vehicleStatus :: Status,
+    position :: Kernel.External.Maps.Types.LatLong,
+    source :: Kernel.Prelude.Text,
+    destination :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -51,11 +69,13 @@ data TodaySummary = TodaySummary
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("liveMap" :> GetLiveMapDrivers)
+type API = ("liveMap" :> GetLiveMapDriversHelper)
 
-type GetLiveMapDrivers = ("drivers" :> Get '[JSON] [MapDriverInfoRes])
+type GetLiveMapDrivers = ("drivers" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Get '[JSON] [MapDriverInfoRes])
 
-newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: EulerHS.Types.EulerClient [MapDriverInfoRes]}
+type GetLiveMapDriversHelper = ("drivers" :> Capture "requestorId" Kernel.Prelude.Text :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Get '[JSON] [MapDriverInfoRes])
+
+newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient [MapDriverInfoRes]}
 
 mkLiveMapAPIs :: (Client EulerHS.Types.EulerClient API -> LiveMapAPIs)
 mkLiveMapAPIs liveMapClient = (LiveMapAPIs {..})
