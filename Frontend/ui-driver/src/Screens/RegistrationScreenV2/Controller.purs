@@ -308,7 +308,7 @@ eval (CategorySpecificContinueButtonAC PrimaryButtonController.OnClick) state = 
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
 
-eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick)) state = continue state {props{selectedDocumentCategory = Mb.Nothing}}
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick)) state = if state.props.manageVehicle then exit $ GoToHomeScreen state else continue state {props{selectedDocumentCategory = Mb.Nothing}}
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
 

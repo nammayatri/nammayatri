@@ -1073,17 +1073,6 @@ onBoardingFlowV2 _ = do
         isAnyRequestFailed = filter(\(API.OperationHubRequests item) -> item.requestStatus == "REJECTED") requestsArr
     void $ setValueToLocalNativeStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS (if DA.length isAnyRequestPendingOrCompleted > 0 then "COMPLETED" else if DA.length isAnyRequestFailed > 0 then "FAILED" else "NOT_STARTED")
     else pure unit
-  if driverEnabled then do -- Todo: Shikhar -> remove this part for R2 changes
-    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing, firstTimeOnboardingStatus = true } 
-    modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
-          title = Just $ getString REGISTRATION_COMPLETED, -- Todo: Shikhar change back to this after R2 changes go live  getString CONGRATULATIONS,
-          description = Just $ getString WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE, -- getString (YOU_ARE_ALL_SET_TO_TAKE_RIDES merchantName),
-          primaryButtonText = Just $ getString CONTINUE,
-          primaryButtonVisibility = false,
-          illustrationAsset = "ny_ic_go_live_soon"},
-          props{illustrationType = ST.Image}}
-    ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just cityConfig.enableAdvancedBooking) true
-  else pure unit
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue driverRegistrationResp.rcVerificationStatus,
@@ -1112,7 +1101,8 @@ onBoardingFlowV2 _ = do
                       driverEnabled = driverEnabled, 
                       manageVehicleCategory = if manageVehicle then uiCurrentCategory else Nothing,
                       categoryToStepProgressMap = filterCategories registerationStepsCabs registerationScreen.props.categoryToStepProgressMap filteredVehicleDocs vehiclePhotosStatus,
-                      vehicleImagesUploaded = vehiclePhotosStatus
+                      vehicleImagesUploaded = vehiclePhotosStatus,
+                      selectedDocumentCategory = if manageVehicle then Just API.VEHICLE else registerationScreen.props.selectedDocumentCategory
                       }})
   hideSplashAndCallFlow (pure unit)
   flow <- UI.registrationV2
@@ -1214,7 +1204,8 @@ onBoardingFlowV2 _ = do
     LOGOUT_FROM_REGISTERATION_SCREEN_V2 -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN_V2 state -> 
       if state.props.manageVehicle
-      then 
+      then do
+        modifyScreenState $  DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{screenType = ST.VEHICLE_DETAILS}})
         driverProfileFlow
       else do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing, firstTimeOnboardingStatus = true } 
@@ -1905,7 +1896,7 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       deleteValueFromLocalStore ENTERED_RC
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
-      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Nothing}, data { linkedRc = Nothing}})
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Just ST.CarCategory}, data { linkedRc = Nothing, vehicleCategory = Just ST.CarCategory}})
       onBoardingFlow
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do

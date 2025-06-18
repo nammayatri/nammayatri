@@ -243,6 +243,7 @@ window.getMerchantConfig = function () {
       , "showFaqsWhileOnboarding" : true
       , "enableV2Registration" : true
       , "enableV2Earnings" : true
+      , "enableDriverProfile" : false
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"

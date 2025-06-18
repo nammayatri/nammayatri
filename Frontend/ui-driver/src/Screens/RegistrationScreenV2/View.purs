@@ -206,7 +206,7 @@ view push state =
                 , width MATCH_PARENT
                 , gravity CENTER
                 , margin $ Margin 16 0 16 16
-                , visibility $ boolToVisibility $ (state.props.selectedDocumentCategory == Just API.DRIVER) || (state.props.selectedDocumentCategory == Just API.VEHICLE)
+                , visibility $ boolToVisibility $ ((state.props.selectedDocumentCategory == Just API.DRIVER) || (state.props.selectedDocumentCategory == Just API.VEHICLE)) && not state.props.manageVehicle
                 ]
                 [ PrimaryButton.view (push <<< CategorySpecificContinueButtonAC) (continueCategorySpecificButtonConfig state) ]
             ]
@@ -225,7 +225,7 @@ view push state =
                       Just ST.AutoCategory -> state.data.registerationStepsAuto
                       Just ST.BusCategory -> state.data.registerationStepsBus
                       _ -> state.data.registerationStepsAuto
-        buttonVisibility categoryCompletedStatusCount = if state.props.manageVehicle then all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ filter(\elem -> elem.isMandatory) documentList
+        buttonVisibility categoryCompletedStatusCount = if state.props.manageVehicle then true -- all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ filter(\elem -> elem.isMandatory) documentList
                             else if state.props.driverEnabled then state.props.driverEnabled
                             else isNothing state.props.selectedDocumentCategory && (categoryCompletedStatusCount == (DA.length state.props.categoryToStepProgressMap))  -- Todo: add this if that dummy screen is needed and remove from top. isNothing state.props.selectedDocumentCategory && (categoryCompletedStatusCount == (DA.length state.props.categoryToStepProgressMap))) 
 
@@ -817,28 +817,6 @@ variantListView push state =
               ] <> FontStyle.subHeading1 TypoGraphy
           ]
       ) (state.data.variantList))
-
-getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
-getStatus step state = 
-  case step of
-    ST.GRANT_PERMISSION -> state.data.permissionsStatus
-    -- ST.SUBSCRIPTION_PLAN -> state.data.subscriptionStatus  //don't check from frontend
-    _ -> do
-          let documentStatusArr = state.data.documentStatusList
-              vehicleDoc = [ ST.VEHICLE_PERMIT, ST.FITNESS_CERTIFICATE, ST.VEHICLE_INSURANCE, ST.VEHICLE_PUC, ST.VEHICLE_DETAILS_OPTION]
-              findStatus = if step `elem` vehicleDoc 
-                          then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
-                          else find (\docStatus -> docStatus.docType == step) documentStatusArr
-          case step of 
-            ST.INSPECTION_HUB -> do
-               let inspectionHubCreated = (getValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS)
-               if (inspectionHubCreated == "COMPLETED") then ST.COMPLETED else if (inspectionHubCreated == "FAILED") then ST.FAILED else ST.NOT_STARTED
-            ST.VEHICLE_PHOTOS -> if state.props.vehicleImagesUploaded then ST.COMPLETED else ST.NOT_STARTED
-            _ -> do
-                  case findStatus of
-                    Nothing -> ST.NOT_STARTED
-                    Just docStatus -> docStatus.status
-  where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
 dependentDocAvailable item state =
