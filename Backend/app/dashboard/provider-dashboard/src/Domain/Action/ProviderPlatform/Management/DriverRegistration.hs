@@ -24,6 +24,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
+    postDriverRegistrationUnlinkDocument,
   )
 where
 
@@ -145,3 +146,10 @@ postDriverRegistrationRegisterAadhaar merchantShortId opCity apiTokenInfo driver
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterAadhaar) driverId req
+
+postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.DocumentType -> Flow APISuccess
+postDriverRegistrationUnlinkDocument merchantShortId opCity apiTokenInfo personId documentType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just personId) (Just documentType)
+  let mbRequestorId = determineRequestorId apiTokenInfo personId
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationUnlinkDocument) personId documentType mbRequestorId
