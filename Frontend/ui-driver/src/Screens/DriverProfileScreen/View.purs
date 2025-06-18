@@ -361,7 +361,7 @@ manageVehicleItem state vehicle push =
     , linearLayout
         [ height $ V 2
         , width MATCH_PARENT
-        , background Color.white900
+        , background Color.grey800
         , cornerRadius 15.0
         , margin $ MarginHorizontal 16 16
         ]
@@ -589,6 +589,7 @@ completedProfile state push =
             , textSize FontSize.a_14
             , fontStyle $ semiBold LanguageStyle
             , fontWeight $ FontWeight 600
+            , visibility $ boolToVisibility $ state.data.config.feature.enableDriverProfile
             ]
     ]
   ]
@@ -1422,7 +1423,7 @@ payment push state =
             [ detailsListViewComponent state push
                 { backgroundColor: EHU.getColorWithOpacity 8 Color.blue900
                 , separatorColor: Color.white900
-                , isLeftKeyClickable: true
+                , isLeftKeyClickable: false
                 , arrayList: driverNoAutoPayArray state
                 }
             ]
@@ -1855,18 +1856,23 @@ vehicleListItem state push vehicle =
             ]
         ]
     , linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey700
+        , margin $ MarginTop 16
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory `elem` [ST.AmbulanceCategory, ST.TruckCategory, ST.BusCategory])
+        ][]
+    , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , background Color.blue600
         , cornerRadius 8.0
         , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory `elem` [ST.AmbulanceCategory, ST.TruckCategory, ST.BusCategory])
-        , padding $ Padding 16 8 16 8
-        , margin $ MarginTop 16
-        , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS
+        , padding $ Padding 16 8 16 0
+        , onClick push $ const $ OptionClick DOCUMENTS
         ]
         [ textView
-            [ text $ getString BOOKING_OPTIONS
+            [ text $ "Documents"
             , textSize FontSize.a_14
             , color Color.black900
             , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -2342,7 +2348,7 @@ driverPaymentsArray state =
 
 driverNoAutoPayArray :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean, valueTextColor :: Maybe String }
 driverNoAutoPayArray state =
-  [ { key: (getString GET_QR_CODE), value: Nothing, action: UpdateValue ST.PAYMENT, isEditable: false, keyInfo: false, isRightInfo: true, valueTextColor: Nothing }
+  [ { key: (getString GET_QR_CODE), value: Just $ getString ADD, action: UpdateValue ST.PAYMENT, isEditable: false, keyInfo: false, isRightInfo: false, valueTextColor: Just Color.blue900 }
   ]
 
 getLanguagesSpoken :: Array String -> Maybe String

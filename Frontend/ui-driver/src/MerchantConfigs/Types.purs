@@ -248,6 +248,7 @@ type Features = {
 , showFaqsWhileOnboarding :: Boolean
 , enableV2Registration :: Boolean
 , enableV2Earnings :: Boolean
+, enableDriverProfile :: Boolean
 }
  
  -- VV - VechileVerfication

@@ -1114,6 +1114,7 @@ config =
   , showFaqsWhileOnboarding : false
   , enableV2Registration : false
   , enableV2Earnings : false
+  , enableDriverProfile : true
   }
   , showCorporateAddress : false
   , engilshInNative: "English"

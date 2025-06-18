@@ -2102,11 +2102,11 @@ type DocumentDetailsScreenState = {
 }
 
 type DocumentDetailsScreenData = {
-
+  config :: AppConfig
 }
 
 type DocumentDetailsScreenProps = {
-
+  menuOptions :: Boolean
 }
 
 type DriverCompleteProfileScreenState = {
