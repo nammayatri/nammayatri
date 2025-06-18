@@ -140,6 +140,25 @@ apis:
         endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
+  - POST: #UnlinkDocumentAPI
+      endpoint: /{personId}/unlink/document/{documentType}
+      auth: ApiAuthV2
+      params:
+        personId: Id Driver
+        documentType: DocumentType
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{personId}/unlink/document/{documentType}
+            auth: ApiAuthV2
+            params:
+              personId: Id Driver
+              documentType: DocumentType
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
 
 types:
   ValidationStatus:
@@ -202,6 +221,7 @@ types:
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
   DocumentType:
     - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, Odometer, InspectionHub"
+    - derive: "HttpInstance, 'HideSecrets"
   UploadDocumentReq:
     - imageBase64: Text
     - imageType: DocumentType
