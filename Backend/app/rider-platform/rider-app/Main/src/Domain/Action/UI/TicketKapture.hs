@@ -24,9 +24,10 @@ postKaptureCustomerLogin ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    TIT.TicketType ->
     Environment.Flow TicketKapture.TicketKaptureResp
   )
-postKaptureCustomerLogin (mbPersonId, _) = do
+postKaptureCustomerLogin (mbPersonId, _) ticketType = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
@@ -39,7 +40,7 @@ postKaptureCustomerLogin (mbPersonId, _) = do
     case addAndUpdateKaptureCustomerResponse of
       Right resp ->
         try @_ @SomeException
-          (kaptureEncryption person.merchantId person.merchantOperatingCityId (TIT.KaptureEncryptionReq resp.kaptureCustomerId))
+          (kaptureEncryption person.merchantId person.merchantOperatingCityId (TIT.KaptureEncryptionReq resp.kaptureCustomerId ticketType))
       Left err -> throwError $ InternalError ("Add And Update Kapture Customer Ticket API failed - " <> show err)
 
   case kaptureEncryptionResponse of
