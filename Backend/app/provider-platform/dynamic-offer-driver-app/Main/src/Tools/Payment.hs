@@ -153,7 +153,7 @@ decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
           | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
         _ -> paymentServiceName
   logDebug $ "decidePaymentService: clientSdkVersion " <> show paymentService
-  logDebug $ "decidePaymentService: transporterConfig.aaEnabledClientSdkVersion " <> show $ textToVersionDefault transporterConfig.aaEnabledClientSdkVersion
+  logDebug $ "decidePaymentService: transporterConfig.aaEnabledClientSdkVersion " <> show (textToVersionDefault transporterConfig.aaEnabledClientSdkVersion)
   logDebug $ "decidePaymentService: PaymentServiceName" <> show paymentService
   return paymentService
 
