@@ -39,8 +39,8 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.fleetVehicleVerificationSkippable (Just fleetVehicleVerificationSkippable),
-      Se.Set Beam.driverVehicleVerificationSkippable (Just driverVehicleVerificationSkippable)
+      Se.Set Beam.fleetVehicleVerificationSkippable fleetVehicleVerificationSkippable,
+      Se.Set Beam.driverVehicleVerificationSkippable driverVehicleVerificationSkippable
     ]
     [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId)]]
 
@@ -61,8 +61,8 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            fleetVehicleVerificationSkippable = fromMaybe True fleetVehicleVerificationSkippable,
-            driverVehicleVerificationSkippable = fromMaybe True driverVehicleVerificationSkippable
+            fleetVehicleVerificationSkippable = fleetVehicleVerificationSkippable,
+            driverVehicleVerificationSkippable = driverVehicleVerificationSkippable
           }
 
 instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
@@ -80,6 +80,6 @@ instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt,
-        Beam.fleetVehicleVerificationSkippable = Just fleetVehicleVerificationSkippable,
-        Beam.driverVehicleVerificationSkippable = Just driverVehicleVerificationSkippable
+        Beam.fleetVehicleVerificationSkippable = fleetVehicleVerificationSkippable,
+        Beam.driverVehicleVerificationSkippable = driverVehicleVerificationSkippable
       }
