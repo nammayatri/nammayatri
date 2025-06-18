@@ -6,7 +6,7 @@ import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import qualified Data.List as L
 import Data.OpenApi (ToSchema)
 import Data.Ord (comparing)
-import Data.Time (UTCTime (UTCTime, utctDay), getCurrentTime)
+import Data.Time (UTCTime (UTCTime, utctDay), diffUTCTime, getCurrentTime)
 --import qualified Domain.Types.MerchantOperatingCity
 import Domain.Action.Dashboard.Common (mobileIndianCode)
 import Domain.Action.UI.Invoice (getSourceAndDestination)
@@ -34,6 +34,7 @@ import Servant
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Ride as CHR
 import qualified Storage.Clickhouse.RideDetails as CHRD
@@ -61,19 +62,23 @@ buildMapDriverInfo (driver, driverInformation) = do
   if null rideLs
     then pure Nothing
     else do
-      todaySummary <- buildTodaySummary (driver, driverInformation) rideLs
       let ride = L.maximumBy (comparing (.tripStartTime)) rideLs
+          driverStatus = castDriverStatus driverInformation.mode
+      todaySummary <- buildTodaySummary (driver, driverInformation) rideLs driverStatus
       position <- getDriverCurrentLocation driver.id
       mbBooking <- CHB.findById ride.bookingId
       (source, destination) <- getSourceAndDestination mbBooking
+      mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
       pure . Just $
         Common.MapDriverInfoRes
           { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
-            driverStatus = castDriverStatus driverInformation.mode,
+            driverStatus = driverStatus,
             todaySummary = todaySummary,
             position = position,
             source = source,
-            destination = destination
+            destination = destination,
+            mobileCountryCode = fromMaybe mobileIndianCode driver.mobileCountryCode,
+            mobileNumber = mobileNumber
           }
 
 castDriverStatus :: Maybe DCommon.DriverMode -> Common.Status
@@ -83,9 +88,12 @@ castDriverStatus = \case
   Just DCommon.SILENT -> Common.SILENT
   _ -> Common.OFFLINE
 
-buildTodaySummary :: (DP.Person, DDI.DriverInformation) -> [CHR.Ride] -> Environment.Flow Common.TodaySummary
-buildTodaySummary (driver, driverInformation) rideLs = do
-  mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
+buildTodaySummary ::
+  (DP.Person, DDI.DriverInformation) ->
+  [CHR.Ride] ->
+  Common.Status ->
+  Environment.Flow Common.TodaySummary
+buildTodaySummary (driver, driverInformation) rideLs driverStatus = do
   let trips = countTrips rideLs $ Trips 0 0 0 0 0 0
   transporterConfig <-
     CTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
@@ -94,10 +102,18 @@ buildTodaySummary (driver, driverInformation) rideLs = do
   let merchantLocalDate = utctDay localTime
   mbDailyStats <- SQDS.findByDriverIdAndDate driver.id merchantLocalDate
   let onlineDuration = fromMaybe (Seconds 0) $ (.onlineDuration) =<< mbDailyStats
+      additionalTimeInOnline =
+        Seconds
+          if driverStatus == Common.ONLINE
+            then
+              let startDayTime = UTCTime (utctDay localTime) 0
+                  mbOnlineFrom = mbDailyStats >>= (.statusUpdatedAt)
+                  onlineFrom = maybe startDayTime (max startDayTime) mbOnlineFrom
+               in floor $ diffUTCTime localTime onlineFrom
+            else 0
   pure $
     Common.TodaySummary
-      { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
-        tripStatus = castDriverStatus driverInformation.mode,
+      { tripStatus = castDriverStatus driverInformation.mode,
         tripsCompletedCount = trips.tripsCompletedCount,
         earnings = Money trips.fare,
         totalDistance = Meters trips.chargeableDistance,
@@ -105,9 +121,7 @@ buildTodaySummary (driver, driverInformation) rideLs = do
         tripsCancelled = trips.tripsCancelled,
         tripsPassed = trips.tripsPassed,
         tripsScheduled = trips.tripsScheduled,
-        onlineDuration = onlineDuration, --TODO
-        mobileCountryCode = fromMaybe mobileIndianCode driver.mobileCountryCode,
-        mobileNumber = mobileNumber
+        onlineDuration = onlineDuration + additionalTimeInOnline
       }
 
 data Trips = Trips

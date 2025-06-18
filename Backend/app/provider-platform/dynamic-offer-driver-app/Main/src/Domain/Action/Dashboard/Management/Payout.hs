@@ -252,8 +252,7 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
                     updatedAt = now,
                     merchantId = ride.merchantId,
                     merchantOperatingCityId = Just ride.merchantOperatingCityId,
-                    lastOnlineFrom = Nothing,
-                    lastOnlineTo = Nothing,
+                    statusUpdatedAt = Nothing,
                     onlineDuration = Nothing
                   }
 

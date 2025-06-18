@@ -299,8 +299,7 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
                     numFleetsOnboarded = 0,
                     merchantId = ride.merchantId,
                     merchantOperatingCityId = Just $ ride.merchantOperatingCityId,
-                    lastOnlineFrom = Nothing,
-                    lastOnlineTo = Nothing,
+                    statusUpdatedAt = Nothing,
                     onlineDuration = Nothing
                   }
           QDailyStats.create dailyStatsOfDriver'

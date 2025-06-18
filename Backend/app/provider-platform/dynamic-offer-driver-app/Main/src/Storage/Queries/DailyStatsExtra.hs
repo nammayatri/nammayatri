@@ -70,16 +70,13 @@ updateOnlineDurationByDriverId ::
   Id SP.Person ->
   Day ->
   Maybe UTCTime ->
-  Maybe UTCTime ->
   Maybe Seconds ->
   m ()
-updateOnlineDurationByDriverId driverId merchantLocalDate lastOnlineFrom lastOnlineTo onlineDuration = do
+updateOnlineDurationByDriverId driverId merchantLocalDate statusUpdatedAt onlineDuration = do
   _now <- getCurrentTime
   updateOneWithKV
-    ( [ Se.Set Beam.lastOnlineTo lastOnlineTo,
-        Se.Set Beam.updatedAt _now
-      ]
-        <> [Se.Set Beam.lastOnlineFrom lastOnlineFrom | isJust lastOnlineFrom]
+    ( [Se.Set Beam.updatedAt _now]
+        <> [Se.Set Beam.statusUpdatedAt statusUpdatedAt | isJust statusUpdatedAt]
         <> [Se.Set Beam.onlineDuration onlineDuration | isJust onlineDuration]
     )
     [Se.And [Se.Is Beam.driverId $ Se.Eq (getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]

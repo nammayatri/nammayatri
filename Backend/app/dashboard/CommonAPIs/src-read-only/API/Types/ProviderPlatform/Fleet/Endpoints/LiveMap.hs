@@ -21,7 +21,9 @@ data MapDriverInfoRes = MapDriverInfoRes
     todaySummary :: TodaySummary,
     position :: Kernel.External.Maps.Types.LatLong,
     source :: Kernel.Prelude.Text,
-    destination :: Kernel.Prelude.Text
+    destination :: Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -36,8 +38,7 @@ data Status
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TodaySummary = TodaySummary
-  { driverName :: Kernel.Prelude.Text,
-    tripStatus :: Status,
+  { tripStatus :: Status,
     tripsCompletedCount :: Kernel.Prelude.Int,
     earnings :: Kernel.Types.Common.Money,
     totalDistance :: Kernel.Types.Common.Meters,
@@ -45,18 +46,16 @@ data TodaySummary = TodaySummary
     tripsCancelled :: Kernel.Prelude.Int,
     tripsPassed :: Kernel.Prelude.Int,
     tripsScheduled :: Kernel.Prelude.Int,
-    onlineDuration :: Kernel.Types.Common.Seconds,
-    mobileCountryCode :: Kernel.Prelude.Text,
-    mobileNumber :: Kernel.Prelude.Text
+    onlineDuration :: Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type API = ("liveMap" :> GetLiveMapDrivers)
 
-type GetLiveMapDrivers = ("drivers" :> Get ('[JSON]) [MapDriverInfoRes])
+type GetLiveMapDrivers = ("drivers" :> Get '[JSON] [MapDriverInfoRes])
 
-newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: (EulerHS.Types.EulerClient [MapDriverInfoRes])}
+newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: EulerHS.Types.EulerClient [MapDriverInfoRes]}
 
 mkLiveMapAPIs :: (Client EulerHS.Types.EulerClient API -> LiveMapAPIs)
 mkLiveMapAPIs liveMapClient = (LiveMapAPIs {..})
@@ -69,10 +68,10 @@ data LiveMapUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON LiveMapUserActionType where
-  toJSON (GET_LIVE_MAP_DRIVERS) = Data.Aeson.String "GET_LIVE_MAP_DRIVERS"
+  toJSON GET_LIVE_MAP_DRIVERS = Data.Aeson.String "GET_LIVE_MAP_DRIVERS"
 
 instance FromJSON LiveMapUserActionType where
   parseJSON (Data.Aeson.String "GET_LIVE_MAP_DRIVERS") = pure GET_LIVE_MAP_DRIVERS
   parseJSON _ = fail "GET_LIVE_MAP_DRIVERS expected"
 
-$(Data.Singletons.TH.genSingletons [(''LiveMapUserActionType)])
+$(Data.Singletons.TH.genSingletons [''LiveMapUserActionType])

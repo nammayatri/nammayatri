@@ -38,8 +38,7 @@ DailyStats:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     numDriversOnboarded: Int
     numFleetsOnboarded: Int
-    lastOnlineFrom: Maybe UTCTime
-    lastOnlineTo: Maybe UTCTime
+    statusUpdatedAt: Maybe UTCTime
     onlineDuration: Maybe Seconds
 
   beamType:

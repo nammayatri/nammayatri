@@ -18,10 +18,11 @@ types:
     - position: LatLong
     - source: Text
     - destination: Text
+    - mobileCountryCode: Text
+    - mobileNumber: Text
   Status:
     - enum: "TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE"
   TodaySummary:
-    - driverName: Text
     - tripStatus: Status
     - tripsCompletedCount: Int
     - earnings: Money
@@ -31,5 +32,3 @@ types:
     - tripsPassed: Int
     - tripsScheduled: Int
     - onlineDuration: Seconds
-    - mobileCountryCode: Text
-    - mobileNumber: Text

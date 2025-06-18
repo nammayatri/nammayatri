@@ -80,6 +80,5 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN num_drivers_onboarded 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN status_updated_at timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN online_duration integer ;
-ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN last_online_to timestamp with time zone ;
-ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN last_online_from timestamp with time zone ;
