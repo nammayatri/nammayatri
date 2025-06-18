@@ -319,6 +319,14 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
       return res.blocked
   when blocked $ throwError AccountBlocked
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  case transporterConfig.allowDuplicatePan of
+    Just False -> do
+      panHash <- getDbHash req.panNumber
+      panInfo <- DPQuery.findByEncryptedPanNumber panHash
+      when (isJust panInfo) $ throwError PanAlreadyLinked
+    _ -> pure ()
+
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -464,6 +472,13 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
       return res.blocked
   when blocked $ throwError AccountBlocked
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  case transporterConfig.allowDuplicateGst of
+    Just False -> do
+      gstinHash <- getDbHash req.gstin
+      gstInfo <- DGQuery.findByEncryptedGstin gstinHash
+      when (isJust gstInfo) $ throwError GstAlreadyLinked
+    _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
@@ -579,6 +594,13 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
       res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
       return res.blocked
   when blocked $ throwError AccountBlocked
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  case transporterConfig.allowDuplicateAadhaar of
+    Just False -> do
+      aadhaarHash <- getDbHash req.aadhaarNumber
+      aadhaarInfo <- QAadhaarCard.findByAadhaarNumberHash (Just aadhaarHash)
+      when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
+    _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id

@@ -36,7 +36,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverOperatorAssociation <- QDriverOperatorAssociation.findByDriverId driverId False >>= fromMaybeM (InactiveOperatorDriverAssociationNotFound driverId.getId)
-  onboardingVehicleCategory <- driverOperatorAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
+  let mbOnboardingVehicleCategory = driverOperatorAssociation.onboardingVehicleCategory
   operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
@@ -45,7 +45,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
-  QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
+  QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
 
   transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   unless (transporterConfig.requiresOnboardingInspection == Just True) $
