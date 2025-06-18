@@ -193,18 +193,23 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
+  mbFleetConfig <- case (getEntityData.role, getMbFleetOwnerId) of
+    (DP.DRIVER, Just fleetOwnerId) -> QFC.findByPrimaryKey (Id fleetOwnerId)
+    _ -> QFC.findByPrimaryKey getEntityData.id
+  let fleetSkip = maybe False DFC.fleetVehicleVerificationSkippable mbFleetConfig
+      driverSkip = maybe False DFC.driverVehicleVerificationSkippable mbFleetConfig
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
       whenJust rc $ \rcert -> void $ checkRCAssociationForDriver getEntityData.id rcert True
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      unless driverSkip $ void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
       Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      unless fleetSkip $ void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
