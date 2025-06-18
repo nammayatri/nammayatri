@@ -214,14 +214,14 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         let phoneNumber = countryCode <> mobileNumber
         withLogTag ("personId_" <> getId person.id) $ do
-          (mbSender, message) <-
+          (mbSender, message, templateId) <-
             MessageBuilder.buildSendOTPMessage merchantOpCityId $
               MessageBuilder.BuildSendOTPMessageReq
                 { otp = otpCode,
                   hash = otpHash
                 }
           let sender = fromMaybe smsCfg.sender mbSender
-          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
             >>= Sms.checkSmsResult
       SP.EMAIL -> do
         receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
@@ -545,14 +545,14 @@ resend tokenId = do
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
   withLogTag ("personId_" <> entityId) $ do
-    (mbSender, message) <-
+    (mbSender, message, templateId) <-
       MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
     let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender templateId)
       >>= Sms.checkSmsResult
   _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)

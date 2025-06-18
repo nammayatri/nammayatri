@@ -102,7 +102,7 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId A
   driverReferral <- QDR.findById driverId >>= fromMaybeM (InternalError $ "Driver referral should have been there, something bad happened.") -- maybe we can create here if it doesn't exist but that will not happen
   let phoneNumber = customerMobileCountryCode <> customerMobileNumber
   withLogTag ("sending_communication_to_download_app" <> phoneNumber) $ do
-    (mbSender, message) <-
+    (mbSender, message, templateId) <-
       MessageBuilder.buildSendReceiptMessage merchantOpCityId $
         MessageBuilder.BuildSendReceiptMessageReq
           { totalFare = show ride.currency <> " " <> show (fromMaybe 0 ride.fare),
@@ -112,6 +112,6 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId A
           }
     smsCfg <- asks (.smsCfg)
     let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
       >>= Sms.checkSmsResult
   pure Kernel.Types.APISuccess.Success
