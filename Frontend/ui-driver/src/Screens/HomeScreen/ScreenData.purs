@@ -26,6 +26,7 @@ import RemoteConfig.Utils as RU
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
+import Services.API as API
 
 initData :: HomeScreenState
 initData =
@@ -442,3 +443,24 @@ initialParkingData = {
 
 
 data DriverStatusChangeEntry = DriverStatusChangeNormalEntry | DriverStatusChangeMeterRideEntry
+
+
+createDummyStop :: Number -> Number -> API.Stop
+createDummyStop lat lon = API.Stop {
+  location : API.LocationInfo {
+  area: Nothing,
+  state: Nothing,
+  country: Nothing,
+  building: Nothing,
+  door: Nothing,
+  street: Nothing,
+  lat: lat,
+  city: Nothing,
+  areaCode: Nothing,
+  lon: lon,
+  instructions: Nothing,
+  extras: Nothing,
+  id: Nothing
+},
+  stopInfo: Nothing
+}

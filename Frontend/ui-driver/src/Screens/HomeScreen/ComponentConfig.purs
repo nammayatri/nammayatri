@@ -104,6 +104,7 @@ rideActionModalConfig state =
   Tuple stage rideData = case state.props.bookingStage, state.data.advancedRideData of
                               ADVANCED, Just advRideInfo -> Tuple state.props.advancedRideStage advRideInfo
                               _, _  -> Tuple state.props.currentStage state.data.activeRide
+  stopToDepart = HU.getStopToDepart rideData.stops
   isDelivery = state.data.activeRide.tripType == ST.Delivery
   sourceAddressTitleText = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0)) rideData.sourceArea
   destinationAddressTitleText = (\destination -> fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0)) rideData.destinationArea)
@@ -169,6 +170,7 @@ rideActionModalConfig state =
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   , stops = rideData.stops
+  , enableMapButton = isNothing stopToDepart
   , isPetRide = state.data.activeRide.isPetRide
   }
   in rideActionModalConfig'

@@ -1855,4 +1855,6 @@ getHi =
     , open_meter : "मीटर खोलें"
     , this_ride_includes_a_pet : "इस सवारी में एक पालतू जानवर भी शामिल है"
     , pet_rides : "पेट राइड्स"
+    , please_resume_ride_to_continue : "यात्रा पुनः शुरू करें"
+    , you_are_too_far_from_the_stop : "आप स्टॉप से बहुत दूर हैं। अगले स्टॉप पर जाएं"
     }

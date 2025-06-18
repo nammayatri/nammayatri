@@ -340,7 +340,7 @@ openGoogleMap push config =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , background Color.blue900
+      , background $ if config.enableMapButton then Color.blue900 else Color.blueGrey
       , padding $ Padding 24 16 24 16
       , margin $ MarginRight 16
       , cornerRadius 30.0

@@ -1855,4 +1855,6 @@ getEn =
     , open_meter : "Open Meter"
     , this_ride_includes_a_pet : "This ride includes a pet"
     , pet_rides : "Pet Rides"
+    , please_resume_ride_to_continue : "Please resume ride to continue"
+    , you_are_too_far_from_the_stop : "You are too far from the stop. Please reach the next Stop"
     }
