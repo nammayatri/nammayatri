@@ -1529,14 +1529,14 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
             phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
-          (mbSender, message) <-
+          (mbSender, message, templateId) <-
             MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
               MessageBuilder.BuildFleetJoiningMessageReq
                 { otp = otpCode,
                   fleetOwnerName = fleetOwnerName
                 }
           let sender = fromMaybe smsCfg.sender mbSender
-          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
         let key = makeFleetDriverOtpKey phoneNumber
         Redis.setExp key otpCode 3600
       pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
@@ -1571,13 +1571,13 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
 
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message) <-
+        (mbSender, message, templateId) <-
           MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
             MessageBuilder.BuildDownloadAppMessageReq
               { fleetOwnerName = fleetOwner.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
           >>= Sms.checkSmsResult
     Nothing -> do
       let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
@@ -2266,13 +2266,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
       withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message) <-
+        (mbSender, message, templateId) <-
           MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
             MessageBuilder.BuildFleetDeepLinkAuthMessage
               { fleetOwnerName = fleetOwner.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
 
     sendOperatorDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
     sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId operator = do
@@ -2280,13 +2280,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
       withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message) <-
+        (mbSender, message, templateId) <-
           MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
             MessageBuilder.BuildOperatorDeepLinkAuthMessage
               { operatorName = operator.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
