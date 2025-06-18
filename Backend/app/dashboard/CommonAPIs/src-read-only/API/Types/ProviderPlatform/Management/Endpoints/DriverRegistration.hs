@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
 import qualified Dashboard.Common
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -13,6 +14,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
@@ -111,7 +113,10 @@ data DocumentType
   | Odometer
   | InspectionHub
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets DocumentType where
+  hideSecrets = Kernel.Prelude.identity
 
 data DocumentsListResponse = DocumentsListResponse
   { driverLicense :: [[Kernel.Prelude.Text]],
@@ -397,7 +402,7 @@ data VerifyAadhaarOtpRes = VerifyAadhaarOtpRes
 instance Kernel.Types.HideSecrets.HideSecrets VerifyAadhaarOtpRes where
   hideSecrets = Kernel.Prelude.identity
 
-type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate)
+type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationUnlinkDocumentHelper)
 
 type GetDriverRegistrationDocumentsList =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "rcId" Kernel.Prelude.Text
@@ -458,6 +463,22 @@ type GetDriverRegistrationDocumentsInfo = (Capture "driverId" (Kernel.Types.Id.I
 
 type PostDriverRegistrationDocumentsUpdate = ("documents" :> "update" :> ReqBody '[JSON] UpdateDocumentRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostDriverRegistrationUnlinkDocument =
+  ( Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unlink" :> "document" :> Capture "documentType" DocumentType
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostDriverRegistrationUnlinkDocumentHelper =
+  ( Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unlink" :> "document"
+      :> Capture
+           "documentType"
+           DocumentType
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 data DriverRegistrationAPIs = DriverRegistrationAPIs
   { getDriverRegistrationDocumentsList :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DocumentsListResponse,
     getDriverRegistrationGetDocument :: Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient GetDocumentResponse,
@@ -469,13 +490,14 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     postDriverRegistrationRegisterVerifyAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyAadhaarOtpReq -> EulerHS.Types.EulerClient VerifyAadhaarOtpRes,
     getDriverRegistrationUnderReviewDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient UnderReviewDriversListResponse,
     getDriverRegistrationDocumentsInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [DriverDocument],
-    postDriverRegistrationDocumentsUpdate :: UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverRegistrationDocumentsUpdate :: UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverRegistrationUnlinkDocument :: Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)
 mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..})
   where
-    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
+    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate :<|> postDriverRegistrationUnlinkDocument = driverRegistrationClient
 
 data DriverRegistrationUserActionType
   = GET_DRIVER_REGISTRATION_DOCUMENTS_LIST
@@ -489,7 +511,10 @@ data DriverRegistrationUserActionType
   | GET_DRIVER_REGISTRATION_UNDER_REVIEW_DRIVERS
   | GET_DRIVER_REGISTRATION_DOCUMENTS_INFO
   | POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE
+  | POST_DRIVER_REGISTRATION_UNLINK_DOCUMENT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''DocumentType)
 
 $(Data.Singletons.TH.genSingletons [''DriverRegistrationUserActionType])
