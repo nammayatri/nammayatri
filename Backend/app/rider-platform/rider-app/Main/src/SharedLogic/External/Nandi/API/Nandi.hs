@@ -21,6 +21,10 @@ type StopsByGtfsIdAndStopCodeAPI = "stop" :> Capture "gtfs_id" Text :> Capture "
 
 type StopsByGtfsIdFuzzySearchAPI = "stops" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
+type StopChildrenAPI = "station-children" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [Text]
+
+type GtfsVersionAPI = "version" :> Capture "gtfs_id" Text :> Get '[JSON] Text
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -45,6 +49,12 @@ nandiStopsByGtfsIdAndStopCodeAPI = Proxy
 nandiStopsByGtfsIdFuzzySearchAPI :: Proxy StopsByGtfsIdFuzzySearchAPI
 nandiStopsByGtfsIdFuzzySearchAPI = Proxy
 
+nandiStopChildrenAPI :: Proxy StopChildrenAPI
+nandiStopChildrenAPI = Proxy
+
+nandiGtfsVersionAPI :: Proxy GtfsVersionAPI
+nandiGtfsVersionAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -68,3 +78,9 @@ getNandiStopsByGtfsIdAndStopCode = ET.client nandiStopsByGtfsIdAndStopCodeAPI
 
 getNandiStopsByGtfsIdFuzzySearch :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiStopsByGtfsIdFuzzySearch = ET.client nandiStopsByGtfsIdFuzzySearchAPI
+
+getNandiStopChildren :: Text -> Text -> ET.EulerClient [Text]
+getNandiStopChildren = ET.client nandiStopChildrenAPI
+
+getNandiGtfsVersion :: Text -> ET.EulerClient Text
+getNandiGtfsVersion = ET.client nandiGtfsVersionAPI
