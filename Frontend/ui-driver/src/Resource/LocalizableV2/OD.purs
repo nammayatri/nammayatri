@@ -1855,4 +1855,6 @@ getOd =
     , open_meter : "ମିଟର୍ ଖୋଲନ୍ତୁ"
     , this_ride_includes_a_pet : "ଏହି ଯାତ୍ରାରେ ଗୋଟିଏ ପାଳିତ ପଶୁ ଅନ୍ତର୍ଭୁକ୍ତ"
     , pet_rides : "ପେଟ ରାଇଡସ"
+    , please_resume_ride_to_continue : "ଯାତ୍ରା ପୁନରାରମ୍ଭ କରନ୍ତୁ"
+    , you_are_too_far_from_the_stop : "ଆପଣଙ୍କର ସ୍ଟପ୍ ମୁକଳାରେ ଅତିରିକ୍ତ ଦୂରତା ଅଛି। ଅଟନ୍ତୁ ଅଟନ୍ତୁ"
   }

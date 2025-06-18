@@ -340,7 +340,7 @@ openGoogleMap push config =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , background Color.blue900
+      , background $ if config.enableMapButton then Color.blue900 else Color.blueGrey
       , padding $ Padding 24 16 24 16
       , margin $ MarginRight 16
       , cornerRadius 30.0
@@ -679,17 +679,18 @@ cancelOrEndRide push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , background Color.white900
+  , background $ if showEndRide then Color.red else Color.white900
   , visibility $ boolToVisibility $ config.startRideActive || HU.checkIfStopsLeft config.stops
-  , padding $ PaddingBottom 16
+  , margin $ Margin 32 0 32 16
+  , cornerRadius 8.0
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , padding $ Padding 16 8 16 8
+      , padding (Padding 8 16 8 16)
       , text (getString if showEndRide then END_RIDE else CANCEL_RIDE)
-      , color Color.red
+      , color $ if showEndRide then Color.white900 else Color.red
       , onClick push (const if showEndRide then ShowEndRideWithStops else CancelRide)
-      ] <> FontStyle.body1 TypoGraphy
+      ] <> FontStyle.subHeading1 TypoGraphy
       )
   ]
   where
@@ -1549,7 +1550,7 @@ rideActionButtonView push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , padding $ Padding 16 16 16 24
+  , padding $ Padding 16 16 16 16
   ][ 
     if config.startRideActive
       then startRide push config 

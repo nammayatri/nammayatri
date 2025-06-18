@@ -1273,10 +1273,15 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
       srcLon = state.data.activeRide.src_lon
       _ = runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
       upcomingStop = HU.getUpcomingStop state.data.activeRide.stops
+      stopToDepart = HU.getStopToDepart state.data.activeRide.stops
+      isStopToDepart = isJust stopToDepart
   void $ pure $ setValueToLocalStore TRIGGER_MAPS "false"
   void $ pure $ JB.clearAudioPlayer ""
-  if isRideStartActive then
+  if isRideStartActive && not isStopToDepart then
     action srcLat srcLon
+  else if isStopToDepart then do 
+    void $ pure $ toast $ StringsV2.getStringV2 LT2.please_resume_ride_to_continue
+    continue state
   else if state.data.activeRide.tripType == ST.Rental then do
    case state.data.activeRide.nextStopLat, state.data.activeRide.nextStopLon of
     Just nextStopLat,Just nextStopLon -> action nextStopLat nextStopLon
