@@ -246,6 +246,9 @@ type Features = {
 , enableSpecialPickup :: Boolean
 , enableInterOperability :: Boolean
 , showFaqsWhileOnboarding :: Boolean
+, enableV2Registration :: Boolean
+, enableV2Earnings :: Boolean
+, enableDriverProfile :: Boolean
 }
  
  -- VV - VechileVerfication

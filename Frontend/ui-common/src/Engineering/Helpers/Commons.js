@@ -352,9 +352,9 @@ export const getPastWeeks = function (count) {
 export const getPastMonths = function (count) {
   try {
     const result = []
-    const currentDate = new Date(), month = currentDate.getMonth();
+    const currentDate = new Date("2025-05-31T00:00:00.000Z"), month = currentDate.getMonth();
     for (let i = 0; i < count; i++) {
-      const newDate = new Date(); newDate.setMonth(month - i);
+      const newDate = new Date("2025-05-31T00:00:00.000Z"); newDate.setMonth(month - i);
       const obj = { utcDate: newDate, month: month - i + 1 };
       result.push(obj);
     }
@@ -381,6 +381,84 @@ export const getFutureDate = function (startDate) {
     const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
+  };
+};
+
+export const getPastDateFromDate = function (startDate) {
+  return function (noOfDays) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() - noOfDays);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+};
+
+export const getPastDaysFromDate = function (startDate) {
+  return function (noOfDays) {
+    const result = [];
+    const language = getLanguageLocale();
+    for (let i = 0; i < noOfDays; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() - i);
+      const obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: "short" }), year: d.getFullYear() };
+      result.push(obj);
+    }
+    return result.reverse();
+  };
+};
+
+export const getPastMonthsFromDate = function (startDate) {
+  return function (noOfMonths) {
+    const result = [];
+    const language = getLanguageLocale();
+    const start = new Date(startDate);
+    const startMonth = start.getMonth();
+    const startYear = start.getFullYear();
+
+    for (let i = 0; i < noOfMonths; i++) {
+      const currentMonth = (startMonth - i + 12) % 12;
+      const yearOffset = Math.floor((startMonth - i) / 12);
+      const currentYear = startYear + yearOffset;
+      const d = new Date(currentYear, currentMonth - 1, 1);
+
+      const obj = { 
+        utcDate: d.toISOString(), 
+        date: d.getDate(), 
+        month: d.toLocaleString(getFormattedLanguage(language), { month: "short" }), 
+        year: d.getFullYear() 
+      };
+      result.push(obj);
+    }
+    return result.reverse();
+  };
+};
+
+export const getFutureMonthsFromDate = function (startDate) {
+  return function (noOfMonths) {
+    const result = [];
+    const language = getLanguageLocale();
+    const start = new Date(startDate);
+
+    start.setMonth(start.getMonth() + 1);
+
+    for (let i = 0; i < noOfMonths; i++) {
+      const futureDate = new Date(start);
+      futureDate.setMonth(start.getMonth() + i);
+
+      const obj = { 
+        utcDate: futureDate.toISOString(), 
+        date: futureDate.getDate(), 
+        month: futureDate.toLocaleString(getFormattedLanguage(language), { month: "short" }), 
+        year: futureDate.getFullYear() 
+      };
+
+      result.push(obj);
+    }
+
+    return result;
   };
 };
 
