@@ -1033,6 +1033,9 @@ TransporterConfig:
     deactivateRCOnUnlink: Maybe Bool
     aaEnabledClientSdkVersion : Text
     isAAEnabledForRecurring : Maybe Bool
+    allowDuplicatePan : Maybe Bool
+    allowDuplicateGst: Maybe Bool
+    allowDuplicateAadhaar : Maybe Bool
 
   beamType:
     currency: Maybe Currency
