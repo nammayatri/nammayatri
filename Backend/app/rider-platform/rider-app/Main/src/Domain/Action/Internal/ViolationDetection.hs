@@ -17,7 +17,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Notifications as Notify
 
 data ViolationDetectionReq = ViolationDetectionReq
-  { rideId :: Id DRide.Ride,
+  { rideId :: Id DRide.BPPRide,
     driverId :: Id DP.Person,
     isViolated :: Bool,
     detectionData :: DTD.DetectionData
@@ -27,7 +27,7 @@ data ViolationDetectionReq = ViolationDetectionReq
 violationDetection :: ViolationDetectionReq -> Flow APISuccess
 violationDetection ViolationDetectionReq {..} = do
   logDebug $ "Stop detected in BAP for driverId:" <> driverId.getId
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- QRide.findByBPPRideId rideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   case detectionData of
     OverSpeedingDetection _ -> do
