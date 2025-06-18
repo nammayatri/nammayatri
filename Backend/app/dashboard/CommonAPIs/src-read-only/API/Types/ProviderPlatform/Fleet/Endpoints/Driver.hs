@@ -982,9 +982,9 @@ type GetDriverFleetGetFleetDriverVehicleAssociationHelper =
   )
 
 type GetDriverFleetDriverAssociation =
-  ( "fleet" :> "driverAssociation" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "limit" Kernel.Prelude.Int
+  ( "fleet" :> "driverAssociation" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "Limit" Kernel.Prelude.Int
       :> QueryParam
-           "offset"
+           "Offset"
            Kernel.Prelude.Int
       :> QueryParam "countryCode" Kernel.Prelude.Text
       :> QueryParam
