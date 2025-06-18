@@ -148,10 +148,14 @@ runWithUnWrap func merchantId merchantOperatingCity serviceName mRoutingId req =
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  return $ case clientSdkVersion of
-    Just v
-      | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
-    _ -> paymentServiceName
+  let paymentService = case clientSdkVersion of
+        Just v
+          | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
+        _ -> paymentServiceName
+  logDebug $ "decidePaymentService: clientSdkVersion " <> show paymentService
+  logDebug $ "decidePaymentService: transporterConfig.aaEnabledClientSdkVersion " <> show $ textToVersionDefault transporterConfig.aaEnabledClientSdkVersion
+  logDebug $ "decidePaymentService: PaymentServiceName" <> show paymentService
+  return paymentService
 
 decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> m DMSC.ServiceName
 decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId serviceName = do
