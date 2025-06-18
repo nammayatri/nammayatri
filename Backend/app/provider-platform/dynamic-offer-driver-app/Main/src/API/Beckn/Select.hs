@@ -27,6 +27,7 @@ import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.IOLogging as IOL
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
@@ -40,12 +41,25 @@ type API =
 handler :: FlowServer API
 handler = select
 
+withForcedDebugLevel ::
+  (HasField "loggerEnv" r IOL.LoggerEnv, MonadReader r m) =>
+  Text ->
+  m a ->
+  m a
+withForcedDebugLevel tag = local modifyEnv
+  where
+    modifyEnv env = do
+      let logEnv = env.loggerEnv
+          updLogEnv = IOL.updateLogLevelAndRawSql (Just DEBUG) logEnv
+          updLogEnv' = IOL.appendLogTag tag updLogEnv
+      env{loggerEnv = updLogEnv'}
+
 select ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Select.SelectReqV2 ->
   FlowHandler AckResponse
-select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . withConditionalLogDebug $ do
   transactionId <- Utils.getTransactionId reqV2.selectReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SelectV2 API Flow" "Reached"
@@ -59,6 +73,12 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       fork "select received pushing ondc logs" do
         void $ pushLogs "select" (toJSON reqV2) merchant.id.getId "MOBILITY"
     pure Ack
+  where
+    withConditionalLogDebug fa =
+      if subscriber.subscriber_id == "api.moving.tech/bap/beckn/v1/19dded4d-51dd-4dcd-a07d-d353649d8595"
+        then do
+          withForcedDebugLevel "ANNA_APP_BAP" fa
+        else fa
 
 selectLockKey :: Text -> Text
 selectLockKey id = "Driver:Select:MessageId-" <> id
