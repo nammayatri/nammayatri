@@ -368,9 +368,9 @@ activateAndDeactivateRcPopUpConfig push state =
         , option1 {
           text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE)
         , width = MATCH_PARENT
-        , color = Color.yellow900
-        , strokeColor = Color.black900
-        , background = Color.black900
+        , color = state.data.config.primaryTextColor
+        , strokeColor = state.data.config.primaryButtonBackground
+        , background = state.data.config.primaryButtonBackground
         , padding = (PaddingVertical 10 10)
         }
         , option2 {
