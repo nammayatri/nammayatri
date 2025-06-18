@@ -32,6 +32,7 @@ where
 
 import Data.OpenApi hiding (email, info, name, url)
 import Data.Text hiding (elem)
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
@@ -580,5 +581,6 @@ logout (personId, _, _) = do
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken Nothing uperson.id
   QR.deleteByPersonId personId.getId
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) Nothing (cast uperson.id))
+  let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
+  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (Just newFlowStatus) (cast uperson.id))
   pure Success

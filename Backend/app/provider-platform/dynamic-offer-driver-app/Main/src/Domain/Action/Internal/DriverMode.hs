@@ -16,6 +16,7 @@ module Domain.Action.Internal.DriverMode where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
@@ -40,5 +41,14 @@ setDriverMode apiKey req = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  void $ QDriverInformation.updateActivity isActive (Just mode) Nothing driverId
+  let newFlowStatus = getDriverFlowStatus (Just mode) isActive
+  void $ QDriverInformation.updateActivity isActive (Just mode) (Just newFlowStatus) driverId
   pure Success
+
+getDriverFlowStatus :: Maybe DriverInfo.DriverMode -> Bool -> DDFS.DriverFlowStatus
+getDriverFlowStatus mode isActive =
+  case mode of
+    Just DriverInfo.ONLINE -> DDFS.ONLINE
+    Just DriverInfo.SILENT -> DDFS.SILENT
+    Just DriverInfo.OFFLINE -> DDFS.OFFLINE
+    Nothing -> if isActive then DDFS.ACTIVE else DDFS.INACTIVE
