@@ -697,6 +697,9 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               hideSplashAndCallFlow hotspotScreenFlow
             "subscription" -> do
               hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
+            "addNewLocation" -> do
+              modifyScreenState $ DriverSavedLocationScreenStateType (\state -> state {props { viewType = ST.SearchLocation} , data { predictions = [] }})
+              hideSplashAndCallFlow goToLocationFlow
             "benefits" -> do
               hideSplashAndCallFlow benefitsScreenFlow
             "goTo" -> do
