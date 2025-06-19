@@ -47,9 +47,9 @@ import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteExtra as RE
-import Storage.Queries.RouteStopFare as QRSF
 import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
+import Storage.Queries.StopFare as QRSF
 import Tools.Error
 
 getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
@@ -153,7 +153,7 @@ getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode vehicleType = do
   fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfig.id
   fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
   farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
-  routeFares <- QRSF.findByRouteCode farePolicy.id routeCode
+  routeFares <- QRSF.findByRouteCode farePolicy.id
 
   let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares -- TODO: Sort the fares by startStopCode
   let sortedGroupedFares = sortBy (comparing (negate . length)) groupedFares
@@ -241,14 +241,14 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode vehicleType r
         fareProducts <- QFRFSRouteFareProduct.findByRouteCode row.routeCode integratedBPPConfig.id
         fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
         farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
-        existingFares <- QRSF.findByRouteStartAndStopCode farePolicy.id row.routeCode row.startStopCode row.endStopCode
+        existingFares <- QRSF.findByRouteStartAndStopCode farePolicy.id row.startStopCode row.endStopCode
 
         case existingFares of
           Nothing -> do
             logInfo $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
             pure [(row.routeCode, row.startStopCode, row.endStopCode)]
           _ -> do
-            QRSF.updateFareByRouteCodeAndStopCodes value farePolicy.id row.routeCode row.startStopCode row.endStopCode
+            QRSF.updateFareByStopCodes value farePolicy.id row.startStopCode row.endStopCode
             logInfo $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
             pure []
 
