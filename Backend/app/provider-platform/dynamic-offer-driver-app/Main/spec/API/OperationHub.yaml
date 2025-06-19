@@ -16,7 +16,6 @@ types:
     requestType: RequestType
     operationHubId: Id OperationHub
     registrationNo: Text
-    creatorId: Text
   OperationHubRequestsResp:
     - recordType: NewType
     - requests: [OperationHubDriverRequest]
