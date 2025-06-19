@@ -77,7 +77,7 @@ Here's a step-by-step breakdown of both the manual acceptance and auto-assignmen
 1.  **BAP Receives `on_select` (`API.Beckn.OnSelect.hs`)**:
     *   The `rider-app` (BAP) receives the `on_select` callback at its `API.Beckn.OnSelect` handler.
     *   `Domain.Action.Beckn.OnSelect.onSelect` updates the `Estimate` entity with the confirmed details from the BPP.
-    *   We create `driver offer` data, and here we either show the driver accepted quotes by `estimate/<estimateId>/results` api if the user has opted for choosing between multiple drivers, or else, in case of auto-assign, we take the first offer, create a `booking`, and then call `init`.
+    *   We create `driver offer` data, and here we either show the driver accepted quotes by `estimate/<estimateId>/results` api if the user has opted for choosing between multiple drivers, or else, in case of auto-assign, we take the first offer, create a `Booking Entry`, and then call `init`.
 3.  **API Call**: Upon user confirmation in case of `choose between drivers`, the `rider-app` calls its `API.UI.Confirm` endpoint, initiating the Beckn `init` phase. This request is sent to the BPP. (`Booking already created`)
 
 ### 2.7. Driver App Initializes Booking (`dynamic-offer-driver-app` - BPP)
@@ -86,7 +86,7 @@ Here's a step-by-step breakdown of both the manual acceptance and auto-assignmen
     *   The `dynamic-offer-driver-app` (BPP) receives the Beckn `init` request at `POST /v2/beckn/{merchantId}/init`.
 2.  **Preliminary Booking & Terms (`Domain.Action.Beckn.Init.validateRequest`, `Domain.Action.Beckn.Init.handler`)**:
     *   `Domain.Action.Beckn.Init.validateRequest` validates the request based on the merchant and confirmed estimate.
-    *   `Domain.Action.Beckn.Init.handler` creates a preliminary `Booking` record on the BPP's side, finalizes any terms and conditions, and prepares the `on_init` callback.
+    *   `Domain.Action.Beckn.Init.handler` creates a preliminary `Booking Table` record on the BPP's side, finalizes any terms and conditions, and prepares the `on_init` callback.
 3.  **BPP Sends `on_init` Callback**:
     *   The BPP sends an `on_init` callback message back to the `rider-app` (BAP), signaling the successful initialization of the booking on the provider's side.
 
@@ -104,10 +104,10 @@ Here's a step-by-step breakdown of both the manual acceptance and auto-assignmen
     *   The `dynamic-offer-driver-app` (BPP) receives the Beckn `confirm` request at `POST /v2/beckn/{merchantId}/confirm`.
 2.  **Finalize Booking (`Domain.Action.Beckn.Confirm.validateRequest`, `Domain.Action.Beckn.Confirm.handler`)**:
     *   `Domain.Action.Beckn.Confirm.validateRequest` performs final validations.
-    *   `Domain.Action.Beckn.Confirm.handler` finalizes the `Booking` on the BPP side, and then creates the Ride entry.
+    *   `Domain.Action.Beckn.Confirm.handler` finalizes the `Booking` on the BPP side, and then creates the `Ride entry`.
 3.  **BPP Sends `on_confirm` Callback**:
     *   The BPP sends an `on_confirm` callback message back to the `rider-app` (BAP), indicating the ride is officially confirmed and ready to proceed.
-    *   Ride is consumed and a Ride is created on the BAP side.
+    *   Ride is consumed and a `Ride` is created on the BAP side.
 
 ### 2.10. Ride Tracking and Live Updates
 
