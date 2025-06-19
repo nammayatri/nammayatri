@@ -19,6 +19,8 @@ imports:
   ActionSource: Dashboard.Common
   FleetBadgeType: Domain.Types.FleetBadgeType
   Role: Dashboard.Common
+  OperationHub: Dashboard.Common
+
 module: Driver
 
 apis:
@@ -1055,6 +1057,7 @@ types:
     - vehicleModelYear: Maybe Int
     - vehicleTags: Maybe [Text]
     - fuelType: Maybe Text
+    - operationHubId: Maybe (Id OperationHub)
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType

@@ -58,6 +58,7 @@ import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day)
 import Data.Time.Format
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.OperationHub as DOH
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
@@ -68,6 +69,7 @@ import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
 import qualified Domain.Types.VehicleCategory as DVC
@@ -949,7 +951,29 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
                   VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
+              tryToCreateOperationHubRequest rc
         Nothing -> pure ()
+    tryToCreateOperationHubRequest rc = do
+      registrationNo <- decrypt rc.certificateNumber
+      let opHubReqkey = DOH.mkCreateOperationHubRequestKey registrationNo
+      mbOperationHubRequestData <- Redis.get opHubReqkey
+      whenJust mbOperationHubRequestData $ \DOH.CreateOperationHubRequestData {operationHubId, creatorId} -> do
+        when (rc.verificationStatus == Documents.VALID) $ do
+          let driverId = if person.role == Person.DRIVER then Just person.id else Nothing
+          let createOperationHubRequestParams =
+                DOH.CreateOperationHubRequestParams
+                  { creatorId,
+                    driverId,
+                    operationHubId,
+                    vehicleRC = rc,
+                    requestType = DOHR.ONBOARDING_INSPECTION,
+                    merchantId = person.merchantId,
+                    merchantOperatingCityId = person.merchantOperatingCityId
+                  }
+          try @_ @SomeException (DOH.createOperationHubRequest createOperationHubRequestParams) >>= \case
+            Right () -> pure ()
+            Left err -> logWarning $ "Unable to create operation hub request: rcId:" <> rc.id.getId <> "; error: " <> show err
+        Redis.del opHubReqkey
 
 validateRCResponse :: MonadFlow m => RCValidationReq -> RCValidationRules -> m [Text]
 validateRCResponse rc rule = do

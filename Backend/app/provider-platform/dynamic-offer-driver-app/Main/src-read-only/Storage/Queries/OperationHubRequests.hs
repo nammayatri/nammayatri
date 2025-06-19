@@ -23,13 +23,28 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.OperationHubRequests.OperationHubRequests] -> m ())
 createMany = traverse_ create
 
-findByCreatorStatusAndType ::
+findByRcAndStatusAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
-findByCreatorStatusAndType creatorId requestStatus requestType = do
+  (Kernel.Prelude.Text -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
+findByRcAndStatusAndType registrationNo requestStatus requestType = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.creatorId $ Se.Eq (Kernel.Types.Id.getId creatorId),
+        [ Se.Is Beam.registrationNo $ Se.Eq registrationNo,
+          Se.Is Beam.requestStatus $ Se.Eq requestStatus,
+          Se.Is Beam.requestType $ Se.Eq requestType
+        ]
+    ]
+
+findByRcOrCreatorAndStatusAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
+findByRcOrCreatorAndStatusAndType registrationNo creatorId requestStatus requestType = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is Beam.registrationNo $ Se.Eq registrationNo,
+              Se.Is Beam.creatorId $ Se.Eq (Kernel.Types.Id.getId creatorId)
+            ],
           Se.Is Beam.requestStatus $ Se.Eq requestStatus,
           Se.Is Beam.requestType $ Se.Eq requestType
         ]

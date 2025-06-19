@@ -2,7 +2,6 @@ imports:
   Summary: Dashboard.Common
   Driver: Dashboard.Common
   StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
-  OperationHub: Dashboard.Common
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   FCMRecipientToken: Kernel.External.Notification.FCM.Types

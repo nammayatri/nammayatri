@@ -14,10 +14,10 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
-import qualified API.Types.UI.OperationHub as DomainT
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
+import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
@@ -26,10 +26,12 @@ import qualified Domain.Action.UI.OperationHub as Domain
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
@@ -40,6 +42,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
@@ -47,6 +50,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -54,6 +58,8 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.FleetRCAssociation as QFRCA
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
@@ -112,11 +118,57 @@ postDriverOperatorCreateRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchan
 postDriverOperatorCreateRequest merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  let domainReq = castOpsHubReq req
-  Domain.postOperationCreateRequest (Nothing, merchant.id, merchantOpCity.id) domainReq
+  vehicleRC <- QVRC.findLastVehicleRCWrapper req.registrationNo >>= fromMaybeM (RCNotFound req.registrationNo)
+  unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError RcNotValid
+
+  checkCreatorRcAssociation vehicleRC.id (Id @DP.Person req.creatorId)
+
+  let params = mkCreateOperationHubRequestParams merchantOpCity vehicleRC req
+  Domain.createOperationHubRequest params
+  pure Success
   where
-    castOpsHubReq :: API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> DomainT.DriverOperationHubRequest
-    castOpsHubReq API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest {..} = DomainT.DriverOperationHubRequest {operationHubId = cast operationHubId, requestType = castReqTypeToDomain requestType, ..}
+    mkCreateOperationHubRequestParams :: DMOC.MerchantOperatingCity -> DVRC.VehicleRegistrationCertificate -> API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> Domain.CreateOperationHubRequestParams
+    mkCreateOperationHubRequestParams merchantOpCity vehicleRC API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest {..} =
+      Domain.CreateOperationHubRequestParams
+        { operationHubId = cast operationHubId,
+          requestType = castReqTypeToDomain requestType,
+          creatorId = Id @DP.Person creatorId,
+          driverId = Nothing,
+          merchantId = merchantOpCity.merchantId,
+          merchantOperatingCityId = merchantOpCity.id,
+          ..
+        }
+
+checkCreatorRcAssociation :: Id DVRC.VehicleRegistrationCertificate -> Id DP.Person -> Flow ()
+checkCreatorRcAssociation rcId creatorId = do
+  creator <- B.runInReplica $ QP.findById creatorId >>= fromMaybeM (PersonNotFound creatorId.getId)
+  now <- getCurrentTime
+  case creator.role of
+    DP.OPERATOR -> do
+      let operatorId = creatorId
+      SQDRA.findLatestLinkedByRCId rcId now >>= \case
+        Just driverRcAssoc -> do
+          isDriverOperatorAssociated <- DDriver.checkDriverOperatorAssociation driverRcAssoc.driverId operatorId
+          unless isDriverOperatorAssociated $ do
+            QFDA.findByDriverId driverRcAssoc.driverId True >>= \case
+              Just fleetDriverAssoc -> do
+                isFleetOperatorAssociated <- DDriver.checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
+                unless isFleetOperatorAssociated $ throwError (InvalidRequest $ "Fleet id " <> fleetDriverAssoc.fleetOwnerId <> " is not associated with operator")
+              Nothing -> throwError (InvalidRequest ("Driver id " <> driverRcAssoc.driverId.getId <> " is not associated with operator"))
+        Nothing -> do
+          fleetRcAssoc <- QFRCA.findLatestLinkedByRCId rcId now >>= fromMaybeM (InvalidRequest "No driver or fleet exist with this RC")
+          isFleetOperatorAssociated <- DDriver.checkFleetOperatorAssociation fleetRcAssoc.fleetOwnerId operatorId
+          unless isFleetOperatorAssociated $ throwError (InvalidRequest $ "Fleet id " <> fleetRcAssoc.fleetOwnerId.getId <> " is not associated with operator")
+    DP.FLEET_OWNER -> do
+      let fleetOwnerId = creatorId
+      SQDRA.findLatestLinkedByRCId rcId now >>= \case
+        Just driverRcAssoc -> do
+          isFleetDriverAssociated <- WMB.checkFleetDriverAssociation driverRcAssoc.driverId fleetOwnerId
+          unless isFleetDriverAssociated $ throwError (InvalidRequest $ "Driver id " <> driverRcAssoc.driverId.getId <> " is not associated with fleet owner")
+        Nothing -> do
+          fleetRcAssoc <- QFRCA.findLatestLinkedByRCId rcId now >>= fromMaybeM (InvalidRequest "No driver or fleet exist with this RC")
+          unless (fleetRcAssoc.fleetOwnerId == fleetOwnerId) $ throwError AccessDenied
+    _ -> throwError AccessDenied
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
 postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("operationHubRequestId_" <> req.operationHubRequestId) $ do
