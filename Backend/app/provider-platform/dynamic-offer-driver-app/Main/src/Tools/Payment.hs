@@ -75,6 +75,8 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity serviceName merchantOperatingCity
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show serviceName))
+  logDebug $ "runWithServiceConfigAndName: getRoutingId " <> show getRoutingId
+  logDebug $ "runWithServiceConfigAndName: serviceConfig " <> show merchantServiceConfig.serviceConfig
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
     DMSC.RentalPaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
@@ -152,7 +154,7 @@ decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
         Just v
           | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
         _ -> paymentServiceName
-  logDebug $ "decidePaymentService: clientSdkVersion " <> show paymentService
+  logDebug $ "decidePaymentService: clientSdkVersion " <> show clientSdkVersion
   logDebug $ "decidePaymentService: transporterConfig.aaEnabledClientSdkVersion " <> show (textToVersionDefault transporterConfig.aaEnabledClientSdkVersion)
   logDebug $ "decidePaymentService: PaymentServiceName" <> show paymentService
   return paymentService
