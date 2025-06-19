@@ -70,9 +70,9 @@ import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
-import Storage.Queries.RouteStopFare as QRouteStopFare
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
+import Storage.Queries.StopFare as QRouteStopFare
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Maps as Maps
@@ -278,7 +278,7 @@ getFare riderId vehicleType integratedBPPConfigId merchantId merchantOperatingCi
         price <-
           case farePolicy._type of
             DFRFSFarePolicy.MatrixBased -> do
-              routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id routeCode startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
+              routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
               return $
                 Price
                   { amountInt = round routeStopFare.amount,
