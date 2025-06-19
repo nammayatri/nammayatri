@@ -5,11 +5,12 @@ on:
     branches: 
       - "main"
       - "prodHotPush-Common"
+      - "prodHotPush-MM"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
       - "main"
-      - "prodHotPush-Common"
+      - "prodHotPush-MM"
   workflow_dispatch:
 
 permissions:

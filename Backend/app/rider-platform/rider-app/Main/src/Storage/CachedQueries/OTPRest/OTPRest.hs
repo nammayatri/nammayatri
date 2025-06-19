@@ -382,3 +382,13 @@ getRouteByRouteCodeWithFallback integratedBPPConfig routeCode = do
     Right route'' -> case route'' of
       Just route' -> pure route'
       Nothing -> B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= maybe (QRoute.findByRouteId (Id routeCode)) (pure . Just) >>= fromMaybeM (RouteNotFound routeCode)
+
+-- Vehicle Related Queries
+getVehicleServiceType ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe VehicleServiceTypeResponse)
+getVehicleServiceType integratedBPPConfig vehicleNumber = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getVehicleServiceType baseUrl vehicleNumber

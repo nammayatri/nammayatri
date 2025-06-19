@@ -180,7 +180,8 @@ fetchLiveBusTimings ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   [Text] ->
   Text ->
@@ -204,10 +205,17 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
           filteredBuses = filter (\(_, eta) -> eta.stopId == stopCode) busEtaData
       logDebug $ "filteredBuses: " <> show filteredBuses <> " busEtaData: " <> show busEtaData
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
-        vrMapping <- QVehicleRouteMapping.findByVehicleNo vehicleNumber
-        case listToMaybe vrMapping of
-          Just mapping -> return (Just ((vehicleNumber, etaData), mapping))
-          Nothing -> return Nothing
+        vrMapping <-
+          try @_ @SomeException (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
+            Left _ -> return Nothing
+            Right mapping -> return mapping
+        case vrMapping of
+          Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.schedule_no)
+          Nothing -> do
+            mbMapping <- listToMaybe <$> QVehicleRouteMapping.findByVehicleNo vehicleNumber
+            case mbMapping of
+              Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.typeOfService)
+              Nothing -> return Nothing
       logDebug $ "vehicleRouteMappings: " <> show vehicleRouteMappings
 
       let validBuses = catMaybes vehicleRouteMappings
@@ -219,7 +227,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
 
     createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping =
       let timeOfDay = timeToTimeOfDay $ utctDayTime eta.arrivalTime
-          serviceTierType = mapToServiceTierType mapping.typeOfService
+          serviceTierType = mapToServiceTierType mapping
        in RouteStopTimeTable
             { integratedBppConfigId = integratedBppConfig.id,
               routeCode = routeWithBuses.routeId,
