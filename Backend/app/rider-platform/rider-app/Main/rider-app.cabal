@@ -268,6 +268,7 @@ library
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
@@ -736,6 +737,8 @@ library
       Domain.Types.MerchantState
       Domain.Types.MultimodalPreferences
       Domain.Types.NotificationSoundsConfig
+      Domain.Types.NyRegularInstanceLog
+      Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
       Domain.Types.PartnerOrganization
@@ -867,6 +870,8 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.MultimodalPreferences
       Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.NyRegularInstanceLog
+      Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
       Storage.Beam.PartnerOrganization
@@ -999,6 +1004,8 @@ library
       Storage.Queries.MerchantState
       Storage.Queries.MultimodalPreferences
       Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.NyRegularInstanceLog
+      Storage.Queries.NyRegularSubscription
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS

@@ -48,7 +48,117 @@
 - **Database design**: Clear - Multi-schema PostgreSQL + ClickHouse analytics
 - **External systems**: Mapped - Payment, verification, communication webhooks
 
-## What's Left to Build/Explore
+## NYRegular Feature (Backend) - Progress Tracker
+
+**Overall Goal:** Implement the backend functionality for "NYRegular" (recurring/subscription-based rides with fixed pricing). **Existing BECKN API call flows (`search`, `select`, `init`, `confirm`, etc.) and their formats must remain unchanged and not break existing functionality.**
+
+**Status:** Planning Phase - Detailed plan formulated.
+
+**Key Components & Plan Summary:**
+1.  **New Database Table (`rider-app`): `ny_regular_subscriptions`**
+    *   Stores subscription terms: user details, locations, vehicle category, recurrence rules, agreed fixed price (amount, currency, breakup details), BPP info, original quote ID, status (ACTIVE, PAUSED, CANCELLED).
+    *   An entry is created and persisted here when a user successfully reserves/creates an NYRegular subscription.
+2.  **New Database Table (`rider-app`): `ny_regular_instance_log`**
+    *   Lightweight log: `instance_transaction_id` (PK), `ny_regular_subscription_id` (FK), `scheduled_pickup_time`, `automation_status` (e.g., PENDING, SEARCH_SENT, BOOKING_INITIATED, CONFIRMED, FAILED).
+    *   Provides traceability for automated instances and state of automation, without altering core tables.
+3.  **Existing `search_request` Table (`rider-app`):**
+    *   No schema changes.
+    *   Scheduler (Child Job) creates standard `SearchRequest` records for each instance. The `SearchRequest.id` becomes the `instance_transaction_id` for logging in `ny_regular_instance_log`.
+4.  **Existing `booking` Table (`rider-app`):**
+    *   No schema changes.
+    *   Existing BECKN handlers create `Booking` records. `Booking.transaction_id` links to the `instance_transaction_id`.
+5.  **API Endpoints (`rider-app`):** (Following same format as existing APIs)
+    *   For users to initiate a quote for an NYRegular ride (BAP sends special `/search` to BPPs).
+    *   For users to create/confirm the `NyRegularSubscription` with the agreed fixed price.
+    *   Standard CRUD for managing subscriptions (view, update status e.g., pause/cancel).
+6.  **Scheduler Jobs (`rider-app-scheduler`):**
+    *   **Master Cron Job (`NyRegularMasterSchedulerJob`):**
+        *   Runs daily.
+        *   Reads the `ny_regular_subscriptions` table.
+        *   Checks if any subscription has a booking instance due for that day (or within a look-ahead window), considering `ny_regular_instance_log` to avoid re-processing.
+        *   Creates/enqueues Child Jobs as needed for these instances.
+    *   **Child Job (`ProcessSingleNyRegularInstanceJob`):**
+        *   **Timing:** Scheduled to run at `Calculated_Booking_Time - X_configurable_buffer_minutes`.
+        *   Receives parameters for one instance (including `ny_regular_subscription_id`, `scheduled_pickup_time`, fixed price details, target BPP info).
+        *   Generates a new unique `instance_transaction_id`.
+        *   Logs to `ny_regular_instance_log`.
+        *   **Automates Search:** Constructs and sends a BECKN `/search` message (using `instance_transaction_id` as `context.transaction_id`) to the specific BPP. Injects fixed price details and "reserved ride" tags into the BECKN `/search` message. This `/search` triggers the creation of a `SearchRequest` DB record by existing mechanisms.
+        *   **Automates Full Flow:** After the system-triggered `/search` and receiving `/on_search` (where BPP honors fixed price tags):
+            *   The system will automatically proceed to `/select` the appropriate offer.
+            *   Then automatically call `/init`.
+            *   Then automatically call `/confirm`.
+            *   The entire write process (creation of `SearchRequest`, `Booking` entities) is completed programmatically by leveraging existing handlers.
+        *   Updates `ny_regular_instance_log.automation_status` based on success (e.g., `Booking` confirmed via event from `/on_confirm` handler) or failure.
+7.  **Modifications (`dynamic-offer-driver-app` - BPP):**
+    *   Logic to recognize an "NYRegular quote request" tag in `/search` and return a fixed, quotable price.
+    *   Logic to recognize "reserved ride" tags + fixed price details in an incoming `/search` (from Child Job) and use that fixed price in its `/on_search` response.
+
+**Tasks:**
+
+**Phase 1: Core NYRegular Subscription Management (`rider-app`)**
+*   [X] **Task 1.1 (DB & Haskell):** Define `ny_regular_subscriptions` schema using Namma DSL in `spec/Storage/`. Generate SQL migration and Haskell Beam/domain types.
+    *   Haskell Types / (SQL Types):
+    *   `id`: `Id NyRegularSubscription` (PK, character(36))
+    *   `userId`: `Id Person` (character(36))
+    *   `pickupLocation`: `Location` (custom type)
+    *   `dropoffLocation`: `Location` (custom type)
+    *   `vehicleServiceTier`: `Maybe ServiceTierType` (nullable, text)
+    *   `startDatetime`: `UTCTime` (timestamp with time zone)
+    *   `recurrenceRuleDays`: `[DayOfWeek]` (text[])
+    *   `scheduledTimeOfDay`: `TimeOfDay` (time)
+    *   `recurrenceEndDate`: `Maybe Day` (nullable, date)
+    *   `fixedPrice`: `Maybe Price` (nullable, custom type)
+    *   `fixedPriceBreakupDetails`: `Maybe Value` (nullable, json)
+    *   `fixedPriceExpiryDate`: `Maybe UTCTime` (nullable, timestamp with time zone)
+    *   `initialBppQuoteId`: `Maybe Text` (nullable, text)
+    *   `bppId`: `Text` (text)
+    *   `status`: `NyRegularSubscriptionStatus` (enum, text, default 'NEW')
+    *   `pauseStartDate`: `Maybe UTCTime` (nullable, timestamp with time zone)
+    *   `pauseEndDate`: `Maybe UTCTime` (nullable, timestamp with time zone)
+    *   `createdAt`: `UTCTime` (timestamp with time zone)
+    *   `updatedAt`: `UTCTime` (timestamp with time zone)
+    *   `metadata`: `Maybe Value` (nullable, json)
+    *   (Implicit `merchant_id`, `merchant_operating_city_id` auto-added by DSL generator)
+*   [X] **Task 1.2 (DB & Haskell):** Define `ny_regular_instance_log` schema using Namma DSL in `spec/Storage/`. Generate SQL migration and Haskell Beam/domain types.
+    *   Haskell Types / (SQL Types):
+    *   `instanceTransactionId`: `Text` (PK, text)
+    *   `nyRegularSubscriptionId`: `Id NyRegularSubscription` (character(36), indexed via SecondaryKey)
+    *   `scheduledPickupTime`: `UTCTime` (timestamp with time zone)
+    *   `automationStatus`: `NyRegularInstanceAutomationStatus` (enum, text)
+    *   `createdAt`: `UTCTime` (timestamp with time zone)
+    *   `updatedAt`: `UTCTime` (timestamp with time zone)
+    *   (Implicit `merchant_id`, `merchant_operating_city_id` auto-added by DSL generator)
+*   [ ] **Task 1.3 (API):** Implement API endpoint to initiate a fixed price quote for an NYRegular subscription (`/ny-regular/subscriptions/initiate-quote`).
+*   [ ] **Task 1.4 (API):** Implement API endpoint to create/confirm an `NyRegularSubscription` (`/ny-regular/subscriptions/create`).
+*   [ ] **Task 1.5 (API):** Implement API endpoints for managing `NyRegularSubscription` entries (GET list, GET by ID, PUT to update status e.g., PAUSE/CANCEL).
+*   [ ] **Task 1.6 (Queries):** Implement DB query functions for `ny_regular_subscriptions` and `ny_regular_instance_log` (using generated types).
+
+**Phase 2: Scheduler Implementation (`rider-app-scheduler`)**
+*   [ ] **Task 2.1 (Scheduler):** Define and implement Master Cron Job (`NyRegularMasterSchedulerJob`).
+*   [ ] **Task 2.2 (Scheduler):** Define and implement Child Job (`ProcessSingleNyRegularInstanceJob`).
+*   [ ] **Task 2.3 (Config):** Make the child job trigger buffer (`X` minutes) configurable.
+*   [ ] **Task 2.4 (Scheduler):** Implement robust outcome tracking for Child Job (updating `ny_regular_instance_log` based on events from `Booking` status changes or other reliable mechanism).
+
+**Phase 3: BPP Modifications (`dynamic-offer-driver-app`)**
+*   [ ] **Task 3.1 (BPP Logic):** Modify `/search` handler for "NYRegular quote request" tag.
+*   [ ] **Task 3.2 (BPP Logic):** Modify `/search` handler for "reserved ride instance" tags (honor fixed price).
+*   [ ] **Task 3.3 (BPP Testing):** Test BPP compliance.
+
+**Phase 4: Testing & Integration**
+*   [ ] **Task 4.1 (Testing):** Unit tests for new logic in `rider-app` and `rider-app-scheduler`.
+*   [ ] **Task 4.2 (Testing):** Unit tests for BPP modifications.
+*   [ ] **Task 4.3 (Integration Testing):** End-to-end NYRegular flow.
+*   [ ] **Task 4.4 (Monitoring):** Add logging/metrics for NYRegular feature.
+
+**Open Questions / Areas for Further Investigation (before starting relevant tasks):**
+*   [X] **Q1 (Resolved):** BECKN Tag strategy defined.
+*   [X] **Q2 (Clarified):** NYRegular is a separate flow, not using `Booking.isScheduled`.
+*   [X] **Q3 (Clarified):** Automation Success Confirmation will be event-driven (listening to events from `/on_confirm` or `/on_status` related to `Booking`).
+*   [ ] **Q4 (Deferred):** Detailed error handling/notifications for failed automated bookings will be a separate task.
+*   [X] **Q_New (Ride Entity - Clarified):** A `Ride` entity is created as usual if a driver is assigned; `Booking` status `TRIP_ASSIGNED` is a key indicator for the scheduler.
+*   [ ] **Q_ExistingSchedulers:** Confirm no overlap or interference with existing scheduled ride jobs (e.g., `ScheduledRideNotificationsToDriver`) if they operate on different criteria or tables. (This is mostly resolved by making NYRegular distinct, but a quick check is good).
+
+## What's Left to Build/Explore (General Project)
 
 ### Implementation Deep Dives 🔍
 1. **Core Algorithm Implementations**
@@ -166,4 +276,3 @@
 - **Comprehensive testing**: Maintain high test coverage
 - **Monitoring**: Proactive performance monitoring
 - **Documentation**: Maintain updated technical documentation
-
