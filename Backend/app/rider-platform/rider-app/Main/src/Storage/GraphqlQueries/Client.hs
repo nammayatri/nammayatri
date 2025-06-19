@@ -171,6 +171,12 @@ extractServiceCode routeCode = maybe "O" snd (find match patterns)
         ("-OS-", "OS"),
         ("-S-", "S"),
         ("-X-", "X"),
-        ("-O-", "O")
+        ("-O-", "O"),
+        ("Z", "Z"),
+        ("XS", "XS"),
+        ("OS", "OS"),
+        ("S", "S"),
+        ("X", "X"),
+        ("O", "O")
       ]
     match (pat, _) = pat `isInfixOf` Text.unpack routeCode
