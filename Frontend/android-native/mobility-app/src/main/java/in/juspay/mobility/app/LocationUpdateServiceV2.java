@@ -1219,12 +1219,13 @@ public class LocationUpdateServiceV2 extends Service {
                         "SUCCESS"
                 );
             }
-            Map<String,Object> payload = new HashMap<>();
-            payload.put("lat",lastLatitudeValue);
-            payload.put("lon",lastLongitudeValue);
-            payload.put("timestamp",timestamp);
-            notifyReact("onLocationUpdateSuccess", Arguments.makeNativeMap(payload));
+            Log.d(TAG, "onLocationUpdateSuccess Triggered with " + lastLatitudeValue + " "+ lastLongitudeValue + " " + timestamp) ;
         }
+        Map<String,Object> payload = new HashMap<>();
+        payload.put("lat",lastLatitudeValue);
+        payload.put("lon",lastLongitudeValue);
+        payload.put("timestamp",timestamp);
+        notifyReact("onLocationUpdateSuccess", Arguments.makeNativeMap(payload));
         Log.d(TAG, "notifyLocationUpdateSuccess() complete");
     }
 
