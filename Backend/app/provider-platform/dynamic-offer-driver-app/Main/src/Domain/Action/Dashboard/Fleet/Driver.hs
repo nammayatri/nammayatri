@@ -48,6 +48,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
     postDriverFleetGetNearbyDrivers,
+    validateOperatorToFleetAssoc,
   )
 where
 

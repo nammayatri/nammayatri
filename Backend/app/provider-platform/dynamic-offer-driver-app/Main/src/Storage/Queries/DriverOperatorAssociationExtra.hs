@@ -143,3 +143,18 @@ findByDriverIdAndOperatorId driverId operatorId isActive = do
       (Se.Desc BeamDOA.createdAt)
       (Just 1)
       Nothing
+
+findAllActiveByOperatorId::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  m [Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation]
+findAllActiveByOperatorId operatorId =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.operatorId $ Se.Eq operatorId,
+          Se.Is BeamDOA.isActive $ Se.Eq True
+        ]
+    ]
+    (Se.Asc Beam.associatedOn)
+    Nothing
+    Nothing
