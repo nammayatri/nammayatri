@@ -116,6 +116,7 @@ import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
@@ -1518,6 +1519,10 @@ postDriverFleetSendJoiningOtp ::
   Flow Common.AuthRes
 postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwnerId mbRequestorId req = do
   validateMobileNumber req.mobileNumber req.mobileCountryCode
+  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeFleetDriverHitsCountKey phoneNumber) sendOtpRateLimitOptions
+
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
@@ -1532,7 +1537,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
       withLogTag ("personId_" <> getId person.id) $ do
         SA.checkForDriverAssociationOverwrite merchant person.id
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-            phoneNumber = req.mobileCountryCode <> req.mobileNumber
+
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           (mbSender, message, templateId) <-
@@ -1602,6 +1607,9 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
 
 makeFleetDriverOtpKey :: Text -> Text
 makeFleetDriverOtpKey phoneNo = "Fleet:Driver:PhoneNo" <> phoneNo
+
+makeFleetDriverHitsCountKey :: Text -> Text
+makeFleetDriverHitsCountKey phoneNo = "Fleet:Driver:PhoneNoHits" <> phoneNo <> ":hitsCount"
 
 ---------------------------------------------------------------------
 postDriverFleetLinkRCWithDriver ::

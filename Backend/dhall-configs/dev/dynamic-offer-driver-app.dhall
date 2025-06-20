@@ -161,14 +161,14 @@ let eventStreamMappings =
 
 let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
 
+let sendOtpRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let slackCfg =
       { channelName = "beckn-driver-onboard-test"
       , slackToken = common.slackToken
       }
-
-let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
 
 let driverLocationUpdateRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +1 }
@@ -368,6 +368,7 @@ in  { esqDBCfg
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
+    , sendOtpRateLimitOptions
     , slackCfg
     , jobInfoMapx
     , smsCfg = smsConfig
