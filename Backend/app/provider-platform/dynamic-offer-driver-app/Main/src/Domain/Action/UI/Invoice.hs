@@ -1,4 +1,4 @@
-module Domain.Action.UI.Invoice (getInvoice, getSourceAndDestination) where
+module Domain.Action.UI.Invoice (getInvoice, getSourceAndDestination, notAvailableText) where
 
 import qualified API.Types.UI.Invoice
 import Control.Monad (msum)

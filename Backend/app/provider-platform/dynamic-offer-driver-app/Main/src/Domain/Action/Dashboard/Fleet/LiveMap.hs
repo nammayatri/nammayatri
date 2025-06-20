@@ -7,12 +7,13 @@ import qualified Data.List as L
 import Data.OpenApi (ToSchema)
 import Data.Ord (comparing)
 import Data.Time (UTCTime (UTCTime, utctDay), diffUTCTime, getCurrentTime)
---import qualified Domain.Types.MerchantOperatingCity
 import Domain.Action.Dashboard.Common (mobileIndianCode)
-import Domain.Action.UI.Invoice (getSourceAndDestination)
+import Domain.Action.Dashboard.Fleet.Driver (validateOperatorToFleetAssoc) -- , validateRequestorRoleAndGetEntityId)
+import Domain.Action.UI.Invoice (getSourceAndDestination, notAvailableText)
 import Domain.Action.UI.Person (getPersonNumber)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.FleetDriverAssociation as DFDA
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
@@ -23,14 +24,13 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common (Meters (..), Money (..), Seconds (..))
 import Kernel.Types.Error
   ( GenericError (InternalError),
-    PersonError (PersonNotFound, PersonDoesNotExist),
+    PersonError (PersonDoesNotExist, PersonNotFound),
     RideError (RideDoesNotExist),
     VehicleError (VehicleNotFound),
   )
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
 import Kernel.Utils.Time (getLocalCurrentTime)
---import Servant
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -40,70 +40,68 @@ import qualified Storage.Clickhouse.Ride as CHR
 import qualified Storage.Clickhouse.RideDetails as CHRD
 import qualified Storage.Queries.DailyStats as SQDS
 import Storage.Queries.DriverInformationExtra (findAllWithLimitOffsetByMerchantId, findByIdAndVerified)
+import Storage.Queries.DriverOperatorAssociationExtra (findAllActiveByOperatorId)
+import Storage.Queries.FleetDriverAssociationExtra (findAllActiveDriverByFleetOwnerIdWithDriverInfo)
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
-import Tools.Error 
-  (DriverInformationError (..), 
-   TransporterError (TransporterConfigNotFound), 
-   GenericError( InvalidRequest ), 
-   AuthError( AccessDenied )
+import Tools.Error
+  ( AuthError (AccessDenied),
+    DriverInformationError (..),
+    GenericError (InvalidRequest),
+    TransporterError (TransporterConfigNotFound),
   )
-import Domain.Action.Dashboard.Fleet.Driver (validateOperatorToFleetAssoc) -- , validateRequestorRoleAndGetEntityId)
-import Storage.Queries.FleetDriverAssociationExtra (findAllActiveDriverByFleetOwnerIdWithDriverInfo)
-import Storage.Queries.DriverOperatorAssociationExtra (findAllActiveByOperatorId) 
-import qualified Domain.Types.FleetDriverAssociation as DFDA
 
 getLiveMapDrivers ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Text -> 
-  Kernel.Prelude.Maybe Text -> 
+  Text ->
+  Kernel.Prelude.Maybe Text ->
   Environment.Flow [Common.MapDriverInfoRes]
 getLiveMapDrivers _merchantShortId _opCity requestorId mbFleetOwnerId = do
-  requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId) 
+  requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   catMaybes <$> case entityRole of
     DP.FLEET_OWNER -> do
       let limit = 10000
-          offset = 0 
+          offset = 0
       driverAndDriverInfoLs <- findAllActiveDriverByFleetOwnerIdWithDriverInfo entityId limit offset Nothing Nothing Nothing (Just True) Nothing
       mapM buildFleetMapDriverInfo driverAndDriverInfoLs
     DP.OPERATOR -> do
-      driverIdLs <- mapM (.driverId) $ findAllActiveByOperatorId entityId
+      driverIdLs <- map (.driverId) <$> findAllActiveByOperatorId entityId
       mbDriverInfoLs <- forM driverIdLs $ \driverId -> findByIdAndVerified driverId Nothing
       forM mbDriverInfoLs $ maybe (pure Nothing) buildOperatorMapDriverInfo
     _ -> throwError (InvalidRequest "Invalid Data")
 
-
-buildFleetMapDriverInfo :: 
+buildFleetMapDriverInfo ::
   (DFDA.FleetDriverAssociation, DP.Person, DDI.DriverInformation) ->
   Environment.Flow (Kernel.Prelude.Maybe Common.MapDriverInfoRes)
 buildFleetMapDriverInfo (_, driver, driverInformation) = do
   now <- liftIO getCurrentTime
-  let fromDate = UTCTime (utctDay now) 0
+  let driverStatus = Common.ONLINE -- driverInformation.driverStatus, TODO Chenge after rebase
+      fromDate = UTCTime (utctDay now) 0
       toDate = now
   rideLs <- CHR.getAllRidesByDriverId driver.id fromDate toDate
-  if null rideLs
-    then pure Nothing
-    else do
-      let ride = L.maximumBy (comparing (.tripStartTime)) rideLs
-          driverStatus = Common.ONLINE -- driverInformation.driverStatus, TODO Chenge after rebase
-      todaySummary <- buildTodaySummary (driver, driverInformation) rideLs driverStatus
-      position <- getDriverCurrentLocation driver.id
-      mbBooking <- CHB.findById ride.bookingId
-      (source, destination) <- getSourceAndDestination mbBooking
-      mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-      pure . Just . Common.FleetMapDriverInfo $
-        Common.FleetMapDriverInfoRes
-          { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
-            driverStatus = driverStatus,
-            todaySummary = todaySummary,
-            position = position,
-            source = source,
-            destination = destination,
-            mobileCountryCode = fromMaybe mobileIndianCode driver.mobileCountryCode,
-            mobileNumber = mobileNumber
-          }
+  todaySummary <- buildTodaySummary (driver, driverInformation) rideLs driverStatus
+  position <- getDriverCurrentLocation driver.id
+  (source, destination) <-
+    if null rideLs
+      then pure (notAvailableText, notAvailableText)
+      else do
+        let ride = L.maximumBy (comparing (.tripStartTime)) rideLs
+        mbBooking <- CHB.findById ride.bookingId
+        getSourceAndDestination mbBooking
+  mobileNumber <- getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
+  pure . Just . Common.FleetMapDriverInfo $
+    Common.FleetMapDriverInfoRes
+      { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
+        driverStatus = driverStatus,
+        todaySummary = todaySummary,
+        position = position,
+        source = source,
+        destination = destination,
+        mobileCountryCode = fromMaybe mobileIndianCode driver.mobileCountryCode,
+        mobileNumber = mobileNumber
+      }
 
 buildTodaySummary ::
   (DP.Person, DDI.DriverInformation) ->
@@ -146,7 +144,7 @@ castStatus = \case
   -- Needs to be changed after implementation "2. Live Activity (No. of drivers)"
   Just DCommon.ONLINE -> Common.ONLINE
   Just DCommon.SILENT -> Common.SILENT
-  _ -> Common.OFFLINE      
+  _ -> Common.OFFLINE
 
 data Trips = Trips
   { tripsCompletedCount :: Int,
@@ -182,36 +180,38 @@ countTrips (rd : rds) trips =
             fare = trips.fare + fromMaybe 0 rd.fare
           }
 
-buildOperatorMapDriverInfo :: 
+buildOperatorMapDriverInfo ::
   DDI.DriverInformation ->
   Environment.Flow (Kernel.Prelude.Maybe Common.MapDriverInfoRes)
 buildOperatorMapDriverInfo driverInformation = do
   now <- liftIO getCurrentTime
+  driver <- QP.findById driverInformation.driverId >>= fromMaybeM (PersonNotFound driverInformation.driverId.getId)
+  position <- getDriverCurrentLocation driver.id
   let fromDate = UTCTime (utctDay now) 0
       toDate = now
-  driver <- QP.findById driverInformation.driverId >>= fromMaybeM (PersonNotFound driverInformation.driverId.getId)
   rideLs <- CHR.getAllRidesByDriverId driver.id fromDate toDate
-  if null rideLs
-    then pure Nothing
-    else do
-      let ride = L.maximumBy (comparing (.tripStartTime)) rideLs
-      position <- getDriverCurrentLocation driver.id
-      mbBooking <- CHB.findById ride.bookingId
-      (source, destination) <- getSourceAndDestination mbBooking
-      pure . Just . Common.OperatorMapDriverInfo $
-        Common.OperatorMapDriverInfoRes
-          { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
-            driverStatus = Common.ONLINE, -- driverInformation.driverStatus, TODO Chenge after rebase
-            vehicleNumber = "X000XX00", -- TODO Get from vehicle table directly through driverId
-            vehicleStatus = Common.ONLINE, -- TODO Get from vehicle table directly through driverId
-            position = position,
-            source = source,
-            destination = destination
-          }
+  (source, destination) <-
+    if null rideLs
+      then pure (notAvailableText, notAvailableText)
+      else do
+        let ride = L.maximumBy (comparing (.tripStartTime)) rideLs
+        mbBooking <- CHB.findById ride.bookingId
+        getSourceAndDestination mbBooking
+  pure . Just . Common.OperatorMapDriverInfo $
+    Common.OperatorMapDriverInfoRes
+      { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
+        driverStatus = Common.ONLINE, -- driverInformation.driverStatus, TODO Chenge after rebase
+        vehicleNumber = "X000XX00", -- TODO Get from vehicle table directly through driverId
+        vehicleStatus = Common.ONLINE, -- TODO Get from vehicle table directly through driverId
+        position = position,
+        source = source,
+        destination = destination
+      }
 
 -- TODO Will import from Domain.Action.Dashboard.Fleet.Driver after rebase
-validateRequestorRoleAndGetEntityId :: 
-  DP.Person ->  Kernel.Prelude.Maybe Text -> 
+validateRequestorRoleAndGetEntityId ::
+  DP.Person ->
+  Kernel.Prelude.Maybe Text ->
   Environment.Flow (DP.Role, Text)
 validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId = do
   case requestedPerson.role of
