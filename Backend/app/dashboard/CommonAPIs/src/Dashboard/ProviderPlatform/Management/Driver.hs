@@ -40,7 +40,7 @@ validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
 validateUpdateDriverNameReq :: Validate UpdateDriverNameReq
 validateUpdateDriverNameReq UpdateDriverNameReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+    [ validateField "firstName" firstName $ MinLength 1 `And` P.name,
       validateField "middleName" middleName $ InMaybe P.name,
       validateField "lastName" lastName $ InMaybe P.name
     ]

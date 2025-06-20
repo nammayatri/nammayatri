@@ -181,11 +181,12 @@ postDriverFleetAddVehicle ::
   Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode mbRole req = do
   runRequestValidation Common.validateAddVehicleReq req
+  let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
+  validateMobileNumber reqDriverPhoneNo mobileCountryCode
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
-  let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
   let role = case mbRole of
         Just Common.FLEET -> DP.FLEET_OWNER
         _ -> DP.DRIVER
@@ -721,17 +722,20 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       Flow (Either Text ())
     handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo mbRole = do
       result <- try @_ @SomeException $ do
+        let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbCountryCode
+        let addVehicleReq = convertToAddVehicleReq registerRcReq
+        runRequestValidation Common.validateAddVehicleReq addVehicleReq
+        validateMobileNumber phoneNo mobileCountryCode
+        whenJust mbFleetNo $ \fleetNo -> validateMobileNumber fleetNo mobileCountryCode
+
         when transporterConfig.enableExistingVehicleInBulkUpload $
-          isVehicleAlreadyAssociatedWithFleetOrDriver registerRcReq.vehicleRegistrationCertNumber
+          isVehicleAlreadyAssociatedWithFleetOrDriver addVehicleReq.registrationNo
 
         mbFleetOwnerId <- case mbFleetNo of
           Just fleetNo -> do
             phoneHash <- getDbHash fleetNo
-            let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbCountryCode
             QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneHash merchant.id DP.FLEET_OWNER >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
           Nothing -> pure Nothing
-
-        let addVehicleReq = convertToAddVehicleReq registerRcReq
 
         postDriverFleetAddVehicle merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
 
@@ -1513,6 +1517,7 @@ postDriverFleetSendJoiningOtp ::
   Common.AuthReq ->
   Flow Common.AuthRes
 postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwnerId mbRequestorId req = do
+  validateMobileNumber req.mobileNumber req.mobileCountryCode
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
@@ -1552,6 +1557,7 @@ postDriverFleetVerifyJoiningOtp ::
   Common.VerifyFleetJoiningOtpReq ->
   Flow APISuccess
 postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbRequestorId req = do
+  validateMobileNumber req.mobileNumber req.mobileCountryCode
   FleetOwnerInfo {fleetOwner, mbOperator} <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
@@ -2199,6 +2205,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc fleetOwner req_ = do
       validateDriverName req_.driverName
+      validateMobileNumber req_.driverPhoneNumber DCommon.mobileIndianCode
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> validateMobileNumber fleetPhoneNo DCommon.mobileIndianCode
       whenJust req_.fleetPhoneNo \fleetPhoneNo -> do
         mobileNumberHash <- getDbHash fleetPhoneNo
         fleetOwnerCsv <-
@@ -2212,6 +2220,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByOperator merchant moc operator req_ = do
       validateDriverName req_.driverName
+      validateMobileNumber req_.driverPhoneNumber DCommon.mobileIndianCode
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> validateMobileNumber fleetPhoneNo DCommon.mobileIndianCode
       case req_.fleetPhoneNo of
         Nothing -> do
           linkDriverToOperator merchant moc operator req_
@@ -2230,13 +2240,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             when (now > associatedTill) $
               throwError (InvalidRequest "FleetOperatorAssociation expired")
           linkDriverToFleetOwner merchant moc fleetOwner (Just operator.id) req_
-
-    validateDriverName :: Text -> Flow ()
-    validateDriverName driverName = do
-      result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
-      case result of
-        Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 3 letters"
-        Right _ -> pure ()
 
     linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToFleetOwner merchant moc fleetOwner mbOperatorId req_ = do
@@ -2288,6 +2291,20 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+
+validateMobileNumber :: Text -> Text -> Flow ()
+validateMobileNumber mobileNumber mobileCountryCode = do
+  result <- try (void $ runRequestValidation Common.validateUpdatePhoneNumberReq (Common.UpdatePhoneNumberReq {newPhoneNumber = mobileNumber, newCountryCode = mobileCountryCode}))
+  case result of
+    Left (_ :: SomeException) -> throwError $ InvalidRequest "Invalid mobile number"
+    Right _ -> pure ()
+
+validateDriverName :: Text -> Flow ()
+validateDriverName driverName = do
+  result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
+  case result of
+    Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter"
+    Right _ -> pure ()
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
