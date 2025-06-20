@@ -535,6 +535,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     driverSelectedFare : ride.driverSelectedFare  ,
     vehicleColor : ride.vehicleColor  ,
     id : ride.shortRideId,
+    rideId : ride.id,
     updatedAt : ride.updatedAt,
     source : (Const.decodeShortAddress ride.fromLocation),
     destination : maybe "" (\toLocation -> Const.decodeShortAddress toLocation) ride.toLocation,
@@ -556,7 +557,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     acRide : ride.isVehicleAirConditioned,
     vehicleServiceTier : ride.vehicleServiceTier,
     parkingCharge : fromMaybe 0.0 ride.parkingCharge, 
-    stops : fromMaybe [] ride.stops
+    stops : fromMaybe [] ride.stops,
+    isInsured : fromMaybe false ride.isInsured
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -807,5 +809,7 @@ dummyRideHistoryItem = RidesInfo {
       senderDetails : Nothing,
       receiverDetails : Nothing,
       coinsEarned : Nothing,
-      stops : Nothing
+      stops : Nothing,
+      isInsured : Nothing,
+      insuredAmount : Nothing
 }

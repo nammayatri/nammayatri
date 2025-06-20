@@ -294,6 +294,7 @@ rideListResponseTransformer =
         driverSelectedFare : ride.driverSelectedFare  ,
         vehicleColor : ride.vehicleColor  ,
         id : ride.shortRideId,
+        rideId : ride.id,
         updatedAt : ride.updatedAt,
         source : (decodeAddress (ride.fromLocation) false),
         destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
@@ -315,7 +316,8 @@ rideListResponseTransformer =
         acRide : ride.isVehicleAirConditioned,
         vehicleServiceTier : ride.vehicleServiceTier,
         parkingCharge : fromMaybe 0.0 ride.parkingCharge,
-        stops : fromMaybe [] ride.stops
+        stops : fromMaybe [] ride.stops,
+        isInsured : fromMaybe false ride.isInsured
       }) 
 
 
@@ -341,6 +343,7 @@ dummyCard =  {
     driverSelectedFare : 0,
     vehicleColor : "",
     id : "",
+    rideId : "",
     updatedAt : "",
     source : "",
     destination : "",
@@ -362,5 +365,6 @@ dummyCard =  {
     acRide : Nothing,
     vehicleServiceTier : "",
     parkingCharge : 0.0,
-    stops : []
+    stops : [],
+    isInsured : false
   }

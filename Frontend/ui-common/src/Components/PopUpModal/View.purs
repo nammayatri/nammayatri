@@ -118,7 +118,7 @@ view push state =
         , height WRAP_CONTENT
         , cornerRadii state.cornerRadius
         , orientation VERTICAL
-        , background Color.white900
+        , background state.background
         , margin state.margin
         , padding state.padding
         , accessibility DISABLE
@@ -143,6 +143,7 @@ view push state =
             , orientation VERTICAL
             , background state.popUpHeaderConfig.backgroundColor
             , weight 1.0
+            , visibility $ state.popUpHeaderConfig.visibilityV2
             ]
         [textView $
             [ width MATCH_PARENT
@@ -431,7 +432,7 @@ view push state =
              , height WRAP_CONTENT
              , color $ state.secondaryText.color
              , gravity $ state.secondaryText.gravity
-             , textFromHtml state.secondaryText.text
+             , if state.secondaryText.useTextFromHtml then textFromHtml state.secondaryText.text else text state.secondaryText.text
              , accessibility ENABLE
              , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") (if state.secondaryText.accessibilityHint /= ""  then state.secondaryText.accessibilityHint else state.secondaryText.text)
              , visibility $ state.secondaryText.visibility
@@ -444,6 +445,7 @@ view push state =
                , margin state.secondaryText.suffixImage.margin
              ]
           ]
+        , policyDownloadView push state
         , deliveryView push state
         , upiView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
@@ -472,7 +474,7 @@ view push state =
                 ]
                 [ linearLayout
                     ([ if state.option2.visibility && state.deliveryDetailsConfig.visibility /= VISIBLE then width state.option1.width 
-                       else weight 1.0
+                       else if state.option1.useWeight then weight 1.0 else width state.option1.width
                     , background state.option1.background
                     , height $ state.option1.height
                     , cornerRadius 8.0
@@ -808,6 +810,30 @@ deliveryView push state =
     ]
     [
         deliveryDetailsView push state 
+    ]
+
+policyDownloadView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+policyDownloadView push state = 
+    linearLayout[
+        height WRAP_CONTENT,
+        width MATCH_PARENT,
+        gravity CENTER,
+        margin $ Margin 0 30 0 10,
+        visibility $ if state.showDownloadPolicy == true then VISIBLE else GONE
+    ][
+        textView $
+        [
+          textFromHtml $ "<u>Download Policy</u>"
+        , color Color.white900
+        , textSize FontSize.a_16
+        , fontStyle $ FontStyle.bold LanguageStyle
+        , onClick
+            ( \action -> do
+                void $ openUrlInApp state.certificateUrl
+                pure unit
+            )
+            $ const NoAction
+        ] <> FontStyle.body3 TypoGraphy
     ]
     
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

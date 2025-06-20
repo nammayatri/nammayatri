@@ -183,7 +183,9 @@ dummyActiveRideData = {
   senderPersonDetails : Nothing,
   receiverPersonDetails : Nothing,
   notifiedReachedDestination : false,
-  stops : []
+  stops : [],
+  isInsured : Nothing,
+  insuredAmount : Nothing
 }
 
 

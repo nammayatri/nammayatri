@@ -105,6 +105,7 @@ type Config = {
     tipSelected :: String,
     fareEstimateText :: String,
     tipSelectedText :: String,
+    background :: String,
     backgroundColor  :: String,
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
@@ -125,7 +126,9 @@ type Config = {
     deliveryDetailsConfig :: DeliveryDetailsConfig,
     externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     voiceToTextConfig :: VoiceToTextConfig,
-    goldTierRewardConfig :: CoinWarningConfig
+    goldTierRewardConfig :: CoinWarningConfig,
+    showDownloadPolicy :: Boolean,
+    certificateUrl :: String
 }
 
 
@@ -192,7 +195,8 @@ type TextConfig = {
   accessibilityHint :: String,
   suffixImage :: ImageConfig,
   prefixImage :: ImageConfig,
-  isClickable :: Boolean
+  isClickable :: Boolean,
+  useTextFromHtml :: Boolean
 }
 type ButtonConfig = {
   background :: String,
@@ -214,7 +218,8 @@ type ButtonConfig = {
   showShimmer :: Boolean,
   gravity :: Gravity,
   enableRipple :: Boolean,
-  rippleColor :: String
+  rippleColor :: String,
+  useWeight :: Boolean
 }
 
 type DismissPopupConfig =
@@ -293,6 +298,7 @@ type PopUpHeaderConfig = {
   , margin :: Margin
   , padding :: Padding
   , visibility :: Visibility
+  , visibilityV2 :: Visibility
   , backgroundColor :: String
   , cornerRadius :: Number
   , orientation :: String
@@ -328,6 +334,8 @@ config = {
   , cornerRadius : (PTD.Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
+  , background : Color.white900
+  , showDownloadPolicy : false
   , backgroundColor : Color.black9000
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
@@ -369,7 +377,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     }
   , secondaryText : {
       text : "Text2",
@@ -396,7 +405,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     }
   , headerInfo : {
       text : "Step",
@@ -423,7 +433,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     }
   , tipButton: {
      background : Color.white900
@@ -453,6 +464,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , useWeight : true
   } 
   , option1 : {
       background : Color.white900
@@ -482,6 +494,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , useWeight : true
     }
   , option2 : {
       background : Color.black900
@@ -511,6 +524,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , useWeight : true
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -540,7 +554,8 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
-        }
+        },
+        useTextFromHtml : true
       },
       textOpt2 : {
         text : "",
@@ -567,7 +582,8 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
-        }
+        },
+        useTextFromHtml : true
       },
       visibility : false,
       margin : (Margin 0 0 0 0),
@@ -671,7 +687,8 @@ config = {
             , width : (V 0)
             , margin : (Margin 0 0 0 0)
             , padding : (Padding 0 0 0 0)
-          }
+          },
+          useTextFromHtml : true
       }
     },
     onlyTopTitle : VISIBLE,
@@ -697,6 +714,7 @@ config = {
       margin : (Margin 0 0 0 0),
       padding : (Padding 0 0 0 0),
       visibility : GONE,
+      visibilityV2 : VISIBLE,
       backgroundColor : Color.white900,
       cornerRadius : 0.0,
       orientation : "VERTICAL",
@@ -725,7 +743,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     },
     subHeadingText :{
       text : "",
@@ -752,7 +771,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     },
     imageConfig : {
       visibility : GONE
@@ -807,7 +827,8 @@ config = {
           margin: MarginLeft 8,
           padding: PaddingLeft 8
         }
-    } 
+    }
+  , certificateUrl : ""
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

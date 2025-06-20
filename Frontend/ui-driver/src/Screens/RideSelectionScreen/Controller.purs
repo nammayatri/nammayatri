@@ -216,6 +216,7 @@ rideListResponseTransformer :: Array RidesInfo -> String -> Array IndividualRide
 rideListResponseTransformer list categoryAction =
   (map (\ (RidesInfo ride) ->
     { id   : ride.id
+    , rideId : ride.id
     , date : (convertUTCtoISC (ride.createdAt) "D MMM")
     , time : (convertUTCtoISC (ride.createdAt )"h:mm A")
     , source : (decodeAddress (ride.fromLocation) false)
@@ -257,6 +258,7 @@ rideListResponseTransformer list categoryAction =
     , vehicleServiceTier : ride.vehicleServiceTier
     , parkingCharge : fromMaybe 0.0 ride.parkingCharge
     , stops : fromMaybe [] ride.stops
+    , isInsured : fromMaybe false ride.isInsured
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

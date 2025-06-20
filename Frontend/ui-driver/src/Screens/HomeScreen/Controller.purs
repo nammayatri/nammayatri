@@ -152,6 +152,7 @@ import Data.Traversable (for_)
 import Engineering.Helpers.RippleCircles as EHR
 import Components.TripStageTopBar.Controller as TripStageTopBar
 import Data.Array as DA
+import Resource.Constants as Const
 
 
 instance showAction :: Show Action where
@@ -324,6 +325,7 @@ instance showAction :: Show Action where
   show (RideEndWithStopsPopupAction _) = "RideEndWithStopsPopupAction"
   show (UpdateRouteInState _) = "UpdateRouteInState"
   show (DriverBlockedPopUp _) = "DriverBlockedPopUp"
+  show (RideInsuranceCardAction _) = "RideInsuranceCardAction"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -512,6 +514,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | UpdateStopsStatus ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
+                    | UpdateDriverInsurance ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -682,6 +685,7 @@ data Action = NoAction
             | UpdateRouteInState (Array Route)
             | GotoMeterRideScreen
             | DriverBlockedPopUp PopUpModal.Action
+            | RideInsuranceCardAction PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -701,6 +705,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
+
+eval (RideInsuranceCardAction PopUpModal.OnButton1Click) state = continue state {props{showInsuranceBanner = false}}
 
 eval GotoMeterRideScreen state = exit $ MeterRideScreen state
 
@@ -1261,6 +1267,14 @@ eval (RideActionModalAction (RideActionModal.EndRide)) state = do
 
 eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
   exit $ ArrivedAtStop state
+
+eval (RideActionModalAction (RideActionModal.OpenInsuranceBanner)) state = do
+  let startRideActive =
+        (state.props.currentStage == ST.RideAccepted)
+        || (state.props.currentStage == ST.ChatWithCustomer
+            && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted)
+  if (startRideActive == false) then exit $ UpdateDriverInsurance state { props { showInsuranceBanner = true } }
+  else continue $ state { props { showInsuranceBanner = true } }
 
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   let isRideStartActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && ((getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted)
@@ -2205,7 +2219,9 @@ activeRideDetail state (RidesInfo ride) =
                             case s1.stopInfo, s2.stopInfo of
                               Just (API.StopInformation s1stopInfo), Just (API.StopInformation s2stopInfo) -> compare s1stopInfo.stopOrder s2stopInfo.stopOrder
                               _,_ -> LT
-                            ) $ fromMaybe [] ride.stops
+                            ) $ fromMaybe [] ride.stops,
+  isInsured : ride.isInsured,
+  insuredAmount : ride.insuredAmount           
 }
   where
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

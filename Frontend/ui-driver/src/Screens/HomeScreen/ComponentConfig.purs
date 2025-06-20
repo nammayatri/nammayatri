@@ -168,6 +168,7 @@ rideActionModalConfig state =
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   , stops = rideData.stops
+  , isInsured = true
   }
   in rideActionModalConfig'
   where
@@ -526,6 +527,7 @@ freeTrialRidesEndingPopupConfig state =
   , popUpHeaderConfig {
     gravity = CENTER
     , visibility = VISIBLE
+    , visibilityV2 = GONE
     , headingText {
       text = getString $ N_MORE_FREE_RIDES $ show freeTrialRidesLeft
       , visibility = VISIBLE
@@ -3218,3 +3220,71 @@ rideEndStopsWarningPopup state = PopUpModal.config {
     , height = V 190
     }
   }
+
+gettingPolicyText :: ST.HomeScreenState -> String
+gettingPolicyText state = 
+  case state.data.insuranceData.policyNumber of
+    Just policyNum -> "Policy Number - " <> policyNum <>  "\nSum Insured - " <> (fromMaybe "" state.data.activeRide.insuredAmount)
+    Nothing -> "Generating your policy\nPlease try again in some time."
+
+rideInsuranceBannerConfig :: ST.HomeScreenState -> PopUpModal.Config
+rideInsuranceBannerConfig state = let
+  config' = PopUpModal.config
+  startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) )
+  subText = case startRideActive of
+    true -> "You policy gets generates \n once the ride starts."
+    false -> gettingPolicyText state
+  popUpConfig' = config'{
+    showDownloadPolicy = if state.data.insuranceData.certificateUrl /= Nothing then true else false,
+    certificateUrl = fromMaybe "" state.data.insuranceData.certificateUrl,
+    background = Color.blue900,
+    backgroundClickable = true,
+    gravity = BOTTOM,
+    buttonLayoutMargin =(Margin 0 0 0 0),
+    cornerRadius = (PTD.Corners 16.0 true true true true),
+    padding = Padding 16 24 16 16,
+    optionButtonOrientation = "VERTICAL",
+    popUpHeaderConfig {
+      backgroundColor = Color.blue900,
+      visibility = VISIBLE,
+      visibilityV2 = GONE,
+      orientation = "HORIZONTAL",
+      imageConfig {
+        width = V 200,
+        height = V 200,
+        imageUrl = "ny_ic_shield",
+        visibility = VISIBLE,
+        margin = MarginTop 10
+      },
+      headingText {
+        visibility = GONE
+      }
+    },
+    option2 {
+      visibility = false
+    },
+    primaryText {
+      text =  "This ride comes with a\ncomplimentary insurance",
+      margin = MarginTop 16,
+      color = Color.white900,
+      textStyle = Heading1
+    },
+    secondaryText {
+      text = subText,
+      margin = (Margin 0 15 0 0),
+      color = Color.white900,
+      textStyle = SubHeading1,
+      useTextFromHtml = false
+    },
+    option1 {
+        text = "Got it!"
+      , color = Color.blue900
+      , background = Color.white900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      , margin = MarginVertical 30 10
+      , useWeight = false
+      }
+  }
+  in popUpConfig'
