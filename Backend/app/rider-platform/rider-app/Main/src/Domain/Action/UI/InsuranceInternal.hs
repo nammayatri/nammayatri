@@ -31,7 +31,7 @@ getInsurance bppRideId mbToken = do
             message = "Insurance generated!"
           }
     Nothing -> do
-      unless (ride.status == DRide.INPROGRESS) $ throwError $ InvalidRequest "Insurance will be generated after ride is started!"
+      unless (ride.status `elem` [DRide.INPROGRESS, DRide.COMPLETED]) $ throwError $ InvalidRequest "Insurance will be generated after ride is started!"
       fork "Try creating insurance again" $ SI.createInsurance ride
       return $
         Insurance.InsuranceAPIEntity

@@ -9,7 +9,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (elem, id)
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -44,7 +44,7 @@ getInsurance _ insuranceId = do
     Nothing -> do
       ride <- QRide.findById (Kernel.Types.Id.Id insuranceId.getId) >>= fromMaybeM (InternalError "Ride not found")
       unless (ride.isInsured) $ throwError $ InvalidRequest "This booking is not insured!"
-      unless (ride.status == DRide.INPROGRESS) $ throwError $ InvalidRequest "Insurance will be generated after ride is started!"
+      unless (ride.status `elem` [DRide.INPROGRESS, DRide.COMPLETED]) $ throwError $ InvalidRequest "Insurance will be generated after ride is started!"
       fork "Try creating insurance again" $ SI.createInsurance ride
       return $
         API.Types.UI.Insurance.InsuranceAPIEntity

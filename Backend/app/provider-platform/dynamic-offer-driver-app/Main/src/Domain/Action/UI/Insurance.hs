@@ -32,6 +32,5 @@ getInsurance ::
 getInsurance _ rideId = do
   ride <- runInReplica $ QRide.findById (Kernel.Types.Id.Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
   unless (ride.isInsured) $ throwError $ InvalidRequest "This ride is not insured!"
-  unless (ride.status == DRide.INPROGRESS) $ throwError $ InvalidRequest "Insurance will be generated after ride is started!"
   appBackendBapInternal <- asks (.appBackendBapInternal)
   SharedLogic.CallBAPInternal.getInsuranceInfo appBackendBapInternal.apiKey appBackendBapInternal.url rideId
