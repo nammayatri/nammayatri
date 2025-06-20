@@ -54,11 +54,13 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    postDriverFleetUnlinkDocument,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as CommonDriver
 import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import qualified Data.ByteString.Lazy as LBS
@@ -488,3 +490,10 @@ getDriverDashboardInternalHelperGetFleetOwnerId _ _ _ _ = throwError $ InternalE
 
 getDriverDashboardInternalHelperGetFleetOwnerIds :: (ShortId DM.Merchant -> City.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.Flow [(Kernel.Prelude.Text, Kernel.Prelude.Text)])
 getDriverDashboardInternalHelperGetFleetOwnerIds _ _ _ _ = throwError $ InternalError "Unimplemented!"
+
+postDriverFleetUnlinkDocument :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> CommonDriver.DocumentType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetUnlinkDocument merchantShortId opCity apiTokenInfo driverId documentType mbFleetOwnerId = do
+  checkFleetOwnerVerification apiTokenInfo.personId
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetUnlinkDocument) requestorId driverId documentType mbFleetOwnerId'

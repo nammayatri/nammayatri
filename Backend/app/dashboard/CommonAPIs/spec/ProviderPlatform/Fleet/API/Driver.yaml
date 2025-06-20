@@ -356,7 +356,28 @@ apis:
               - fleetOwnerId: Text
             response:
               type: APISuccess
-
+  - POST: #FleetUnlinkPanGstAadhaar
+      endpoint: /{driverId}/fleet/unlink/document/{documentType}
+      auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
+      params:
+        driverId: Id Driver
+        documentType: DocumentType
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{driverId}/fleet/unlink/document/{documentType}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              requestorId: Text
+              documentType: DocumentType
+            query:
+              - fleetOwnerId: Text
+            response:
+              type: APISuccess
   - GET: # FleetTotalEarningAPI
       endpoint: /fleet/totalEarning
       auth: ApiAuthV2
@@ -949,6 +970,9 @@ apis:
       response:
         type: "[(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
 types:
+  DocumentType:
+    enum: "UNLINK_PAN,UNLINK_GST,UNLINK_AADHAAR"
+    derive: "HttpInstance"
   NearbyDriverReq:
     - point: LatLong
     - radius: Int

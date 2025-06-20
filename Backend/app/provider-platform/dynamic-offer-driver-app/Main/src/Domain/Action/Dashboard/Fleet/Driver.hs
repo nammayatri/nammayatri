@@ -52,10 +52,12 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    postDriverFleetUnlinkDocument,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as CommonDriver
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import Control.Applicative (optional)
@@ -132,6 +134,7 @@ import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
+import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
@@ -149,6 +152,7 @@ import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
 import qualified Storage.Queries.FleetOwnerInformation as FOI
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Image as QImage
@@ -2522,3 +2526,48 @@ getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbO
   driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
   let (fleetDriverAssociation, person, driverInformation) = unzip3 driverAssociationAndInfo
   return (fleetDriverAssociation, person, driverInformation)
+
+postDriverFleetUnlinkDocument ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  CommonDriver.DocumentType ->
+  Maybe Text ->
+  Flow APISuccess
+postDriverFleetUnlinkDocument merchantShortId _ requestorId driverId documentType mbFleetOwnerId = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  merchant <- findMerchantByShortId merchantShortId
+  let personId = cast @Common.Driver @DP.Person driverId
+  let fleetOwnerId = cast @Common.Driver @DP.Person driverId
+  case entityRole of
+    DP.FLEET_OWNER -> do
+      DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
+      isFleetDriver <- DDriver.checkFleetDriverAssociation personId fleetOwnerId
+      unless isFleetDriver $ throwError DriverNotPartOfFleet
+      removeDriverDocument personId
+    DP.OPERATOR -> do
+      validateOperatorWithDriver personId entityId
+      removeDriverDocument personId
+    _ -> throwError (InvalidRequest "Invalid Data")
+  pure Success
+  where
+    validateOperatorWithDriver :: Id DP.Person -> Text -> Flow ()
+    validateOperatorWithDriver personId operatorId = do
+      isDriverOperator <- DDriver.checkDriverOperatorAssociation personId (Id operatorId)
+      unless isDriverOperator $ throwError DriverNotPartOfOperator
+    removeDriverDocument :: Id DP.Person -> Flow ()
+    removeDriverDocument personId = do
+      person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      case person.role of
+        DP.FLEET_OWNER -> do
+          case documentType of
+            CommonDriver.UNLINK_PAN -> QFOI.updatePanImage Nothing Nothing personId
+            CommonDriver.UNLINK_GST -> QFOI.updateGstImage Nothing Nothing personId
+            CommonDriver.UNLINK_AADHAAR -> QFOI.updateAadhaarImage Nothing Nothing Nothing personId
+        _ -> pure ()
+      case documentType of
+        CommonDriver.UNLINK_PAN -> QPanCard.deleteByDriverId personId
+        CommonDriver.UNLINK_GST -> QGstin.deleteByDriverId personId
+        CommonDriver.UNLINK_AADHAAR -> QAadhaarCard.deleteByPersonId personId
