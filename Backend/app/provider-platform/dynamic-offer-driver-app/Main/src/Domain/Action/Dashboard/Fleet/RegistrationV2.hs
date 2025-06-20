@@ -100,11 +100,12 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     Just imageId -> do
       panCard <- QPanCard.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("PAN not uploaded " <> imageId))
       unless (panCard.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "PAN not validated"
-  case fleetOwnerInfo.gstImageId of
-    Nothing -> throwError $ InvalidRequest "GST not uploaded"
-    Just imageId -> do
-      gstIn <- QGST.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("GST not uploaded " <> imageId))
-      unless (gstIn.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "GST not validated"
+  when (req.fleetType == Just Common.BUSINESS_FLEET) $ do
+    case fleetOwnerInfo.gstImageId of
+      Nothing -> throwError $ InvalidRequest "GST not uploaded"
+      Just imageId -> do
+        gstIn <- QGST.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("GST not uploaded " <> imageId))
+        unless (gstIn.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "GST not validated"
   case fleetOwnerInfo.aadhaarFrontImageId of
     Nothing -> throwError $ InvalidRequest "Aadhaar front image not uploaded"
     Just imageId -> do
