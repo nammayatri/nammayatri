@@ -236,7 +236,7 @@
                                         android:layout_height="16dp"
                                         android:layout_marginLeft="8dp"
                                         android:layout_marginRight="2dp"
-                                        android:src="@drawable/ny_ic_pet" />
+                                        android:src="@drawable/ny_ic_pet_rides_label" />
 
                                     <TextView
                                         android:id="@+id/pet_text"
@@ -248,7 +248,7 @@
                                         android:paddingRight="7dp"
                                         android:text="₹10 Pet"
                                         android:paddingBottom="8dp"
-                                        android:textColor="#844E00"
+                                        android:textColor="#FFFFFF"
                                         android:textSize="12dp" />
                                 </LinearLayout>
 
