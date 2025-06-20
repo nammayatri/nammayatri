@@ -1,58 +1,10 @@
-/*
- * Copyright 2022-23, Juspay India Pvt Ltd
- * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- * as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- * is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- * the GNU Affero General Public License along with this program. If not, see https://www.gnu.org/licenses/.
- */
-
-/* Required Payload template
-"message" : {
-    "token": "<DEVICE_TOKEN>",
-    "android": {
-        "data": {
-        "notification_type": "DRIVER_NOTIFY",
-        "show_notification": "true",
-        "entity_type": "Case",
-        "entity_ids": "",
-        "notification_json": "{
-            \"title\": \"Demo message\",
-            \"body\": \"Body of demo message\",
-            \"icon\": \"<ICON_URL>\",
-            \"tag\": \"DRIVER_NOTIFY\",
-            \"sound\": \"default\",
-            \"channel_id\": \"General\"
-        }",
-            "driver_notification_payload": "{
-                \"title\" : \"This is a demo message\",
-                \"description\" :\"This is the description of demo message\",
-                \"imageUrl\" : \"<IMAGE_URL>\",
-                \"okButtonText\" : \"Ok\",
-                \"cancelButtonText\" : \"Cancel\",
-                \"actions\" : [\"SET_DRIVER_ONLINE\", \"OPEN_APP\", \"OPEN_LINK\"],
-                \"link\" : \"http://www.google.com\",
-                \"endPoint\": \"<EP>\",
-                \"method\": \"POST\",
-                \"reqBody\" : {},
-                \"titleVisibility\" : true,
-                \"descriptionVisibility\" : true,
-                \"buttonOkVisibility\" : true,
-                \"buttonCancelVisibility\" : true,
-                \"buttonLayoutVisibility\" : true,
-                \"imageVisibility\" : true
-            }"
-        }
-    }
-    }
-}
- */
 
 
-package in.juspay.mobility.app;
+package in.juspay.mobility.app.overlayMessage;
+
+import static in.juspay.mobility.app.Utils.dpToPx;
 
 import android.annotation.SuppressLint;
-import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -62,11 +14,13 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.net.Uri;
+import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -80,6 +34,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
+import com.google.android.flexbox.FlexboxLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.android.material.card.MaterialCardView;
@@ -96,13 +51,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
 
+import in.juspay.mobility.app.MyFirebaseMessagingService;
+import in.juspay.mobility.app.R;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+import in.juspay.mobility.app.RideRequestUtils;
+import in.juspay.mobility.app.TranslatorMLKit;
+import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
-public class OverlayMessagingService extends Service {
-    private WindowManager windowManager;
+public class MessagingView implements ViewInterface {
+
     private View messageView;
+    private Context context;
+    private ServiceInterface serviceInterface;
+
     private String currency;
     private String lang;
     private String link, endPoint, method;
@@ -115,53 +78,14 @@ public class OverlayMessagingService extends Service {
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private String toastMessage;
     private String supportPhoneNumber;
-
     private double editLat, editlon;
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    @Override
-    public void onCreate() {
-        if (!Settings.canDrawOverlays(this)) return;
-        super.onCreate();
-
-    }
-
-    @SuppressLint("InflateParams")
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-
-        String intentMessage = intent != null && intent.hasExtra("payload") ? intent.getStringExtra("payload") : null;
-        if (!Settings.canDrawOverlays(this) || intentMessage == null) return START_STICKY;
-        int layoutParamsType = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
-        if (windowManager != null) {
-            setDataToViews(intentMessage);
-            return START_STICKY;
-        }
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                layoutParamsType,
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_DIM_BEHIND,
-                PixelFormat.TRANSPARENT);
-        params.dimAmount = 0.6f;
-        params.gravity = Gravity.CENTER;
-        params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
-        messageView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.message_overlay, null);
-
-        setViewListeners(messageView, intentMessage);
-        windowManager.addView(messageView, params);
-        setDataToViews(intentMessage);
-        return START_STICKY;
-    }
-
-    private void setDataToViews(String bundle) {
+    public View createView(String bundle, Context context, ServiceInterface serviceInterface) {
         try {
+            this.context = context;
+            this.serviceInterface = serviceInterface;
+            messageView = LayoutInflater.from(context.getApplicationContext()).inflate(R.layout.message_overlay, null);
+            setViewListeners(messageView, bundle);
             JSONObject data = new JSONObject(bundle);
             TextView title = messageView.findViewById(R.id.title);
             FrameLayout updateLocDetailsComponent = messageView.findViewById(R.id.update_loc_details_component);
@@ -188,15 +112,15 @@ public class OverlayMessagingService extends Service {
             supportPhoneNumber = data.optString("contactSupportNumber", null);
             editLat = data.has("editlat") ? data.getDouble("editlat") : 0.0;
             editlon = data.has("editlon") ? data.getDouble("editlon") : 0.0;
-            Glide.with(this).load(data.getString("imageUrl")).into(imageView);
+            Glide.with(context).load(data.getString("imageUrl")).into(imageView);
             boolean titleVisibility = data.has("titleVisibility") && data.getBoolean("titleVisibility");
             boolean updateLocDetailsComponentVisibility = data.has("updateLocDetails");
             if (updateLocDetailsComponentVisibility) {
-                SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
                 currency = sharedPref.getString("CURRENCY", "₹");
                 lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-                editor.putString("CALL_REFRESH", "true").apply(); 
+                editor.putString("CALL_REFRESH", "true").apply();
             }
             boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
             boolean buttonOkVisibility = data.has("buttonOkVisibility") && data.getBoolean("buttonOkVisibility");
@@ -215,7 +139,7 @@ public class OverlayMessagingService extends Service {
             } catch (Exception e){
                 Exception exception = new Exception("Error in SetDataToView " + e);
                 FirebaseCrashlytics.getInstance().recordException(exception);
-                RideRequestUtils.firebaseLogEventWithParams("exception_in_construct_media_view", "CONSTRUCT_MEDIA_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_construct_media_view", "CONSTRUCT_MEDIA_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), context);
             }
             Boolean showContactSupport = supportPhoneNumber != null;
             if (showContactSupport) {
@@ -228,17 +152,27 @@ public class OverlayMessagingService extends Service {
             if (updateLocDetailsComponentVisibility) {
                 setDataToLocationDetailsComponent(data);
             }
-
+            return messageView;
         } catch (Exception e) {
             Exception exception = new Exception("Error in ConstructView " + e);
             FirebaseCrashlytics.getInstance().recordException(exception);
-            RideRequestUtils.firebaseLogEventWithParams("exception_construct_view", "CONSTRUCT_VIEW", String.valueOf(e), this);
-            stopSelf();
+            RideRequestUtils.firebaseLogEventWithParams("exception_construct_view", "CONSTRUCT_VIEW", String.valueOf(e), context);
+            return null;
         }
     }
 
+    @Override
+    public void destroyView() {
 
-    public void setDataToLocationDetailsComponent (JSONObject data) throws JSONException {
+    }
+
+    @Override
+    public View getView() {
+        return messageView;
+    }
+
+
+    private void setDataToLocationDetailsComponent (JSONObject data) throws JSONException {
         JSONObject updateLocDetails = data.getJSONObject("updateLocDetails");
         JSONObject mbDestination = updateLocDetails.has("destination") ? updateLocDetails.getJSONObject("destination") : null;
         if (mbDestination != null) {
@@ -246,10 +180,10 @@ public class OverlayMessagingService extends Service {
             double destLon = mbDestination.optDouble("lon", 0.0);
             JSONObject destAddress = mbDestination.has("address") ? mbDestination.getJSONObject("address") : null;
             String destAddressString = destAddress.optString("fullAddress", "");
-            String destPincode = RideRequestUtils.getPinCodeFromRR(destLat, destLon, OverlayMessagingService.this);
+            String destPincode = RideRequestUtils.getPinCodeFromRR(destLat, destLon, context);
             TextView destination = messageView.findViewById(R.id.new_drop);
             String destinationAddress = "Drop: "+ destAddressString;
-            updateViewFromMlTranslation(destination, destinationAddress, getApplicationContext());
+            updateViewFromMlTranslation(destination, destinationAddress, context.getApplicationContext());
             TextView pincode = messageView.findViewById(R.id.pin_code);
             pincode.setText(destPincode);
             pincode.setVisibility(View.VISIBLE);
@@ -315,12 +249,12 @@ public class OverlayMessagingService extends Service {
         }
         else {
             fareDrawableVisibility = View.GONE;
-            fareDiffValueText = getString(R.string.no_change);
+            fareDiffValueText = context.getString(R.string.no_change);
             fareDiffColor = fareDiffColorNeutral;
         }
         fareIndicator.setCardBackgroundColor(Color.parseColor(fareDiffColor));
         fareIndicatorArrow.setVisibility(fareDrawableVisibility);
-        fareIndicatorArrow.setImageDrawable(getDrawable(fareDrawable));
+        fareIndicatorArrow.setImageDrawable(context.getDrawable(fareDrawable));
         fareDiffView.setText(fareDiffValueText);
         TextView newDistance = messageView.findViewById(R.id.new_dist_val);
         newDistance.setText(String.format(Locale.getDefault(), "%.1f", newEstimatedDistInKm) + " km");
@@ -345,9 +279,9 @@ public class OverlayMessagingService extends Service {
         else {
             distDrawableVisibility = View.GONE;
             distDiffColor = distDiffColorNeutral;
-            distDiffValueText = getString(R.string.no_change);
+            distDiffValueText = context.getString(R.string.no_change);
         }
-        distIndicatorArrow.setImageDrawable(getDrawable(distDrawable));
+        distIndicatorArrow.setImageDrawable(context.getDrawable(distDrawable));
         distIndicatorArrow.setVisibility(distDrawableVisibility);
         distIndicator.setCardBackgroundColor(Color.parseColor(distDiffColor));
         distDiffView.setText(distDiffValueText);
@@ -364,17 +298,16 @@ public class OverlayMessagingService extends Service {
                 int progressCompat = (int) (millisUntilFinished/1000);
                 progressIndicator.setProgressCompat(progressCompat*2, true);
                 if (progressCompat <= 8) {
-                    progressIndicator.setIndicatorColor(getColor(R.color.red900));
+                    progressIndicator.setIndicatorColor(context.getColor(R.color.red900));
                 } else {
-                    progressIndicator.setIndicatorColor(getColor(R.color.green900));
+                    progressIndicator.setIndicatorColor(context.getColor(R.color.green900));
                 }
 
             }
 
             @Override
             public void onFinish() {
-                stopSelf();
-
+                serviceInterface.killService();
             }
         };
         countDownTimer.start();
@@ -386,28 +319,28 @@ public class OverlayMessagingService extends Service {
         translate.translateStringInTextView(address, destinationAddressHolder);
     }
 
-    public void setDataToMediaView (JSONObject data) throws JSONException {
+    private void setDataToMediaView (JSONObject data) throws JSONException {
         LinearLayout dynamicView = messageView.findViewById(R.id.dynamic_views);
         dynamicView.removeAllViews();
         JSONArray mediaViews = data.has("socialMediaLinks") ? data.getJSONArray("socialMediaLinks") : null;
         if(mediaViews != null){
             for (int i = 0; i < mediaViews.length(); i++){
-                LinearLayout mediaView = new LinearLayout(this);
+                LinearLayout mediaView = new LinearLayout(context);
                 JSONObject mediaViewData = mediaViews.getJSONObject(i);
                 int imageHeight = mediaViewData.has("height") ? mediaViewData.getInt("height") : 0;
                 int imageWidth = mediaViewData.has("width") ? mediaViewData.getInt("height") : 0;
                 if(mediaViewData.has("prefixImage")) {
-                    ImageView prefixImage = new ImageView(this);
-                    Glide.with(this).load(mediaViewData.getString("prefixImage")).into(prefixImage);
+                    ImageView prefixImage = new ImageView(context);
+                    Glide.with(context).load(mediaViewData.getString("prefixImage")).into(prefixImage);
                     prefixImage.setLayoutParams(new LinearLayout.LayoutParams(imageWidth, imageHeight));
                     boolean prefixImageVisibility = mediaViewData.has("prefixImage") && mediaViewData.getString("prefixImage").length() != 0;
                     prefixImage.setVisibility(prefixImageVisibility ? View.VISIBLE : View.GONE);
                     mediaView.addView(prefixImage);
                 }
 
-                TextView linkText = new TextView(this);
+                TextView linkText = new TextView(context);
                 linkText.setText(mediaViewData.has("linkText") ? mediaViewData.getString("linkText") : "");
-                linkText.setTextColor(mediaViewData.has("linkTextColor") ? mediaViewData.getInt("linkTextColor") :  getResources().getColor(R.color.blue800, null)); //ask theme
+                linkText.setTextColor(mediaViewData.has("linkTextColor") ? mediaViewData.getInt("linkTextColor") :  context.getResources().getColor(R.color.blue800, null)); //ask theme
                 boolean isTextUnderLined = !mediaViewData.has("isTextUnderlined") || mediaViewData.getBoolean("isTextUnderlined");
                 if (isTextUnderLined)
                     linkText.setPaintFlags(linkText.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
@@ -417,8 +350,8 @@ public class OverlayMessagingService extends Service {
                 mediaView.addView(linkText);
 
                 if(mediaViewData.has("suffixImage")) {
-                    ImageView suffixImage = new ImageView(this);
-                    Glide.with(this).load(mediaViewData.getString("suffixImage")).into(suffixImage);
+                    ImageView suffixImage = new ImageView(context);
+                    Glide.with(context).load(mediaViewData.getString("suffixImage")).into(suffixImage);
                     suffixImage.setLayoutParams(new LinearLayout.LayoutParams(imageWidth, imageHeight));
                     boolean suffixImageVisibility = mediaViewData.has("suffixImage") && mediaViewData.getString("suffixImage").length() != 0;
                     suffixImage.setVisibility(suffixImageVisibility ? View.VISIBLE : View.GONE);
@@ -430,7 +363,7 @@ public class OverlayMessagingService extends Service {
                 if(mediaLink != null){
                     mediaView.setOnClickListener(view -> {
                         openLink(mediaLink);
-                        stopSelf();
+                        serviceInterface.killService();
                     });
                 }
                 dynamicView.addView(mediaView);
@@ -458,7 +391,7 @@ public class OverlayMessagingService extends Service {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            stopSelf();
+            serviceInterface.killService();
         });
 
         messageView.findViewById(R.id.secondary_button).setOnClickListener(view -> {
@@ -478,19 +411,19 @@ public class OverlayMessagingService extends Service {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            stopSelf();
+            serviceInterface.killService();
         });
     }
 
-    public void openNavigation(double lat, double lon) {
+    private void openNavigation(double lat, double lon) {
         try {
             Uri mapsURI = Uri.parse("google.navigation:q=" + lat + "," + lon);
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
             mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             mapIntent.setPackage("com.google.android.apps.maps");
-            startActivity(mapIntent);
+            context.startActivity(mapIntent);
         } catch (Exception e) {
-            RideRequestUtils.firebaseLogEventWithParams("exception_in_open_navigation", "OPEN_NAVIGATION", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            RideRequestUtils.firebaseLogEventWithParams("exception_in_open_navigation", "OPEN_NAVIGATION", Objects.requireNonNull(e.getMessage()).substring(0, 40), context);
             e.printStackTrace();
         }
     }
@@ -498,8 +431,8 @@ public class OverlayMessagingService extends Service {
     void performAction(String action, String intentMessage){
         switch (action) {
             case "SET_DRIVER_ONLINE":
-                RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
-                RideRequestUtils.restartLocationService(this);
+                RideRequestUtils.updateDriverStatus(true, "ONLINE", context, false);
+                RideRequestUtils.restartLocationService(context);
                 break;
             case "NAVIGATE":
                 openNavigation(editLat, editlon);
@@ -514,15 +447,15 @@ public class OverlayMessagingService extends Service {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(getApplicationContext());
-                                Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
+                                MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context.getApplicationContext());
+                                Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
                                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(endPoint, baseHeaders, reqBody, method);
                                 Handler handler = new Handler(Looper.getMainLooper());
                                 handler.post(new Runnable() {
                                     @Override
                                     public void run() {
                                         if (toastMessage != null && apiResponse.getStatusCode() == 200)
-                                            Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show();
                                     }
                                 });
                             }
@@ -535,23 +468,23 @@ public class OverlayMessagingService extends Service {
                 }
                 break;
             case "OPEN_APP":
-                RideRequestUtils.openApplication(this);
+                RideRequestUtils.openApplication(context);
                 break;
             case "OPEN_SUBSCRIPTION" :
-                Intent intent = getApplicationContext().getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
+                Intent intent = context.getApplicationContext().getPackageManager().getLaunchIntentForPackage(context.getApplicationContext().getPackageName());
                 intent.putExtra("notification_type", "PAYMENT_MODE_MANUAL");
                 intent.putExtra("entity_ids", "");
                 intent.putExtra("entity_type", "");
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                Utils.logEvent("ny_driver_overlay_join_now", getApplicationContext());
+                context.startActivity(intent);
+                Utils.logEvent("ny_driver_overlay_join_now", context.getApplicationContext());
                 break;
             case "CALL_SUPPORT" :
                 try {
                     intent = new Intent(Intent.ACTION_DIAL);
                     intent.setData(Uri.parse("tel:" + supportPhoneNumber));
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
+                    context.startActivity(intent);
                 } catch (Exception e){
                     System.out.println(e.toString());
                 }
@@ -567,7 +500,7 @@ public class OverlayMessagingService extends Service {
                 }
                 break;
         }
-        stopSelf();
+        serviceInterface.killService();
     }
 
     void performAction2(JSONObject action, String intentMessage){
@@ -579,8 +512,8 @@ public class OverlayMessagingService extends Service {
             JSONArray dependentActions = action.has("dependentActions") ? action.getJSONArray("dependentActions") : null;
             switch (actionName) {
                 case "SET_DRIVER_ONLINE":
-                    RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
-                    RideRequestUtils.restartLocationService(this);
+                    RideRequestUtils.updateDriverStatus(true, "ONLINE", context, false);
+                    RideRequestUtils.restartLocationService(context);
                     performDependentAction(dependentActions, intentMessage);
                     break;
                 case "NAVIGATE":
@@ -603,8 +536,8 @@ public class OverlayMessagingService extends Service {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(getApplicationContext());
-                                    Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
+                                    MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context.getApplicationContext());
+                                    Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
                                     MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(endPoint, baseHeaders, reqBody, method);
                                     Handler handler = new Handler(Looper.getMainLooper());
                                     handler.post(new Runnable() {
@@ -613,14 +546,14 @@ public class OverlayMessagingService extends Service {
                                             if (apiResponse.getStatusCode() == 200)
                                             {
                                                 if (toastMessage != null)
-                                                    Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show();
                                                 performDependentAction(dependentActions, intentMessage);
                                             }
                                             else
                                             {
-                                                RideRequestUtils.firebaseLogEventWithParams("failure_call_api", "CALL_API", String.valueOf(apiResponse), getApplicationContext());
+                                                RideRequestUtils.firebaseLogEventWithParams("failure_call_api", "CALL_API", String.valueOf(apiResponse), context.getApplicationContext());
                                                 toastMessage = "Something went Wrong.";
-                                                Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
+                                                Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show();
                                             }
                                         }
 
@@ -631,21 +564,21 @@ public class OverlayMessagingService extends Service {
                             }).start();
                         }
                     } catch (Exception e){
-                        RideRequestUtils.firebaseLogEventWithParams("exception_call_api", "CALL_API", String.valueOf(e), this);
+                        RideRequestUtils.firebaseLogEventWithParams("exception_call_api", "CALL_API", String.valueOf(e), context);
                     }
                     break;
                 case "OPEN_APP":
-                    RideRequestUtils.openApplication(this);
+                    RideRequestUtils.openApplication(context);
                     performDependentAction(dependentActions, intentMessage);
                     break;
                 case "OPEN_SUBSCRIPTION" :
-                    Intent intent = getApplicationContext().getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
+                    Intent intent = context.getApplicationContext().getPackageManager().getLaunchIntentForPackage(context.getApplicationContext().getPackageName());
                     intent.putExtra("notification_type", "PAYMENT_MODE_MANUAL");
                     intent.putExtra("entity_ids", "");
                     intent.putExtra("entity_type", "");
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    Utils.logEvent("ny_driver_overlay_join_now", getApplicationContext());
+                    context.startActivity(intent);
+                    Utils.logEvent("ny_driver_overlay_join_now", context.getApplicationContext());
                     performDependentAction(dependentActions, intentMessage);
                     break;
                 case "CALL_SUPPORT" :
@@ -654,7 +587,7 @@ public class OverlayMessagingService extends Service {
                         intent = new Intent(Intent.ACTION_DIAL);
                         intent.setData(Uri.parse("tel:" + contactSupportNumber));
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
+                        context.startActivity(intent);
                         performDependentAction(dependentActions, intentMessage);
                     } catch (Exception e){
                         System.out.println("Error : " + e);
@@ -671,11 +604,11 @@ public class OverlayMessagingService extends Service {
                     }
                     break;
             }
-            stopSelf();
+            serviceInterface.killService();
             }
         }
             catch (Exception e){
-                RideRequestUtils.firebaseLogEventWithParams("exception_perform_action", "PERFORM_ACTION", String.valueOf(e), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_perform_action", "PERFORM_ACTION", String.valueOf(e), context);
             }
     }
 
@@ -697,14 +630,7 @@ public class OverlayMessagingService extends Service {
         }
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (windowManager != null && messageView != null) {
-            windowManager.removeView(messageView);
-            messageView = null;
-        }
-    }
+
 
     void openLink (String link) {
         if (link != null) {
@@ -712,13 +638,13 @@ public class OverlayMessagingService extends Service {
             Intent intent = new Intent(Intent.ACTION_VIEW, uri);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try {
-                startActivity(intent);
+                context.startActivity(intent);
             } catch (ActivityNotFoundException e) {
-                String message = this.getResources().getString(Utils.getResIdentifier(getApplicationContext(), "no_enabled_browser", "string"));
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                RideRequestUtils.firebaseLogEventWithParams("exception_in_open_link_no_activity", "OPEN_LINK", "ActivityNotFoundException", this);
+                String message = context.getResources().getString(Utils.getResIdentifier(context.getApplicationContext(), "no_enabled_browser", "string"));
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_open_link_no_activity", "OPEN_LINK", "ActivityNotFoundException", context);
             } catch (Exception e) {
-                RideRequestUtils.firebaseLogEventWithParams("exception_in_open_link", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_open_link", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), context);
             }
         }
     }
