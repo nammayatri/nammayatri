@@ -158,7 +158,7 @@ getAppBasedConfig config app = case app of
   "Odisha Yatri" -> fromMaybe config.default config.odishaYatri
   "Yatri" -> fromMaybe config.default config.yatri
   "Yatri Sathi" -> fromMaybe config.default config.yatriSathi
-  "ONDC FleetX" -> fromMaybe config.default config.ondcFleetX
+  "FleetX" -> fromMaybe config.default config.fleetX
   _ -> config.default
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
@@ -406,7 +406,7 @@ defaultAppRemoteConfig defaultValue =
   , manaYatriPartner: Just defaultValue
   , yatriSathi: Just defaultValue
   , yatriSathiPartner: Just defaultValue
-  , ondcFleetX: Just defaultValue
+  , fleetX: Just defaultValue
   , default: defaultValue 
   }
 
@@ -462,16 +462,12 @@ appLanguageConfig :: String -> Array AppLanguage
 appLanguageConfig appName = do
   let config = fetchRemoteConfigString "enabled_app_languages"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultLanguageConfig
-      _ = spy "printing appLanguageConfig" value
-      _ = spy "printing appName" appName
   getAppBasedConfig value appName
 
 selectCityConfig :: String -> AppCities
 selectCityConfig appName = do
   let config = fetchRemoteConfigString "enabled_app_cities"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultAppCities
-      _ = spy "printing selectCityConfig" value
-      _ = spy "printing appName" appName
   getAppBasedConfig value appName
 
 defaultOfferBannerConfig :: Types.OfferBanner

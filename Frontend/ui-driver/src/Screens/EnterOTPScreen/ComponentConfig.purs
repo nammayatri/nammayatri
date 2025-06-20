@@ -37,7 +37,7 @@ primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString REGISTER) }
+      { textConfig{ text = (getString CONTINUE) }
       , id = "PrimaryButtonOtpNumber"
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.6

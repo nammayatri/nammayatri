@@ -198,6 +198,7 @@ newtype Keymap
   , time_taken :: String
   , maps :: String
   , call :: String
+  , whatsapp :: String
   , start_ride :: String
   , cancel_ride :: String
   , please_tell_us_why_you_want_to_cancel :: String
@@ -351,6 +352,7 @@ newtype Keymap
   , more_than_one_face :: String
   , outside_marked_area :: String
   , front_str :: String
+  , back_str :: String
   , left_str :: String
   , right_str :: String
   , odometer_str :: String
@@ -365,6 +367,9 @@ newtype Keymap
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
+  , eligibility_criteria_for_rc :: String
+  , car_must_be_less_than_3_years_old :: String
+  , car_must_be_sedan_vehicle :: String
   , updated_at :: String
   , trip_count :: String
   , todays_earnings :: String
@@ -2395,6 +2400,9 @@ maps = a
 call :: Proxy "call"
 call = a
 
+whatsapp :: Proxy "whatsapp"
+whatsapp = a
+
 start_ride :: Proxy "start_ride"
 start_ride = a
 
@@ -2854,6 +2862,9 @@ outside_marked_area = a
 front_str :: Proxy "front_str"
 front_str = a
 
+back_str :: Proxy "back_str"
+back_str = a
+
 left_str :: Proxy "left_str"
 left_str = a
 
@@ -2895,6 +2906,15 @@ re_enter_vehicle_registration_number = a
 
 re_enter_driving_license_number :: Proxy "re_enter_driving_license_number"
 re_enter_driving_license_number = a
+
+eligibility_criteria_for_rc :: Proxy "eligibility_criteria_for_rc"
+eligibility_criteria_for_rc = a
+
+car_must_be_less_than_3_years_old :: Proxy "car_must_be_less_than_3_years_old"
+car_must_be_less_than_3_years_old = a
+
+car_must_be_sedan_vehicle :: Proxy "car_must_be_sedan_vehicle"
+car_must_be_sedan_vehicle = a
 
 updated_at :: Proxy "updated_at"
 updated_at = a

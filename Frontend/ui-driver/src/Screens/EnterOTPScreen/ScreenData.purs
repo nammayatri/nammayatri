@@ -26,7 +26,7 @@ initData =  {
     tokenId : "",
     attemptCount : 3,
     mobileNo : "",
-    timer: "10s",
+    timer: "15s",
     capturedOtp : "",
     focusedIndex : 1,
     editTextId : (EHC.getNewIDWithTag "EnterOTPNumberEditText"),

@@ -184,7 +184,7 @@ view push state =
                     , if isNothing state.props.selectedDocumentCategory then categoryListView push state else categorySpecificList push state -- cardsListView push state
                     ]
                 ]
-            -- , refreshView push state
+            , refreshView push state
             , linearLayout
                 [ height $ V 1
                 , width MATCH_PARENT
@@ -347,7 +347,7 @@ categoryListView push state =
                             ]
                         ]
                       , imageView
-                        [ imageWithFallback $ fetchImage COMMON_ASSET ( if referralCodeAlreadyApplied then "ny_ic_green_tick" else "ny_ic_chevron_right")
+                        [ imageWithFallback $ fetchImage COMMON_ASSET ( if referralCodeAlreadyApplied then "ny_ic_green_tick" else "ny_ic_chevron_right_black")
                         , width (V 20)
                         , height (V 20)
                         ]
@@ -442,9 +442,9 @@ categoryListItem push item state =
           _ -> not $ statusCompOrManual item.completionStatus -- (Todo: Shikhar change to this after testing)
       getStatusImg state item = 
         case item.category of
-          API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right"
-          API.TRAINING -> if checkIfTrainingsEnabled state && state.data.trainingsCompletionStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right"
-          _ -> getComponentStatusImg item.completionStatus -- if item.completionStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right"
+          API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right_black"
+          API.TRAINING -> if checkIfTrainingsEnabled state && state.data.trainingsCompletionStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right_black"
+          _ -> getComponentStatusImg item.completionStatus -- if item.completionStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right_black"
       getStrokeColor state item = 
         case item.category of
           API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then Color.green900 else Color.grey300
@@ -635,7 +635,7 @@ getComponentStatusImg status =
     ST.COMPLETED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
     ST.MANUAL_VERIFICATION_REQUIRED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
     ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
-    ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
+    ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right_black"
     ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
@@ -650,7 +650,7 @@ popupModal push state =
                 else if state.props.confirmChangeVehicle then ChangeVehicleAC
                 else if state.data.vehicleTypeMismatch then VehicleMismatchAC
                 else VehicleMismatchAC
-      popupConfig = if state.props.logoutModalView then logoutPopUp Language
+      popupConfig = if state.props.logoutModalView then logoutPopUp state
                     else if state.props.confirmChangeVehicle then changeVehicleConfig FunctionCall
                     else if state.data.vehicleTypeMismatch then vehicleMismatchConfig state
                     else vehicleMismatchConfig state

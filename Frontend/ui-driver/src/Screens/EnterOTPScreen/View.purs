@@ -47,7 +47,7 @@ screen initialState =
   , name : "EnterOTPScreen"
   , globalEvents : [ (\push -> do
                       _ <- pure $ HU.clearTimer ""
-                      _ <- HU.startTimer 10 true push TIMERACTION
+                      _ <- HU.startTimer 15 true push TIMERACTION
                       pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [] --[ HU.startOtpReciever AutoFill ]
   , eval
   }
@@ -160,7 +160,7 @@ primaryEditTextView state push =
         [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
         ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
         title: case (getLanguageLocale languageKey) of 
-                  "EN_US" -> (getString OTP_SENT_TO) <> state.data.mobileNo
+                  "EN_US" -> (getString OTP_SENT_TO) <> "+91 "<> state.data.mobileNo
                   _ -> state.data.mobileNo <> (getString ENTER_OTP_SENT_TO) ,
         type: "number",
         hint: (getString AUTO_READING_OTP),

@@ -32,7 +32,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage ( getValueToLocalStore , KeyStore(..))
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Prelude ((<), not, ($), (&&), (>=), (<>), (==))
+import Prelude ((<), not, ($), (&&), (>=), (<>), (==), (||))
 import Data.Array as DA
 import Data.String as DS
 import Mobility.Prelude
@@ -43,6 +43,7 @@ import Components.BottomDrawerList as BottomDrawerList
 import Services.API as API
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2 as LT2
+import Debug
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -181,8 +182,8 @@ vehicleMismatchConfig state = PopUpModal.config {
     }
   }
 
-logoutPopUp :: Common.LazyCheck -> PopUpModal.Config
-logoutPopUp  dummy = let 
+logoutPopUp :: ST.RegistrationScreenState -> PopUpModal.Config
+logoutPopUp  state = let 
   config' = PopUpModal.config
   popUpConfig' = config' {
     primaryText {text = (getString LOGOUT)},
@@ -193,26 +194,26 @@ logoutPopUp  dummy = let
     dismissPopup = true,
     option1 {
       text = (getString LOGOUT),
-      color = Color.black700,
+      color = Color.white900,
       textStyle = FontStyle.SubHeading1,
-      strokeColor = Color.white900,
+      strokeColor = state.data.config.primaryButtonBackground,
       width = MATCH_PARENT,
       height = WRAP_CONTENT,
-      background = Color.blue600,
+      background = state.data.config.primaryButtonBackground,
       margin = (MarginBottom 12),
       padding = (PaddingVertical 16 16),
       enableRipple = true
       },
     option2 {
       text = (getString CANCEL),
-      color = Color.black700,
+      color = Color.blue900,
       textStyle = FontStyle.SubHeading1,
       height = WRAP_CONTENT,
       strokeColor = Color.white900,
       width = MATCH_PARENT,
       padding = PaddingVertical 16 16,
       margin = (MarginBottom 0),
-      background = Color.blue600,
+      background = Color.white900,
       enableRipple = true
       },
     optionButtonOrientation = "VERTICAL"
@@ -342,7 +343,29 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_whatsapp_black", title : getString WHATSAPP, desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
   ]
 }
+
+getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
+getStatus step state = 
+  case step of
+    ST.GRANT_PERMISSION -> state.data.permissionsStatus
+    -- ST.SUBSCRIPTION_PLAN -> state.data.subscriptionStatus  //don't check from frontend
+    _ -> do
+          let documentStatusArr = state.data.documentStatusList
+              vehicleDoc = [ ST.VEHICLE_PERMIT, ST.FITNESS_CERTIFICATE, ST.VEHICLE_INSURANCE, ST.VEHICLE_PUC, ST.VEHICLE_DETAILS_OPTION]
+              findStatus = if DA.elem step vehicleDoc 
+                          then DA.find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
+                          else DA.find (\docStatus -> docStatus.docType == step) documentStatusArr
+          case step of 
+            ST.INSPECTION_HUB -> do
+               let inspectionHubCreated = (getValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS)
+               if (inspectionHubCreated == "COMPLETED") then ST.COMPLETED else if (inspectionHubCreated == "FAILED") then ST.FAILED else ST.NOT_STARTED
+            ST.VEHICLE_PHOTOS -> if state.props.vehicleImagesUploaded then ST.COMPLETED else ST.NOT_STARTED
+            _ -> do
+                  case findStatus of
+                    Nothing -> ST.NOT_STARTED
+                    Just docStatus -> docStatus.status
+  where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)

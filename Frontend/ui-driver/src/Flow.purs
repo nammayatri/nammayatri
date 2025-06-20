@@ -514,10 +514,10 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
               if permissionsGiven
                 then do
                   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                  onBoardingFlow -- handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide) // TODO :: Shikhar revert this after R1 changes
+                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
                 else do
                   modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                  onBoardingFlow -- permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)  // TODO :: Shikhar revert this after R1 changes
+                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide) 
             else do
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
@@ -1064,25 +1064,26 @@ onBoardingFlowV2 _ = do
       localStoreRC = getValueToLocalStore ENTERED_RC
       enteredRC = if localStoreRC == "__failed" then Nothing else Just localStoreRC
       rcNo = if manageVehicle then enteredRC else onboardingRC
-      filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList
-  if isJust rcNo && (getValueToLocalNativeStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS /= "COMPLETED") then do
+      filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList -- handled for the cases when more than one rc are there
+      -- filteredVehicleDocs = filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList
+  if isJust rcNo then do
     (API.OperationHubRequestsResp resp) <- Remote.getOperationHubRequestBT (fromMaybe "" rcNo) "2025-01-01T14:30Z"
     let requestsArr = resp.requests
         isAnyRequestPendingOrCompleted = filter(\(API.OperationHubRequests item) -> item.requestStatus == "APPROVED" || item.requestStatus == "PENDING") requestsArr
         isAnyRequestFailed = filter(\(API.OperationHubRequests item) -> item.requestStatus == "REJECTED") requestsArr
     void $ setValueToLocalNativeStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS (if DA.length isAnyRequestPendingOrCompleted > 0 then "COMPLETED" else if DA.length isAnyRequestFailed > 0 then "FAILED" else "NOT_STARTED")
     else pure unit
-  if driverEnabled then do -- Todo: Shikhar -> remove this part for R2 changes
-    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing, firstTimeOnboardingStatus = true } 
-    modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
-          title = Just $ getString REGISTRATION_COMPLETED, -- Todo: Shikhar change back to this after R2 changes go live  getString CONGRATULATIONS,
-          description = Just $ getString WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE, -- getString (YOU_ARE_ALL_SET_TO_TAKE_RIDES merchantName),
-          primaryButtonText = Just $ getString CONTINUE,
-          primaryButtonVisibility = false,
-          illustrationAsset = "ny_ic_go_live_soon"},
-          props{illustrationType = ST.Image}}
-    ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just cityConfig.enableAdvancedBooking) true
-  else pure unit
+  -- if driverEnabled then do -- Todo: Shikhar -> remove this part for R2 changes
+  --   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing, firstTimeOnboardingStatus = true } 
+  --   modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
+  --         title = Just $ getString REGISTRATION_COMPLETED, -- Todo: Shikhar change back to this after R2 changes go live  getString CONGRATULATIONS,
+  --         description = Just $ getString WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE, -- getString (YOU_ARE_ALL_SET_TO_TAKE_RIDES merchantName),
+  --         primaryButtonText = Just $ getString CONTINUE,
+  --         primaryButtonVisibility = false,
+  --         illustrationAsset = "ny_ic_go_live_soon"},
+  --         props{illustrationType = ST.Image}}
+  --   ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just cityConfig.enableAdvancedBooking) true
+  -- else pure unit
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue driverRegistrationResp.rcVerificationStatus,
@@ -1110,7 +1111,7 @@ onBoardingFlowV2 _ = do
                       referralCodeSubmitted = referralCodeAdded, 
                       driverEnabled = driverEnabled, 
                       manageVehicleCategory = if manageVehicle then uiCurrentCategory else Nothing,
-                      categoryToStepProgressMap = filterCategories registerationStepsCabs registerationScreen.props.categoryToStepProgressMap filteredVehicleDocs registerationScreen.props.vehicleImagesUploaded,
+                      categoryToStepProgressMap = filterCategories registerationStepsCabs registerationScreen.props.categoryToStepProgressMap filteredVehicleDocs vehiclePhotosStatus,
                       vehicleImagesUploaded = vehiclePhotosStatus
                       }})
   hideSplashAndCallFlow (pure unit)

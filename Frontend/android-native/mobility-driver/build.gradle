@@ -61,7 +61,7 @@ dependencies {
     compileOnly 'com.google.maps.android:android-maps-utils:2.4.0'
     compileOnly 'com.google.android.gms:play-services-maps:18.1.0'
     compileOnly 'com.google.android.gms:play-services-location:21.0.1'
-    implementation("co.hyperverge:hyperkyc:0.26.0") {
+    implementation("co.hyperverge:hyperkyc:0.44.0") {
         transitive = true
         exclude group: 'co.hyperverge', module: 'hyperdocdetect'
         exclude group: 'co.hyperverge', module: 'face-detection-preview-frame'

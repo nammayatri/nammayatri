@@ -38,7 +38,7 @@ primaryButtonViewConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) }
-      , id = "PrimaryButtonMobileNumber"
+      , id = "PrimaryButtonMobileNumber1"
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.6
       , height = (V 60)
@@ -107,7 +107,7 @@ mobileNumberConfig state = let
       , pattern = Just "[0-9]*,10"
       , margin = MarginHorizontal 10 0
       , text = ""
-      , placeholder = getString TEN_DIGIT_MOBILE_NUMBER
+      , placeholder = getString ENTER_MOBILE_NUMBER
       , padding = Padding 0 16 16 16
       , focused = state.props.mobileNumberEditFocused
       }
