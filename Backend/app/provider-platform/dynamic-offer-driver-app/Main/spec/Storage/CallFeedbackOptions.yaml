@@ -27,6 +27,11 @@ CallFeedbackOptions:
       where:
         and: [category, merchantOperatingCityId]
 
+    findByMessageKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [messageKey, merchantId, merchantOperatingCityId]
+
   sqlType:
     category: character varying (255)
     messageKey: character varying (255)
