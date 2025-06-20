@@ -1855,4 +1855,6 @@ getTe =
     , open_meter : "మీటర్ తెరవండి"
     , this_ride_includes_a_pet : "ఈ రైడ్‌లో ఒక పెంపుడు జంతువు కూడా ఉంది"
     , pet_rides : "పెట్ రైడ్స్"
+    , please_resume_ride_to_continue: "ప్రయాణం తిరిగి ప్రారంభించండి"
+    , you_are_too_far_from_the_stop: "మీరు స్టాప్ కి అతికించినారు. ముందుకు వెళ్ళండి"
     }
