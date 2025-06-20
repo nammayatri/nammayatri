@@ -503,6 +503,15 @@ if (window.eventQueue) {
     window.onMerchantEvent.apply(null, args)
   }
 }
+window.onSharedPreferenceChanged = function (key, value) {
+  if (key) {
+    if (value) {
+      if (key === "LANGUAGE_KEY") {
+        window.languageKey = value;
+      }
+    }
+  }
+}
 
 window.timeStamps["indexBundleEval"] = window.timeStamps["indexBundleEval"] || {}
 window.timeStamps["indexBundleEval"]["end"] = Date.now();

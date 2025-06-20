@@ -168,7 +168,7 @@ in  upstream
       , "web-events"
       ]
     , repo = "https://github.com/Vignesh-772/purescript-presto-dom.git"
-    , version = "nammayatri"
+    , version = "ny-driver-patch"
     }
   with halogen-vdom =
     { dependencies =
