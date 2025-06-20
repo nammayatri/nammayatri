@@ -259,7 +259,8 @@ data DriverRideRes = DriverRideRes
     parcelType :: Maybe DParcel.ParcelType,
     parcelQuantity :: Maybe Int,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    isPetRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -439,7 +440,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         parcelType = booking.parcelType,
         parcelQuantity = booking.parcelQuantity,
         isInsured = Just $ ride.isInsured,
-        insuredAmount = ride.insuredAmount
+        insuredAmount = ride.insuredAmount,
+        isPetRide = booking.isPetRide
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
