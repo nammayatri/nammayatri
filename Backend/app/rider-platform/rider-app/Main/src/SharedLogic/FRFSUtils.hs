@@ -401,8 +401,10 @@ data VehicleTracking = VehicleTracking
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpcomingStop = UpcomingStop
-  { -- stop :: RouteStopMapping.RouteStopMapping, TODO: akhilesh, add it if required after graphql thing
-    stopName :: Text,
+  { stopName :: Text,
+    stopCode :: Text,
+    stopSeq :: Int,
+    travelDistance :: Maybe Meters,
     estimatedTravelTime :: Maybe UTCTime,
     actualTravelTime :: Maybe UTCTime
   }
@@ -468,24 +470,30 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
             let busData = bus.busData
             let sortedEtaData = sortBy (comparing (.stopSeq)) (fromMaybe [] busData.eta_data)
             let mbNextStop = listToMaybe sortedEtaData
-            let upcomingStops =
-                  map
-                    ( \stop -> do
-                        UpcomingStop
-                          { stopName = stop.stopName,
-                            estimatedTravelTime = Just stop.arrivalTime,
-                            actualTravelTime = Nothing
-                          }
+            let (_, upcomingStops) =
+                  foldr'
+                    ( \stop (lastPoint, acc) -> do
+                        let us =
+                              UpcomingStop
+                                { stopCode = stop.stopCode,
+                                  stopSeq = stop.stopSeq,
+                                  stopName = stop.stopName,
+                                  estimatedTravelTime = Just stop.arrivalTime,
+                                  travelDistance = fmap highPrecMetersToMeters (\lastPoint' -> distanceBetweenInMeters lastPoint' (mkLatLong stop.stopLat stop.stopLon)) <$> lastPoint,
+                                  actualTravelTime = Nothing
+                                }
+                        (Just (mkLatLong stop.stopLat stop.stopLon), us : acc)
                     )
+                    (mbRiderPosition, [])
                     sortedEtaData
             logDebug $ "Got bus data for route " <> routeCode <> ": next stop" <> show mbNextStop
             mbNextStopMapping <-
               case mbNextStop of
                 Just nextStop -> do
-                  logDebug $ "Got bus data for route " <> routeCode <> ": next stop mapping" <> show nextStop <> " data: " <> show routeCode <> " " <> nextStop.stopId <> " " <> integratedBPPConfig.id.getId
+                  logDebug $ "Got bus data for route " <> routeCode <> ": next stop mapping" <> show nextStop <> " data: " <> show routeCode <> " " <> nextStop.stopCode <> " " <> integratedBPPConfig.id.getId
                   nextStop' <-
-                    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode nextStop.stopId routeCode integratedBPPConfig) >>= \case
-                      Left _ -> QRSM.findByRouteCodeAndStopCode nextStop.stopId routeCode integratedBPPConfig.id
+                    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode nextStop.stopCode routeCode integratedBPPConfig) >>= \case
+                      Left _ -> QRSM.findByRouteCodeAndStopCode nextStop.stopCode routeCode integratedBPPConfig.id
                       Right stops -> pure stops
                   return $ listToMaybe nextStop'
                 Nothing -> pure Nothing

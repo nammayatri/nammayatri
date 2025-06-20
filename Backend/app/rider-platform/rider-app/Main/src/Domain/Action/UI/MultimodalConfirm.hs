@@ -551,8 +551,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
               status = legData.status,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
-              mode = legData.mode,
-              boardedVehicles = legData.boardedVehicles
+              mode = legData.mode
             }
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess

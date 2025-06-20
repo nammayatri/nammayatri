@@ -208,12 +208,11 @@ instance JT.JourneyLeg TaxiLegRequest m where
             JT.JourneyLegStateData
               { status = journeyLegStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = latLong, vehicleId = "taxi", nextStop = Nothing}]) vehiclePosition,
+                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = latLong, vehicleId = "taxi", upcomingStops = []}]) vehiclePosition,
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
-                mode = DTrip.Taxi,
-                boardedVehicles = Nothing
+                mode = DTrip.Taxi
               }
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
@@ -229,8 +228,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
-                mode = DTrip.Taxi,
-                boardedVehicles = Nothing
+                mode = DTrip.Taxi
               }
   getState _ = throwError (InternalError "Not Supported")
 

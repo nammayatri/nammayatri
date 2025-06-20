@@ -25,10 +25,12 @@ utcToIST = addUTCTime 19800
 
 -- Type for bus stop ETA information
 data BusStopETA = BusStopETA
-  { stopId :: Text,
+  { stopCode :: Text,
     stopSeq :: Int,
     stopName :: Text,
-    arrivalTime :: UTCTime
+    arrivalTime :: UTCTime,
+    stopLat :: Double,
+    stopLon :: Double
   }
   deriving (Generic, Show, Eq)
 
@@ -39,19 +41,23 @@ withCrossAppRedisNew f = do
 
 instance FromJSON BusStopETA where
   parseJSON = withObject "BusStopETA" $ \v -> do
-    stopId <- v .: "stop_id"
+    stopCode <- v .: "stop_id"
     stopSeq <- v .: "stop_seq"
     stopName <- v .: "stop_name"
     arrivalTimestamp <- v .: "arrival_time" :: Parser Integer
+    stopLat <- v .: "stop_lat"
+    stopLon <- v .: "stop_lon"
     let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimestamp
     return $ BusStopETA {..}
 
 instance ToJSON BusStopETA where
   toJSON BusStopETA {..} =
     object
-      [ "stop_id" .= stopId,
+      [ "stop_id" .= stopCode,
         "stop_seq" .= stopSeq,
         "stop_name" .= stopName,
+        "stop_lat" .= stopLat,
+        "stop_lon" .= stopLon,
         "arrival_time" .= floor @Double @Integer (realToFrac $ utcTimeToPOSIXSeconds arrivalTime)
       ]
 
