@@ -30,6 +30,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -138,6 +139,9 @@ postFleetManagementFleetUnlink ::
 postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId = do
   operator <- checkOperator requestorId
 
+  fleetOperatorAssocList <- QFOA.findAllByFleetIdAndOperatorId (Id fleetOwnerId :: Id DP.Person) operator.id
+  when (null fleetOperatorAssocList) $ throwError (InvalidRequest $ "Fleet id " <> fleetOwnerId <> " is not associated with operator")
+
   fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
   unless (fleetOwner.role == DP.FLEET_OWNER) $
     throwError (InvalidRequest "Invalid fleet owner")
@@ -169,6 +173,9 @@ postFleetManagementFleetLinkSendOtp ::
   Common.FleetOwnerSendOtpReq ->
   Environment.Flow Common.FleetOwnerSendOtpRes
 postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
+  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeFleetLinkHitsCountKey phoneNumber) sendOtpRateLimitOptions
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -203,7 +210,6 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
 
   smsCfg <- asks (.smsCfg)
   let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
-      phoneNumber = req.mobileCountryCode <> req.mobileNumber
       key = makeFleetLinkOtpKey phoneNumber
   otpCode <- maybe generateOTPCode return mbUseFakeOtp
   whenNothing_ mbUseFakeOtp $ do
@@ -270,3 +276,6 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
 
 makeFleetLinkOtpKey :: Text -> Text
 makeFleetLinkOtpKey phoneNo = "Fleet:Link:PhoneNo:" <> phoneNo
+
+makeFleetLinkHitsCountKey :: Text -> Text
+makeFleetLinkHitsCountKey phoneNo = "Fleet:Link:PhoneNoHits:" <> phoneNo <> ":hitsCount"
