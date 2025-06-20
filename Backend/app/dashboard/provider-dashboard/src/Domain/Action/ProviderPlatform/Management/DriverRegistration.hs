@@ -30,6 +30,7 @@ where
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -53,6 +54,27 @@ buildTransaction ::
 buildTransaction apiTokenInfo driverId =
   T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
 
+-----------------------------------------------------------------------------------------------------------------------
+----------------------------------------------- Helper Functions --------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
+
+determineRequestorId :: ApiTokenInfo -> Id Common.Driver -> Maybe Text
+determineRequestorId apiTokenInfo driverId =
+  case apiTokenInfo.merchant.hasFleetMemberHierarchy of
+    Just False ->
+      if shouldExcludeRequestorId apiTokenInfo driverId
+        then Nothing
+        else Just apiTokenInfo.personId.getId
+    _ -> Nothing
+
+shouldExcludeRequestorId :: ApiTokenInfo -> Id Common.Driver -> Bool
+shouldExcludeRequestorId apiTokenInfo driverId =
+  DP.isAdmin apiTokenInfo.person || apiTokenInfo.personId.getId == driverId.getId
+
+-----------------------------------------------------------------------------------------------------------------------
+----------------------------------------------- Endpoints ------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
+
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId opCity apiTokenInfo driverId mbRcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -67,9 +89,7 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> City.City -> ApiT
 postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
-  let mbRequestorId = case apiTokenInfo.merchant.hasFleetMemberHierarchy of
-        Just False -> Just apiTokenInfo.personId.getId
-        _ -> Nothing
+  let mbRequestorId = determineRequestorId apiTokenInfo driverId
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId req {Common.requestorId = mbRequestorId}
 

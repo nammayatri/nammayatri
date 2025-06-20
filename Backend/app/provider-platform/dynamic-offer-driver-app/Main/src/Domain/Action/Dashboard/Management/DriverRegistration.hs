@@ -43,7 +43,6 @@ import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
 import qualified Domain.Types.VehicleNOC as DNOC
@@ -51,7 +50,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (foldl', map, whenJust)
+import EulerHS.Prelude hiding (find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -238,12 +237,11 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   whenJust req.requestorId $ \requestorId -> do
-    requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-    validAssociation <- case requestedPerson.role of
-      DP.FLEET_OWNER -> DDriver.checkFleetDriverAssociation requestedPerson.id (cast driverId_)
-      DP.OPERATOR -> DDriver.checkDriverOperatorAssociation (cast driverId_) requestedPerson.id
-      _ -> throwError (InvalidRequest "Entity is not a fleet owner or operator")
-    unless validAssociation $ throwError (InvalidRequest "Driver is not associated with the entity")
+    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
+    entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
+    requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+    isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
   res <-
     validateImage
       True

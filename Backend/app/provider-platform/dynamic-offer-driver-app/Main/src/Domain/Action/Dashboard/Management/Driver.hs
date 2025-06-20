@@ -57,6 +57,7 @@ module Domain.Action.Dashboard.Management.Driver
     checkFleetOperatorAssociation,
     checkFleetDriverAssociation,
     getDriverEarnings,
+    isAssociationBetweenTwoPerson,
   )
 where
 
@@ -1217,20 +1218,21 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
                   }
         _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
 
-    isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
-    isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
-      case (requestedPersonDetails.role, personDetails.role) of
-        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation personDetails.id requestedPersonDetails.id
-        (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
-        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
-        _ -> return False
-
     calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
     calculateEarningsPerKm distance earnings =
       let distanceInKm = distance `div` 1000
        in if distanceInKm.getMeters == 0
             then HighPrecMoney 0.0
             else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
+
+isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
+  case (requestedPersonDetails.role, personDetails.role) of
+    (DP.OPERATOR, DP.DRIVER) -> checkFleetDriverAndDriverOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.ADMIN, _) -> return True
+    _ -> return False
 
 checkFleetDriverAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
 checkFleetDriverAssociation fleetId driverId = do
@@ -1246,6 +1248,16 @@ checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
 checkDriverOperatorAssociation driverId operatorId = do
   mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
   return $ isJust mbAssoc
+
+checkFleetDriverAndDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAndDriverOperatorAssociation driverId operatorId = do
+  isDriverOperatorAssociated <- checkDriverOperatorAssociation driverId operatorId
+  if isDriverOperatorAssociated
+    then return True
+    else do
+      QFleetDriver.findByDriverId driverId True >>= \case
+        Just fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
+        Nothing -> return False
 
 getDriverEarnings :: ShortId DM.Merchant -> Context.City -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Text -> Flow Common.EarningPeriodStatsRes
 getDriverEarnings merchantShortId opCity from to earningType dId requestorId = do
