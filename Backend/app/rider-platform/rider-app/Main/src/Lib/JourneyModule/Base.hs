@@ -206,7 +206,7 @@ getAllLegsInfo journeyId skipAddLegFallback = do
     mapMaybeM
       ( \leg -> do
           case leg.legSearchId of
-            Just legSearchIdText -> Just <$> getLegInfo leg legSearchIdText
+            Just legSearchIdText -> getLegInfo leg legSearchIdText
             Nothing -> do
               logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
               if skipAddLegFallback
@@ -215,7 +215,7 @@ getAllLegsInfo journeyId skipAddLegFallback = do
                   addAllLegs journeyId [leg]
                   updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
                   legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
-                  Just <$> getLegInfo updatedLeg legSearchIdText'
+                  getLegInfo updatedLeg legSearchIdText'
       )
       allLegsRawData
   where
@@ -223,11 +223,11 @@ getAllLegsInfo journeyId skipAddLegFallback = do
       JL.GetStateFlow m r c =>
       DJourneyLeg.JourneyLeg ->
       Text ->
-      m JL.LegInfo
+      m (Maybe JL.LegInfo)
     getLegInfo leg legSearchIdText = do
       let legSearchId = Id legSearchIdText
       case leg.mode of
-        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = leg}
+        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
         DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg}
         DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
         DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}

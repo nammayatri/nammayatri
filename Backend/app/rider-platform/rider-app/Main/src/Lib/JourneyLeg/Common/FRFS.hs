@@ -477,10 +477,10 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
     selectMaxFare [] = Nothing
     selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
 
-getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m JT.LegInfo
+getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m (Maybe JT.LegInfo)
 getInfo searchId fallbackFare distance duration entrance exit = do
   mbBooking <- QTBooking.findBySearchId searchId
-  case mbBooking of
+  Just <$> case mbBooking of
     Just booking -> do
       JT.mkLegInfoFromFrfsBooking booking distance duration entrance exit
     Nothing -> do

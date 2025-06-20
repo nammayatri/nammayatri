@@ -172,7 +172,7 @@ type UpdateJourneyLeg leg m = leg -> m ()
 
 type GetJourneyLegState leg m = leg -> m JourneyLegState
 
-type GetJourneyLeg leg m = leg -> m LegInfo
+type GetJourneyLeg leg m = leg -> m (Maybe LegInfo)
 
 class JourneyLeg leg m where
   search :: SearchRequestFlow m r c => SearchJourneyLeg leg m
