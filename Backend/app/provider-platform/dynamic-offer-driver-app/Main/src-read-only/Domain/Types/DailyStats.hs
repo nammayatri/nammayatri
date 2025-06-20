@@ -35,7 +35,6 @@ data DailyStats = DailyStats
     payoutStatus :: Domain.Types.DailyStats.PayoutStatus,
     referralCounts :: Kernel.Prelude.Int,
     referralEarnings :: Kernel.Types.Common.HighPrecMoney,
-    statusUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tipAmount :: Kernel.Types.Common.HighPrecMoney,
     tollCharges :: Kernel.Types.Common.HighPrecMoney,
     totalDistance :: Kernel.Types.Common.Meters,

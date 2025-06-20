@@ -115,6 +115,7 @@ DriverInformation:
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
+    onlineDurationRefreshedAt: Maybe UTCTime
 
   default:
     active: "false"

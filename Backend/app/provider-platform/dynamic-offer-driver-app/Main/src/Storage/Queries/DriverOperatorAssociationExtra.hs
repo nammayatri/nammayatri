@@ -144,7 +144,7 @@ findByDriverIdAndOperatorId driverId operatorId isActive = do
       (Just 1)
       Nothing
 
-findAllActiveByOperatorId::
+findAllActiveByOperatorId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->
   m [Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation]

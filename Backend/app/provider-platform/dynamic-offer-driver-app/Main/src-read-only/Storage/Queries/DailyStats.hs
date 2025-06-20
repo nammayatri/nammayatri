@@ -142,7 +142,6 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus),
       Se.Set Beam.referralCounts (Kernel.Prelude.Just referralCounts),
       Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
-      Se.Set Beam.statusUpdatedAt statusUpdatedAt,
       Se.Set Beam.tipAmount (Kernel.Prelude.Just tipAmount),
       Se.Set Beam.tollCharges (Kernel.Prelude.Just tollCharges),
       Se.Set Beam.totalDistance totalDistance,

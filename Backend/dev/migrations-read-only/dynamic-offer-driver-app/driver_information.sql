@@ -208,3 +208,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN referred_by_fle
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN drunk_and_drive_violation_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone ;

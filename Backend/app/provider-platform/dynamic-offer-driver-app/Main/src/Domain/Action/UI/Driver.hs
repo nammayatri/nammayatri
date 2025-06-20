@@ -782,18 +782,19 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-    processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driverInfo.mode mode
+    processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driverInfo mode
   pure APISuccess.Success
 
 processingChangeOnline ::
   (CacheFlow m r, EsqDBFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   UTCTime ->
-  Maybe DriverInfo.DriverMode ->
+  Maybe DriverInfo.DriverInformation ->
   Maybe DriverInfo.DriverMode ->
   m ()
-processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime previousMode mode = do
-  let merchantLocalDate = utctDay localTime
+processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driverInfo mode = do
+  let previousMode = driverInfo.mode 
+      merchantLocalDate = utctDay localTime
   mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
   when (previousMode == Just DriverInfo.ONLINE) $ do
     let lastOnlineTo = Just localTime

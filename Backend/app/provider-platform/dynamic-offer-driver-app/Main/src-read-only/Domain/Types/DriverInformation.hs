@@ -66,6 +66,7 @@ data DriverInformation = DriverInformation
     onRide :: Kernel.Prelude.Bool,
     onRideTripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    onlineDurationRefreshedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentPending :: Kernel.Prelude.Bool,
     payoutRegAmountRefunded :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
