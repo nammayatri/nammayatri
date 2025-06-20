@@ -724,6 +724,8 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } })
               hideSplashAndCallFlow helpAndSupportFlow
 
+            "clearDues" -> hideSplashAndCallFlow $ clearPendingDuesFlow true
+
             "rideDetails" -> do
               (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "COMPLETED" "null"
               let _ = spy "rideHistoryResponse" rideHistoryResponse
