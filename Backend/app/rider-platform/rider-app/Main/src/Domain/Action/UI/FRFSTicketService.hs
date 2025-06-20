@@ -23,6 +23,7 @@ import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFeedback
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
@@ -77,6 +78,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
@@ -833,7 +835,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                   mRiderNumber <- mapM decrypt person.mobileNumber
                   void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
                   whenJust booking.journeyId $ \journeyId -> do
-                    void $ QJourney.updatePaymentOrderShortId (Just (ShortId paymentOrder.id.getId)) journeyId
+                    void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) journeyId
                   void $ CallExternalBPP.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
@@ -1248,4 +1250,40 @@ postFrfsTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicleCateg
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
   let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData platformType
+  return APISuccess.Success
+
+postFrfsBookingFeedbackData ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
+    API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postFrfsBookingFeedbackData (_mbPersonId, merchantId) bookingId req = do
+  -- Validate merchant exists
+  void $ CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+
+  case req of
+    API.Types.UI.FRFSTicketService.BookingFareAccepted API.Types.UI.FRFSTicketService.BookingFareAcceptedReq {..} -> do
+      -- Try to find existing feedback first, then update or create accordingly
+      existingFeedback <- QFRFSTicketBookingFeedback.findByBookingId bookingId
+      case existingFeedback of
+        Just _ -> void $ QFRFSTicketBookingFeedback.updateByBookingId isFareAccepted bookingId
+        Nothing -> do
+          feedbackId <- generateGUID
+          now <- getCurrentTime
+          let feedback =
+                DFRFSTicketBookingFeedback.FRFSTicketBookingFeedback
+                  { id = feedbackId,
+                    bookingId = bookingId,
+                    isFareAccepted = isFareAccepted,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          void $ QFRFSTicketBookingFeedback.create feedback
+
   return APISuccess.Success

@@ -1098,7 +1098,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled) $ do
       -- deprecated logic, moved to driver service tier options
       checkIfCanDowngrade vehicle
       let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
@@ -1803,14 +1803,14 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
     let otpHash = smsCfg.credConfig.otpHash
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
     withLogTag ("personId_" <> getId person.id) $ do
-      (mbSender, message) <-
+      (mbSender, message, templateId) <-
         MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
             }
       let sender = fromMaybe smsCfg.sender mbSender
-      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message altPhoneNumber sender)
+      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message altPhoneNumber sender templateId)
         >>= Sms.checkSmsResult
   let verified = False
   cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt verified
@@ -1891,14 +1891,14 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
   let otpHash = smsCfg.credConfig.otpHash
       altphoneNumber = counCode <> altNumber
   withLogTag ("personId_" <> getId personId) $ do
-    (mbSender, message) <-
+    (mbSender, message, templateId) <-
       MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
     let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message altphoneNumber sender)
+    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message altphoneNumber sender templateId)
       >>= Sms.checkSmsResult
   updAttempts <- Redis.decrby (makeAlternateNumberAttemptsKey personId) 1
   let updAttempt = fromIntegral updAttempts

@@ -725,6 +725,7 @@ library
       Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingFeedback
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
@@ -786,7 +787,6 @@ library
       Domain.Types.RouteDetails
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
-      Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
       Domain.Types.RouteStopTimeTable
       Domain.Types.RouteTripMapping
@@ -803,6 +803,7 @@ library
       Domain.Types.SpecialZoneQuote
       Domain.Types.Station
       Domain.Types.StationsExtraInformation
+      Domain.Types.StopFare
       Domain.Types.StopInformation
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
@@ -861,6 +862,7 @@ library
       Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingFeedback
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
@@ -921,7 +923,6 @@ library
       Storage.Beam.RouteDetails
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
-      Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
       Storage.Beam.RouteStopTimeTable
       Storage.Beam.RouteTripMapping
@@ -938,6 +939,7 @@ library
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.Station
       Storage.Beam.StationsExtraInformation
+      Storage.Beam.StopFare
       Storage.Beam.StopInformation
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
@@ -999,6 +1001,7 @@ library
       Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingFeedback
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier
@@ -1114,7 +1117,6 @@ library
       Storage.Queries.RouteDetails
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
-      Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
       Storage.Queries.RouteStopTimeTable
       Storage.Queries.RouteTripMapping
@@ -1131,6 +1133,7 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Station
       Storage.Queries.StationsExtraInformation
+      Storage.Queries.StopFare
       Storage.Queries.StopInformation
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory

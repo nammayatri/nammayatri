@@ -913,6 +913,10 @@ FRFSRouteFareProduct:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
+    findAllByIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
 
 FRFSFarePolicy:
   tableName: frfs_fare_policy
@@ -935,40 +939,50 @@ FRFSFarePolicy:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+         in: [id]
 
-RouteStopFare:
+StopFare:
   tableName: route_stop_fare
   fields:
     farePolicyId: Id FRFSFarePolicy
-    routeCode: Text
     startStopCode: Text
     endStopCode: Text
     amount: HighPrecMoney
     currency: Currency
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    integratedBppConfigId: Id IntegratedBPPConfig
+  beamType:
+    routeCode: Maybe Text
   default:
     timeBounds: "'Unbounded'"
     currency: "'INR'"
   constraints:
     farePolicyId: PrimaryKey
-    routeCode: PrimaryKey
     startStopCode: PrimaryKey
     endStopCode: PrimaryKey
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
       where:
-        and: [farePolicyId, routeCode]
+        and: [farePolicyId]
     findByRouteStartAndStopCode:
       kvFunction: findOneWithKV
       where:
-        and: [farePolicyId, routeCode, startStopCode, endStopCode]
-    updateFareByRouteCodeAndStopCodes:
+        and: [farePolicyId, startStopCode, endStopCode]
+    findAllByStartStopAndIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [startStopCode, endStopCode, integratedBppConfigId]
+    updateFareByStopCodes:
       kvFunction: updateOneWithKV
       params: [amount]
       where:
-        and: [farePolicyId, routeCode, startStopCode, endStopCode]
+        and: [farePolicyId, startStopCode, endStopCode]
+
 
 FRFSStageFare:
   tableName: frfs_stage_fare
@@ -1099,6 +1113,10 @@ FRFSVehicleServiceTier:
       kvFunction: findAllWithKV
       where:
         and: [providerCode, merchantOperatingCityId]
+    findByServiceTierAndMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [_type,merchantOperatingCityId]
 
 RouteTripMapping:
   tableName: route_trip_mapping
@@ -1183,3 +1201,30 @@ RouteStopCalender:
         and:
           - in: [tripId]
           - integratedBppConfigId
+
+FRFSTicketBookingFeedback:
+  tableName: frfs_ticket_booking_feedback
+  fields:
+    id: Id FRFSTicketBookingFeedback
+    bookingId: Id FRFSTicketBooking
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    isFareAccepted: Bool
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bookingId]
+    findByMerchantIdAndOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId]
+    updateByBookingId:
+      kvFunction: updateOneWithKV
+      params: [isFareAccepted, updatedAt]
+      where:
+        and: [bookingId]

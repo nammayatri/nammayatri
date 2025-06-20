@@ -480,8 +480,8 @@ apis:
       auth: ApiAuthV2
       query:
         - isActive: Bool
-        - limit: Int
-        - offset: Int
+        - Limit: Int
+        - Offset: Int
         - countryCode: Text
         - phoneNo: Text
         - includeStats: Bool

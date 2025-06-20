@@ -4,6 +4,7 @@
 
 module Storage.Queries.FRFSVehicleServiceTier where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -34,6 +35,17 @@ findByProviderCode providerCode merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.providerCode $ Se.Eq providerCode,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
+
+findByServiceTierAndMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+findByServiceTierAndMerchantOperatingCityId _type merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam._type $ Se.Eq _type,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]

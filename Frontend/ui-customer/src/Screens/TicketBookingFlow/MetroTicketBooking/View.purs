@@ -50,7 +50,7 @@ import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
 import Data.String as DS
-import Data.Function.Uncurried (runFn1, runFn3)
+import Data.Function.Uncurried (runFn1, runFn2, runFn3)
 import Data.Maybe(Maybe(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -65,7 +65,7 @@ import Constants
 import MerchantConfig.Types (MetroConfig)
 import Helpers.API (callApi)
 import Data.Array as DA
-import LocalStorage.Cache (getFromCache)
+import LocalStorage.Cache (getFromCache, setInCache)
 import Common.Animation.Config
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
@@ -86,6 +86,8 @@ screen initialState =
   where
     getQuotes push = do
       let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+          pollingId = EHC.getCurrentUTC ""
+          _ = runFn2 setInCache "POLLING_ID" pollingId
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         (FRFSConfigAPIRes fcResponse) <- Remote.getFRFSBookingConfigBT (show city)
         liftFlowBT $ push $ MetroBookingConfigAction (FRFSConfigAPIRes fcResponse)
@@ -97,13 +99,14 @@ screen initialState =
         liftFlowBT $ push $ ShowMetroBookingTimeError withinTimeRange
         pure unit
 
-      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 pollingId initialState push GetMetroQuotesAction
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getSDKPolling initialState.data.bookingId 3000.0 initialState push GetSDKPollingAC
       pure $ pure unit
 
-getQuotesPolling :: forall action. String-> Int -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (Array FrfsQuote -> action) -> Flow GlobalState Unit
-getQuotesPolling searchId count delayDuration state push action = do
-  if state.props.currentStage == GetMetroQuote && searchId /= "" then do
+getQuotesPolling :: forall action. String-> Int -> Number -> String -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (Array FrfsQuote -> action) -> Flow GlobalState Unit
+getQuotesPolling searchId count delayDuration pollingId state push action = do
+  let quotesPollingId = runFn3 getFromCache "POLLING_ID" Nothing Just
+  if quotesPollingId == Just pollingId && state.props.currentStage == GetMetroQuote && searchId /= "" then do
     if count > 0 then do
       (getMetroQuotesResp) <- Remote.frfsQuotes searchId
       case getMetroQuotesResp of
@@ -115,7 +118,7 @@ getQuotesPolling searchId count delayDuration state push action = do
                 doAff do liftEffect $ push $ action resp
               else do
                 void $ delay $ Milliseconds delayDuration
-                getQuotesPolling searchId (count - 1) delayDuration state push action
+                getQuotesPolling searchId (count - 1) delayDuration pollingId state push action
           Left _ -> pure unit
       else 
         pure unit

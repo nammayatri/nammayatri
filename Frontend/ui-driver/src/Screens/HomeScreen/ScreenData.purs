@@ -268,6 +268,8 @@ initData =
       , accountBlockedPopup: false
       , accountBlockedPopupDueToCancellations: false
       , showCoinsPopup: false
+      , showPetRidesPopup: false
+      , showOptOutPetRidesPopup: false
       , isStatsModelExpanded: false
       , tobeLogged: false
       , safetyAudioAutoPlay: false
@@ -429,6 +431,7 @@ dummyRideData = {
       , receiverPersonDetails : Nothing
       , notifiedReachedDestination : false
       , stops : []
+      , isPetRide : Nothing
       }
 
 initialParkingData :: ParkingData

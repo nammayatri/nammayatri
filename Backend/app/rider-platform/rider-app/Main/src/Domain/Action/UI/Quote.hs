@@ -257,7 +257,9 @@ data RouteDetail = RouteDetail
     color :: Maybe Text,
     colorCode :: Maybe Text,
     fromStationLatLong :: LatLong,
-    toStationLatLong :: LatLong
+    toStationLatLong :: LatLong,
+    fromStationPlatformCode :: Maybe Text,
+    toStationPlatformCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -470,7 +472,9 @@ getJourneys searchRequest hasMultimodalSearch = do
             LatLong
               { lat = routeDetail.endLocation.latLng.latitude,
                 lon = routeDetail.endLocation.latLng.longitude
-              }
+              },
+          fromStationPlatformCode = routeDetail.fromStopDetails >>= (.platformCode),
+          toStationPlatformCode = routeDetail.toStopDetails >>= (.platformCode)
         }
 
 -- Get the most frequent element in the list

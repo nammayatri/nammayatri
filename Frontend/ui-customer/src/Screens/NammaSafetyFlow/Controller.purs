@@ -15,29 +15,31 @@
 module Screens.NammaSafetyFlow.Controller where
 
 import Prelude (class Show, pure, ($), show, not, map, (<>), (==), (+), (>=), (&&), (||), (/=), (>), discard, void, unit)
-import PrestoDOM (Eval, update, defaultPerformLog, exit)
+import PrestoDOM (Eval, defaultPerformLog, exit, continue,continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM.Core (processEvent)
 import Screens.Types (NammaSafetyScreenState, SafetyStepsConfig(..), NewContacts(..), NammaSafetyStage(..))
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
-import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Components.LargeBannerCarousel as LargeBannerCarousel
 import RemoteConfig as RC
 import Data.String as DS
 import Effect.Unsafe (unsafePerformEffect)
 import Locale.Utils (getLanguageLocale)
-import Constants (languageKey)
-import SessionCache (getValueFromWindow)
+import Constants (languageKey, globalPayload)
 import Data.Array as Array
 import Data.Int as DI
 import Data.Maybe (Maybe(..), fromMaybe)
-import Common.Types.App (LazyCheck(..))
 import PrestoDOM.List (ListItem)
 import Services.API as API
-import Helpers.Utils (isParentView, emitTerminateApp)
+import Helpers.Utils (emitTerminateApp)
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Debug
 import Screens.DataExplainWithFetch.ComponentConfig (getBooleanFromOptions)
+import Engineering.Helpers.Commons (getGlobalPayload)
+import Data.Lens ((^.))
+import Mobility.Prelude as MP
+import Engineering.Helpers.Accessor
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -66,12 +68,24 @@ eval AfterRender state = continue state
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
 
-eval BackPressed state = 
-  if isParentView FunctionCall 
-    then do 
+eval BackPressed state = do
+  let mBPayload = getGlobalPayload globalPayload
+  case mBPayload of
+    Just globalPayload ->
+      case globalPayload ^. _payload ^. _view_param of
+        Just screen ->
+          if MP.startsWith "rideConfirmed" screen
+            then exit Exit
+            else do
+              void $ pure $ emitTerminateApp Nothing true
+              continue state
+        Nothing -> do
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+    Nothing -> do
       void $ pure $ emitTerminateApp Nothing true
       continue state
-    else exit Exit
+
 
 eval (SetBannerItem bannerItem) state = continue state { data { bannerData { bannerItem = Just bannerItem } } }
 

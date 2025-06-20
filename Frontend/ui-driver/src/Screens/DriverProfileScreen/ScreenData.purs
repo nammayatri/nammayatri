@@ -147,7 +147,8 @@ initData =
     canSwitchToInterCity : Nothing,
     canSwitchToIntraCity : Nothing,
     showDriverBlockedPopup : false,
-    skipGlobalEvents : false
+    skipGlobalEvents : false,
+    isPetModeEnabled : Nothing
    }
 , showDriverDetails : false
 }
@@ -281,6 +282,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , overchargingTag : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing
+    , isPetModeEnabled : Nothing
 }
 
 organizationInfo :: OrganizationInfo

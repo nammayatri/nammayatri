@@ -12,6 +12,7 @@ import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.StopEvents as StopEvents
+import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
 import Servant
 import Tools.Auth ()
@@ -26,6 +27,7 @@ type API =
            :<|> DriverArrivalNotf.API
            :<|> MeterRideInternal.API
            :<|> InsuranceInternal.API
+           :<|> ViolationDetection.API
        )
 
 handler :: FlowServer API
@@ -38,3 +40,4 @@ handler =
     :<|> DriverArrivalNotf.handler
     :<|> MeterRideInternal.handler
     :<|> InsuranceInternal.handler
+    :<|> ViolationDetection.handler

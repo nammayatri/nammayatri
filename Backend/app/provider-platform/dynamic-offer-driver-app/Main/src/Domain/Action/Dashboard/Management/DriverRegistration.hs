@@ -31,6 +31,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Tuple.Extra as TE
+import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
@@ -49,7 +50,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (foldl', map, whenJust)
+import EulerHS.Prelude hiding (find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -235,6 +236,12 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> I
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  whenJust req.requestorId $ \requestorId -> do
+    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
+    entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
+    requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+    isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
   res <-
     validateImage
       True
