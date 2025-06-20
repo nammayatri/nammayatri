@@ -59,7 +59,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
-import qualified Storage.CachedQueries.Merchant.MultiModalBus
+-- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -196,15 +196,16 @@ data NextStopDetails = NextStopDetails
   { stopCode :: Text,
     sequenceNumber :: Int,
     travelTime :: Maybe Seconds,
-    travelDistance :: Maybe Meters
+    travelDistance :: Maybe Meters,
+    stopName :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehiclePosition = VehiclePosition
-  { position :: LatLong,
-    vehicleId :: Text,
-    nextStop :: Maybe NextStopDetails
+  { position :: LatLong, -- Bus's current lat/long
+    vehicleId :: Text, -- Bus's ID/number
+    upcomingStops :: [NextStopDetails] -- List of upcoming stops for this vehicle
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -213,11 +214,11 @@ data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus,
     statusChanged :: Bool,
     userPosition :: Maybe LatLong,
-    vehiclePositions :: [VehiclePosition],
+    vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,
     legOrder :: Int,
-    mode :: DTrip.MultimodalTravelMode,
-    boardedVehicles :: Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusDataWithoutETA]
+    mode :: DTrip.MultimodalTravelMode
+    -- boardedVehicles field removed
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -783,7 +784,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
-                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for show cris ticket but still sending for future use
+                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for cris sdk initiation
                   selectedServiceTier = mbSelectedServiceTier
                 }
 

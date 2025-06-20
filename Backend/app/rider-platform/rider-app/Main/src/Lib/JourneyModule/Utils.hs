@@ -201,7 +201,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
   where
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
-          filteredBuses = filter (\(_, eta) -> eta.stopId == stopCode) busEtaData
+          filteredBuses = filter (\(_, eta) -> eta.stopCode == stopCode) busEtaData
       logDebug $ "filteredBuses: " <> show filteredBuses <> " busEtaData: " <> show busEtaData
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-
