@@ -22,6 +22,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
+
+import java.util.HashMap;
 import java.util.Locale;
 
 import android.graphics.Color;
@@ -43,6 +45,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -407,6 +410,7 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
                     Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model, true, RideRequestActivity.this, sheetArrayList.indexOf(model));
+                    ReactUtils.emitReactEvent(context,"onRideRequested", Arguments.makeNativeMap(new HashMap<>()));
                     if (isApiSuccess) {
                         mainLooper.post(executor::shutdown);
                         startLoader(model.getSearchRequestId());

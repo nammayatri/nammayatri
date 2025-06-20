@@ -97,6 +97,30 @@ genericHeaderConfig state =
       , margin = MarginBottom if enableYatriCoins then 0 else 24
       }
 
+defaultGenericHeaderConfig :: ST.DriverEarningsScreenState -> GenericHeaderConfig.Config
+defaultGenericHeaderConfig state =
+  GenericHeaderConfig.config
+    { height = WRAP_CONTENT
+    , padding = PaddingVertical 5 5
+    , textConfig
+      { text = getString EARNINGS
+      , color = Color.darkCharcoal
+      }
+    , prefixImageConfig
+      { height = V 25
+      , width = V 25
+      , imageUrl = "ny_ic_chevron_left_black"
+      , enableRipple = true
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      }
+    , suffixImageConfig
+      { visibility = GONE
+      }
+    , margin = MarginBottom 0
+    }
+
+
 earningsPopupConfig :: ST.DriverEarningsScreenState -> PopUpModalConfig.Config
 earningsPopupConfig state =
   let
