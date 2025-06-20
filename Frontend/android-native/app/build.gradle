@@ -199,7 +199,8 @@ android {
             dimension "app"
         }
         msilDriver {
-            applicationId "in.juspay.nammayatripartner"
+           applicationId "in.msil.fleetx"
+            // applicationId "in.juspay.nammayatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
@@ -395,8 +396,8 @@ dependencies {
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
-    compileOnly ("co.hyperverge:hyperkyc:0.26.0") {
+    // // debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+    compileOnly ("co.hyperverge:hyperkyc:0.44.0") {
         transitive = true
         exclude group: 'co.hyperverge', module: 'hyperdocdetect'
         exclude group: 'co.hyperverge', module: 'face-detection-preview-frame'

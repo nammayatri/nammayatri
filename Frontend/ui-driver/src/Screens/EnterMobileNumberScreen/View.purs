@@ -153,10 +153,10 @@ underlinedTextView _ _ =
     , height WRAP_CONTENT
     , textFromHtml $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR
     , color Color.black900
-    , alpha 0.5
+    , alpha 0.8
     , singleLine false
     , onClick (\_ -> JB.openUrlInApp $ config.termsLink) (const NonDisclosureAgreementAction)
-    ] <> FontStyle.body3 TypoGraphy
+    ] <> FontStyle.tags TypoGraphy
  ]
 
 enterMobileNumberView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w

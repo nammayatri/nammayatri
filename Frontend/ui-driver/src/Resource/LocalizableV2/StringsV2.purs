@@ -259,6 +259,7 @@ getProxy str = case str of
   TIME_TAKEN -> \a -> a @~ time_taken
   MAPS -> \a -> a @~ maps
   CALL -> \a -> a @~ call
+  WHATSAPP -> \a -> a @~ whatsapp
   START_RIDE -> \a -> a @~ start_ride
   CANCEL_RIDE -> \a -> a @~ cancel_ride
   PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL -> \a -> a @~ please_tell_us_why_you_want_to_cancel
@@ -412,6 +413,7 @@ getProxy str = case str of
   MORE_THAN_ONE_FACE -> \a -> a @~ more_than_one_face
   OUTSIDE_MARKED_AREA -> \a -> a @~ outside_marked_area
   FRONT_STR -> \a -> a @~ front_str
+  BACK_STR -> \a -> a @~ back_str
   LEFT_STR -> \a -> a @~ left_str
   RIGHT_STR -> \a -> a @~ right_str
   ODOMETER_STR -> \a -> a @~ odometer_str
@@ -426,6 +428,9 @@ getProxy str = case str of
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number
+  ELIGIBILITY_CRITERIA_FOR_RC -> \a -> a @~ eligibility_criteria_for_rc
+  CAR_MUST_BE_LESS_THAN_3_YEARS_OLD -> \a -> a @~ car_must_be_less_than_3_years_old
+  CAR_MUST_BE_SEDAN_VEHICLE -> \a -> a @~ car_must_be_sedan_vehicle
   UPDATED_AT -> \a -> a @~ updated_at
   TRIP_COUNT -> \a -> a @~ trip_count
   TODAYS_EARNINGS -> \a -> a @~ todays_earnings

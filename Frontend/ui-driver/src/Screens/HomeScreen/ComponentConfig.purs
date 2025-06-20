@@ -762,9 +762,9 @@ driverRCPopUpConfig state = let
       margin = (Margin 0 0 0 0)
     } ,
     option1 {
-      background = Color.black900,
+      background = state.data.config.primaryButtonBackground,
       text = getString GO_TO_VEHICLE_DETAILS,
-      color = Color.yellow900, 
+      color = state.data.config.primaryTextColor, 
       margin = MarginTop 24,
       width = MATCH_PARENT, 
       padding = Padding 16 6 16 6,

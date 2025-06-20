@@ -85,7 +85,7 @@ type AppConfigRC a =
   , manaYatriPartner :: Maybe a
   , yatriSathi :: Maybe a
   , yatriSathiPartner :: Maybe a
-  , ondcFleetX :: Maybe a
+  , fleetX :: Maybe a
   , default :: a
   }
 

@@ -797,8 +797,8 @@ public class MobilityAppBridge extends HyperBridge {
                 for (int i = 0; i < dotsCount; i++) {
                     dots[i] = new ImageView(context);
                     dots[i].setImageDrawable(ContextCompat.getDrawable(context, in.juspay.mobility.app.R.drawable.carousel_dot_inactive));
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(28, 28);
-                    params.setMargins(14, 0, 14, 0);
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(56, 28);
+                    params.setMargins(10, 0, 10, 0);
                     sliderDotsPanel.addView(dots[i], params);
                     dots[0].setImageDrawable(ContextCompat.getDrawable(context, in.juspay.mobility.app.R.drawable.carousel_dot_active));
                     int finalI = i;

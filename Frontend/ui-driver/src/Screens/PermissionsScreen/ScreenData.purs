@@ -58,4 +58,4 @@ permissionsList state =
       {permission: AutoStart , icon:""},
       {permission: Battery , icon:""}
     ] <> (if state.data.config.permissions.locationPermission then [{permission: LocationPermission , icon:""}] else [])
-      <> (if state.data.config.permissions.notification then [{permission: Notifications , icon:""}] else [])
+      -- <> (if state.data.config.permissions.notification then [{permission: Notifications , icon:""}] else [])

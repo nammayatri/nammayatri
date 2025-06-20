@@ -340,7 +340,7 @@ vehicleRegistrationNumber state push =
               , padding (Padding 0 17 0 17)
               , color Color.greyTextColor
               , text state.props.input_data
-              , hint (getString ENTER_VEHICLE_NO)
+              , hint (getString ENTER_RC_NUMBER)
               , weight 1.0
               , cornerRadius 4.0
               , pattern "[0-9a-zA-Z]*,10"
@@ -413,7 +413,7 @@ vehicleRegistrationNumber state push =
                     , padding (Padding 0 17 0 17)
                     , color Color.greyTextColor
                     , text state.props.input_data
-                    , hint  (getString ENTER_VEHICLE_NO)
+                    , hint  (getString ENTER_RC_NUMBER)
                     , weight 1.0
                     , cornerRadius 4.0
                     , pattern "[0-9a-zA-Z]*,10"
@@ -497,7 +497,7 @@ vehicleRegistrationNumber state push =
                     ]
                   , facilityListView state push
           ]
-        , if appName == "ONDC FleetX" then rcEligibilityCriteriaView state push else checkACView state push
+        , if appName == "FleetX" then rcEligibilityCriteriaView state push else checkACView state push
         ]
       ]
   ]
@@ -632,19 +632,19 @@ rcEligibilityCriteriaView state push =
     [ textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , text "Eligibility criteria for RC"
+      , text $ getStringV2 eligibility_criteria_for_rc
       , color Color.grey600
       ]
     , textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , text "-   Your car must be less than 3 years old"
+      , text $ "-   " <> getStringV2 car_must_be_less_than_3_years_old
       , margin $ Margin 16 8 0 0
       ]
     , textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , text "-   Your car must be a sedan vehicle"
+      , text $ "-   " <> getStringV2 car_must_be_sedan_vehicle
       , margin $ Margin 16 8 0 0
       ]
     ]
@@ -972,7 +972,7 @@ rightWrongView isRight =
   ][ imageView
     [ width $ V 120
     , height $ V if isRight then 80 else 100
-    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_rc_right" else "ny_ic_upload_rc_wrong"
     ]
   , linearLayout
     [ width MATCH_PARENT

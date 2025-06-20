@@ -58,12 +58,11 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
 import Data.String.Common as DSC
 import ConfigProvider
 import Components.OptionsMenu as OptionsMenu
 import Data.Array as DA
-import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Screens.RegistrationScreenV2.ComponentConfig (changeVehicleConfig)
 import Components.BottomDrawerList as BottomDrawerList
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
@@ -584,7 +583,7 @@ popupModal push state =
     where 
       action = if state.props.logoutPopupModal then PopUpModalLogoutAction 
                 else ChangeVehicleAC
-      popupConfig = if state.props.logoutPopupModal then (LP.logoutPopUp Language)
+      popupConfig = if state.props.logoutPopupModal then (logoutPopUp state)
                     else changeVehicleConfig FunctionCall
 
 validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
