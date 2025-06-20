@@ -33,6 +33,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as Qquote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.IntegratedBPPConfig as QIBC
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -58,7 +59,8 @@ validateRequest DOnSelect {..} = do
 onSelect :: FRFSConfirmFlow m r => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> m ()
 onSelect onSelectReq merchant quote = do
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
-  Qquote.updatePriceById quote.id onSelectReq.totalPrice
+  Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
+  QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)
   platformType <- case quote.integratedBppConfigId of
     Just integratedBppConfigId' -> do
       ibppConfig <- QIBC.findById integratedBppConfigId' >>= fromMaybeM (IntegratedBPPConfigNotFound integratedBppConfigId'.getId)

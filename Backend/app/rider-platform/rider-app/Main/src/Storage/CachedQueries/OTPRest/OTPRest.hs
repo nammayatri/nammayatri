@@ -31,6 +31,8 @@ import qualified Storage.Queries.StationsExtraInformation as QStationsExtraInfor
 import Tools.Error
 import Tools.MultiModal as MM
 
+-- Route Queries
+
 getRouteByRouteId ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->
@@ -83,6 +85,8 @@ getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   return (feedInfo, baseUrl)
 
+-- Route Stop Mapping Queries
+
 getRouteStopMappingByRouteCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
@@ -125,6 +129,8 @@ getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig
 
 fromMaybe' :: Int -> Maybe Int -> Integer
 fromMaybe' a b = fromMaybe (integerFromInt a) (integerFromInt <$> b)
+
+-- Station Queries
 
 getStationsByGtfsId ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -189,6 +195,13 @@ findAllMatchingStations mbSearchStr mbLimit mbOffset merchantOperatingCityId veh
         Left err -> do
           logError $ "Error getting stations by gtfs id fuzzy search: " <> show err
           QStation.findAllMatchingStations mbSearchStr (integerFromInt <$> mbLimit) (integerFromInt <$> mbOffset) merchantOperatingCityId vehicle integratedBPPConfig.id
+
+getChildrenStationsCodes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> Text -> m [Text]
+getChildrenStationsCodes integratedBPPConfig stopCode = do
+  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
+  Flow.getStopChildren baseUrl feedInfo.feedId.getId stopCode
+
+-- Parse Queries
 
 parseStationsFromInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
@@ -382,3 +395,13 @@ getRouteByRouteCodeWithFallback integratedBPPConfig routeCode = do
     Right route'' -> case route'' of
       Just route' -> pure route'
       Nothing -> B.runInReplica $ QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= maybe (QRoute.findByRouteId (Id routeCode)) (pure . Just) >>= fromMaybeM (RouteNotFound routeCode)
+
+-- Vehicle Related Queries
+getVehicleServiceType ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe VehicleServiceTypeResponse)
+getVehicleServiceType integratedBPPConfig vehicleNumber = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getVehicleServiceType baseUrl vehicleNumber

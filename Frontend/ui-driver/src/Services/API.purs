@@ -494,6 +494,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , overchargingTag :: Maybe OverchargingTag
     , ridesWithFareIssues :: Maybe Int
     , totalRidesConsideredForFareIssues :: Maybe Int
+    , isPetModeEnabled :: Maybe Boolean
     }
 
 data OverchargingTag =
@@ -724,7 +725,8 @@ newtype RidesInfo = RidesInfo
       returnTime :: Maybe String,
       senderDetails :: Maybe PersonDetails,
       receiverDetails :: Maybe PersonDetails,
-      stops :: Maybe (Array Stop)
+      stops :: Maybe (Array Stop),
+      isPetRide :: Maybe Boolean
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType
@@ -1010,6 +1012,7 @@ type UpdateDriverInfoReqEntity =
   , canSwitchToIntraCity :: Maybe Boolean
   , canSwitchToInterCity :: Maybe Boolean
   , isSpecialLocWarrior :: Maybe Boolean
+  , isPetModeEnabled :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp

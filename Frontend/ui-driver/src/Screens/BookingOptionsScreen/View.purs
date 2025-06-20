@@ -12,7 +12,7 @@ import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariant
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate, (/=)) 
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate, (/=), (/), (#), identity)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, LoggableScreen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, textFromHtml, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.BookingOptionsScreen.ScreenData (defaultRidePreferenceOption)
@@ -43,6 +43,8 @@ import Constants as CS
 import Helpers.Utils as HU
 import Common.RemoteConfig.Utils as CommonRC
 import Common.RemoteConfig.Types (FeaturesConfigData(..))
+import RemoteConfig.Utils
+import RemoteConfig.Types
 
 screen :: ST.BookingOptionsScreenState -> LoggableScreen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -247,6 +249,15 @@ downgradeVehicleView push state =
   let
     compareRidePreferences a b = compare a.priority b.priority
     defaultRidePreferences = DA.sortBy compareRidePreferences state.data.ridePreferences
+    petRidesFeatureConfig = getPetRidesFeatureConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+    totalPreferencesCount =
+     [ isJust state.props.canSwitchToIntraCity
+     , isJust state.props.canSwitchToRental
+     , isJust state.props.canSwitchToInterCity
+     , petRidesFeatureConfig.enablePetRidesFeature
+     ]
+     # DA.filter identity
+     # DA.length
   in
     linearLayout
       [ width MATCH_PARENT
@@ -280,9 +291,10 @@ downgradeVehicleView push state =
         , margin $ MarginBottom 12
         ] 
         $ if state.data.vehicleType /= "BIKE" then 
-          [ localPreferenceView push state
-          , rentalPreferenceView push state
-          , intercityPreferenceView push state
+          [ localPreferenceView push state totalPreferencesCount
+          , rentalPreferenceView push state totalPreferencesCount
+          , intercityPreferenceView push state totalPreferencesCount
+          , petRidesPreferenceView push state totalPreferencesCount petRidesFeatureConfig
           ] else []
       , linearLayout
           [ width MATCH_PARENT
@@ -407,25 +419,34 @@ serviceTierItem state push service enabled opacity index =
             , onClick push $ const $ ToggleRidePreference service
             , gravity RIGHT
             ]
-            [ toggleView push service.isSelected (service.isDefault || show service.serviceTierType == show API.AMBULANCE_TAXI_TIER) service ]
+            [ toggleView push service.isSelected (service.isDefault || show service.serviceTierType == show API.AMBULANCE_TAXI_TIER) service (ToggleRidePreference service)]
         ],
         serviceTierItemDesc state service
       ]
     ]
 
-serviceTierItemHorizontal :: forall w. ST.BookingOptionsScreenState -> (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> Int -> PrestoDOM (Effect Unit) w
-serviceTierItemHorizontal state push service enabled opacity index =
+serviceTierItemHorizontal :: forall w. ST.BookingOptionsScreenState -> (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+serviceTierItemHorizontal state push service enabled opacity index totalPreferencesCount isPetRidesPreferenceView =
+  let 
+    vehicleVariantImage = if isPetRidesPreferenceView
+      then fetchImage FF_ASSET "ny_ic_pet_rides_preferences_icon"
+      else getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
+    action = if isPetRidesPreferenceView
+      then TogglePetRide
+      else getAction
+  in
   linearLayout
   [ weight 1.0
   , height WRAP_CONTENT
+  , width $ V $ (EHC.screenWidth unit) / totalPreferencesCount - 30
   , padding (Padding 12 8 8 8)
   , orientation VERTICAL
-  , onClick push $ const $ getAction
+  , onClick push $ const $ action
   , cornerRadius 8.0
   , gravity CENTER
   ]
   [ imageView
-    [ imageWithFallback $ getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
+    [ imageWithFallback vehicleVariantImage
     , width $ V 35
     , margin $ MarginTop 8
     , height $ V 35
@@ -441,12 +462,12 @@ serviceTierItemHorizontal state push service enabled opacity index =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , padding $ PaddingVertical 12 8
-    , onClick push $ const $ getAction
+    , onClick push $ const $ action
     , gravity RIGHT
     ]
-    [ toggleView push service.isSelected service.isDefault service ]
+    [ toggleView push service.isSelected service.isDefault service action]
 ]
-  where 
+  where
     getAction :: Action
     getAction = case service.serviceTierType of
       API.RENTALS -> ToggleRentalRide
@@ -477,41 +498,57 @@ serviceTierItemDesc state service =
       API.DELIVERY_BIKE -> getString DELIVERY_BIKE_SERVICE_TIER_DESC
       _ -> ""
 
-localPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
-localPreferenceView push state = 
+localPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Int -> PrestoDOM (Effect Unit) w
+localPreferenceView push state totalPreferencesCount = 
   linearLayout
     [ height WRAP_CONTENT
     , weight 1.0
     , background $ if item.isSelected then Color.blue600 else Color.white900
     , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
-    , margin $ MarginRight 12
+    , margin $ MarginRight 6
     , gravity CENTER
     , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToIntraCity
-    ][ serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToIntraCity) false (-1)]
+    ][ serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToIntraCity) false (-1) totalPreferencesCount false]
   where 
     item :: ST.RidePreference
     item = defaultRidePreferenceOption {name = "Local", isSelected = fromMaybe false state.props.canSwitchToIntraCity,  serviceTierType = API.LOCAL}
 
 
-rentalPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
-rentalPreferenceView push state = 
+rentalPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Int -> PrestoDOM (Effect Unit) w
+rentalPreferenceView push state totalPreferencesCount = 
   linearLayout
     [ height WRAP_CONTENT
     , weight 1.0
-    , margin $ MarginRight 12
+    , margin $ MarginRight 6
     , background $ if item.isSelected then Color.blue600 else Color.white900
     , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
     , gravity CENTER
     , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToRental
-    ][serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToRental) false (-1)]
+    ][serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToRental) false (-1) totalPreferencesCount false]
   where 
     item :: ST.RidePreference
     item = defaultRidePreferenceOption {name = getString RENTAL, isSelected = fromMaybe false state.props.canSwitchToRental,  serviceTierType = API.RENTALS}
 
-intercityPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
-intercityPreferenceView push state = do
+intercityPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Int -> PrestoDOM (Effect Unit) w
+intercityPreferenceView push state totalPreferencesCount = do
+  linearLayout
+    [ height WRAP_CONTENT
+    , weight 1.0
+    , background $ if item.isSelected then Color.blue600 else Color.white900
+    , stroke $ "1," <> Color.grey900
+    , cornerRadius 8.0
+    , margin $ MarginRight 6
+    , gravity CENTER
+    , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToInterCity
+    ][serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToInterCity) false (-1) totalPreferencesCount false]
+  where 
+    item :: ST.RidePreference
+    item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToInterCity, serviceTierType = API.INTERCITY}
+
+petRidesPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Int -> PetRidesFeatureConfig -> PrestoDOM (Effect Unit) w
+petRidesPreferenceView push state totalPreferencesCount petRidesFeatureConfig =
   linearLayout
     [ height WRAP_CONTENT
     , weight 1.0
@@ -519,14 +556,14 @@ intercityPreferenceView push state = do
     , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
     , gravity CENTER
-    , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToInterCity
-    ][serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToInterCity) false (-1)]
-  where 
+    , visibility $ MP.boolToVisibility petRidesFeatureConfig.enablePetRidesFeature
+    ][serviceTierItemHorizontal state push item (fromMaybe false state.props.isPetModeEnabled) false (-1) totalPreferencesCount true]
+  where
     item :: ST.RidePreference
-    item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToInterCity, serviceTierType = API.INTERCITY}
+    item = defaultRidePreferenceOption {name = getString PET_RIDES, isSelected = fromMaybe false state.props.isPetModeEnabled}
 
-toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
-toggleView push enabled default service =
+toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> Action -> PrestoDOM (Effect Unit) w
+toggleView push enabled default service action =
   let
     backgroundColor = if enabled && not service.isUsageRestricted then Color.blue800 else Color.black600
 
@@ -540,7 +577,7 @@ toggleView push enabled default service =
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
       , gravity CENTER_VERTICAL
-      , onClick push $ const $ getAction
+      , onClick push $ const $ action
       , clickable $ not default
       ]
       [ linearLayout
@@ -559,13 +596,6 @@ toggleView push enabled default service =
               []
           ]
       ]
-  where
-    getAction :: Action
-    getAction = case service.serviceTierType of
-      API.RENTALS -> ToggleRentalRide
-      API.INTERCITY -> ToggleIntercityRide
-      API.LOCAL -> ToggleLocalRide
-      _ -> ToggleRidePreference service
 
 defaultVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 defaultVehicleView push state =

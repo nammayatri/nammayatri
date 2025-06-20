@@ -57,8 +57,25 @@ getStationsByGtfsIdFuzzySearch :: (CoreMetrics m, MonadFlow m, MonadReader r m, 
 getStationsByGtfsIdFuzzySearch baseUrl gtfsId query = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiStopsByGtfsIdFuzzySearch gtfsId query) "getStationsByGtfsIdFuzzySearch" NandiAPI.nandiStopsByGtfsIdFuzzySearchAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_STATIONS_BY_GTFS_ID_FUZZY_SEARCH_API") baseUrl)
 
+getGtfsVersion :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m Text
+getGtfsVersion baseUrl gtfsId = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGtfsVersion gtfsId) "getGtfsVersion" NandiAPI.nandiGtfsVersionAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_GTFS_VERSION_API") baseUrl)
+
+getStopChildren :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m [Text]
+getStopChildren baseUrl gtfsId stopCode = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiStopChildren gtfsId stopCode) "getStopChildren" NandiAPI.nandiStopChildrenAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_STOP_CHILDREN_API") baseUrl)
+
 caseTextToVehicleCategory :: Text -> BecknV2.FRFS.Enums.VehicleCategory
 caseTextToVehicleCategory "BUS" = BecknV2.FRFS.Enums.BUS
 caseTextToVehicleCategory "TRAIN" = BecknV2.FRFS.Enums.METRO
 caseTextToVehicleCategory "SUBWAY" = BecknV2.FRFS.Enums.SUBWAY
 caseTextToVehicleCategory _ = BecknV2.FRFS.Enums.BUS
+
+getVehicleServiceType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m (Maybe VehicleServiceTypeResponse)
+getVehicleServiceType baseUrl vehicleNumber = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiVehicleServiceType vehicleNumber) "getVehicleServiceType" NandiAPI.nandiVehicleServiceTypeAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting vehicle service type: " <> show err
+        pure Nothing

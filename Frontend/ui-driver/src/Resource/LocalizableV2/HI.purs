@@ -1853,4 +1853,6 @@ getHi =
     , good : "अच्छा"
     , poor : "खराब"
     , open_meter : "मीटर खोलें"
+    , this_ride_includes_a_pet : "इस सवारी में एक पालतू जानवर भी शामिल है"
+    , pet_rides : "पेट राइड्स"
     }

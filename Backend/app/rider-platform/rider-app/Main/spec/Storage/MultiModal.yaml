@@ -368,6 +368,16 @@ JourneyLeg:
       kvFunction: findOneWithKV
       where:
         and: [journeyId, sequenceNumber]
+    updateEstimatedFaresByJourneyIdAndSequenceNumber:
+      kvFunction: updateWithKV
+      params: [estimatedMinFare, estimatedMaxFare]
+      where:
+        and: [journeyId, sequenceNumber]
+    updateEstimatedFaresBySearchId:
+      kvFunction: updateWithKV
+      params: [estimatedMinFare, estimatedMaxFare]
+      where: searchRequestId
+      where: legSearchId
 
   intermediateTransformers:
     fromTType:

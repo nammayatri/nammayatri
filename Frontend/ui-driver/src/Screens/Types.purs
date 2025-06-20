@@ -613,7 +613,8 @@ type DriverProfileScreenProps = {
   canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean,
   showDriverBlockedPopup :: Boolean,
-  skipGlobalEvents :: Boolean
+  skipGlobalEvents :: Boolean,
+  isPetModeEnabled :: Maybe Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1360,7 +1361,8 @@ type ActiveRide = {
   senderPersonDetails :: Maybe API.PersonDetails,
   receiverPersonDetails :: Maybe API.PersonDetails,
   notifiedReachedDestination :: Boolean,
-  stops :: Array API.Stop
+  stops :: Array API.Stop,
+  isPetRide :: Maybe Boolean
 }
 
 type HomeScreenProps =  {
@@ -1422,6 +1424,8 @@ type HomeScreenProps =  {
   accountBlockedPopup :: Boolean,
   accountBlockedPopupDueToCancellations :: Boolean,
   showCoinsPopup :: Boolean,
+  showPetRidesPopup :: Boolean,
+  showOptOutPetRidesPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
   safetyAudioAutoPlay :: Boolean,
@@ -2251,6 +2255,7 @@ type BookingOptionsScreenProps = {
   fromDeepLink :: Boolean,
   canSwitchToInterCity :: Maybe Boolean,
   canSwitchToIntraCity :: Maybe Boolean,
+  isPetModeEnabled :: Maybe Boolean,
   showRateCard :: Boolean,
   rateCardLoaded :: Boolean,
   peakTime :: Boolean

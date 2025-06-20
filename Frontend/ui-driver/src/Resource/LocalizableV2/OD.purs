@@ -1853,4 +1853,6 @@ getOd =
     , good : "ଭାଲୋ"
     , poor : "ଖାରାପ"
     , open_meter : "ମିଟର୍ ଖୋଲନ୍ତୁ"
+    , this_ride_includes_a_pet : "ଏହି ଯାତ୍ରାରେ ଗୋଟିଏ ପାଳିତ ପଶୁ ଅନ୍ତର୍ଭୁକ୍ତ"
+    , pet_rides : "ପେଟ ରାଇଡସ"
   }

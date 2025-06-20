@@ -509,6 +509,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
                           | UPDATE_STOPS_STATUS HomeScreenState
                           | GO_TO_METER_RIDE_SCREEN
+                          | ENABLE_PET_RIDES HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -539,7 +540,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
 
 data BOOKING_OPTIONS_SCREEN_OUTPUT =
   SELECT_CAB BookingOptionsScreenState Boolean
-  | ENABLE_RENTAL_INTERCITY_RIDE BookingOptionsScreenState
+  | ENABLE_RENTAL_INTERCITY_PET_RIDE BookingOptionsScreenState
   | GO_TO_PROFILE
   | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference
   | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean

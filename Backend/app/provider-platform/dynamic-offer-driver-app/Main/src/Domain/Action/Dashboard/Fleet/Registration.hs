@@ -227,14 +227,14 @@ fleetOwnerLogin req = do
         phoneNumber = countryCode <> mobileNumber
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
-        (mbSender, message) <-
+        (mbSender, message, templateId) <-
           MessageBuilder.buildSendOTPMessage merchantOpCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
         >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)

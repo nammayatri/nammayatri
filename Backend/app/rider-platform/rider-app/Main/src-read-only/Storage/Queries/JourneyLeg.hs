@@ -65,6 +65,25 @@ updateDistanceAndDuration distance duration id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateEstimatedFaresBySearchId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateEstimatedFaresBySearchId estimatedMinFare estimatedMaxFare legSearchId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.estimatedMinFare estimatedMinFare, Se.Set Beam.estimatedMaxFare estimatedMaxFare, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
+
+updateEstimatedFaresByJourneyIdAndSequenceNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m ())
+updateEstimatedFaresByJourneyIdAndSequenceNumber estimatedMinFare estimatedMaxFare journeyId sequenceNumber = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.estimatedMinFare estimatedMinFare,
+      Se.Set Beam.estimatedMaxFare estimatedMaxFare,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+
 updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateIsDeleted isDeleted legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isDeleted isDeleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 

@@ -151,13 +151,13 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   smsCfg <- asks (.smsCfg)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  (mbSender, message) <-
+  (mbSender, message, templateId) <-
     buildFleetUnlinkSuccessMessage merchantOpCityId $
       BuildFleetLinkUnlinkSuccessMessageReq
         { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
         }
   let sender = fromMaybe smsCfg.sender mbSender
-  SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+  SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
 
   pure Kernel.Types.APISuccess.Success
 
@@ -208,14 +208,14 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
   otpCode <- maybe generateOTPCode return mbUseFakeOtp
   whenNothing_ mbUseFakeOtp $ do
     let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
-    (mbSenderHeader, message) <-
+    (mbSenderHeader, message, templateId) <-
       buildOperatorJoiningMessage merchantOpCityId $
         BuildOperatorJoiningMessageReq
           { operatorName = operatorName,
             otp = otpCode
           }
     let sender = fromMaybe smsCfg.sender mbSenderHeader
-    SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+    SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
 
   Redis.setExp key otpCode 3600
   pure $
@@ -253,13 +253,13 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
-  (mbSender, message) <-
+  (mbSender, message, templateId) <-
     buildFleetLinkSuccessMessage merchantOpCityId $
       BuildFleetLinkUnlinkSuccessMessageReq
         { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
         }
   let sender = fromMaybe smsCfg.sender mbSender
-  SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+  SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
   Redis.del key
   pure Kernel.Types.APISuccess.Success
 
