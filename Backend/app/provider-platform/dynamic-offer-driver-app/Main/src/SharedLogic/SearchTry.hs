@@ -146,6 +146,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                   batchingStartedAt = now,
                   batchingExpireAt = totalBatchTime `addUTCTime` now
                 }
+            logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` now)
           else do
             mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
             case mbScheduleTime of
@@ -159,6 +160,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                       batchingStartedAt,
                       batchingExpireAt = totalBatchTime `addUTCTime` batchingStartedAt
                     }
+                logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` batchingStartedAt)
               Nothing -> do
                 booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
                 QST.updateStatus DST.CANCELLED searchTry.id
