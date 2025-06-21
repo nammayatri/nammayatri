@@ -24,6 +24,8 @@ data FleetConfig = FleetConfig
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    fleetVehicleVerificationSkippable :: Kernel.Prelude.Bool,
+    driverVehicleVerificationSkippable :: Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
