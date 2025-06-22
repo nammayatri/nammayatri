@@ -47,8 +47,8 @@ updateJourneyLegStatus travelMode recentLocations endLatLang currentStatus isLas
   let (arrivedThreshold, finishingThreshold) =
         case travelMode of
           Walk -> (50, 100)
-          Subway -> (150, 400)
-          Metro -> (150, 400)
+          Subway -> (300, 500)
+          Metro -> (300, 500)
           Bus -> (100, 300)
           Taxi -> (50, 100)
   case currentStatus of
