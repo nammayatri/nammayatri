@@ -20,6 +20,7 @@ import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (utctTimeToDayOfWeek)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude (concatMapM)
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
 import Kernel.Prelude
@@ -194,8 +195,9 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
   routeStopTimes <- mapM processRoute allRouteWithBuses
   let flattenedRouteStopTimes = concat routeStopTimes
   disableLiveBuses <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ Se.lookupEnv "DISABLE_LIVE_BUSES")
+  calledForFare <- fromMaybe False <$> L.getOptionLocal GRSM.CalledForFare
   logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
-  if not (null flattenedRouteStopTimes) && not disableLiveBuses
+  if not (null flattenedRouteStopTimes) && not disableLiveBuses && not calledForFare
     then return flattenedRouteStopTimes
     else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
   where
