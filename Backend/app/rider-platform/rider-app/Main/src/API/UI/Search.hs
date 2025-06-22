@@ -468,7 +468,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
       let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
       let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
       let duration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
-      let startTime = getISTTimeInfo now
+      let startTime = now
       let endTime = addUTCTime (secondsToNominalDiffTime duration) startTime
       let leg =
             MultiModalTypes.MultiModalLeg
