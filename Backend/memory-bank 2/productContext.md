@@ -98,33 +98,12 @@ To enable the careers of service providers like auto drivers by providing them w
 -   **Cost Optimization for Utility-like Pricing:** Aims to provide affordable services through efficiency.
 -   **Focus on Empowering Service Providers:** Directly addresses the needs and economic well-being of drivers.
 
-## NY Regular Subscriptions
 
-### Feature Overview
+# Product Context
 
-The "NY Regular" feature allows users to set up recurring ride subscriptions. This is designed for users who have a regular commute, such as from home to work, and want to automate the process of booking a ride.
+## Why Nammayatri Exists
 
-### Key Concepts
-
-- **Subscription:** A user-defined schedule for a recurring ride. It includes pickup and drop-off locations, time of day, and the days of the week the ride is needed.
-- **Instance:** A single occurrence of a ride within a subscription. For example, if a user has a subscription for every weekday, Monday's ride is one instance, Tuesday's is another, and so on.
-- **Automation:** The system will automatically initiate a search for a ride and book it based on the subscription schedule.
-
-### Data Models
-
-#### `NyRegularSubscription`
-
-This table stores the core information about a user's subscription.
-
-- **Key Fields:**
-    - `id`: Unique identifier for the subscription.
-    - `userId`: The user who created the subscription.
-    - `pickupLocation`, `dropoffLocation`: The start and end points of the ride.
-    - `startDatetime`: When the subscription becomes active.
-    - `recurrenceRuleDays`: The days of the week the subscription is active (e.g., Monday, Wednesday, Friday).
-    - `scheduledTimeOfDay`: The time the ride should be scheduled for.
-    - `recurrenceEndDate`: When the subscription expires.
-    - `status`: The current state of the subscription (e.g., `ACTIVE`, `PAUSED`, `CANCELLED`).
+*This section seems to be a duplicate of the content above it. Removing the duplicate content.*
 
 #### `NyRegularInstanceLog`
 

@@ -224,6 +224,7 @@ library
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
+      Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -317,6 +318,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
+      ExternalInstances
       Lib.JourneyLeg.Bus
       Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Interface
@@ -599,6 +601,7 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
+      API.Action.UI.NyRegularSubscription
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -657,6 +660,7 @@ library
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
+      API.Types.UI.NyRegularSubscription
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment

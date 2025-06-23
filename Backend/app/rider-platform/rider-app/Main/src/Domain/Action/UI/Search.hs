@@ -388,8 +388,13 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       let isMultimodalSearch = case journeySearchData of
             Just _ -> True
             Nothing -> False
+      -- let reserveTag = case searchRequest.searchMode of
+      --       Just SearchRequest.RESERVE -> [(Beckn.RESERVED_RIDE_TAG, Just "true")]
+      --       _ -> []
       Just $
         def{Beckn.fulfillmentTags =
+              -- reserveTag -- Add the reserve tag here
+              -- ++
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
                 (Beckn.DURATION_INFO_IN_S, show . (.getSeconds) <$> duration),
                 (Beckn.RETURN_TIME, show <$> returnTime),
@@ -543,8 +548,10 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Enums.VehicleCategory ->
+  -- Maybe SearchRequest.SearchMode ->
   m SearchRequest.SearchRequest
 buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory = do
+  -- searchMode = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -597,6 +604,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         destinationStopCode = destinationStopCode,
         originStopCode = originStopCode,
         allJourneysLoaded = Just False,
+        searchMode = Nothing,
         ..
       }
   where

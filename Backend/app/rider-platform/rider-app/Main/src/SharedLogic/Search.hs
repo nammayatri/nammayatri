@@ -106,7 +106,8 @@ data OneWaySearchReq = OneWaySearchReq
     driverIdentifier :: Maybe DRL.DriverIdentifier,
     isMeterRideSearch :: Maybe Bool,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
-    platformType :: Maybe DIBPC.PlatformType
+    platformType :: Maybe DIBPC.PlatformType,
+    isReserveRide :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

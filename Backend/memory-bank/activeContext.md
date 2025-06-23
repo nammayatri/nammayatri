@@ -2,10 +2,10 @@
 
 ## Current Work Focus
 
-### Memory Bank Initialization
-**Status**: Setting up Cline Memory Bank structure for Nammayatri backend
-**Goal**: Enable consistent AI assistance across development sessions
-**Progress**: Creating core memory bank files with project understanding
+### Memory Bank Initialization & Merging
+**Status**: Merging two memory banks to enable consistent AI assistance.
+**Goal**: Consolidate all project knowledge into a single, coherent memory bank without losing information.
+**Progress**: Merging unique and common files. Key files like `productContext.md` and `activeContext.md` are undergoing a structured merge.
 
 ### Development Environment
 **Current State**: Project uses Nix-based development with Cabal
@@ -13,7 +13,6 @@
 - Nix development shell with direnv
 - Multi-package Cabal project (40+ packages)
 - VSCode with Haskell Language Server
-
 ## Recent Changes
 
 ### Memory Bank Enhancement
@@ -23,10 +22,40 @@
 - **Enhanced `techContext.md`** - Comprehensive external integrations, webhooks
 - **Status**: Completed detailed codebase analysis and memory bank enrichment
 
+## Learnings & Project Insights
+
+### Architecture Insights
+- **Microservices Design**: Well-structured separation of concerns with 40+ microservices.
+- **Event-Driven**: Heavy use of async communication patterns (Kafka) and scheduled jobs.
+-   **Declarative Schema**: YAML files in `spec/` define database schemas, which are then used to generate Haskell types and queries.
+-   **Database-driven Configuration**: Many business rules, service parameters, and pricing models are dynamically configured in the database.
+- **Scalability Focus**: Built for high-concurrency scenarios.
+- **Protocol-First**: BECKN/ONDC compliance drives design decisions.
+
+### Technical Insights
+- **Haskell Benefits**: Type safety for critical business logic, extensive use of Template Haskell.
+- **NammaDSL**: A custom DSL is used for API and Storage specifications, streamlining code generation.
+- **Nix Advantages**: Reproducible builds and development environments.
+- **Multi-package Strategy**: Enables focused development and testing.
+- **External Dependencies**: Careful management through flake inputs.
+-   **Idempotency**: Redis locks are used extensively to prevent duplicate processing of Beckn messages.
+-   **ACL Layer**: Anti-Corruption Layers (`Beckn/ACL/`) are crucial for translating between external Beckn types and internal domain model types.
+
+### Business Logic Insights
+- **Rider Journey**: The core booking flow is a choreographed sequence of Beckn interactions: search -> on_search -> select -> on_select -> init -> on_init -> confirm -> on_confirm.
+- **Driver Allocation**: The BPP (`dynamic-offer-driver-app`) handles the complex logic of driver searching and allocation, primarily triggered after receiving a `select` message.
+- **Multi-modal Support**: Single platform for various transport types.
+- **Real-time Requirements**: Critical for user experience.
+-   **NYRegular Feature**: A recurring/scheduled rides feature that uses a Master/Child scheduler pattern to automate the standard Beckn booking flow with tagged, fixed-price search requests.
+
 ## Next Steps
 
 ### Immediate Priorities
-1. **Complete Memory Bank Setup**
+1. **Complete Memory Bank Merge**
+   - Finalize merging of all common files (`progress.md`, `projectbrief.md`, `systemPatterns.md`, `techContext.md`).
+   - Copy over the remaining unique file (`directory_structure.md`).
+   - Verify the merged memory bank is coherent and complete.
+   1. **Complete Memory Bank Setup**
    - Finalize `activeContext.md` and `progress.md`
    - Test memory bank with Cline workflows
    - Establish update patterns
@@ -36,16 +65,17 @@
    - Test Plan/Act mode transitions
    - Validate context preservation
 
+
 ### Development Areas to Explore
 1. **Rider Platform Deep Dive**
-   - Understand booking flow implementation
-   - Review API structures and patterns
-   - Examine integration points
+   - Understand booking flow implementation.
+   - Review API structures and patterns.
+   - Examine integration points.
 
 2. **Provider Platform Analysis**
-   - Driver allocation algorithm details
-   - Real-time tracking implementation
-   - BECKN protocol integration
+   - Driver allocation algorithm details.
+   - Real-time tracking implementation.
+   - BECKN protocol integration.
 
 3. **Shared Services Understanding**
    - Payment processing workflows
@@ -117,10 +147,15 @@
 4. **Location Tracking**: Geospatial calculation specifics
 5. **Performance Optimization**: Actual bottlenecks and scaling patterns
 
-### Investigation Priorities
+
+4.  **NYRegular Feature Implementation**
+    *   Finalize NammaDSL schemas for `NyRegularSubscription` and `NyRegularInstanceLog`.
+    *   Detail the API contracts for NYRegular management.
+    *   Elaborate on error handling and notification strategy for the scheduler jobs.
+
+## Investigation Priorities
 - Supply-demand ratio calculation algorithm implementation
 - Congestion charge calculation with geohash integration
 - CAC and SuperPosition feature flag management
 - Driver onboarding workflow with verification steps
 - Scheduled ride management and notification systems
-

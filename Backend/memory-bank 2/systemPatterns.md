@@ -1,183 +1,11 @@
-# System Patterns & Architecture
+# System Patterns: Namma Yatri
 
-## Overall Architecture
-
-### Microservices Architecture (40+ Services)
-The system follows a sophisticated microservices pattern with clear domain boundaries:
-
-```
-├── Rider Platform (Customer Journey)
-├── Provider Platform (Driver/Fleet Management)
-├── Shared Services (Cross-platform utilities)
-├── Dashboard Services (Operations & Analytics)
-├── Kafka Consumers (Event Processing)
-├── Mock Services (Development & Testing)
-└── Utility Services (Supporting functions)
-```
-
-### Core Platforms Detail
-
-#### Rider Platform Services
-- **rider-app** (Main): Customer APIs, search, booking, payment (Port: 8013)
-- **rider-app-scheduler**: Background jobs, notifications, scheduled tasks
-- **rider-app-drainer**: Data pipeline processing for analytics
-- **search-result-aggregator**: Multi-provider search result consolidation
-- **public-transport-rider-platform**: FRFS services for buses/metro
-- **public-transport-search-consumer**: Async search processing
-
-#### Provider Platform Services
-- **dynamic-offer-driver-app** (Main): Driver APIs, ride management (Port: 8016)
-- **driver-offer-allocator**: Core allocation engine (Port: 9996)
-- **dynamic-offer-driver-drainer**: Analytics data processing
-
-#### Dashboard Services
-- **rider-dashboard**: Customer operations dashboard
-- **provider-dashboard**: Driver/fleet operations dashboard
-- **safety-dashboard**: Safety monitoring and management
-
-### Communication Patterns
-
-#### BECKN/ONDC Protocol
-- Standardized message format between platforms
-- Event-driven communication for state changes
-- Asynchronous processing for scalability
-
-#### Internal Communication
-- Direct API calls for synchronous operations
-- Kafka-based messaging for async operations
-- Shared database for transactional consistency
-
-## Key Design Patterns
-
-### Domain-Driven Design
-- Clear domain boundaries between rider and provider contexts
-- Shared kernel for common business logic
-- Anti-corruption layers for external integrations
-
-### Event Sourcing
-- State changes captured as events
-- Audit trail for all business operations
-- Eventual consistency across services
-
-### CQRS (Command Query Responsibility Segregation)
-- Separate read and write models
-- Optimized queries for different use cases
-- Scalable data access patterns
-
-## Critical Implementation Paths
-
-### Ride Booking Flow
-1. **Search Request**: Rider initiates search
-2. **Provider Query**: System queries available providers
-3. **Offer Generation**: Providers respond with offers
-4. **Selection**: Rider selects preferred option
-5. **Allocation**: System assigns driver
-6. **Tracking**: Real-time location updates
-7. **Completion**: Payment and feedback
-
-### Driver Allocation Algorithm (24+ Job Types)
-**Core Allocation Jobs:**
-- `SendSearchRequestToDriver`: Main driver search distribution
-- `UnblockDriver` & `UnblockSoftBlockedDriver`: Driver availability management
-- `SoftBlockNotifyDriver`: Driver notification system
-
-**Financial Management:**
-- `CalculateDriverFees`: Driver fee calculation and processing
-- `BadDebtCalculation`: Financial risk management
-- `MandateExecution`: Payment mandate processing
-- `DriverReferralPayout`: Referral payment distribution
-
-**Analytics & Optimization:**
-- `SupplyDemand`: Real-time supply-demand ratio calculations
-- `CongestionCharge`: Dynamic congestion pricing
-- `Daily/Weekly/Monthly/Quarterly`: Time-based analytics jobs
-
-**Scheduled Operations:**
-- `ScheduledRideNotificationsToDriver`: Advance booking notifications
-- `ScheduledRideAssignedOnUpdate`: Scheduled ride management
-- `CheckExotelCallStatusAndNotifyBAP`: Call status verification
-
-## Component Relationships
-
-### Shared Libraries (`lib/`)
-- **beckn-spec**: BECKN/ONDC protocol implementations (V1 & V2)
-- **beckn-services**: Common BECKN service logic and utilities
-- **shared-services**: URL shortener, issue management, registry services
-- **location-updates**: Real-time tracking with geospatial calculations
-- **payment**: Juspay payment gateway abstractions
-- **scheduler**: Redis-based job scheduling system
-- **producer**: Kafka event production services
-- **yudhishthira**: Decision engine for business rules
-
-### External Dependencies
-- **Database**: PostgreSQL (atlas_driver_offer_bpp, atlas_app schemas)
-- **Analytics**: ClickHouse for event analytics and metrics
-- **Cache**: Redis (single + cluster) for sessions, location data
-- **Message Queue**: Kafka with multiple topics (location-updates, broadcast-messages)
-- **Maps**: OSRM for routing, snap-to-road, geospatial calculations
-- **Payments**: Juspay (payment + payout), multiple webhook integrations
-- **Verification**: Idfy, HyperVerge for document verification
-- **Communication**: SMS services, FCM notifications, Exophone calls
-- **Storage**: S3 for file uploads and document storage
-- **Translation**: Google Translate API for multilingual support
-
-## Advanced Business Logic Patterns
-
-### Fare Policy System (5 Types)
-**Progressive Fare Policy:**
-- Distance-based progressive pricing
-- Congestion charge multipliers (BaseFareAndExtraDistanceFare, ExtraDistanceFare)
-- Night shift bounds and surge pricing
-- Platform fee models (Subscription, FixedAmount, SlabBased, NoCharge)
-
-**Complex Pricing Components:**
-- Service charges, parking charges, per-stop charges
-- Government charges, toll charges, PET charges
-- Insurance charges, card processing fees
-- Smart tip suggestions with ML-driven reasoning
-- Supply-demand ratio adjustments per geohash
-
-**Public Transport Fare Management:**
-- Stage-based progressive fares with route-stop mapping
-- Direct stop-to-stop fare calculations
-- Service tier differentiation (vehicle types)
-- Time-bound fare validity and discount applications
-
-## Scalability Patterns
-
-### Horizontal Scaling
-- Stateless service design
-- Load balancer distribution
-- Database read replicas
-- Cache clustering
-
-### Performance Optimization
-- Connection pooling
-- Query optimization
-- Caching strategies (L1/L2 cache)
-- Asynchronous processing
-
-## Security Patterns
-
-### Authentication & Authorization
-- JWT-based session management
-- Role-based access control
-- API key management for external services
-
-### Data Protection
-- Encryption at rest and in transit
-- PII data handling compliance
-- Audit logging for sensitive operations
-
----
-## Detailed System Patterns
-
-### 1. System Architecture Overview
+## 1. System Architecture Overview
 The Namma Yatri backend is structured as a collection of microservices/packages, primarily written in Haskell. It appears to be event-driven, utilizing Kafka for message consumption. The architecture separates concerns into rider platform, provider platform, dashboards, Kafka consumers, mocks, and utility services.
 The frontend consists of UI components for customers (riders) and drivers, likely interacting with the backend via APIs. Mobile applications are native Android and iOS.
 Nix is used for overall environment and build management, suggesting a focus on reproducible builds and dependency management.
 
-### 2. Key Technical Decisions
+## 2. Key Technical Decisions
 -   **Strong Static Typing & Functional Programming:** Haskell is used for the backend, and PureScript for the frontend, emphasizing type safety and functional paradigms to enhance code reliability and maintainability.
 -   **Template Haskell for Metaprogramming:** Heavily used in the Haskell backend (e.g., `mkBeamInstancesForEnumAndList`, `mkHttpInstancesForEnum`, `mkBeamInstancesForJSON`, `encryptItem`, `decryptItem`) to reduce boilerplate for deriving instances for database interaction (Beam), JSON serialization (Aeson), HTTP parameter handling, schema generation, and field-level encryption. This keeps domain type definitions concise.
 -   **Nix for Environment and Build Management:** Chosen for reproducible builds and consistent development environments across the team and in CI/CD pipelines.
@@ -190,7 +18,7 @@ Nix is used for overall environment and build management, suggesting a focus on 
 -   **Declarative Schema & Configuration (YAML):** YAML files in `spec/Storage/` are used to define database table schemas, Haskell type mappings (via Beam), data transformations, default values, and predefined queries. This "schema-as-code" approach likely drives code generation and ensures consistency. Examples: `SearchTry.yaml`, `DriverInformation.yaml`, `Booking.yaml`, `Vehicle.yaml`, `Plan.yaml`, `DriverFee.yaml`, `CallStatus.yaml`, `Estimate.yaml`, `Person.yaml`, `configs.yaml` (for `DriverPoolConfig`, `MerchantState`, `SurgePricing`, `CancellationFarePolicy`, etc.), `SubscriptionConfig.yaml`.
 -   **Highly Configurable Business Logic:** Many operational parameters, business rules, and feature flags are managed through database configuration tables (defined in YAML specs like `configs.yaml`, `SubscriptionConfig.yaml`), allowing for dynamic adjustments per merchant, city, or service.
 
-### 3. Core Components & Services
+## 3. Core Components & Services
 The system is composed of several key services and domain entities, with a strong emphasis on configurability at the merchant and operating city level.
 -   **Backend Services (Haskell):** (Structure as previously identified)
     -   Rider Platform (`rider-app`): Acts as a Beckn Application Platform (BAP). Manages rider interactions, initiates searches, processes offers, and handles booking state from the rider's perspective.
@@ -221,7 +49,7 @@ The system is composed of several key services and domain entities, with a stron
 -   **External Service Dependencies:** PostgreSQL, Clickhouse, Redis, Kafka, Paseto, OSRM Server, and various third-party services.
 -   **Frontend Components (PureScript, Native Mobile):** `ui-customer`, `ui-driver`, native mobile shells.
 
-### 4. Data Flow & Storage
+## 4. Data Flow & Storage
 -   **Primary OLTP Database:** PostgreSQL (via Beam). Schemas defined in YAML.
 -   **Analytical/Event Database:** Clickhouse.
 -   **Caching:** Redis.
@@ -232,7 +60,7 @@ The system is composed of several key services and domain entities, with a stron
 -   **Configuration Management:** Dhall and Database-driven Configuration.
 -   **Data Persistence & Mapping (Beam):** YAML specs drive Haskell types and Beam table definitions.
 
-### 5. Common Design Patterns
+## 5. Common Design Patterns
 -   **Anti-Corruption Layer (ACL):** Modules named `ACL` (e.g., `Beckn.ACL.OnSearch`) are used to translate between external Beckn protocol types and internal domain types for each Beckn action (`search`, `on_search`, `select`, `on_select`, etc.). This isolates the core domain logic from the specifics of the Beckn protocol.
 -   **Asynchronous Processing with Forking:** Many Beckn callback handlers (e.g., for `on_search`, `on_select`, `on_init`, `on_confirm`) perform initial validation and transformation, acknowledge the request (`AckResponse`), and then fork the main domain logic into a background thread (`fork "..." $ ...`). This ensures timely responses to network partners.
 -   **Idempotency using Redis Locks:** Redis locks (e.g., `whenWithLockRedis`) are used extensively in Beckn callback handlers, typically keyed by `message_id` or a combination of `message_id` and `subscriber_id`, to prevent duplicate processing of the same incoming message.
@@ -246,7 +74,7 @@ The system is composed of several key services and domain entities, with a stron
     *   The rest of the Beckn flow (`on_select`, `init`, `on_init`, `confirm`, `on_confirm`) proceeds using existing handlers, driven by this automated initiation.
     *   The outcome of each automated booking attempt is logged in `NyRegularInstanceLog`.
 
-### 6. API Design & Communication
+## 6. API Design & Communication
 -   **API Style:** RESTful (Servant, Swagger).
 -   **Inter-service Communication:** Direct API calls, Kafka.
 -   **External Communication (Beckn Ride Booking Flow):**
@@ -270,3 +98,9 @@ The system is composed of several key services and domain entities, with a stron
         *   BPP's `Domain.Action.Beckn.Confirm` handles BPP-side ride creation.
     10. **BAP processes `on_confirm`**: Updates its `Booking` to `TRIP_ASSIGNED`, creates local `Ride` entity, notifies rider. Ride is booked.
         *   BAP's `Domain.Action.Beckn.OnConfirm` handles this.
+
+## 7. Scalability & Performance Considerations
+(To be filled: Strategies for ensuring the system can scale and perform under load.)
+
+## 8. Security Patterns
+(To be filled: Common security measures and patterns implemented, e.g., Authentication, Authorization, Data Encryption.)

@@ -262,3 +262,37 @@ ALTER TABLE atlas_app.search_request ADD COLUMN vehicle_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN on_search_failed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN search_mode text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
