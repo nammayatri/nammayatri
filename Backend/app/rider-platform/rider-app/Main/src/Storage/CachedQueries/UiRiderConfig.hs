@@ -24,26 +24,29 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
-import Kernel.Utils.Common (CacheFlow, fromMaybeM)
-import Kernel.Utils.Time
-import qualified Lib.Yudhishthira.Types as LYT
+import Kernel.Utils.Common (CacheFlow, throwError)
+-- import Kernel.Utils.Time
+-- import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.UiRiderConfig as Queries
-import qualified Tools.DynamicLogic as TDL
+
+-- import qualified Tools.DynamicLogic as TDL
 
 findUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe UiRiderConfig, Maybe Int)
-findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
-  localTime <- getLocalCurrentTime 19800 -- Fix Me
-  version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) (LYT.RIDER_CONFIG (LYT.UiConfig os platform)) localTime toss >>= fromMaybeM (InvalidRequest $ "No version found. No dynamic logic found for merchantOpCityId: " <> show merchantOperatingCityId <> " and domain: " <> show (LYT.RIDER_CONFIG (LYT.UiConfig os platform)))
-  let mbConfigInExperimentVersions = Just [YType.ConfigVersionMap {config = LYT.RIDER_CONFIG (LYT.UiConfig os platform), version = version}]
-  TDL.findOneUiConfig
-    (cast merchantOperatingCityId)
-    (LYT.RIDER_CONFIG (LYT.UiConfig os platform))
-    mbConfigInExperimentVersions
-    Nothing
-    (Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId)
-    isBaseLogic
+findUiConfig _ _ _ = do
+  throwError $ InvalidRequest $ "UI config not supported yet"
+
+-- localTime <- getLocalCurrentTime 19800 -- Fix Me
+-- version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) (LYT.RIDER_CONFIG (LYT.UiConfig os platform)) localTime toss >>= fromMaybeM (InvalidRequest $ "No version found. No dynamic logic found for merchantOpCityId: " <> show merchantOperatingCityId <> " and domain: " <> show (LYT.RIDER_CONFIG (LYT.UiConfig os platform)))
+-- let mbConfigInExperimentVersions = Just [YType.ConfigVersionMap {config = LYT.RIDER_CONFIG (LYT.UiConfig os platform), version = version}]
+-- TDL.findOneUiConfig
+--   (cast merchantOperatingCityId)
+--   (LYT.RIDER_CONFIG (LYT.UiConfig os platform))
+--   mbConfigInExperimentVersions
+--   Nothing
+--   (Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId)
+--   isBaseLogic
 
 cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiRiderConfig -> m ()
 cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOpCityId os plt config = do
@@ -62,8 +65,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UiRiderConf
 updateByPrimaryKey = Queries.updateByPrimaryKey
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> m ()
-clearCache mocid dt pt =
-  TDL.clearConfigCache
-    (cast mocid)
-    (LYT.RIDER_CONFIG (LYT.UiConfig dt pt))
-    Nothing
+clearCache _ _ _ = do
+  throwError $ InvalidRequest $ "UI config not supported yet"
+
+-- TDL.clearConfigCache
+--   (cast mocid)
+--   (LYT.RIDER_CONFIG (LYT.UiConfig dt pt))
+--   Nothing
