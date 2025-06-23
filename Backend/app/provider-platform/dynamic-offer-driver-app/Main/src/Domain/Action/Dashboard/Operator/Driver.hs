@@ -141,7 +141,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
         person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let language = fromMaybe merchantOpCity.language person.language
-        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments personId merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
+        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments person merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
         vehicleDoc <-
           find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
             & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
