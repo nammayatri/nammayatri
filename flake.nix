@@ -24,15 +24,14 @@
     classyplate.url = "github:eswar2001/classyplate/a360f56820df6ca5284091f318bcddcd3e065243";
     references.url = "github:eswar2001/references/120ae7826a7af01a527817952ad0c3f5ef08efd0";
     spider = {
-      url = "github:juspay/spider/nammayatri";
+      url = "github:juspay/spider/nammayatri-without-beam";
       inputs = {
-        nixpkgs.follows = "nixpkgs";
+        nixpkgs.follows = "common/nixpkgs";
         haskell-flake.follows = "haskell-flake";
         references.follows = "references";
         classyplate.follows = "classyplate";
       };
     };
-
     haskell-cac = {
       url = "github:piyushKumar-1/haskell_cac_client/Testing";
       inputs = {

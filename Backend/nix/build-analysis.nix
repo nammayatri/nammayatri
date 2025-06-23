@@ -33,10 +33,8 @@ in
                 # Set trap for cleanup
                 trap cleanup EXIT INT TERM
 
-                mkdir -p $nammayatriMetadata/${name}
                 echo "Running fdep server..."
-                cp ${scriptsDir}/server.py .
-                python3 ./server.py &
+                python3 @server@ &
                 echo $! > server.pid
 
                 # Wait for port file with timeout
@@ -56,32 +54,32 @@ in
                   exit 1
                 fi
 
-                export SERVER_PORT=$(cat fdep_port)
-                if [ -z "$SERVER_PORT" ]; then
+                export FDEP_SOCKET_PATH=$(cat fdep_port)
+                echo $FDEP_SOCKET_PATH
+                if [ -z "$FDEP_SOCKET_PATH" ]; then
                   echo "Failed to get valid server port"
                   exit 1
                 fi
 
                 export NIX_BUILD_API_CONTRACT=True
+
               ''
             ];
 
             postBuildHooks = [
               ''
                 if [ -f server.pid ]; then
-                  echo "Running data extraction script..."
-                  cp ${scriptsDir}/tmpzip.py .
-
                   echo "Creating fdep zip..."
-                  python3 tmpzip.py --output-path $nammayatriMetadata/${name}/fdep.zip || {
+                  python3 @tmpzip@ --output-path $juspayMetadata/@packageName@/fdep.zip || {
                     echo "Failed to create fdep.zip"
                     exit 1
                   }
-                  echo "fdep output zipping complete - output saved to $nammayatriMetadata/${name}"
+                  echo "fdep output zipping complete - output saved to $juspayMetadata/@packageName@"
 
                   # Server cleanup is handled by the trap
                   kill $(cat server.pid) 2>/dev/null || true
                 fi
+
               ''
             ];
 
