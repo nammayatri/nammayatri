@@ -11,6 +11,7 @@ FleetOwnerInformation:
     enabled: Bool
     blocked: Bool
     verified: Bool
+    isEligibleForSubscription: Bool
     gstNumber: Maybe Text
     panNumber: Maybe Text
     fleetType: FleetType
@@ -25,6 +26,14 @@ FleetOwnerInformation:
   types:
     FleetType:
       enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+  beamType:
+    isEligibleForSubscription: Maybe Bool
+
+  fromTType:
+    isEligibleForSubscription: fromMaybe True isEligibleForSubscription | E
+
+  toTType:
+    isEligibleForSubscription: Just isEligibleForSubscription | E
 
   constraints:
     fleetOwnerPersonId : PrimaryKey

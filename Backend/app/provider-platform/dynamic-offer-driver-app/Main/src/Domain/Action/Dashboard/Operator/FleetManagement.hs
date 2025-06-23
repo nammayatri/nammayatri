@@ -223,6 +223,7 @@ createFleetOwnerInfo personId merchantId enabled = do
             referredByOperatorId = Nothing,
             panImageId = Nothing,
             panNumber = Nothing,
+            isEligibleForSubscription = True,
             createdAt = now,
             updatedAt = now
           }
