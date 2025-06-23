@@ -124,6 +124,14 @@ data LegStatus = LegStatus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MultimodalTicketVerifyReq = MultimodalTicketVerifyReq {qrData :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalTicketVerifyResp = MultimodalTicketVerifyResp {legInfo :: Lib.JourneyModule.Types.LegInfo}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MultimodalTransitOptionData = MultimodalTransitOptionData {duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds, travelModes :: [Domain.Types.Trip.MultimodalTravelMode]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -29,6 +29,8 @@ imports:
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
   BusData: Storage.CachedQueries.Merchant.MultiModalBus
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  VehicleCategory: BecknV2.FRFS.Enums
 
 module: MultimodalConfirm
 
@@ -85,6 +87,12 @@ types:
   MultimodalTransitOptionsReq:
     sourceLatLong: LatLong
     destLatLong: LatLong
+
+  MultimodalTicketVerifyReq:
+    qrData: Text
+
+  MultimodalTicketVerifyResp:
+    legInfo: LegInfo
 
   MultimodalTransitOptionData:
     travelModes: [MultimodalTravelMode]
@@ -379,3 +387,16 @@ apis:
         status: JourneyLegStatus
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/ticket/verify
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
+      auth: TokenAuth
+      request:
+        type: MultimodalTicketVerifyReq
+      response:
+        type: MultimodalTicketVerifyResp
