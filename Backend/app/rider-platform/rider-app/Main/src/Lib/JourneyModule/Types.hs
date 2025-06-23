@@ -314,7 +314,9 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
-    providerName :: Maybe Text
+    providerName :: Maybe Text,
+    adultTicketQuantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -344,7 +346,9 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     providerRouteId :: Maybe Text,
     deviceId :: Maybe Text,
     ticketTypeCode :: Maybe Text,
-    selectedServiceTier :: Maybe LegServiceTier
+    selectedServiceTier :: Maybe LegServiceTier,
+    adultTicketQuantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -375,7 +379,9 @@ data BusLegExtraInfo = BusLegExtraInfo
     providerName :: Maybe Text,
     selectedServiceTier :: Maybe LegServiceTier,
     frequency :: Maybe Seconds,
-    alternateShortNames :: [Text]
+    alternateShortNames :: [Text],
+    adultTicketQuantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -736,7 +742,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
-                  providerName = Just booking.providerName
+                  providerName = Just booking.providerName,
+                  adultTicketQuantity = Just booking.quantity,
+                  childTicketQuantity = booking.childTicketQuantity
                 }
         Spec.BUS -> do
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
@@ -764,7 +772,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
                   alternateShortNames = journeyRouteDetail.alternateShortNames,
-                  selectedServiceTier = mbSelectedServiceTier
+                  selectedServiceTier = mbSelectedServiceTier,
+                  adultTicketQuantity = Just booking.quantity,
+                  childTicketQuantity = booking.childTicketQuantity
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -785,7 +795,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
                   ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for cris sdk initiation
-                  selectedServiceTier = mbSelectedServiceTier
+                  selectedServiceTier = mbSelectedServiceTier,
+                  adultTicketQuantity = Just booking.quantity,
+                  childTicketQuantity = booking.childTicketQuantity
                 }
 
 getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
@@ -912,7 +924,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
-                  providerName = Nothing
+                  providerName = Nothing,
+                  adultTicketQuantity = mbQuote <&> (.quantity),
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
         Spec.BUS -> do
           journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
@@ -938,7 +952,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   selectedServiceTier = mbSelectedServiceTier,
                   alternateShortNames = journeyRouteDetail.alternateShortNames,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails,
-                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
+                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails,
+                  adultTicketQuantity = mbQuote <&> (.quantity),
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
@@ -955,7 +971,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   deviceId = Nothing, -- not required for cris sdk initiation
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- required for cris sdk initiation
                   ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- required for cris sdk initiation
-                  selectedServiceTier = mbSelectedServiceTier
+                  selectedServiceTier = mbSelectedServiceTier,
+                  adultTicketQuantity = mbQuote <&> (.quantity),
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
 
 getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier

@@ -18,6 +18,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
+import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -187,18 +188,20 @@ status merchantId merchantOperatingCity bapConfig booking platformType = do
       void $ CallFRFSBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId
     _ -> do
       onStatusReq <- Flow.status merchantId merchantOperatingCity integratedBPPConfig bapConfig booking
-      processOnStatus onStatusReq
+      void $ processOnStatus onStatusReq
   where
     processOnStatus onStatusReq = do
       let bookingOnStatusReq = DOnStatus.Booking onStatusReq
       (merchant', booking') <- DOnStatus.validateRequest bookingOnStatusReq
       DOnStatus.onStatus merchant' booking' bookingOnStatusReq
 
-verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Flow ()
+verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Flow DFRFSTicket.FRFSTicket
 verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encryptedQrData platformType = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| platformType ||+ "")
   onStatusReq <- Flow.verifyTicket merchantId merchantOperatingCity integratedBPPConfig bapConfig encryptedQrData
-  processOnStatus onStatusReq
+  processOnStatus onStatusReq >>= \case
+    DOnStatus.TicketVerificationSync ticket -> return ticket
+    _ -> throwError $ InvalidRequest "Unsupported OnStatus Response."
   where
     processOnStatus onStatusReq = do
       let verificationOnStatusReq = DOnStatus.TicketVerification onStatusReq
