@@ -14,6 +14,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
@@ -199,14 +200,30 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
             & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
         let makeSelfieAadhaarPanMandatory = Nothing
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
-        allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
+        vehicleDocsVerified <- SStatus.checkVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
+        driverDocsVerified <- SStatus.checkDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
+        let allVehicleDocsVerified = all snd vehicleDocsVerified
+            allDriverDocsVerified = all snd driverDocsVerified
         let allDriverVehicleDocsVerified = allVehicleDocsVerified && allDriverDocsVerified
         when allDriverVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           void $ postDriverEnable merchantShortId opCity $ cast @DP.Person @Common.Driver personId
+        remarks <-
+          if allDriverVehicleDocsVerified
+            then pure req.remarks
+            else do
+              let vehicleDocsUnverified = map fst . filter (not . snd) $ vehicleDocsVerified
+              let driverDocsUnverified = map fst . filter (not . snd) $ driverDocsVerified
+              unless (null vehicleDocsUnverified) $ do
+                logError $ "Vehicle docs unverified for registartionNo " <> opHubReq.registrationNo <> ": " <> T.intercalate ", " (show <$> vehicleDocsUnverified)
+              unless (null driverDocsUnverified) $ do
+                logError $ "Driver docs unverified for driverId " <> personId.getId <> ": " <> T.intercalate ", " (show <$> driverDocsUnverified)
+              pure $
+                req.remarks
+                  <> (if null vehicleDocsUnverified then "" else "; vehicle docs unverified: " <> T.intercalate ", " (show <$> vehicleDocsUnverified))
+                  <> (if null driverDocsUnverified then "" else "; driver docs unverified: " <> T.intercalate ", " (show <$> driverDocsUnverified))
         let reqUpdatedStatus = if allDriverVehicleDocsVerified then castReqStatusToDomain req.status else PENDING
-        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
+        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
         mbVehicle <- QVehicle.findById personId
         when (isNothing mbVehicle && allDriverVehicleDocsVerified) $
           void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
