@@ -29,7 +29,7 @@ import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
-import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType)
+import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType,GlobalPayload)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT, runExcept)
@@ -40,7 +40,7 @@ import Data.Array as DA
 import Resource.Constants as Const
 import Data.Either (Either(..), either, isRight)
 import Data.Function (on, flip)
-import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn1, runFn2, runFn3)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
@@ -133,7 +133,7 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AddDestRes(..),LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload)
+import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload, _show_splash)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
@@ -173,7 +173,7 @@ import Screens.RideRequestScreen.ScreenData as RideRequestData
 import Screens.RideSummaryScreen.Controller as RSC
 import Screens.RideSummaryScreen.ScreenData (initData) as RideSummaryScreenData
 import DecodeUtil as DU
-import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
+import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash, hideLoaderFlow)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
 import Screens.MetroWarriorsScreen.Controller (getMetroWarriorFromLocationId, makeStationsData)
@@ -186,14 +186,16 @@ import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 import Screens (ScreenName(..)) as Screen
+import Helpers.PrestoUtils 
 
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
-    when baseFlow $ do
-      lift $ lift $ initUI
+    let gPayload = EHC.getGlobalPayload "__payload"
+    when baseFlow $ initUIWrapper ""
     let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "splash"
-    when (baseFlow && bundleSplashConfig.enable) $ do
+        hybridInit = fromMaybe true $ gPayload >>= (\payload -> payload ^. _payload ^. _show_splash)
+    when (baseFlow && bundleSplashConfig.enable && hybridInit) $ do
       toggleSetupSplash true
       let _ = DU.setKeyInWindow "forceAppToNoInternetScreen" true
       pure unit
@@ -286,7 +288,10 @@ baseAppFlow baseFlow event driverInfoResponse = do
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       liftFlowBT $ markPerformance "INITIAL_FLOW_END"
       if isTokenValid regToken then do
-        checkRideAndInitiate event driverInfoResponse
+        if HU.isParentView FunctionCall then do 
+          handleDeepLinksFlow event Nothing Nothing
+        else do
+          checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
         chooseLanguageFlow event
       else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
@@ -501,37 +506,71 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
             void $ lift $ lift $ fork $ Remote.getDriverInfoApi ""
           if getDriverInfoResp.enabled
             then do
-              deleteValueFromLocalStore ENTERED_RC
-              if getValueToLocalStore IS_DRIVER_ENABLED == "false"
-                then do
-                  void $ pure $ firebaseLogEvent "ny_driver_enabled"
-                  void $ pure $ metaLogEvent "ny_driver_enabled"
-                  let (Vehicle linkedVehicle) = fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle
-                  let category = fromMaybe "" linkedVehicle.category
-                  when (category /= "") $ do
-                    void $ lift $ lift $ liftFlow $ logEvent logField_ $ "ny_driver_" <> toLower category <> "_enabled"
-                    void $ pure $ metaLogEvent $ "ny_driver_" <> toLower category <> "_enabled"
-                else pure unit
-              setValueToLocalStore IS_DRIVER_ENABLED "true"
-              if updateShowSubscription
-                then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
-                else pure unit
-              (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
-              modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
-              updateDriverDataToStates
-              void $ liftFlowBT $ runEffectFn1 consumeBP unit
-              if (isJust getDriverInfoResp.autoPayStatus)
-                then setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
-                else pure unit
-              permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
-              if permissionsGiven
-                then do
-                  liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
-                  handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
-                else do
-                  modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                  permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
+              if (HU.isParentView FunctionCall) then do
+                void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
+                  $ CTA.EventPayload
+                      { event: "process_result"
+                      , payload:
+                          Just
+                            { action: "terminate"
+                            , trip_amount: Nothing
+                            , ride_status: Nothing
+                            , trip_id: Nothing
+                            , screen: Nothing
+                            , exit_app: true
+                            , registration_token: Just $ getValueToLocalStore REGISTERATION_TOKEN
+                            }
+                      }
+                pure unit
+              else do
+                deleteValueFromLocalStore ENTERED_RC
+                if getValueToLocalStore IS_DRIVER_ENABLED == "false"
+                  then do
+                    void $ pure $ firebaseLogEvent "ny_driver_enabled"
+                    void $ pure $ metaLogEvent "ny_driver_enabled"
+                    let (Vehicle linkedVehicle) = fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle
+                    let category = fromMaybe "" linkedVehicle.category
+                    when (category /= "") $ do
+                      void $ lift $ lift $ liftFlow $ logEvent logField_ $ "ny_driver_" <> toLower category <> "_enabled"
+                      void $ pure $ metaLogEvent $ "ny_driver_" <> toLower category <> "_enabled"
+                  else pure unit
+                setValueToLocalStore IS_DRIVER_ENABLED "true"
+                if updateShowSubscription
+                  then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
+                  else pure unit
+                (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
+                modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
+                updateDriverDataToStates
+                void $ liftFlowBT $ runEffectFn1 consumeBP unit
+                if (isJust getDriverInfoResp.autoPayStatus)
+                  then setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
+                  else pure unit
+                permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
+                if permissionsGiven
+                  then do
+                    liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_END"
+                    handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
+                  else do
+                    modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
+                    permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
             else do
+              if (HU.isParentView FunctionCall) then do
+                void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
+                  $ CTA.EventPayload
+                      { event: "process_result"
+                      , payload:
+                          Just
+                            { action: "update_token"
+                            , trip_amount: Nothing
+                            , ride_status: Nothing
+                            , trip_id: Nothing
+                            , screen: Nothing
+                            , exit_app: true
+                            , registration_token: Just $ getValueToLocalStore REGISTERATION_TOKEN
+                            }
+                      }
+                pure unit
+              else pure unit
               -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
               setValueToLocalStore IS_DRIVER_ENABLED "false"
               if getDriverInfoResp.verified
@@ -603,9 +642,10 @@ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appCon
 handleDeepLinksFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 handleDeepLinksFlow event activeRideResp isActiveRide = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS_FLOW"
+  let _ = spy "handleDeepLinksFlow event" event
   case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e ->
-          case e.data of
+          case (spy "handleDeepLinksFlow e.data" e.data) of
             "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
             "lang" -> do
               modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
@@ -628,7 +668,112 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
             "alerts" -> do
               let gPayload = EHC.getGlobalPayload "__payload"
               hideSplashAndCallFlow $ notificationFlow gPayload
+            "earnings" -> do              
+              (GlobalState globalState) <- getState
+              appConfig <- getAppConfigFlowBT Constants.appConfig              
+              modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+              hideSplashAndCallFlow driverEarningsFlow
+            "registration" -> hideSplashAndCallFlow onBoardingFlow
+            "onboarding" -> do
+              isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+              if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
+                  chooseCityFlow event
+                else authenticationFlow "" event
+            "profile" -> do
+              -- liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
+              (GlobalState allState) <- getState
+              let updatedState = allState.homeScreen
+              modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
+              hideSplashAndCallFlow driverProfileFlow
+            "ride_request" -> do
+              (GlobalState allState) <- getState
+              let updatedState = allState.homeScreen
+              LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon updatedState.data.currentDriverLat updatedState.data.currentDriverLon 700 false true
+              modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> (RideRequestData.initData "") {data{driverLat = Just lat , driverLong = Just lon}})
+              hideSplashAndCallFlow rideRequestScreenFlow
+            "hotspot" -> do
+              (GlobalState allState) <- getState
+              let updatedState = allState.homeScreen
+              hideSplashAndCallFlow hotspotScreenFlow
+            "subscription" -> do
+              hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
+            "addNewLocation" -> do
+              modifyScreenState $ DriverSavedLocationScreenStateType (\state -> state {props { viewType = ST.SearchLocation} , data { predictions = [] }})
+              hideSplashAndCallFlow goToLocationFlow
+            "benefits" -> do
+              hideSplashAndCallFlow benefitsScreenFlow
+            "goTo" -> do
+              resp <- lift $ lift $ Remote.getDriverHomeLocation ""
+              case resp of
+                Right response -> modifyScreenState $ HomeScreenStateType (\state -> state { data { driverGotoState { showGoto = true, savedLocationsArray = getLocationArray response } } })
+                Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+              hideSplashAndCallFlow homeScreenFlow
+            "helpAndSupport" -> do
+              let
+                language =
+                  ( case getLanguageLocale languageKey of
+                      "HI_IN" -> "hi"
+                      "KN_IN" -> "kn"
+                      "TA_IN" -> "ta"
+                      "TE_IN" -> "te"
+                      _ -> "en"
+                  )
+              categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
+              modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } })
+              hideSplashAndCallFlow helpAndSupportFlow
+
+            "clearDues" -> hideSplashAndCallFlow $ clearPendingDuesFlow true
+
+            "rideDetails" -> do
+              (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "COMPLETED" "null"
+              let _ = spy "rideHistoryResponse" rideHistoryResponse
+              case (head rideHistoryResponse.list) of
+                Nothing -> pure unit
+                Just (RidesInfo response) -> do
+                  let
+                    specialZoneConfig = HU.getRideLabelData response.specialLocationTag
+
+                    isSpecialPickUpZone = HU.checkSpecialPickupZone response.specialLocationTag
+                  modifyScreenState
+                    $ TripDetailsScreenStateType
+                        ( \tripDetailsScreen ->
+                            tripDetailsScreen
+                              { data
+                                { tripId = response.shortRideId
+                                , date = (convertUTCtoISC (response.createdAt) "D MMM")
+                                , time = (convertUTCtoISC (response.createdAt) "h:mm A")
+                                , source = (decodeAddress response.fromLocation false)
+                                , destination = if (RC.rideTypeConstructor response.tripCategory) == ST.Rental then "" else maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation
+                                , vehicleType = response.vehicleVariant
+                                , totalAmount = fromMaybe response.estimatedBaseFare response.computedFare
+                                , distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2
+                                , status = response.status
+                                , rider = (fromMaybe "" response.riderName)
+                                , customerExtraFee = response.customerExtraFee
+                                , purpleTagVisibility = isJust response.disabilityTag
+                                , gotoTagVisibility = isJust response.driverGoHomeRequestId
+                                , spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag)
+                                , specialZoneLayoutBackground = specialZoneConfig.backgroundColor
+                                , specialZoneImage = specialZoneConfig.imageUrl
+                                , specialZoneText = specialZoneConfig.text
+                                , specialZonePickup = isSpecialPickUpZone
+                                , tollCharge = fromMaybe 0.0 response.tollCharges
+                                , vehicleModel = response.vehicleModel
+                                , rideType = response.vehicleServiceTierName
+                                , tripStartTime = response.tripStartTime
+                                , tripEndTime = response.tripEndTime
+                                , acRide = response.isVehicleAirConditioned
+                                , vehicleServiceTier = response.vehicleServiceTier
+                                , tripType = RC.rideTypeConstructor response.tripCategory
+                                , parkingCharge = fromMaybe 0.0 response.parkingCharge
+                                , stops = (fst <<< HU.getStopName) <$> (fromMaybe [] response.stops)
+                                , goBackTo = ST.Home
+                                }
+                              }
+                        )
+                  hideSplashAndCallFlow $ tripDetailsScreenFlow
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
+            
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState

@@ -105,14 +105,7 @@ function callInitiateResult() {
     errorMessage: "",
     errorCode: ""
   }
-  const jpConsumingBackpress = {
-    event: "jp_consuming_backpress",
-    payload: {
-      jp_consuming_backpress: true
-    }
-  }
   console.log("APP_PERF INDEX_BUNDLE_INITIATE_RESULT : ", new Date().getTime());
-  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
@@ -508,6 +501,15 @@ if (window.eventQueue) {
   while (window.eventQueue.length) {
     const args = window.eventQueue.pop();
     window.onMerchantEvent.apply(null, args)
+  }
+}
+window.onSharedPreferenceChanged = function (key, value) {
+  if (key) {
+    if (value) {
+      if (key === "LANGUAGE_KEY") {
+        window.languageKey = value;
+      }
+    }
   }
 }
 

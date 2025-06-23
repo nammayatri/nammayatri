@@ -16,11 +16,12 @@
 module Screens.HotspotScreen.Controller where
 
 import Common.Resources.Constants
+import Common.Types.App
 import Components.PrimaryButton as PrimaryButtonController
 import Data.Array (mapWithIndex, filter, (..), foldl, sortBy, length)
 import Data.FoldableWithIndex (foldMapWithIndex)
 import Data.Int (toNumber)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe,Maybe(..))
 import Data.Number (fromString, pi, cos, sin)
 import Data.Ord (comparing)
 import Effect (Effect)
@@ -29,7 +30,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (getColorWithOpacity)
-import Helpers.Utils (toRad)
+import Helpers.Utils (toRad,emitTerminateApp, isParentView)
 import JBridge as JB
 import MerchantConfig.Types
 import Prelude (pure, unit, class Show, bind, discard, ($), void, (<>), show, (>=), (<=), (&&), map, (/), (*), max, (>), Unit, (<), negate, (+), (||), (/=), when)
@@ -40,6 +41,8 @@ import Screens.Types as ST
 import Services.API (LatLong(..), DemandHotspotsResp(..), HotspotsDetails(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
+import Prelude
+import Debug
 
 instance showAction :: Show Action where
   show (ShowMap _ _ _) = "ShowMap"
@@ -118,7 +121,13 @@ eval BackPressed state =
   if state.props.showNavigationSheet then continue state {props{showNavigationSheet = false}}
   else exit GoBack
 
-eval BackButtonClicked state = exit GoBack
+eval BackButtonClicked state = do
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else do
+      exit GoBack
 
 eval (CircleOnClick lat lon color) state = continue state {props {showNavigationSheet = true, selectedCircleColor = color, selectedCircleLatLng = LatLong { lat : fromMaybe 0.0 $ fromString lat, lon : fromMaybe 0.0 $ fromString lon}, isAnyCircleSelected = true}}
 

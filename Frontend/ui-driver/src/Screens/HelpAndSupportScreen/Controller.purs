@@ -25,8 +25,9 @@ import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
 import JBridge (showDialer, differenceBetweenTwoUTC, openUrlInApp)
-import Helpers.Utils (getTime,getCurrentUTC,toStringJSON, contactSupportNumber)
+import Helpers.Utils (getTime,getCurrentUTC,toStringJSON, contactSupportNumber , isParentView , emitTerminateApp)
 import Data.Array (foldr,cons,filter,reverse)
+import Data.Maybe (Maybe(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Components.IssueList as IssueList
 import Screens (ScreenName(..), getScreen)
@@ -125,7 +126,10 @@ eval BackPressed state = do
     case state.data.goBackTo of
         HELP_AND_SUPPORT_SCREEN -> exit (GoBack state {props{startTimerforDummyRides = false}, data{timerId = "",issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL}})
         DRIVER_PROFILE_SCREEN -> exit (GoToProfileScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
-        HOME_SCREEN -> exit (GoToHomeScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
+        HOME_SCREEN -> if (isParentView FunctionCall) then do
+                          void $ pure $ emitTerminateApp Nothing true
+                          continue state {props{startTimerforDummyRides = false}, data{timerId = ""}}
+                      else exit (GoToHomeScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         TRIP_DETAILS_SCREEN -> exit (GoToTripDetailsScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         METER_RIDE_SCREEN -> exit (GotoMeterRideScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         _ -> continue state
