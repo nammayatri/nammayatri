@@ -258,6 +258,7 @@ import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -781,25 +782,27 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
-    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-    processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driverInfo mode
+    processingChangeOnline (driverId, merchantId, merchantOpCityId) transporterConfig.timeDiffFromUtc driverInfo mode
   pure APISuccess.Success
 
 processingChangeOnline ::
   (CacheFlow m r, EsqDBFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  UTCTime ->
-  Maybe DriverInfo.DriverInformation ->
+  Seconds ->
+  DriverInfo.DriverInformation ->
   Maybe DriverInfo.DriverMode ->
   m ()
-processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driverInfo mode = do
-  let previousMode = driverInfo.mode 
+processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc driverInfo mode = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  let previousMode = driverInfo.mode
       merchantLocalDate = utctDay localTime
+  now <- getCurrentTime
   mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
   when (previousMode == Just DriverInfo.ONLINE) $ do
-    let lastOnlineTo = Just localTime
+    --  let localTimeOfThatDay = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) ride.updatedAt
+    let lastOnlineTo = Just localTime -- now
         startDayTime = Just $ UTCTime (utctDay localTime) 0
-        mbLastOnlineFrom = mbDailyStats >>= (.statusUpdatedAt)
+        mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
         lastOnlineFrom = max mbLastOnlineFrom startDayTime
         onlineDuration = if mbLastOnlineFrom < startDayTime then Just $ Seconds 0 else mbDailyStats >>= (.onlineDuration)
         newOnlineDuration = do
@@ -807,29 +810,31 @@ processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driver
           lastOnlineFrom' <- lastOnlineFrom
           onlineDuration' <- onlineDuration
           pure $ onlineDuration' + Seconds (floor $ diffUTCTime lastOnlineTo' lastOnlineFrom')
-    addDataToDailyStats mbDailyStats driverId merchantLocalDate lastOnlineTo newOnlineDuration
+    addDataToDailyStats mbDailyStats driverId merchantLocalDate newOnlineDuration
+    QDIE.updateOnlineDurationRefreshedAt driverId $ Just now
 
     when (mbLastOnlineFrom < startDayTime) $ do
       let yesterdayMerchantLocalDate = addDays (-1) merchantLocalDate
           yesterdaylastOnlineTo = addUTCTime (-1) <$> startDayTime
+          startYesterdayTime = (\d -> UTCTime (utctDay d) 0) <$> yesterdaylastOnlineTo
       mbYesterdayDailyStats <- SQDS.findByDriverIdAndDate driverId yesterdayMerchantLocalDate
-      when (isNothing $ mbYesterdayDailyStats >>= (.statusUpdatedAt)) . throwError . InternalError $ "OnlineDuration more than 24 hours. DriverId: " <> driverId.getId
-      SQDSE.updateOnlineDurationByDriverId driverId yesterdayMerchantLocalDate yesterdaylastOnlineTo $ do
+      when (startYesterdayTime > mbLastOnlineFrom) . throwError . InternalError $ "OnlineDuration more than 24 hours. DriverId: " <> driverId.getId
+      SQDSE.updateOnlineDurationByDriverId driverId yesterdayMerchantLocalDate $ do
         yesterdaylastOnlineTo' <- yesterdaylastOnlineTo
         yesterdayDailyStats <- mbYesterdayDailyStats
-        yesterdaylastOnlineFrom <- yesterdayDailyStats.statusUpdatedAt
+        yesterdaylastOnlineFrom <- mbLastOnlineFrom
         yesterdayOnlineDuration <- yesterdayDailyStats.onlineDuration
         pure $ yesterdayOnlineDuration + Seconds (floor $ diffUTCTime yesterdaylastOnlineTo' yesterdaylastOnlineFrom)
 
   when (mode == Just DriverInfo.ONLINE) $ do
-    let statusUpdatedAt = Just localTime
-    addDataToDailyStats mbDailyStats driverId merchantLocalDate statusUpdatedAt Nothing
+    let onlineDurationRefreshedAt = Just now
+    QDIE.updateOnlineDurationRefreshedAt driverId onlineDurationRefreshedAt
   where
     addDataToDailyStats mbDailyStats driverId' =
       if isJust mbDailyStats
         then SQDSE.updateOnlineDurationByDriverId driverId'
         else createNewDailyStats
-    createNewDailyStats merchantLocalDate statusUpdatedAt onlineDuration = do
+    createNewDailyStats merchantLocalDate onlineDuration = do
       id <- generateGUIDText
       now <- getCurrentTime
       merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -860,7 +865,6 @@ processingChangeOnline (driverId, merchantId, merchantOpCityId) localTime driver
             numFleetsOnboarded = 0,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
-            statusUpdatedAt = statusUpdatedAt,
             onlineDuration = onlineDuration
           }
 

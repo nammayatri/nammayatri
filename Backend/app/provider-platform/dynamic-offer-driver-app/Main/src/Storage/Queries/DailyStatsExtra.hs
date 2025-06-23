@@ -69,14 +69,12 @@ updateOnlineDurationByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id SP.Person ->
   Day ->
-  Maybe UTCTime ->
   Maybe Seconds ->
   m ()
-updateOnlineDurationByDriverId driverId merchantLocalDate statusUpdatedAt onlineDuration = do
+updateOnlineDurationByDriverId driverId merchantLocalDate onlineDuration = do
   _now <- getCurrentTime
   updateOneWithKV
-    ( [Se.Set Beam.updatedAt _now]
-        <> [Se.Set Beam.statusUpdatedAt statusUpdatedAt | isJust statusUpdatedAt]
-        <> [Se.Set Beam.onlineDuration onlineDuration | isJust onlineDuration]
-    )
+    [ Se.Set Beam.updatedAt _now,
+      Se.Set Beam.onlineDuration onlineDuration
+    ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]

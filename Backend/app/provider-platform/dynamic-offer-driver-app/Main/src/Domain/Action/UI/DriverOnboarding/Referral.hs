@@ -271,7 +271,6 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
                 numFleetsOnboarded = fleetCount,
                 merchantId = Just transporterConfig.merchantId,
                 merchantOperatingCityId = Just transporterConfig.merchantOperatingCityId,
-                statusUpdatedAt = Nothing,
                 onlineDuration = Nothing
               }
       QDailyStats.create dailyStatsOfDriver'

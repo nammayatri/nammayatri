@@ -6,7 +6,7 @@ import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import qualified Data.List as L
 import Data.OpenApi (ToSchema)
 import Data.Ord (comparing)
-import Data.Time (UTCTime (UTCTime, utctDay), diffUTCTime, getCurrentTime)
+import Data.Time (UTCTime (UTCTime, utctDay), addUTCTime, diffUTCTime, getCurrentTime)
 import Domain.Action.Dashboard.Common (mobileIndianCode)
 import Domain.Action.Dashboard.Fleet.Driver (validateOperatorToFleetAssoc) -- , validateRequestorRoleAndGetEntityId)
 import Domain.Action.UI.Invoice (getSourceAndDestination, notAvailableText)
@@ -30,7 +30,7 @@ import Kernel.Types.Error
   )
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
-import Kernel.Utils.Time (getLocalCurrentTime)
+import Kernel.Utils.Time (getLocalCurrentTime, secondsToNominalDiffTime)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -122,7 +122,7 @@ buildTodaySummary (driver, driverInformation) rideLs driverStatus = do
           if driverStatus == Common.ONLINE
             then
               let startDayTime = UTCTime (utctDay localTime) 0
-                  mbOnlineFrom = mbDailyStats >>= (.statusUpdatedAt)
+                  mbOnlineFrom = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) <$> driverInformation.onlineDurationRefreshedAt
                   onlineFrom = maybe startDayTime (max startDayTime) mbOnlineFrom
                in floor $ diffUTCTime localTime onlineFrom
             else 0

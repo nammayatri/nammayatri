@@ -207,7 +207,6 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                       numFleetsOnboarded = 0,
                       merchantId = Just merchantId,
                       merchantOperatingCityId = Just merchantOperatingCity.id,
-                      statusUpdatedAt = Nothing,
                       onlineDuration = Nothing
                     }
             QDailyStats.create dailyStatsOfDriver'

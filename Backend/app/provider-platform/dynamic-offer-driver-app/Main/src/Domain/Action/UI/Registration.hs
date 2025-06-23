@@ -312,7 +312,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             softBlockStiers = Nothing,
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
-            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION]
+            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            onlineDurationRefreshedAt = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
