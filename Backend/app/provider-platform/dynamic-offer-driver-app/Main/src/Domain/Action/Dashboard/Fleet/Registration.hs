@@ -180,7 +180,8 @@ createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbRef
             panImageId = Nothing,
             panNumber = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            isEligibleForSubscription = True
           }
   QFOI.create fleetOwnerInfo
 

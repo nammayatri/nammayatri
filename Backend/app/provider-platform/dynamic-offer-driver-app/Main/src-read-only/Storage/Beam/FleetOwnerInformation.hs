@@ -20,6 +20,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,
     gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     panImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

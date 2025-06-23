@@ -116,6 +116,8 @@ import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFare
+import Storage.Queries.FleetDriverAssociationExtra as QFDAE
+import Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -566,9 +568,13 @@ createDriverFee ::
 createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName = do
   unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    fleetDriverAssoc <- QFDAE.findByDriverId driverId True
+    fleetOwnerInfo <- maybe (pure Nothing) (\fda -> QFOI.findByPrimaryKey (Id fda.fleetOwnerId)) fleetDriverAssoc
+    let fleetIsSubscriptionEligble = maybe True (.isEligibleForSubscription) fleetOwnerInfo
     freeTrialDaysLeft' <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
     let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-    case newFareParams.platformFeeChargesBy of
+    let chargeBy = if (not fleetIsSubscriptionEligble) then DFP.NoCharge else newFareParams.platformFeeChargesBy
+    case chargeBy of
       DFP.NoCharge -> pure ()
       _ -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
   where
