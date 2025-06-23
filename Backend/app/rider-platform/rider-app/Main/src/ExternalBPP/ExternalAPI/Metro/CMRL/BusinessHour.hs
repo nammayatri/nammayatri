@@ -13,7 +13,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
-import Tools.Error
 
 data BusinessHourResult = BusinessHourResult
   { qrBookingStartTime :: T.Text,
@@ -33,8 +32,9 @@ data BusinessHourRes = BusinessHourRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type BusinessHourAPI =
-  "cumta" :> "businesshour"
+  "CmrlThirdParty" :> "businesshour"
     :> Header "Authorization" T.Text
+    :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] BusinessHourRes
 
 businessHourAPI :: Proxy BusinessHourAPI
@@ -42,8 +42,6 @@ businessHourAPI = Proxy
 
 getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m BusinessHourResult
 getBusinessHour config = do
-  accessToken <- getAuthToken config
-  response <-
-    callAPI config.networkHostUrl (ET.client businessHourAPI (Just $ "Bearer " <> accessToken)) "getBusinessHour" businessHourAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_BUSINESS_HOUR_API") config.networkHostUrl)
+  let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken) cmrlAppType
+  response <- callCMRLAPI config eulerClient "getBusinessHour" businessHourAPI
   return response.result

@@ -19,6 +19,8 @@ import ConfigProvider
 import Screens.Types as ST
 import Data.Maybe (Maybe(..))
 import Services.API (FRFSRouteAPI(..), FrfsQuote(..))
+import Foreign.Object (Object, empty)
+import Foreign(Foreign)
 
 initData :: SelectBusRouteScreenState
 initData = {
@@ -27,9 +29,16 @@ initData = {
     , destLoc : ""
     , quotes : Nothing
     , selectedQuote : Nothing
+    , logField : empty
+    , cheapestRoute : Nothing
+    , fastestRoute : Nothing
+    , isSortByPillClicked : false
+    , sortbyPillText : "Sort By"
+    , eta : []
   },
   props : {
     enableSeeRoute : false
+  , isInitialRender : true
   }
 }
 
@@ -43,8 +52,20 @@ type SelectBusRouteScreenData = {
   , destLoc :: String
   , quotes :: Maybe (Array FrfsQuote)
   , selectedQuote :: Maybe FrfsQuote
+  , logField :: Object Foreign
+  , cheapestRoute :: Maybe String
+  , fastestRoute :: Maybe String
+  , isSortByPillClicked :: Boolean
+  , sortbyPillText :: String
+  , eta :: Array EtaBasedOnRoute
 }
 
 type SelectBusRouteScreenProp = {
     enableSeeRoute :: Boolean
+  , isInitialRender :: Boolean
+}
+
+type EtaBasedOnRoute = {
+    etas :: Maybe Int
+  , routeCode :: String
 }

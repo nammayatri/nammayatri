@@ -28,6 +28,16 @@ createMany = traverse_ create
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 deleteById driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateNumDriversOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateNumDriversOnboarded numDriversOnboarded driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.numDriversOnboarded (Kernel.Prelude.Just numDriversOnboarded), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateNumFleetsOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateNumFleetsOnboarded numFleetsOnboarded driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.numFleetsOnboarded (Kernel.Prelude.Just numFleetsOnboarded), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updatePayoutEarningsByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updatePayoutEarningsByDriverId totalPayoutEarnings driverId = do
   _now <- getCurrentTime
@@ -91,7 +101,11 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.idleSince idleSince,
       Se.Set Beam.isValidRating isValidRating,
       Se.Set Beam.lateNightTrips lateNightTrips,
+      Se.Set Beam.numDriversOnboarded (Kernel.Prelude.Just numDriversOnboarded),
+      Se.Set Beam.numFleetsOnboarded (Kernel.Prelude.Just numFleetsOnboarded),
       Se.Set Beam.ridesCancelled ridesCancelled,
+      Se.Set Beam.safetyPlusEarnings (Kernel.Prelude.Just safetyPlusEarnings),
+      Se.Set Beam.safetyPlusRideCount (Kernel.Prelude.Just safetyPlusRideCount),
       Se.Set Beam.totalCoinsConvertedCash (Kernel.Prelude.Just totalCoinsConvertedCash),
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),

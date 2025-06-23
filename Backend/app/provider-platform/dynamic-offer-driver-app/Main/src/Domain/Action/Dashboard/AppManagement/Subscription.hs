@@ -13,6 +13,7 @@ module Domain.Action.Dashboard.AppManagement.Subscription
     getSubscriptionDriverPaymentHistoryAPIV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
     postSubscriptionCollectManualPayments,
+    postSubscriptionFeeWaiveOff,
   )
 where
 
@@ -225,4 +226,15 @@ postSubscriptionCollectManualPayments merchantShortId opCity driverId serviceNam
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   let dataClearManualSelectedDues = Domain.Action.UI.Driver.ClearManualSelectedDues {driverFeeIds = fromMaybe [] req.paymentIds}
   _ <- Domain.Action.UI.Driver.clearDriverDues (Kernel.Types.Id.cast driverId, m.id, mOCityId) serviceName (Just dataClearManualSelectedDues) Nothing
+  return Kernel.Types.APISuccess.Success
+
+postSubscriptionFeeWaiveOff ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  API.Types.Dashboard.AppManagement.Subscription.WaiveOffReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postSubscriptionFeeWaiveOff merchantShortId opCity req = do
+  m <- findMerchantByShortId merchantShortId
+  mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  void $ Domain.Action.UI.Plan.updateWaiveOffByDriver mOCityId req.waiveOffEntities
   return Kernel.Types.APISuccess.Success

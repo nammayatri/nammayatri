@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.RateCardScreen.Controller (ScreenOutput(..))
 import Screens.RateCardScreen.View as RateCardScreen
 import Types.App (FlowBT, GlobalState(..), RATE_CARD_SCREEN_OUTPUT(..), ScreenType(..))
@@ -29,7 +29,7 @@ import Types.ModifyScreenState (modifyScreenState)
 rateCardScreen :: FlowBT String RATE_CARD_SCREEN_OUTPUT
 rateCardScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ RateCardScreen.screen state.rateCardScreen
+  action <- lift $ lift $ runLoggableScreen $ RateCardScreen.screen state.rateCardScreen
   case action of
     UpdatePrice updatedState val -> do
       modifyScreenState $ RateCardScreenStateType (\_ -> updatedState)

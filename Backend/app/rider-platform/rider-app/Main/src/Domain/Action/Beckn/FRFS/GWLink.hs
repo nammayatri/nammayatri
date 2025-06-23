@@ -42,6 +42,12 @@ data GoogleTripType = ONE_WAY | ROUND_TRIP deriving stock (Eq, Show, Generic)
 
 data GooglePassengerType = SINGLE_PASSENGER | MULTIPLE_PASSENGERS deriving stock (Eq, Show, Generic)
 
+getCustomCardTitleValueByTripType :: GoogleTripType -> Text
+getCustomCardTitleValueByTripType tripType =
+  case tripType of
+    ONE_WAY -> "Single ticket"
+    ROUND_TRIP -> "Round trip"
+
 getserviceAccount :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id M.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m TC.ServiceAccount
 getserviceAccount merchantId merchantOpCityId serviceName = do
   merchantServiceConfig <- CQMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId serviceName >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "WalletService" (show GW.GoogleWallet))

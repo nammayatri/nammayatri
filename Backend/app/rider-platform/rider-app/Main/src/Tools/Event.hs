@@ -91,6 +91,20 @@ data Payload
         createdAt :: UTCTime,
         updatedAt :: UTCTime
       }
+  | MarketingParams
+      { personId :: Id Person,
+        gclId :: Maybe Text,
+        utmCampaign :: Maybe Text,
+        utmContent :: Maybe Text,
+        utmCreativeFormat :: Maybe Text,
+        utmMedium :: Maybe Text,
+        utmSource :: Maybe Text,
+        utmTerm :: Maybe Text,
+        merchantId :: Id Merchant,
+        merchantOperatingCityId :: Id MerchantOperatingCity,
+        createdAt :: UTCTime,
+        updatedAt :: UTCTime
+      }
   deriving (Show, Eq, Generic, ToSchema)
 
 instance ToJSON Payload where
@@ -160,6 +174,22 @@ data RouteDataEvent = RouteDataEvent
     updatedAt :: UTCTime
   }
   deriving (Show, Eq, Generic, FromJSON)
+
+data MarketingParamsEventData = MarketingParamsEventData
+  { personId :: Id Person,
+    gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 newtype SearchEventData = SearchEventData
   { searchRequest :: DSearchRequest.SearchRequest
@@ -294,4 +324,14 @@ triggerRouteDataEvent ::
 triggerRouteDataEvent RouteDataEvent {..} = do
   let routePayload = RouteCollectionData {..}
   event <- createEvent Nothing (getId routePayload.merchantId) RouteCollection RIDER_APP System (Just routePayload) Nothing Nothing
+  triggerEvent event
+
+triggerMarketingParamEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  MarketingParamsEventData ->
+  m ()
+triggerMarketingParamEvent MarketingParamsEventData {..} = do
+  let marketingParamsPayload = MarketingParams {..}
+  event <- createEvent (Just $ getId marketingParamsPayload.personId) (getId marketingParamsPayload.merchantId) MarketingParamsData RIDER_APP System (Just marketingParamsPayload) Nothing Nothing
   triggerEvent event

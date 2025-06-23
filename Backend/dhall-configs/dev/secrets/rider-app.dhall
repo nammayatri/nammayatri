@@ -32,6 +32,7 @@ in  { dbUserId = "atlas_app_user"
     , internalClickhouseAPIKey = "test-clickhosue-api-key"
     , clickHouseUsername = "default"
     , clickHousePassword = ""
+    , locationTrackingServiceKey = "ae288466-2add-11ee-be56-0242ac120002"
     , ondcTokenMap
     , googleSAPrivateKey
     }

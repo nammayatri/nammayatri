@@ -19,6 +19,7 @@ import Screens.Types(VehicleDetailsScreenState, VehicalTypes(..))
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import ConfigProvider
  
 
 initData :: VehicleDetailsScreenState
@@ -30,7 +31,8 @@ initData = {
     vehicleRegNumber : "",
     vehicleType : "",
     vehicleModel : "",
-    vehicleColor : ""
+    vehicleColor : "",
+    config : getAppConfig appConfig
   },
 
   props: {

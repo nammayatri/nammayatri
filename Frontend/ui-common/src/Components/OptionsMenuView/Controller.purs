@@ -21,13 +21,17 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>), class Eq)
+import Prelude ((<>), class Eq, class Show, show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Screens.Types (IssueInfo(..), IssueModalType(..))
 import Styles.Colors as Color
 
 data Action = ItemClick String
               | BackgroundClick
+
+instance showAction :: Show Action where
+  show (ItemClick _) = "ItemClick"
+  show (BackgroundClick) = "BackgroundClick"
 
 type MenuItemData = {
     image :: String,

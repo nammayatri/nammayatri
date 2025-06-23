@@ -24,7 +24,15 @@ import Engineering.Helpers.Commons (screenWidth, screenHeight)
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Prelude ((<>), class Show)
+
+instance showAction :: Show Action where
+  show (Decline _) = "Decline"
+  show (Request _ _) = "Request"
+  show (CountDown _ _ _) = "CountDown"
+  show (NoAction) = "NoAction"
+  show (IncreasePrice _) = "IncreasePrice"
+  show (DecreasePrice _) = "DecreasePrice"
 
 data Action = Decline String | Request String Number | CountDown Int String String | NoAction | IncreasePrice String | DecreasePrice String
 

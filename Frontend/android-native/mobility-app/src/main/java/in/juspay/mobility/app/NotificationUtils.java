@@ -144,10 +144,10 @@ public class NotificationUtils {
             final SimpleDateFormat tf1 = new SimpleDateFormat("hh:mm a");
             df1.setTimeZone(TimeZone.getTimeZone("IST"));
             tf1.setTimeZone(TimeZone.getTimeZone("IST"));
-            
+
             String date = df1.format(rideDateTime);
             String time = tf1.format(rideDateTime);
-            
+
             rideStartTime = time;
             rideStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
         }
@@ -155,7 +155,7 @@ public class NotificationUtils {
             rideStartDate = "Today";
             rideStartTime = "now";
             e.printStackTrace();
-            
+
         }
         return new String[]{rideStartDate, rideStartTime};
     }
@@ -267,11 +267,14 @@ public class NotificationUtils {
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
+                    sheetData.putInt("congestionCharges", (entity_payload.has("congestionCharges") && !entity_payload.isNull("congestionCharges") ? entity_payload.getInt("congestionCharges") : 0));
+                    sheetData.putInt("petCharges", (entity_payload.has("petCharges") && !entity_payload.isNull("petCharges") ? entity_payload.getInt("petCharges") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
                     sheetData.putBoolean("isTranslated", (!entity_payload.has("isTranslated") || entity_payload.isNull("isTranslated") || entity_payload.getBoolean("isTranslated")));
                     sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
                     sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? entity_payload.getString("requestedVehicleVariant") : NO_VARIANT);
+                    sheetData.putInt("coinsRewardedOnGoldTierRide", (entity_payload.has("coinsRewardedOnGoldTierRide") && !entity_payload.isNull("coinsRewardedOnGoldTierRide") ? entity_payload.getInt("coinsRewardedOnGoldTierRide") : 0));
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 0): 0);
@@ -317,8 +320,10 @@ public class NotificationUtils {
                             listData.add(sheetData);
                         } else {
                             new Handler(Looper.getMainLooper()).post(() -> {
-                                if (binder != null) {
+                                if (binder != null && binder.getService() != null) {
                                     binder.getService().addToList(sheetData);
+                                } else {
+                                    listData.add(sheetData);
                                 }
                             });
                         }
@@ -343,37 +348,35 @@ public class NotificationUtils {
                             }
                         }, BIND_AUTO_CREATE);
                     } else {
-                        if (overlayFeatureNotAvailable(context)) {
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.postDelayed(() -> {
-                                try {
-                                    String reqId = entity_payload.getString("searchRequestId");
-                                    boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(reqId);
-                                    if (isClearedReq){
-                                        MyFirebaseMessagingService.clearedRideRequest.remove(reqId);
-                                        return;
-                                    }
-                                    mFirebaseAnalytics.logEvent("low_ram_device", params);
-                                    if (RideRequestActivity.getInstance() == null) {
-                                        Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                        intent.putExtras(sheetData);
-                                        context.getApplicationContext().startActivity(intent);
-                                    } else {
-                                        RideRequestActivity.getInstance().addToList(sheetData);
-                                    }
-                                    lastRideReq = new Bundle();
-                                    lastRideReq.putAll(sheetData);
-                                    lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                    RideRequestUtils.createRideRequestNotification(context);
-                                } catch (Exception e) {
-                                    Exception exception = new Exception("Error in onCreate ride req activity " + e);
-                                    FirebaseCrashlytics.getInstance().recordException(exception);
-                                    params.putString("exception", e.toString());
-                                    mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.postDelayed(() -> {
+                            try {
+                                String reqId = entity_payload.getString("searchRequestId");
+                                boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(reqId);
+                                if (isClearedReq){
+                                    MyFirebaseMessagingService.clearedRideRequest.remove(reqId);
+                                    return;
                                 }
-                            }, (sheetData.getInt("keepHiddenForSeconds", 0) * 1000L));
-                        }
+                                mFirebaseAnalytics.logEvent("low_ram_device", params);
+                                if (RideRequestActivity.getInstance() == null) {
+                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                    intent.putExtras(sheetData);
+                                    context.getApplicationContext().startActivity(intent);
+                                } else {
+                                    RideRequestActivity.getInstance().addToList(sheetData);
+                                }
+                                lastRideReq = new Bundle();
+                                lastRideReq.putAll(sheetData);
+                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
+                                RideRequestUtils.createRideRequestNotification(context);
+                            } catch (Exception e) {
+                                Exception exception = new Exception("Error in onCreate ride req activity " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
+                                params.putString("exception", e.toString());
+                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
+                            }
+                        }, (sheetData.getInt("keepHiddenForSeconds", 0) * 1000L));
 
 //                        Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
                         System.out.println("no_overlay_permission" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
@@ -452,7 +455,7 @@ public class NotificationUtils {
         }
     }
 
-    public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
+    public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl, String messageId) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
         int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
         String show_notification = data.getString("show_notification");
@@ -471,6 +474,7 @@ public class NotificationUtils {
         System.out.println("imageUrl" + imageUrl);
         System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
+        intent.putExtra("message_id", messageId != null ? messageId : "");
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("title",title)
                   .put("msg",msg);
@@ -494,7 +498,7 @@ public class NotificationUtils {
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.REALLOCATE_PRODUCT)) {
             channelId = notificationType + "_NEW";
-        } 
+        }
         else {
             channelId = GENERAL_NOTIFICATION;
         }
@@ -547,7 +551,7 @@ public class NotificationUtils {
             boolean playSoundForNotification = allowSoundForNotification(notificationType,data,key);
             if(playSoundForNotification){
               mBuilder.setSound(notificationSound);
-            } 
+            }
             System.out.println("Default sound" + notificationSound);
        }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -809,8 +813,9 @@ public class NotificationUtils {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         boolean useSilentFCMForForwardBatch = fetchUseSilentFCMForForwardBatch(entity_payload);
         sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.NEW_RIDE_AVAILABLE)).apply();
+        boolean isAppOnAnotherActivity = sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true");
         boolean activityBasedChecks = Arrays.asList("onPause", "onDestroy").contains(sharedPref.getString("ACTIVITY_STATUS", "null"));
-        boolean useWidgetService = (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch;
+        boolean useWidgetService = !isAppOnAnotherActivity && ((sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch);
         boolean widgetCheckForNonOverlay = useWidgetService && !NotificationUtils.overlayFeatureNotAvailable(context);
          boolean reqPresentCheckForWidget = binder == null && widgetCheckForNonOverlay;
          if (reqPresentCheckForWidget) {
@@ -842,7 +847,7 @@ public class NotificationUtils {
             }
         }
     }
-   
+
     public static boolean fetchUseSilentFCMForForwardBatch(JSONObject payload) {
         boolean isOnRide = payload.optBoolean("isOnRide", false);
         return payload.optBoolean("useSilentFCMForForwardBatch", false) && isOnRide;
@@ -878,6 +883,7 @@ public class NotificationUtils {
         return isLowRamDevice || modelNotSupported;
     }
 
+    @Deprecated
     public static void updateLocationUpdateDisAndFreq(String fcmType, SharedPreferences sharedPref) {
         if (remoteConfigs.hasKey("loc_pings_config")){
             String locationPingsConfig = remoteConfigs.getString("loc_pings_config");
@@ -1018,20 +1024,31 @@ public class NotificationUtils {
             if (triggerUICallback) NotificationUtils.triggerUICallbacks(notificationType, String.valueOf(new JSONObject().put("title", title).put("msg" , body)));
             switch (notificationType){
                 case MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT:
-                    NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                    NotificationUtils.showNotification(context, title, body, payload, imageUrl, null);
                     sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
-                    startMainActivity(context);
+
+                    System.out.println("openMeterActive "+ openMeterActive);
+                    System.out.println("openMeterActive "+ openMeterActive.isActive());
+
+                    if(openMeterActive != null && openMeterActive.isActive()){
+                        Intent meterAcitvityIntent = new Intent(context,Class.forName("in.juspay.mobility.OpenMeterActivity"));
+                        context.startActivity(meterAcitvityIntent);
+                    }else{
+                        startMainActivity(context);
+                    }
+
+
                     if (merchantType.equals("DRIVER")){
-                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
                     break;
                 case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
                     if (payload.get("show_notification").equals("true")) {
-                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, null);
                     }
                     if (merchantType.equals("DRIVER")){
-                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
                     break;
             }
@@ -1081,4 +1098,12 @@ public class NotificationUtils {
             }
         }
     }
+
+    public static OpenMeterActive openMeterActive;
+
+    public interface OpenMeterActive{
+        public  boolean isActive();
+    }
+
+
 }

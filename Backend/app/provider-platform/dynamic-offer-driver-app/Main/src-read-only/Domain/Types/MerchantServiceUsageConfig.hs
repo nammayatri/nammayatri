@@ -41,11 +41,13 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getPlaceName :: Kernel.External.Maps.Types.MapsService,
     getRoutes :: Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: Kernel.External.Maps.Types.MapsService,
+    gstVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     initiateCall :: Kernel.External.Call.CallService,
     issueTicketService :: Kernel.External.Ticket.Types.IssueTicketService,
     llmChatCompletion :: ChatCompletion.Types.LLMChatCompletionService,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    panVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     rectifyDistantPointsFailure :: Kernel.External.Maps.Types.MapsService,
     retryBankAccountLink :: Kernel.External.Payment.Types.PaymentService,
     sdkVerificationService :: Kernel.External.Verification.Types.VerificationService,
@@ -60,7 +62,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   }
   deriving (Generic, Show)
 
-type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
+type MerchantServiceUsageConfig = MerchantServiceUsageConfigD ('Safe)
 
 instance FromJSON (MerchantServiceUsageConfigD 'Unsafe)
 

@@ -16,7 +16,6 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
-import API.Types.RiderPlatform.Management.Endpoints.FRFSTicket (FRFSStationAPI)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
@@ -28,7 +27,6 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
-import Domain.Types.Journey (Journey, JourneyStatus)
 import Domain.Types.Location (Location, LocationAPIEntity)
 import Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as Person
@@ -48,13 +46,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Booking (getfareBreakups)
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -63,28 +61,6 @@ import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
-
-data JourneyLocation = Taxi LocationAPIEntity | Frfs FRFSStationAPI | Null
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-newtype BookingListResV2 = BookingListResV2
-  { list :: [BookingAPIEntityV2]
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data BookingAPIEntityV2 = Ride BookingAPIEntity | MultiModalRide JourneyAPIEntity
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data JourneyAPIEntity = JourneyAPIEntity
-  { id :: Id Journey,
-    fare :: Price,
-    fromLocation :: JourneyLocation,
-    toLocation :: JourneyLocation,
-    startTime :: Maybe UTCTime,
-    createdAt :: UTCTime,
-    status :: JourneyStatus
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
@@ -126,6 +102,7 @@ data BookingAPIEntity = BookingAPIEntity
     sosStatus :: Maybe DSos.SosStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    isPetRide :: Bool,
     isValueAddNP :: Bool,
     vehicleServiceTierType :: DVST.ServiceTierType,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
@@ -138,7 +115,10 @@ data BookingAPIEntity = BookingAPIEntity
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int,
     cancellationReason :: Maybe BookingCancellationReasonAPIEntity,
-    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange
+    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
+    isSafetyPlus :: Bool,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -163,7 +143,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     driversPreviousRideDropLocLat :: Maybe Double,
     driversPreviousRideDropLocLon :: Maybe Double,
     stopInfo :: [DSI.StopInformation],
-    batchConfig :: Maybe SharedRedisKeys.BatchConfig
+    batchConfig :: Maybe BatchConfig,
+    isSafetyPlus :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -323,6 +304,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         sosStatus = mbSosStatus,
         isBookingUpdated = booking.isBookingUpdated,
         isValueAddNP,
+        isPetRide = booking.isPetRide,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
@@ -337,7 +319,10 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         favCount = activeRide >>= (.favCount),
         tripCategory = booking.tripCategory,
         estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
-        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl
+        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
+        isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
+        isInsured = Just booking.isInsured,
+        insuredAmount = booking.insuredAmount
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -467,22 +452,7 @@ buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
-  (fareBreakups, estimatedFareBreakups) <- do
-    case mbRide of
-      Just ride ->
-        case booking.status of
-          COMPLETED -> do
-            updatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
-            estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-            let fareBreakups = if null updatedFareBreakups then estimatedFareBreakups else updatedFareBreakups
-            return (fareBreakups, estimatedFareBreakups)
-          _ -> do
-            --------- Need to remove it after fixing the status api polling in frontend ---------
-            estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
-            return ([], estimatedFareBreakups)
-      Nothing -> do
-        estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
-        return ([], estimatedFareBreakups)
+  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mbRide
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
@@ -511,8 +481,9 @@ buildBookingStatusAPIEntity booking = do
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
       destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
       talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
+      isSafetyPlus = fromMaybe False $ mbActiveRide <&> (.isSafetyPlus)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
@@ -541,5 +512,6 @@ buildRideAPIEntity DRide.Ride {..} = do
         allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
         allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
         talkedWithDriver = fromMaybe False talkedWithDriver,
+        isInsured = Just isInsured,
         ..
       }

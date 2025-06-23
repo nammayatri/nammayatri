@@ -6,6 +6,7 @@ module Storage.Queries.Person (module Storage.Queries.Person, module ReExport) w
 
 import qualified Data.Time
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
@@ -105,6 +106,23 @@ updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValidRating isValidRating, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateJuspayCustomerPaymentId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateJuspayCustomerPaymentId juspayCustomerPaymentID id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateLastUsedVehicleServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.lastUsedVehicleServiceTiers (Just lastUsedVehicleServiceTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateLiveActivityToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLiveActivityToken liveActivityToken id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.liveActivityToken liveActivityToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -136,11 +154,13 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   updateWithKV
     [ Se.Set Beam.aadhaarVerified aadhaarVerified,
       Se.Set Beam.androidId androidId,
+      Se.Set Beam.authBlocked authBlocked,
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.blocked blocked,
       Se.Set Beam.blockedAt (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
       Se.Set Beam.blockedByRuleId (Kernel.Types.Id.getId <$> blockedByRuleId),
       Se.Set Beam.blockedCount blockedCount,
+      Se.Set Beam.blockedUntil blockedUntil,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
@@ -154,6 +174,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags),
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
+      Se.Set Beam.dateOfBirth dateOfBirth,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
       Se.Set Beam.description description,
       Se.Set Beam.deviceId deviceId,
@@ -173,11 +194,18 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.identifier identifier,
       Se.Set Beam.identifierType identifierType,
+      Se.Set Beam.imeiNumberEncrypted (imeiNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.imeiNumberHash (imeiNumber <&> (.hash)),
       Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,
+      Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID,
       Se.Set Beam.language language,
       Se.Set Beam.lastName lastName,
+      Se.Set Beam.lastUsedVehicleServiceTiers (Just lastUsedVehicleServiceTiers),
+      Se.Set Beam.latestLat latestLat,
+      Se.Set Beam.latestLon latestLon,
+      Se.Set Beam.liveActivityToken liveActivityToken,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId ((Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId),
       Se.Set Beam.middleName middleName,
@@ -188,6 +216,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.payoutVpa payoutVpa,
+      Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByCustomer referredByCustomer,
@@ -203,6 +232,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.totalRidesCount totalRidesCount,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.useFakeOtp useFakeOtp,
+      Se.Set Beam.verificationChannel verificationChannel,
       Se.Set Beam.whatsappNotificationEnrollStatus whatsappNotificationEnrollStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

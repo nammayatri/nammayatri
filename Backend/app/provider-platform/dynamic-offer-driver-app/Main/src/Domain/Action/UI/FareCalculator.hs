@@ -20,6 +20,7 @@ import Kernel.Prelude hiding (concatMap)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.FarePolicy as FP
 import qualified SharedLogic.TollsDetector as TD
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -41,23 +42,25 @@ getCalculateFare ::
   )
 getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropLatLong pickupLatlong = do
   (_, mbDistance, mbDuration, mbRoute, _) <- calculateDistanceAndRoutes merchantId merchanOperatingCityId distanceWeightage [pickupLatlong, dropLatLong] -----------------if you want congestionCharges to be considered then pass geohash imstead of nothing
-  calculateFareUtil merchantId merchanOperatingCityId (Just dropLatLong) pickupLatlong mbDistance mbDuration mbRoute (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
+  calculateFareUtil merchantId merchanOperatingCityId (Just dropLatLong) pickupLatlong mbDistance mbDuration mbRoute (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) Nothing []
 
 data CalculateFareReq = CalculateFareReq
-  { dropLatLong :: Kernel.External.Maps.Types.LatLong,
+  { dropLatLong :: Maybe Kernel.External.Maps.Types.LatLong,
     pickupLatLong :: Kernel.External.Maps.Types.LatLong,
     mbDistance :: Maybe Meters,
-    mbDuration :: Maybe Seconds
+    mbDuration :: Maybe Seconds,
+    mbTripCategory :: Maybe DTC.TripCategory
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 calculateFare :: Id Merchant -> Context.City -> Maybe Text -> CalculateFareReq -> Environment.Flow API.Types.UI.FareCalculator.FareResponse
 calculateFare merchantId merchantCity apiKey CalculateFareReq {..} = do
+  let tripCategory = fromMaybe (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) mbTripCategory
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-  calculateFareUtil merchantId merchantOperatingCity.id (Just dropLatLong) pickupLatLong mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
+  calculateFareUtil merchantId merchantOperatingCity.id dropLatLong pickupLatLong mbDistance mbDuration Nothing tripCategory Nothing []
 
 calculateFareUtil ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
@@ -68,13 +71,15 @@ calculateFareUtil ::
   Maybe Seconds ->
   Maybe Utils.RouteInfo ->
   DTC.TripCategory ->
+  Maybe DVST.ServiceTierType ->
+  [LYT.ConfigVersionMap] ->
   Environment.Flow API.Types.UI.FareCalculator.FareResponse
-calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory = do
+calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory mbVehicleServiceTier configsInExperimentVersions = do
   now <- getCurrentTime
   transporterConfig <- CCT.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   let mbFromLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (pickupLatlong.lat, pickupLatlong.lon)
   let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
-  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory
+  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
   let mbTollCharges = (\(tollCharges, _, _, _) -> tollCharges) <$> mbTollChargesAndNames
   let mbTollNames = (\(_, tollNames, _, _) -> tollNames) <$> mbTollChargesAndNames
@@ -87,14 +92,15 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   where
     buildEstimateHelper fp mbTollCharges mbTollNames now = do
       vehicleServiceTierItem <-
-        CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchanOperatingCityId
+        CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchanOperatingCityId configsInExperimentVersions
           >>= fromMaybeM (VehicleServiceTierNotFound $ show fp.vehicleServiceTier)
-      DBS.buildEstimate merchantId merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp
+      DBS.buildEstimate merchantId merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 mbDuration False vehicleServiceTierItem fp
 
     selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' =
-      filter isValid
+      filter (\farePolicy -> isValid farePolicy mbVehicleServiceTier)
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
+        isValid farePolicy (Just vehicleServiceTier) = farePolicy.vehicleServiceTier == vehicleServiceTier && checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
+        isValid farePolicy Nothing = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
         autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == DVST.AUTO_RICKSHAW then fromMaybe True mbIsAutoRickshawAllowed' else True
         bikesAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == DVST.BIKE then fromMaybe True mbIsTwoWheelerAllowed' else True
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
@@ -127,7 +133,7 @@ calculateDistanceAndRoutes merchantId merchantOpCityId distanceWeightage latLong
             calcPoints = True,
             mode = Just Utils.CAR
           }
-  routeResponse <- Maps.getRoutes merchantId merchantOpCityId request
+  routeResponse <- Maps.getRoutes merchantId merchantOpCityId Nothing request
   let durationWeightage = 100 - distanceWeightage
       (shortestRouteInfo, shortestRouteIndex) = Utils.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
       longestRouteDistance = (.distance) =<< Utils.getLongestRouteDistance routeResponse

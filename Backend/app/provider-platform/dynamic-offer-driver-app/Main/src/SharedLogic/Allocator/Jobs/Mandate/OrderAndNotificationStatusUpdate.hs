@@ -32,7 +32,8 @@ notificationAndOrderStatusUpdate ::
     EncFlow m r,
     EventStreamFlow m r,
     HasShortDurationRetryCfg r c,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
   m ExecutionResult

@@ -26,28 +26,36 @@ import Common.Types.App (LazyCheck)
 import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (unit, (/=), (<>), (==))
 import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
-import Data.Maybe(fromMaybe, Maybe(..), isJust)
+import Data.Maybe(fromMaybe, Maybe(..), isJust, maybe)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Prelude ((<>), (||),(&&),(==),(<), not, (>))
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Data.Array as DA
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import PrestoDOM.Types.DomAttributes  (Corners(..))
-import Prelude
+import Prelude hiding (zero)
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import Font.Style (Style(..))
 import ConfigProvider
+import Components.ExtraChargeCard as ExtraChargeCard
+import Services.API
+import Data.Array
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
+import Components.DriverProfileScoreCard as DriverProfileScoreCard
+import RemoteConfig.Types
+import Storage
+import RemoteConfig as RC
+import Debug
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -177,7 +185,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.updateLanguages && DA.length (getSelectedLanguages state) > 0) || (state.props.showGenderView && isJust state.data.genderTypeSelect && state.data.driverGender /= state.data.genderTypeSelect) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber && state.data.driverAlternateNumber /= state.data.driverEditAlternateMobile) then 1.0 else 0.7
       }
   in primaryButtonConfig'
-
 
 updateButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
@@ -390,7 +397,7 @@ paymentInfoPopUpConfig push state =
     config' = PopUpModal.config
     popUpConfig' =
       config'
-        { 
+        {
          buttonLayoutMargin = Margin 16 24 16 20 ,
          padding = PaddingTop 24,
          backgroundClickable = true,
@@ -458,7 +465,7 @@ addRCButtonConfig state = let
       , cornerRadius = 10.0
       , background = Color.blue600
       , height = (V 60)
-      , id = "AddRCPrimaryButton" 
+      , id = "AddRCPrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -473,7 +480,7 @@ addRCButtonConfigs state = let
       , cornerRadius = 10.0
       , background = Color.blue600
       , height = (V 60)
-      , id = "AddRCPrimaryButton" 
+      , id = "AddRCPrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -508,53 +515,67 @@ deleteRcPopUpConfig state =
     popUpConfig'
 
 driverBLockedPopup :: ST.DriverProfileScreenState -> PopUpModal.Config
-driverBLockedPopup state = 
-  PopUpModal.config {
-    gravity = CENTER,
-    backgroundClickable = false,
-    optionButtonOrientation = "VERTICAL",
-    buttonLayoutMargin = Margin 16 0 16 20,
-    margin = MarginHorizontal 25 25, 
-    primaryText {
-      text = getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
-    , textStyle = Heading2
-    , margin = Margin 16 0 16 10},
-    secondaryText{
-      text = getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
-    , textStyle = Body5
-    , margin = Margin 16 0 16 15 },
-    option1 {
-      text = getString CALL_SUPPORT
-    , color = Color.yellow900
-    , background = Color.black900
-    , strokeColor = Color.transparent
-    , textStyle = FontStyle.SubHeading1
-    , width = MATCH_PARENT
-    , image {
-        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
-        , height = V 16
-        , width = V 16
-        , visibility = VISIBLE
-        , margin = MarginRight 8
-      }
+driverBLockedPopup state =
+  let
+    mbOverchargingTag = maybe Nothing (\(GetDriverInfoResp resp) -> resp.overchargingTag) state.data.driverInfoResponse
+    isOverCharging = maybe false (\overchargingTag -> overchargingTag `elem` [MediumOverCharging, SuperOverCharging, HighOverCharging]) mbOverchargingTag
+    isSuspended = maybe false (\overchargingTag -> overchargingTag == MediumOverCharging) mbOverchargingTag
+
+    title = if isOverCharging  && isSuspended then getString $  SUSPENDED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+      else getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+
+    description = if isOverCharging && isSuspended then getStringV2 overcharging_suspended_desc
+      else if isOverCharging then getStringV2 overcharging_blocked_desc
+      else getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
+
+
+  in
+    PopUpModal.config {
+      gravity = CENTER,
+      backgroundClickable = false,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 25 25,
+      primaryText {
+        text = title
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10},
+      secondaryText{
+        text = description
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 },
+      option1 {
+        text = getString CALL_SUPPORT
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      , image {
+          imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
+          , height = V 16
+          , width = V 16
+          , visibility = VISIBLE
+          , margin = MarginRight 8
+        }
+      },
+      option2 {
+      text = getString CLOSE,
+      margin = MarginHorizontal 16 16,
+      color = Color.black650,
+      background = Color.white900,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT
     },
-    option2 {
-    text = getString CLOSE,
-    margin = MarginHorizontal 16 16,
-    color = Color.black650,
-    background = Color.white900,
-    strokeColor = Color.white900,
-    width = MATCH_PARENT
-  },
-    cornerRadius = Corners 15.0 true true true true,
-    coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
-    , visibility = VISIBLE
-    , margin = Margin 16 16 16 16
-    , width = MATCH_PARENT
-    , height = V 250
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 16
+      , width = MATCH_PARENT
+      , height = V 200
+      }
     }
-  }
 
 getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRailData
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
@@ -589,3 +610,203 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         }
       ]
     )
+
+
+driverProfileScoreCardConfigs :: ST.DriverProfileScreenState -> CancellationThresholdConfig -> Array (Maybe DriverProfileScoreCard.DriverProfileScoreCardType)
+driverProfileScoreCardConfigs state cancellationThresholdConfig =
+  [
+    cancellationBadgeConfig state cancellationThresholdConfig
+  , overchargingBadgeConfig state
+  , safetyBadgeConfig state
+  ]
+
+
+cancellationBadgeConfig :: ST.DriverProfileScreenState -> CancellationThresholdConfig -> Maybe DriverProfileScoreCard.DriverProfileScoreCardType
+cancellationBadgeConfig state cancellationThresholdConfig =
+  if cancellationRate < cancellationThresholdConfig.warning1 then
+    Just goodCancellationConfig
+  else
+    Just poorCancellationConfig
+
+  where
+    cancellationRate = if (isJust state.data.cancellationWindow) then state.data.cancellationRate else state.data.analyticsData.cancellationRate
+
+    goodCancellationConfig = {
+      score : show cancellationRate <> "%"
+    , background : "#1453BB6F"
+    , title : getStringV2 good
+    , titleColor : Color.green900
+    , image : fetchImage COMMON_ASSET "ny_ic_cancellation_thumbs_up"
+    , description : getStringV2 good_cancellation_score
+    , primaryButtonText : getStringV2 view_more
+    , badgeTitle : getStringV2 cancellation_score
+    , type : DriverProfileScoreCard.Cancellation
+    , imageWidth : V 61
+    , imageHeight : V 68
+    }
+
+    poorCancellationConfig = {
+      score : show cancellationRate <> "%"
+    , background : "#14E55454"
+    , title : getStringV2 poor
+    , titleColor : Color.red900
+    , image : fetchImage COMMON_ASSET "ny_ic_cancellation_thumbs_down"
+    , description : getStringV2 poor_cancellation_score
+    , primaryButtonText : getStringV2 view_more
+    , badgeTitle : getStringV2 cancellation_score
+    , type : DriverProfileScoreCard.Cancellation
+    , imageWidth : V 61
+    , imageHeight : V 68
+    }
+
+safetyBadgeConfig :: ST.DriverProfileScreenState  -> Maybe DriverProfileScoreCard.DriverProfileScoreCardType
+safetyBadgeConfig state =
+  -- TODO: remove this once the backend is ready
+  let
+     safetyScore = 99
+  in
+    -- if safetyScore > 80 then
+    --   Just (safeCancellationConfig safetyScore)
+    -- else if safetyScore > 50 then
+    --   Just (watchlistedCancellationConfig safetyScore)
+    -- else
+    --   Just (unsafeCancellationConfig safetyScore)
+    Nothing
+
+  where
+    safeCancellationConfig :: Int -> DriverProfileScoreCard.DriverProfileScoreCardType
+    safeCancellationConfig safetyScore = {
+      score : show safetyScore <> "%"
+    , background : "#1453BB6F"
+    , title : getStringV2 safe
+    , titleColor : Color.green900
+    , image : fetchImage COMMON_ASSET "ny_ic_green_shield_with_tick"
+    , description : getStringV2 you_are_safe
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 safety_score
+    , type : DriverProfileScoreCard.Safety
+    , imageWidth : V 61
+    , imageHeight : V 66
+    }
+
+    watchlistedCancellationConfig :: Int -> DriverProfileScoreCard.DriverProfileScoreCardType
+    watchlistedCancellationConfig safetyScore = {
+      score : show safetyScore <> "%"
+    , background : "#14FF8533"
+    , title : getStringV2 watchlisted
+    , titleColor : Color.orange900
+    , image : fetchImage COMMON_ASSET "ny_ic_orange_shield_with_eye"
+    , description : getStringV2 you_have_been_watchlisted
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 safety_score
+    , type : DriverProfileScoreCard.Safety
+    , imageWidth : V 61
+    , imageHeight : V 68
+    }
+
+    unsafeCancellationConfig :: Int -> DriverProfileScoreCard.DriverProfileScoreCardType
+    unsafeCancellationConfig safetyScore = {
+      score : show safetyScore <> "%"
+    , background : "#14E55454"
+    , title : getStringV2 unsafe
+    , titleColor : Color.red900
+    , image : fetchImage COMMON_ASSET "ny_ic_red_shield_with_alert"
+    , description : getStringV2 you_have_been_unsafe
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 safety_score
+    , type : DriverProfileScoreCard.Safety
+    , imageWidth : V 61
+    , imageHeight : V 68
+    }
+
+
+overchargingBadgeConfig :: ST.DriverProfileScreenState -> Maybe DriverProfileScoreCard.DriverProfileScoreCardType
+overchargingBadgeConfig state =
+  case state.data.driverInfoResponse of
+    Just (GetDriverInfoResp driverProfileResp) ->
+      let
+        city = getValueToLocalStore DRIVER_LOCATION
+        config = spy "getExtraChargeConfig" $ RC.getExtraChargeConfig city
+        percentage = ((fromMaybe 0 driverProfileResp.ridesWithFareIssues) * 100) / (fromMaybe 1 driverProfileResp.totalRidesConsideredForFareIssues)
+      in
+        case driverProfileResp.overchargingTag of
+          Just NoOverCharging -> Just $ zeroConfig percentage config
+          Just VeryLowOverCharging -> Just $ lowConfig percentage
+          Just LowOverCharging -> Just $ lowConfig percentage
+          Just ModerateOverCharging ->  Just $ highConfig percentage
+          Just MediumOverCharging -> Just $ suspendedConfig percentage
+          Just HighOverCharging -> Just $ blockedConfig percentage
+          Just SuperOverCharging -> Just $ blockedConfig percentage
+          Nothing -> Nothing
+    _ ->
+      Nothing
+  where
+    zeroConfig percentage config = {
+      score : show percentage <> "%"
+    , background : "#1453BB6F"
+    , title : getStringV2 zero
+    , titleColor : Color.green900
+    , image : config.zeroImage
+    , description : getStringV2 fair_price_driver
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 overcharging_score
+    , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 130
+    , imageHeight : V 68
+    }
+
+    lowConfig percentage = {
+      score : show percentage <> "%"
+    , background : "#12FCC32C"
+    , title : getStringV2 low
+    , titleColor :Color.yellow900
+    , image : fetchImage COMMON_ASSET "ny_ic_ekd_low_gauge"
+    , description : getStringV2 extra_charged
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 overcharging_score
+    , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 100
+    , imageHeight : V 68
+    }
+
+    highConfig percentage = {
+      score : show percentage <> "%"
+    , background : "#12FF8B33"
+    , title : getStringV2 high
+    , titleColor : Color.orange900
+    , image : fetchImage COMMON_ASSET "ny_ic_ekd_heigh_gauge"
+    , description : getStringV2 extra_charged
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 overcharging_score
+    , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 100
+    , imageHeight : V 68
+    }
+
+    suspendedConfig percentage = {
+      score : show percentage <> "%"
+    , background : "#12E55454"
+    , title : getStringV2 suspended
+    , titleColor : Color.red900
+    , image : fetchImage COMMON_ASSET "ny_ic_ekd_suspended_gauge"
+    , description : getStringV2 extra_charged
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 overcharging_score
+    , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 100
+    , imageHeight : V 68
+    }
+
+    blockedConfig percentage = {
+      score : show percentage <> "%"
+    , background : "#12E55454"
+    , title : getStringV2 blocked
+    , titleColor : Color.red900
+    , image : fetchImage COMMON_ASSET "ny_ic_blocked"
+    , description : getStringV2 extra_charged
+    , primaryButtonText : getStringV2 learn_more
+    , badgeTitle : getStringV2 overcharging_score
+    , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 61
+    , imageHeight : V 68
+    }

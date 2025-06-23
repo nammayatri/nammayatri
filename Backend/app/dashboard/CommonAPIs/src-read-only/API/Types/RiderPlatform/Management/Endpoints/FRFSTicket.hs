@@ -70,9 +70,11 @@ data FRFSStartStopsAPI = FRFSStartStopsAPI {code :: Data.Text.Text, lat :: Kerne
 data FRFSStationAPI = FRFSStationAPI
   { address :: Kernel.Prelude.Maybe Data.Text.Text,
     code :: Data.Text.Text,
+    hindiName :: Kernel.Prelude.Maybe Data.Text.Text,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    name :: Data.Text.Text
+    name :: Data.Text.Text,
+    regionalName :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

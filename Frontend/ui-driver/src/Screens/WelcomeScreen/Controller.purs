@@ -2,7 +2,7 @@ module Screens.WelcomeScreen.Controller where
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge (minimizeApp, firebaseLogEvent)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, ($))
+import Prelude (class Show, bind, pure, ($), show, (<>))
 import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
@@ -11,7 +11,9 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (AfterRender ) = "AfterRender"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "WelcomeScreen"

@@ -51,6 +51,13 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
+    postDriverBulkSubscriptionServiceUpdate,
+    getDriverStats,
+    checkDriverOperatorAssociation,
+    checkFleetOperatorAssociation,
+    checkFleetDriverAssociation,
+    getDriverEarnings,
+    isAssociationBetweenTwoPerson,
   )
 where
 
@@ -61,7 +68,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
 import Data.Csv
 import qualified Data.HashSet as HS
-import Data.List (partition, sortOn)
+import Data.List (nub, partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
 import Data.Ord (Down (..))
@@ -72,8 +79,6 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
-import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
-import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
@@ -115,9 +120,12 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Merchant (findMerchantByShortId, getCurrencyByMerchantOpCity)
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
@@ -128,10 +136,15 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
+import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
 import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
@@ -199,19 +212,19 @@ incrDocs lic vehReg old =
 getRcExpiration :: VehicleRegistrationCertificate -> UTCTime
 getRcExpiration = (.fitnessExpiry)
 
-getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerification -> St.ResponseStatus
+getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerification -> SStatus.ResponseStatus
 getLicenseStatus onboardingTryLimit currentTries mbLicense mbLicReq =
   case mbLicense of
-    Just driverLicense -> St.mapStatus driverLicense.verificationStatus
+    Just driverLicense -> SStatus.mapStatus driverLicense.verificationStatus
     Nothing -> verificationState onboardingTryLimit currentTries mbLicReq
 
-getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> St.ResponseStatus
+getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> SStatus.ResponseStatus
 getRegCertStatus onboardingTryLimit currentTries mbRegCert mbVehRegReq =
   case mbRegCert of
-    Just (_assoc, vehicleRC) -> St.mapStatus vehicleRC.verificationStatus
+    Just (_assoc, vehicleRC) -> SStatus.mapStatus vehicleRC.verificationStatus
     Nothing -> verificationState onboardingTryLimit currentTries mbVehRegReq
 
-verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
+verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> SStatus.ResponseStatus
 verificationState onboardingTryLimit imagesNum verificationReq =
   case verificationReq of
     Just req -> do
@@ -340,7 +353,7 @@ postDriverAcRestrictionUpdate merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
   checkAndUpdateAirConditioned True req.isWorking personId cityVehicleServiceTiers req.downgradeReason
   logTagInfo "dashboard -> updateACUsageRestriction : " (show personId)
   pure Success
@@ -612,7 +625,7 @@ getDriverClearStuckOnRide merchantShortId _ dbSyncTime = do
     mapM
       ( \dI -> do
           updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId) (Just dI.ride)
-          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing Nothing
+          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (dI.ride.fromLocation.lat) (dI.ride.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) dI.ride.stops}))
           return (cast dI.driverInfo.driverId)
       )
       driverInfosAndRideDetails
@@ -765,7 +778,7 @@ updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
+  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId (Just [])
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo' vehicle vehicleServiceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
@@ -1097,3 +1110,170 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
       "AadhaarCard" -> return DomainDVC.AadhaarCard
       "ProfilePhoto" -> return DomainDVC.ProfilePhoto
       _ -> throwError $ InvalidDocumentType docType
+
+postDriverBulkSubscriptionServiceUpdate :: ShortId DM.Merchant -> Context.City -> Common.BulkServiceUpdateReq -> Flow APISuccess
+postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  when (length req.driverIds > 200) $ throwError (InvalidRequest "driver ids limit exceeded")
+  let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
+  QDriverInfo.updateServicesEnabled req.driverIds services
+  return Success
+
+getDriverStats :: ShortId DM.Merchant -> Context.City -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Text -> Flow Common.DriverStatsRes
+getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  whenJust mbEntityId $ \e_Id -> do
+    let entityId = cast @Common.Driver @DP.Person e_Id
+    when (entityId.getId /= requestorId) $ do
+      entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, entityId] merchantOpCityId
+      entity <- find (\e -> e.id == entityId) entities & fromMaybeM (PersonDoesNotExist entityId.getId)
+      requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+      isValid <- isAssociationBetweenTwoPerson requestor entity
+      unless isValid $ throwError AccessDenied
+
+  let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestorId) mbEntityId
+  findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
+  where
+    -- TODO: Need to implement clickhouse aggregated query to fetch data for the given date range
+    findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m Common.DriverStatsRes
+    findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
+      currency <- getCurrencyByMerchantOpCity merchantOpCityId
+      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let defaultStats =
+            Common.DriverStatsRes
+              { numDriversOnboarded = 0,
+                numFleetsOnboarded = 0,
+                totalRides = 0,
+                totalEarnings = Money 0,
+                totalDistance = Meters 0,
+                bonusEarnings = Money 0,
+                totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+                totalEarningsPerKm = Money 0,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
+                bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
+              }
+      case (maybeFrom, maybeTo) of
+        (Nothing, Nothing) -> do
+          stats <- B.runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
+          let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+          return $
+            Common.DriverStatsRes
+              { numDriversOnboarded = stats.numDriversOnboarded,
+                numFleetsOnboarded = stats.numFleetsOnboarded,
+                totalRides = stats.totalRides,
+                totalEarnings = roundToIntegral stats.totalEarnings,
+                totalDistance = stats.totalDistance,
+                bonusEarnings = roundToIntegral stats.bonusEarned,
+                totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency
+              }
+        (Just fromDate, Just toDate) | fromDate == toDate -> do
+          mbStats <- B.runInReplica $ QDailyStats.findByDriverIdAndDate personId fromDate
+          case mbStats of
+            Nothing -> return defaultStats
+            Just stats -> do
+              let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+              return $
+                Common.DriverStatsRes
+                  { numDriversOnboarded = stats.numDriversOnboarded,
+                    numFleetsOnboarded = stats.numFleetsOnboarded,
+                    totalRides = stats.numRides,
+                    totalEarnings = roundToIntegral stats.totalEarnings,
+                    totalDistance = stats.totalDistance,
+                    bonusEarnings = roundToIntegral stats.bonusEarnings,
+                    totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                    totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                    totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                    bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
+                  }
+        (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
+          statsList <- B.runInReplica $ QDailyStats.findAllInRangeByDriverId_ personId fromDate toDate
+          if null statsList
+            then return defaultStats
+            else do
+              let agg f = sum (map f statsList)
+                  aggMoney f = HighPrecMoney $ sum (map (getHighPrecMoney . f) statsList)
+                  aggMeters f = Meters $ sum (map (getMeters . f) statsList)
+                  totalEarnings = aggMoney (.totalEarnings)
+                  totalDistance = aggMeters (.totalDistance)
+                  bonusEarnings = aggMoney (.bonusEarnings)
+                  totalEarningsPerKm = calculateEarningsPerKm totalDistance totalEarnings
+              return $
+                Common.DriverStatsRes
+                  { numDriversOnboarded = agg (.numDriversOnboarded),
+                    numFleetsOnboarded = agg (.numFleetsOnboarded),
+                    totalRides = agg (.numRides),
+                    totalEarnings = roundToIntegral totalEarnings,
+                    totalDistance = totalDistance,
+                    bonusEarnings = roundToIntegral bonusEarnings,
+                    totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+                    totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                    totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                    bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency
+                  }
+        _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
+
+    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
+    calculateEarningsPerKm distance earnings =
+      let distanceInKm = distance `div` 1000
+       in if distanceInKm.getMeters == 0
+            then HighPrecMoney 0.0
+            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
+
+isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
+  case (requestedPersonDetails.role, personDetails.role) of
+    (DP.OPERATOR, DP.DRIVER) -> checkFleetDriverAndDriverOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.ADMIN, _) -> return True
+    _ -> return False
+
+checkFleetDriverAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAssociation fleetId driverId = do
+  mbAssoc <- QFleetDriver.findByDriverIdAndFleetOwnerId driverId fleetId.getId True
+  return $ isJust mbAssoc
+
+checkFleetOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetOperatorAssociation fleetId operatorId = do
+  mbAssoc <- QFleetOperator.findByFleetIdAndOperatorId fleetId.getId operatorId.getId True
+  return $ isJust mbAssoc
+
+checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkDriverOperatorAssociation driverId operatorId = do
+  mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
+  return $ isJust mbAssoc
+
+checkFleetDriverAndDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAndDriverOperatorAssociation driverId operatorId = do
+  isDriverOperatorAssociated <- checkDriverOperatorAssociation driverId operatorId
+  if isDriverOperatorAssociated
+    then return True
+    else do
+      QFleetDriver.findByDriverId driverId True >>= \case
+        Just fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
+        Nothing -> return False
+
+getDriverEarnings :: ShortId DM.Merchant -> Context.City -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Text -> Flow Common.EarningPeriodStatsRes
+getDriverEarnings merchantShortId opCity from to earningType dId requestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverId = cast @Common.Driver @DP.Person dId
+  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverId] merchantOpCityId
+  driver <- find (\e -> e.id == driverId) entities & fromMaybeM (PersonDoesNotExist driverId.getId)
+  requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+  isValid <- isAssociationWithDriver requestor driver
+  unless isValid $ throwError AccessDenied
+  DDriver.getEarnings (driverId, merchant.id, merchantOpCityId) from to earningType
+  where
+    isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+    isAssociationWithDriver requestedPersonDetails driverDetails = do
+      case (requestedPersonDetails.role, driverDetails.role) of
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
+        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+        _ -> return False

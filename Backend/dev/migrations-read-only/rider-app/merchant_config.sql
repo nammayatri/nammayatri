@@ -16,3 +16,9 @@ ALTER TABLE atlas_app.merchant_config ADD COLUMN merchant_id character varying(3
 ALTER TABLE atlas_app.merchant_config ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.merchant_config ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.merchant_config ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_auth_count_window json  default '{"period":20, "periodType":"Minutes"}';
+ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_auth_count_threshold integer  default 8;

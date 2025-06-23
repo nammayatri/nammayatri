@@ -16,3 +16,10 @@ ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN vehicle_type text NOT NULL;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route_stop_mapping ADD PRIMARY KEY ( route_code, stop_code);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_mapping DROP CONSTRAINT route_stop_mapping_pkey;
+ALTER TABLE atlas_app.route_stop_mapping ADD PRIMARY KEY ( integrated_bpp_config_id, route_code, sequence_num, stop_code);

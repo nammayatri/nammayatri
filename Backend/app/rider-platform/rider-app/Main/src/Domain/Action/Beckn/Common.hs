@@ -21,6 +21,7 @@ where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
@@ -41,6 +42,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderConfig as DRC
@@ -56,17 +58,22 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Confidence
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SW
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified Kernel.Utils.Time as KUT
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -78,6 +85,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -91,12 +99,13 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Constants
 import Tools.Error
 import Tools.Event
-import Tools.Maps (LatLong)
+import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
@@ -133,7 +142,8 @@ data RideAssignedReq = RideAssignedReq
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
     fareBreakups :: Maybe [DFareBreakup],
-    driverTrackingUrl :: Maybe BaseUrl
+    driverTrackingUrl :: Maybe BaseUrl,
+    isSafetyPlus :: Bool
   }
 
 data OnlinePaymentParameters = OnlinePaymentParameters
@@ -155,7 +165,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl,
     isAlreadyFav :: Bool,
-    favCount :: Maybe Int
+    favCount :: Maybe Int,
+    isSafetyPlus :: Bool
   }
 
 data RideStartedReq = RideStartedReq
@@ -310,6 +321,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         safetyCheckStatus = Nothing,
         isFreeRide = Just isFreeRide,
         endOtp = Nothing,
+        isPetRide = booking.isPetRide,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         clientBundleVersion = booking.clientBundleVersion,
@@ -337,6 +349,9 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         wasRideSafe = Nothing,
         pickupRouteCallCount = Just 0,
         talkedWithDriver = Nothing,
+        isSafetyPlus = isSafetyPlus,
+        isInsured = booking.isInsured,
+        insuredAmount = booking.insuredAmount,
         ..
       }
 
@@ -355,7 +370,8 @@ rideAssignedReqHandler ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasKafkaProducer r
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -372,6 +388,7 @@ rideAssignedReqHandler req = do
   case mbRide of
     Just ride -> do
       QERIDE.updateStatus ride.id rideStatus
+      QERIDE.updateIsSafetyPlus ride.id req.isSafetyPlus
       unless isInitiatedByCronJob $ do
         Notify.notifyOnRideAssigned booking ride
         when req.isDriverBirthDay $
@@ -397,7 +414,8 @@ rideAssignedReqHandler req = do
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasBAPMetrics m r,
         EventStreamFlow m r,
-        HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+        HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+        HasKafkaProducer r
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
@@ -514,6 +532,8 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   QPFS.clearCache booking.riderId
+  fork "create insurance" $ do
+    SI.createInsurance updRideForStartReq
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
@@ -596,7 +616,9 @@ rideCompletedReqHandler ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -672,6 +694,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
+
+  when (isNothing booking.journeyId) $ createRecentLocationForTaxi booking
+
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
   --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -753,7 +778,8 @@ bookingCancelledReqHandler ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     SchedulerFlow r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   ValidatedBookingCancelledReq ->
   m ()
@@ -775,7 +801,8 @@ cancellationTransaction ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     SchedulerFlow r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DRB.Booking ->
   Maybe DRide.Ride ->
@@ -1031,7 +1058,8 @@ sendRideEndMessage ::
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   DRB.Booking ->
   m ()
@@ -1065,7 +1093,9 @@ customerReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   DRide.Ride ->
   Maybe Bool ->
@@ -1080,38 +1110,55 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
   mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory Nothing
   case mbPayoutConfig of
     Just payoutConfig -> do
-      let isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
-      when (isConsideredForPayout && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
-        whenJust person_.referredByCustomer $ \referredByCustomerId -> do
+      whenJust person_.referredByCustomer $ \referredByCustomerId -> do
+        referredByPersonStats <- getPersonStats (Id referredByCustomerId)
+        personsWithSameDeviceId <- QP.findAllByDeviceId person_.deviceId
+        let dailyPayoutCountKey = getDailyPayoutCountKey referredByCustomerId
+            monthlyPayoutCountKey = getMonthlyPayoutKey referredByCustomerId
+        dailyPayoutCount_ <- Redis.get dailyPayoutCountKey
+        monthlyPayoutCount <- fromIntegral <$> SWC.getCurrentWindowCount monthlyPayoutCountKey SW.SlidingWindowOptions {period = 1, periodType = SW.Months}
+        let dailyPayoutCount = fromMaybe 0 dailyPayoutCount_ -- for referredBy customer
+            isDeviceIdValid = length personsWithSameDeviceId == 1 -- deviceId of new customer should be unique
+            deviceIdCheck = fromMaybe False riderConfig.isDeviceIdCheckDisabled || isDeviceIdValid
+            isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
+            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (monthlyPayoutCount < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
+        when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
 
           referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
-          referredByPersonStats <- getPersonStats referredByPerson.id
-          handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD
-          handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE
+          sendPNToPerson referredByPerson True
+          sendPNToPerson person_ False
+          handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD dailyPayoutCount
+          handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE dailyPayoutCount
     Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found for cityId: " <> merchantOperatingCityId.getId <> " and category: " <> show vehicleCategory
   where
-    handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity = do
+    handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity dailyPayoutCount = do
       case person.payoutVpa of
         Just vpa -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey person.id.getId) 5 5 $ do
             case isReferredByPerson of
-              True -> QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
+              True -> do
+                QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
+                setPayoutCountForReferree person.id.getId dailyPayoutCount
               False -> QPersonStats.updateReferredByEarningsPayoutStatus (Just DPS.Processing) person.id
             phoneNo <- mapM decrypt person.mobileNumber
             emailId <- mapM decrypt person.email
             uid <- generateGUID
             let entityName = entity
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-            let serviceName = DEMSC.PayoutService PT.Juspay
-                createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
+            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+            let createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId payoutServiceName (Just person.id.getId)
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-        Nothing ->
+            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            case mbPayoutOrderResp of
+              Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
+              _ -> pure ()
+        Nothing -> do
           when isReferredByPerson $ do
-            QPersonStats.updateBacklogPayoutAmountAndActivations (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
+            setPayoutCountForReferree person.id.getId dailyPayoutCount
+            QPersonStats.updateEarningsAndActivations (referredByPersonStats.referralEarnings + amount) (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
 
     getPersonStats personId = do
       mbPersonStats <- QPersonStats.findByPersonId personId
@@ -1150,15 +1197,47 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             isBackfilled = Just False
           }
 
+    getExpirationSeconds timeDiffFromUtc = do
+      currentUtcTime <- getCurrentTime
+      let localTime = addUTCTime (KUT.secondsToNominalDiffTime timeDiffFromUtc) currentUtcTime
+          nextLocalMidnight = UTCTime (addDays 1 (utctDay localTime)) 0
+          secondsUntilExpiration = round $ diffUTCTime nextLocalMidnight localTime
+      pure secondsUntilExpiration
+
+    setPayoutCountForReferree personId dailyPayoutCount = do
+      expirationPeriodForDay <- getExpirationSeconds riderConfig.timeDiffFromUtc
+      let dailyPayoutCountKey = getDailyPayoutCountKey personId
+          monthlyPayoutCountKey = getMonthlyPayoutKey personId
+      Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
+      SWC.incrementByValue 1 monthlyPayoutCountKey SW.SlidingWindowOptions {period = 1, periodType = SW.Months}
+
+    sendPNToPerson person oldCustomer =
+      when (isNothing person.payoutVpa) $ do
+        let pnKey =
+              if oldCustomer
+                then "REFERRAL_REWARD_ADD_VPA"
+                else "REFERRED_BY_REWARD_ADD_VPA"
+        mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
+        whenJust mbMerchantPN $ \merchantPN -> do
+          let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
+          Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
+
+getDailyPayoutCountKey :: Text -> Text
+getDailyPayoutCountKey personId = "Payout:Daily:PId" <> personId
+
+getMonthlyPayoutKey :: Text -> Text
+getMonthlyPayoutKey personId = "Payout:Monthly:PId-" <> personId
 
 sendRideBookingDetailsViaWhatsapp ::
   ( CacheFlow m r,
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id DPerson.Person ->
   DRide.Ride ->
@@ -1177,14 +1256,15 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
       fare = show booking.estimatedTotalFare.amount
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just driverNumber) (Just ride.vehicleNumber) (Just fare) (Just ride.otp) (Just "N/A") (Just riderConfig.appUrl) Nothing Nothing Nothing)
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just driverNumber, Just ride.vehicleNumber, Just fare, Just ride.otp, Just "N/A", Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Ride Booking Details Whatsapp message")
 
 sendBookingCancelledMessageViaWhatsapp ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id DPerson.Person ->
   DRC.RiderConfig ->
@@ -1196,17 +1276,75 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   let phoneNumber = countryCode <> mobileNumber
       messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just riderConfig.appUrl) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 
 notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> m ()
 notifyOnDriverArrived booking ride = do
   mbHasReachedNotified <- Redis.safeGet @() driverHasReached
   when (isNothing mbHasReachedNotified) $ do
-    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
     Redis.setExp driverHasReached () 1500
   where
     driverHasReached = driverHasReachedCacheKey ride.id.getId
 
 driverHasReachedCacheKey :: Text -> Text
 driverHasReachedCacheKey rideId = "Ride:GetDriverLoc:DriverHasReached " <> rideId
+
+createRecentLocationForTaxi :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRB.Booking -> m ()
+createRecentLocationForTaxi booking = do
+  now <- getCurrentTime
+  let mbToLocation = case booking.bookingDetails of
+        DRB.OneWayDetails details -> Just details.toLocation
+        DRB.RentalDetails _ -> Nothing
+        DRB.DriverOfferDetails details -> Just details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.InterCityDetails details -> Just details.toLocation
+        DRB.AmbulanceDetails details -> Just details.toLocation
+        DRB.DeliveryDetails details -> Just details.toLocation
+        DRB.MeterRideDetails details -> details.toLocation
+
+  whenJust mbToLocation $ \toLocation -> do
+    let address' =
+          Text.intercalate ", " $
+            catMaybes
+              [ toLocation.address.title,
+                toLocation.address.building,
+                toLocation.address.street,
+                toLocation.address.city,
+                toLocation.address.state,
+                toLocation.address.country
+              ]
+        -- Generate geohash with precision of ~100 meters (precision level 6)
+        toGeohash = Text.pack <$> Geohash.encode 6 (toLocation.lat, toLocation.lon)
+        fromGeohash = Text.pack <$> Geohash.encode 6 (booking.fromLocation.lat, booking.fromLocation.lon)
+
+    -- Search for existing recent location with same geohash and entity type
+    mbExistingLocation <- SQRL.findByRiderIdAndGeohashAndEntityType booking.riderId toGeohash fromGeohash DTRL.TAXI
+    case mbExistingLocation of
+      Just existingLocation -> do
+        -- If found, increase frequency
+        SQRL.increaceFrequencyById existingLocation.id
+      Nothing -> do
+        -- If not found, create new recent location
+        uuid <- generateGUID
+        let recentLocation =
+              DTRL.RecentLocation
+                { DTRL.address = Just address',
+                  DTRL.entityType = DTRL.TAXI,
+                  DTRL.frequency = 1,
+                  DTRL.fromStopCode = Nothing,
+                  DTRL.id = uuid,
+                  DTRL.toLatLong = LatLong toLocation.lat toLocation.lon,
+                  DTRL.merchantOperatingCityId = booking.merchantOperatingCityId,
+                  DTRL.riderId = booking.riderId,
+                  DTRL.routeCode = Nothing,
+                  DTRL.toStopCode = Nothing,
+                  DTRL.fromLatLong = Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon,
+                  DTRL.createdAt = now,
+                  DTRL.updatedAt = now,
+                  DTRL.fare = Just booking.estimatedTotalFare.amount,
+                  DTRL.toGeohash = toGeohash,
+                  DTRL.fromGeohash = fromGeohash
+                }
+        SQRL.create recentLocation

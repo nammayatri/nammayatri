@@ -26,11 +26,15 @@ buildS3Env (S3MockConf m) = do
   S3Env
     { pathPrefix = m.pathPrefix,
       getH = mockGet baseDir bucketName,
-      putH = mockPut baseDir bucketName
+      putH = mockPut baseDir bucketName,
+      putRawH = mockPutRaw baseDir bucketName,
+      deleteH = mockDelete baseDir bucketName
     }
 buildS3Env (S3AwsConf a) = do
   S3Env
     { pathPrefix = a.pathPrefix,
       getH = get'' a.bucketName,
-      putH = put'' a.bucketName
+      putH = put'' a.bucketName,
+      putRawH = putRaw'' a.bucketName,
+      deleteH = delete'' a.bucketName
     }

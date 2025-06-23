@@ -35,6 +35,7 @@ import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.CallBAP
+import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -77,7 +78,10 @@ sendScheduledRideAssignedOnUpdate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -130,7 +134,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                  responseArray <- errorCatchAndHandle [req1] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId)
+                  responseArray <- errorCatchAndHandle [req1] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
                   if isAPIError responseArray
                     then do
                       let cReason = "Ride is Reallocated due to getDistance API failure"
@@ -150,7 +154,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           whenJust (booking.toLocation) $ \toLoc -> do
                             QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
                           void $ QRide.updateStatus ride.id DRide.NEW
-                          void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) Nothing
+                          void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
                           void $ sendRideAssignedUpdateToBAP booking ride driver vehicle True -- TODO: handle error
                           return Complete
                 _ -> do
@@ -206,7 +210,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                  responseArray <- errorCatchAndHandle [req1, req2] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId)
+                  responseArray <- errorCatchAndHandle [req1, req2] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
                   if isAPIError responseArray
                     then do
                       let cReason = "Ride is Reallocated due to getDistance API failure"
@@ -280,7 +284,10 @@ cancelOrReallocate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
   ) =>
   DRide.Ride ->
   Text ->

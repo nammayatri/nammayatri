@@ -39,6 +39,9 @@ module SharedLogic.MessageBuilder
     buildDeliveryDetailsMessage,
     buildFRFSTicketCancelMessage,
     BuildFRFSTicketCancelMessageReq (..),
+    buildFRFSTicketCancelOTPMessage,
+    BuildFRFSTicketCancelOTPMessageReq (..),
+    templateText,
   )
 where
 
@@ -74,6 +77,7 @@ buildSendSmsReq merchantMessage vars = do
   smsCfg <- asks (.smsCfg)
   let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
+      templateId = merchantMessage.templateId
   return $ \phoneNumber -> Sms.SendSMSReq {..}
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
@@ -88,6 +92,18 @@ buildSendOTPMessage merchantOperatingCityId req = do
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
+
+newtype BuildFRFSTicketCancelOTPMessageReq = BuildFRFSTicketCancelOTPMessageReq
+  { otp :: Text
+  }
+  deriving (Generic)
+
+buildFRFSTicketCancelOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildFRFSTicketCancelOTPMessageReq -> m SmsReqBuilder
+buildFRFSTicketCancelOTPMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.PARTNER_ORG_FRFS_TICKET_CANCEL_OTP Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.PARTNER_ORG_FRFS_TICKET_CANCEL_OTP))
+  buildSendSmsReq merchantMessage [("otp", req.otp)]
 
 data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   { otp :: Text,

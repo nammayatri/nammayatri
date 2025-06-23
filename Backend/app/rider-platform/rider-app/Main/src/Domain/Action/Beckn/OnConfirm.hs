@@ -83,7 +83,8 @@ data RideAssignedInfo = RideAssignedInfo
     fareBreakups :: Maybe [DCommon.DFareBreakup],
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
-    driverAccountId :: Maybe Payment.AccountId
+    driverAccountId :: Maybe Payment.AccountId,
+    isSafetyPlus :: Bool
   }
 
 data ValidatedOnConfirmReq

@@ -17,7 +17,6 @@ import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
-import Tools.Error
 
 data TicketStatusReq = TicketStatusReq
   { ticketNo :: T.Text
@@ -56,9 +55,10 @@ data TicketStatusRes = TicketStatusRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type TicketStatusAPI =
-  "cumta" :> "ticketStatus"
+  "CmrlThirdParty" :> "ticketStatus"
     :> Header "Authorization" T.Text
     :> MandatoryQueryParam "ticketNo" T.Text
+    :> MandatoryQueryParam "appType" T.Text
     :> Get '[JSON] TicketStatusRes
 
 ticketStatusAPI :: Proxy TicketStatusAPI
@@ -72,15 +72,14 @@ getTicketStatus config booking = do
       ( \ticket -> do
           if ticket.status == Ticket.ACTIVE
             then do
-              accessToken <- getAuthToken config
-              ticketStatus <-
-                callAPI config.networkHostUrl (ET.client ticketStatusAPI (Just $ "Bearer " <> accessToken) ticket.ticketNumber) "getTicketStatus" ticketStatusAPI
-                  >>= fromEitherM (ExternalAPICallError (Just "CMRL_TICKET_STATUS_API") config.networkHostUrl)
+              let eulerClient = \accessToken -> ET.client ticketStatusAPI (Just $ "Bearer " <> accessToken) ticket.ticketNumber cmrlAppType
+              ticketStatus <- callCMRLAPI config eulerClient "getTicketStatus" ticketStatusAPI
               let qrStatus = mkTicketStatus ticketStatus.result
               return $
                 Just $
                   ProviderTicket
                     { ticketNumber = ticket.ticketNumber,
+                      vehicleNumber = Nothing,
                       qrData = ticket.qrData,
                       qrStatus,
                       qrValidity = ticket.validTill,

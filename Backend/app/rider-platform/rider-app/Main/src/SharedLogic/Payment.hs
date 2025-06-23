@@ -13,7 +13,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -29,7 +29,8 @@ makePaymentIntent ::
     EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -52,7 +53,8 @@ cancelPaymentIntent ::
     EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -67,7 +69,8 @@ chargePaymentIntent ::
     EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -87,7 +90,8 @@ paymentErrorHandler ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Booking.Booking ->
   SomeException ->
@@ -113,7 +117,8 @@ makeCxCancellationPayment ::
     EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->

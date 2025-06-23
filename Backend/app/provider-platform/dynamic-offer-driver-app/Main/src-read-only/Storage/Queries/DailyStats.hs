@@ -47,6 +47,28 @@ updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings 
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
+updateNumDriversOnboardedByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
+updateNumDriversOnboardedByDriverId numDriversOnboarded driverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.numDriversOnboarded (Kernel.Prelude.Just numDriversOnboarded), Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateNumFleetsOnboardedByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
+updateNumFleetsOnboardedByDriverId numFleetsOnboarded driverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.numFleetsOnboarded (Kernel.Prelude.Just numFleetsOnboarded), Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
 updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Text.Text -> Data.Text.Text -> m ())
 updatePayoutOrderId payoutOrderId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.payoutOrderId payoutOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
@@ -111,6 +133,8 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantLocalDate merchantLocalDate,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.numDriversOnboarded (Kernel.Prelude.Just numDriversOnboarded),
+      Se.Set Beam.numFleetsOnboarded (Kernel.Prelude.Just numFleetsOnboarded),
       Se.Set Beam.numRides numRides,
       Se.Set Beam.payoutOrderId payoutOrderId,
       Se.Set Beam.payoutOrderStatus payoutOrderStatus,

@@ -1,3 +1,16 @@
+# Public Transport System Backend
+
+## Documentation
+
+### Database
+- [Public Transport Comprehensive Database Schema Documentation](docs/database-schema.md)
+  - Detailed table structures
+  - Relationships and constraints
+  - Usage guidelines
+  - System features
+
+## Additional Resources
+For specific implementation details or API documentation, please refer to respective sections in the docs folder.
 
 This is the sub-project containing backend code written in [haskell] powering [nammayatri] servers.
 
@@ -163,10 +176,10 @@ Also see: https://nixos.asia/en/vscode
 
 Once you have cloned the repo and have been successfully able to build the project using `cabal build all`, you can use [Visual Studio Code](https://code.visualstudio.com/) to develop the project.
 
-- Launch [VSCode](https://code.visualstudio.com/), and open the `git clone`’ed project directory [as single-folder workspace](https://code.visualstudio.com/docs/editor/workspaces#_singlefolder-workspaces)
+- Launch [VSCode](https://code.visualstudio.com/), and open the `git clone`'ed project directory [as single-folder workspace](https://code.visualstudio.com/docs/editor/workspaces#_singlefolder-workspaces)
     - NOTE: If you are on Windows, you must use the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) to open the folder in WSL.
 - When prompted by VSCode, install the [workspace recommended](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions) extensions.
-    - If it doesn’t prompt, press Cmd+Shift+X and search for `@recommended` to install them all manually.
+    - If it doesn't prompt, press Cmd+Shift+X and search for `@recommended` to install them all manually.
 - Ensure that the direnv extension is fully activated. You should expect to see this in the footer of VSCode: ![image](https://user-images.githubusercontent.com/3998/235459201-f0442741-294b-40bc-9c65-77500c9f4f1c.png)
 - Once direnv is activated (and only then) open a Haskell file (`.hs`). You should expect haskell-language-server to startup, as seen in the footer: ![image](https://user-images.githubusercontent.com/3998/235459551-7c6c0c61-f4e8-41f3-87cf-6a834e2cdbc7.png)
     - Once this processing is complete, all IDE features should work.

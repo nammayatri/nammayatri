@@ -27,6 +27,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -50,7 +51,9 @@ sendCustomerRefund ::
     MonadFlow m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   Job 'MetroIncentivePayout ->
   m ExecutionResult
@@ -96,7 +99,9 @@ callPayout ::
     MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -119,10 +124,10 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
             emailId <- mapM decrypt person.email
             let amount = fromMaybe 0 booking.eventDiscountAmount
                 entityName = DLP.METRO_BOOKING_CASHBACK
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType True
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
-            let serviceName = DEMSC.PayoutService PT.Juspay
-                createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
+            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+            let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
             mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()

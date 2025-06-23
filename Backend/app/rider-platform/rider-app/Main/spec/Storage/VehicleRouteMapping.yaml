@@ -1,0 +1,39 @@
+imports:
+  UTCTime: Data.Time
+
+VehicleRouteMapping:
+  tableName: vehicle_route_mapping
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  fields:
+    vehicleNo: Text
+    routeId: Text
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    typeOfService: Text
+    shift: Text
+    service: Text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  constraints:
+    vehicleNo: PrimaryKey
+
+  queries:
+    findByVehicleNo:
+      kvFunction: findAllWithDb
+      where: vehicleNo
+
+    findByRouteId:
+      kvFunction: findAllWithDb
+      where: routeId
+
+    findByShift:
+      kvFunction: findAllWithDb
+      where: shift
+
+    findByService:
+      kvFunction: findAllWithDb
+      where: service

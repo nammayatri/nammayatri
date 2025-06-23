@@ -14,11 +14,11 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC, WmbFlowConfig)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
-import Prelude (not, ($), (==), (||))
+import Prelude
 import Data.Maybe (fromMaybe)
 import Data.Array (elem, filter, uncons)
 import Data.Array as DA
@@ -27,6 +27,12 @@ import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Common.RemoteConfig.Types as Types
+import Data.Foldable (foldl)
+import Data.Ord (compare)
+import LocalStorage.Cache
+import Foreign.Object (empty)
+import Data.Function (on)
+import Data.String as DS
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -105,6 +111,7 @@ filterCategoryBasedCarousel allowedFilter variantFilter configs =
       categoryList = fromMaybe [] config.categoryFilter
     in
       if DA.null categoryList then true else elem allowedFilter categoryList || elem variantFilter categoryList
+
 
 fetchWhiteListedUser :: String -> Array String
 fetchWhiteListedUser configKey = fetchRemoteConfig configKey
@@ -539,3 +546,78 @@ defaultVoipConfig = {
     enableVoipCalling : false
   }
 }
+
+defaultEstimateOfferConfig :: Types.EstimateOfferConfig
+defaultEstimateOfferConfig = {
+  conditions : [],
+  enableAllVariant : false,
+  translations : empty
+}
+
+getEstimateOfferConfig :: String -> Types.EstimateOfferConfig
+getEstimateOfferConfig city = getValueFromCache 
+                                ("estimate_offer_ratio_" <> city) 
+                                  (\_ -> 
+                                    let config = fetchRemoteConfigString "estimate_offer_ratio"
+                                        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEstimateOfferConfig
+                                    in getCityBasedConfig value $ toLower city)
+
+
+evaluateFarePolicy :: (Array Types.Conditions) -> Int -> String -> Number
+evaluateFarePolicy conditions distance variant = do
+  let sortedFares = DA.reverse $ DA.sortBy (\a b -> compare a.maxDistance b.maxDistance) conditions
+  foldl (\acc item -> if distance <= item.maxDistance && distance >= item.minDistance && ((fromMaybe variant item.variant) == variant) then item.ratio else acc) 0.0 sortedFares
+
+fetchWmbFlowConfig :: LazyCheck -> WmbFlowConfig
+fetchWmbFlowConfig _ = 
+    let config = fetchRemoteConfigString "wmb_flow_configs"
+        value = decodeForeignObject (parseJSON config) defaultWmbFlowConfig
+    in value
+
+defaultWmbFlowConfig :: WmbFlowConfig
+defaultWmbFlowConfig =
+  { maxDeviatedDistanceInMeters: 1000.0
+  , showAllDeviatedBus: false
+  , maxAllowedTimeDiffInLTSinSec: 1800 
+  , maxSnappingOnRouteDistance: 1000.0
+  , defaultRadiusForFindingBus : 8000.0
+  , minimumRadiusForFindingBus : 1000.0
+  , defaultZoomLevelOnMap : 17.0
+  , maxRadiusCanBeSearched : 16001.0
+  , radiusMultiplier : 2.0
+  , updatePollingRadiusToClosestBus : false
+  }
+
+-- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)
+pollingConfig :: String -> Types.PollingConfig
+pollingConfig functionName =
+  let config = fetchRemoteConfigString "polling_configs"
+      pollingConfigList = decodeForeignObject (parseJSON config) defaultPollingConfigList
+      compareStrings = on (==) DS.trim
+      mbPollingConfig = DA.find (\item -> compareStrings item.functionName functionName) pollingConfigList.pollingConfigList
+  in fromMaybe defaultPollingConfig mbPollingConfig
+  where
+    defaultPollingConfigList :: Types.PollingConfigList
+    defaultPollingConfigList = {
+      pollingConfigList: []
+    }
+
+    defaultPollingConfig :: Types.PollingConfig
+    defaultPollingConfig = {
+      functionName : "",
+      disable : true,
+      pollingIntervalInMilliSecond : 0,
+      pollingIntervalDelayMultiplier : 0,
+      pollingRetryCount : 0
+    }
+
+-- Generic Event Triggering Config via Kafka
+pushEventsConfig :: LazyCheck -> Types.PushEventsConfig
+pushEventsConfig _ =
+  let config = fetchRemoteConfigString "push_events_configs"
+  in decodeForeignObject (parseJSON config) defaultPushEventsConfig
+  where
+    defaultPushEventsConfig :: Types.PushEventsConfig
+    defaultPushEventsConfig = {
+      loggingIntervalInS : 30000
+    }

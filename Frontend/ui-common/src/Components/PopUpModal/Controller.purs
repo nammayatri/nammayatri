@@ -23,13 +23,33 @@ import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), Unit)
+import Prelude ((<>), Unit, class Show, show)
 import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
+import Language.Strings (getString)
+
+instance showAction :: Show Action where
+  show (OnButton1Click) = "OnButton1Click"
+  show (OnButton2Click) = "OnButton2Click"
+  show (NoAction) = "NoAction"
+  show (ETextController var1) = "ETextController_" <> show var1
+  show (CountDown _ _ _) = "CountDown"
+  show (OnImageClick) = "OnImageClick"
+  show (DismissPopup) = "DismissPopup"
+  show (OptionWithHtmlClick) = "OptionWithHtmlClick"
+  show (OnSecondaryTextClick) = "OnSecondaryTextClick"
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
+  show (TipsViewActionController var1) = "TipsViewActionController_" <> show var1
+  show (OnCoverImageClick) = "OnCoverImageClick"
+  show (PersonMobile var1) = "PersonMobile_" <> show var1
+  show (PersonName var1) = "PersonName_" <> show var1
+  show (PersonAddress var1) = "PersonAddress_" <> show var1
+  show (PersonInstruction var1) = "PersonInstruction_" <> show var1
+  show (CheckBoxClick) = "CheckBoxClick"
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -52,6 +72,7 @@ data Action = OnButton1Click
 type Config = {
     primaryText :: TextConfig,
     headerInfo :: TextConfig,
+    enableAnim :: Boolean,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
@@ -101,7 +122,16 @@ type Config = {
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
     completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
-    deliveryDetailsConfig :: DeliveryDetailsConfig
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
+    voiceToTextConfig :: VoiceToTextConfig,
+    goldTierRewardConfig :: CoinWarningConfig
+}
+
+
+type VoiceToTextConfig = {
+  id :: String,
+  enabled :: Boolean
 }
 
 type DeliveryDetailsConfig = {
@@ -176,6 +206,7 @@ type ButtonConfig = {
   padding :: Padding,
   timerValue :: Int,
   enableTimer :: Boolean,
+  animate :: Boolean,
   timerID :: String,
   textStyle :: Style,
   height :: Length,
@@ -271,11 +302,25 @@ type PopUpHeaderConfig = {
   , gravity :: Gravity
   }
 
+type CoinWarningConfig = {
+  text :: String,
+  coinsLoss :: Mb.Maybe Int,
+  cancellationWarningText :: String,
+  backgroundColor :: String,
+  textColor :: String,
+  cornerRadius :: Number,
+  padding :: Padding,
+  margin :: Margin,
+  coinImage :: ImageConfig,
+  arrowImage :: ImageConfig
+}  
+
 config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
   , showRetry : true
   , activeIndex : 1
+  , enableAnim : false
   , customerTipAvailable : false
   , backgroundClickable : true
   , customerTipArray : []
@@ -393,6 +438,7 @@ config = {
     , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , textStyle : Body3
     , height : (V 48)
@@ -421,6 +467,7 @@ config = {
     , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
@@ -449,6 +496,7 @@ config = {
     , padding : (Padding 0 0 0 0)
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
@@ -731,7 +779,35 @@ config = {
       }
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
+  , externalHeader : Mb.Nothing
   , completeProfileLayout : Mb.Nothing
+  , voiceToTextConfig : dummyVoiceToTextConfig
+  ,  goldTierRewardConfig: {
+        text: "",
+        coinsLoss: Mb.Nothing,
+        cancellationWarningText: "",
+        backgroundColor: Color.lightOrange400,
+        textColor: Color.black800,
+        cornerRadius: 12.0,
+        padding: (Padding 8 12 10 12),
+        margin: (Margin 20 8 0 8),
+        coinImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_yatri_coin",
+          height: (V 20),
+          width: (V 20),
+          margin: (MarginLeft 8),
+          padding: (Padding 0 0 0 0)
+        },
+        arrowImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_arrow_down_red",
+          height: (V 12),
+          width: (V 12),
+          margin: MarginLeft 8,
+          padding: PaddingLeft 8
+        }
+    } 
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
@@ -782,3 +858,10 @@ dummyDeliveryPrimaryText =
         , width = MATCH_PARENT
         }
       in primaryEditTextConfig'
+
+dummyVoiceToTextConfig :: VoiceToTextConfig
+dummyVoiceToTextConfig = 
+  {
+    id : "",
+    enabled: false
+  }

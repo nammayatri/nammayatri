@@ -15,9 +15,9 @@
 
 module Main where
 
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard, identity)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard, identity, map)
 import Data.Either (Either(..))
-import Effect (Effect)
+import Effect (Effect, foreachE)
 import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, markPerformance, setEventTimestamp)
@@ -25,7 +25,7 @@ import AssetsProvider (fetchAssets)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import PrestoDOM.Core (processEvent) as PrestoDom
+import PrestoDOM.Core (processEvent, terminateUI) as PrestoDom
 import Log
 import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (throwErr)
@@ -51,7 +51,7 @@ import Screens.Types as ST
 import Common.Types.App as Common
 import Storage (KeyStore(..), setValueToLocalStore)
 import Services.API (GetDriverInfoResp(..))
-import DecodeUtil (getFromWindow, removeFromWindow)
+import DecodeUtil (getFromWindow, removeFromWindow, storeFiber, getFibers, resetFibers)
 import Debug
 
 main :: Event -> Effect Unit
@@ -80,8 +80,11 @@ main event = do
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+  assetsFiber <- launchAff $ flowRunner defaultGlobalState $ fetchAssets
+  void $ storeFiber $ mainFiber
+  void $ storeFiber $ assetsFiber
   void $ markPerformance "MAIN_END"
+
   pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
@@ -129,6 +132,7 @@ onConnectivityEvent triggertype = do
       "CHECK_NETWORK_TIME" ->  Flow.checkTimeSettings
       _ -> Flow.baseAppFlow false Nothing Nothing
     pure unit
+  void $ storeFiber $ mainFiber
   pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
@@ -141,7 +145,7 @@ onBundleUpdatedEvent description = do
 
 onNewIntent :: Event -> Effect Unit
 onNewIntent event = do
-  _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
+  mainFiber <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
     case event.type of
       "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event) Nothing
       "DEEP_VIEW" -> Flow.baseAppFlow true (Just event) Nothing
@@ -150,8 +154,7 @@ onNewIntent event = do
         setValueToLocalStore REFERRER_URL event.data
         Flow.baseAppFlow true Nothing Nothing
       _ -> Flow.baseAppFlow false Nothing Nothing
-  -- required if we need to update Payment page assets in first run
-  -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
+  void $ storeFiber $ mainFiber
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit
@@ -165,3 +168,11 @@ restorePreviousState :: FlowBT String Unit
 restorePreviousState = do
   let popupType = maybe ST.NO_POPUP_VIEW identity (runFn2 Utils.getPopupType Just Nothing)
   modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = popupType})
+
+
+onDestroy :: String -> Effect Unit
+onDestroy _ = do 
+  fibers <- getFibers ""
+  _ <- resetFibers unit
+  _ <- foreachE fibers (\fiber -> launchAff_ $ killFiber (error "error in killing fiber") fiber)
+  PrestoDom.terminateUI Nothing

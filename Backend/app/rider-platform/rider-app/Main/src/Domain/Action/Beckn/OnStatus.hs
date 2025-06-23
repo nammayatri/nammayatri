@@ -185,7 +185,8 @@ onStatus ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "storeRidesTimeLimit" r Int,
     HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   ValidatedOnStatusReq ->
   m ()
@@ -311,6 +312,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       fare = Nothing
       totalFare = Nothing
       chargeableDistance = Nothing
+      isPetRide = booking.isPetRide
       traveledDistance = Nothing
       driverArrivalTime = Nothing
       rideStartTime = Nothing
@@ -350,6 +352,9 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       feedbackSkipped = False
       pickupRouteCallCount = Just 0
       talkedWithDriver = Nothing
+      isSafetyPlus = booking.preferSafetyPlus
+      isInsured = booking.isInsured
+      insuredAmount = booking.insuredAmount
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

@@ -9,7 +9,6 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -26,9 +25,6 @@ createMany = traverse_ create
 deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findAllDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.FleetDriverAssociation.FleetDriverAssociation]))
-findAllDriverByFleetOwnerId fleetOwnerId = do findAllWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
-
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation -> m (Maybe Domain.Types.FleetDriverAssociation.FleetDriverAssociation))
@@ -44,6 +40,7 @@ updateByPrimaryKey (Domain.Types.FleetDriverAssociation.FleetDriverAssociation {
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.isActive isActive,
+      Se.Set Beam.onboardedOperatorId (Kernel.Types.Id.getId <$> onboardedOperatorId),
       Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory,
       Se.Set Beam.updatedAt _now
     ]

@@ -56,6 +56,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -105,7 +106,7 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
   let mbServiceName = listToMaybe invoices <&> (.serviceName)
   let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentServiceName = subscriptionConfig.paymentServiceName
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
@@ -122,7 +123,7 @@ getOrder (personId, _, _) orderId = do
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 
-mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
+mkOrderAPIEntity :: (EncFlow m r, HasKafkaProducer r) => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
   clientAuthToken_ <- decrypt `mapM` clientAuthToken
   return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
@@ -139,7 +140,8 @@ getStatus ::
     EventStreamFlow m r,
     MonadFlow m,
     JobCreatorEnv r,
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
@@ -172,10 +174,11 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
       serviceConfig <-
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall serviceConfig.paymentServiceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
+      paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
@@ -219,7 +222,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   let merchantId = merchant.id
       serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName'
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId Nothing serviceName'
       >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchanOperatingCityId
@@ -282,7 +285,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       let serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName'
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       serviceConfig <-
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId serviceName'
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId Nothing serviceName'
           >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
       return (invoices', serviceName', serviceConfig, driver)
 
@@ -410,9 +413,10 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
   driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
   driver <- B.runInReplica $ QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity Nothing driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
-  resp <- Payment.mandateNotificationStatus merchantId opCity subscriptionConfig.paymentServiceName (mkNotificationRequest pdnNotification.shortId)
+  paymentServiceName <- Payment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id driver.merchantOperatingCityId subscriptionConfig.serviceName
+  resp <- Payment.mandateNotificationStatus merchantId opCity paymentServiceName (Just driver.id.getId) (mkNotificationRequest pdnNotification.shortId)
   let (responseCode, reponseMessage) = Tuple.both (\func -> func =<< resp.providerResponse) ((.responseCode), (.responseMessage))
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False
   return resp
@@ -607,10 +611,10 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             vehicle_number = veh.registrationNo,
             phone_number = fromMaybe "6666666666" unencryptedMobileNumber,
             name = person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName,
-            org_id = "",
+            org_id = fromMaybe "" $ subsConfig.extWebhookConfigs >>= (.merchantId),
             mandate_created_at = mandate.createdAt,
             order_id = orderId,
-            mandate_status = show mandate.status,
+            mandate_status = show $ castAutoPayStatus mandateStatus,
             event_name = show WT.MANDATE,
             last_sent_at = show now
           }

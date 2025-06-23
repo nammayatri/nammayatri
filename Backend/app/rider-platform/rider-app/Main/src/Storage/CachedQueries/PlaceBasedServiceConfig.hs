@@ -13,6 +13,8 @@ import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.Insurance.Interface.Types as Insurance
+import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.MultiModal.Interface.Types as MultiModal
@@ -59,13 +61,16 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
     Sms.GupShupConfig _ -> SmsService Sms.GupShup
     Sms.TwillioSmsConfig _ -> SmsService Sms.TwillioSms
+    Sms.DigoEngageSmsConfig _ -> SmsService Sms.DigoEngage
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
+    Whatsapp.TataCommunicationsConfig _ -> WhatsappService Whatsapp.TataCommunications
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> CallService Call.Exotel
     Call.TwillioCallConfig _ -> CallService Call.TwillioCall
+    Call.TataClickToCallConfig _ -> CallService Call.TataClickToCall
   NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig _ -> NotificationService Notification.FCM
     Notification.PayTMConfig _ -> NotificationService Notification.PayTM
@@ -100,3 +105,8 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
   WalletServiceConfig walletCfg -> case walletCfg of
     GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
+  MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
+    MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
+    MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
+  InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
+    Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko

@@ -6,8 +6,8 @@ imports:
   OptionalValue: Kernel.Types.Value
   NominalDiffTime: Kernel.Prelude
   VehicleVariant: Dashboard.Common
-  VehicleCategory:  Dashboard.Common
-  FarePolicy:  Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  FarePolicy: Dashboard.Common
   SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
   Area: Lib.Types.SpecialLocation
   SupportedVehicleClasses: Dashboard.Common.Merchant
@@ -19,6 +19,8 @@ imports:
   CreateMerchantOperatingCityReq: Dashboard.Common.Merchant
   CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
   CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
   UpsertSpecialLocationReq: Dashboard.Common.Merchant
   UpsertSpecialLocationReqT: Dashboard.Common.Merchant
@@ -28,6 +30,7 @@ imports:
   Vector: Data.Vector
   ConfigFailoverReq: Dashboard.Common.Merchant
   ConfigNames: Dashboard.Common.Merchant
+  DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 
 module: Merchant
 
@@ -348,6 +351,17 @@ apis:
         endpoint: MerchantAPI UpdateOnboardingVehicleVariantMappingEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+  - POST: # UpsertSpecialLocationCsvAPI
+      endpoint: /config/specialLocation/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
@@ -374,7 +388,7 @@ apis:
   - DELETE: # DeleteSpecialLocationAPI
       endpoint: /specialLocation/{specialLocationId}/delete
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
       auth: ApiAuthV2
       response:
         type: APISuccess
@@ -385,7 +399,7 @@ apis:
   - POST: # UpsertSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/upsert
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
       auth: ApiAuthV2
       multipart:
         type: UpsertSpecialLocationGateReq
@@ -395,7 +409,7 @@ apis:
         - POST:
             endpoint: /specialLocation/{specialLocationId}/gates/upsert
             params:
-              specialLocationId : Id SpecialLocation
+              specialLocationId: Id SpecialLocation
             auth: ApiAuthV2 # TODO remove
             request:
               type: UpsertSpecialLocationGateReqT
@@ -408,7 +422,7 @@ apis:
   - DELETE: # DeleteSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
         gateName: Text
       auth: ApiAuthV2
       response:
@@ -601,7 +615,7 @@ types:
     - currentRideTripCategoryValidForForwardBatching: [Text]
     - batchSizeOnRide: Int
     - batchSizeOnRideWithStraightLineDistance: Maybe Int
-    - useOneToOneOsrmMapping : Maybe Bool
+    - useOneToOneOsrmMapping: Maybe Bool
     - actualDistanceThresholdWithUnit: Maybe Distance
     - actualDistanceThresholdOnRideWithUnit: Maybe Distance
     - maxDriverQuotesRequired: Int
@@ -712,6 +726,7 @@ types:
     - stepFeeWithCurrency: Maybe PriceAPIEntity
     - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
     - filterForOldApks: Maybe Bool
+    - documentCategory: Maybe DocumentCategory
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money
@@ -789,19 +804,19 @@ types:
     - file: FilePath
     - derive: "'HideSecrets"
   ClearCacheSubscriptionReq:
-    - serviceName : Maybe ServiceNames
-    - planId : Maybe Text
+    - serviceName: Maybe ServiceNames
+    - planId: Maybe Text
     - derive: "'HideSecrets"
   PayoutConfigReq:
-   - toEnable : Maybe Bool
-   - referralRewardAmountPerRide : Maybe HighPrecMoney
-   - vehicleCategory : VehicleCategory
-   - payoutRegistrationFee : Maybe HighPrecMoney
-   - payoutRegistrationCgst : Maybe HighPrecMoney
-   - payoutRegistrationSgst : Maybe HighPrecMoney
-   - thresholdPayoutAmountPerPerson : Maybe HighPrecMoney
-   - remark : Maybe Text
-   - derive: "'HideSecrets"
+    - toEnable: Maybe Bool
+    - referralRewardAmountPerRide: Maybe HighPrecMoney
+    - vehicleCategory: VehicleCategory
+    - payoutRegistrationFee: Maybe HighPrecMoney
+    - payoutRegistrationCgst: Maybe HighPrecMoney
+    - payoutRegistrationSgst: Maybe HighPrecMoney
+    - thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
+    - remark: Maybe Text
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

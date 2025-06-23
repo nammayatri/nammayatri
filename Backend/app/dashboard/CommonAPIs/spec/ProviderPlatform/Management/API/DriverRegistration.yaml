@@ -18,6 +18,8 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        rcId: Text
       response:
         type: DocumentsListResponse
       migrate:
@@ -35,7 +37,7 @@ apis:
       endpoint: /{driverId}/document/upload
       auth: ApiAuthV2
       params:
-        driverId: Id Driver
+        driverId: Id Driver # This driverId doesn't contain only driverId. It may contain different role entity id's. Not changed the name due to backward compatibility.
       request:
         type: UploadDocumentReq
       response:
@@ -70,6 +72,15 @@ apis:
         endpoint: DriverRegistrationAPI RegisterRCEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
+  - POST: # RegisterAadhaarAPI
+      endpoint: /{driverId}/register/aadhaar
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AadhaarCardReq
+      response:
+        type: APISuccess
   - POST: # GenerateAadhaarOtpAPI
       endpoint: /{driverId}/register/generateAadhaarOtp
       auth: ApiAuthV2
@@ -130,7 +141,11 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
 
 types:
+  ValidationStatus:
+    enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
+    derive: "Read"
   DLDetails:
+    - driverName: Maybe Text
     - driverLicenseNumber: Text
     - operatingCity: Text
     - driverDateOfBirth: Maybe UTCTime
@@ -155,8 +170,9 @@ types:
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - createdAt: UTCTime
+    - failedRules: [Text]
   DocumentsListResponse:
-    - driverLicense: [Text]
+    - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]
     - driverLicenseDetails: [DLDetails]
     - vehicleRegistrationCertificateDetails: [RCDetails]
@@ -168,22 +184,28 @@ types:
     - vehicleInspectionForm: [Text]
     - vehiclePermit: [Text]
     - vehiclePUC: [Text]
-    # TODO(Rupak): add vehiclePermit and vehiclePUC
     - vehicleFront: [Text]
     - vehicleBack: [Text]
     - vehicleRight: [Text]
     - vehicleLeft: [Text]
     - vehicleFrontInterior: [Text]
     - vehicleBackInterior: [Text]
+    - pan: [Text]
+    - vehicleNOC: [Text]
+    - businessLicense: [Text]
+    - odometer: [Text]
+    - aadhaar: [Text]
+    - gstCertificate: [Text]
   GetDocumentResponse:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
   DocumentType:
-    - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage"
+    - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, Odometer, InspectionHub"
   UploadDocumentReq:
     - imageBase64: Text
     - imageType: DocumentType
     - rcNumber: Maybe Text
+    - requestorId: Maybe Text
   UploadDocumentTReq:
     - imageType: DocumentType
     - rcNumber: Maybe Text
@@ -199,6 +221,18 @@ types:
     - imageId2: Maybe (Id Image)
     - dateOfIssue: Maybe UTCTime
     - derive: "'HideSecrets"
+  AadhaarCardReq:
+    aadhaarFrontImageId: Maybe (Id Image)
+    aadhaarBackImageId: Maybe (Id Image)
+    maskedAadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+    consent: Bool
+    consentTimestamp: UTCTime
+    validationStatus: ValidationStatus
+    transactionId: Text
+    derive: "'HideSecrets"
   RegisterRCReq:
     - vehicleRegistrationCertNumber: Text
     - imageId: Id Image
@@ -316,8 +350,25 @@ types:
     - driverLicenseNumber: Maybe Text
     - driverDateOfBirth: Maybe UTCTime
     - dateOfExpiry: Maybe UTCTime
+  PanApproveDetails:
+    - documentImageId: Id Image
+    - panNumber: Text
+    - docType: Maybe PanType
+    - driverDob: Maybe UTCTime
+    - driverNameOnGovtDB: Maybe Text
+  NOCApproveDetails:
+    - documentImageId: Id Image
+    - nocNumber: Text
+    - nocExpiry: UTCTime
+    - rcNumber: Text
+  BusinessLicenseApproveDetails:
+    - documentImageId: Id Image
+    - businessLicenseNumber: Text
+    - licenseExpiry: UTCTime
+  PanType:
+      enum: "INDIVIDUAL,BUSINESS"
   ApproveDetails:
-    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails"
+    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

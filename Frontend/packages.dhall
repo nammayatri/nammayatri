@@ -136,8 +136,8 @@ in  upstream
     , repo = "https://github.com/juspay/purescript-backtrack.git"
     , version = "update/github-purescript-backtrack-repo"
     }
-  with presto-dom =
-    { dependencies =
+  with presto-dom = 
+  { dependencies =
       [ "effect"
       , "prelude"
       , "hyrule"
@@ -167,7 +167,7 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/Vignesh-772/purescript-presto-dom"
+    , repo = "https://github.com/Vignesh-772/purescript-presto-dom.git"
     , version = "nammayatri"
     }
   with halogen-vdom =

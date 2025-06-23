@@ -46,7 +46,11 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             totalAmountChargedForService = Kernel.Prelude.fromMaybe 0 totalAmountChargedForService,
             totalCoinsConvertedCash = totalCoinsConvertedCash,
             updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory'
+            vehicleCategory = vehicleCategory',
+            waiveOfMode = Kernel.Prelude.fromMaybe Domain.Types.DriverPlan.NO_WAIVE_OFF waiveOfMode,
+            waiveOffEnabledOn = waiveOffEnabledOn,
+            waiveOffValidTill = waiveOffValidTill,
+            waiverOffPercentage = Kernel.Prelude.fromMaybe 0 waiverOffPercentage
           }
 
 instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
@@ -73,5 +77,9 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.totalAmountChargedForService = Kernel.Prelude.Just totalAmountChargedForService,
         Beam.totalCoinsConvertedCash = totalCoinsConvertedCash,
         Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = vehicleCategory
+        Beam.vehicleCategory = vehicleCategory,
+        Beam.waiveOfMode = Kernel.Prelude.Just waiveOfMode,
+        Beam.waiveOffEnabledOn = waiveOffEnabledOn,
+        Beam.waiveOffValidTill = waiveOffValidTill,
+        Beam.waiverOffPercentage = Kernel.Prelude.Just waiverOffPercentage
       }

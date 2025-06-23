@@ -31,6 +31,17 @@ import Screens.Types as ST
 
 data ScreenOutput = Back ST.RateCardScreenState | UpdatePrice ST.RateCardScreenState Int
 
+instance showAction :: Show Action where
+  show (BackClick) = "BackClick"
+  show (ShowRateCard _) = "ShowRateCard"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (SliderCallback _) = "SliderCallback"
+  show (AfterRender) = "AfterRender"
+  show (RateCardAction var1) = "RateCardAction_" <> show var1
+  show (ChangeSlider _) = "ChangeSlider"
+  show (OpenLink _) = "OpenLink"
+  show (DebounceCallBack _ _) = "DebounceCallBack"
+
 data Action = BackClick
     | ShowRateCard ST.RidePreference
     | PrimaryButtonAC PrimaryButton.Action
@@ -40,9 +51,6 @@ data Action = BackClick
     | ChangeSlider Boolean
     | OpenLink String
     | DebounceCallBack String Boolean
-
-instance showAction :: Show Action where
-    show _ = ""
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of

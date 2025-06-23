@@ -36,6 +36,7 @@ import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.maps.android.PolyUtil;
@@ -343,5 +344,104 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public boolean isAccessibilityEnabled() {
         AccessibilityManager accessibilityManager = (AccessibilityManager) bridgeComponents.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
         return accessibilityManager.isEnabled();
+    }
+
+    @JavascriptInterface
+    public void updateMarkersOnRoute(String _payload) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject payload = new JSONObject(_payload);
+                String pureScriptID = payload.optString("pureScriptID", "");
+                GoogleMap gMap = pureScriptID.isEmpty() ? googleMap : googleMapInstance.get(pureScriptID);
+                String json = payload.optString("currentVehicleLocation");
+                JSONObject currentVehicleLocation = payload.getJSONObject("currentVehicleLocation");
+                double currentLng = currentVehicleLocation.getDouble("lng");
+                double currentLat = currentVehicleLocation.getDouble("lat");
+                LatLng currentLatLng = new LatLng(currentLat, currentLng);
+
+                String eta = payload.optString("eta", "");
+                JSONObject srcMarker = payload.getJSONObject("srcMarker");
+                JSONObject srcHeaderArrowMarker = payload.getJSONObject("srcHeaderArrowMarker");
+                String vehicleMarkerId = srcMarker.optString("markerId", "");
+                String srcHeaderArrowMarkerId = srcHeaderArrowMarker.optString("markerId", "");
+                double srcHeaderArrowSize = srcHeaderArrowMarker.optDouble("markerSize", 80.0);
+                Marker marker = (Marker) markers.get(vehicleMarkerId);
+                Marker markerHeaderArrow = (Marker) markers.get(srcHeaderArrowMarkerId);
+                double vehicleRotationFromPrevLatLon = payload.optDouble("vehicleRotationFromPrevLatLon", -1.0);
+
+                if (marker != null) {
+                    String srcMarkerPointerIcon = srcMarker.optString("pointerIcon", "");
+
+                    LatLng startPosition = marker.getPosition();
+                    ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
+                    valueAnimator.setDuration(2000);
+                    valueAnimator.setInterpolator(new LinearInterpolator());
+                    valueAnimator.addUpdateListener(animation -> {
+                        try {
+                            float v = animation.getAnimatedFraction();
+                            LatLng newPosition = SphericalUtil.interpolate(startPosition, currentLatLng, v);
+                            marker.setPosition(newPosition);
+                            if (markerHeaderArrow != null){
+                                String srcHeaderArrowMarkerIcon = srcHeaderArrowMarker.optString("pointerIcon", "");
+                                float rotation = (vehicleRotationFromPrevLatLon == -1.0) ? bearingBetweenLocations(startPosition, currentLatLng) : (float) vehicleRotationFromPrevLatLon;
+                                if (rotation > 1.0){
+                                    MarkerConfig markerConfig = new MarkerConfig();
+                                    markerConfig.setRotation(rotation);
+                                    markerConfig.setMarkerIconSize((int) srcHeaderArrowSize);
+                                    markerHeaderArrow.setRotation(0.0f);
+                                    markerHeaderArrow.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(srcHeaderArrowMarkerIcon, false, MarkerType.NORMAL_MARKER_V2, markerConfig)));
+                                }
+
+                                markerHeaderArrow.setPosition(newPosition);
+                                markerHeaderArrow.setAnchor(0.5f, 0.5f);
+                                markers.put(srcHeaderArrowMarkerIcon, markerHeaderArrow);
+                            }
+                            marker.setAnchor(0.5f, 0.5f);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+                    valueAnimator.addListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            super.onAnimationEnd(animation);
+                        }
+                    });
+                    valueAnimator.start();
+                }
+                else {
+                    String srcMarkerStr = payload.optString("srcMarker","");
+                    showMarker(srcMarkerStr);
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public boolean checkMarkerAvailable (String _payload) {
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String markerId = payload.optString("markerId", "");
+            return ((Marker) markers.get(markerId) != null);
+        } catch (JSONException e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public String getMarkerPosition (String _payload) {
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String markerId = payload.optString("markerId", "");
+            Marker marker = (Marker) markers.get(markerId);
+            if(marker != null) {
+                return (marker.getPosition().toString());
+            }
+            return "";
+        } catch (JSONException e) {
+            return "";
+        }
     }
 }

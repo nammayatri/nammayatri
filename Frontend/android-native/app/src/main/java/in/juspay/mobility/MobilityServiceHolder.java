@@ -1,8 +1,11 @@
 package in.juspay.mobility;
 
+import static android.content.Context.MODE_PRIVATE;
 import static in.juspay.mobility.MainActivity.getService;
 import static in.juspay.mobility.Utils.getInnerPayload;
+import in.juspay.mobility.app.R;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -18,6 +21,7 @@ import androidx.fragment.app.FragmentActivity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.UUID;
@@ -25,6 +29,7 @@ import java.util.UUID;
 import in.juspay.hypersdk.core.MerchantViewType;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
+import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallback;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 
@@ -32,8 +37,9 @@ public class MobilityServiceHolder {
     private static MobilityServiceHolder instance;
     private static JSONObject initiatePayload = new JSONObject();
     private static long initiateTime = 0;
-    private final MobilityServices hyperService;
+    private MobilityServices hyperService;
     private final Queue<Pair<JSONObject, JuspayResponseHandler>> queue = new LinkedList<>();
+    @Nullable
     private HyperPaymentsCallbackAdapter adapter = null;
 
     MobilityServiceHolder(Context context) {
@@ -41,9 +47,22 @@ public class MobilityServiceHolder {
     }
 
     public static MobilityServiceHolder getInstance(Context context) {
-        if (instance == null) {
+        if (instance == null || instance.hyperService == null) {
             Log.i("APP_PERF", "ON_CREATE_HYPER_SERVICE : " + System.currentTimeMillis());
             instance = new MobilityServiceHolder(context);
+            // Backward Compatibility
+            boolean isUpdated = Boolean.parseBoolean(KeyValueStore.read(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"isUpdated","false"));
+            if (!isUpdated) {
+                try {
+                    File deleteFile = new File(context.getDir("juspay",MODE_PRIVATE), "v1-assets_downloader_godel_2.1.33.jsa");
+                    if (deleteFile.exists()) deleteFile.delete();
+                    deleteFile = new File(context.getDir("juspay",MODE_PRIVATE), "v1-index_bundle_godel_2.1.33.jsa");
+                    if (deleteFile.exists()) deleteFile.delete();
+                    KeyValueStore.write(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"isUpdated","true");
+                } catch (Exception e) {
+                    Log.e("MobilityServiceHolder",e.toString());
+                }
+            }
             Log.i("APP_PERF", "ON_CREATE_HYPER_END : " + System.currentTimeMillis());
         }
         return instance;
@@ -51,10 +70,6 @@ public class MobilityServiceHolder {
 
     public static JSONObject getInitiatePayload() {
         return initiatePayload;
-    }
-
-    public MobilityServices getHyperService() {
-        return hyperService;
     }
 
     public boolean isInitialized() {
@@ -84,8 +99,9 @@ public class MobilityServiceHolder {
             hyperService.initiate(initiatePayload, new HyperPaymentsCallback() {
                 @Override
                 public void onStartWaitingDialogCreated(@Nullable View view) {
-
-                    adapter.onStartWaitingDialogCreated(view);
+                    if (adapter != null) {
+                        adapter.onStartWaitingDialogCreated(view);
+                    }
                 }
 
                 @Override
@@ -126,12 +142,6 @@ public class MobilityServiceHolder {
         }
     }
 
-    public void process() {
-        if (hyperService.isInitialised()) {
-            hyperService.process(getInitiatePayload());
-        }
-    }
-
     public void setCallbackAdapter(HyperPaymentsCallbackAdapter adapter) {
         if (this.adapter == null) {
             while (!queue.isEmpty()) {
@@ -145,6 +155,41 @@ public class MobilityServiceHolder {
     public void terminate() {
         adapter = null;
         hyperService.terminate();
+        instance = null;
+        hyperService = null;
+    }
+
+    public boolean bindToService(Context context, Activity activity) {
+        if (MobilityServiceHolder.canCacheApp(context)) {
+            hyperService.resetActivity((FragmentActivity) activity);
+            terminate();
+            MobilityServiceHolder.getInstance(context).initiate(context);
+            return true;
+        } else {
+            terminate();
+            return false;
+        }
+    }
+
+    public static void leaveMeAlone() {
+        instance = null;
+    }
+
+    public static void catchMeBack(MobilityServiceHolder instance) {
+        MobilityServiceHolder.instance = instance;
+        MobilityServiceHolder.instance.queue.clear();
+    }
+
+    public static boolean canCacheApp(Context context) {
+        String s = KeyValueStore.read(context, context.getString(R.string.preference_file_key), "APP_CACHING_CONFIG", "{}");
+        boolean isCachingEnabled = false;
+        try {
+            JSONObject config = new JSONObject(s);
+            isCachingEnabled = config.optBoolean(KeyValueStore.read(context, context.getString(R.string.preference_file_key), "DRIVER_LOCATION", "").toLowerCase(),false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return isCachingEnabled;
     }
 
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {

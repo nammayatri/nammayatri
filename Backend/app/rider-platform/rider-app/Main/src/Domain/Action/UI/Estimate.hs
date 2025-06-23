@@ -18,6 +18,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
@@ -33,6 +34,7 @@ import Tools.Error
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
     vehicleVariant :: Vehicle.VehicleVariant,
+    serviceTierType :: DVST.ServiceTierType,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
@@ -71,7 +73,9 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleIconUrl :: Maybe Text,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
-    isReferredRide :: Bool
+    isReferredRide :: Bool,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -120,7 +124,9 @@ mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
         vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
+        serviceTierType = vehicleServiceTierType,
         vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
+        isInsured = Just isInsured,
         ..
       }
   where

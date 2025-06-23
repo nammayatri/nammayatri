@@ -1,0 +1,21 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  DeviceType: Kernel.Types.Version
+  Person: Domain.Types.Person
+
+DeletedPerson:
+  tableName: deleted_person
+
+  fields:
+    personId : Id Person
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    deviceId : Maybe Text
+    clientOsType: Maybe DeviceType
+    reasonToDelete: Maybe Text
+
+  constraints:
+    personId: PrimaryKey

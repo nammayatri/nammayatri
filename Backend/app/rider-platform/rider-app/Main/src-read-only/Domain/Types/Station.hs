@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data Station = Station
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     code :: Kernel.Prelude.Text,
+    hindiName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -25,6 +26,8 @@ data Station = Station
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
+    regionalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    suggestedDestinations :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,

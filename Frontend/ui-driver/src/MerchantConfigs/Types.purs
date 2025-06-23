@@ -8,11 +8,12 @@ type AppConfig = AppConfigDriver CommonAppConfig
 
 type AppConfigDriver a =
   {
+    logWhitelistConfig :: LogWhitelistConfig,
     primaryTextColor :: String,
     primaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
-    rideCompletedCardConfig :: RideCompletedCardConfig, 
+    rideCompletedCardConfig :: RideCompletedCardConfig,
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
@@ -51,9 +52,65 @@ type AppConfigDriver a =
     showMonthlyLeaderBoard :: Boolean,
     hotspotConfig :: HotspotConfig,
     rentalRideVideoConfig :: RentalRideVideoConfig,
-    scheduledRideConfig :: ScheduledRideConfig
+    scheduledRideConfig :: ScheduledRideConfig,
+    customerTokenForMeterRide :: String
     | a
-  } 
+  }
+
+type LogWhitelistConfig = {
+  aadhaarVerificationScreenLogWhitelist :: Array String,
+  aboutUsScreenLogWhitelist :: Array String,
+  acknowledgementScreenLogWhitelist :: Array String,
+  addVehicleDetailsScreenLogWhitelist :: Array String,
+  applicationStatusScreenLogWhitelist :: Array String,
+  bankDetailScreenLogWhitelist :: Array String,
+  benefitsLogWhitelist :: {benefitsScreenLogWhitelist :: Array String, lmsQuizScreenLogWhitelist :: Array String, lmsVideoScreenLogWhitelist :: Array String},
+  bookingOptionsScreenLogWhitelist :: Array String,
+  cancellationRateScreenLogWhitelist :: Array String,
+  chooseCityScreenLogWhitelist :: Array String,
+  chooseLanguageScreenLogWhitelist :: Array String,
+  customerReferralTrackerScreenLogWhitelist :: Array String,
+  documentCaptureScreenLogWhitelist :: Array String,
+  documentDetailsScreenLogWhitelist :: Array String,
+  driverCompleteProfileScreenLogWhitelist :: Array String,
+  driverDetailsScreenLogWhitelist :: Array String,
+  driverEarningsScreenLogWhitelist :: Array String,
+  driverProfileScreenLogWhitelist :: Array String,
+  driverRideRatingScreenLogWhitelist :: Array String,
+  driverSavedLocationScreenLogWhitelist :: Array String,
+  editAadhaarDetailsScreenLogWhitelist :: Array String,
+  editBankDetailsScreenLogWhitelist :: Array String,
+  enterMobileNumberScreenLogWhitelist :: Array String,
+  enterOTPScreenLogWhitelist :: Array String,
+  helpAndSupportScreenLogWhitelist :: Array String,
+  homeScreenLogWhitelist :: Array String,
+  hotspotScreenLogWhitelist :: Array String,
+  metroWarriorsScreenLogWhitelist :: Array String,
+  notificationsScreenLogWhitelist :: Array String,
+  obBoardingSubscriptionScreenLogWhitelist :: Array String,
+  paymentHistoryScreenLogWhitelist :: Array String,
+  permissionsScreenLogWhitelist :: Array String,
+  popUpScreenLogWhitelist :: Array String,
+  rateCardScreenLogWhitelist :: Array String,
+  referralScreenLogWhitelist :: Array String,
+  registrationScreenLogWhitelist :: Array String,
+  reportIssueChatScreenLogWhitelist :: Array String,
+  rideHistoryScreenLogWhitelist :: Array String,
+  rideRequestScreenLogWhitelist :: Array String,
+  rideSelectionScreenLogWhitelist :: Array String,
+  rideSummaryScreenLogWhitelist :: Array String,
+  scheduledRideAcceptedScreenLogWhitelist :: Array String,
+  selectLanguageScreenLogWhitelist :: Array String,
+  splashScreenLogWhitelist :: Array String,
+  subscriptionScreenLogWhitelist :: Array String,
+  tripDetailsScreenLogWhitelist :: Array String,
+  uploadAdhaarScreenLogWhitelist :: Array String,
+  uploadDrivingLicenseScreenLogWhitelist :: Array String,
+  uploadParcelImageScreenLogWhitelist :: Array String,
+  vehicleDetailsScreenLogWhitelist :: Array String,
+  welcomeScreenLogWhitelist :: Array String,
+  writeToUsScreenLogWhitelist :: Array String
+}
 
 type RentalRideVideoConfig = {
   auto :: String,
@@ -215,7 +272,7 @@ type Features = {
 , enableSpecialPickup :: Boolean
 , enableInterOperability :: Boolean
 }
- 
+
  -- VV - VechileVerfication
 type VVConfig = {
   validationPrefix :: String
@@ -273,7 +330,15 @@ type CityConfig = {
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
   showScheduledRides :: Boolean,
-  chatFooterBanner :: Maybe ChatFootBannerConfig
+  chatFooterBanner :: Maybe ChatFootBannerConfig,
+  enableNammaMeter :: Maybe (Object Boolean), -- Deprecated. Use openMeter instead.
+  openMeter :: Maybe OpenMeterConfig
+}
+
+type OpenMeterConfig = {
+  enable :: Maybe (Object Boolean),
+  addDestination :: Boolean,
+  shareRideTracking :: Boolean
 }
 
 
@@ -321,7 +386,7 @@ type PurpleRideConfigForVehicle = {
 
 type RideStartAudio = {
   acCab :: StartAudioUrls,
-  nonAcCab :: StartAudioUrls, 
+  nonAcCab :: StartAudioUrls,
   auto :: StartAudioUrls,
   bike :: StartAudioUrls
 }
@@ -341,7 +406,7 @@ type VariantToDisabilityVideo = {
 }
 
 type DisabilityToVideo = {
-  disabilityType :: String, 
+  disabilityType :: String,
   videoUrl :: String
 }
 

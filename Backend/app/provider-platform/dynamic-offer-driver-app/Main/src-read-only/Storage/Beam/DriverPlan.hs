@@ -6,6 +6,7 @@ module Storage.Beam.DriverPlan where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.DriverPlan
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Plan
 import qualified Domain.Types.VehicleCategory
@@ -37,7 +38,11 @@ data DriverPlanT f = DriverPlanT
     totalAmountChargedForService :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalCoinsConvertedCash :: B.C f Kernel.Types.Common.HighPrecMoney,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    waiveOfMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPlan.WaiveOffMode),
+    waiveOffEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    waiveOffValidTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    waiverOffPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

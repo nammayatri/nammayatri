@@ -25,6 +25,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -43,7 +44,9 @@ callBasedEndRide ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EncFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->

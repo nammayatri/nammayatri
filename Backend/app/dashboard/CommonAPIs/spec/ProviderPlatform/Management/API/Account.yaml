@@ -1,0 +1,82 @@
+imports:
+  Person: Dashboard.Common
+  Role: Dashboard.Common
+  Summary: Dashboard.Common
+
+
+module: Account
+
+apis:
+  - GET:
+      endpoint: /fetchUnverifiedAccounts
+      auth: ApiAuthV2
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - mobileNumber: Text
+        - status: FleetOwnerStatus
+        - limit: Int
+        - offset: Int
+      response:
+        type: UnverifiedAccountsResp
+  - POST:
+      endpoint: /verifyAccount
+      auth: ApiAuthV2
+      request:
+        type: VerifyAccountReq
+      response:
+        type: APISuccess
+  - PUT:
+      endpoint: /updateRole/{personId}/{roleId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+        roleId: Id Role
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /updateRole/{personId}/{accessType}
+            auth: ApiAuthV2
+            params:
+              personId: Id Person
+              accessType: DashboardAccessType
+            response:
+              type: APISuccess
+
+
+types:
+  FleetOwnerStatus:
+    - enum: Approved, Rejected
+    - derive: "Read, HttpInstance"
+  VerifyAccountReq:
+    - status: FleetOwnerStatus
+    - reason: Maybe Text
+    - fleetOwnerId: Id Person
+    - derive: "'HideSecrets"
+  PersonAPIEntity:
+    - id: Id Person
+    - firstName: Text
+    - lastName: Text
+    - roleAPIEntity: RoleAPIEntity
+    - email: Maybe Text
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - dashboardAccessType: Maybe DashboardAccessType
+    - createdAt: UTCTime
+    - receiveNotification: Maybe Bool
+    - updatedAt: UTCTime
+    - verified: Maybe Bool
+    - rejectionReason: Maybe Text
+    - rejectedAt: Maybe UTCTime
+  DashboardAccessType:
+    - enum: DASHBOARD_USER, DASHBOARD_ADMIN, FLEET_OWNER, DASHBOARD_RELEASE_ADMIN, MERCHANT_ADMIN, RENTAL_FLEET_OWNER, MERCHANT_MAKER, MERCHANT_SERVER, DASHBOARD_OPERATOR, TICKET_DASHBOARD_USER, TICKET_DASHBOARD_MERCHANT, TICKET_DASHBOARD_ADMIN, TICKET_DASHBOARD_APPROVER
+    - derive: "HttpInstance"
+  RoleAPIEntity:
+    - id: Id Role
+    - name: Text
+    - dashboardAccessType: DashboardAccessType
+    - description: Text
+  UnverifiedAccountsResp:
+    - listItems: [PersonAPIEntity]
+    - summary: Summary

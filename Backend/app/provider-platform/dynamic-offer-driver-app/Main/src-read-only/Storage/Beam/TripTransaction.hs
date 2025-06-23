@@ -15,9 +15,13 @@ import Tools.Beam.UtilsTH
 
 data TripTransactionT f = TripTransactionT
   { allowEndingMidRoute :: B.C f Kernel.Prelude.Bool,
+    conductorFleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    conductorName :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     deviationCount :: B.C f Kernel.Prelude.Int,
+    fleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     driverId :: B.C f Data.Text.Text,
+    driverName :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     endLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     endLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     endRideApprovalRequestId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
@@ -35,6 +39,7 @@ data TripTransactionT f = TripTransactionT
     status :: B.C f Domain.Types.TripTransaction.TripStatus,
     tripCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     tripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    tripStartSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource),
     tripStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     tripTerminationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,

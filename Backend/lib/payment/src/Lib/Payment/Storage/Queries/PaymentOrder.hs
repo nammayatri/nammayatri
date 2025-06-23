@@ -90,6 +90,15 @@ updateAmountAndPaymentIntentId orderId amount paymentServiceOrderId = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+updateAmount :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> m ()
+updateAmount orderId amount = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.amount amount,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
     paymentLinks <- parsePaymentLinks orderT

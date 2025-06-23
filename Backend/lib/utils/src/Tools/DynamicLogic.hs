@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use lambda-case" #-}
 module Tools.DynamicLogic where
 
 import Data.Aeson as A
@@ -6,6 +9,7 @@ import Data.List (nub)
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
@@ -17,14 +21,12 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
--- import Data.Aeson as A
-
 findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> m (Maybe a)
 findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig :: Maybe a <- Hedis.safeGet (makeConfigCacheKey merchantOpCityId mbVersion cfgDomain)
+  cachedConfig :: Maybe a <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
   case cachedConfig of
     Just cfg -> return $ Just cfg
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -33,15 +35,15 @@ findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimen
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig <- getConfigFromDBFunc
       config <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime cfg) mbConfig
-      cacheConfig (makeConfigCacheKey merchantOpCityId mbVersion cfgDomain) config
+      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) config
       return config
 
-findAllConfigs :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m [a]) -> m [a]
+findAllConfigs :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m [a] -> m [a]
 findAllConfigs merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig :: Maybe [a] <- Hedis.safeGet (makeConfigCacheKey merchantOpCityId mbVersion cfgDomain)
+  cachedConfig :: Maybe [a] <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
   case cachedConfig of
     Just cfgs -> return cfgs
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -50,15 +52,15 @@ findAllConfigs merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDime
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       listConfig <- getConfigFromDBFunc
       allConfigs <- mapM (processConfig allLogics mbVersion extraDimensionsWithTime) listConfig
-      cacheConfig (makeConfigCacheKey merchantOpCityId mbVersion cfgDomain) allConfigs
+      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) allConfigs
       return allConfigs
 
-findOneConfigWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> Text -> m (Maybe a)
+findOneConfigWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Text -> m (Maybe a)
 findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc cacheKey = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig <- Hedis.safeGet (makeConfigCacheKeyWithPrefix cacheKey mbVersion)
+  cachedConfig <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
   case cachedConfig of
     Just cfg -> return $ Just cfg
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -67,15 +69,16 @@ findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersion
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig <- getConfigFromDBFunc
       config <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime cfg) mbConfig
-      cacheConfig (makeConfigCacheKeyWithPrefix cacheKey mbVersion) config
+      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion) config
       return config
 
-findAllConfigsWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m [a]) -> Text -> m [a]
+findAllConfigsWithCacheKey :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m [a] -> Text -> m [a]
 findAllConfigsWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc cacheKey = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig :: Maybe [a] <- Hedis.safeGet (makeConfigCacheKeyWithPrefix cacheKey mbVersion)
+  cachedConfig :: Maybe [a] <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
+  logDebug $ "cachedConfig: " <> (show $ isNothing cachedConfig)
   case cachedConfig of
     Just cfgs -> return cfgs
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -84,7 +87,7 @@ findAllConfigsWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersio
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       listConfig <- getConfigFromDBFunc
       allConfigs <- mapM (processConfig allLogics mbVersion extraDimensionsWithTime) listConfig
-      cacheConfig (makeConfigCacheKeyWithPrefix cacheKey mbVersion) allConfigs
+      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion) allConfigs
       return allConfigs
 
 processConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => [A.Value] -> Maybe Int -> Maybe Value -> a -> m a
@@ -125,7 +128,7 @@ getConfigLogic ::
 getConfigLogic merchantOpCityId mbVersion configDomain = do
   mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) configDomain
   baseLogics <- maybe (return []) (\rollout -> DALE.findByDomainAndVersion configDomain rollout.version) mbBaseRollout
-  when (null baseLogics) $ logError $ "Base logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configDomain: " <> show configDomain
+  when (null baseLogics) $ logWarning $ "Base logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configDomain: " <> show configDomain
   case (mbVersion, mbBaseRollout) of
     (Just version, Just rollout) | version == rollout.version -> return $ baseLogics <&> (.logic)
     (Just version, _) -> do
@@ -233,33 +236,71 @@ getConfigVersionMapForStickiness merchantOpCityId = do
         (Just version, DRIVER_CONFIG _) -> return $ Just $ ConfigVersionMap domain version
         _ -> return Nothing
 
-cacheConfig :: (ToJSON a, CacheFlow m r) => Text -> a -> m ()
-cacheConfig configKey config = do
+cacheConfig :: (ToJSON a, CacheFlow m r) => Text -> Text -> a -> m ()
+cacheConfig redisHashKey configKey config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp configKey config expTime
+  Hedis.withCrossAppRedis $ Hedis.hSetExp redisHashKey configKey config expTime
 
-makeConfigCacheKey :: Id MerchantOperatingCity -> Maybe Int -> LogicDomain -> Text
-makeConfigCacheKey cityId mbVersion configDomain = "CachedQueries: " <> show configDomain <> "-MerchantOperatingCityId:" <> cityId.getId <> "-V:" <> show mbVersion
+makeRedisHashKeyForConfig :: Id MerchantOperatingCity -> LogicDomain -> Text
+makeRedisHashKeyForConfig cityId configDomain = "CacheHash:" <> show configDomain <> "-MerchantOperatingCityId:" <> cityId.getId
 
-makeConfigCacheKeyWithPrefix :: Text -> Maybe Int -> Text
-makeConfigCacheKeyWithPrefix prefix mbVersion = prefix <> "-V:" <> show mbVersion
+makeCacheKeyForConfig :: Maybe Int -> Text
+makeCacheKeyForConfig mbVersion = "V:" <> show mbVersion
+
+makeCacheKeyForConfigWithPrefix :: Text -> Maybe Int -> Text
+makeCacheKeyForConfigWithPrefix prefix mbVersion = prefix <> "-V:" <> show mbVersion
 
 clearConfigCache :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCache merchanOperatingCityId configDomain mbVersion = do
-  case mbVersion of
-    Nothing -> do
-      rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
-      forM_ rollouts $ \rollout -> do
-        Hedis.del (makeConfigCacheKey merchanOperatingCityId (Just rollout.version) configDomain)
-      Hedis.del (makeConfigCacheKey merchanOperatingCityId Nothing configDomain)
-    Just version -> Hedis.del (makeConfigCacheKey merchanOperatingCityId (Just version) configDomain)
+  Hedis.withCrossAppRedis $
+    case mbVersion of
+      Nothing -> do
+        rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
+        let allKeys = makeCacheKeyForConfig Nothing : map (\r -> makeCacheKeyForConfig (Just r.version)) rollouts
+        Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
+      Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfig (Just version)]
 
 clearConfigCacheWithPrefix :: BeamFlow m r => Text -> Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCacheWithPrefix prefix merchanOperatingCityId configDomain mbVersion = do
-  case mbVersion of
-    Nothing -> do
-      rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
-      forM_ rollouts $ \rollout -> do
-        Hedis.del (makeConfigCacheKeyWithPrefix prefix (Just rollout.version))
-      Hedis.del (makeConfigCacheKeyWithPrefix prefix Nothing)
-    Just version -> Hedis.del (makeConfigCacheKeyWithPrefix prefix (Just version))
+  Hedis.withCrossAppRedis $
+    case mbVersion of
+      Nothing -> do
+        rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
+        let allKeys = makeCacheKeyForConfigWithPrefix prefix Nothing : map (\r -> makeCacheKeyForConfigWithPrefix prefix (Just r.version)) rollouts
+        Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
+      Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfigWithPrefix prefix (Just version)]
+
+deleteConfigHashKey :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m ()
+deleteConfigHashKey merchantOpCityId configDomain = do
+  Hedis.withCrossAppRedis $ Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
+
+findOneUiConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r, HasField "config" a Value) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Bool -> m (Maybe a, Maybe Int)
+findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc isBaseLogic = do
+  currentTime <- getCurrentTime
+  let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
+  mbVersion <-
+    if isBaseLogic
+      then do
+        mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId cfgDomain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+        return $ Just mbBaseRollout.version
+      else getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
+  cachedConfig :: Maybe a <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
+  case cachedConfig of
+    Just cfg -> return (Just cfg, mbVersion)
+    Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
+  where
+    fetchAndCacheConfig mbVersion extraDimensionsWithTime = do
+      allLogics <-
+        if isBaseLogic
+          then do
+            getConfigLogic merchantOpCityId Nothing cfgDomain
+          else getConfigLogic merchantOpCityId mbVersion cfgDomain
+      mbConfig :: Maybe a <- getConfigFromDBFunc
+      config :: Maybe Value <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime (getField @"config" cfg :: Value)) mbConfig
+      -- apply the updated json to the old config and return the updated config
+      finalConfig :: Maybe a <- case (mbConfig, config) of
+        (Just oldCfg, Just newValue) -> do
+          return $ Just $ setField @"config" oldCfg newValue
+        _ -> return Nothing
+      cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) finalConfig
+      return (finalConfig, mbVersion)

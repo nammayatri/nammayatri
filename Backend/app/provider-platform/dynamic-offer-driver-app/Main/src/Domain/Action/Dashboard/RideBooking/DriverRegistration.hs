@@ -50,10 +50,10 @@ auth merchantShortId opCity req = do
   pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}
 
 postDriverRegistrationVerify :: ShortId DM.Merchant -> Context.City -> Text -> Bool -> Text -> Common.AuthVerifyReq -> Flow APISuccess
-postDriverRegistrationVerify _merchantShortId _opCity = verify
+postDriverRegistrationVerify _merchantShortId _opCity authId mbFleet fleetOwnerId = verify authId mbFleet fleetOwnerId Nothing
 
-verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> Flow APISuccess
-verify authId mbFleet fleetOwnerId req = do
+verify :: Text -> Bool -> Text -> Maybe (Id SP.Person) -> Common.AuthVerifyReq -> Flow APISuccess
+verify authId mbFleet fleetOwnerId mbOperatorId req = do
   let regId = Id authId :: Id SR.RegistrationToken
   res <-
     DReg.verify
@@ -66,6 +66,6 @@ verify authId mbFleet fleetOwnerId req = do
   when mbFleet $ do
     checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
-    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
   pure Success

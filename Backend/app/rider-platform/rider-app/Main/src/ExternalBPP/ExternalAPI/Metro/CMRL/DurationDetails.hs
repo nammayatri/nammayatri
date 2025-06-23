@@ -12,11 +12,11 @@ import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import Servant
-import Tools.Error
 
 data DurationDetailsReq = DurationDetailsReq
   { originStationId :: T.Text,
-    destinationStationId :: T.Text
+    destinationStationId :: T.Text,
+    appType :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -36,7 +36,7 @@ data DurationDetailsRes = DurationDetailsRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type DurationDetailsAPI =
-  "cumta" :> "traveldistanceduration"
+  "CmrlThirdParty" :> "traveldistanceduration"
     :> Header "Authorization" T.Text
     :> ReqBody '[JSON] DurationDetailsReq
     :> Get '[JSON] DurationDetailsRes
@@ -46,8 +46,6 @@ durationDetailsAPI = Proxy
 
 getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> DurationDetailsReq -> m [DurationDetailsResult]
 getDurationDetails config req = do
-  accessToken <- getAuthToken config
-  response <-
-    callAPI config.networkHostUrl (ET.client durationDetailsAPI (Just $ "Bearer " <> accessToken) req) "getDurationDetails" durationDetailsAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_DURATION_DETAILS_API") config.networkHostUrl)
+  let eulerClient = \accessToken -> ET.client durationDetailsAPI (Just $ "Bearer " <> accessToken) req
+  response <- callCMRLAPI config eulerClient "getDurationDetails" durationDetailsAPI
   return response.result

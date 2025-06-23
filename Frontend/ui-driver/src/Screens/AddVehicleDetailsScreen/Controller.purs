@@ -60,7 +60,56 @@ import Components.RequestInfoCard as RequestInfoCard
 import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (WhatsAppSupport) = "WhatsAppSupport"
+  show (BackPressed _) = "BackPressed"
+  show (PrimarySelectItemAction var1) = "PrimarySelectItemAction_" <> show var1
+  show (NoAction) = "NoAction"
+  show (VehicleRegistrationNumber _) = "VehicleRegistrationNumber"
+  show (ReEnterVehicleRegistrationNumber _) = "ReEnterVehicleRegistrationNumber"
+  show (UploadFile) = "UploadFile"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (SelectVehicleTypeModalAction var1) = "SelectVehicleTypeModalAction_" <> show var1
+  show (VehicleModelName _) = "VehicleModelName"
+  show (VehicleColour _) = "VehicleColour"
+  show (RemoveUploadedFile) = "RemoveUploadedFile"
+  show (ScreenClick) = "ScreenClick"
+  show (OnboardingHeaderAction var1) = "OnboardingHeaderAction_" <> show var1
+  show (RegistrationModalAction var1) = "RegistrationModalAction_" <> show var1
+  show (PrimaryButtonAction var1) = "PrimaryButtonAction_" <> show var1
+  show (TutorialModalAction var1) = "TutorialModalAction_" <> show var1
+  show (TutorialModal _) = "TutorialModal"
+  show (VehicleRCNumber _) = "VehicleRCNumber"
+  show (AfterRender) = "AfterRender"
+  show (ReferralMobileNumberAction var1) = "ReferralMobileNumberAction_" <> show var1
+  show (GenericMessageModalAction var1) = "GenericMessageModalAction_" <> show var1
+  show (ReferralMobileNumber) = "ReferralMobileNumber"
+  show (DatePicker _ _ _ _) = "DatePicker"
+  show (PreviewImageAction) = "PreviewImageAction"
+  show (DatePickerAction) = "DatePickerAction"
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (ValidateDocumentModalAction var1) = "ValidateDocumentModalAction_" <> show var1
+  show (RenderProfileImage _ _) = "RenderProfileImage"
+  show (PopUpModalActions var1) = "PopUpModalActions_" <> show var1
+  show (RedirectScreen) = "RedirectScreen"
+  show (ChangeLocation) = "ChangeLocation"
+  show (ActivateRCbtn var1) = "ActivateRCbtn_" <> show var1
+  show (CancelButtonMultiRCPopup) = "CancelButtonMultiRCPopup"
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
+  show (SkipButton) = "SkipButton"
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (ChangeVehicleAC var1) = "ChangeVehicleAC_" <> show var1
+  show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
+  show (WhatsAppClick) = "WhatsAppClick"
+  show (SelectButton _) = "SelectButton"
+  show (OpenAcModal) = "OpenAcModal"
+  show (RequestInfoCardAction var1) = "RequestInfoCardAction_" <> show var1
+  show (SelectAmbulanceFacility) = "SelectAmbulanceFacility"
+  show (ListExpandAinmationEnd) = "ListExpandAinmationEnd"
+  show (SelectAmbulanceVarient _) = "SelectAmbulanceVarient"
+  show (OpenAmbulanceFacilityModal) = "OpenAmbulanceFacilityModal"
+  show (RequestAmbulanceFacility var1) = "RequestAmbulanceFacility_" <> show var1
+  show (AgreePopUp var1) = "AgreePopUp_" <> show var1
+  show (ButtonClick) = "ButtonClick"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

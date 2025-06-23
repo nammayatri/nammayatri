@@ -158,9 +158,16 @@ callButton push config =
   
 rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithLabel push config =
-  let tagConfig = if config.bookingFromOtherPlatform then 
+  let tagConfig = if config.bookingFromOtherPlatform then
                     dummyLabelConfig{ text = (getString THIRD_PARTY_BOOKING) <> ": " <> config.bapName, textColor = Color.black700, backgroundColor = Color.grey900 }
-                  else if config.rideType == ST.Rental then 
+                  else if fromMaybe false config.isPetRide then
+                    dummyLabelConfig
+                      { text = getString THIS_RIDE_INCLUDES_A_PET
+                      , textColor = Color.white900
+                      , backgroundColor = Color.brown
+                      , imageUrl = fetchImage FF_ASSET "ny_ic_pet_rides_label"
+                      }
+                  else if config.rideType == ST.Rental then
                   
                     dummyLabelConfig
                       { label = "Rental Ride",
@@ -747,6 +754,11 @@ estimatedFareView push config =
             , singleLine true
             ] <> FontStyle.body10 TypoGraphy
           , if config.waitTimeSeconds > (chargesOb.freeSeconds + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
+          , if Maybe.isJust config.coinsRewardedOnGoldTierRide 
+              then case config.coinsRewardedOnGoldTierRide of
+                     Just coins -> goldTierRideCoinsView coins
+                     Nothing -> dummyView
+              else dummyView
         ]
     ]
     where currency = getCurrency appConfig
@@ -758,6 +770,32 @@ estimatedFareView push config =
             let min = Int.floor $ Int.toNumber sec / 60.0
                 waitingCharges = chargesOb.perMinCharges
             in waitingCharges * Int.toNumber min
+
+goldTierRideCoinsView :: forall w. Int -> PrestoDOM (Effect Unit) w
+goldTierRideCoinsView coins =
+    linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , background Color.yellow800
+      , padding $ Padding 3 2 3 2
+      , gravity CENTER_VERTICAL
+      , margin $ Margin 2 2 0 0
+      , cornerRadius 10.0
+      ][ textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ "+" <> show coins
+          , color Color.black800
+          , ellipsize true
+          , singleLine true
+          ] <> FontStyle.body9 TypoGraphy
+        , imageView
+          [ height $ V 16
+          , width  $ V 16
+          , margin $ MarginLeft 4
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_yatri_coin"
+          ]
+      ]
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 waitTimeView push config =
@@ -1014,7 +1052,7 @@ normalRideInfoView push config =
           ]
       , if config.estimatedTollCharges > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_blue_toll") (getString $ RIDE_TOLL_FARE_INCLUDES $ (getCurrency appConfig) <> (show $ round config.estimatedTollCharges)) else noView 
       , if config.parkingCharge > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue") (getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round config.parkingCharge) ) else noView
-      , if config.isDelivery then collectDeliveryCashView else noView
+      , if config.isDelivery then collectDeliveryCashView config else noView
       ] 
   ]
 
@@ -1267,7 +1305,7 @@ separatorConfig config =
     deliveryHasSourceInstruction config = maybe false (\delivery -> isJust delivery.sender.instructions) config.delivery
 
 showTag :: Config -> Boolean
-showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental || config.rideType == ST.Intercity
+showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental || config.rideType == ST.Intercity || fromMaybe false config.isPetRide
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50
@@ -1383,8 +1421,8 @@ stopImageView  config push =
 isWaitingTimeStarted :: Config -> Boolean
 isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
 
-collectDeliveryCashView :: forall w. PrestoDOM (Effect Unit) w
-collectDeliveryCashView = 
+collectDeliveryCashView :: Config -> forall w. PrestoDOM (Effect Unit) w
+collectDeliveryCashView _ = 
   linearLayout[
     height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1525,3 +1563,7 @@ rideActionButtonView push config =
 stopActionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 stopActionView push config = 
   PB.view (push <<< StopActionButton) (stopActionButtonConfig config)
+
+
+dummyView :: forall w. PrestoDOM (Effect Unit) w
+dummyView = linearLayout [ visibility GONE ] []  

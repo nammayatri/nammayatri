@@ -17,7 +17,7 @@ module Screens.Benefits.LmsQuizScreen.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM --(imageUrlWithFallback,  alignParentBottom, afterRender, shimmerFrameLayout, Orientation(..), PrestoDOM, Screen, Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), layoutGravity, weight, maxLines, ellipsize, frameLayout, stroke, clickable, onClick, imageWithFallback, cornerRadius, margin, imageView, visibility, color, gravity, relativeLayout, height, width, background, textView, text, padding, linearLayout, orientation, onBackPressed, scrollView, scrollBarY)
+import PrestoDOM --(imageUrlWithFallback,  alignParentBottom, afterRender, shimmerFrameLayout, Orientation(..), PrestoDOM, LoggableScreen, Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), layoutGravity, weight, maxLines, ellipsize, frameLayout, stroke, clickable, onClick, imageWithFallback, cornerRadius, margin, imageView, visibility, color, gravity, relativeLayout, height, width, background, textView, text, padding, linearLayout, orientation, onBackPressed, scrollView, scrollBarY)
 import Screens.Types (LmsQuizScreenState, QuestionStatus(..), LmsQuestion(..))
 import Screens.Benefits.LmsQuizScreen.Controller (Action(..), eval, ScreenOutput)
 import Debug (spy)
@@ -58,7 +58,7 @@ import Data.Tuple (Tuple(..))
 import Components.PopUpModal as PopUpModal
 import Animation.Config as AnimConfig
 
-screen :: LmsQuizScreenState -> Screen Action LmsQuizScreenState ScreenOutput
+screen :: LmsQuizScreenState -> LoggableScreen Action LmsQuizScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -82,7 +82,10 @@ screen initialState =
             _ = spy "LmsQuizScreen ---- action" action
         eval action state
     )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.benefitsLogWhitelist.lmsQuizScreenLogWhitelist
   }
+
 
 view :: forall w. (Action -> Effect Unit) -> LmsQuizScreenState -> PrestoDOM (Effect Unit) w
 view push state =

@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (Unit, bind, pure, ($), (<$>), discard, unit)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.AadhaarVerificationScreen.Controller (ScreenOutput(..))
 import Screens.AadhaarVerificationScreen.View as AadhaarVerificationScreen
 import Storage (KeyStore(..), setValueToLocalStore)
@@ -30,7 +30,7 @@ import Debug
 aadhaarVerificationScreen :: FlowBT String AADHAAR_VERIFICATION_SCREEN_OUTPUT
 aadhaarVerificationScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ AadhaarVerificationScreen.screen state.aadhaarVerificationScreen
+  act <- lift $ lift $ runLoggableScreen $ AadhaarVerificationScreen.screen state.aadhaarVerificationScreen
   case act of
     GoToOtpStage updatedState-> do
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> updatedState)

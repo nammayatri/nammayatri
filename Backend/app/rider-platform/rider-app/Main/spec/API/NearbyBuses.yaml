@@ -1,0 +1,64 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  Text: Data.Text
+  Id: Kernel.Types.Id
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  RideStatus: Domain.Types.RideStatus
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  Price: Kernel.Types.Price
+  ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
+  UpcomingTripInfo: Lib.JourneyModule.Utils
+
+module: NearbyBuses
+
+types:
+  NearbyBus:
+      vehicleNumber: Maybe Text
+      routeCode: Text
+      currentLocation: LatLong
+      nextStop: Maybe Text
+      distance: Maybe Double
+      serviceType: Maybe Text
+      eta: Maybe UTCTime
+      capacity: Maybe Int
+      occupancy: Maybe Int
+
+  RecentRide:
+      fromStopCode: Text
+      toStopCode: Text
+      fare: Price
+      routeCode: Maybe Text
+
+  NearbyBusesRequest:
+      userLat: Double
+      userLon: Double
+      platformType: PlatformType
+      vehicleType: VehicleCategory
+      requireRecentRide: Bool
+      requireNearbyBuses: Bool
+
+  NearbyBusesResponse:
+      nearbyBuses: [NearbyBus]
+      recentRides: [RecentRide]
+
+apis:
+  - POST:
+      endpoint: /nearbyBusBooking
+      auth: TokenAuth
+      request:
+        type: NearbyBusesRequest
+      response:
+        type: NearbyBusesResponse
+
+  - GET:
+      endpoint: /nextVehicleDetails/{routeCode}/{stopCode}
+      auth: TokenAuth
+      params:
+        routeCode: Text
+        stopCode: Text
+      query:
+        vehicleType: VehicleCategory
+      response:
+        type: UpcomingTripInfo

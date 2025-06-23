@@ -49,6 +49,34 @@ findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = f
 findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
+findByMobileNumberHashAndCountryCode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> DbHash -> m (Maybe Person)
+findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode),
+          Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash)
+        ]
+    ]
+    (Se.Desc BeamP.id)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
+findByMobileNumberAndMerchantAndRole :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
+findByMobileNumberAndMerchantAndRole mobileNumberHash (Id merchantId) role = findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In role]]
+
+updateImeiNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Kernel.Prelude.Text) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateImeiNumber imeiNumber id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.imeiNumberEncrypted (imeiNumber <&> unEncrypted . (.encrypted)),
+      Se.Set BeamP.imeiNumberHash (imeiNumber <&> (.hash)),
+      Se.Set BeamP.updatedAt _now
+    ]
+    [Se.Is BeamP.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
   when
@@ -89,9 +117,17 @@ updatePersonalInfo ::
   Maybe Bool ->
   Maybe Text ->
   Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Double ->
   Person ->
+  Maybe Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -118,6 +154,14 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
         <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
         <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
+        <> [Se.Set BeamP.dateOfBirth mbDateOfBirth | isJust mbDateOfBirth]
+        <> [Se.Set BeamP.profilePicture mbProfilePicture | isJust mbProfilePicture]
+        <> [Se.Set BeamP.verificationChannel mbVerificationChannel | isJust mbVerificationChannel]
+        <> [Se.Set BeamP.registrationLat mbRegLat | isJust mbRegLat]
+        <> [Se.Set BeamP.registrationLon mbRegLon | isJust mbRegLon]
+        <> [Se.Set BeamP.latestLat mbLatestLat | isJust mbLatestLat]
+        <> [Se.Set BeamP.latestLon mbLatestLon | isJust mbLatestLon]
+        <> [Se.Set BeamP.liveActivityToken mbLiveActivityToken | isJust mbLiveActivityToken]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -166,6 +210,29 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
                 else driverP.blockedCount
           ]
             <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
+        )
+        [Se.Is BeamP.id (Se.Eq personId)]
+
+updatingAuthEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Bool -> Maybe UTCTime -> m ()
+updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blockedUntil = do
+  person <- findByPId (Id personId)
+  case person of
+    Nothing -> pure ()
+    Just driverP -> do
+      now <- getCurrentTime
+      let authBlocked = fromMaybe False isAuthBlocked
+      updateWithKV
+        ( [ Se.Set BeamP.enabled (not authBlocked),
+            Se.Set BeamP.authBlocked isAuthBlocked,
+            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+            Se.Set BeamP.updatedAt now,
+            Se.Set BeamP.blockedUntil blockedUntil,
+            Se.Set BeamP.blockedCount $
+              if fromMaybe False isAuthBlocked
+                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
+                else driverP.blockedCount
+          ]
+            <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | authBlocked]
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 

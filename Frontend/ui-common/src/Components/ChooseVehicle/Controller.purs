@@ -1,6 +1,6 @@
 module Components.ChooseVehicle.Controller where
 
-import Prelude (class Eq, class Show )
+import Prelude (class Eq, class Show, show, (<>) )
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -10,6 +10,14 @@ import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
 import Common.Types.App (RateCardType(..), FareList)
 import Common.Types.App as CT
+
+instance showAction :: Show Action where
+  show (NoAction var1) = "NoAction_" <> show var1
+  show (OnSelect var1) = "OnSelect_" <> show var1
+  show (OnImageClick) = "OnImageClick"
+  show (ShowRateCard var1) = "ShowRateCard_" <> show var1
+  show (OnEditClick) = "OnEditClick"
+  show (ServicesOnClick var1 var2) = "ServicesOnClick_" <> show var1 <> "_" <> show var2
 
 data Action
   = NoAction Config
@@ -69,7 +77,9 @@ type Config
     , hasParkingCharges :: Boolean
     , smartTipSuggestion :: Maybe Int
     , specialLocationTag :: Maybe String
-    , smartTipReason :: Maybe String 
+    , smartTipReason :: Maybe String
+    , enableOffer :: Boolean
+    , actualPrice :: String
     }
 
 data SearchResultType = QUOTES FareProductType | ESTIMATES
@@ -147,4 +157,6 @@ config =
   , specialLocationTag : Nothing
   , smartTipSuggestion: Nothing
   , smartTipReason : Nothing
+  , enableOffer : false
+  , actualPrice : ""
   }

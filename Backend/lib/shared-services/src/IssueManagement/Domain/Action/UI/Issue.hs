@@ -32,11 +32,12 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.City as Context
@@ -62,7 +63,10 @@ data ServiceHandle m = ServiceHandle
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
     mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
     mbFindRideByBookingId :: Maybe (Id Booking -> Id Merchant -> m (Maybe Ride)),
-    mbSyncRide :: Maybe (Id Merchant -> Id Ride -> m ())
+    mbSyncRide :: Maybe (Id Merchant -> Id Ride -> m ()),
+    mbSendUnattendedTicketAlert :: Maybe (Text -> m ()),
+    findRideByRideShortId :: Id Merchant -> ShortId Ride -> m (Maybe Ride),
+    findByMobileNumberAndMerchantId :: Text -> DbHash -> Id Merchant -> m (Maybe Person)
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -141,7 +145,8 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- CQI.findByMerchantOpCityId adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
-  processIssueReportTypeActions (personId, merchantId) mbIssueOption Nothing Nothing False identifier issueHandle
+  let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
+  processIssueReportTypeActions (personId, merchantId) mbIssueReportType Nothing Nothing False identifier issueHandle
   issueMessageTranslationList <- case issueOptionId of
     Nothing -> CQIM.findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier
     Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId language identifier
@@ -208,12 +213,13 @@ issueReportList ::
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListRes
-issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
+issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
+  let validIssueReports = filter (isJust . (.categoryId)) issueReports
   issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
-  issues <- mapM (processIssueReport issueConfig now language issueHandle) issueReports
+  issues <- mapM (processIssueReport issueConfig now language issueHandle) validIssueReports
   return $ Common.IssueReportListRes {issues}
   where
     processIssueReport ::
@@ -226,12 +232,11 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
       ServiceHandle m ->
       D.IssueReport ->
       m Common.IssueReportListItem
-    processIssueReport iConfig currTime language iHandle iReport = do
+    processIssueReport iConfig currTime language _ iReport = do
       let timeDiff = realToFrac (currTime `diffUTCTime` iReport.updatedAt) / 3600
       if iReport.status == RESOLVED && timeDiff > iConfig.autoMarkIssueClosedDuration
         then do
           QIR.updateStatusAssignee iReport.id (Just CLOSED) iReport.assignee
-          updateTicketStatus iReport TIT.CL merchantId merchantOpCityId iHandle "Closed by system"
           mbIssueMessages <- mapM (`CQIM.findById` identifier) iConfig.onAutoMarkIssueClsMsgs
           let issueMessages = mapMaybe ((.id) <$>) mbIssueMessages
           let updatedChats =
@@ -247,7 +252,7 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
       Language ->
       m Common.IssueReportListItem
     mkIssueReport issueReport issueStatus language = do
-      (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage issueReport.categoryId language identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
+      (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage (fromJust issueReport.categoryId) language identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
       mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueReport.optionId
       return $
         Common.IssueReportListItem
@@ -393,7 +398,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       chats_ = fromMaybe [] chats
       updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
-  processIssueReportTypeActions (personId, merchantId) mbOption mbRide (Just config) True identifier issueHandle
+  let mbIssueReportType = mbOption >>= (.label) >>= A.decode . A.encode
+  processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide (Just config) True identifier issueHandle
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
   let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
   when isLOFeedback $
@@ -428,7 +434,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             rideId = rideId,
             merchantOperatingCityId = Just mocId,
             optionId = optionId,
-            categoryId = categoryId,
+            categoryId = Just categoryId,
             mediaFiles = mediaFiles,
             assignee = Nothing,
             status = if shouldCreateTicket then OPEN else NOT_APPLICABLE,
@@ -617,7 +623,11 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
   issueConfig <-
     CQI.findByMerchantOpCityId adjMerchantOpCityId identifier
       >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
-  (issueCategory, _) <- CQIC.findByIdAndLanguage issueReport.categoryId language identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
+  (categoryLabel, categoryId) <- case issueReport.categoryId of
+    Nothing -> pure (Nothing, Nothing)
+    Just catId -> do
+      (issueCategory, _) <- CQIC.findByIdAndLanguage catId language identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
+      pure (Just (issueCategory.category & T.toUpper & T.replace " " "_"), Just catId)
   mbIssueOption <- (join <$>) $
     forM issueReport.optionId $ \justIssueOption -> do
       CQIO.findByIdAndLanguage justIssueOption language identifier
@@ -630,7 +640,7 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
     Common.IssueInfoRes
       { issueReportId = issueReport.id,
         issueReportShortId = issueReport.shortId,
-        categoryLabel = issueCategory.category & T.toUpper & T.replace " " "_",
+        categoryLabel = categoryLabel,
         option = mkIssueOption <$> mbIssueOption,
         assignee = issueReport.assignee,
         description = issueReport.description,
@@ -639,7 +649,7 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
         createdAt = issueReport.createdAt,
         chats = issueChats,
         options = map (mkIssueOptionList issueConfig language mbRideInfoRes) issueOptions,
-        categoryId = issueReport.categoryId
+        categoryId = categoryId
       }
 
 updateIssueOption ::
@@ -684,31 +694,35 @@ updateIssueStatus ::
   Identifier ->
   m Common.IssueStatusUpdateRes
 updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLanguage Common.IssueStatusUpdateReq {..} issueHandle identifier = do
-  language <- getLanguage personId mbLanguage issueHandle
-  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
-  mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
-  case status of
-    CLOSED -> do
-      QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-      pure $
-        Common.IssueStatusUpdateRes
-          { messages = []
-          }
-    REOPENED -> do
-      QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
-      QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-      updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
-      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
-      issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
-      let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
-      now <- getCurrentTime
-      let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
-      QIR.updateChats issueReportId updatedChats
-      pure $
-        Common.IssueStatusUpdateRes
-          { messages = issueMessages
-          }
-    _ -> throwError $ InternalError "Cannot Update Issue : Incorrect Status Provided"
+  Redis.withLockRedisAndReturnValue (makeIssueReportKey issueReportId) 60 $ do
+    language <- getLanguage personId mbLanguage issueHandle
+    issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+    mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
+    if issueReport.status `notElem` [CLOSED, REOPENED, NOT_APPLICABLE]
+      then do
+        case status of
+          CLOSED -> do
+            QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
+            pure $
+              Common.IssueStatusUpdateRes
+                { messages = []
+                }
+          REOPENED -> do
+            QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
+            QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
+            updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
+            issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+            issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
+            let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
+            now <- getCurrentTime
+            let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
+            QIR.updateChats issueReportId updatedChats
+            pure $
+              Common.IssueStatusUpdateRes
+                { messages = issueMessages
+                }
+          _ -> throwError $ InternalError "Cannot Update Issue : Incorrect Status Provided"
+      else pure Common.IssueStatusUpdateRes {messages = []}
 
 updateTicketStatus ::
   ( EncFlow m r,
@@ -735,20 +749,20 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
 processIssueReportTypeActions ::
   BeamFlow m r =>
   (Id Person, Id Merchant) ->
-  Maybe D.IssueOption ->
+  Maybe IssueReportType ->
   Maybe Ride ->
   Maybe MerchantConfig ->
   Bool ->
   Identifier ->
   ServiceHandle m ->
   m ()
-processIssueReportTypeActions (personId, merchantId) mbIssueOption mbRide mbMerchantConfig isIssueReportCreated identifier issueHandle = do
-  let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
+processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide mbMerchantConfig isIssueReportCreated identifier issueHandle = do
   case mbIssueReportType of
     Just AC_RELATED_ISSUE -> processExternalIssueReporting AC_RELATED_ISSUE issueHandle
     Just DRIVER_TOLL_RELATED_ISSUE -> processExternalIssueReporting DRIVER_TOLL_RELATED_ISSUE issueHandle
     Just SYNC_BOOKING -> processBookingSyncReq issueHandle
     Just EXTRA_FARE_MITIGATION -> processExternalIssueReporting EXTRA_FARE_MITIGATION issueHandle
+    Just DRUNK_AND_DRIVE_VIOLATION -> processExternalIssueReporting DRUNK_AND_DRIVE_VIOLATION issueHandle
     Nothing -> return ()
   where
     processBookingSyncReq :: BeamFlow m r => ServiceHandle m -> m ()
@@ -889,6 +903,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       fareBreakup = maybe [] (.fareBreakup) mbRideInfoRes
       driverPickupCharges = maybe 0.0 (.amount.amount) (getFareFromArray "DEAD_KILOMETER_FARE" fareBreakup)
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
+      petCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PET_CHARGES" fareBreakup)
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
@@ -912,12 +927,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "ESTIMATED_FARE" -> show estimatedFare
         "FINAL_FARE" -> show finalFare
         "FARE_DIFFERENCE" -> show fareDifference
-        "FARE_CORRELATION" -> bool "remained same" (bool ("was decreased by ₹" <> show fareDifference) ("was increased by ₹" <> show fareDifference) (finalFare > estimatedFare)) (finalFare == estimatedFare)
-        "DISTANCE_CORRELATION" -> bool "no change" (bool ("a " <> show distanceDifference <> " km decrease") ("a " <> show distanceDifference <> " km increase") (chargeableDistance > estimatedDistance)) (chargeableDistance == estimatedDistance)
-        "FARE_ARROW" -> bool (bool " ↓" " ↑" (finalFare > estimatedFare)) "" (finalFare == estimatedFare)
-        "DISTANCE_ARROW" -> bool (bool " ↓" " ↑" (chargeableDistance > estimatedDistance)) "" (chargeableDistance == estimatedDistance)
         "DRIVER_PICKUP_CHARGE" -> show driverPickupCharges
         "TOLL_CHARGES" -> show tollCharges
+        "PET_CHARGES" -> show petCharges
         "TIP_ADDED" -> show tipAdded
         "DRIVER_ADDITIONS" -> show driverAdditions
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
@@ -1005,3 +1017,6 @@ mkMediaFiles =
           _ -> mediaFileList
     )
     []
+
+makeIssueReportKey :: Id D.IssueReport -> Text
+makeIssueReportKey id = "IssueReport:IssueReportId-" <> id.getId

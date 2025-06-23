@@ -21,9 +21,11 @@ import Animation (translateInXSidebarAnim, translateOutXSidebarAnim)
 import Common.Types.App (LazyCheck(..), City(..))
 import Components.SettingSideBar.Controller (Action(..), SettingSideBarState, Status(..), Tag(..), Item)
 import Data.Array as DA
-import Data.Maybe (Maybe(..))
+import RemoteConfig as RemoteConfig
+import Data.Maybe (Maybe(..), isJust)
 import Data.Maybe (Maybe(..))
 import Data.String as DS
+import Language.Types(STR(..)) as STR
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
@@ -32,7 +34,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map, not)
+import Prelude
 import Mobility.Prelude (boolToVisibility)
 import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
@@ -49,6 +51,7 @@ import Data.String as DS
 import Mobility.Prelude
 import Debug
 import Engineering.Helpers.Utils (getCityFromString)
+import Data.Int (fromNumber)
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -106,16 +109,16 @@ settingsView state push =
   , orientation VERTICAL
   ](map (\item -> 
         case item of
-        "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : "", showNewTag : false} push
-        "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : "", showNewTag : false} push
-        "MetroTickets" -> if (DA.any (_ == city) [Kochi, Chennai, Delhi]) then settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey_small", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : "", showNewTag: true} push else linearLayout[visibility GONE][]
-        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
-        "NammaSafety" -> if state.appConfig.feature.enableSafetyFlow then settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push else emptyLayout
-        "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  if state.appConfig.feature.enableHelpAndSupport && not isOdishaApp then getString HELP_AND_SUPPORT else getString CONTACT_SUPPORT, accessibilityHint : "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
-        "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : "", showNewTag : false} push
-        "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_AND_REFER), accessibilityHint : "Refer And Share ", tag : SETTINGS_SHARE_APP, iconUrl : "", showNewTag : false} push
-        "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage, showNewTag : false} push
-        "About" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : "", showNewTag : false} push
+        "MyRides" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : "", showNewTag : false} push
+        "Tickets" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : "", showNewTag : false} push
+        "MetroTickets" -> if (DA.any (_ == city) [Kochi, Chennai, Delhi]) then settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey_small", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : "", showNewTag: true} push else linearLayout[visibility GONE][]
+        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
+        "NammaSafety" -> if state.appConfig.feature.enableSafetyFlow then settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push else emptyLayout
+        "HelpAndSupport" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  if state.appConfig.feature.enableHelpAndSupport && not isOdishaApp then getString HELP_AND_SUPPORT else getString CONTACT_SUPPORT, accessibilityHint : "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
+        "Language" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : "", showNewTag : false} push
+        "ShareApp" -> settingsMenuView {showReferralTag : state.isPayoutEnabled, imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_AND_REFER), accessibilityHint : "Refer And Share ", tag : SETTINGS_SHARE_APP, iconUrl : "", showNewTag : false} push
+        "LiveStatsDashboard" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage, showNewTag : false} push
+        "About" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : "", showNewTag : false} push
         "Logout" -> logoutView state push
         "Separator" -> separator
         _ -> emptyLayout
@@ -154,7 +157,7 @@ logoutView state push =
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_logout", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : "", showNewTag : false} push
+  , settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_logout", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : "", showNewTag : false} push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -249,6 +252,9 @@ profileView state push =
 ------------------------------ settingsMenuView --------------------------------
 settingsMenuView :: forall w. Item -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 settingsMenuView item push  =
+  let 
+    referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -287,13 +293,21 @@ settingsMenuView item push  =
       , height ( V 25 )
       , imageWithFallback item.imageUrl
       ]
-    , textView $
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text item.text
-      , color Color.charcoalGrey
-      , padding (PaddingLeft 20)
-      ] <> FontStyle.body13 TypoGraphy
+    , linearLayout
+        [ height WRAP_CONTENT
+        , weight 1.0
+        ]
+        [ textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text item.text
+              , singleLine true
+              , ellipsize true
+              , color Color.charcoalGrey
+              , padding (PaddingLeft 20)
+              ]
+            <> FontStyle.body13 TypoGraphy
+        ]
     , imageView
       [ width ( V 8 )
       , height ( V 8 )
@@ -310,6 +324,27 @@ settingsMenuView item push  =
       , margin $ MarginLeft 4
       , cornerRadius 4.0
       ] <> FontStyle.body19 TypoGraphy
+    , linearLayout
+      [ weight 0.5
+      , height WRAP_CONTENT
+      , cornerRadius 24.0
+      , background Color.blue600
+      , visibility $ boolToVisibility $ isJust referralPayoutConfig.youGet && item.showReferralTag
+      , padding $ Padding 10 8 10 8
+      , gravity CENTER
+      ][ textView $
+          [ text "🚕 "
+          , color Color.blue900
+          , gravity CENTER
+          , padding $ PaddingBottom 5
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $
+          [ text $ getString $ STR.EARN_ (show $ fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.youGet)
+          , color Color.blue900
+          , gravity CENTER
+          -- , padding $ PaddingBottom 3
+          ] <> FontStyle.body1 TypoGraphy
+      ]
     ]
 
 profileCompleteValue :: SettingSideBarState -> String

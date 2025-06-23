@@ -143,6 +143,7 @@ types:
     - fareProductType: FareProductType # TODO: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     - tripCategory: TripCategory
     - endOtp: Maybe Text
+    - isSafetyPlus: Bool
   RideInfoRes:
     - rideId: Id Ride
     - bookingId: Id Booking
@@ -190,6 +191,8 @@ types:
     - rideCreatedAt: UTCTime
     - roundTrip: Maybe Bool
     - mobileCountryCode: Maybe Text
+    - isSafetyPlus: Bool
+    - isAirConditioned: Bool
   ShareRideInfoRes:
     - id: Id Ride
     - bookingId: Id Booking

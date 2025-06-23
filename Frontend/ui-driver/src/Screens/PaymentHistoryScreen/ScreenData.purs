@@ -25,6 +25,7 @@ import ConfigProvider
 initData :: PaymentHistoryScreenState
 initData = {
     data: {
+        config : getAppConfig appConfig,
         autoPayList : [],
         manualPayList : [],
         transactionDetails : {

@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.Common
     runVerifyRCFlow,
     appendPlusInMobileCountryCode,
     castStatus,
+    checkFleetOwnerVerification,
   )
 where
 
@@ -32,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.Queries.FleetOwnerInformation as QFI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -44,6 +46,7 @@ mapServiceName :: Common.ServiceNames -> ServiceNames
 mapServiceName common = case common of
   Common.YATRI_SUBSCRIPTION -> YATRI_SUBSCRIPTION
   Common.YATRI_RENTAL -> YATRI_RENTAL
+  Common.DASHCAM_RENTAL_CAUTIO -> DASHCAM_RENTAL CAUTIO
 
 castVerificationStatus :: Documents.VerificationStatus -> Common.VerificationStatus
 castVerificationStatus = \case
@@ -114,15 +117,15 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         merchantMessage <-
           QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey Nothing Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just $ fromMaybe "XXXXX" vehicleId) (Just timeStamp) mbReason Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [(Just $ fromMaybe "XXXXX" vehicleId), (Just timeStamp), mbReason] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       _ -> pure ()
 
@@ -146,3 +149,9 @@ castStatus status = case status of -- only PENDING and OVERDUE possible
   REFUND_MANUAL_REVIEW_REQUIRED -> Common.REFUND_MANUAL_REVIEW_REQUIRED
   ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
   SETTLED -> Common.SETTLED
+
+checkFleetOwnerVerification :: Text -> Maybe Bool -> Flow ()
+checkFleetOwnerVerification personId mbEnabledCheck = do
+  when (mbEnabledCheck == Just True) $ do
+    fleetOwnerInfo <- QFI.findByPrimaryKey (Id personId) >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
+    unless fleetOwnerInfo.enabled $ throwError (InvalidRequest "Fleet owner is not enabled")

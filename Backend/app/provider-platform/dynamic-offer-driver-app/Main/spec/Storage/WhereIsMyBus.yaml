@@ -7,7 +7,8 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
-  ApprovalRequest: Domain.Types.ApprovalRequest
+  AlertRequest: Domain.Types.AlertRequest
+  FleetBadge: Domain.Types.FleetBadge
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -37,11 +38,11 @@ TripTransaction:
     # Assignment Trip Status Flow : TRIP_ASSIGNED -> CANCELLED | INPROGRESS
     # Inprogress Trip Status Flow : IN_PROGRESS -> PAUSED | COMPLETED
     TripStatus:
-      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     ActionSource:
-      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard"
+      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob, AutoRecovery"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
@@ -49,6 +50,10 @@ TripTransaction:
     fleetOwnerId: Id Person
     vehicleNumber: Text
     tripCode: Maybe Text
+    driverFleetBadgeId: Maybe (Id FleetBadge)
+    conductorFleetBadgeId: Maybe (Id FleetBadge)
+    driverName: Maybe Text
+    conductorName: Maybe Text
     driverId: Id Person
     routeCode: Text
     roundRouteCode: Maybe Text
@@ -63,16 +68,17 @@ TripTransaction:
     allowEndingMidRoute: Bool
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
-    endRideApprovalRequestId: Maybe (Id ApprovalRequest)
+    endRideApprovalRequestId: Maybe (Id AlertRequest)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripStartSource: Maybe ActionSource
     tripTerminationSource: Maybe ActionSource
     createdAt: UTCTime
     updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
-    driverId: SecondaryKey
+    driverId: "!SecondaryKey"
 
   beamFields:
     startLocation:
@@ -81,6 +87,8 @@ TripTransaction:
     endLocation:
       endLocationLat: Maybe Double
       endLocationLon: Maybe Double
+    driverFleetBadgeId:
+      fleetBadgeId: Maybe (Id FleetBadge)
 
   toTType:
     startLocationLat: Kernel.Prelude.fmap (.lat)|I
@@ -104,11 +112,8 @@ TripTransaction:
     updateOnStart:
       kvFunction: updateOneWithKV
       params:
-        [tripCode, startedNearStopCode, startLocation, status, tripStartTime]
+        [tripCode, startedNearStopCode, startLocation, status, tripStartTime, tripStartSource]
       where: id
-    findAllTripTransactionByDriverId:
-      kvFunction: findAllWithKV
-      where: driverId
     updateOnEnd:
       kvFunction: updateOneWithKV
       params: [status, endLocation, tripEndTime, tripTerminationSource]
@@ -125,57 +130,39 @@ TripTransaction:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-ApprovalRequest:
-  tableName: approval_request
-
-  types:
-    RequestStatus:
-      - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
-      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
-
-    RequestType:
-      enum: "END_RIDE, CHANGE_ROUTE"
-
-    ApprovalRequestData:
-      enum: "EndRide EndRideData, ChangeRoute EmptyDynamicParam"
-
-    EndRideData:
-      lat: Double
-      lon: Double
-      tripTransactionId: Text
-      tripCode: Maybe Text
-      driverName: Text
-      driverMobileNumber: Maybe Text
-      vehicleRegistrationNumber: Text
-      derive: "Eq,Ord,Read"
+TripAlertRequest:
+  tableName: trip_alert_request
 
   fields:
-    id: Id ApprovalRequest
-    requestorId: Id Person
-    requesteeId: Id Person
-    requestData: ApprovalRequestData
-    title: Text
-    body: Text
-    status: RequestStatus
-    reason: Maybe Text
+    id: Id TripAlertRequest
+    alertRequestId: Id AlertRequest
+    tripTransactionId: Id TripTransaction
+    driverId: Id Person
+    fleetOwnerId: Id Person
+    driverFleetBadgeId: Maybe (Id FleetBadge)
+    conductorFleetBadgeId: Maybe (Id FleetBadge)
+    routeCode: Text
+    alertRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+    isViolated: Bool
     createdAt: UTCTime
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    alertStatus: Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus
 
   constraints:
-    id: PrimaryKey
-    requesteeId: "!SecondaryKey"
+    id: "PrimaryKey"
+    driverId: "!SecondaryKey"
+
+  beamFields:
+    driverFleetBadgeId:
+      fleetBadgeId: Maybe (Id FleetBadge)
 
   queries:
-    updateStatusWithReason:
+    updateIsViolated:
       kvFunction: updateOneWithKV
-      params: [status, reason]
+      params: [isViolated]
       where: id
-
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestStatus>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestStatus>
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -190,16 +177,25 @@ FleetConfig:
     endRideDistanceThreshold: HighPrecMeters
     allowStartRideFromQR: Bool
     allowAutomaticRoundTripAssignment: Bool
+    directlyStartFirstTripAssignment: Bool
+    unlinkDriverAndVehicleOnTripTermination: Bool
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
+    directlyStartFirstTripAssignment: Maybe Bool
+    unlinkDriverAndVehicleOnTripTermination: Maybe Bool
   toTType:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
+    directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
+    unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
   fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
+    directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
+    unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
   sqlType:
     endRideDistanceThreshold: double precision
   default:
     endRideDistanceThreshold: "100"
-
+    directlyStartFirstTripAssignment: "true"
+    unlinkDriverAndVehicleOnTripTermination: "true"
   constraints:
     fleetOwnerId: PrimaryKey

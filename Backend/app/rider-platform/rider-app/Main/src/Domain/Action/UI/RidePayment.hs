@@ -5,6 +5,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Environment
@@ -15,6 +16,7 @@ import Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -25,6 +27,7 @@ import qualified SharedLogic.Payment as Payment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Payment as Payment
@@ -35,16 +38,58 @@ data DFareBreakup = DFareBreakup
   }
   deriving (Generic, Show)
 
+getcustomer ::
+  Domain.Types.Person.Person -> Environment.Flow Payment.CreateCustomerResp
+getcustomer person = do
+  mbCustomer <- QPaymentCustomer.findByCustomerId person.id.getId
+  case mbCustomer of
+    Just customer -> do
+      now <- getCurrentTime
+      if maybe False (> now) customer.clientAuthTokenExpiry
+        then
+          return $
+            Payment.CreateCustomerResp
+              { customerId = customer.customerId,
+                clientAuthToken = customer.clientAuthToken,
+                clientAuthTokenExpiry = customer.clientAuthTokenExpiry
+              }
+        else do
+          getCustomer <- Payment.getCustomer person.merchantId person.merchantOperatingCityId person.id.getId
+          QPaymentCustomer.updateCATAndExipry getCustomer.clientAuthToken getCustomer.clientAuthTokenExpiry getCustomer.customerId
+          return $ getCustomer
+    Nothing -> do
+      customer <- Payment.getCustomer person.merchantId person.merchantOperatingCityId person.id.getId
+      paymentCustomer <- buildCreateCustomer customer
+      QPaymentCustomer.create paymentCustomer
+      return $ customer
+
+buildCreateCustomer ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Payment.CreateCustomerResp ->
+  m DPaymentCustomer.PaymentCustomer
+buildCreateCustomer createCustomerResp = do
+  now <- getCurrentTime
+  return
+    DPaymentCustomer.PaymentCustomer
+      { clientAuthToken = createCustomerResp.clientAuthToken,
+        clientAuthTokenExpiry = createCustomerResp.clientAuthTokenExpiry,
+        customerId = createCustomerResp.customerId,
+        createdAt = now,
+        updatedAt = now
+      }
+
 getCustomerPaymentId :: Domain.Types.Person.Person -> Environment.Flow CustomerId
 getCustomerPaymentId person =
   case person.customerPaymentId of
     Just customerId -> return customerId
     Nothing -> do
       --- Create a customer in payment service if not there ---
-      email <- person.email & fromMaybeM (PersonFieldNotPresent "email")
-      emailDecrypted <- decrypt email
+      mbEmailDecrypted <- mapM decrypt person.email
       phoneDecrypted <- mapM decrypt person.mobileNumber
-      let req = Payment.CreateCustomerReq {email = emailDecrypted, name = fromMaybe "User" person.firstName, phone = phoneDecrypted}
+      let req = Payment.CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
       customer <- Payment.createCustomer person.merchantId person.merchantOperatingCityId req
       QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
       return customer.customerId
@@ -225,3 +270,14 @@ applicationFeeAmountForTipAmount tipRequest = do
   let cardFixedCharges = HighPrecMoney 0.3
   let cardPercentageCharges = 0.029 -- 2.9%
   HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges
+
+getPaymentCustomer ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.Flow Kernel.External.Payment.Interface.Types.CreateCustomerResp
+  )
+getPaymentCustomer (mbPersonId, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  getcustomer person

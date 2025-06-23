@@ -165,6 +165,7 @@ parseRideAssignedEvent order msgId txnId = do
       driverTrackingUrl :: Maybe BaseUrl = SCC.parseBaseUrl . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_TRACKING_URL tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
       isAlreadyFav = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+      isSafetyPlus = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_SAFETY_PLUS tagGroups
       favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
   let fareBreakups = mbFareBreakupsQuotationBreakup <&> (mapMaybe mkDFareBreakup)

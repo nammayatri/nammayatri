@@ -30,6 +30,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -64,7 +65,9 @@ sendDriverReferralPayoutJobData ::
     MonadFlow m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   Job 'DriverReferralPayout ->
   m ExecutionResult
@@ -131,7 +134,9 @@ callPayout ::
     MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   DS.DailyStats ->
   DI.DriverInformation ->
@@ -170,12 +175,12 @@ callPayout DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRet
               else pure 0.0
           let entityName = DLP.DRIVER_DAILY_STATS
               amount = referralEarnings + refundRegistrationAmt
-              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
+              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
-              let serviceName = DEMSC.PayoutService PT.Juspay
-                  createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
+              payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+              let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
               mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
               errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do

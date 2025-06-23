@@ -31,7 +31,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, pure, show, unit, bind, void, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
+import Prelude (class Show, pure, show, unit, bind, void, ($), discard, (==), (&&), (||), not, (<=), (>=), (/), (<>))
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -43,7 +43,19 @@ import Helpers.Utils as HU
 import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (PrimaryButtonActionController) = "PrimaryButtonActionController"
+  show (Logout) = "Logout"
+  show (SupportCall) = "SupportCall"
+  show (Dummy) = "Dummy"
+  show (AfterRender) = "AfterRender"
+  show (DriverRegistrationStatusAction var1) = "DriverRegistrationStatusAction_" <> show var1
+  show (ReTry _) = "ReTry"
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (CompleteOnBoardingAction var1) = "CompleteOnBoardingAction_" <> show var1
+  show (AlternateMobileNumberAction var1) = "AlternateMobileNumberAction_" <> show var1
+  show (ExitGoToEnterOtp) = "ExitGoToEnterOtp"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen APPLICATION_STATUS_SCREEN)

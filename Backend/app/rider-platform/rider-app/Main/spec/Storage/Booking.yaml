@@ -35,6 +35,8 @@ imports:
   Value: Data.Aeson
   Journey: Domain.Types.Journey
   ParcelType: Domain.Types.ParcelDetails
+  JourneyLegStatus: Lib.JourneyLeg.Types
+  RecentLocation: Domain.Types.RecentLocation
 
 BookingLocation:
   tableName: booking_location
@@ -173,7 +175,7 @@ Booking:
     MeterRideBookingDetails:
       derive': Generic,Show
       distanceCovered: Maybe Distance
-      toLocation : Maybe Location
+      toLocation: Maybe Location
 
   fields:
     id: Id Booking
@@ -193,8 +195,9 @@ Booking:
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
-    hasStops : Maybe Bool
+    hasStops: Maybe Bool
     riderId: Id Person
+    isPetRide: Bool
     fromLocation: Location
     initialPickupLocation: Location|NoRelation
     estimatedFare: Price
@@ -237,6 +240,12 @@ Booking:
     isSkipped: Maybe Bool
     configInExperimentVersions: "[ConfigVersionMap]"
     journeyId: Maybe (Id Journey)
+    journeyLegStatus: Maybe JourneyLegStatus
+    preferSafetyPlus: Bool
+    recentLocationId: Maybe (Id RecentLocation)
+    isInsured: Bool
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -282,7 +291,7 @@ Booking:
     currency: Maybe Currency
     tripTermsId: Maybe Text
     isScheduled: Maybe Bool
-    isBookingUpdated : Maybe Bool
+    isBookingUpdated: Maybe Bool
     merchantOperatingCityId: Maybe Text
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
@@ -292,6 +301,10 @@ Booking:
     clientManufacturer: Maybe Text
     vehicleIconUrl: Maybe Text
     configInExperimentVersions: Maybe Value
+    preferSafetyPlus: Maybe Bool
+    isInsured: Maybe Bool
+    isPetRide: Maybe Bool
+
 
   sqlType:
     id: character(36)
@@ -384,6 +397,9 @@ Booking:
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     parcelType: getParcelType
     parcelQuantity: getParcelQuantity
+    preferSafetyPlus : Kernel.Prelude.Just|I
+    isInsured: Kernel.Prelude.Just isInsured|E
+    isPetRide: Kernel.Prelude.Just|I
 
   intermediateTransformers:
     toTType:
@@ -413,6 +429,9 @@ Booking:
     itemId: bppEstimateId|E
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    isInsured: fromMaybe False isInsured|E
+    preferSafetyPlus : fromMaybe False preferSafetyPlus | E
+    isPetRide: fromMaybe False isPetRide | E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -463,8 +482,8 @@ BookingPartiesLink:
       kvFunction: findAllWithKVAndConditionalDB
       where:
         and:
-         - bookingId
-         - isActive: True|CB
+          - bookingId
+          - isActive: True|CB
     makeAllInactiveByBookingId:
       kvFunction: updateWithKV
       params:

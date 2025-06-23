@@ -29,6 +29,8 @@ imports:
   DriverIdentifier: Domain.Types.RefereeLink
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  RecentLocation: Domain.Types.RecentLocation
+  VehicleCategory: BecknV2.OnDemand.Enums
 
 SearchRequest:
   tableName: search_request
@@ -37,6 +39,7 @@ SearchRequest:
 
   fields:
     id: Id SearchRequest
+    recentLocationId: Maybe (Id RecentLocation)
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
@@ -58,6 +61,7 @@ SearchRequest:
     language: Maybe Language
     disabilityTag: Maybe Text
     customerExtraFee: Maybe Price
+    isPetRide: Maybe Bool
     autoAssignEnabled: Maybe Bool
     autoAssignEnabledV2: Maybe Bool
     selectedPaymentMethodId: Maybe PaymentMethodId
@@ -80,7 +84,13 @@ SearchRequest:
     journeyLegInfo: Maybe JourneySearchData
     driverIdentifier: Maybe DriverIdentifier
     hasMultimodalSearch: Maybe Bool
+    routeCode: Maybe Text
+    originStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    vehicleCategory: Maybe VehicleCategory
     configInExperimentVersions: "[ConfigVersionMap]"
+    allJourneysLoaded: Maybe Bool
+
 
   default:
     hasMultimodalSearch: "false"
@@ -90,7 +100,7 @@ SearchRequest:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
     RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity, Ambulance, Delivery"
+      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport"
       derive: "HttpInstance"
 
   beamType:
@@ -148,6 +158,7 @@ SearchRequest:
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
+      onSearchFailed: Maybe Bool
     driverIdentifier:
       driverIdentifierType: Maybe DriverIdentifierType
       driverIdentifierValue: Maybe Text
@@ -181,6 +192,7 @@ SearchRequest:
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted:  (journeyLegInfo >>= (.isDeleted))|E
+    onSearchFailed:  (journeyLegInfo >>= (.onSearchFailed))|E
     driverIdentifierType: driverIdentifier <&> (._type)|E
     driverIdentifierValue: driverIdentifier <&> (.value)|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
@@ -227,6 +239,11 @@ SearchRequest:
       params: [id, totalRidesCount]
       where: riderId
 
+    updateAllJourneysLoaded:
+      kvFunction: updateOneWithKV
+      params: [allJourneysLoaded]
+      where: id
+
     updateInitiatedBy:
       kvFunction: updateOneWithKV
       params: [initiatedBy]
@@ -236,6 +253,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       where: id
       params: [hasMultimodalSearch]
+
+    updatePetRide:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [isPetRide]
 
   constraints:
     id: PrimaryKey

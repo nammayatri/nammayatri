@@ -90,6 +90,7 @@ data PersonE e = Person
     lastName :: Maybe Text,
     mobileNumber :: Maybe (EncryptedHashedField e Text),
     merchantOperatingCityId :: Id MerchantOperatingCity,
+    merchantId :: Id Merchant,
     blocked :: Maybe Bool
   }
   deriving (Generic)
@@ -266,8 +267,8 @@ data MerchantConfig = MerchantConfig
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
 
-data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION
-  deriving stock (Eq, Generic)
+data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION | DRUNK_AND_DRIVE_VIOLATION
+  deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data MandatoryUploads = MandatoryUploads

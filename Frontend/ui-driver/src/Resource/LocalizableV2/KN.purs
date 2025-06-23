@@ -461,7 +461,7 @@ getKn =
     , min_ago: "ನಿಮಿಷದ ಹಿಂದೆ"
     , sec_ago: "ಎರಡನೇ ಹಿಂದೆ"
     , app_related: "ಅಪ್ಲಿಕೇಶನ್ ಸಂಬಂಧಿತ"
-    , fare: "ಶುಲ್ಕ ಸಂಬಂಧಿತ"
+    , fare: "ಭಾಡಿ"
     , ride_related: "ಸವಾರಿ ಸಂಬಂಧಿತ"
     , lost_and_found: "ಕಳೆದು ಮತ್ತೆ ದೊರಕಿದ"
     , report_lost_item: "ಕಳೆದುಹೋದ ಐಟಂ ಅನ್ನು ವರದಿ ಮಾಡಿ"
@@ -1142,6 +1142,8 @@ getKn =
     , customer_should_complete_a_valid_ride: "ಗ್ರಾಹಕರು ಮಾನ್ಯವಾದ ಸವಾರಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಬೇಕು"
     , driver_referral: "ಡ್ರೈವರ್ ರೆಫರಲ್"
     , purple_ride_completed: "ಪರ್ಪಲ್ ರೈಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ"
+    , gold_tier_ride_completed: "ಗೋಲ್ಡ್ ಟಿಯರ್ ರೈಡ್ ಪೂರ್ಣಗೊಂಡಿದೆ"
+    , you_will_lose_a_chance_to_earn:(\coins -> "ನೀವು " <> coins <> " ಪಾಯಿಂಟ್‌ಗಳು ಸಂಪಾದಿಸಲು ಅವಕಾಶವನ್ನು ಕಳೆದುಕೊಳ್ಳುತ್ತೀರಿ")
     , training_complted: "ಪ್ರಶಿಕ್ಷಣ ಪೂರ್ಣಗೊಂಡಿದೆ"
     , rides_in_a_day: "ದಿನದಲ್ಲಿ ಸವಾರಿಗಳು"
     , top: "ಟಾಪ್"
@@ -1788,8 +1790,69 @@ getKn =
     , canceling_this_booking_may_affect_the_emergency_medical : " ಈ ಬುಕ್ಕಿಂಗ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ರೋಗಿಗೆ ತುರ್ತು ವೈದ್ಯಕೀಯ ಸೇವೆಗಳ ಮೇಲೆ ಪರಿಣಾಮ ಬೀರುವ ಸಾಧ್ಯತೆಯಿದೆ"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ಡ್ರೈವರರು ತಮ್ಮ ವೈದ್ಯಕೀಯ ಕಾರಣಗಳು ಅಥವಾ ವಾಹನದ ಬೃಹತ್‌ ಕಡಿವಾಣಗಳಿಂದ ಮಾತ್ರ ರದ್ದು ಮಾಡುವುದು ಅನುಮತಿಸಲಾಗಿದೆ"
     , payment_under_maintenance : "ಪಾವತಿ ನಿರ್ವಹಣೆಯಲ್ಲಿದೆ"
-    , payments_temporarily_unavailable : "ಪಾವತಿಗಳು ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ ಮತ್ತು ಶೀಘ್ರದಲ್ಲೇ ಮರಳಲಿವೆ. ದಯವಿಟ್ಟು ನಂತರ ಪ್ರಯತ್ನಿಸಿ."
+    , payments_temporarily_unavailable : "ಪಾವತಿಗಳು ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ ಮತ್ತು ಶೀಘ್ರದಲ್ಲೇ ಮರಳಲಿವೆ. ದಯವಿಟ್ಟು ನಂತರ ಪ್ರಯತ್ನಿಸಿ.",
+    extra_charge_penalty: "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕದ ದಂಡ",
+    out_of_rides: (\numerator denaminator -> numerator <> " ನಲ್ಲಿ " <> denaminator <> " ಸವಾರಿಗಳು"),
+    extra_charged: "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ವಿಧಿಸಲಾಗಿದೆ",
+    get_clarified: "ಪ್ರಮಾಣಿತವಾಗಿರಿ",
+    dont_ask_extra_suspend: "ನಿಲಂಬನವನ್ನು ತಪ್ಪಿಸಲು ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ಬೇಡ",
+    dont_ask_extra_blocking: "ನಿಷೇಧವನ್ನು ತಪ್ಪಿಸಲು ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ಬೇಡ",
+    your_extra_charge_penalty: "ನಿಮ್ಮ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕದ ದಂಡ",
+    what_does_this_mean: "ಇದು ಎಂದರ್ಥ?",
+    read_more: "ಇನ್ನಷ್ಟು ಓದಿ",
+    take_the_course: "ಕೋರ್ಸ್ ತೆಗೆದುಕೊಳ್ಳಿ",
+    extra_charge_q1: "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕದ ದಂಡ ಎಂದರೇನು?",
+    extra_charge_a1: "ಚಾಲಕ ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಹಣ ಕೇಳಿದರೆ, ಓವರ್‌ಚಾರ್ಜಿಂಗ್ ಸ್ಕೋರ್ ಹೆಚ್ಚಾಗುತ್ತದೆ.",
+    extra_charge_q2: "ದಂಡ ಹೆಚ್ಚಾದರೆ ಏನಾಗುತ್ತದೆ?",
+    extra_charge_a2: "ಸ್ಕೋರ್ ಹೆಚ್ಚು ಇದ್ದರೆ, ಚಾಲಕನಿಗೆ ಕಡಿಮೆ ಸವಾರಿಗಳು ದೊರಕುತ್ತವೆ.",
+    extra_charge_q3: "ನಾನು ನನ್ನ ದಂಡವನ್ನು ಹೇಗೆ ಕಡಿಮೆ ಮಾಡಬಹುದು?",
+    extra_charge_a3: "ಸವಾರಿಗಳನ್ನು ಕೈಗೊಂಡು, ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ಬೇಡ. ಸಮಯದೊಂದಿಗೆ ಸ್ಕೋರ್ ಕಡಿಮೆಯಾಗುತ್ತದೆ.",
+    extra_charge_q4: "ಚಾಲಕ ಹೆಚ್ಚುವರಿ ಹಣ ಕೇಳುವುದು ನಿಲ್ಲಿಸದಿದ್ದರೆ?",
+    extra_charge_a4: "ಚಾಲಕನನ್ನು ಕೆಲಕಾಲ ನಿಲಂಬಿಸಲಾಗುತ್ತದೆ. ಇನ್ನೂ ಮುಂದುವರೆದರೆ, ಅವನನ್ನು ನಿಷೇಧಿಸಲಾಗುತ್ತದೆ.",
+    zero: "ಶೂನ್ಯ",
+    low: "ಕಡಿಮೆ",
+    suspended: "ನಿಲಂಬಿಸಲಾಗಿದೆ",
+    blocked: "ನಿಷೇಧಿಸಲಾಗಿದೆ",
+    overcharging_blocked_desc: "ನಿರಂತರ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ವಸೂಲಿಗೆ, ನೀವು ಸವಾರಿಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳುವುದರಿಂದ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ",
+    overcharging_suspended_desc: "ನಿರಂತರ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ವಸೂಲಿಗಾಗಿ, ನೀವು ಆನ್ಲೈನ್‌ಗೆ ಹೋಗುವುದರಿಂದ ತಾತ್ಕಾಲಿಕವಾಗಿ ನಿಲ್ಲಿಸಲಾಗಿದೆ",
+    suspended_till: (\time date -> "ನಿಲಂಬಿತವಾಗಿದೆ " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver: "ನ್ಯಾಯಯುತ ಬೆಲೆಯ ಚಾಲಕ"
     , resume_ride : "ಪ್ರಯಾಣವನ್ನು ಪುನರಾರಂಭಿಸಿ"
-    , end_ride_with_stops : "ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಇನ್ನೂ ಹೆಚ್ಚು ನಿಲ್ದಾಣಗಳಿವೆ. ಆದರೂ ಪ್ರಯಾಣವನ್ನು ಮುಗಿಸಬೇಕೇ?"  
+    , end_ride_with_stops : "ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಇನ್ನೂ ಹೆಚ್ಚು ನಿಲ್ದಾಣಗಳಿವೆ. ಆದರೂ ಪ್ರಯಾಣವನ್ನು ಮುಗಿಸಬೇಕೇ?"
     , stop: (\n -> "ನಿಲ್ದಾಣ " <> n)
+    , rate_changes_as_the_distance_changes: "ಅಂತರ ಬದಲಾಗುತ್ತಿದ್ದಂತೆ ದರ ಬದಲಾಗುತ್ತದೆ"
+    , nammanmeter: "ನಮ್ಮ\nಮೀಟರ್"
+    , press_to_cancel: "ರದ್ದು ಮಾಡಲು ಒತ್ತಿರಿ"
+    , dist: "ದೂರ"
+    , km: "ಕಿಮೀ"
+    , updated_at_: "ನವೀಕರಿಸಿದ ಸಮಯ"
+    , time: "ಸಮಯ"
+    , enter_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ನಮೂದಿಸಿ"
+    , stop_meter: "ಮೀಟರ್ ನಿಲ್ಲಿಸಿ"
+    , upton2km: "2KM ತನಕ"
+    , meter_running: "ಮೀಟರ್ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಿದೆ"
+    , confirm_meter_stop: "ಮೀಟರ್ ನಿಲ್ಲಿಸುವುದನ್ನು ಖಚಿತಪಡಿಸಬಹುದಾ?"
+    , confirm_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ಖಚಿತಪಡಿಸಿ"
+    , search_results: "ಹುಡುಕಾಟ ಫಲಿತಾಂಶಗಳು"
+    , start_typing_to_search_places: "ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲು ಟೈಪ್ ಮಾಡು ಪ್ರಾರಂಭಿಸಿ"
+    , bus_number: "ಬಸ್ ಸಂಖ್ಯೆ"
+    , bus_type: "ಬಸ್ ಪ್ರಕಾರ"
+    , namma_meter: "ನಮ್ಮ ಮೀಟರ್"
+    , package: "ಪ್ಯಾಕೇಜ್"
+    , overcharging_score : "ಅತಿರಿಕ್ತ ಚಾರ್ಜ್ ಸ್ಕೋರ್"
+    , cancellation_score : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
+    , safety_score : "ಸುರಕ್ಷಿತವಾಗಿರುವ ಸ್ಕೋರ್"
+    , you_have_been_unsafe : "ನೀವು ಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ\nಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ"
+    , you_have_been_watchlisted : "ನೀವು ಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ\nಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ"
+    , you_are_safe : "ನೀವು ಸುರಕ್ಷಿತವಾಗಿದ್ದೀರಿ"
+    , watchlisted : "ಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ"
+    , unsafe : "ಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ"
+    , safe : "ಅನುಮತಿಸಲಾಗಿದ್ದೀರಿ"
+    , good_cancellation_score : "ನಿಮ್ಮ ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್ ಉತ್ತಮ"
+    , poor_cancellation_score : "ನಿಮ್ಮ ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್ ಖಾರಾಬಿಸ್ತು"
+    , good : "ಉತ್ತಮ"
+    , poor : "ಖಾರಾಬಿಸ್ತು"
+    , open_meter : "ತೆರೆಯಿರಿ ಮೀಟರ್"
+    , this_ride_includes_a_pet : "ಈ ಸವಾರಿಯಲ್ಲಿ ಸಾಕುಪ್ರಾಣಿಯೂ ಸೇರಿದೆ."
+    , pet_rides : "ಪೆಟ್ ರೈಡ್ಸ್"
     }

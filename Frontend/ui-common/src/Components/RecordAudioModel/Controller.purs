@@ -19,6 +19,16 @@ import Prelude
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 
+instance showAction :: Show Action where
+  show (OnClickDone) = "OnClickDone"
+  show (OnClickRestart) = "OnClickRestart"
+  show (OnClickClose) = "OnClickClose"
+  show (OnClickRecord _) = "OnClickRecord"
+  show (OnClickStop) = "OnClickStop"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (TimerCallback _ _ _) = "TimerCallback"
+
 data Action = OnClickDone
             | OnClickRestart
             | OnClickClose

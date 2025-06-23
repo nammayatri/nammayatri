@@ -13,7 +13,7 @@ import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (show, Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (-), unit, (/=), (||), (+), bind, discard, void, pure, (/))
 import Data.Array ( mapWithIndex, (..))
-import PrestoDOM (onAnimationEnd, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), relativeLayout, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, focus, visibility, clickable, singleLine, scrollView, editText, hint, pattern, id, onChange, hintColor, multiLineEditText, nestedScrollView)
+import PrestoDOM (onAnimationEnd, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), relativeLayout, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, focus, visibility, clickable, singleLine, scrollView, editText, hint, pattern, id, onChange, hintColor, multiLineEditText, nestedScrollView)
 import Screens.DriverCompleteProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.DriverCompleteProfileScreen.ComponentConfig
 import Screens.Types as ST
@@ -52,7 +52,7 @@ import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Resource.Constants
 import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..))
 
-screen :: ST.DriverCompleteProfileScreenState -> GlobalState -> Screen Action ST.DriverCompleteProfileScreenState ScreenOutput
+screen :: ST.DriverCompleteProfileScreenState -> GlobalState -> LoggableScreen Action ST.DriverCompleteProfileScreenState ScreenOutput
 screen initialState st =
   { initialState
   , view
@@ -62,30 +62,33 @@ screen initialState st =
           let
             _ = spy "DriverProfileCompleteScreen action" action
             _ = spy "DriverProfileCompleteScreen state" state
-          void $ case action of 
+          void $ case action of
             TextChanged _ _ -> pure unit
             InputTextAC (InputTextView.FeedbackChanged _) -> pure unit
             InputTextAC (InputTextView.PrimaryButtonAC _) -> do
                 let _ =  JB.clearFocusFunction (getNewIDWithTag "homeTown-editText")
                 pure unit
-            _ -> do 
+            _ -> do
                 let _ = JB.hideKeyboardOnNavigation true
                 let _ =  JB.clearFocusFunction (getNewIDWithTag "homeTown-editText")
                 pure unit
           eval action state
       )
+    , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.driverCompleteProfileScreenLogWhitelist
   }
   where
   globalEvents' :: (Action -> Effect Unit) -> Effect (Effect Unit)
-  globalEvents' push = do 
+  globalEvents' push = do
     _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getProfileData ProfileDataAPIResponseAction push initialState
     void $ JB.storeCallBackImageUpload push ImageUploadCallback
     void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
     pure $ pure unit
 
+
 view :: forall w. (Action -> Effect Unit) -> ST.DriverCompleteProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  relativeLayout[
+  Anim.screenAnimation $ relativeLayout[
       height MATCH_PARENT
     , width MATCH_PARENT
   ]
@@ -125,7 +128,7 @@ view push state =
         <> if state.props.showViewImageModel then [ viewImageModel state push ] else []
         <> if state.props.showInputTextView then [inputTextView state push ] else []
         )
-  ] 
+  ]
 
 getProfileData :: forall action. (DriverProfileDataRes -> action) -> (action -> Effect Unit) -> ST.DriverCompleteProfileScreenState -> FlowBT String Unit
 getProfileData action push state = do
@@ -217,7 +220,7 @@ uploadPhoto push state =
                 , onClick push $ const OnClickUpload
                 ]
             ]
-        ,   textView $ 
+        ,   textView $
             [     text $ getString ADD_UPTO_FOUR
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -226,7 +229,7 @@ uploadPhoto push state =
                 , margin $ MarginTop 15
                 ] <> FontStyle.body23 TypoGraphy
 
-        ,   textView $ 
+        ,   textView $
             [     text $ getString CARD_TEXT
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -265,12 +268,12 @@ uploadMorePhoto push state =
             , height WRAP_CONTENT
             , margin $ MarginTop 25
         ] $ (mapWithIndex(\idx item -> do
-                addedImage push idx item.image) state.data.addedImages) <> 
+                addedImage push idx item.image) state.data.addedImages) <>
             (mapWithIndex(\idx item -> leftImage push idx ) (1..(maxDriverImages - (DA.length state.data.addedImages))))
     ]
 
 addedImage :: forall w. (Action -> Effect Unit) -> Int -> String -> PrestoDOM (Effect Unit) w
-addedImage push idx item = 
+addedImage push idx item =
     relativeLayout[
         width WRAP_CONTENT
     ,   height WRAP_CONTENT
@@ -282,8 +285,8 @@ addedImage push idx item =
         , margin $ MarginRight 5
         , cornerRadius 4.0
         , afterRender
-            ( \action -> do 
-                runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source =  item, id = getNewIDWithTag ("driverImages" <> show idx), scaleType =  "FIT_XY", adjustViewBounds = false} 
+            ( \action -> do
+                runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source =  item, id = getNewIDWithTag ("driverImages" <> show idx), scaleType =  "FIT_XY", adjustViewBounds = false}
             ) (const NoAction)
         ][]
     ,   imageView
@@ -297,7 +300,7 @@ addedImage push idx item =
 
 
 leftImage :: forall w. (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
-leftImage push _ = 
+leftImage push _ =
     linearLayout
     [ width $ V $ ((screenWidth unit) - 60) / (4)
     , height $ V 72
@@ -328,10 +331,10 @@ pill push state action title isSelected =
     ,   stroke $ "1," <> if isSelected == true then Color.blue900 else Color.grey900
     ,   padding $ Padding 0 8 0 8
     ,   margin $ Margin 0 0 16 13
-    ,   onClick push $ const action 
+    ,   onClick push $ const action
     ,   background $ if isSelected == true then Color.blue600 else Color.white900
     ][
-        textView $ 
+        textView $
         [     text $ title
             , width MATCH_PARENT
             , height WRAP_CONTENT
@@ -349,10 +352,10 @@ pillItems push state action title isSelected =
     ,   stroke $ "1," <> if isSelected == true then Color.blue900 else Color.grey900
     ,   padding $ Padding 0 8 0 8
     ,   margin $ Margin 0 0 10 13
-    ,   onClick push $ const $ action 
+    ,   onClick push $ const $ action
     ,   background $ if isSelected == true then Color.blue600 else "#FFFFFF"
     ][
-        textView $ 
+        textView $
         [     text $ title
             , width MATCH_PARENT
             , height WRAP_CONTENT
@@ -371,7 +374,7 @@ pledge push state =
         isSmoothDrivingSelected = checkPillSelected (getEN SMOOTH_DRIVING) state.data.pledge
         isNoCancellationSelected = checkPillSelected (getEN NO_CANCELLATION) state.data.pledge
         isOtherSelected = checkPledgeOtherSelected state
-    in 
+    in
     linearLayout[
         height WRAP_CONTENT
     ,   width MATCH_PARENT
@@ -632,11 +635,11 @@ aspirations push state =
 checkPillSelected :: String -> Array String -> Boolean
 checkPillSelected pill pillArray = DA.any (\item -> item == pill) pillArray
 
-checkWhyNyOtherSelected :: ST.DriverCompleteProfileScreenState -> Boolean 
+checkWhyNyOtherSelected :: ST.DriverCompleteProfileScreenState -> Boolean
 checkWhyNyOtherSelected state = if state.data.inputTextState.others.aspirations == "" then false else true
 
-checkPledgeOtherSelected :: ST.DriverCompleteProfileScreenState -> Boolean 
+checkPledgeOtherSelected :: ST.DriverCompleteProfileScreenState -> Boolean
 checkPledgeOtherSelected state = if state.data.inputTextState.others.pledge == "" then false else true
 
 getEN :: STR -> String
-getEN = StringsV2.getString "EN_US" 
+getEN = StringsV2.getString "EN_US"

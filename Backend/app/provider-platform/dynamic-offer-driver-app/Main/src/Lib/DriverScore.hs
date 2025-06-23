@@ -33,6 +33,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore.Types as DST
@@ -58,19 +59,19 @@ import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
-  DP.removeSearchReqIdFromMap merchantId driverId searchTryId
+  DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of
     SRD.Accept -> do
       DP.incrementQuoteAcceptedCount merchantOpCityId driverId
       forM_ restDriverIds $ \restDriverId -> do
-        DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchTryId
-        DP.removeSearchReqIdFromMap merchantId restDriverId searchTryId
+        DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchReqId
+        DP.removeSearchReqIdFromMap merchantId restDriverId searchReqId
     SRD.Reject -> pure ()
     SRD.Pulled -> pure ()
 eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
@@ -210,6 +211,8 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 cancellationCharges = 0.0,
                 tipAmount = 0.0,
                 totalRideTime = rideDuration,
+                numDriversOnboarded = 0,
+                numFleetsOnboarded = 0,
                 merchantId = DR.merchantId ride,
                 merchantOperatingCityId = Just merchantOpCityId
               }
@@ -266,7 +269,11 @@ createDriverStat currency distanceUnit driverId = do
             validDriverCancellationTagCount = 0,
             validCustomerCancellationTagCount = 0,
             validCancellationTagsStatsStartDate = Just now,
-            updatedAt = now
+            updatedAt = now,
+            numDriversOnboarded = 0,
+            numFleetsOnboarded = 0,
+            safetyPlusEarnings = 0.0,
+            safetyPlusRideCount = 0
           }
   _ <- DSQ.create driverStat
   pure driverStat

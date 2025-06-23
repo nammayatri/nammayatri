@@ -40,6 +40,7 @@ data DriverRideRequest
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
         searchTryId :: Id DST.SearchTry,
+        searchReqId :: Id DSR.SearchRequest,
         restDriverIds :: [Id DP.Person],
         response :: SRD.SearchRequestForDriverResponse
       }

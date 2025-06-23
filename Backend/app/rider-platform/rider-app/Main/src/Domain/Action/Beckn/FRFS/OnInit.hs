@@ -35,6 +35,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
+import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSSearch as QSearch
@@ -80,7 +81,7 @@ onInit onInitReq merchant booking_ = do
   void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
-
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   case booking.journeyId of
     Just journeyId -> do
       QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
@@ -90,9 +91,9 @@ onInit onInitReq merchant booking_ = do
         Redis.withLockRedis (key journeyId) 60 $ do
           (orderId, orderShortId) <- getPaymentIds
           ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
-          let amount = sum $ allJourneyBookings <&> (.price.amount)
           let paymentType = Payment.FRFSMultiModalBooking
-          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType
+          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType
+          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
           case mCreateOrderRes of
             Just _ -> do
               let bookingAndPayments = zip ticketBookingPayments allJourneyBookings
@@ -104,7 +105,8 @@ onInit onInitReq merchant booking_ = do
       (orderId, orderShortId) <- getPaymentIds
       ticketBookingPayment <- processPayments orderId booking
       let paymentType = getPaymentType booking.vehicleType
-      mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId booking.price.amount person paymentType
+      let amt :: HighPrecMoney = if isMetroTestTransaction then 1 else booking.price.amount
+      mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType []
       case mCreateOrderRes of
         Just _ -> do
           markBookingApproved (ticketBookingPayment, booking)
@@ -116,22 +118,18 @@ onInit onInitReq merchant booking_ = do
       Spec.METRO -> Payment.FRFSBooking
       Spec.BUS -> Payment.FRFSBusBooking
       Spec.SUBWAY -> Payment.FRFSBooking
-
     key journeyId = "initJourney-" <> journeyId.getId
-
     getPaymentIds = do
       orderShortId <- generateShortId
       orderId <- generateGUID
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
       let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
       return (orderId, updatedOrderShortId)
-
     markBookingApproved (ticketBookingPayment, booking) = do
       let price = if booking.id == booking_.id then onInitReq.totalPrice else booking.price
       void $ QFRFSTicketBookingPayment.create ticketBookingPayment
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       void $ QFRFSTicketBooking.updateFinalPriceById (Just price) booking.id
-
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
 
 processPayments ::
@@ -172,8 +170,9 @@ createPayments ::
   HighPrecMoney ->
   DP.Person ->
   Payment.PaymentServiceType ->
+  [Payment.VendorSplitDetails] ->
   m (Maybe Payment.CreateOrderResp)
-createPayments merchantOperatingCityId merchantId orderId orderShortId amount person paymentType = do
+createPayments merchantOperatingCityId merchantId orderId orderShortId amount person paymentType vendorSplitArr = do
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
@@ -195,10 +194,10 @@ createPayments merchantOperatingCityId merchantId orderId orderShortId amount pe
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled amount []
+            splitSettlementDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType
+      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
   DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId createOrderReq createOrderCall

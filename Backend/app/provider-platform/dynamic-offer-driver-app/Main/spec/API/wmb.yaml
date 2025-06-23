@@ -5,15 +5,16 @@ imports:
   ServiceTierType: Domain.Types.Common
   ToParamSchema: Kernel.Prelude
   Person: Domain.Types.Person
-  ApprovalRequestData: Domain.Types.ApprovalRequest
+  AlertRequestData: Domain.Types.Alert.AlertRequestData
   TripStatus: Domain.Types.TripTransaction
   TripTransaction: Domain.Types.TripTransaction
-  ApprovalRequest: Domain.Types.ApprovalRequest
+  AlertRequest: Domain.Types.AlertRequest
   TimeBound: Kernel.Types.TimeBound
   HighPrecMeters: Kernel.Types.Distance
   FleetConfig: Domain.Types.FleetConfig
   RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
-  RequestStatus: Domain.Types.ApprovalRequest
+  AlertRequestStatus: Domain.Types.Alert.AlertRequestStatus
+  FleetBadgeType: Domain.Types.FleetBadgeType
 
 module: WMB
 
@@ -43,13 +44,17 @@ types:
     _type: ServiceTierType
 
   TripQrStartReq:
-    vehicleNumberHash: Text
+    vehicleNumberHash: Maybe Text
+    driverBadgeName: Maybe Text
+    conductorBadgeName: Maybe Text
     routeCode: Text
     location: LatLong
 
   TripTransactionDetails:
     tripTransactionId: Id TripTransaction
-    endRideApprovalRequestId: Maybe (Id ApprovalRequest)
+    endRideApprovalRequestId: Maybe (Id AlertRequest)
+    driverName: Maybe Text
+    conductorName: Maybe Text
     vehicleNumber: Text
     vehicleType: ServiceTierType
     source: StopInfo
@@ -74,20 +79,36 @@ types:
     result: EndTripStatus
 
   RequestDetails:
-    requestData: ApprovalRequestData
+    requestData: AlertRequestData
     title: Text
     body: Text
 
-  DriverReqResp:
+  AlertReqResp:
     requestId: Text
 
-  ApprovalRequestResp:
-    status: RequestStatus
+  AlertRequestResp:
+    status: AlertRequestStatus
 
   AvailableRouteReq:
-    vehicleNumber: Text
+    vehicleNumber: Maybe Text
+
+  AvailableBadge:
+    badgeName: Text
+    isActive: Bool
+    badgeType: FleetBadgeType
 
 apis:
+  - GET: # Get all Available Driver Badges of Private Fleet
+      endpoint: /wmb/fleetBadges
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - mbSearchString: Text
+        - mbBadgeType: FleetBadgeType
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[AvailableBadge]"
   - POST: # Fetch available routes for a driver of private fleet.
       endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE
@@ -163,21 +184,21 @@ apis:
       request:
         type: RequestDetails
       response:
-        type: DriverReqResp
+        type: AlertReqResp
 
   - GET: # Get approval request status by approval request ID.
       endpoint: /wmb/requests/{approvalRequestId}/status
       auth: TokenAuth PROVIDER_TYPE
       params:
-        approvalRequestId: Id ApprovalRequest
+        approvalRequestId: Id AlertRequest
       response:
-        type: ApprovalRequestResp
+        type: AlertRequestResp
 
   - POST: # Cancel a driver request by approval request ID.
       endpoint: /wmb/requests/{approvalRequestId}/cancel
       auth: TokenAuth PROVIDER_TYPE
       params:
-        approvalRequestId: Id ApprovalRequest
+        approvalRequestId: Id AlertRequest
       response:
         type: APISuccess
 

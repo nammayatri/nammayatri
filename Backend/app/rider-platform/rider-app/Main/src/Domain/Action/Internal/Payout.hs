@@ -31,12 +31,14 @@ import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPersonStats
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
 
 payoutProcessingLockKey :: Text -> Text
@@ -72,48 +74,59 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
       let personId = Id payoutOrder.customerId
       payoutConfig <- CPC.findByCityIdAndVehicleCategory merchanOperatingCityId DV.AUTO_CATEGORY Nothing >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
       unless (isPayoutStatusSuccess payoutOrder.status) do
+        personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+        person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
         case payoutOrder.entityName of
           Just DPayment.METRO_BOOKING_CASHBACK -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \bookingId -> do
               when (isPayoutStatusSuccess payoutStatus) do
                 QFTB.updatePayoutStatusById (Just $ castPayoutOrderStatus payoutStatus) (Id bookingId)
               fork "Update Payout Status and Transactions for MetroBooking" $ do
-                callPayoutService payoutOrder payoutConfig
+                callPayoutService payoutOrder payoutConfig person
           Just DPayment.REFERRAL_AWARD_RIDE -> do
             when (isPayoutStatusSuccess payoutStatus) do
-              personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+              notifyPersonOnAmountCredit person
               QPersonStats.updateReferralAmountPaid (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
             fork "Update Payout Status and Transactions for Referral Award" $ do
-              callPayoutService payoutOrder payoutConfig
+              callPayoutService payoutOrder payoutConfig person
           Just DPayment.REFERRED_BY_AWARD -> do
             when (isPayoutStatusSuccess payoutStatus) do
-              QPersonStats.updateReferredByEarningsPayoutStatus (Just $ castOrderStatus payoutStatus) personId
+              notifyPersonOnAmountCredit person
+              QPersonStats.updateReferredByEarningsPayoutStatusAndAmountPaid (Just $ castOrderStatus payoutStatus) (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
             fork "Update Payout Status and Transactions for ReferredBy Award" $ do
-              callPayoutService payoutOrder payoutConfig
+              callPayoutService payoutOrder payoutConfig person
           Just DPayment.BACKLOG -> do
             when (isPayoutStatusSuccess payoutStatus) do
-              QPersonStats.updateBacklogPayoutStatus (Just $ castOrderStatus payoutStatus) personId
+              notifyPersonOnAmountCredit person
+              QPersonStats.updateBacklogStatusAndAmountPaid (Just $ castOrderStatus payoutStatus) (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
             fork "Update Payout Status and Transactions for Backlog Referral Award" $ do
-              callPayoutService payoutOrder payoutConfig
+              callPayoutService payoutOrder payoutConfig person
           Just DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> do
             when (isPayoutStatusSuccess payoutStatus) do
               let mbStatus = Just $ castOrderStatus payoutStatus
-              QPersonStats.updateBacklogAndReferredByPayoutStatus mbStatus mbStatus personId
+              notifyPersonOnAmountCredit person
+              QPersonStats.updateBacklogAndReferredByPayoutStatusAndAmountPaid mbStatus mbStatus (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
             fork "Update Payout Status and Transactions for Referred By And Backlog Award" $ do
-              callPayoutService payoutOrder payoutConfig
+              callPayoutService payoutOrder payoutConfig person
           _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
     isPayoutStatusSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
-    callPayoutService payoutOrder payoutConfig = do
-      let personId = Id payoutOrder.customerId
-      person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
-          serviceName = DEMSC.PayoutService TPayout.Juspay
-          createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId serviceName
+    callPayoutService payoutOrder payoutConfig person = do
+      payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion
+      let personId = person.id
+          createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId payoutServiceName (Just $ getId personId)
       void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) createPayoutOrderStatusReq createPayoutOrderStatusCall
+
+    notifyPersonOnAmountCredit person = do
+      let pnKey = "REFERRAL_BONUS_EARNED"
+      mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
+      whenJust mbMerchantPN $ \merchantPN -> do
+        let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
+        Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
 
 castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DFTB.CashbackStatus
 castPayoutOrderStatus payoutOrderStatus =

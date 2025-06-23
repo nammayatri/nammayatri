@@ -55,3 +55,15 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_amount_p
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_driver_cancellation_tag_count integer  default 0;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_customer_cancellation_tag_count integer  default 0;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_cancellation_tags_stats_start_date timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN num_fleets_onboarded integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN num_drivers_onboarded integer  default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN safety_plus_ride_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN safety_plus_earnings double precision ;

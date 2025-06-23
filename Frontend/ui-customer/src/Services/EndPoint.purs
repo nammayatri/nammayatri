@@ -155,9 +155,6 @@ userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"
 onCall :: String -> String
 onCall _ = (getBaseUrl "38") <> "/callEvent"
 
-voipCall :: String -> String
-voipCall _ = (getBaseUrl "55") <> "/call/voip"
-
 callbackRequest :: String -> String
 callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
 
@@ -368,3 +365,21 @@ frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> ro
 
 confirmMetroQuoteV2 :: String -> String
 confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId <> "/confirm"
+
+verifyVpa :: String -> String
+verifyVpa vpa = (getBaseUrl "50") <> "/referral/verifyVpa?vpa=" <> vpa
+
+updateVpa :: String -> String
+updateVpa dummy = (getBaseUrl "50") <> "/payoutVpa/upsert"
+
+payoutHistory :: String -> String
+payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"
+
+deletePerson :: String -> String
+deletePerson _ = (getBaseUrl "62") <> "/deleted/person"
+
+postNearbyDrivers :: String -> String
+postNearbyDrivers _ = (getBaseUrl "62") <> "/nearbyDrivers"
+
+trackRouteVehicles :: String -> String
+trackRouteVehicles routeCode = (getBaseUrl "") <> "/track/" <> routeCode <> "/vehicles"

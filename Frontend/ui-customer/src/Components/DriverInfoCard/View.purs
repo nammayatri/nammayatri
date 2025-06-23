@@ -91,12 +91,13 @@ import Data.String as STR
 import JBridge as JB
 import Animation as Anim
 import Screens.Types as ST
+import RemoteConfig.Types
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
   let enableShareRide = state.data.config.feature.enableShareRide && isStageAfterRideAccepted
       enableSupport = state.data.config.feature.enableSupport && isStageAfterRideAccepted
-      isStageAfterRideAccepted = (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
+      isStageAfterRideAccepted = (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver]
   in
   PrestoAnim.animationSet
           [ scaleYAnimWithDelay 10] $ linearLayout
@@ -114,7 +115,7 @@ view push state =
           , accessibility ENABLE
           , id $ getNewIDWithTag "DriverInfoCardActionView"
           , clickable true
-          ][ otpAndWaitView push state 
+          ][ otpAndWaitView push state
             , endOTPView push state
             , deliveryImageAndOtpView push state
             , linearLayout [
@@ -147,13 +148,13 @@ endOTPView push state =
   [ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , accessibilityHint $ " END O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp) 
+    , accessibilityHint $ " END O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp)
     , accessibility ENABLE
     , text $ getString END_OTP
     , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
     , color Color.black700
     ] <> FontStyle.body22 TypoGraphy
-  , linearLayout 
+  , linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , background Color.grey700
@@ -165,12 +166,12 @@ endOTPView push state =
     , cornerRadius 16.0
     , rippleColor Color.rippleShade
     ]
-    [ imageView 
+    [ imageView
       [ gravity CENTER_VERTICAL
       , height $ V 22
       , width $ V 22
       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
-      ] 
+      ]
     ]
   , linearLayout
     [ height $ WRAP_CONTENT
@@ -179,8 +180,8 @@ endOTPView push state =
     , visibility $ boolToVisibility state.props.showEndOTP
     ]
     [ PrestoAnim.animationSet [translateInXAnim $ endOTPAnimConfig state]
-      $ textView $ 
-      [ text $ state.data.otp 
+      $ textView $
+      [ text $ state.data.otp
       , color Color.black900
       , cornerRadius if os == "IOS" then 12.0 else 16.0
       , padding $ Padding 8 4 8 6
@@ -205,13 +206,13 @@ deliveryImageAndOtpView push state =
   ][ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , accessibilityHint $ " O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp) 
+    , accessibilityHint $ " O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp)
     , accessibility ENABLE
     , text $ getString PACKAGE_PHOTO_AND_OTP
     , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
     , color Color.black700
     ] <> FontStyle.body22 TypoGraphy
-  , linearLayout 
+  , linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , background Color.grey700
@@ -222,21 +223,21 @@ deliveryImageAndOtpView push state =
     , cornerRadius 16.0
     , rippleColor Color.rippleShade
     ]
-    [ imageView 
+    [ imageView
       [ gravity CENTER_VERTICAL
       , height $ V 22
       , width $ V 22
       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
-      ] 
+      ]
     ]
   ]
 
 driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoViewSpecialZone push state =
-  let 
+  let
     currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
     brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
-  in 
+  in
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
@@ -276,6 +277,7 @@ driverInfoViewSpecialZone push state =
                  ][]
                ]
               , titleAndETA push state
+              , enquiryBanner push state.props.enquiryBannerData state.props.enquiryBannerUndoTimer
               , driverDetailsView push (getDriverDetails state) "SpecialDriverDetailsView" "SpecialNumberPlate"
               , navigateView push state
               , paymentMethodView push state (getString FARE_ESTIMATE) true "SpecialPaymentMethodView"
@@ -294,8 +296,87 @@ driverInfoViewSpecialZone push state =
       ]
   ]
 
+enquiryBanner :: forall w. (Action -> Effect Unit) ->  Maybe EnquiryBannerConfig -> Maybe Int -> PrestoDOM ( Effect Unit) w
+enquiryBanner push enquiryBannerMbConfig undoTimer =
+  case enquiryBannerMbConfig of
+    Nothing -> linearLayout[width $ V 0, height $ V 0][]
+    Just enquiryBannerConfig ->
+      frameLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ Margin 16 0 16 16
+      ][
+        linearLayout[
+          height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background enquiryBannerConfig.background
+        , cornerRadius 16.0
+        , layoutGravity "bottom"
+        ][
+          linearLayout[
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation VERTICAL
+          , margin $ Margin 16 16 16 16
+          ][
+            textView $ [
+              width MATCH_PARENT
+            , height WRAP_CONTENT
+            , color enquiryBannerConfig.color
+            , text enquiryBannerConfig.title
+            ] <> (FontStyle.body4 TypoGraphy)
+          , linearLayout[
+              width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , margin $ MarginTop 14
+            ][
+              buttonView OnEnqFirstBtnClick enquiryBannerConfig.button1 undoTimer
+            , linearLayout[width $ V 8][]
+            , buttonView OnEnqSecondBtnClick enquiryBannerConfig.button2 Nothing
+            ]
+          ]
+        ]
+      , linearLayout[
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        -- , alignParentBottom "true,-1"
+        , layoutGravity "right"
+        ][
+          imageView[
+            width $ V 142
+          , height $ V 131
+          , imageWithFallback $ spy " " enquiryBannerConfig.image
+          ]
+        ]
+      ]
+  where
+    buttonView action buttonMbConfig undoTimer =
+      case buttonMbConfig of
+        Nothing -> linearLayout [height $ V 0, width $ V 0][]
+        Just buttonConfig ->
+          linearLayout[
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , padding $ Padding 16 4 16 4
+          , cornerRadius 16.0
+          , background buttonConfig.background
+          , gravity CENTER
+          , onClick push $ const action
+          ][
+            textView $ [
+              width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , color buttonConfig.color
+            , text $ buttonConfig.title <> (case undoTimer of
+                Just timer -> " (" <> show timer <> ")"
+                Nothing -> "")
+            , padding $ PaddingBottom 4
+            ] <> (FontStyle.body4 TypoGraphy)
+          ]
+
 sizedBox :: forall w. Length -> Length -> PrestoDOM ( Effect Unit) w
-sizedBox height' width' = 
+sizedBox height' width' =
   linearLayout
   [ height height'
   , width width'
@@ -304,7 +385,7 @@ sizedBox height' width' =
   ][]
 
 shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-shareRideButton push state = 
+shareRideButton push state =
   linearLayout
   [ width $ V 56
   , height $ V 56
@@ -412,8 +493,8 @@ otpAndWaitView push state =
         , otpView push state
         ]
       -- , trackRideView push state -- TODO :: may use in future
-     ] <> if (isOtpRideFlow state|| state.data.driverArrived) then 
-           [(PrestoAnim.animationSet [ fadeIn true ] $ 
+     ] <> if (isOtpRideFlow state|| state.data.driverArrived) then
+           [(PrestoAnim.animationSet [ fadeIn true ] $
            let isQuotes = isOtpRideFlow state
            in
            linearLayout
@@ -428,11 +509,11 @@ otpAndWaitView push state =
            , accessibility DISABLE
            , margin $ Margin 6 8 8 8
            , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-           ][ textView $ 
+           ][ textView $
              [ width WRAP_CONTENT
              , height WRAP_CONTENT
              , accessibility ENABLE
-             , accessibilityHint $ (if isQuotes then "O T P Expiry Info" else "Wait time info : ") <> "Button : Select to learn more about " <> if isQuotes then "O T P Expiry Time" else "wait time"   
+             , accessibilityHint $ (if isQuotes then "O T P Expiry Info" else "Wait time info : ") <> "Button : Select to learn more about " <> if isQuotes then "O T P Expiry Time" else "wait time"
              , text $ if isQuotes then getString EXPIRES_IN else getString WAIT_TIME
              , color Color.black700
              , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
@@ -450,7 +531,7 @@ otpAndWaitView push state =
            ])]
          else [])
   ]
-  
+
 
 shineAnimation :: forall w . Int -> Int -> PrestoDOM (Effect Unit) w
 shineAnimation height' width' =
@@ -496,12 +577,12 @@ waitTimeView push state =
   , background $ colorForWaitTime state
   , gravity CENTER_VERTICAL
   , accessibility DISABLE
-  ][ textView $ 
-     [ height $ WRAP_CONTENT 
+  ][ textView $
+     [ height $ WRAP_CONTENT
      , width $ V $ 60
      , padding $ Padding 0 4 0 6
      , accessibilityHint $ waitTimeHint state
-     , accessibility ENABLE 
+     , accessibility ENABLE
      , text $ state.data.waitingTime
      , color Color.black900
      , gravity CENTER
@@ -511,10 +592,10 @@ waitTimeView push state =
 
 waitTimeHint :: DriverInfoCardState -> String
 waitTimeHint state = (if isOtpRideFlow state then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
-                        [minutes, seconds] -> do 
+                        [minutes, seconds] -> do
                           let min = STR.trim $ minutes
                           let sec = STR.trim $ seconds
-                          if min /= "00" then min <> " Minutes and " <> sec <> " Seconds" else sec <> " Seconds" 
+                          if min /= "00" then min <> " Minutes and " <> sec <> " Seconds" else sec <> " Seconds"
                         _ -> ""
 
 colorForWaitTime:: DriverInfoCardState -> String
@@ -522,11 +603,11 @@ colorForWaitTime state =
   let waitTime = STR.split (STR.Pattern ":") state.data.waitingTime
   in
   case waitTime of
-    [minutes, _] -> 
+    [minutes, _] ->
       let mins = fromMaybe 0 (fromString (STR.trim minutes))
           threshold = if isOtpRideFlow state then mins < 5 else mins > 2
       in
-      if threshold then Color.carnation100 else Color.grey700 
+      if threshold then Color.carnation100 else Color.grey700
     _ -> Color.grey700
 
 
@@ -549,7 +630,7 @@ otpView push state =
       , margin $ Margin 0 4 4 4
       , gravity CENTER_VERTICAL
       , background Color.grey700
-      ][ textView $ 
+      ][ textView $
         [ text $ state.data.otp
         , color Color.black900
         , width MATCH_PARENT
@@ -595,7 +676,7 @@ trackRideView push state =
           , accessibility ENABLE
           , margin $ MarginRight 4
           ]
-        , textView $ 
+        , textView $
           [ text $ getString TRACK_ON_GOOGLE_MAPS
           , color Color.black800
           ] <> FontStyle.body9 TypoGraphy
@@ -609,7 +690,7 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  ][ if rideNotStarted state then specialZoneHeader state $ STO.getValueToLocalStore STO.SELECTED_VARIANT 
+  ][ if rideNotStarted state then specialZoneHeader state $ STO.getValueToLocalStore STO.SELECTED_VARIANT
      else distanceView push state
   ]
 
@@ -683,7 +764,7 @@ navigateView push state =
      , margin $ MarginRight 8
      , imageWithFallback $ fetchImage FF_ASSET "ic_navigation_blue"
      ]
-   , textView $ 
+   , textView $
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , gravity CENTER
@@ -703,7 +784,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ not $ isOtpRideFlow state 
+  , visibility $ boolToVisibility $ not $ isOtpRideFlow state
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -788,6 +869,7 @@ driverInfoView push state =
                       , margin $ MarginTop if os == "IOS" && rideStarted then 12 else 0
                       ][addStopView push state
                       , rentalDetailsView push state
+                      , enquiryBanner push state.props.enquiryBannerData state.props.enquiryBannerUndoTimer
                       , driverDetailsView push (getDriverDetails state) "DriverDetailsView" "NumberPlate"
                       , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                       , sizedBox (V 12) MATCH_PARENT
@@ -827,10 +909,10 @@ getCarouselConfig view state = {
 }
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-distanceView push state = let 
+distanceView push state = let
   feature = state.data.config.feature
   in
-  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
+  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $
   linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT
@@ -863,27 +945,27 @@ distanceView push state = let
      ]
   , if state.props.isChatWithEMEnabled then chatButtonView push state else dummyView push
   ]
-  where 
+  where
     getTitleText :: String
     getTitleText = do
       case state.data.fareProductType of
         FPT.RENTAL -> getRentalTitleText
-        FPT.DELIVERY -> if state.data.destinationReached then getString ARRIVED_AT_DROP else getString OUT_FOR_DELIVERY 
+        FPT.DELIVERY -> if state.data.destinationReached then getString ARRIVED_AT_DROP else getString OUT_FOR_DELIVERY
         _ -> getString ENJOY_THE_RIDE
     getRentalTitleText :: String
-    getRentalTitleText = 
+    getRentalTitleText =
       if (null state.data.rentalData.startTimeUTC) then (getString ENJOY_THE_RIDE)
-      else 
+      else
         let startTime = state.data.rentalData.startTimeUTC
             startTimeNotEmpty = startTime /= ""
-            baseDuration = state.data.rentalData.baseDuration            
+            baseDuration = state.data.rentalData.baseDuration
             endUTC = if startTimeNotEmpty then  runFn2 getUTCAfterNSecondsImpl startTime (baseDuration * 60 * 60) else ""
             endTimeInHH = if startTimeNotEmpty then convertUTCtoISC endUTC "h" <> ":" <> convertUTCtoISC endUTC "mm" <> " " <> convertUTCtoISC endUTC "A" else ""
         in if state.data.destination /= "" then getString RENTAL_RIDE_UNTIL <> " " <> endTimeInHH
           else "Add Stop to continue ride" <> (if state.props.endOTPShown then " or share End-OTP to end ride" else "")
 
 etaView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-etaView push state = 
+etaView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -905,10 +987,10 @@ etaView push state =
   ]
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> Boolean -> String -> PrestoDOM (Effect Unit) w
-brandingBannerView driverInfoConfig isVisible uid onUsRide providerName = 
+brandingBannerView driverInfoConfig isVisible uid onUsRide providerName =
   let providerRideText = getString if onUsRide then GUARANTEED_RIDE else THIS_RIDE_FULFILLED_BY providerName
       style = if onUsRide then FontStyle.captions else FontStyle.body3
-  in 
+  in
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -931,7 +1013,7 @@ brandingBannerView driverInfoConfig isVisible uid onUsRide providerName =
           , margin $ MarginHorizontal 10 10
           , visibility $ boolToVisibility $ onUsRide
           ]
-        , textView $ 
+        , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , margin $ MarginLeft 5
@@ -942,7 +1024,7 @@ brandingBannerView driverInfoConfig isVisible uid onUsRide providerName =
 
 cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 cancelRideLayout push state =
-  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
+  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -1009,20 +1091,20 @@ contactView push state airportZone =
       , textView [weight 1.0]
       , chatButtonView push state
     ]
-    where 
+    where
       eta = secondsToHms $ fromMaybe 0 state.data.eta
       distance = if state.data.distance < 1000 then show state.data.distance <> " meters" else fromMetersToKm state.data.distance
-      getAccessibilityHintText = "Ride Status : " <> 
-        if distance /= "0 meters" 
-          then if eta /= "--" 
+      getAccessibilityHintText = "Ride Status : " <>
+        if distance /= "0 meters"
+          then if eta /= "--"
                 then state.data.driverName <> " is " <> distance <> " Away and is arriving in " <> eta
-                else if state.data.waitingTime /= "--" 
+                else if state.data.waitingTime /= "--"
                       then state.data.driverName <> " is waiting for you."
                       else state.data.driverName <> " is " <> distance <> "away"
           else state.data.driverName <> " is waiting for you."
 
 airportPickupView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> Boolean -> PrestoDOM (Effect Unit) w
-airportPickupView push state airportZone = 
+airportPickupView push state airportZone =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -1035,7 +1117,7 @@ airportPickupView push state airportZone =
     , margin $ Margin 16 5 16 12
     , cornerRadius 8.0
     , gravity CENTER_VERTICAL
-    ][  PrestoAnim.animationSet[ Anim.triggerOnAnimationEnd true] $ 
+    ][  PrestoAnim.animationSet[ Anim.triggerOnAnimationEnd true] $
         lottieAnimationView
         [ height $ V 24
         , width $ V 24
@@ -1062,7 +1144,7 @@ airportPickupView push state airportZone =
 
 
 chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-chatButtonView push state = 
+chatButtonView push state =
   linearLayout
   [ width WRAP_CONTENT
   , layoutGravity "right"
@@ -1086,7 +1168,7 @@ chatButtonView push state =
       ]
     ]
   ]
-  where 
+  where
     feature = state.data.config.feature
     imageAsset = case feature.enableChat && disableChat state.data.fareProductType, state.data.providerType of
       true, ONUS -> fetchImage FF_ASSET if state.props.unReadMessages then "ic_chat_badge_green" else "ic_call_msg"
@@ -1153,7 +1235,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , gravity CENTER_VERTICAL
           , padding $ Padding 0 5 20 5
           , onClick push $ const RateCardInfo
-          , clickable state.props.isRateCardAvailable 
+          , clickable state.props.isRateCardAvailable
           ][ textView $
              [ text title
              , color Color.black700
@@ -1162,7 +1244,7 @@ paymentMethodView push state title shouldShowIcon uid =
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
             , height $ V 16
             , width $ V 16
-            , visibility $ boolToVisibility state.props.isRateCardAvailable 
+            , visibility $ boolToVisibility state.props.isRateCardAvailable
             , margin $ MarginLeft 2
             ]
           ]
@@ -1180,7 +1262,7 @@ paymentMethodView push state title shouldShowIcon uid =
       , linearLayout[
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , gravity CENTER 
+        , gravity CENTER
         , orientation VERTICAL
         ][
           extraChargesView
@@ -1204,8 +1286,8 @@ paymentMethodView push state title shouldShowIcon uid =
               ]
           ]
       ]
-  where 
-    extraChargesView = 
+  where
+    extraChargesView =
       linearLayout [
         width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -1228,7 +1310,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_black_toll"
           , margin $ MarginRight 4
           ]
-        , textView $ [ 
+        , textView $ [
             textFromHtml $ getString TOLL_CHARGES_INCLUDED
             , color Color.black800
             , gravity CENTER_HORIZONTAL
@@ -1237,12 +1319,12 @@ paymentMethodView push state title shouldShowIcon uid =
             , width MATCH_PARENT
             ] <> FontStyle.tags TypoGraphy
         ]
-      ] 
+      ]
 
 
 
 specialZoneShimmerView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-specialZoneShimmerView push state = 
+specialZoneShimmerView push state =
   linearLayout
   [ width MATCH_PARENT
   , height $ WRAP_CONTENT
@@ -1261,7 +1343,7 @@ specialZoneShimmerView push state =
       , height $ V 4
       , width $ V 34
       , cornerRadius if os == "IOS" then 2.0 else 4.0
-      ][] 
+      ][]
     ]
     , linearLayout
       [ height $ V 40
@@ -1289,7 +1371,7 @@ specialZoneShimmerView push state =
     ]
 
 shimmerView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-shimmerView push state = 
+shimmerView push state =
   linearLayout
   [ width MATCH_PARENT
   , height $ WRAP_CONTENT
@@ -1308,7 +1390,7 @@ shimmerView push state =
       , height $ V 4
       , width $ V 34
       , cornerRadius if os == "IOS" then 2.0 else 4.0
-      ][] 
+      ][]
     ]
     , linearLayout
       [ height $ WRAP_CONTENT
@@ -1324,7 +1406,7 @@ shimmerView push state =
          ][linearLayout
            [ height $ V 40
            , width $ V 64
-           , cornerRadius 52.0 
+           , cornerRadius 52.0
            , background Color.grey900
            ][]
          ]
@@ -1344,7 +1426,7 @@ customTextView :: forall w. Int -> Int -> Int -> PrestoDOM (Effect Unit) w
 customTextView height' width' bottomMargin' =
   shimmerFrameLayout
   [ cornerRadius 8.0
-  ][linearLayout 
+  ][linearLayout
     [ width $ V width'
     , height $ V height'
     , background Color.grey900
@@ -1359,7 +1441,7 @@ sfl height' width' radius' =
   [ cornerRadius radius'
   , stroke $ "1," <> Color.grey900
   , margin $ MarginBottom 12
-  ][linearLayout 
+  ][linearLayout
     [ width $ V width'
     , height $ V height'
     , cornerRadius radius'
@@ -1368,7 +1450,7 @@ sfl height' width' radius' =
   ]
 
 paymentMethodShimmer :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-paymentMethodShimmer push state = 
+paymentMethodShimmer push state =
   linearLayout
   [ height $ WRAP_CONTENT
   , width $ MATCH_PARENT
@@ -1588,7 +1670,7 @@ getDriverDetails state = {
 
 endOTPAnimConfig :: DriverInfoCardState -> AnimConfig.AnimConfig
 endOTPAnimConfig state =
-  if os == "IOS" 
+  if os == "IOS"
     then
       AnimConfig.animConfig
       { fromX = -30
@@ -1604,7 +1686,7 @@ endOTPAnimConfig state =
       , ifAnim = state.props.showEndOTP
       }
 
-getTripDetails :: DriverInfoCardState -> TripDetails Action 
+getTripDetails :: DriverInfoCardState -> TripDetails Action
 getTripDetails state = {
   rideStarted : state.props.currentStage == RideStarted
   , source : state.data.source
@@ -1622,21 +1704,21 @@ getTripDetails state = {
   , senderDetails : state.data.senderDetails
   , receiverDetails : state.data.receiverDetails
   }
-  where 
+  where
     isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
-driverPickUpStatusText state _ = 
+driverPickUpStatusText state _ =
   case state.data.fareProductType of
     FPT.DELIVERY -> if state.data.driverArrived then getString PICKUP_IN_PROGRESS else getString OUT_FOR_PICKUP
     _ -> case state.props.zoneType.priorityTag of
           SPECIAL_PICKUP -> getString DRIVER_AT_PICKUP_LOCATION
-          _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP 
-     
+          _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP
+
 
 
 rideNotStarted :: DriverInfoCardState -> Boolean
-rideNotStarted state = 
+rideNotStarted state =
   let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
   in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && (lastStage == RideAccepted || state.props.stageBeforeChatScreen == RideAccepted)
 
@@ -1663,7 +1745,7 @@ rentalTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> ST
 rentalTimeView push state showText showInfo =
   let rentalData = state.data.rentalData
       isRideStarted = state.props.currentStage == RideStarted
-  in 
+  in
     PrestoAnim.animationSet [ fadeIn true] $
     linearLayout
     [ height WRAP_CONTENT
@@ -1679,23 +1761,23 @@ rentalTimeView push state showText showInfo =
       , color Color.black650
       , singleLine true
       ] <> FontStyle.body3 TypoGraphy
-    , imageView 
+    , imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue_lg"
             , height $ V 15
             , visibility $ boolToVisibility $ showInfo
-            , width $ V 15 
-            , margin $ MarginLeft 4 
+            , width $ V 15
+            , margin $ MarginLeft 4
             , onClick push $ const $ RentalInfo
             ]]
     , linearLayout
       [ height MATCH_PARENT
       , width $ if isTime showText then WRAP_CONTENT else MATCH_PARENT
       , orientation HORIZONTAL
-      ] 
+      ]
       [ textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ case showText of 
+            , text $ case showText of
                 TIME -> (if isRideStarted then state.props.rideDurationTimer else "0") <> " hr"
                 DISTANCE -> show rentalData.baseDistance <> " km"
                 _ -> if rentalData.startOdometer == "" then "-" else rentalData.startOdometer <> " km"
@@ -1721,7 +1803,7 @@ rentalTimeView push state showText showInfo =
 addStopView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 addStopView push state =
   let isDestinationTextGiven = state.data.destination /= ""
-  in 
+  in
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -1738,10 +1820,10 @@ addStopView push state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ]
-      [ imageView 
+      [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_circle"
         , height $ V 8
-        , width $ V 8  
+        , width $ V 8
         , margin $ MarginRight 8
         ]
       , textView $
@@ -1771,7 +1853,7 @@ addStopView push state =
         , width WRAP_CONTENT
         , height WRAP_CONTENT
         , accessibility ENABLE
-        , accessibilityHint  $ if isDestinationTextGiven then "Edit : Button" else "Add now : Button" 
+        , accessibilityHint  $ if isDestinationTextGiven then "Edit : Button" else "Add now : Button"
         , padding $ Padding 16 4 16 4
         ] <> FontStyle.body1 TypoGraphy
       ]
@@ -1792,29 +1874,29 @@ separatorView visibility' =
       ][]
     ]
 
-rideInfoPill state rideData = 
+rideInfoPill state rideData =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT 
-    , orientation VERTICAL 
+    , width WRAP_CONTENT
+    , orientation VERTICAL
     ][  textView $
         [ text $ rideData.title
-        , color Color.black700 
+        , color Color.black700
         ] <> FontStyle.body24 TypoGraphy
       , linearLayout
         [ height WRAP_CONTENT
-        , width WRAP_CONTENT 
-        ][  
-          textView $ 
+        , width WRAP_CONTENT
+        ][
+          textView $
           [ text $ rideData.value
-          , color Color.black800 
+          , color Color.black800
           ] <> FontStyle.body24 TypoGraphy
-        , textView  $ 
+        , textView  $
           [ text $ rideData.perUnit
-          , color Color.black600 
+          , color Color.black600
           ] <> FontStyle.body24 TypoGraphy
         ]
-      
+
     ]
 
 isOtpRideFlow :: DriverInfoCardState -> Boolean

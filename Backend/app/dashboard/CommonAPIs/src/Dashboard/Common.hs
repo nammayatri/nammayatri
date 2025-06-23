@@ -25,10 +25,12 @@ module Dashboard.Common
 where
 
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Csv as Csv
 import Data.OpenApi
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -36,7 +38,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Servant (FromHttpApiData, ToHttpApiData)
+import Servant
 
 data Customer
 
@@ -71,6 +73,24 @@ data Document
 data TripTransaction
 
 data CoinsConfig
+
+data Person
+
+data Role = DRIVER | FLEET
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData Role where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData Role where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+data Operator
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
@@ -179,10 +199,15 @@ instance ToMultipart Tmp PersonMobileNoReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
 
-data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
+data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL | DASHCAM_RENTAL_CAUTIO
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ServiceNames)
+
+data WaiveOffMode = WITH_OFFER | WITHOUT_OFFER | NO_WAIVE_OFF
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''WaiveOffMode)
 
 newtype TransactionLogId = TransactionLogId Text
   deriving stock (Generic)
@@ -191,3 +216,13 @@ newtype TransactionLogId = TransactionLogId Text
 
 instance Kernel.Types.HideSecrets.HideSecrets TransactionLogId where
   hideSecrets = Kernel.Prelude.identity
+
+data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | ForceDashboard | CronJob
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''ActionSource)
+
+data EarningType = DAILY | WEEKLY | MONTHLY
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''EarningType)

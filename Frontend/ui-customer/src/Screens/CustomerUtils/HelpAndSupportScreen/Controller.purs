@@ -303,7 +303,7 @@ eval (EmailEditTextAC (PrimaryEditText.TextChanged _ a)) state = continue state{
 
 eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do
   let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
-  continue state{data {description = a},props{btnActive = length email > 0 && (strLenWithSpecificCharacters (trim a) "[a-zA-Z]")  > 9 && validateEmail email}}
+  continue state{data {description = a},props{btnActive = (strLenWithSpecificCharacters (trim a) "[a-zA-Z]") > 9}}
 
 eval DeleteAccount state = do
  continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
@@ -316,8 +316,7 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
-  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
-  exit $ ConfirmDeleteAccount state{data{email=email}}
+  exit $ ConfirmDeleteAccount state
 
 eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoHome state {data{accountStatus = ACTIVE}, props {showDeleteAccountView = false}}
 

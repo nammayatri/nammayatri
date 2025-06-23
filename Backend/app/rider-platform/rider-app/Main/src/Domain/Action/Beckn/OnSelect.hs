@@ -86,7 +86,8 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
     isUpgradedToCab :: Maybe Bool,
-    bppDriverQuoteId :: Text
+    bppDriverQuoteId :: Text,
+    isSafetyPlus :: Bool
   }
   deriving (Generic, Show)
 
@@ -196,6 +197,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             quoteBreakupList = [], -- Not Handling as Rate Card details not required after Select stage
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
+            isSafetyPlus = quoteDetails.isSafetyPlus,
             ..
           }
   pure quote

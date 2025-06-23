@@ -17,6 +17,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ParcelDetails
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import qualified Domain.Types.TripTerms
@@ -25,6 +26,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.JourneyLeg.Types
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
@@ -44,6 +46,7 @@ data Booking = Booking
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    driverInsuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
@@ -55,24 +58,30 @@ data Booking = Booking
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initialPickupLocation :: Domain.Types.Location.Location,
     initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
+    insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBookingUpdated :: Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isInsured :: Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Bool,
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     paymentStatus :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferSafetyPlus :: Kernel.Prelude.Bool,
     primaryExophone :: Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,
     quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

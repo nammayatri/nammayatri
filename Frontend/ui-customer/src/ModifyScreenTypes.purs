@@ -83,6 +83,7 @@ modifyScreenStateFlow st =
     BusTrackingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {busTrackingScreen = a state.busTrackingScreen})
     AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
     SelectBusRouteScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { selectBusRouteScreen = a state.selectBusRouteScreen })
+    ReferralPayoutScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { referralPayoutScreen = a state.referralPayoutScreen })
 
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
@@ -164,3 +165,4 @@ data FlowState = HelpAndSupportScreenFlow
                | ChangeLanguageScreenFlow
                | RiderRideCompleted
                | RiderRideEndScreen
+               | DeleteAccountFlow

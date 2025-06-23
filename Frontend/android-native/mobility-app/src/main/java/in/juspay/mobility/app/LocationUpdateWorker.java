@@ -118,25 +118,47 @@ public class LocationUpdateWorker extends Worker {
                     public void onServiceConnected(ComponentName name, IBinder service) {
                         try {
                             if (hasLocationPermission(getApplicationContext())) {
-                                System.out.println("OnServiceConnected called");
-                                LocationUpdateService.LocalBinder binder = (LocationUpdateService.LocalBinder) service;
+                                if (sharedPrefs.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                                    System.out.println("OnServiceConnected called");
+                                    LocationUpdateService.LocalBinder binder = (LocationUpdateService.LocalBinder) service;
 
-                                LocationUpdateService myService = binder.getService();
+                                    LocationUpdateService myService = binder.getService();
 
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    context.startForegroundService(getServiceIntent(context));
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        context.startForegroundService(getServiceIntent(context));
+                                    } else {
+                                        context.startService(getServiceIntent(context));
+                                    }
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                        myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                                    } else {
+                                        myService.startForeground(15082022, getNotification());
+                                    }
+
+                                    context.unbindService(this);
+                                    Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
+                                    FirebaseCrashlytics.getInstance().recordException(exception);
                                 } else {
-                                    context.startService(getServiceIntent(context));
-                                }
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-                                } else {
-                                    myService.startForeground(15082022, getNotification());
-                                }
+                                    System.out.println("OnServiceConnected called");
+                                    LocationUpdateServiceV2.LocalBinder binder = (LocationUpdateServiceV2.LocalBinder) service;
 
-                                context.unbindService(this);
-                                Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
-                                FirebaseCrashlytics.getInstance().recordException(exception);
+                                    LocationUpdateServiceV2 myService = binder.getService();
+
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        context.startForegroundService(getServiceIntent(context));
+                                    } else {
+                                        context.startService(getServiceIntent(context));
+                                    }
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                        myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                                    } else {
+                                        myService.startForeground(15082022, getNotification());
+                                    }
+
+                                    context.unbindService(this);
+                                    Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
+                                    FirebaseCrashlytics.getInstance().recordException(exception);
+                                }
                             }
                         }catch (Exception e){
                             Exception exception = new Exception("Location Update Service onServiceConnected Exception " + driverId + "exception = " + e);
@@ -167,7 +189,12 @@ public class LocationUpdateWorker extends Worker {
                     } catch (Exception e) {
                         Exception exception = new Exception("Exception in Binding Not working for ID : " + driverId + " $ Error : " + e);
                         FirebaseCrashlytics.getInstance().recordException(exception);
-                        Intent locationService = new Intent(context, LocationUpdateService.class);
+                        Intent locationService;
+                        if (sharedPrefs.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                            locationService = new Intent(context, LocationUpdateService.class);
+                        } else {
+                            locationService = new Intent(context, LocationUpdateServiceV2.class);
+                        }
                         locationService.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             context.startForegroundService(locationService);
@@ -179,16 +206,18 @@ public class LocationUpdateWorker extends Worker {
                     Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
                     restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                     String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-                    if (Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")) {
-                        try {
-                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                context.startActivity(restartIntent);
-                                Utils.minimizeApp(context);
-                            }, 5000);
-                        } catch (Exception e) {
-                            Log.e(TAG, "Unable to Start Widget Service");
-                            Exception exception = new Exception("Exception in LocationUpdateWorker$minimizeApp for ID : " + driverId + " $ Error : " + e);
-                            FirebaseCrashlytics.getInstance().recordException(exception);
+                    if (sharedPrefs.getString("LOCATION_SERVICE_VERSION","V2").equals("V1")) {
+                        if (Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")) {
+                            try {
+                                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    context.startActivity(restartIntent);
+                                    Utils.minimizeApp(context);
+                                }, 5000);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Unable to Start Widget Service");
+                                Exception exception = new Exception("Exception in LocationUpdateWorker$minimizeApp for ID : " + driverId + " $ Error : " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
+                            }
                         }
                     }
                 }
@@ -238,7 +267,12 @@ public class LocationUpdateWorker extends Worker {
     }
 
     private Intent getServiceIntent(Context context) {
-        Intent locationService = new Intent(context, LocationUpdateService.class);
+        Intent locationService;
+        if (sharedPrefs.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+            locationService = new Intent(context, LocationUpdateService.class);
+        } else {
+            locationService = new Intent(context, LocationUpdateServiceV2.class);
+        }
         locationService.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         return locationService;
     }

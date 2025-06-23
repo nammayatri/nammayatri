@@ -1,0 +1,157 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+@operator = favorit-operator-token0-000000000000
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name postDriverOperatorSendJoiningOtp
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/sendJoiningOtp
+token: {{operator}}
+content-type: application/json
+
+{
+    "firstName": "Driver1",
+    "lastName": "CumOwner",
+    "mobileNumber": "2211111124",
+    "mobileCountryCode": "+91",
+    "email": "dco@nammayatri.in"
+}
+
+###
+
+# existing person otp
+# @name postDriverOperatorVerifyJoiningOtp1
+
+@authId={{postDriverOperatorSendJoiningOtp.response.body.authId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/verifyJoiningOtp
+token: {{operator}}
+content-type: application/json
+
+{   "mobileCountryCode": "+91",
+    "mobileNumber": "2211111124",
+    "otp": "7891",
+    "deviceToken": ""
+}
+
+###
+
+# new person authId + otp
+# @name postDriverOperatorVerifyJoiningOtp2
+
+@authId={{postDriverOperatorSendJoiningOtp.response.body.authId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/verifyJoiningOtp?authId={{authId}}
+token: {{operator}}
+content-type: application/json
+
+{   "mobileCountryCode": "+91",
+    "mobileNumber": "2211111124",
+    "otp": "7891",
+    "deviceToken": ""
+}
+
+###
+
+# @name addDriversToFleetByOperator
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/addDrivers
+token: {{operator}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="addDrivers.txt"
+Content-Type: text/csv
+
+driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_no
+Peter, 2211111201, AUTO_CATEGORY, 6666666666
+Vasiliy, 2211111202, CAR, 6666666666
+William, 2211111206, FLIGHT, 6666666666
+Samwell, 2211111207, no_constraint, 6666666666
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# @name addDriversToOperator
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/addDrivers
+token: {{operator}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="addDrivers.txt"
+Content-Type: text/csv
+
+driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_no
+Peter, 2211111201, AUTO_CATEGORY, no_constraint
+Vasiliy, 2211111202, CAR, no_constraint
+William, 2211111206, FLIGHT, no_constraint
+Samwell, 2211111207, no_constraint, no_constraint
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+@driver-offer-bpp-host = http://localhost:8016
+
+# fb4a43a9-41c8-4836-a226-aa756022004c
+# @name operatorConsent
+POST {{driver-offer-bpp-host}}/ui/operator/consent
+token: c026249e-6f05-4402-b2da-9b9160714545
+
+content-type: application/json
+
+###
+
+# @name createHubRequest
+
+# DELETE FROM atlas_driver_offer_bpp.operation_hub_requests
+
+@token2 = {{driver-offer-bpp-auto-token2}}
+@operationHubId = 29d6f629-1f0c-4d17-5546-db7f22f9c433
+
+@rcNo = 4814
+
+POST {{driver-offer-bpp-host}}/ui/operation/createRequest
+content-type: application/json
+token: {{token2}}
+
+{ "requestType": "ONBOARDING_INSPECTION",
+  "operationHubId": "{{operationHubId}}",
+  "registrationNo": "{{rcNo}}",
+  "creatorId": "Text"
+}
+
+###
+
+# @name getHubRequests
+
+@token2 = {{driver-offer-bpp-auto-token2}}
+
+GET {{driver-offer-bpp-host}}/ui/operation/getRequests?rcNo={{rcNo}}
+content-type: application/json
+token: {{token2}}
+
+###
+
+# @name respondHubRequest
+
+@operationHubRequestId = {{getHubRequests.response.body.requests[0].id}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/operator/respond/hubRequest
+token: {{operator}}
+content-type: application/json
+
+{ "status" : "APPROVED",
+  "operationHubRequestId" : "{{operationHubRequestId}}",
+  "operatorId": "operatorId",
+  "remarks": "remarks"
+}

@@ -17,7 +17,7 @@ module Screens.Benefits.LmsVideoScreen.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM (shimmerFrameLayout, Orientation(..), PrestoDOM, Screen, Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), layoutGravity, weight, maxLines, ellipsize, frameLayout, stroke, clickable, onClick, imageWithFallback, cornerRadius, margin, imageView, visibility, color, gravity, relativeLayout, height, width, background, textView, text, padding, linearLayout, orientation, onBackPressed, scrollView)
+import PrestoDOM (shimmerFrameLayout, Orientation(..), PrestoDOM, LoggableScreen, Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), layoutGravity, weight, maxLines, ellipsize, frameLayout, stroke, clickable, onClick, imageWithFallback, cornerRadius, margin, imageView, visibility, color, gravity, relativeLayout, height, width, background, textView, text, padding, linearLayout, orientation, onBackPressed, scrollView)
 import Screens.Types (LmsVideoScreenState)
 import Screens.Benefits.LmsVideoScreen.Controller (Action(..), eval, ScreenOutput)
 import Debug (spy)
@@ -49,7 +49,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Mobility.Prelude (boolToVisibility)
 import Services.Accessor (_name)
 
-screen :: LmsVideoScreenState -> Screen Action LmsVideoScreenState ScreenOutput
+screen :: LmsVideoScreenState -> LoggableScreen Action LmsVideoScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -70,6 +70,8 @@ screen initialState =
             _ = spy "LmsVideoScreen ---- action" action
         eval action state
     )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.benefitsLogWhitelist.lmsVideoScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w

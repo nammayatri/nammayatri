@@ -16,6 +16,10 @@
 module Components.DueDetailsList.Controller where
 
 import Screens.Types(DueCard)
+import Prelude(class Show)
+
+instance showAction :: Show Action where
+  show (SelectDue _) = "SelectDue"
 
 data Action = SelectDue DueCard
 

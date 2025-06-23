@@ -44,6 +44,7 @@ data PersonE e = Person
     language :: Kernel.Prelude.Maybe Kernel.External.Types.Language,
     languagesSpoken :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    maskedMobileDigits :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -51,6 +52,7 @@ data PersonE e = Person
     mobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     onboardedFromDashboard :: Kernel.Prelude.Bool,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    qrImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     registrationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     role :: Domain.Types.Person.Role,
@@ -97,6 +99,7 @@ instance EncryptedItem Person where
           language = language entity,
           languagesSpoken = languagesSpoken entity,
           lastName = lastName entity,
+          maskedMobileDigits = maskedMobileDigits entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           middleName = middleName entity,
@@ -104,6 +107,7 @@ instance EncryptedItem Person where
           mobileNumber = mobileNumber_,
           onboardedFromDashboard = onboardedFromDashboard entity,
           passwordHash = passwordHash entity,
+          qrImageId = qrImageId entity,
           registrationLat = registrationLat entity,
           registrationLon = registrationLon entity,
           role = role entity,
@@ -142,6 +146,7 @@ instance EncryptedItem Person where
             language = language entity,
             languagesSpoken = languagesSpoken entity,
             lastName = lastName entity,
+            maskedMobileDigits = maskedMobileDigits entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             middleName = middleName entity,
@@ -149,6 +154,7 @@ instance EncryptedItem Person where
             mobileNumber = mobileNumber_,
             onboardedFromDashboard = onboardedFromDashboard entity,
             passwordHash = passwordHash entity,
+            qrImageId = qrImageId entity,
             registrationLat = registrationLat entity,
             registrationLon = registrationLon entity,
             role = role entity,
@@ -172,7 +178,7 @@ data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show
 
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = DRIVER | ADMIN | FLEET_OWNER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
 

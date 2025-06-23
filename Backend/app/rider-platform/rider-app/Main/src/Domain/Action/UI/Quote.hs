@@ -24,12 +24,17 @@ module Domain.Action.UI.Quote
     mkQuoteBreakupAPIEntity,
     QuoteAPIEntity (..),
     QuoteBreakupAPIEntity (..),
+    JourneyData (..),
+    JourneyLeg (..),
+    getJourneys,
   )
 where
 
 import qualified Beckn.ACL.Cancel as CancelACL
+import qualified BecknV2.FRFS.Enums as FRFSEnums
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
+import Data.List (group)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.DriverOffer as UDriverOffer
@@ -53,11 +58,12 @@ import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
 import Domain.Types.QuoteBreakup
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.Trip as DTrip
-import EulerHS.Prelude hiding (id, map, sum)
+import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, sum)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.External.MultiModal.Interface.Types
@@ -77,11 +83,13 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -201,6 +209,7 @@ data GetQuotesRes = GetQuotesRes
     quotes :: [OfferRes],
     estimates :: [UEstimate.EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity],
+    allJourneysLoaded :: Bool,
     journey :: Maybe [JourneyData]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -214,7 +223,10 @@ data JourneyData = JourneyData
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
     journeyId :: Id DJ.Journey,
-    journeyLegs :: [JourneyLeg]
+    journeyLegs :: [JourneyLeg],
+    relevanceScore :: Double,
+    hasPreferredServiceTier :: Maybe Bool,
+    hasPreferredTransitModes :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -230,7 +242,10 @@ data JourneyLeg = JourneyLeg
     color :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     colorCode :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     duration :: Maybe Seconds,
-    distance :: Maybe Distance
+    distance :: Maybe Distance,
+    serviceTypes :: Maybe [FRFSEnums.ServiceTierType],
+    estimatedMinFare :: Maybe HighPrecMoney,
+    estimatedMaxFare :: Maybe HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -238,10 +253,13 @@ data RouteDetail = RouteDetail
   { routeCode :: Maybe Text,
     fromStationCode :: Maybe Text,
     toStationCode :: Maybe Text,
+    alternateShortNames :: [Text],
     color :: Maybe Text,
     colorCode :: Maybe Text,
     fromStationLatLong :: LatLong,
-    toStationLatLong :: LatLong
+    toStationLatLong :: LatLong,
+    fromStationPlatformCode :: Maybe Text,
+    toStationPlatformCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -277,11 +295,17 @@ getQuotes searchRequestId mbAllowMultiple = do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
     whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
-  journeyData <- getJourneys searchRequest
+  journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
+  person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
+  let mostFrequentVehicleCategory = mostFrequent person.lastUsedVehicleServiceTiers
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
-    estimates <- getEstimates searchRequestId (isJust searchRequest.driverIdentifier) -- TODO(MultiModal): only check for estimates which are done
+    estimates' <- getEstimates searchRequestId (isJust searchRequest.driverIdentifier) -- TODO(MultiModal): only check for estimates which are done
+    riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
+
+    let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
+        estimates = estimatesSorting estimates' (mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig)
     return $
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
@@ -290,6 +314,7 @@ getQuotes searchRequestId mbAllowMultiple = do
           quotes = offers,
           estimates,
           paymentMethods = [],
+          allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
           journey = journeyData
         }
 
@@ -381,9 +406,9 @@ sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare.amount)
   sortBy sortFunc resultList
 
-getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
-getJourneys searchRequest = do
-  case searchRequest.hasMultimodalSearch of
+getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> Maybe Bool -> m (Maybe [JourneyData])
+getJourneys searchRequest hasMultimodalSearch = do
+  case hasMultimodalSearch of
     Just True -> do
       allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
       journeyData <-
@@ -404,7 +429,10 @@ getJourneys searchRequest = do
                     colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
                     routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
-                    distance = journeyLeg.distance
+                    serviceTypes = journeyLeg.serviceTypes,
+                    distance = journeyLeg.distance,
+                    estimatedMinFare = journeyLeg.estimatedMinFare,
+                    estimatedMaxFare = journeyLeg.estimatedMaxFare
                   }
           let estimatedMinFare = sum $ mapMaybe (.estimatedMinFare) journeyLegsFromOtp
           let estimatedMaxFare = sum $ mapMaybe (.estimatedMaxFare) journeyLegsFromOtp
@@ -413,24 +441,28 @@ getJourneys searchRequest = do
               { totalMinFare = estimatedMinFare,
                 totalMaxFare = estimatedMaxFare,
                 modes = journey.modes,
-                journeyLegs = sortBy (comparing (.journeyLegOrder)) journeyLegs,
+                journeyLegs = sortOn (.journeyLegOrder) journeyLegs,
                 startTime = journey.startTime,
                 endTime = journey.endTime,
                 journeyId = journey.id,
                 duration = journey.estimatedDuration,
-                distance = journey.estimatedDistance
+                distance = journey.estimatedDistance,
+                relevanceScore = fromMaybe 1 journey.relevanceScore, -- 1 is the max possible score.
+                hasPreferredServiceTier = journey.hasPreferredServiceTier,
+                hasPreferredTransitModes = journey.hasPreferredTransitModes
               }
-      return $ Just journeyData
+      return . Just $ sortOn (.relevanceScore) journeyData
     _ -> return Nothing
   where
     mkRouteDetail :: MultiModalRouteDetails -> RouteDetail
     mkRouteDetail routeDetail =
       RouteDetail
         { routeCode = gtfsIdtoDomainCode <$> routeDetail.gtfsId,
-          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
-          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
+          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
+          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
           color = routeDetail.shortName,
           colorCode = routeDetail.shortName,
+          alternateShortNames = routeDetail.alternateShortNames,
           fromStationLatLong =
             LatLong
               { lat = routeDetail.startLocation.latLng.latitude,
@@ -440,5 +472,32 @@ getJourneys searchRequest = do
             LatLong
               { lat = routeDetail.endLocation.latLng.latitude,
                 lon = routeDetail.endLocation.latLng.longitude
-              }
+              },
+          fromStationPlatformCode = routeDetail.fromStopDetails >>= (.platformCode),
+          toStationPlatformCode = routeDetail.toStopDetails >>= (.platformCode)
         }
+
+-- Get the most frequent element in the list
+mostFrequent :: [DVST.ServiceTierType] -> Maybe DVST.ServiceTierType
+mostFrequent [] = Nothing
+mostFrequent xs = Just $ fst $ maximumBy (comparing snd) frequencyList
+  where
+    grouped = group . sort $ xs
+    frequencyList = [(head g, length g) | g <- grouped]
+
+mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> Maybe VehicleServiceTierOrderConfig
+mostFrequentVehicleCategoryConfig Nothing _ = Nothing
+mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) orderArray =
+  find (\v -> v.vehicle == vehicleServiceTier) orderArray
+
+-- Sorting function
+estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrderConfig -> [UEstimate.EstimateAPIEntity]
+estimatesSorting list Nothing = list
+estimatesSorting list (Just config) =
+  sortBy (comparing (\estimate -> vehicleOrderIndex config.orderArray estimate.serviceTierType)) list
+
+vehicleOrderIndex :: [DVST.ServiceTierType] -> DVST.ServiceTierType -> Int
+vehicleOrderIndex order v =
+  case lookup v (zip order [0 ..]) of
+    Just idx -> idx
+    Nothing -> maxBound

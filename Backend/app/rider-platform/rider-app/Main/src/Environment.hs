@@ -29,6 +29,7 @@ where
 import AWS.S3
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -86,6 +87,7 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    ltsRedis :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
@@ -161,7 +163,11 @@ data AppCfg = AppCfg
     nyGatewayUrl :: BaseUrl,
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    locationTrackingServiceKey :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
+    selfBaseUrl :: BaseUrl,
+    tsServiceConfig :: CPT.TSServiceConfig
   }
   deriving (Generic, FromDhall)
 
@@ -207,6 +213,7 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -257,7 +264,11 @@ data AppEnv = AppEnv
     nyGatewayUrl :: BaseUrl,
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    locationTrackingServiceKey :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
+    selfBaseUrl :: BaseUrl,
+    tsServiceConfig :: CPT.TSServiceConfig
   }
   deriving (Generic)
 
@@ -309,6 +320,7 @@ buildAppEnv cfg@AppCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
+  ltsHedisEnv <- connectHedis ltsRedis identity
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

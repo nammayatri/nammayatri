@@ -13,7 +13,7 @@ imports:
 
 UiDriverConfig:
   tableName: ui_driver_config
-
+  derives: "Generic,Show,ToJSON,FromJSON,Eq,ToSchema"
 
   fields:
     id : Id UiDriverConfig

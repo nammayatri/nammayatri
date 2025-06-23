@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management where
 
+import qualified API.Types.ProviderPlatform.Management.Account
 import qualified API.Types.ProviderPlatform.Management.Booking
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
@@ -18,6 +19,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.System
+import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -26,7 +28,8 @@ import qualified Text.Read
 import qualified Text.Show
 
 data ManagementUserActionType
-  = BOOKING API.Types.ProviderPlatform.Management.Booking.BookingUserActionType
+  = ACCOUNT API.Types.ProviderPlatform.Management.Account.AccountUserActionType
+  | BOOKING API.Types.ProviderPlatform.Management.Booking.BookingUserActionType
   | COINS_CONFIG API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigUserActionType
   | DRIVER API.Types.ProviderPlatform.Management.Driver.DriverUserActionType
   | DRIVER_COINS API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsUserActionType
@@ -41,11 +44,13 @@ data ManagementUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
+  | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Text.Show.Show ManagementUserActionType where
   show = \case
+    ACCOUNT e -> "ACCOUNT/" <> show e
     BOOKING e -> "BOOKING/" <> show e
     COINS_CONFIG e -> "COINS_CONFIG/" <> show e
     DRIVER e -> "DRIVER/" <> show e
@@ -61,18 +66,28 @@ instance Text.Show.Show ManagementUserActionType where
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
+    VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
 
 instance Text.Read.Read ManagementUserActionType where
   readsPrec d' =
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(BOOKING v1, r2) | r1 <- stripPrefix "BOOKING/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(ACCOUNT v1, r2) | r1 <- stripPrefix "ACCOUNT/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( BOOKING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "BOOKING/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( COINS_CONFIG v1,
                    r2
                  )
                  | r1 <- stripPrefix "COINS_CONFIG/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( DRIVER v1,
                    r2
@@ -191,9 +206,18 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( VEHICLE_INFO v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "VEHICLE_INFO/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])

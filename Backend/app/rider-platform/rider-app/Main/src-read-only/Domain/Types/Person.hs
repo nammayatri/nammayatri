@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
+import qualified Domain.Types.ServiceTierType
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -25,11 +26,13 @@ import qualified Tools.Beam.UtilsTH
 data PersonE e = Person
   { aadhaarVerified :: Kernel.Prelude.Bool,
     androidId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    authBlocked :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
     blockedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     blockedByRuleId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantConfig.MerchantConfig),
     blockedCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    blockedUntil :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
@@ -40,6 +43,7 @@ data PersonE e = Person
     customerNammaTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     customerPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     customerReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -59,11 +63,17 @@ data PersonE e = Person
     id :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     identifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     identifierType :: Domain.Types.Person.IdentifierType,
+    imeiNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     informPoliceSos :: Kernel.Prelude.Bool,
     isNew :: Kernel.Prelude.Bool,
     isValidRating :: Kernel.Prelude.Bool,
+    juspayCustomerPaymentID :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lastUsedVehicleServiceTiers :: [Domain.Types.ServiceTierType.ServiceTierType],
+    latestLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    latestLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    liveActivityToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -73,6 +83,7 @@ data PersonE e = Person
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -89,6 +100,7 @@ data PersonE e = Person
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     useFakeOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verificationChannel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     whatsappNotificationEnrollStatus :: Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods
   }
   deriving (Generic)
@@ -101,16 +113,19 @@ instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (entity, salt) = do
     email_ <- encryptItem $ (,salt) <$> email entity
+    imeiNumber_ <- encryptItem $ (,salt) <$> imeiNumber entity
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber entity
     pure
       Person
         { aadhaarVerified = aadhaarVerified entity,
           androidId = androidId entity,
+          authBlocked = authBlocked entity,
           backendAppVersion = backendAppVersion entity,
           blocked = blocked entity,
           blockedAt = blockedAt entity,
           blockedByRuleId = blockedByRuleId entity,
           blockedCount = blockedCount entity,
+          blockedUntil = blockedUntil entity,
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
           clientDevice = clientDevice entity,
@@ -121,6 +136,7 @@ instance EncryptedItem Person where
           customerNammaTags = customerNammaTags entity,
           customerPaymentId = customerPaymentId entity,
           customerReferralCode = customerReferralCode entity,
+          dateOfBirth = dateOfBirth entity,
           defaultPaymentMethodId = defaultPaymentMethodId entity,
           description = description entity,
           deviceId = deviceId entity,
@@ -140,11 +156,17 @@ instance EncryptedItem Person where
           id = id entity,
           identifier = identifier entity,
           identifierType = identifierType entity,
+          imeiNumber = imeiNumber_,
           informPoliceSos = informPoliceSos entity,
           isNew = isNew entity,
           isValidRating = isValidRating entity,
+          juspayCustomerPaymentID = juspayCustomerPaymentID entity,
           language = language entity,
           lastName = lastName entity,
+          lastUsedVehicleServiceTiers = lastUsedVehicleServiceTiers entity,
+          latestLat = latestLat entity,
+          latestLon = latestLon entity,
+          liveActivityToken = liveActivityToken entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           middleName = middleName entity,
@@ -154,6 +176,7 @@ instance EncryptedItem Person where
           notificationToken = notificationToken entity,
           passwordHash = passwordHash entity,
           payoutVpa = payoutVpa entity,
+          profilePicture = profilePicture entity,
           rating = rating entity,
           referralCode = referralCode entity,
           referredAt = referredAt entity,
@@ -170,20 +193,24 @@ instance EncryptedItem Person where
           totalRidesCount = totalRidesCount entity,
           updatedAt = updatedAt entity,
           useFakeOtp = useFakeOtp entity,
+          verificationChannel = verificationChannel entity,
           whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
         }
   decryptItem entity = do
     email_ <- fmap fst <$> decryptItem (email entity)
+    imeiNumber_ <- fmap fst <$> decryptItem (imeiNumber entity)
     mobileNumber_ <- fmap fst <$> decryptItem (mobileNumber entity)
     pure
       ( Person
           { aadhaarVerified = aadhaarVerified entity,
             androidId = androidId entity,
+            authBlocked = authBlocked entity,
             backendAppVersion = backendAppVersion entity,
             blocked = blocked entity,
             blockedAt = blockedAt entity,
             blockedByRuleId = blockedByRuleId entity,
             blockedCount = blockedCount entity,
+            blockedUntil = blockedUntil entity,
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
             clientDevice = clientDevice entity,
@@ -194,6 +221,7 @@ instance EncryptedItem Person where
             customerNammaTags = customerNammaTags entity,
             customerPaymentId = customerPaymentId entity,
             customerReferralCode = customerReferralCode entity,
+            dateOfBirth = dateOfBirth entity,
             defaultPaymentMethodId = defaultPaymentMethodId entity,
             description = description entity,
             deviceId = deviceId entity,
@@ -213,11 +241,17 @@ instance EncryptedItem Person where
             id = id entity,
             identifier = identifier entity,
             identifierType = identifierType entity,
+            imeiNumber = imeiNumber_,
             informPoliceSos = informPoliceSos entity,
             isNew = isNew entity,
             isValidRating = isValidRating entity,
+            juspayCustomerPaymentID = juspayCustomerPaymentID entity,
             language = language entity,
             lastName = lastName entity,
+            lastUsedVehicleServiceTiers = lastUsedVehicleServiceTiers entity,
+            latestLat = latestLat entity,
+            latestLon = latestLon entity,
+            liveActivityToken = liveActivityToken entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             middleName = middleName entity,
@@ -227,6 +261,7 @@ instance EncryptedItem Person where
             notificationToken = notificationToken entity,
             passwordHash = passwordHash entity,
             payoutVpa = payoutVpa entity,
+            profilePicture = profilePicture entity,
             rating = rating entity,
             referralCode = referralCode entity,
             referredAt = referredAt entity,
@@ -243,6 +278,7 @@ instance EncryptedItem Person where
             totalRidesCount = totalRidesCount entity,
             updatedAt = updatedAt entity,
             useFakeOtp = useFakeOtp entity,
+            verificationChannel = verificationChannel entity,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
           },
         ""
@@ -259,7 +295,7 @@ data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, O
 
 data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = USER | CUSTOMER_SUPPORT deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Role = USER | CUSTOMER_SUPPORT | METER_RIDE_DUMMY | TICKET_DASHBOARD_USER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Role)
 

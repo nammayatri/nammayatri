@@ -14,11 +14,13 @@
 
 module Domain.Action.Internal.ReportIssue where
 
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.Ride
 import Domain.Types.ServiceTierType
 import Environment
 import qualified IssueManagement.Common as ICommon
 import Kernel.Beam.Functions
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -28,11 +30,15 @@ import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
 
 reportIssue :: Id Ride -> ICommon.IssueReportType -> Maybe Text -> Flow APISuccess
@@ -44,11 +50,12 @@ reportIssue rideId issueType apiKey = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
   case issueType of
     ICommon.AC_RELATED_ISSUE -> do
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
     ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
+    ICommon.DRUNK_AND_DRIVE_VIOLATION -> handleDrunkAndDriveViolation ride
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()
@@ -69,3 +76,17 @@ handleExtraFareMitigation ride serviceTierType = do
       QDI.updateExtraFareMitigation (pure True) ride.driverId
       IBM.incrementIssueBreachCounter EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
       IBM.issueBreachMitigation EXTRA_FARE_MITIGATION transporterConfig driverInfo
+
+handleDrunkAndDriveViolation :: Ride -> Flow ()
+handleDrunkAndDriveViolation ride = do
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  let drunkAndDriveViolationCount = fromMaybe 0 driverInfo.drunkAndDriveViolationCount + 1
+  person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  if drunkAndDriveViolationCount < 2
+    then do
+      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "DRUNK_AND_DRIVE_WARNING" (fromMaybe ENGLISH person.language) Nothing Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
+      let fcmOverlayReq = Notify.mkOverlayReq overlay
+      let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
+      Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
+    else QDriverInfo.updateDynamicBlockedStateWithActivity ride.driverId (Just "DRUNK_AND_DRIVE_VIOLATION") Nothing "AUTOMATICALLY_BLOCKED_BY_APP" person.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" ride.merchantOperatingCityId DTDBT.Application True Nothing Nothing DrunkAndDriveViolation
+  void $ QDI.updateDrunkAndDriveViolationCount (Just drunkAndDriveViolationCount) ride.driverId

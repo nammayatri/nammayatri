@@ -62,6 +62,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
@@ -253,7 +254,8 @@ rideInfo ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    CH.HasClickhouseEnv CH.ATLAS_KAFKA m
+    CH.HasClickhouseEnv CH.ATLAS_KAFKA m,
+    HasShortDurationRetryCfg r c
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -552,8 +554,8 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
               }
       void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
     createRCAssociation driverId rc = do
-      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
-      DAQuery.create driverRCAssoc
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      createDriverRCAssociationIfPossible transporterConfig driverId rc
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 endActiveRide rideId merchantId merchantOperatingCityId = do

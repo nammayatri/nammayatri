@@ -26,7 +26,10 @@ flag Local
 
 library
   exposed-modules:
+      ConfigPilotFrontend.API
       ConfigPilotFrontend.Common
+      ConfigPilotFrontend.Flow
+      ConfigPilotFrontend.Types
       IssueManagement.API.Beckn.Issue
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils
@@ -48,6 +51,7 @@ library
       IssueManagement.Domain.Types.Issue.IGMConfig
       IssueManagement.Domain.Types.Issue.IGMIssue
       IssueManagement.Domain.Types.Issue.IssueCategory
+      IssueManagement.Domain.Types.Issue.IssueChat
       IssueManagement.Domain.Types.Issue.IssueConfig
       IssueManagement.Domain.Types.Issue.IssueMessage
       IssueManagement.Domain.Types.Issue.IssueOption
@@ -59,6 +63,7 @@ library
       IssueManagement.Storage.Beam.Issue.IGMConfig
       IssueManagement.Storage.Beam.Issue.IGMIssue
       IssueManagement.Storage.Beam.Issue.IssueCategory
+      IssueManagement.Storage.Beam.Issue.IssueChat
       IssueManagement.Storage.Beam.Issue.IssueConfig
       IssueManagement.Storage.Beam.Issue.IssueMessage
       IssueManagement.Storage.Beam.Issue.IssueOption
@@ -75,6 +80,7 @@ library
       IssueManagement.Storage.Queries.Issue.IGMConfig
       IssueManagement.Storage.Queries.Issue.IGMIssue
       IssueManagement.Storage.Queries.Issue.IssueCategory
+      IssueManagement.Storage.Queries.Issue.IssueChat
       IssueManagement.Storage.Queries.Issue.IssueConfig
       IssueManagement.Storage.Queries.Issue.IssueMessage
       IssueManagement.Storage.Queries.Issue.IssueOption

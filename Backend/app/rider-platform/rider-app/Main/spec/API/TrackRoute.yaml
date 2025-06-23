@@ -5,7 +5,7 @@ imports:
   UTCTime: Kernel.Prelude
   Double: Kernel.Prelude
   VehicleCategory: BecknV2.FRFS.Enums
-  UpcomingStop: SharedLogic.FRFSUtils
+  PlatformType: Domain.Types.IntegratedBPPConfig
 
 module: TrackRoute
 
@@ -22,15 +22,16 @@ types:
     longitude: Maybe Double
     speed: Maybe Double
     timestamp: Maybe Text
+    upcomingStops: Maybe [SharedLogic.External.LocationTrackingService.Types.UpcomingStop]
     derive: "Show"
 
   VehicleInfo:
-    nextStop: RouteStopMapping
+    nextStop: Maybe RouteStopMapping
     nextStopTravelTime: Maybe Seconds
-    nextStopTravelDistance: Meters
+    nextStopTravelDistance: Maybe Meters
     vehicleId: Text
     vehicleInfo: VehicleInfoForRoute
-    upcomingStops: "[UpcomingStop]"
+    upcomingStops: [SharedLogic.FRFSUtils.UpcomingStop]
     delay: Maybe Seconds
 
 apis:
@@ -38,6 +39,7 @@ apis:
       endpoint: /track/{routeCode}/vehicles
       query:
         vehicleType: VehicleCategory
+        platformType: PlatformType
       params:
         routeCode: Text
       response:

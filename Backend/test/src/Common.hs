@@ -60,7 +60,7 @@ searchServices ::
   Maybe Text ->
   Maybe Bool ->
   ClientM AppBESearch.SearchResp
-searchServices = client (Proxy :: Proxy AppBESearch.API)
+searchServices = client (Proxy :: Proxy AppBESearch.SearchAPI)
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> Maybe Bool -> ClientM AbeQuoteAPI.GetQuotesRes
 getQuotes = client (Proxy :: Proxy AbeQuoteAPI.API)

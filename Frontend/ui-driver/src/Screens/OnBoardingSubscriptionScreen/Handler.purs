@@ -3,7 +3,7 @@ module Screens.OnBoardingSubscriptionScreen.Handler where
 import Prelude
 import Engineering.Helpers.BackTrack (getState)
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Screens.OnBoardingSubscriptionScreen.View as OnBoardingSubscriptionScreen
 import Screens.OnBoardingSubscriptionScreen.Controller (ScreenOutput(..))
@@ -24,7 +24,7 @@ onBoardingSubscriptionScreen = do
     (GlobalState state) <- getState
     logField_ <- lift $ lift $ getLogFields
     HSP.hideLoaderFlow
-    action <- lift $ lift $ runScreen $ OnBoardingSubscriptionScreen.screen state.onBoardingSubscriptionScreen
+    action <- lift $ lift $ runLoggableScreen $ OnBoardingSubscriptionScreen.screen state.onBoardingSubscriptionScreen
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
         StartFreeTrialExit updatedState -> do

@@ -15,7 +15,7 @@
 
 module Screens.BankDetailScreen.Controller where
 
-import Prelude (Unit, bind, pure, ($), class Show, unit, (==), discard)
+import Prelude (Unit, bind, pure, ($), class Show, unit, (==), discard, show, (<>))
 import Effect (Effect)
 import PrestoDOM (Eval, update, Props, continue, exit)
 import Screens.Types (BankDetailScreenState)
@@ -29,7 +29,16 @@ import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRend
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (Dummy) = "Dummy"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (BeneficiaryNumber _) = "BeneficiaryNumber"
+  show (ReEnterBeneficiaryNumber _) = "ReEnterBeneficiaryNumber"
+  show (IFSCNumber _) = "IFSCNumber"
+  show (OnboardingHeaderAction var1) = "OnboardingHeaderAction_" <> show var1
+  show (RegistrationModalAction var1) = "RegistrationModalAction_" <> show var1
+  show (PrimaryButtonAction var1) = "PrimaryButtonAction_" <> show var1
+  show (AfterRender) = "AfterRender"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 

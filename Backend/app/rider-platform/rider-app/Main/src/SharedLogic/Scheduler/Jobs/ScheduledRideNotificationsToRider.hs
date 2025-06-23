@@ -31,6 +31,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -55,7 +56,8 @@ type ScheduleNotificationFlow m r =
     MonadFlow m,
     EsqDBFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasKafkaProducer r
   )
 
 sendScheduledRideNotificationsToRider ::
@@ -73,7 +75,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
   ride <- QR.findByRBId bookingId >>= fromMaybeM (RideDoesNotExist bookingId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
-  when (booking.status /= DB.CANCELLED) $
+  when (booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) $
     sendCommunicationToCustomer $
       SendCommunicationToCustomerReq
         { rideId = Just ride.id,
@@ -123,7 +125,7 @@ data SendCommunicationToCustomerReq = SendCommunicationToCustomerReq
   }
 
 sendCommunicationToCustomer ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   SendCommunicationToCustomerReq ->
   m ()
 sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
@@ -155,7 +157,7 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
       merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow merchantOperatingCityId messageKey configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       let (_, smsReqBody) = messageTransformer ("", merchantMessage.message)
-      Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender) -- TODO: append SMS heading
+      Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender merchantMessage.templateId) -- TODO: append SMS heading
         >>= Sms.checkSmsResult
     _ -> pure ()
   where

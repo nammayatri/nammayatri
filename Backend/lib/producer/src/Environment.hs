@@ -16,7 +16,7 @@
 module Environment where
 
 import qualified Data.Text as T
-import EulerHS.Prelude hiding (maybe, show)
+import EulerHS.Prelude hiding (maybe)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
 import Kernel.Streaming.Kafka.Producer.Types
@@ -102,15 +102,16 @@ data AppEnv = AppEnv
   }
   deriving (Generic)
 
-buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
-  hedisEnv <- connectHedis hedisCfg id
+buildAppEnv :: AppCfg -> ProducerType -> IO AppEnv
+buildAppEnv AppCfg {..} producerType = do
+  let modifierFunc = (show producerType <>)
+  hedisEnv <- connectHedis hedisCfg modifierFunc
   version <- lookupDeploymentVersion
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools

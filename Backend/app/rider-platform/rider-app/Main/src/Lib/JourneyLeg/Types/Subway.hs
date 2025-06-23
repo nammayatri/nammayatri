@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Types.Subway where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as FRFSSearch
@@ -8,6 +9,7 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RecentLocation as DRecentLocation
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -19,7 +21,8 @@ data SubwayLegRequestSearchData = SubwayLegRequestSearchData
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     city :: Context.City,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    recentLocationId :: Maybe (Id DRecentLocation.RecentLocation)
   }
 
 data SubwayLegRequestUpdateData = SubwayLegRequestUpdateData
@@ -31,10 +34,17 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    crisSdkResponse :: Maybe ApiTypes.CrisSdkResponse,
+    quantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    cancellationType :: Spec.CancellationType,
+    isSkipped :: Bool
+  }
 
 data SubwayLegRequestIsCancellableData = SubwayLegRequestIsCancellableData
 
@@ -48,7 +58,8 @@ data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
-    duration :: Maybe Seconds
+    duration :: Maybe Seconds,
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data SubwayLegRequest
@@ -65,6 +76,8 @@ data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
     routeDetails :: [FRFSRouteDetails],
+    fromArrivalTime :: Maybe UTCTime,
     merchant :: DMerchant.Merchant,
-    merchantOpCity :: DMOC.MerchantOperatingCity
+    merchantOpCity :: DMOC.MerchantOperatingCity,
+    riderId :: Id DPerson.Person
   }

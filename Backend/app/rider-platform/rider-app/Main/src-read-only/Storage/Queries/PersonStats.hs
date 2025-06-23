@@ -39,14 +39,15 @@ updateBacklogAndReferredByPayoutStatus backlogPayoutStatus referredByEarningsPay
     ]
     [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
-updateBacklogPayoutAmountAndActivations ::
+updateBacklogAndReferredByPayoutStatusAndAmountPaid ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateBacklogPayoutAmountAndActivations backlogPayoutAmount validActivations personId = do
+  (Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus -> Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateBacklogAndReferredByPayoutStatusAndAmountPaid backlogPayoutStatus referredByEarningsPayoutStatus referralAmountPaid personId = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.backlogPayoutAmount (Kernel.Prelude.Just backlogPayoutAmount),
-      Se.Set Beam.validActivations (Kernel.Prelude.Just validActivations),
+    [ Se.Set Beam.backlogPayoutStatus backlogPayoutStatus,
+      Se.Set Beam.referredByEarningsPayoutStatus referredByEarningsPayoutStatus,
+      Se.Set Beam.referralAmountPaid (Kernel.Prelude.Just referralAmountPaid),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
@@ -55,6 +56,31 @@ updateBacklogPayoutStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Ker
 updateBacklogPayoutStatus backlogPayoutStatus personId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.backlogPayoutStatus backlogPayoutStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+updateBacklogStatusAndAmountPaid ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateBacklogStatusAndAmountPaid backlogPayoutStatus referralAmountPaid personId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.backlogPayoutStatus backlogPayoutStatus,
+      Se.Set Beam.referralAmountPaid (Kernel.Prelude.Just referralAmountPaid),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+updateEarningsAndActivations ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateEarningsAndActivations referralEarnings backlogPayoutAmount validActivations personId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
+      Se.Set Beam.backlogPayoutAmount (Kernel.Prelude.Just backlogPayoutAmount),
+      Se.Set Beam.validActivations (Kernel.Prelude.Just validActivations),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 updateReferralAmountPaid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferralAmountPaid referralAmountPaid personId = do
@@ -89,6 +115,18 @@ updateReferredByEarningsPayoutStatus ::
 updateReferredByEarningsPayoutStatus referredByEarningsPayoutStatus personId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.referredByEarningsPayoutStatus referredByEarningsPayoutStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+updateReferredByEarningsPayoutStatusAndAmountPaid ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReferredByEarningsPayoutStatusAndAmountPaid referredByEarningsPayoutStatus referralAmountPaid personId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.referredByEarningsPayoutStatus referredByEarningsPayoutStatus,
+      Se.Set Beam.referralAmountPaid (Kernel.Prelude.Just referralAmountPaid),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PersonStats.PersonStats))
 findByPrimaryKey personId = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]

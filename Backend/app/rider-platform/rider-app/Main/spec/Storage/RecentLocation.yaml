@@ -1,0 +1,66 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  LatLong: Kernel.External.Maps.Types
+  HighPrecMoney: Kernel.Types.Common
+
+RecentLocation:
+  tableName: recent_location
+
+  types:
+    EntityType:
+      enum: "MULTIMODAL, SUBWAY, BUS, METRO, TAXI"
+
+  fields:
+    id : Id RecentLocation
+    riderId : Id Person
+    frequency : Int
+    entityType: EntityType
+    address: Maybe Text
+    fromLatLong: Maybe Kernel.External.Maps.Types.LatLong
+    toLatLong: Kernel.External.Maps.Types.LatLong
+    routeCode: Maybe Text
+    fromStopCode: Maybe Text
+    toStopCode: Maybe Text
+    fare: Maybe HighPrecMoney
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    toGeohash: Maybe Text
+    fromGeohash: Maybe Text
+
+  beamFields:
+    toLatLong:
+      lat: Double
+      lon: Double
+    fromLatLong:
+      stopLat: Maybe Double
+      stopLon: Maybe Double
+    toStopCode:
+      stopCode: Maybe Text
+
+  fromTType:
+    toLatLong: Kernel.External.Maps.Types.LatLong lat lon|E
+    fromLatLong: Kernel.External.Maps.Types.LatLong <$> stopLat <*> stopLon|E
+    toStopCode: stopCode|E
+
+  toTType:
+    lat: (.lat)|I
+    lon: (.lon)|I
+    stopLat: fromLatLong <&> (.lat)|E
+    stopLon: fromLatLong <&> (.lon)|E
+    stopCode: toStopCode|E
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+  excludedFields: [ merchantId, merchantOperatingCityId]
+  queries:
+    findAllRecentLocationsForPerson:
+      kvFunction: findAllWithDb
+      where: riderId

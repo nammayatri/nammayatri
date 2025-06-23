@@ -43,25 +43,23 @@ findBaseRolloutByMerchantOpCityAndDomain ::
   Lib.Yudhishthira.Types.LogicDomain ->
   m (Maybe Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout)
 findBaseRolloutByMerchantOpCityAndDomain merchantOperatingCityId domain = do
-  Hedis.safeGet (baseRolloutCacheKey merchantOperatingCityId domain)
-    >>= ( \case
-            Just a -> pure $ Just a
-            Nothing -> fetchAndCase
-        )
+  mbRollouts :: (Maybe [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]) <- Hedis.safeGet (baseRolloutCacheKey merchantOperatingCityId domain)
+  case mbRollouts of
+    Just rollouts -> pure $ listToMaybe rollouts
+    _ -> listToMaybe <$> fetchAndCase
   where
     fetchAndCase =
       ( \dataToBeCached -> do
           expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
           Hedis.setExp (baseRolloutCacheKey merchantOperatingCityId domain) dataToBeCached expTime
       )
-        /=<< listToMaybe
-          <$> findAllWithKV
-            [ Se.And
-                [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-                  Se.Is Beam.domain $ Se.Eq domain,
-                  Se.Is Beam.isBaseVersion $ Se.Eq (Just True)
-                ]
-            ]
+        /=<< findAllWithKV
+          [ Se.And
+              [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+                Se.Is Beam.domain $ Se.Eq domain,
+                Se.Is Beam.isBaseVersion $ Se.Eq (Just True)
+              ]
+          ]
 
 findByMerchantOpCityAndDomain ::
   BeamFlow.BeamFlow m r =>
@@ -95,11 +93,23 @@ clearDomainCache cityId domain = Hedis.del $ domainCacheKey cityId domain
 createMany :: BeamFlow.BeamFlow m r => [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] -> m ()
 createMany = Queries.createMany
 
+create :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout -> m ()
+create = Queries.create
+
 cityConfigsCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Text
-cityConfigsCacheKey cityId = "CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId
+cityConfigsCacheKey cityId = "yudhishthira-CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId
 
 domainCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> Text
-domainCacheKey cityId domain = "CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain
+domainCacheKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain
 
 baseRolloutCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> Text
-baseRolloutCacheKey cityId domain = "CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain <> ":BaseRollout"
+baseRolloutCacheKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain <> ":BaseRollout"
+
+clearBaseRolloutCacheKey :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
+clearBaseRolloutCacheKey cityId domain = Hedis.del $ baseRolloutCacheKey cityId domain
+
+clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
+clearCache cityId domain = do
+  clearCityConfigsCache cityId
+  clearDomainCache cityId domain
+  clearBaseRolloutCacheKey cityId domain

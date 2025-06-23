@@ -23,15 +23,15 @@ import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..) , TripTypeData,NotificationBody)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..), TicketServiceType)
 import Prelude (($) ,negate)
-import Data.Array (head)
+import Data.Array (head, elem)
 import Prelude(negate)
 import Services.API as API
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
-import Data.Map as Map 
-import JBridge (Location)
+import Data.Map as Map
+import JBridge (Location, getKeyInSharedPrefKeys)
 import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
@@ -43,16 +43,19 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (convertUTCtoISC,getCurrentUTC)
 
+
 initData :: HomeScreenState
 initData = let
   config = getAppConfig appConfig
   in
   {
+    showTakeFirstRidePopup : false,
     data: {
       suggestedAmount : 0
     , channelIdFromFCM : ""
     , personIdFromFCM : ""
     , sourceFromFCM : ""
+    , profile : Nothing
     , isBookingUpdated : false
     , source : ""
     , destination : ""
@@ -111,6 +114,7 @@ initData = let
       , isBtnActive : false
       }
     , rideDistance : "--"
+    , actualEstimateDistnace : 0
     , rideDuration : "--"
     , newEstimatedDistance : Nothing
     , newEstimatedFare : Nothing
@@ -165,7 +169,7 @@ initData = let
       , currentBanner : 0
       , bannerScrollState: "0"
       , currentPage : 0
-    } 
+    }
     , contactList : Nothing
     , followers : Nothing
     , manuallySharedFollowers : Nothing
@@ -183,7 +187,7 @@ initData = let
     }
     , otherSelectedEstimates : []
     , rateCardCache : Nothing
-    , rentalsInfo : Nothing 
+    , rentalsInfo : Nothing
     , startTimeUTC : ""
     , returnTimeUTC : ""
     , estReturnTimeUTC : ""
@@ -209,6 +213,7 @@ initData = let
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
     , cancellationRate : Nothing
+    , enquiryBannerStage : Just ST.QuestionStage
     },
     props: {
       rideRequestFlow : false
@@ -260,7 +265,7 @@ initData = let
     , isSrcServiceable : true
     , isDestServiceable : true
     , isRideServiceable : true
-    , userBlocked : false 
+    , userBlocked : false
     , showlocUnserviceablePopUp : false
     , autoSelecting : true
     , searchExpire : 90
@@ -277,7 +282,7 @@ initData = let
     , showShareAppPopUp : false
     , showMultipleRideInfo : false
     , hasTakenRide : true
-    , isReferred : false
+    , isReferred : (elem (getKeyInSharedPrefKeys "REFERRAL_STATUS") [ "REFERRED_NOT_TAKEN_RIDE", "HAS_TAKEN_RIDE" ])
     , storeCurrentLocs : false
     , unReadMessages : false
     , openChatScreen : false
@@ -393,8 +398,9 @@ initData = let
                                , referralCode : Nothing
                                , applyButtonActive : false
                                , showReferredUserInfoPopup : false
-                               , showReferralProgramInfoPopup : false 
-                               , isInvalidCode : false 
+                               , showReferralProgramInfoPopup : false
+                               , isInvalidCode : false
+                               , isFocused : false
                                }
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false
@@ -430,6 +436,8 @@ initData = let
     , showBoostSearch : false
     , busClicked : false
     , ticketServiceType : API.METRO
+    , enquiryBannerUndoTimer : Nothing
+    , isBottomSheetOpened : false
   }
 }
 
@@ -590,10 +598,11 @@ dummySettingBar = {
   , appConfig : getAppConfig appConfig
   , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
   , hasCompletedSafetySetup : false
+  , isPayoutEnabled : false
 }
 
 dummyAddress :: Address
-dummyAddress = 
+dummyAddress =
   { "area"      : Nothing
   , "state"     : Nothing
   , "country"   : Nothing
@@ -663,7 +672,7 @@ dummyRideBooking = RideBookingRes
   specialLocationTag : Nothing,
   hasDisability : Nothing,
   sosStatus: Nothing,
-  serviceTierName : Nothing, 
+  serviceTierName : Nothing,
   isAirConditioned : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing,
@@ -713,16 +722,16 @@ dummyTrip = {
     sourceLong: 0.0,
     destLat: 0.0,
     destLong: 0.0,
-    frequencyCount: Nothing,  
-    recencyDate: Nothing,  
-    locationScore: Nothing,  
+    frequencyCount: Nothing,
+    recencyDate: Nothing,
+    locationScore: Nothing,
     isSpecialZone: true,
     vehicleVariant: Nothing,
     serviceTierNameV2 : Nothing
 }
 
 dummyRentalBookingConfig :: RentalBookingConfig
-dummyRentalBookingConfig = 
+dummyRentalBookingConfig =
   { startTimeUTC : ""
   , baseDuration : 0
   , baseDistance : 0
@@ -757,13 +766,13 @@ dummyInvalidBookingPopUpConfig = {
 initialRideCompletedData :: RideCompletedData
 initialRideCompletedData = {
   issueReportData : {
-    bannerItem : Nothing 
+    bannerItem : Nothing
   , currentBannerIndex : 0
   , currentPageIndex : 0
   , showIssueBanners : true
   , hasAccessibilityIssue : false
   , hasTollIssue : false
-  , hasSafetyIssue : false                    
+  , hasSafetyIssue : false
   , customerResponse : [
     {
       issueType : TollCharge
@@ -786,7 +795,7 @@ initialRideCompletedData = {
   }
 }
 
-initialParkingData :: ParkingData 
+initialParkingData :: ParkingData
 initialParkingData = {
   estimatedCharge : Nothing
 }
@@ -799,7 +808,7 @@ initialTollData = {
 , showIncludedPopUp : false
 }
 
-dummyNewContacts :: NewContacts 
+dummyNewContacts :: NewContacts
 dummyNewContacts = {
   name : "",
   number : "",
@@ -814,7 +823,7 @@ dummyNewContacts = {
   shareTripWithEmergencyContactOption : neverShareRideOption
 }
 
-dummyNotificationBody :: NotificationBody 
+dummyNotificationBody :: NotificationBody
 dummyNotificationBody = {
     rideTime : Nothing,
     bookingId : Nothing

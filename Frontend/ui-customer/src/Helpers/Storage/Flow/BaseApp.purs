@@ -32,7 +32,8 @@ import ConfigProvider (getAppConfig)
 import Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Function.Uncurried (runFn3)
-import DecodeUtil (getAnyFromWindow)
+import DecodeUtil (getAnyFromWindow, setInWindow)
+import Data.Function.Uncurried (runFn2)
 
 baseAppStorage :: FlowBT String Unit
 baseAppStorage = do
@@ -41,6 +42,7 @@ baseAppStorage = do
         sessionId = getValueToLocalStore SESSION_ID
         countryCode = getValueToLocalStore COUNTRY_CODE
         appConfig = getAppConfig Constants.appConfig
+        _ = runFn2 setInWindow "CUSTOMER_ID" (getValueToLocalStore CUSTOMER_ID)
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     versionCode <- lift $ lift $ liftFlow $ getVersionCode

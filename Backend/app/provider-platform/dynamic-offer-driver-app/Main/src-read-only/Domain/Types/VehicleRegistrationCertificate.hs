@@ -18,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     certificateNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
@@ -35,6 +36,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reviewRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     reviewedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    unencryptedCertificateNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     userPassedVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -67,6 +69,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
     pure
       VehicleRegistrationCertificate
         { airConditioned = airConditioned entity,
+          approved = approved entity,
           certificateNumber = certificateNumber_,
           dateOfRegistration = dateOfRegistration entity,
           documentImageId = documentImageId entity,
@@ -84,6 +87,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           rejectReason = rejectReason entity,
           reviewRequired = reviewRequired entity,
           reviewedAt = reviewedAt entity,
+          unencryptedCertificateNumber = unencryptedCertificateNumber entity,
           userPassedVehicleCategory = userPassedVehicleCategory entity,
           vehicleCapacity = vehicleCapacity entity,
           vehicleClass = vehicleClass entity,
@@ -108,6 +112,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
     pure
       ( VehicleRegistrationCertificate
           { airConditioned = airConditioned entity,
+            approved = approved entity,
             certificateNumber = certificateNumber_,
             dateOfRegistration = dateOfRegistration entity,
             documentImageId = documentImageId entity,
@@ -125,6 +130,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             rejectReason = rejectReason entity,
             reviewRequired = reviewRequired entity,
             reviewedAt = reviewedAt entity,
+            unencryptedCertificateNumber = unencryptedCertificateNumber entity,
             userPassedVehicleCategory = userPassedVehicleCategory entity,
             vehicleCapacity = vehicleCapacity entity,
             vehicleClass = vehicleClass entity,

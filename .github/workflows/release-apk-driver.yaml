@@ -21,30 +21,30 @@ jobs:
             local_properties: LOCAL_PROPERTIES_NYP
             config_path: app/src/driver/nammaYatriPartner/assets/juspay
             config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
-          - name: ManaYatriPartner
-            keystore: ANDROID_KEYSTORE_FILE_MYP
-            fastlane_cm: MYP
-            key_alias: KEYSTORE_KEY_ALIAS_MYP
-            key_alias_password: KEYSTORE_STORE_PASSWORD
-            local_properties: LOCAL_PROPERTIES_MYP
-            config_path: app/src/driver/manaYatriPartner/assets/juspay
-            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
-          - name: YatriPartner
-            keystore: ANDROID_KEYSTORE_FILE_YP
-            fastlane_cm: YP
-            key_alias: KEYSTORE_KEY_ALIAS_YP
-            key_alias_password: KEYSTORE_STORE_PASSWORD
-            local_properties: LOCAL_PROPERTIES_YP
-            config_path: app/src/driver/yatriPartner/assets/juspay
-            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"
-          - name: OdishaYatriPartner
-            keystore: ANDROID_KEYSTORE_FILE_OYP
-            fastlane_cm: OYP
-            key_alias: KEYSTORE_KEY_ALIAS_OYP
-            key_alias_password: KEYSTORE_STORE_PASSWORD_OYP
-            local_properties: LOCAL_PROPERTIES_OYP
-            config_path: app/src/driver/odishaYatriPartner/assets/juspay
-            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
+          # - name: ManaYatriPartner
+          #   keystore: ANDROID_KEYSTORE_FILE_MYP
+          #   fastlane_cm: MYP
+          #   key_alias: KEYSTORE_KEY_ALIAS_MYP
+          #   key_alias_password: KEYSTORE_STORE_PASSWORD
+          #   local_properties: LOCAL_PROPERTIES_MYP
+          #   config_path: app/src/driver/manaYatriPartner/assets/juspay
+          #   config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
+          # - name: YatriPartner
+          #   keystore: ANDROID_KEYSTORE_FILE_YP
+          #   fastlane_cm: YP
+          #   key_alias: KEYSTORE_KEY_ALIAS_YP
+          #   key_alias_password: KEYSTORE_STORE_PASSWORD
+          #   local_properties: LOCAL_PROPERTIES_YP
+          #   config_path: app/src/driver/yatriPartner/assets/juspay
+          #   config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"
+          # - name: OdishaYatriPartner
+          #   keystore: ANDROID_KEYSTORE_FILE_OYP
+          #   fastlane_cm: OYP
+          #   key_alias: KEYSTORE_KEY_ALIAS_OYP
+          #   key_alias_password: KEYSTORE_STORE_PASSWORD_OYP
+          #   local_properties: LOCAL_PROPERTIES_OYP
+          #   config_path: app/src/driver/odishaYatriPartner/assets/juspay
+          #   config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
           # Add more variants as needed 
     defaults:
       run:
@@ -148,6 +148,7 @@ jobs:
           base64 -d -i local.properties.b64 > local.properties
         env:
           LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
+          
 
       - name: Create Google Play Config file
         run: |
@@ -160,8 +161,11 @@ jobs:
         run: |
           echo "" >> local.properties
           echo "$ADDITIONAL_LOCAL_PROPERTIES" >> local.properties
+          echo "" >> local.properties
+          echo "$CT_KEYS_PRD" >> local.properties
         env:
           ADDITIONAL_LOCAL_PROPERTIES: ${{ secrets.ADDITIONAL_LOCAL_PROPERTIES }}
+          CT_KEYS_PRD: ${{ secrets.CT_KEYS }}
 
       - name: Distribute app to Production 🚀
         run: |

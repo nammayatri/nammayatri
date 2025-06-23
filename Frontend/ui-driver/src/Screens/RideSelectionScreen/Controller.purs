@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons (strToBool, convertUTCtoISC)
 import Helpers.Utils (parseFloat, setEnabled, setRefreshing)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||))
+import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||), show)
 import PrestoDOM (Eval, update, ScrollState(..), continue, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, rideTypeConstructor)
@@ -39,7 +39,19 @@ import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils as HU
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (Loader) = "Loader"
+  show (Refresh) = "Refresh"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (BackPressed) = "BackPressed"
+  show (Scroll _) = "Scroll"
+  show (DontKnowRide var1) = "DontKnowRide_" <> show var1
+  show (OnFadeComplete _) = "OnFadeComplete"
+  show (ScrollStateChanged _) = "ScrollStateChanged"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (IndividualRideCardAction var1) = "IndividualRideCardAction_" <> show var1
+  show (ErrorModalActionController var1) = "ErrorModalActionController_" <> show var1
+  show (RideHistoryAPIResponseAction _) = "RideHistoryAPIResponseAction"
 
 instance loggableAction :: Loggable Action where 
   performLog action appId = case action of 

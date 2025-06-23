@@ -20,6 +20,7 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
@@ -37,6 +38,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -46,7 +48,8 @@ startMandateExecutionForDriver ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   Job 'MandateExecution ->
   m ExecutionResult
@@ -63,7 +66,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
-      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
@@ -164,7 +167,8 @@ asyncExecutionCall ::
     EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasKafkaProducer r
   ) =>
   ExecutionData ->
   Id Merchant ->
@@ -172,14 +176,15 @@ asyncExecutionCall ::
   m ()
 asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   driverFeeForExecution <- QDF.findById driverFee.id
+  driver <- QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
   let serviceName = invoice.serviceName
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-  let paymentService = subscriptionConfig.paymentServiceName
+  paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id merchantOperatingCityId subscriptionConfig.serviceName
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
-      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
+      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))
       case exec of
         Left err -> do
           QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing

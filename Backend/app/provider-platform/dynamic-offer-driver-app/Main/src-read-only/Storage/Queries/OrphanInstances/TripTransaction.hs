@@ -20,9 +20,13 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
       Just
         Domain.Types.TripTransaction.TripTransaction
           { allowEndingMidRoute = allowEndingMidRoute,
+            conductorFleetBadgeId = Kernel.Types.Id.Id <$> conductorFleetBadgeId,
+            conductorName = conductorName,
             createdAt = createdAt,
             deviationCount = deviationCount,
+            driverFleetBadgeId = Kernel.Types.Id.Id <$> fleetBadgeId,
             driverId = Kernel.Types.Id.Id driverId,
+            driverName = driverName,
             endLocation = Storage.Queries.Transformers.Ride.mkLatLong endLocationLat endLocationLon,
             endRideApprovalRequestId = Kernel.Types.Id.Id <$> endRideApprovalRequestId,
             endStopCode = endStopCode,
@@ -38,6 +42,7 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             status = status,
             tripCode = tripCode,
             tripEndTime = tripEndTime,
+            tripStartSource = tripStartSource,
             tripStartTime = tripStartTime,
             tripTerminationSource = tripTerminationSource,
             updatedAt = updatedAt,
@@ -49,9 +54,13 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
   toTType' (Domain.Types.TripTransaction.TripTransaction {..}) = do
     Beam.TripTransactionT
       { Beam.allowEndingMidRoute = allowEndingMidRoute,
+        Beam.conductorFleetBadgeId = Kernel.Types.Id.getId <$> conductorFleetBadgeId,
+        Beam.conductorName = conductorName,
         Beam.createdAt = createdAt,
         Beam.deviationCount = deviationCount,
+        Beam.fleetBadgeId = Kernel.Types.Id.getId <$> driverFleetBadgeId,
         Beam.driverId = Kernel.Types.Id.getId driverId,
+        Beam.driverName = driverName,
         Beam.endLocationLat = Kernel.Prelude.fmap (.lat) endLocation,
         Beam.endLocationLon = Kernel.Prelude.fmap (.lon) endLocation,
         Beam.endRideApprovalRequestId = Kernel.Types.Id.getId <$> endRideApprovalRequestId,
@@ -69,6 +78,7 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.status = status,
         Beam.tripCode = tripCode,
         Beam.tripEndTime = tripEndTime,
+        Beam.tripStartSource = tripStartSource,
         Beam.tripStartTime = tripStartTime,
         Beam.tripTerminationSource = tripTerminationSource,
         Beam.updatedAt = updatedAt,

@@ -22,6 +22,16 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
+data DOnSelect = DOnSelect
+  { providerId :: Text,
+    totalPrice :: Price,
+    fareBreakUp :: [DFareBreakUp],
+    bppItemId :: Text,
+    validTill :: Maybe UTCTime,
+    transactionId :: Text,
+    messageId :: Text
+  }
+
 data DFareBreakUp = DFareBreakUp
   { title :: Text,
     price :: HighPrecMoney,
@@ -43,6 +53,7 @@ data DOrder = DOrder
 
 data DTicket = DTicket
   { qrData :: Text,
+    vehicleNumber :: Maybe Text,
     description :: Maybe Text,
     bppFulfillmentId :: Text,
     ticketNumber :: Text,
@@ -52,8 +63,7 @@ data DTicket = DTicket
   }
 
 data DTicketPayload = DTicketPayload
-  { transactionId :: Text,
-    fromRouteProviderCode :: Text,
+  { fromRouteProviderCode :: Text,
     toRouteProviderCode :: Text,
     adultQuantity :: Int,
     childQuantity :: Int,

@@ -9,6 +9,9 @@ import Styles.Types (Color)
 
 
 
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (OnClick _) = "OnClick"
 
 
 data Action = NoAction 

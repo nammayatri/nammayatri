@@ -20,6 +20,7 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
@@ -37,6 +38,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -50,7 +52,8 @@ sendPDNNotificationToDriver ::
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasKafkaProducer r
   ) =>
   Job 'SendPDNNotificationToDriver ->
   m ExecutionResult
@@ -69,7 +72,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName True
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
-      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
@@ -193,7 +196,8 @@ sendAsyncNotification ::
     EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasKafkaProducer r
   ) =>
   DriverInfoForPDNotification ->
   Id Merchant ->
@@ -205,8 +209,10 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
   notificationShortId <- generateShortId
   now <- getCurrentTime
   req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
+  driver <- QP.findById driverToNotify.driverId >>= fromMaybeM (PersonDoesNotExist driverToNotify.driverId.getId)
   QNTF.create $ buildNotificationEntity notificationId req driverToNotify.driverFeeId driverToNotify.mandateId now
-  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId subscriptionConfig.paymentServiceName))
+  paymentServiceName <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id driver.merchantOperatingCityId subscriptionConfig.serviceName
+  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId paymentServiceName (Just driver.id.getId)))
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverToNotify.driverFeeId] Nothing

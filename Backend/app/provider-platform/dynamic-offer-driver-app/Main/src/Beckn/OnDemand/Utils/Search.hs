@@ -143,6 +143,12 @@ getIsMeterRideSearch req = do
   let tagValue = Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.IS_METER_RIDE_SEARCH tagGroups
   readMaybe . T.unpack =<< tagValue
 
+getIsMultimodalSearch :: Spec.SearchReqMessage -> Maybe Bool
+getIsMultimodalSearch req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  let tagValue = Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.IS_MULTIMODAL_SEARCH tagGroups
+  readMaybe . T.unpack =<< tagValue
+
 checkIfDashboardSearch :: Spec.SearchReqMessage -> Maybe Bool
 checkIfDashboardSearch req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)

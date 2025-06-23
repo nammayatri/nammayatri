@@ -75,3 +75,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_first_pickup_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_multimodal_walk_distance text  default 'OSRM';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN insurance_service character varying(30)  default 'Acko';

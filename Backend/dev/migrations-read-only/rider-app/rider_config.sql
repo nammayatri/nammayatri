@@ -201,3 +201,90 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN multimodal_testing boolean  defaul
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN is_first_referred_ride_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN rentals_config text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN intercity_search_locations text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN excluded_vehicle_variants text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_month integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_day integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN variant_list_for_near_by_req text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN near_by_driver_ring_bucket_cfg json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_driver_search_radius double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN is_device_id_check_disabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_bus_filtering boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_rentals_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_inter_city_search_locations json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_booking_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN straight_line_threshold integer  default 300;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN blocked_until_in_mins int  default 1440;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ticket_asset_domain text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_start_time time without time zone;
+ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_end_time time without time zone;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_config json  default '{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}';

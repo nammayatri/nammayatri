@@ -48,6 +48,7 @@ data DriverCoinsFunctionType
   | CustomerReferral
   | DriverReferral
   | PurpleRideCompleted
+  | GoldTierRideCompleted
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction
@@ -70,6 +71,7 @@ instance Show DriverCoinsFunctionType where
   show CustomerReferral = "CustomerReferral"
   show DriverReferral = "DriverReferral"
   show PurpleRideCompleted = "PurpleRideCompleted"
+  show GoldTierRideCompleted = "GoldTierRideCompleted"
   show LeaderBoardTopFiveHundred = "LeaderBoardTopFiveHundred"
   show TrainingCompleted = "TrainingCompleted"
   show BulkUploadFunction = "BulkUploadFunction"
@@ -126,6 +128,10 @@ instance Read DriverCoinsFunctionType where
                ]
             ++ [ (PurpleRideCompleted, r2)
                  | r1 <- stripPrefix "PurpleRideCompleted" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (GoldTierRideCompleted, r2)
+                 | r1 <- stripPrefix "GoldTierRideCompleted" r,
                    ((), r2) <- pure ((), r1)
                ]
             ++ [ (LeaderBoardTopFiveHundred, r2)
@@ -192,6 +198,7 @@ instance FromJSON DriverCoinsFunctionType where
       "CustomerReferral" -> pure CustomerReferral
       "DriverReferral" -> pure DriverReferral
       "PurpleRideCompleted" -> pure PurpleRideCompleted
+      "GoldTierRideCompleted" -> pure GoldTierRideCompleted
       "LeaderBoardTopFiveHundred" -> pure LeaderBoardTopFiveHundred
       "TrainingCompleted" -> pure TrainingCompleted
       "BulkUploadFunction" -> pure BulkUploadFunction

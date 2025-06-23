@@ -148,8 +148,9 @@ eval (PrimaryButtonActionControll PrimaryButton.OnClick) state =
     updateAndExit newState $ PostContacts newState false 
   else if null state.data.selectedContacts then
     continueWithCmd state [ pure ShowAddContactsOptions ]
-  else if state.props.getDefaultContacts then
-    updateAndExit state $ UpdateDefaultContacts state
+  else if state.props.getDefaultContacts then do
+    if isParentView FunctionCall then handleHybridBackPress state 
+    else  updateAndExit state $ UpdateDefaultContacts state
   else
     updateAndExit state $ PostContactsSafety state true
 
@@ -189,20 +190,8 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { showInfoPopUp = false } }
 
 eval BackPressed state = do
-  if isParentView FunctionCall
-    then do 
-      let mBPayload = getGlobalPayload Constants.globalPayload
-      case mBPayload of
-        Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
-          Just screen -> do 
-            if MP.startsWith "emergencycontactscreen" screen then do
-              void $ pure $ emitTerminateApp Nothing true
-              continue state
-              else 
-                handleBackPress state
-          _ -> handleBackPress state
-        Nothing -> handleBackPress state
-    else handleBackPress state
+  if isParentView FunctionCall then handleHybridBackPress state
+  else handleBackPress state
 
   
 
@@ -343,3 +332,16 @@ handleBackPress state = do
     continue state { props { showInfoPopUp = false, showContactList = false } }
   else
     exit $ GoToSafetyScreen state
+
+handleHybridBackPress :: EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
+handleHybridBackPress state = 
+  let mBPayload = getGlobalPayload Constants.globalPayload in
+  case mBPayload of
+    Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+      Just screen -> do 
+        if MP.startsWith "emergencycontactscreen" screen || MP.startsWith "addContacts" screen then do
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+        else handleBackPress state
+      _ -> continue state
+    Nothing -> handleBackPress state

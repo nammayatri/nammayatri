@@ -56,3 +56,13 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN do_st
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN filter_for_old_apks boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN role text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_category text ;

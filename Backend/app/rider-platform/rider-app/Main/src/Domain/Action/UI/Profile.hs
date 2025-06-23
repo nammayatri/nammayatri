@@ -32,7 +32,9 @@ module Domain.Action.UI.Profile
   )
 where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknEnums
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -45,12 +47,14 @@ import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person (RideShareOptions)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
 import Domain.Types.SafetySettings
+import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -62,6 +66,7 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
@@ -72,11 +77,14 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Cac
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
@@ -87,6 +95,7 @@ import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
+import Tools.Event
 
 data ProfileRes = ProfileRes
   { id :: Id Person.Person,
@@ -126,7 +135,9 @@ data ProfileRes = ProfileRes
     referralEarnings :: Maybe HighPrecMoney,
     referredByEarnings :: Maybe HighPrecMoney,
     referralAmountPaid :: Maybe HighPrecMoney,
-    cancellationRate :: Maybe Int
+    cancellationRate :: Maybe Int,
+    isPayoutEnabled :: Maybe Bool,
+    publicTransportVersion :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -146,7 +157,27 @@ data UpdateProfileReq = UpdateProfileReq
     hasDisability :: Maybe Bool,
     enableOtpLessRide :: Maybe Bool,
     deviceId :: Maybe Text,
-    androidId :: Maybe Text
+    androidId :: Maybe Text,
+    liveActivityToken :: Maybe Text,
+    dateOfBirth :: Maybe UTCTime,
+    profilePicture :: Maybe Text,
+    verificationChannel :: Maybe Text,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double,
+    latestLat :: Maybe Double,
+    latestLon :: Maybe Double,
+    marketingParams :: Maybe MarketingParams
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data MarketingParams = MarketingParams
+  { gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -247,9 +278,18 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc
+  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY Nothing
+  let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+  integratedBPPConfigs <-
+    catMaybes
+      <$> forM
+        vehicleTypes
+        ( \vType ->
+            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
+        )
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -273,7 +313,9 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           referralEarnings = Just personStats.referralEarnings,
           referredByEarnings = Just personStats.referredByEarnings,
           referralAmountPaid = Just personStats.referralAmountPaid,
+          isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           cancellationRate = cancellationPerc,
+          publicTransportVersion = if null integratedBPPConfigs then Nothing else Just (T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs),
           ..
         }
 
@@ -283,15 +325,23 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  fork "Triggering kafka marketing params event for person" $
+    when (isNothing person.firstName) $ do
+      case req.marketingParams of
+        Just params -> do
+          now <- getCurrentTime
+          let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm merchantId person.merchantOperatingCityId now now
+          triggerMarketingParamEvent marketingParams
+        Nothing -> pure ()
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
-  void $ Referral.applyReferralCode person False `mapM` req.referralCode
+  void $ mapM (\refCode -> Referral.applyReferralCode person False refCode Nothing) req.referralCode
   void $
     QPerson.updatePersonalInfo
       personId
@@ -312,7 +362,15 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.enableOtpLessRide
       (if isJust person.deviceId then Nothing else req.deviceId)
       (if isJust person.androidId then Nothing else req.androidId)
+      req.dateOfBirth
+      req.profilePicture
+      req.verificationChannel
+      req.registrationLat
+      req.registrationLon
+      req.latestLat
+      req.latestLon
       person
+      req.liveActivityToken
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

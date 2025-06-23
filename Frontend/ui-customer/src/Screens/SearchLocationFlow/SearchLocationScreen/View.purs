@@ -71,7 +71,7 @@ import Log (printLog)
 import Mobility.Prelude (boolToVisibility, boolToInvisibility, noView)
 import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>), (<$>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..), accessibilityHint, toPropValue, rippleColor)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..), accessibilityHint, toPropValue, rippleColor, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -775,7 +775,7 @@ predictionsView push state globalProps = let
                                                                                 then "Recent Bus Stops"
                                                                                 else "Recent Route Stops"
                 else if state.props.actionType == BusRouteSelectionAction then "Destination Stops"
-                else if state.props.actionType == BusStopSelectionAction then if state.props.focussedTextField == MB.Just SearchLocPickup then "Pickup Stops" else "Destination Stops"
+                else if state.props.actionType == BusStopSelectionAction then if state.props.focussedTextField == MB.Just SearchLocPickup then ("Pickup Stops" <> headerRouteSuffix) else "Destination Stops" <> headerRouteSuffix
                 else if state.props.actionType == NoBusRouteSelectionAction then "Nearby Places"
                 else
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
@@ -807,7 +807,7 @@ predictionsView push state globalProps = let
           , text "No Route & Stop found!"
           ] <> FontStyle.subHeading1 TypoGraphy
             ,textView $
-                [ text headerText
+                [ textFromHtml headerText
                 , color Color.black700
                 , margin $ MarginVertical 14 8
                 , visibility $ boolToVisibility $ (if (DA.length state.data.updatedRouteSearchedList == 0  && DA.length state.data.updatedStopsSearchedList /= 0)
@@ -879,6 +879,9 @@ predictionsView push state globalProps = let
           }
         selectedLocation = (if state.props.focussedTextField == MB.Just SearchLocPickup then state.data.destLoc else state.data.srcLoc) <#> _.stationCode
 
+    headerRouteSuffix :: String
+    headerRouteSuffix = " for <b>" <> state.props.routeName <> "</b>"
+    
     predictionArrayView :: Array LocationListItemState -> PrestoDOM (Effect Unit) w
     predictionArrayView locList =
         linearLayout

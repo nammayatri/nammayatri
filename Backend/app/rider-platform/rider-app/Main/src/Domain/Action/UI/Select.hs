@@ -54,6 +54,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
+import qualified Domain.Types.ServiceTierType as DVSTT
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
@@ -75,6 +76,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
@@ -112,11 +114,13 @@ data DSelectReq = DSelectReq
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
+    isPetRide :: Maybe Bool,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool,
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
-    disabilityDisable :: Maybe Bool
+    disabilityDisable :: Maybe Bool,
+    preferSafetyPlus :: Maybe Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -155,6 +159,7 @@ data DSelectRes = DSelectRes
     merchant :: DM.Merchant,
     city :: Context.City,
     autoAssignEnabled :: Bool,
+    isPetRide :: Maybe Bool,
     phoneNumber :: Maybe Text,
     isValueAddNP :: Bool,
     isAdvancedBookingEnabled :: Bool,
@@ -162,7 +167,8 @@ data DSelectRes = DSelectRes
     toUpdateDeviceIdInfo :: Bool,
     tripCategory :: Maybe TripCategory,
     disabilityDisable :: Maybe Bool,
-    selectResDetails :: Maybe DSelectResDetails
+    selectResDetails :: Maybe DSelectResDetails,
+    preferSafetyPlus :: Bool
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -246,6 +252,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -264,6 +271,9 @@ select2 personId estimateId req@DSelectReq {..} = do
     QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
     QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
 
+  let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
+  logError $ "lastUsedVehicleServiceTiers personId: " <> personId.getId <> " lastUsedVehicleServiceTiers: " <> show lastUsedVehicleServiceTiers
+  QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
@@ -280,6 +290,8 @@ select2 personId estimateId req@DSelectReq {..} = do
       _ -> pure Nothing
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
+  when (isJust req.isPetRide) $ do
+    QSearchRequest.updatePetRide req.isPetRide searchRequest.id
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
@@ -302,6 +314,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
         tripCategory = estimate.tripCategory,
         selectResDetails = dselectResDetails,
+        preferSafetyPlus = fromMaybe False preferSafetyPlus,
         ..
       }
   where
@@ -371,3 +384,8 @@ updateRequiredDeliveryDetails searchRequestId merchantId merchantOperatingCityId
           }
   QSRPL.createMany [senderParty, receiverParty]
   QParcel.create $ DParcel.ParcelDetails {createdAt = now, updatedAt = now, ..}
+
+insertVehicleServiceTier :: Int -> DVSTT.ServiceTierType -> [ServiceTierType] -> [ServiceTierType]
+insertVehicleServiceTier n newVehicle currentList
+  | length currentList < n = currentList ++ [newVehicle]
+  | otherwise = tail currentList ++ [newVehicle]

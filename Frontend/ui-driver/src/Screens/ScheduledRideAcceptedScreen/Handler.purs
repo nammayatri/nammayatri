@@ -4,7 +4,7 @@ import Prelude
 import Types.App 
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Types.ModifyScreenState (modifyScreenState)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Components.RideRequestCard.View as RideRequestCard
@@ -21,6 +21,6 @@ import Screens.ScheduledRideAcceptedScreen.Controller
 scheduledRideAcceptedScreen :: FlowBT String SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT
 scheduledRideAcceptedScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ ScheduledRideAcceptedScreen.screen state.scheduledRideAcceptedScreen
+  act <- lift $ lift $ runLoggableScreen $ ScheduledRideAcceptedScreen.screen state.scheduledRideAcceptedScreen
   case act of
     GoHome -> App.BackT $ App.BackPoint <$> pure (GO_HOME_FROM_SCHEDULED_RIDE_ACCEPT_SCREEN )

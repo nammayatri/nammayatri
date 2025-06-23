@@ -7,6 +7,9 @@ import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
+import Data.List (sortBy)
+import Data.Maybe ()
+import Data.Ord (comparing)
 import qualified Data.Text as T
 import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
@@ -14,7 +17,7 @@ import Domain.Types.Booking
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
-import Domain.Types.ServiceTierType
+import Domain.Types.ServiceTierType ()
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -49,6 +52,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         parentSearchReq.device
         False
         (Just journeySearchData)
+        False
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
@@ -80,6 +84,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 stops = Just stops',
                 destination = Just destination,
                 isMeterRideSearch = Just False,
+                recentLocationId = Nothing,
+                platformType = Nothing,
                 ..
               }
 
@@ -91,14 +97,16 @@ instance JT.JourneyLeg TaxiLegRequest m where
             skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,
-            isDeleted = Just False
+            isDeleted = Just False,
+            onSearchFailed = Nothing
           }
   search _ = throwError (InternalError "Not Supported")
 
   confirm (TaxiLegRequestConfirm req) = do
-    -- now <- getCurrentTime
     let shouldSkipBooking = req.skipBooking || (not req.forcedBooked)
     unless shouldSkipBooking $ do
+      now <- getCurrentTime
+      QSearchRequest.updateStartTime (Id req.searchId) now
       mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
       case mbEstimate of
         Just estimate -> do
@@ -106,6 +114,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             let selectReq =
                   DSelect.DSelectReq
                     { customerExtraFee = Nothing,
+                      isPetRide = Nothing,
                       customerExtraFeeWithCurrency = Nothing,
                       autoAssignEnabled = True,
                       autoAssignEnabledV2 = Just True,
@@ -113,7 +122,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                       otherSelectedEstimates = Nothing,
                       isAdvancedBookingEnabled = Nothing,
                       deliveryDetails = Nothing,
-                      disabilityDisable = Nothing
+                      disabilityDisable = Nothing,
+                      preferSafetyPlus = Nothing
                     }
             void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
         Nothing -> CFFM.setConfirmOnceGetFare req.searchId
@@ -171,7 +181,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
               DSelect.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show searchReq.id.getId)
               DSelect.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show searchReq.id.getId)
           Nothing -> return ()
-        if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
+    if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
     if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
   cancel _ = throwError (InternalError "Not Supported")
 
@@ -198,10 +208,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             JT.JourneyLegStateData
               { status = journeyLegStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePosition,
-                nextStop = Nothing,
-                nextStopTravelDistance = Nothing,
-                nextStopTravelTime = Nothing,
+                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = latLong, vehicleId = "taxi", upcomingStops = []}]) vehiclePosition,
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
@@ -217,10 +224,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             JT.JourneyLegStateData
               { status = journeyLegStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePosition = Nothing,
-                nextStop = Nothing,
-                nextStopTravelDistance = Nothing,
-                nextStopTravelTime = Nothing,
+                vehiclePositions = [],
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
@@ -233,21 +237,26 @@ instance JT.JourneyLeg TaxiLegRequest m where
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id
-        JT.mkLegInfoFromBookingAndRide booking mRide
+        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg.entrance req.journeyLeg.exit
       Nothing -> do
-        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-        JT.mkLegInfoFromSearchRequest searchReq
+        mbSearchReq <- QSearchRequest.findById req.searchId
+        if isNothing mbSearchReq && req.ignoreOldSearchRequest
+          then return Nothing
+          else do
+            searchReq <- fromMaybeM (SearchRequestNotFound req.searchId.getId) mbSearchReq
+            Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg.entrance req.journeyLeg.exit
   getInfo _ = throwError (InternalError "Not Supported")
 
   getFare (TaxiLegRequestGetFare taxiGetFareData) = do
     let calculateFareReq =
           CallBPPInternal.CalculateFareReq
             { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latitude, lon = taxiGetFareData.startLocation.longitude},
-              dropLatLong = LatLong {lat = taxiGetFareData.endLocation.latitude, lon = taxiGetFareData.endLocation.longitude},
+              dropLatLong = Just $ LatLong {lat = taxiGetFareData.endLocation.latitude, lon = taxiGetFareData.endLocation.longitude},
               mbDistance = Just $ distanceToMeters taxiGetFareData.distance,
-              mbDuration = Just taxiGetFareData.duration
+              mbDuration = Just taxiGetFareData.duration,
+              mbTripCategory = Nothing
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
-    let mbAutoFare = find (\f -> f.vehicleServiceTier == AUTO_RICKSHAW) fareData.estimatedFares
-    return $ mbAutoFare <&> \auto -> JT.GetFareResponse {estimatedMinFare = auto.minFare, estimatedMaxFare = auto.maxFare}
+    let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)
+    return $ mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, serviceTypes = Nothing}
   getFare _ = throwError (InternalError "Not Supported")

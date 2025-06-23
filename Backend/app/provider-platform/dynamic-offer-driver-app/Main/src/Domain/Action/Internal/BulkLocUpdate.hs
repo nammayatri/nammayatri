@@ -55,15 +55,16 @@ bulkLocUpdate req = do
   transportConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
+  let minUpdatesToTriggerSnapToRoad = getMinLocUpdateCountForDistanceCalculation transportConfig ride.tripCategory
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False (Just minUpdatesToTriggerSnapToRoad)
   rectificationServiceConfig <-
     if DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
   let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
   let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
-  logDebug $ "Did we passed through drop yet in bulkLocation " <> show passedThroughDrop <> " and points: " <> show loc
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop loc
+  logDebug $ "Did we passed through drop yet in bulkLocation  " <> show passedThroughDrop <> " and points: " <> show loc
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) loc
 
   let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
   when (isJust buffertime' && ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do
@@ -77,7 +78,7 @@ bulkLocUpdate req = do
             currentLatLong = NE.last loc
             dropLatLong = TM.LatLong {lat = toLocation.lat, lon = toLocation.lon}
         routeResponse <-
-          TM.getRoutes merchantId booking.merchantOperatingCityId $
+          TM.getRoutes merchantId booking.merchantOperatingCityId (Just rideId.getId) $
             TM.GetRoutesReq
               { waypoints = NE.fromList [currentLatLong, dropLatLong],
                 mode = Just TM.CAR,
@@ -90,3 +91,8 @@ bulkLocUpdate req = do
         QRide.updateEstimatedEndTimeRange newEstimatedEndTimeRange rideId
         CallBAP.sendRideEstimatedEndTimeRangeUpdateToBAP booking updatedRide
   pure Success
+  where
+    getMinLocUpdateCountForDistanceCalculation transporterConfig tripCategory =
+      case tripCategory of
+        (DC.OneWay DC.MeterRide) -> transporterConfig.meterRideBulkLocUpdateBatchSize
+        _ -> transporterConfig.normalRideBulkLocUpdateBatchSize

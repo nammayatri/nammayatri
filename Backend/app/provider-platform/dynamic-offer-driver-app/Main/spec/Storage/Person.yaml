@@ -23,7 +23,7 @@ Person:
       recordType: Type
       derive': ""
     Role:
-      enum: "DRIVER, ADMIN, FLEET_OWNER"
+      enum: "DRIVER, ADMIN, FLEET_OWNER, FLEET_BUSINESS, OPERATOR"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:
@@ -46,6 +46,7 @@ Person:
     identifierType : IdentifierType
     email : Maybe Text
     mobileNumber : Maybe (EncryptedHashedField e Text)
+    maskedMobileDigits: Maybe Text
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
     identifier : Maybe Text
@@ -60,6 +61,7 @@ Person:
     updatedAt : UTCTime
     alternateMobileNumber : Maybe (EncryptedHashedField e Text)
     faceImageId : Maybe (Id MediaFile)
+    qrImageId : Maybe (Id MediaFile)
     merchantOperatingCityId : Id MerchantOperatingCity
     totalEarnedCoins : Int
     usedCoins : Int
@@ -200,6 +202,13 @@ Person:
       kvFunction: findOneWithKV
       where:
         and: [email, merchantId]
+
+    findAllByPersonIdsAndMerchantOpsCityId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [id]
+          - eq: [merchantOperatingCityId]
 
     updateName:
       kvFunction: updateOneWithKV

@@ -25,6 +25,7 @@ type CommonAppConfig = (
   , navigationAppConfig :: NavigationConfig
   , genericHeaderConfig :: GenericHeaderConfig
   , showCorporateAddress :: Boolean
+  , showRegisteredAddress :: Boolean
   , appData :: AppDatas
   , otpRegex :: String
   , termsLink :: String

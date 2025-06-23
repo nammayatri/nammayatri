@@ -1,6 +1,8 @@
 module Lib.Yudhishthira.Flow.Dashboard where
 
 import qualified ConfigPilotFrontend.Common as CPFC
+import qualified ConfigPilotFrontend.Flow as CPF
+import qualified ConfigPilotFrontend.Types as CPT
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
@@ -14,6 +16,7 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
@@ -23,7 +26,6 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CQTBC
-import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as LYSQADLE
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADLE
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
@@ -33,6 +35,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as QNTT
 import Lib.Yudhishthira.Tools.Error
 import Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
@@ -372,6 +375,30 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
         A.Success _ -> []
         A.Error err -> [show err]
 
+verifyAndUpdateUIDynamicLogic ::
+  forall m r a b.
+  (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
+  Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
+  Proxy b ->
+  Text ->
+  Lib.Yudhishthira.Types.AppDynamicLogicReq ->
+  a ->
+  BaseUrl ->
+  m Lib.Yudhishthira.Types.AppDynamicLogicResp
+verifyAndUpdateUIDynamicLogic mbMerchantId proxy referralLinkPassword req logicData url = do
+  resp <- runLogics req.rules logicData
+  validateInputData <-
+    case (fromJSON resp.result :: Result (LYT.Config Value)) of
+      A.Success dpc'' -> pure (dpc''.config)
+      A.Error e -> do
+        throwError $ InvalidRequest $ "Error in applying dynamic logic: " <> show e
+  configValidateResp <- CPF.configValidate url validateInputData
+  case configValidateResp.status of
+    CPT.VALID_CONFIG -> pure ()
+    CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
+    CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
+  verifyAndUpdateDynamicLogic mbMerchantId proxy referralLinkPassword req logicData
+
 getAppDynamicLogicForDomain :: BeamFlow m r => Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain mbVersion domain = do
   case mbVersion of
@@ -444,7 +471,7 @@ getLogicRollout merchantOpCityId _ domain = do
     combineRollout logicRollouts =
       let rollout = DLNE.map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription) logicRollouts
           firstElement = DLNE.head logicRollouts
-       in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout) (firstElement.modifiedBy) firstElement.experimentStatus
+       in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout) (firstElement.modifiedBy)
 
 getFrontendLogicUrlAndToken :: BeamFlow m r => m (BaseUrl, Text)
 getFrontendLogicUrlAndToken = do
@@ -453,51 +480,79 @@ getFrontendLogicUrlAndToken = do
   url <- parseBaseUrl (T.pack config)
   return (url, T.pack token)
 
-callWebHook :: BeamFlow m r => Text -> m CPFC.ConfigPilotFrontendRes
-callWebHook domain = do
-  let cpfcreq = CPFC.ConfigPilotFrontendReq domain True
+callWebHook :: BeamFlow m r => CPFC.ConfigPilotFrontendReq -> m CPFC.ConfigPilotFrontendRes
+callWebHook req = do
   (url, token) <- getFrontendLogicUrlAndToken
   let cfg = CPFC.ConfigPilotFrontendConfig url token
-  CPFC.callConfigPilotFrontend cpfcreq cfg
+  CPFC.callConfigPilotFrontend req cfg
 
-callTheFrontEndHook ::
-  BeamFlow m r =>
-  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
-  Lib.Yudhishthira.Types.LogicDomain ->
-  m Kernel.Types.APISuccess.APISuccess
-callTheFrontEndHook merchantOpCityId domain = do
-  case domain of
-    Lib.Yudhishthira.Types.UI_DRIVER dt pt -> do
-      let domain' = "ui_driver:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
-      res <- callWebHook domain'
-      logDebug $ "Response from Frontend Logic: " <> show res
-      return Kernel.Types.APISuccess.Success
-    Lib.Yudhishthira.Types.UI_RIDER dt pt -> do
-      let domain' = "ui_customer:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
-      res <- callWebHook domain'
-      logDebug $ "Response from Frontend Logic: " <> show res
-      return Kernel.Types.APISuccess.Success
-    _ -> return Kernel.Types.APISuccess.Success
+-- This updates on going release flag in TS Service
+-- callTheFrontEndHook ::
+--   BeamFlow m r =>
+--   Kernel.Types.Beckn.Context.City ->
+--   Lib.Yudhishthira.Types.LogicDomain ->
+--   m Kernel.Types.APISuccess.APISuccess
+-- callTheFrontEndHook opCity domain = do
+--   case domain of
+--     Lib.Yudhishthira.Types.DRIVER_CONFIG cfg -> do
+--       case cfg of
+--         Lib.Yudhishthira.Types.UiConfig os pt -> do
+--           let req = makeReq opCity os pt
+--           res <- callWebHook req
+--           logDebug $ "Response from Frontend Logic: " <> show res
+--           return Kernel.Types.APISuccess.Success
+--         _ -> return Kernel.Types.APISuccess.Success
+--     Lib.Yudhishthira.Types.RIDER_CONFIG cfg -> do
+--       case cfg of
+--         Lib.Yudhishthira.Types.UiConfig os pt -> do
+--           let req = makeReq opCity os pt
+--           res <- callWebHook req
+--           logDebug $ "Response from Frontend Logic: " <> show res
+--           return Kernel.Types.APISuccess.Success
+--         _ -> return Kernel.Types.APISuccess.Success
+--     _ -> return Kernel.Types.APISuccess.Success
+--   where
+--     makeReq city os pt =
+--       CPFC.ConfigPilotFrontendReq
+--         { city = T.pack (show city),
+--           os = T.pack (show os),
+--           platform = T.pack (show pt),
+--           isOnGoingRelease = True
+--         }
 
 upsertLogicRollout ::
-  BeamFlow m r =>
+  (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   [Lib.Yudhishthira.Types.LogicRolloutObject] ->
+  (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) ->
+  Kernel.Types.Beckn.Context.City ->
   m Kernel.Types.APISuccess.APISuccess
-upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
+upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity = do
   unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
   domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
   now <- getCurrentTime
   if isDriverOrRiderConfig domain
-    then handleDriverOrRiderConfig domain merchantOpCityId now rolloutReq
+    then do
+      version <- handleDriverOrRiderConfig domain merchantOpCityId now rolloutReq
+      fork "Pushing Config History" $ do
+        configType <- case domain of
+          LYT.DRIVER_CONFIG ct -> return ct
+          LYT.RIDER_CONFIG ct -> return ct
+          _ -> throwError $ InternalError "Unsupported logic domain"
+        when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
+        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
+        pushConfigHistory domain version merchantOpCityId configsJson
+      -- when (isUIConfig domain) $ do
+      --   void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
+      return Kernel.Types.APISuccess.Success
     else handleOtherDomain merchantOpCityId now rolloutReq domain
   where
     getDomain :: Maybe Lib.Yudhishthira.Types.LogicDomain
     getDomain = listToMaybe $ map (.domain) rolloutReq
 
     -- Driver or Rider Config Domain Handling
-    handleDriverOrRiderConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> m Kernel.Types.APISuccess.APISuccess
+    handleDriverOrRiderConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> m Int
     handleDriverOrRiderConfig domain merchantOpCityId' now rolloutReq' = do
       configRolloutObjectsArr <- mapM (mkAppDynamicLogicRolloutDomain merchantOpCityId' now) rolloutReq'
       let configRolloutObjects = concat configRolloutObjectsArr
@@ -505,30 +560,35 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
       let mbConfigRolloutObject = listToMaybe configRolloutObjects
       when (isNothing mbConfigRolloutObject) $ throwError $ InvalidRequest $ "No rollout config found for " <> show domain
       let configRolloutObject = fromJust mbConfigRolloutObject
-      mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase merchantOpCityId' configRolloutObject.domain
-      when (isNothing mbBaseRollout) $ do
-        newVersion <- do
-          latestElement <- QADLE.findLatestVersion (Just 1) Nothing domain
-          return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
-        LYSQADLE.create $ mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now domain
-        LYSQADLR.create $ mkBaseAppDynamicLogicRollout newVersion now domain (100 - configRolloutObject.percentageRollout)
+      mbBaseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId' configRolloutObject.domain
+      baseRollout <- case mbBaseRollout of
+        Just baseRollout -> return baseRollout
+        Nothing -> do
+          newVersion <- do
+            latestElement <- QADLE.findLatestVersion (Just 1) Nothing domain
+            return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
+          CADLE.create $ mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now domain
+          CADLE.clearCache domain
+          let baseRollout = mkBaseAppDynamicLogicRollout newVersion now domain 100
+          CADLR.create baseRollout
+          CADLR.clearCache (cast merchantOpCityId') domain
+          return baseRollout
       mbConfigRolloutObjectDB <- LYSQADLR.findByPrimaryKey configRolloutObject.domain merchantOpCityId configRolloutObject.timeBounds configRolloutObject.version
-      handleBaseRolloutUpdate configRolloutObject mbBaseRollout mbConfigRolloutObjectDB merchantOpCityId' domain
+      handleRolloutUpdate configRolloutObject baseRollout mbConfigRolloutObjectDB merchantOpCityId' domain
 
-    handleBaseRolloutUpdate :: BeamFlow m r => AppDynamicLogicRollout -> Maybe AppDynamicLogicRollout -> Maybe AppDynamicLogicRollout -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Kernel.Types.APISuccess.APISuccess
-    handleBaseRolloutUpdate configRolloutObject mbBaseRollout mbConfigRolloutObjectDB merchantOpCityId' domain = case mbConfigRolloutObjectDB of
+    handleRolloutUpdate :: BeamFlow m r => AppDynamicLogicRollout -> AppDynamicLogicRollout -> Maybe AppDynamicLogicRollout -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Int
+    handleRolloutUpdate configRolloutObject baseRollout mbConfigRolloutObjectDB merchantOpCityId' domain = case mbConfigRolloutObjectDB of
       Just configRolloutObjectDB -> do
-        let baseRollout = fromJust mbBaseRollout
-            originalRolloutPercentage = configRolloutObjectDB.percentageRollout
+        let originalRolloutPercentage = configRolloutObjectDB.percentageRollout
         when ((baseRollout.percentageRollout - (configRolloutObject.percentageRollout - originalRolloutPercentage)) < 0) $ throwError $ InvalidRequest $ "Insufficient percentage on base version: " <> show baseRollout.percentageRollout <> " either conclude existing versions or reduce rollout percentage."
         when (configRolloutObjectDB.version == baseRollout.version) $ throwError $ InvalidRequest "Percentage of base version cannot be updated directly"
         when (configRolloutObjectDB.experimentStatus /= Just Lib.Yudhishthira.Types.RUNNING) $ throwError $ InvalidRequest "You can only update the percentage of a running experiment"
         let updatedBaseRollout = updateBaseRolloutPercentage baseRollout configRolloutObject originalRolloutPercentage
         LYSQADLR.updateByPrimaryKey updatedBaseRollout
         LYSQADLR.updateByPrimaryKey configRolloutObject
-        CADLR.clearDomainCache (cast merchantOpCityId') domain
-        return Kernel.Types.APISuccess.Success
-      Nothing -> createNewRollout configRolloutObject mbBaseRollout merchantOpCityId' domain
+        CADLR.clearCache (cast merchantOpCityId') domain
+        return updatedBaseRollout.version
+      Nothing -> createNewRollout configRolloutObject baseRollout merchantOpCityId' domain
 
     updateBaseRolloutPercentage :: AppDynamicLogicRollout -> AppDynamicLogicRollout -> Int -> AppDynamicLogicRollout
     updateBaseRolloutPercentage baseRollout configRolloutObject originalRolloutPercentage = do
@@ -536,23 +596,15 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
         then baseRollout {percentageRollout = baseRollout.percentageRollout - (configRolloutObject.percentageRollout - originalRolloutPercentage)}
         else baseRollout {percentageRollout = baseRollout.percentageRollout + (originalRolloutPercentage - configRolloutObject.percentageRollout)}
 
-    createNewRollout :: BeamFlow m r => AppDynamicLogicRollout -> Maybe AppDynamicLogicRollout -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Kernel.Types.APISuccess.APISuccess
-    createNewRollout configRolloutObject mbBaseRollout merchantOpCityId' domain =
-      case mbBaseRollout of
-        Just baseRollout -> do
-          when (configRolloutObject.percentageRollout > baseRollout.percentageRollout) $
-            throwError $ InvalidRequest $ "Insufficient percentage on base version: " <> show baseRollout.percentageRollout <> " either conclude existing versions or reduce rollout percentage."
-          let updatedBaseRollout = baseRollout {percentageRollout = baseRollout.percentageRollout - configRolloutObject.percentageRollout}
-          LYSQADLR.updateByPrimaryKey updatedBaseRollout
-          LYSQADLR.create configRolloutObject
-          CADLR.clearDomainCache (cast merchantOpCityId') domain
-          CADLR.clearCityConfigsCache (cast merchantOpCityId')
-          return Kernel.Types.APISuccess.Success
-        Nothing -> do
-          LYSQADLR.create configRolloutObject
-          CADLR.clearDomainCache (cast merchantOpCityId') domain
-          CADLR.clearCityConfigsCache (cast merchantOpCityId')
-          return Kernel.Types.APISuccess.Success
+    createNewRollout :: BeamFlow m r => AppDynamicLogicRollout -> AppDynamicLogicRollout -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Int
+    createNewRollout configRolloutObject baseRollout merchantOpCityId' domain = do
+      when (configRolloutObject.percentageRollout > baseRollout.percentageRollout) $
+        throwError $ InvalidRequest $ "Insufficient percentage on base version: " <> show baseRollout.percentageRollout <> " either conclude existing versions or reduce rollout percentage."
+      let updatedBaseRollout = baseRollout {percentageRollout = baseRollout.percentageRollout - configRolloutObject.percentageRollout}
+      LYSQADLR.updateByPrimaryKey updatedBaseRollout
+      CADLR.create configRolloutObject
+      CADLR.clearCache (cast merchantOpCityId') domain
+      return configRolloutObject.version
 
     -- Non-driver/rider config domain handling
     handleOtherDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> Lib.Yudhishthira.Types.LogicDomain -> m Kernel.Types.APISuccess.APISuccess
@@ -561,8 +613,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
       let rolloutObjects = concat rolloutObjectsArr
       CADLR.delete (cast merchantOpCityId') domain
       CADLR.createMany rolloutObjects
-      CADLR.clearDomainCache (cast merchantOpCityId') domain
-      CADLR.clearCityConfigsCache (cast merchantOpCityId')
+      CADLR.clearCache (cast merchantOpCityId') domain
       return Kernel.Types.APISuccess.Success
 
     mkAppDynamicLogicRolloutDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicRolloutObject -> m [AppDynamicLogicRollout]
@@ -572,7 +623,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
       unless (isDriverOrRiderConfig domain) $ do
         let rolloutSum = sum $ map (.rolloutPercentage) rollout
         when (rolloutSum /= 100) $ throwError $ InvalidRequest "Sum of rollout percentage should be 100"
-      mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds experimentStatus modifiedBy) rollout
+      mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds (if isDriverOrRiderConfig domain then Just Lib.Yudhishthira.Types.RUNNING else Nothing) modifiedBy) rollout
 
     mkAppDynamicLogicRollout ::
       BeamFlow m r =>
@@ -624,7 +675,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
           percentageRollout = rolloutPerc,
           timeBounds = "Unbounded",
           version = newVersion,
-          versionDescription = Nothing,
+          versionDescription = Just "System generated base rollout",
           createdAt = now,
           updatedAt = now,
           ..
@@ -655,107 +706,88 @@ groupByTimeBounds = groupBy sameTimeBounds
 sameTimeBounds :: AppDynamicLogicRollout -> AppDynamicLogicRollout -> Bool
 sameTimeBounds r1 r2 = Lib.Yudhishthira.Types.AppDynamicLogicRollout.timeBounds r1 == Lib.Yudhishthira.Types.AppDynamicLogicRollout.timeBounds r2
 
-getNammaTagConfigPilotAllConfigsProvider :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Bool -> m [Lib.Yudhishthira.Types.ConfigType]
-getNammaTagConfigPilotAllConfigsProvider merchantOpCityId mbUnderExp = do
-  allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
-  let driverConfigRollouts =
-        filter
-          ( \rollout -> case rollout.domain of
-              Lib.Yudhishthira.Types.DRIVER_CONFIG _ -> True
-              _ -> False
-          )
-          allRollouts
+getNammaTagConfigPilotAllConfigs ::
+  BeamFlow m r =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Maybe Bool ->
+  Lib.Yudhishthira.Types.ConfigTypeChoice ->
+  m [Lib.Yudhishthira.Types.ConfigType]
+getNammaTagConfigPilotAllConfigs merchantOpCityId mbUnderExp configChoice = do
   case mbUnderExp of
     Just True -> do
-      let configsInExperiment :: [Lib.Yudhishthira.Types.LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) allRollouts
-          configTypes = map extractDriverConfig configsInExperiment
+      allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+      let configRollouts =
+            filter
+              ( \rollout -> case configChoice of
+                  Lib.Yudhishthira.Types.DriverCfg -> case rollout.domain of
+                    Lib.Yudhishthira.Types.DRIVER_CONFIG _ -> True
+                    _ -> False
+                  Lib.Yudhishthira.Types.RiderCfg -> case rollout.domain of
+                    Lib.Yudhishthira.Types.RIDER_CONFIG _ -> True
+                    _ -> False
+              )
+              allRollouts
+          configsInExperiment :: [Lib.Yudhishthira.Types.LogicDomain] =
+            nub $
+              map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) configRollouts
+          configTypes = case configChoice of
+            Lib.Yudhishthira.Types.DriverCfg -> map extractDriverConfig configsInExperiment
+            Lib.Yudhishthira.Types.RiderCfg -> map extractRiderConfig configsInExperiment
       return $ catMaybes configTypes
     _ -> do
-      let allConfigDomains = nub $ map domain driverConfigRollouts
-          configTypes = mapMaybe extractDriverConfig allConfigDomains
+      let configTypes :: [Lib.Yudhishthira.Types.ConfigType] = Lib.Yudhishthira.Types.allValues
       return configTypes
-  where
-    extractDriverConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
-    extractDriverConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG config) = Just config
-    extractDriverConfig _ = Nothing
 
-getNammaTagConfigPilotAllConfigsRider :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Bool -> m [Lib.Yudhishthira.Types.ConfigType]
-getNammaTagConfigPilotAllConfigsRider merchantOpCityId mbUnderExp = do
-  allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
-  let riderConfigRollouts =
-        filter
-          ( \rollout -> case rollout.domain of
-              Lib.Yudhishthira.Types.RIDER_CONFIG _ -> True
-              _ -> False
-          )
-          allRollouts
-  case mbUnderExp of
-    Just True -> do
-      let configsInExperiment :: [Lib.Yudhishthira.Types.LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) allRollouts
-          configTypes = map extractRiderConfig configsInExperiment
-      return $ catMaybes configTypes
-    _ -> do
-      let allConfigDomains = nub $ map domain riderConfigRollouts
-          configTypes = mapMaybe extractRiderConfig allConfigDomains
-      return configTypes
-  where
-    extractRiderConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
-    extractRiderConfig (Lib.Yudhishthira.Types.RIDER_CONFIG config) = Just config
-    extractRiderConfig _ = Nothing
-
-getNammaTagConfigPilotConfigDetailsProvider :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.ConfigType -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
-getNammaTagConfigPilotConfigDetailsProvider merchantOpCityId cfg = do
-  allConfigRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId (Lib.Yudhishthira.Types.DRIVER_CONFIG cfg)
-  mapM makeConfigDetailResp allConfigRollouts
+getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
+getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
+  allConfigRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain'
+  let runningConfigRollouts = filter (\rollout -> rollout.isBaseVersion == Just True || rollout.percentageRollout /= 0) allConfigRollouts
+  mapM makeConfigDetailResp runningConfigRollouts
   where
     makeConfigDetailResp :: BeamFlow m r => AppDynamicLogicRollout -> m Lib.Yudhishthira.Types.ConfigDetailsResp
     makeConfigDetailResp (AppDynamicLogicRollout {..}) = do
-      logicsObject <- CADLE.findByDomainAndVersion (Lib.Yudhishthira.Types.DRIVER_CONFIG cfg) version
+      logicsObject <- CADLE.findByDomainAndVersion domain' version
       let logics = map (.logic) logicsObject
       return $
         Lib.Yudhishthira.Types.ConfigDetailsResp
           { modifiedBy = modifiedBy,
             percentageRollout = percentageRollout,
             version = version,
-            configPatch = logics
+            configPatch = logics,
+            isBasePatch = isBaseVersion == Just True
           }
 
-getNammaTagConfigPilotConfigDetailsRider :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.ConfigType -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
-getNammaTagConfigPilotConfigDetailsRider merchantOpCityId cfg = do
-  allConfigRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId (Lib.Yudhishthira.Types.RIDER_CONFIG cfg)
-  mapM makeConfigDetailResp allConfigRollouts
-  where
-    makeConfigDetailResp :: BeamFlow m r => AppDynamicLogicRollout -> m Lib.Yudhishthira.Types.ConfigDetailsResp
-    makeConfigDetailResp (AppDynamicLogicRollout {..}) = do
-      logicsObject <- CADLE.findByDomainAndVersion (Lib.Yudhishthira.Types.RIDER_CONFIG cfg) version
-      let logics = map (.logic) logicsObject
-      return $
-        Lib.Yudhishthira.Types.ConfigDetailsResp
-          { modifiedBy = modifiedBy,
-            percentageRollout = percentageRollout,
-            version = version,
-            configPatch = logics
-          }
-
-postNammaTagConfigPilotActionChange :: BeamFlow m r => Maybe (Id Lib.Yudhishthira.Types.Merchant) -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.ActionChangeRequest -> Maybe Int -> m Kernel.Types.APISuccess.APISuccess
-postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req originalBasePercentage = do
+postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()) -> (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) -> Kernel.Types.Beckn.Context.City -> m Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConfigDBUpdate' giveConfigs opCity = do
   case req of
-    Lib.Yudhishthira.Types.Conclude concludeReq -> do
-      expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain merchantOpCityId "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
+    LYT.Conclude concludeReq -> do
+      expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain (cast merchantOpCityId) "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
+      baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) concludeReq.domain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+      when (concludeReq.version == baseRollout.version) $ throwError $ InvalidRequest "Cannot conclude the base rollout"
+      when (expRollout.experimentStatus /= Just LYT.RUNNING) $ throwError $ InvalidRequest "The experiment should be in running state for getting concluded"
+      baseElements <- CADLE.findByDomainAndVersion concludeReq.domain baseRollout.version
+      let baseLogics = fmap (.logic) baseElements
+      handleConfigDBUpdate' (cast merchantOpCityId) concludeReq baseLogics mbMerchantId opCity
+      let originalBasePercentage = baseRollout.percentageRollout
+          updatedBaseRollout =
+            baseRollout
+              { isBaseVersion = Nothing,
+                experimentStatus = Just LYT.CONCLUDED,
+                percentageRollout = 0
+              }
+      LYSQADLR.updateByPrimaryKey updatedBaseRollout
       let concludedRollout =
             expRollout
-              { experimentStatus = Just Lib.Yudhishthira.Types.CONCLUDED,
+              { experimentStatus = Just LYT.CONCLUDED,
                 isBaseVersion = Just True,
-                percentageRollout = expRollout.percentageRollout + fromMaybe 0 originalBasePercentage
+                percentageRollout = expRollout.percentageRollout + originalBasePercentage
               }
       LYSQADLR.updateByPrimaryKey concludedRollout
-      CADLR.clearDomainCache (cast merchantOpCityId) concludeReq.domain
-      CADLR.clearCityConfigsCache (cast merchantOpCityId)
-      fork "push concluded_rollout to kafka" $ pushToKafka concludedRollout "concluded-rollout" ""
-      pure Kernel.Types.APISuccess.Success
-    Lib.Yudhishthira.Types.Abort abortReq -> do
+      CADLR.clearCache (cast merchantOpCityId) concludeReq.domain
+      makeConfigHistory concludeReq.domain concludeReq.version
+    LYT.Abort abortReq -> do
       expRollout <- LYSQADLR.findByPrimaryKey abortReq.domain merchantOpCityId "Unbounded" abortReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show abortReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show abortReq.version)
-      mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase merchantOpCityId abortReq.domain
+      mbBaseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId abortReq.domain
       when (isNothing mbBaseRollout) $ throwError $ InvalidRequest $ "No Base version rollout found for " <> show abortReq.domain
       let baseRollout = fromJust mbBaseRollout
           updatedBaseRollout =
@@ -765,66 +797,79 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req originalBa
           abortedRollout =
             expRollout
               { percentageRollout = 0,
-                experimentStatus = Just Lib.Yudhishthira.Types.DISCARDED
+                experimentStatus = Just LYT.DISCARDED
               }
       when (abortReq.version == baseRollout.version) $ throwError $ InvalidRequest "Cannot abort the base rollout"
+      when (expRollout.experimentStatus /= Just LYT.RUNNING) $ throwError $ InvalidRequest "The experiment should be in running state for getting aborted"
       LYSQADLR.updateByPrimaryKey abortedRollout
       LYSQADLR.updateByPrimaryKey updatedBaseRollout
-      CADLR.clearDomainCache (cast merchantOpCityId) abortReq.domain
-      CADLR.clearCityConfigsCache (cast merchantOpCityId)
-      fork "push aborted_rollout to kafka" $ pushToKafka abortedRollout "aborted-rollout" ""
-      pure Kernel.Types.APISuccess.Success
+      CADLR.clearCache (cast merchantOpCityId) abortReq.domain
+      makeConfigHistory abortReq.domain abortReq.version
     Lib.Yudhishthira.Types.Revert revertReq -> do
-      mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase merchantOpCityId revertReq.domain
-      when (isNothing mbBaseRollout) $ throwError $ InvalidRequest $ "No Base version rollout found for " <> show revertReq.domain
+      baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId revertReq.domain >>= fromMaybeM (InvalidRequest $ "No Base version rollout found for " <> show revertReq.domain)
       now <- getCurrentTime
       newVersion <- do
         latestElement <- QADLE.findLatestVersion (Just 1) Nothing revertReq.domain
         return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
-      let baseRollout = fromJust mbBaseRollout
-          newBaseElement = mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now
-          newBaseRollout = mkBaseAppDynamicLogicRollout newVersion baseRollout now
+      let newBaseElement = mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now revertReq.domain
+          newBaseRollout = mkBaseAppDynamicLogicRollout newVersion baseRollout now revertReq.domain
           revertedBaseRollout =
             baseRollout
               { isBaseVersion = Nothing,
                 percentageRollout = 0,
-                experimentStatus = Just Lib.Yudhishthira.Types.REVERTED
+                experimentStatus = Just LYT.REVERTED
               }
       LYSQADLR.updateByPrimaryKey revertedBaseRollout
-      LYSQADLE.create newBaseElement
-      LYSQADLR.create newBaseRollout
+      CADLE.create newBaseElement
+      CADLR.create newBaseRollout
       CADLE.clearCache revertReq.domain
-      CADLR.clearDomainCache (cast merchantOpCityId) revertReq.domain
-      CADLR.clearCityConfigsCache (cast merchantOpCityId)
-      pure Kernel.Types.APISuccess.Success
-      where
-        mkBaseAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> DTADLE.AppDynamicLogicElement
-        mkBaseAppDynamicLogicElement version logic order now =
-          DTADLE.AppDynamicLogicElement
-            { createdAt = now,
-              updatedAt = now,
-              merchantId = mbMerchantId,
-              domain = revertReq.domain,
-              description = Nothing,
-              ..
-            }
-        mkBaseAppDynamicLogicRollout :: Int -> AppDynamicLogicRollout -> UTCTime -> AppDynamicLogicRollout
-        mkBaseAppDynamicLogicRollout newVersion originalBaseRollout now =
-          AppDynamicLogicRollout
-            { domain = revertReq.domain,
-              experimentStatus = Just Lib.Yudhishthira.Types.RUNNING,
-              isBaseVersion = Just True,
-              merchantId = mbMerchantId,
-              merchantOperatingCityId = merchantOpCityId,
-              modifiedBy = Nothing,
-              percentageRollout = originalBaseRollout.percentageRollout,
-              timeBounds = "Unbounded",
-              version = newVersion,
-              versionDescription = Nothing,
-              createdAt = now,
-              updatedAt = now,
-              ..
-            }
+      CADLR.clearCache (cast merchantOpCityId) revertReq.domain
+      makeConfigHistory revertReq.domain baseRollout.version
+  pure Kernel.Types.APISuccess.Success
+  where
+    makeConfigHistory domain version = do
+      fork "pushing config history" $ do
+        configType <- case domain of
+          LYT.DRIVER_CONFIG ct -> return ct
+          LYT.RIDER_CONFIG ct -> return ct
+          _ -> throwError $ InternalError "Unsupported logic domain"
+        when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
+        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId) (fromJust mbMerchantId) opCity
+        case req of
+          LYT.Abort _ -> do
+            pushConfigHistory domain version merchantOpCityId configsJson
+          _ -> do
+            allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+            let configRollouts = filter (\rollout -> rollout.domain == domain && (rollout.percentageRollout /= 0 || rollout.isBaseVersion == Just True)) allRollouts
+            mapM_ (\rollout -> pushConfigHistory domain rollout.version merchantOpCityId configsJson) configRollouts
+
+    mkBaseAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> LYT.LogicDomain -> DTADLE.AppDynamicLogicElement
+    mkBaseAppDynamicLogicElement version logic order now domain =
+      DTADLE.AppDynamicLogicElement
+        { createdAt = now,
+          updatedAt = now,
+          merchantId = mbMerchantId,
+          domain = domain,
+          description = Nothing,
+          ..
+        }
+    mkBaseAppDynamicLogicRollout :: Int -> AppDynamicLogicRollout -> UTCTime -> LYT.LogicDomain -> AppDynamicLogicRollout
+    mkBaseAppDynamicLogicRollout newVersion originalBaseRollout now domain =
+      AppDynamicLogicRollout
+        { domain = domain,
+          experimentStatus = Just LYT.CONCLUDED,
+          isBaseVersion = Just True,
+          merchantId = mbMerchantId,
+          merchantOperatingCityId = merchantOpCityId,
+          modifiedBy = Nothing,
+          percentageRollout = originalBaseRollout.percentageRollout,
+          timeBounds = "Unbounded",
+          version = newVersion,
+          versionDescription = Just "System generated base rollout",
+          createdAt = now,
+          updatedAt = now,
+          ..
+        }
 
 isString :: A.Value -> Bool
 isString (A.String _) = True
@@ -838,3 +883,48 @@ isDriverOrRiderConfig :: Lib.Yudhishthira.Types.LogicDomain -> Bool
 isDriverOrRiderConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG _) = True
 isDriverOrRiderConfig (Lib.Yudhishthira.Types.RIDER_CONFIG _) = True
 isDriverOrRiderConfig _ = False
+
+-- isUIConfig :: LYT.LogicDomain -> Bool
+-- isUIConfig (LYT.DRIVER_CONFIG (LYT.UiConfig _ _)) = True
+-- isUIConfig (LYT.RIDER_CONFIG (LYT.UiConfig _ _)) = True
+-- isUIConfig _ = False
+
+extractDriverConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
+extractDriverConfig (Lib.Yudhishthira.Types.DRIVER_CONFIG config) = Just config
+extractDriverConfig _ = Nothing
+
+extractRiderConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
+extractRiderConfig (Lib.Yudhishthira.Types.RIDER_CONFIG config) = Just config
+extractRiderConfig _ = Nothing
+
+pushConfigHistory :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => LYT.LogicDomain -> Int -> Id LYT.MerchantOperatingCity -> [A.Value] -> m ()
+pushConfigHistory domain version merchantOpCityId configsJson = do
+  expRollout <- LYSQADLR.findByPrimaryKey domain (cast merchantOpCityId) "Unbounded" version >>= fromMaybeM (InternalError $ "Experiment Rollout not found for domain: " <> show domain <> " and version: " <> show version)
+  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain >>= fromMaybeM (InternalError "Base Rollout not found")
+  logicsObject <- CADLE.findByDomainAndVersion domain version
+  when (null logicsObject) $ throwError $ InternalError $ "Logics not found for domain: " <> show domain <> " and version: " <> show version
+  let logics = map (.logic) logicsObject
+  let configWrappers = map (\cfg -> LYT.Config cfg Nothing 0) configsJson
+  finalConfigs <- mapM (runLogicsOnConfig logics) configWrappers
+  uuid <- generateGUID
+  now <- getCurrentTime
+  let configHistory =
+        LYT.ConfigHistory
+          { id = uuid,
+            domain,
+            version,
+            status = expRollout.experimentStatus,
+            merchantOperatingCityId = cast merchantOpCityId,
+            configJson = finalConfigs,
+            baseVersionUsed = baseRollout.version,
+            createdAt = now
+          }
+  pushToKafka configHistory "config-history" ""
+  where
+    runLogicsOnConfig logics configWrapper = do
+      response <- try @_ @SomeException $ runLogics logics configWrapper
+      case response of
+        Left e -> do
+          throwError (InternalError $ "Error in push config history for domain: " <> show domain <> " and version: " <> show version <> " and error: " <> show e)
+        Right resp -> do
+          return resp.result

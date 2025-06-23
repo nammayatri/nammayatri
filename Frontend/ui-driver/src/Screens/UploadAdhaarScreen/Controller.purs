@@ -15,7 +15,7 @@
 
 module Screens.UploadAdhaarScreen.Controller where
 
-import Prelude (pure, (==), unit, ($), class Show, bind, discard)
+import Prelude (pure, (==), unit, ($), class Show, bind, discard, (<>), show)
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (UploadAdhaarScreenState)
 import Components.RegistrationModal as RegistrationModalController
@@ -29,7 +29,17 @@ import Screens (ScreenName(..), getScreen)
 import Common.Types.App
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (RegistrationModalAction var1) = "RegistrationModalAction_" <> show var1
+  show (OnboardingHeaderAction var1) = "OnboardingHeaderAction_" <> show var1
+  show (PrimaryButtonAction var1) = "PrimaryButtonAction_" <> show var1
+  show (RemoveUploadedFile _) = "RemoveUploadedFile"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (UploadFileAction _) = "UploadFileAction"
+  show (UploadImage) = "UploadImage"
+  show (PreviewImageAction) = "PreviewImageAction"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

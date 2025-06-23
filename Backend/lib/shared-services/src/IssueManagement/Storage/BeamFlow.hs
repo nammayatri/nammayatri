@@ -4,6 +4,7 @@ import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
 import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
+import qualified IssueManagement.Storage.Beam.Issue.IssueChat as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueMessage as BeamIM
 import qualified IssueManagement.Storage.Beam.Issue.IssueOption as BeamIO
@@ -26,5 +27,6 @@ type BeamFlow m r =
     HasSchemaName BeamIO.IssueOptionT,
     HasSchemaName BeamIR.IssueReportT,
     HasSchemaName BeamIT.IssueTranslationT,
+    HasSchemaName BeamIC.IssueChatT,
     HasSchemaName BeamMF.MediaFileT
   )

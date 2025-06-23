@@ -3,6 +3,8 @@
 
 module Storage.Beam.JourneyLeg where
 
+import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -13,13 +15,17 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data JourneyLegT f = JourneyLegT
-  { distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+  { changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     endLocationLat :: B.C f Kernel.Prelude.Double,
     endLocationLon :: B.C f Kernel.Prelude.Double,
+    entrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    exit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -33,6 +39,7 @@ data JourneyLegT f = JourneyLegT
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
     sequenceNumber :: B.C f Kernel.Prelude.Int,
+    serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
     toArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -54,6 +61,6 @@ instance B.Table JourneyLegT where
 
 type JourneyLeg = JourneyLegT Identity
 
-$(enableKVPG ''JourneyLegT ['id] [['journeyId]])
+$(enableKVPG ''JourneyLegT ['id] [['journeyId], ['legId]])
 
 $(mkTableInstances ''JourneyLegT "journey_leg")

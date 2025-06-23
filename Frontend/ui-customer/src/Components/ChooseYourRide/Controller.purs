@@ -33,10 +33,11 @@ data Action
   | TipBtnClick Int Int (Array Int)
   | AddTip TipViewProps
   | ChangeTip TipViewProps
-
+  | SheetStateChanged String
 
 type Config
   = { rideDistance :: String
+    , actualEstimateDistnace :: Int
     , rideDuration :: String
     , rideTime :: String
     , activeIndex :: Int
@@ -59,6 +60,7 @@ type Config
     , startTimeUTC :: Maybe String
     , returnTimeUTC :: Maybe String
     , roundTrip :: Boolean
+    , pushSheetChangedAction :: Boolean
     }
 
 type BookAnyProps 
@@ -72,6 +74,7 @@ config :: Config
 config =
   { rideDistance: ""
   , rideDuration: ""
+  , actualEstimateDistnace: 0
   , rideTime: ""
   , activeIndex: 0
   , quoteList: []
@@ -105,6 +108,7 @@ config =
   , startTimeUTC : Nothing
   , returnTimeUTC : Nothing
   , roundTrip : false
+  , pushSheetChangedAction : false
   }
 
 bookAnyProps :: BookAnyProps

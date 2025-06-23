@@ -32,6 +32,7 @@ import Tools.Error (RoleError (..))
 
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
+    dashboardAccessType :: Maybe DashboardAccessType,
     description :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -72,7 +73,7 @@ buildRole req = do
     DRole.Role
       { id = uid,
         name = req.name,
-        dashboardAccessType = DRole.DASHBOARD_USER,
+        dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
         description = req.description,
         createdAt = now,
         updatedAt = now

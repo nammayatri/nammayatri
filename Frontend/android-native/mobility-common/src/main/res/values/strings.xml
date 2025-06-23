@@ -28,5 +28,6 @@
     <string name="ny_pick_image_intent_chooser_title" translatable="false">Select source</string>
     <string name="ny_crop_image_activity_no_permissions" translatable="false">Cancelling, required permissions are not granted</string>
     <string name="unable_to_upload_media">Unable to Upload media</string>
+    <string name="media_upload_success">Media Uploaded Successfully</string>
     <string name="location_is_too_far">Location is too far!</string>
 </resources>

@@ -25,3 +25,11 @@ endAssociationForRC (Id fleetOwnerId) (Id rcId) = do
   updateWithKV
     [Se.Set Beam.associatedTill $ Just now]
     [Se.And [Se.Is Beam.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is Beam.associatedTill (Se.GreaterThan $ Just now), Se.Is Beam.rcId (Se.Eq rcId)]]
+
+findAllActiveAssociationByRCId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id VehicleRegistrationCertificate ->
+  m [FleetRCAssociation]
+findAllActiveAssociationByRCId (Id rcId) = do
+  now <- getCurrentTime
+  findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]]

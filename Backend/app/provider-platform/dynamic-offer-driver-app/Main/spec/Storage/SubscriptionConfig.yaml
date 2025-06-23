@@ -23,11 +23,15 @@ SubscriptionConfig:
       nextJobScheduleTimeThreshold : Int
       rescheduleTimeThreshold : Int
       derive: "Ord, Eq"
+    CurrentPlanEntites :
+      enum : "SAFETY_PLUS"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read"
   fields:
     allowManualPaymentLinks: Bool
     useOverlayService: Bool
     paymentLinkChannel: Domain.Types.MerchantMessage.MediaChannel
     paymentLinkJobTime: Data.Time.NominalDiffTime
+    genericNextJobScheduleTimeThreshold: Data.Time.NominalDiffTime
     genericBatchSizeForJobs: Int
     genericJobRescheduleTime: Data.Time.NominalDiffTime
     maxRetryCount: Int
@@ -56,9 +60,17 @@ SubscriptionConfig:
     extWebhookConfigs: Maybe ExternalWebhookConfigs
     isUIEnabled : Bool
     webhookConfig : Maybe WebhookConfig
+    isFreeTrialDaysApplicable : Bool
+    dataEntityToSend : "[CurrentPlanEntites]"
+    enableServiceUsageChargeDefault : Bool
+    waiveOffOfferTitle : Text
+    waiveOffOfferDescription : Text
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    genericNextJobScheduleTimeThreshold: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> genericNextJobScheduleTimeThreshold)|E
     paymentLinkJobTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
     freeTrialRidesApplicable: Kernel.Prelude.fromMaybe False|I
     isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.fromMaybe False|I
@@ -67,10 +79,15 @@ SubscriptionConfig:
     sendAckForMandateEvents : Kernel.Prelude.fromMaybe False|I
     isUIEnabled : Kernel.Prelude.fromMaybe False|I
     eventsEnabledForWebhook : Kernel.Prelude.fromMaybe []|I
+    isFreeTrialDaysApplicable:  Kernel.Prelude.fromMaybe True|I
     extWebhookConfigs: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< extWebhookConfigs | E
     webhookConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< webhookConfig | E
+    dataEntityToSend :  Kernel.Prelude.fromMaybe []|I
+    enableServiceUsageChargeDefault:  Kernel.Prelude.fromMaybe True|I
+    waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
+    waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -83,6 +100,12 @@ SubscriptionConfig:
     extWebhookConfigs: Kernel.Prelude.toJSON <$> extWebhookConfigs | E
     webhookConfig: Kernel.Prelude.toJSON <$> webhookConfig | E
     eventsEnabledForWebhook: Kernel.Prelude.Just|I
+    isFreeTrialDaysApplicable: Kernel.Prelude.Just|I
+    dataEntityToSend : Kernel.Prelude.Just|I
+    enableServiceUsageChargeDefault : Kernel.Prelude.Just|I
+    genericNextJobScheduleTimeThreshold :  Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    waiveOffOfferTitle : Kernel.Prelude.Just|I
+    waiveOffOfferDescription : Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -95,6 +118,12 @@ SubscriptionConfig:
     extWebhookConfigs: Maybe Value
     webhookConfig: Maybe Value
     eventsEnabledForWebhook: Maybe [WebhookEvent]
+    isFreeTrialDaysApplicable: Maybe Bool
+    dataEntityToSend : Maybe [CurrentPlanEntites]
+    enableServiceUsageChargeDefault : Maybe Bool
+    genericNextJobScheduleTimeThreshold : Maybe Seconds
+    waiveOffOfferTitle : Maybe Text
+    waiveOffOfferDescription : Maybe Text
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -127,3 +156,4 @@ SubscriptionConfig:
    eventsEnabledForWebhook: text[]
    extWebhookConfigs: "json"
    webhookConfig:  "json"
+   dataEntityToSend: text[]

@@ -286,6 +286,7 @@ instance IsAPIError TicketBookingError
 data RiderError
   = RiderConfigNotFound Text
   | RiderConfigDoesNotExist Text
+  | RiderConfigFieldIsEmpty Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RiderError
@@ -293,14 +294,17 @@ instanceExceptionWithParent 'HTTPException ''RiderError
 instance IsBaseError RiderError where
   toMessage (RiderConfigNotFound merchantOperatingCityId) = Just $ "Rider with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" not found."
   toMessage (RiderConfigDoesNotExist merchantOperatingCityId) = Just $ "Rider with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" does not exist."
+  toMessage (RiderConfigFieldIsEmpty field merchantOperatingCityId) = Just $ "RiderConfig with merchantOperatingCityId \"" <> merchantOperatingCityId <> "\" , field \"" <> field <> "\" is empty."
 
 instance IsHTTPError RiderError where
   toErrorCode = \case
     RiderConfigNotFound _ -> "RIDER_NOT_FOUND"
     RiderConfigDoesNotExist _ -> "RIDER_NOT_EXISTS"
+    RiderConfigFieldIsEmpty _ _ -> "RIDER_CONFIG_FIELD_IS_EMPTY"
   toHttpCode = \case
     RiderConfigNotFound _ -> E500
     RiderConfigDoesNotExist _ -> E400
+    RiderConfigFieldIsEmpty _ _ -> E400
 
 instance IsAPIError RiderError
 
@@ -624,7 +628,7 @@ instanceExceptionWithParent 'HTTPException ''PaymentError
 instance IsBaseError PaymentError where
   toMessage = \case
     PaymentMethodRequired -> Just "Payment method is required to book a ride"
-    CustomerPaymentIdNotFound cusomterId -> Just $ "Customer payment id with id \"" <> show cusomterId <> "\" not found."
+    CustomerPaymentIdNotFound customerId -> Just $ "Customer payment id with id \"" <> show customerId <> "\" not found."
     PaymentMethodIdNotFound bookingId -> Just $ "Payment method for booking with id \"" <> show bookingId <> "\" not found."
     DriverAccountIdNotFound bookingId -> Just $ "Driver account for booking with id \"" <> show bookingId <> "\" not found."
 
@@ -725,6 +729,8 @@ instance IsAPIError SafetyError
 data JourneyError
   = JourneyNotFound Text
   | JourneyLegReqDataNotFound Int
+  | JourneyLegSearchIdNotFound Text Int
+  | JourneyLegNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''JourneyError
@@ -733,14 +739,20 @@ instance IsBaseError JourneyError where
   toMessage = \case
     JourneyNotFound journeyId -> Just ("Journey with id: " <> journeyId <> " not found.")
     JourneyLegReqDataNotFound sequenceNumber -> Just ("Request data for journey leg number: " <> show sequenceNumber <> " not found!")
+    JourneyLegSearchIdNotFound journeyId legNumber -> Just ("SearchId for JourneyLeg with id: " <> journeyId <> " and legNumber: " <> show legNumber <> " not found.")
+    JourneyLegNotFound legId -> Just ("JourneyLeg with id: " <> legId <> " not found.")
 
 instance IsHTTPError JourneyError where
   toErrorCode = \case
     JourneyNotFound _ -> "JOURNEY_NOT_FOUND"
     JourneyLegReqDataNotFound _ -> "JOURNEY_LEG_REQ_DATA_NOT_FOUND"
+    JourneyLegSearchIdNotFound _ _ -> "JOURNEY_LEG_SEARCH_ID_NOT_FOUND"
+    JourneyLegNotFound _ -> "JOURNEY_LEG_NOT_FOUND"
   toHttpCode = \case
     JourneyNotFound _ -> E400
     JourneyLegReqDataNotFound _ -> E400
+    JourneyLegSearchIdNotFound _ _ -> E400
+    JourneyLegNotFound _ -> E400
 
 instance IsAPIError JourneyError
 
@@ -782,27 +794,35 @@ instance IsHTTPError DiscountError where
 
 instance IsAPIError DiscountError
 
-data CancelAndSwitchLegError
+data JourneyLegError
   = JourneyLegCannotBeSwitched Text
   | JourneyLegCannotBeCancelled Text
+  | JourneyLegCannotBeSkippedForMode Text
+  | JourneyLegCannotBeSkippedForStatus Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''CancelAndSwitchLegError
+instanceExceptionWithParent 'HTTPException ''JourneyLegError
 
-instance IsBaseError CancelAndSwitchLegError where
+instance IsBaseError JourneyLegError where
   toMessage = \case
     JourneyLegCannotBeSwitched journeyLegId -> Just ("JourneyLeg with id: " <> journeyLegId <> " can not be switched.")
     JourneyLegCannotBeCancelled journeyLegId -> Just ("Request data for journey leg number: " <> journeyLegId <> " can not be cancelled!")
+    JourneyLegCannotBeSkippedForMode journeyLegMode -> Just ("JourneyLeg csnnot be switched for mode: " <> journeyLegMode)
+    JourneyLegCannotBeSkippedForStatus journeyLegStatus -> Just ("JourneyLeg csnnot be switched for status: " <> journeyLegStatus)
 
-instance IsHTTPError CancelAndSwitchLegError where
+instance IsHTTPError JourneyLegError where
   toErrorCode = \case
     JourneyLegCannotBeSwitched _ -> "JOURNEY_LEG_CANNOT_SWITCH"
     JourneyLegCannotBeCancelled _ -> "JOURNEY_LEG_CANNOT_CANCELLED"
+    JourneyLegCannotBeSkippedForMode _ -> "JOURNEY_LEG_CANNOT_SKIP"
+    JourneyLegCannotBeSkippedForStatus _ -> "JOURNEY_LEG_CANNOT_SKIP"
   toHttpCode = \case
     JourneyLegCannotBeSwitched _ -> E400
     JourneyLegCannotBeCancelled _ -> E400
+    JourneyLegCannotBeSkippedForMode _ -> E400
+    JourneyLegCannotBeSkippedForStatus _ -> E400
 
-instance IsAPIError CancelAndSwitchLegError
+instance IsAPIError JourneyLegError
 
 data FRFSQuoteError
   = CachedFRFSQuoteAnomaly Text Text
@@ -872,7 +892,7 @@ instanceExceptionWithParent 'HTTPException ''FRFSSearchError
 
 instance IsBaseError FRFSSearchError where
   toMessage = \case
-    FRFSSearchNotFound lockKey -> Just $ "FRFS Search with searchId:- " <> lockKey <> " not found."
+    FRFSSearchNotFound searchId -> Just $ "FRFS Search with searchId:- " <> searchId <> " not found."
 
 instance IsHTTPError FRFSSearchError where
   toErrorCode = \case
@@ -882,3 +902,54 @@ instance IsHTTPError FRFSSearchError where
     FRFSSearchNotFound _ -> E500
 
 instance IsAPIError FRFSSearchError
+
+data FRFSSBookingError
+  = FRFSBookingNotMadeThroughPartnerOrg Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSSBookingError
+
+instance IsBaseError FRFSSBookingError where
+  toMessage = \case
+    FRFSBookingNotMadeThroughPartnerOrg bookingId -> Just $ "This booking is not made by partnerOrg. TicketBookingId :- " <> bookingId
+
+instance IsHTTPError FRFSSBookingError where
+  toErrorCode = \case
+    FRFSBookingNotMadeThroughPartnerOrg _ -> "BOOKING_NOT_MADE_THROUGH_PARTNERORG"
+
+  toHttpCode = \case
+    FRFSBookingNotMadeThroughPartnerOrg _ -> E500
+
+instance IsAPIError FRFSSBookingError
+
+data CustomAuthError = IpHitsLimitExceeded deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomAuthError
+
+instance IsBaseError CustomAuthError where
+  toMessage = \case
+    IpHitsLimitExceeded -> Just "IP Rate Limit Exceed, Too Many Requests In Short Duration"
+
+instance IsHTTPError CustomAuthError where
+  toErrorCode = \case
+    IpHitsLimitExceeded -> "IP_HITS_LIMIT_EXCEED"
+  toHttpCode = \case
+    IpHitsLimitExceeded -> E429
+
+instance IsAPIError CustomAuthError
+
+data GTFSError = GTFSFeedInfoNotFound Text Text deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GTFSError
+
+instance IsBaseError GTFSError where
+  toMessage = \case
+    GTFSFeedInfoNotFound vehicleType merchantOperatingCityId -> Just $ "GTFS feed info not found for vehicleType: " <> vehicleType <> " and merchantOperatingCityId: " <> merchantOperatingCityId
+
+instance IsHTTPError GTFSError where
+  toErrorCode = \case
+    GTFSFeedInfoNotFound _ _ -> "GTFS_FEED_INFO_NOT_FOUND"
+  toHttpCode = \case
+    GTFSFeedInfoNotFound _ _ -> E404
+
+instance IsAPIError GTFSError

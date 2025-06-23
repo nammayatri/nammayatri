@@ -13,8 +13,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.EnterMobileNumberScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>))
+module Screens.EnterMobileNumberScreen.Controller
+  ( Action(..)
+  , ScreenOutput(..)
+  , eval
+  )
+  where
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>), show, (<>))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import Screens.Types (EnterMobileNumberScreenState)
 import Components.PrimaryEditText.Controllers as PrimaryEditText
@@ -34,7 +39,14 @@ import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (PrimaryEditTextAction var1) = "PrimaryEditTextAction_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (NoAction ) = "NoAction"
+  show (CheckBoxClicked ) = "CheckBoxClicked"
+  show (CheckClickability ) = "CheckClickability"
+  show (AfterRender ) = "AfterRender"
+  show (NonDisclosureAgreementAction ) = "NonDisclosureAgreementAction"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

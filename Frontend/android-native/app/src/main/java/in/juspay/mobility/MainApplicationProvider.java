@@ -27,8 +27,5 @@ public class MainApplicationProvider extends SplitCompatApplication implements R
     @Override
     public void onCreate() {
         super.onCreate();
-        System.out.println("Hyper Service " + MobilityServiceHolder.getInstance(this).getHyperService());
-        System.out.println("Hyper Service isInitialised " + MobilityServiceHolder.getInstance(this).getHyperService().isInitialised());
-        MobilityServiceHolder.getInstance(this).initiate(this);
     }
 }

@@ -51,7 +51,25 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeS
 import Styles.Colors as Color
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (Dummy) = "Dummy"
+  show (OnFadeComplete _) = "OnFadeComplete"
+  show (Refresh) = "Refresh"
+  show (BackPressed) = "BackPressed"
+  show (SelectTab _) = "SelectTab"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (IndividualRideCardAction var1) = "IndividualRideCardAction_" <> show var1
+  show (RideHistoryAPIResponseAction _) = "RideHistoryAPIResponseAction"
+  show (Loader) = "Loader"
+  show (Scroll _) = "Scroll"
+  show (ErrorModalActionController var1) = "ErrorModalActionController_" <> show var1
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (ScrollStateChanged _) = "ScrollStateChanged"
+  show (DatePickerAC var1) = "DatePickerAC_" <> show var1
+  show (ShowDatePicker) = "ShowDatePicker"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+  show (PaymentHistoryModelAC var1) = "PaymentHistoryModelAC_" <> show var1
+  show (OpenPaymentHistory) = "OpenPaymentHistory"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

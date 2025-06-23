@@ -63,7 +63,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity, (<$>))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay, fork)
-import PrestoDOM (alignParentRight, alignParentLeft, Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (alignParentRight, alignParentLeft, Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -89,7 +89,7 @@ import Resource.Constants as RSC
 import Data.Function.Uncurried (Fn3(..), runFn3)
 import Screens.Types as ST
 
-screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
+screen :: SubscriptionScreenState -> GlobalState -> LoggableScreen Action SubscriptionScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
   { initialState
   , view
@@ -113,6 +113,8 @@ screen initialState (GlobalState globalState) =
           let _ = spy "SubscriptionScreen --------action" action
           eval state action
       )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.subscriptionScreenLogWhitelist
   }
   where 
     showSubscriptions driverInfo = do
@@ -121,7 +123,8 @@ screen initialState (GlobalState globalState) =
             Just f1, Just f2 -> f1 && f2 && subscriptionEnabledFE
             _ , _ -> subscriptionEnabledFE
 
-          
+
+
 loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (Number -> Number -> Array KioskLocationRes -> action) -> (APITypes.UiPlansResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GetDriverInfoResp -> Flow GlobalState Unit
 loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVehicleChangeAC errorAction state (GetDriverInfoResp driverInfo) = do
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do

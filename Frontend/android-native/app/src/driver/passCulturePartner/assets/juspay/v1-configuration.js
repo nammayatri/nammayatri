@@ -22,6 +22,7 @@ window.getMerchantConfig = function () {
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
+    "showRegisteredAddress" : false,
     "imageUploadOptional" : false,
     "clientName" : "Pass Culture",
     "languageList": [{

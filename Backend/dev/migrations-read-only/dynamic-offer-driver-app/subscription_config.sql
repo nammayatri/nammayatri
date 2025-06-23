@@ -83,3 +83,25 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN ext_webhook_co
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN events_enabled_for_webhook text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_free_trial_days_applicable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_service_usage_charge_default boolean ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN data_entity_to_send text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN generic_next_job_schedule_time_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_title text ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_description text ;

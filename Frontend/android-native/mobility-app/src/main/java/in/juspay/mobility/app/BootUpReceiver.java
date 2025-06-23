@@ -24,7 +24,12 @@ public class BootUpReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction() != null && intent.getAction().equals(ACTION_BOOT_COMPLETED)) {
-            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
+            Intent locationUpdateService;
+            if (context.getSharedPreferences(context.getString(R.string.preference_file_key),Context.MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                locationUpdateService = new Intent(context, LocationUpdateService.class);
+            } else {
+                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+            }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             Intent widgetReloadService = new Intent(context, WidgetService.class);
             widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -41,17 +46,17 @@ public class BootUpReceiver extends BroadcastReceiver {
                     } else {
                         context.startService(locationUpdateService);
                     }
-                }
-                if (Settings.canDrawOverlays(context)) {
-                    try {
-                        context.startService(widgetReloadService);
-                        Handler handler = new Handler();
-                        handler.postDelayed(() -> {
-                            context.startActivity(restartIntent);
-                            Utils.minimizeApp(context);
-                        }, 5000);
-                    } catch (Exception e) {
-                        Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                    if (Settings.canDrawOverlays(context)) {
+                        try {
+                            context.startService(widgetReloadService);
+                            Handler handler = new Handler();
+                            handler.postDelayed(() -> {
+                                    context.startActivity(restartIntent);
+                                    Utils.minimizeApp(context);
+                                }, 5000);
+                            } catch (Exception e) {
+                            Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                        }
                     }
                 }
             }

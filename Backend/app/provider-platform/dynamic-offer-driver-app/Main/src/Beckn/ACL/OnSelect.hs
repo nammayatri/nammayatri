@@ -247,6 +247,7 @@ mkQuoteBreakupInner quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.SAFETY_PLUS_CHARGES)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

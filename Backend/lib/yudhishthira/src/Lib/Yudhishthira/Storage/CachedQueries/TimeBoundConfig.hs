@@ -17,13 +17,13 @@ findByCityAndDomain ::
   BeamFlow.BeamFlow m r =>
   (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.TimeBoundConfig.TimeBoundConfig]))
 findByCityAndDomain merchantOperatingCityId timeBoundDomain = do
-  Hedis.withCrossAppRedis (Hedis.safeGet $ "yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":TimeBoundDomain-" <> show timeBoundDomain)
+  Hedis.withCrossAppRedis (Hedis.safeGet $ cityAndDomainCacheKey merchantOperatingCityId timeBoundDomain)
     >>= ( \case
             Just a -> pure a
             Nothing ->
               ( \dataToBeCached -> do
                   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                  Hedis.withCrossAppRedis $ Hedis.setExp ("yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":TimeBoundDomain-" <> show timeBoundDomain) dataToBeCached expTime
+                  Hedis.withCrossAppRedis $ Hedis.setExp (cityAndDomainCacheKey merchantOperatingCityId timeBoundDomain) dataToBeCached expTime
               )
                 /=<< Queries.findByCityAndDomain merchantOperatingCityId timeBoundDomain
         )
@@ -32,7 +32,7 @@ findByPrimaryKey ::
   BeamFlow.BeamFlow m r =>
   (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Kernel.Prelude.Text -> Lib.Yudhishthira.Types.LogicDomain -> m (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.TimeBoundConfig.TimeBoundConfig))
 findByPrimaryKey merchantOperatingCityId name timeBoundDomain = do
-  (Hedis.safeGet $ "yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Name-" <> show name <> ":TimeBoundDomain-" <> show timeBoundDomain)
+  (Hedis.safeGet $ primaryKeyCacheKey merchantOperatingCityId name timeBoundDomain)
     >>= ( \case
             Just a -> pure (Just a)
             Nothing ->
@@ -40,7 +40,7 @@ findByPrimaryKey merchantOperatingCityId name timeBoundDomain = do
                 whenJust
                 ( \dataToBeCached -> do
                     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                    Hedis.setExp ("yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Name-" <> show name <> ":TimeBoundDomain-" <> show timeBoundDomain) dataToBeCached expTime
+                    Hedis.setExp (primaryKeyCacheKey merchantOperatingCityId name timeBoundDomain) dataToBeCached expTime
                 )
                 /=<< Queries.findByPrimaryKey merchantOperatingCityId name timeBoundDomain
         )
@@ -50,5 +50,12 @@ delete = Queries.delete
 
 clearCache :: BeamFlow.BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Text -> m ()
 clearCache merchantOperatingCityId timeBoundDomain name = do
-  Hedis.withCrossAppRedis $ Hedis.del ("yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":TimeBoundDomain-" <> show timeBoundDomain)
-  Hedis.withCrossAppRedis $ Hedis.del ("yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Name-" <> show name <> ":TimeBoundDomain-" <> show timeBoundDomain)
+  Hedis.withCrossAppRedis $ Hedis.del (cityAndDomainCacheKey merchantOperatingCityId timeBoundDomain)
+  Hedis.withCrossAppRedis $ Hedis.del (primaryKeyCacheKey merchantOperatingCityId name timeBoundDomain)
+
+-- Cache key functions
+cityAndDomainCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> Text
+cityAndDomainCacheKey merchantOperatingCityId timeBoundDomain = "yudhishthira-CachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":TimeBoundDomain-" <> show timeBoundDomain
+
+primaryKeyCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Kernel.Prelude.Text -> Lib.Yudhishthira.Types.LogicDomain -> Text
+primaryKeyCacheKey merchantOperatingCityId name timeBoundDomain = "yudhishthira-CachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Name-" <> show name <> ":TimeBoundDomain-" <> show timeBoundDomain

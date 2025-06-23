@@ -23,7 +23,6 @@ module Storage.CachedQueries.Exophone
     updateAffectedPhones,
     deleteByMerchantOpCityId,
     clearCache,
-    clearAllCache,
     findByEndRidePhone,
     findByMerchantOpCityIdServiceAndExophoneType,
   )
@@ -87,8 +86,8 @@ clearCache merchantOpCityId exophones = do
     Hedis.del (makePhoneKey exophone.primaryPhone)
     Hedis.del (makePhoneKey exophone.backupPhone)
 
-clearAllCache :: Hedis.HedisFlow m r => m ()
-clearAllCache = Hedis.delByPattern patternKey
+-- clearAllCache :: Hedis.HedisFlow m r => m ()
+-- clearAllCache = Hedis.delByPattern patternKey
 
 -- test with empty list
 cacheExophones :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> [Exophone] -> m ()
@@ -117,9 +116,6 @@ makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 
 makeMerchantOpCityIdServiceExophoneTypeKey :: Id DMOC.MerchantOperatingCity -> CallService -> ExophoneType -> Text
 makeMerchantOpCityIdServiceExophoneTypeKey merchantOpCityId service exophoneType = "CachedQueries:Exophones:MerchantOpCityId-" <> merchantOpCityId.getId <> ":CallService-" <> show service <> ":ExophoneType-" <> show exophoneType
-
-patternKey :: Text
-patternKey = "CachedQueries:Exophones:*"
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 create = Queries.create

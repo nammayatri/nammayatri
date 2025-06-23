@@ -1,0 +1,14 @@
+imports:
+module: DeletedPerson
+types:
+  DeletedPersonReq:
+    reasonToDelete: Maybe Text
+apis:
+  - POST:
+      endpoint: /deleted/person
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.DeletedPerson.DeletedPersonReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+

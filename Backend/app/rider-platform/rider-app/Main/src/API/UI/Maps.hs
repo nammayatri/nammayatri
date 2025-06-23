@@ -71,10 +71,10 @@ getPlaceName :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceNameRe
 getPlaceName (personId, merchantId) = withFlowHandlerAPI . getPlaceName' (personId, merchantId)
 
 autoComplete' :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.AutoCompleteReq -> Flow DMaps.AutoCompleteResp
-autoComplete' (personId, merchantId) = withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId)
+autoComplete' (personId, merchantId) = withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId) (Just personId.getId)
 
 getPlaceDetails' :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceDetailsReq -> Flow DMaps.GetPlaceDetailsResp
-getPlaceDetails' (personId, merchantId) = withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId)
+getPlaceDetails' (personId, merchantId) = withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId) (Just personId.getId)
 
 getPlaceName' :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceNameReq -> Flow DMaps.GetPlaceNameResp
-getPlaceName' (personId, merchantId) = withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId)
+getPlaceName' (personId, merchantId) = withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId) (Just personId.getId)

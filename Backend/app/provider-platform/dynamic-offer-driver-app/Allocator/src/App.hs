@@ -40,6 +40,8 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
+import SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
@@ -100,6 +102,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . softBlockNotifyDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockSoftBlockedDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateSupplyDemand)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateCongestionChargeAvgTaxi)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
@@ -124,6 +127,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runScheduledFCMS)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
     }
 
 runDriverOfferAllocator ::

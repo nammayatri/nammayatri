@@ -161,12 +161,14 @@ select bapToken quoteId =
       { customerExtraFee = Just 10,
         customerExtraFeeWithCurrency = Just $ PriceAPIEntity 10.0 INR,
         otherSelectedEstimates = Nothing,
+        isPetRide = Nothing,
         autoAssignEnabled = False,
         autoAssignEnabledV2 = Nothing,
         isAdvancedBookingEnabled = Nothing,
         paymentMethodId = Nothing,
         deliveryDetails = Nothing,
-        disabilityDisable = Nothing
+        disabilityDisable = Nothing,
+        preferSafetyPlus = Nothing
       }
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty DSRD.SearchRequestForDriverAPIEntity)

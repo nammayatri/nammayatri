@@ -30,6 +30,7 @@ create frfsSearchReq = do
               lineColorCode = journeyRouteDetail.lineColorCode,
               journeyStatus = journeyRouteDetail.journeyStatus,
               frequency = journeyRouteDetail.frequency,
+              alternateShortNames = Just journeyRouteDetail.alternateShortNames,
               routeLongName = journeyRouteDetail.routeLongName,
               searchId = frfsSearchReq.id,
               platformNumber = journeyRouteDetail.platformNumber,
@@ -68,4 +69,10 @@ updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool
 updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV
     [Se.Set Beam.isDeleted isDeleted]
+    [Se.Is Beam.id (Se.Eq reqId)]
+
+updateOnSearchFailed :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
+updateOnSearchFailed (Id reqId) onSearchFailed = do
+  updateOneWithKV
+    [Se.Set Beam.onSearchFailed onSearchFailed]
     [Se.Is Beam.id (Se.Eq reqId)]

@@ -1,3 +1,6 @@
+// we use only notify here
+// import {notify} from "node-notifier"
+
 import * as notifier from "node-notifier";
 const args = process.argv.slice(2);
 

@@ -45,11 +45,24 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
              :> Post '[JSON] DriverOnboarding.DriverRCRes
+           :<|> "pan"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverPanReq
+             :> Post '[JSON] DriverOnboarding.DriverPanRes
+           :<|> "gstin"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverGstinReq
+             :> Post '[JSON] DriverOnboarding.DriverGstinRes
+           :<|> "aadhaar"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverAadhaarReq
+             :> Post '[JSON] DriverOnboarding.DriverAadhaarRes
            :<|> "status"
              :> TokenAuth
              :> QueryParam "makeSelfieAadhaarPanMandatory" Bool
              :> QueryParam "providePrefillDetails" Bool
              :> QueryParam "onboardingVehicleCategory" DVC.VehicleCategory
+             :> QueryParam "useHVSdkForDL" Bool
              :> Get '[JSON] DriverOnboarding.StatusRes
            :<|> "validateImage"
              :> TokenAuth
@@ -79,6 +92,11 @@ type API =
     :<|> "driver" :> "referral" :> "getReferredDrivers"
       :> TokenAuth
       :> Get '[JSON] DriverOnboarding.GetReferredDriverRes
+    :<|> "driver" :> "referral" :> "details"
+      :> TokenAuth
+      :> MandatoryQueryParam "value" Text
+      :> QueryParam "role" DP.Role
+      :> Get '[JSON] DriverOnboarding.DriverReferralDetailsRes
     :<|> "rc"
       :> ( "setStatus"
              :> TokenAuth
@@ -97,6 +115,9 @@ handler :: FlowServer API
 handler =
   ( verifyDL
       :<|> verifyRC
+      :<|> verifyPan
+      :<|> verifyGstin
+      :<|> verifyAadhaar
       :<|> statusHandler
       :<|> validateImage
       :<|> validateImageFile
@@ -106,6 +127,7 @@ handler =
   )
     :<|> addReferral
     :<|> getReferredDrivers
+    :<|> getDriverDetailsByReferralCode
     :<|> setRCStatus
     :<|> deleteRC
     :<|> getAllLinkedRCs
@@ -116,8 +138,17 @@ verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverO
 verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req
 
-statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> FlowHandler DriverOnboarding.StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData onboardingVehicleCategory
+statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData onboardingVehicleCategory useHVSdkForDL
+
+verifyPan :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverPanReq -> FlowHandler DriverOnboarding.DriverPanRes
+verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyPan False Nothing (personId, merchantId, merchantOpCityId) req
+
+verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
+verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyGstin False Nothing (personId, merchantId, merchantOpCityId) req
+
+verifyAadhaar :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverAadhaarReq -> FlowHandler DriverOnboarding.DriverAadhaarRes
+verifyAadhaar (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyAadhaar False Nothing (personId, merchantId, merchantOpCityId) req
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
@@ -148,3 +179,6 @@ deleteRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Dri
 
 getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler [DriverOnboarding.LinkedRC]
 getAllLinkedRCs (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId, merchantOpCityId)
+
+getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Text -> Maybe DP.Role -> FlowHandler DriverOnboarding.DriverReferralDetailsRes
+getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole

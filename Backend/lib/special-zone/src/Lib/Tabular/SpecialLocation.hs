@@ -39,6 +39,7 @@ mkPersist
       merchantOperatingCityId Text Maybe
       linkedLocationsIds (PostgresList Text)
       locationType Domain.SpecialLocationType Maybe
+      enabled Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

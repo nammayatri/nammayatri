@@ -21,6 +21,11 @@ import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (DestinationClicked) = "DestinationClicked"
+  show (AfterRender) = "AfterRender"
 
 data Action = DestinationClicked | AfterRender
 type Config =

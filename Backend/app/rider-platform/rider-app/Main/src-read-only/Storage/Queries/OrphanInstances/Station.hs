@@ -12,6 +12,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Storage.Beam.Station as Beam
 
 instance FromTType' Beam.Station Domain.Types.Station.Station where
@@ -21,6 +22,7 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
         Domain.Types.Station.Station
           { address = address,
             code = code,
+            hindiName = hindiName,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             lat = lat,
@@ -29,6 +31,8 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
             possibleTypes = possibleTypes,
+            regionalName = regionalName,
+            suggestedDestinations = Kernel.Utils.Text.decodeFromText =<< suggestedDestinations,
             timeBounds = fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
             vehicleType = vehicleType,
             createdAt = createdAt,
@@ -40,6 +44,7 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
     Beam.StationT
       { Beam.address = address,
         Beam.code = code,
+        Beam.hindiName = hindiName,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.lat = lat,
@@ -48,6 +53,8 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
         Beam.possibleTypes = possibleTypes,
+        Beam.regionalName = regionalName,
+        Beam.suggestedDestinations = Kernel.Utils.Text.encodeToText <$> suggestedDestinations,
         Beam.timeBounds = Kernel.Prelude.Just timeBounds,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,

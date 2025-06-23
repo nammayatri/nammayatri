@@ -17,9 +17,11 @@ module SharedLogic.SearchTry where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
@@ -41,8 +43,10 @@ import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import SharedLogic.Pricing
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.Cac.GoHomeConfig as CGHC
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
@@ -77,7 +81,7 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
   case scheduleTryTimes of
     [] -> return Nothing
     (scheduleTryTime : rest) -> do
-      if (diffUTCTime searchRequest.startTime now <= scheduleTryTime)
+      if diffUTCTime searchRequest.startTime now <= scheduleTryTime
         then do
           setKey rest
           case rest of
@@ -111,51 +115,62 @@ initiateDriverSearchBatch ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasShortDurationRetryCfg r c
   ) =>
   DriverSearchBatchInput m ->
   m ()
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-  goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
-  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
-  now <- getCurrentTime
-  let batchTime = fromIntegral driverPoolConfig.singleBatchProcessTime + singleBatchProcessingTempDelay
-  let totalBatchTime = fromIntegral driverPoolConfig.maxNumberOfBatches * batchTime
-  let scheduleTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
-      instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
-  if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
-    then do
-      (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
-      let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
-      case res of
-        (ReSchedule _) -> scheduleBatching searchTry inTime
-        _ -> return ()
-      SharedRedisKeys.setBatchConfig searchReq.transactionId $
-        SharedRedisKeys.BatchConfig
-          { totalBatches = driverPoolConfig.maxNumberOfBatches,
-            batchTime = nominalDiffTimeToSeconds batchTime,
-            batchingStartedAt = now,
-            batchingExpireAt = totalBatchTime `addUTCTime` now
-          }
-    else do
-      mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
-      case mbScheduleTime of
-        Just scheduleTime -> do
-          scheduleBatching searchTry scheduleTime
-          let batchingStartedAt = scheduleTime `addUTCTime` now
-          SharedRedisKeys.setBatchConfig searchReq.transactionId $
-            SharedRedisKeys.BatchConfig
-              { totalBatches = driverPoolConfig.maxNumberOfBatches,
-                batchTime = nominalDiffTimeToSeconds batchTime,
-                batchingStartedAt,
-                batchingExpireAt = totalBatchTime `addUTCTime` batchingStartedAt
-              }
-        Nothing -> do
-          booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
-          QST.updateStatus DST.CANCELLED searchTry.id
-          SBooking.cancelBooking booking Nothing merchant
+  try @_ @SomeException
+    ( do
+        driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+        goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
+        singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
+        now <- getCurrentTime
+        let batchTime = fromIntegral driverPoolConfig.singleBatchProcessTime + singleBatchProcessingTempDelay
+        let totalBatchTime = fromIntegral driverPoolConfig.maxNumberOfBatches * batchTime
+        let scheduleTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
+            instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
+        if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
+          then do
+            (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
+            let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
+            case res of
+              (ReSchedule _) -> scheduleBatching searchTry inTime
+              _ -> return ()
+            SharedRedisKeys.setBatchConfig searchReq.transactionId $
+              SharedRedisKeys.BatchConfig
+                { totalBatches = driverPoolConfig.maxNumberOfBatches,
+                  batchTime = nominalDiffTimeToSeconds batchTime,
+                  batchingStartedAt = now,
+                  batchingExpireAt = totalBatchTime `addUTCTime` now
+                }
+            logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` now)
+          else do
+            mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
+            case mbScheduleTime of
+              Just scheduleTime -> do
+                scheduleBatching searchTry scheduleTime
+                let batchingStartedAt = scheduleTime `addUTCTime` now
+                SharedRedisKeys.setBatchConfig searchReq.transactionId $
+                  SharedRedisKeys.BatchConfig
+                    { totalBatches = driverPoolConfig.maxNumberOfBatches,
+                      batchTime = nominalDiffTimeToSeconds batchTime,
+                      batchingStartedAt,
+                      batchingExpireAt = totalBatchTime `addUTCTime` batchingStartedAt
+                    }
+                logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` batchingStartedAt)
+              Nothing -> do
+                booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
+                QST.updateStatus DST.CANCELLED searchTry.id
+                SBooking.cancelBooking booking Nothing merchant
+    )
+    >>= \case
+      Left e -> do
+        logError $ "Error in initiateDriverSearchBatch: " <> show e
+        return ()
+      Right _ -> return ()
   where
     scheduleBatching searchTry inTime = do
       JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
@@ -177,7 +192,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId estimateOrQuoteServiceTierNames serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -188,7 +203,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId estimateOrQuoteServiceTierNames serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -218,20 +233,32 @@ buildSearchTry ::
   DST.SearchRepeatType ->
   DTC.TripCategory ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Text ->
   [Text] ->
   DVST.ServiceTierType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId estimateOrQuoteServTierNames serviceTier = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
+  transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
+    then do
+      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (id_.getId))]
+      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 3600
+      void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (id_.getId))]
+      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) 3600
+      void $ Redis.withCrossAppRedis $ Redis.incr (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId)
+      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
+    else pure ()
   pure $
     DST.SearchTry
       { id = id_,
         vehicleServiceTier = serviceTier,
         vehicleServiceTierName = vehicleServiceTierItem.name,
         requestId = searchReq.id,
+        vehicleCategory = vehicleServiceTierItem.vehicleCategory,
         estimateIds = estimateOrQuoteIds,
         estimateId = estOrQuoteId,
         merchantId = Just merchantId,
@@ -246,6 +273,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         currency = searchReq.currency,
         isAdvancedBookingEnabled = searchReq.isAdvanceBookingEnabled,
         serviceTierArray = estimateOrQuoteServTierNames,
+        preferSafetyPlus = searchReq.preferSafetyPlus,
         ..
       }
 
@@ -267,20 +295,23 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Text ->
+  [DAC.ConditionalCharges] ->
   Bool ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId eligibleForUpgrade = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
-        item <- CQDVST.findByServiceTierTypeAndCityId vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+        item <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
   (driverParkingCharge, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
     case (mbDriverParkingCharge, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
       (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
-        farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
+        farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( farePolicy.parkingCharge,

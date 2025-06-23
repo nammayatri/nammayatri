@@ -25,11 +25,16 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class Eq, class Show, (<>))
+import Prelude (class Eq, class Show, (<>), show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Styles.Colors as Color
 import Screens.Types as ST
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+
+instance showAction :: Show Action where
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
 
 data Action =  BackPressed 
               | AfterRender

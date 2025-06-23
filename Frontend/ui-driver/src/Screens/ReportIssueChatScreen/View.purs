@@ -31,7 +31,7 @@ import PrestoDOM (linearLayout)
 import PrestoDOM.Elements.Elements (frameLayout, imageView, relativeLayout, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable, rippleColor)
-import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
+import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, LoggableScreen, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ReportIssueChatScreenState)
@@ -49,7 +49,7 @@ import Data.String (length, trim) as STR
 import Components.ViewImageModel.View (view) as ViewImageModel
 import Effect.Uncurried (runEffectFn2)
 
-screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
+screen :: ReportIssueChatScreenState -> LoggableScreen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
     { initialState
     , view
@@ -60,7 +60,9 @@ screen initialState =
         pure $ pure unit)
     ]
     , eval
-    }
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.reportIssueChatScreenLogWhitelist
+  }
 
 view :: forall w . (Action -> Effect Unit) -> ReportIssueChatScreenState -> PrestoDOM (Effect Unit) w
 view push state =

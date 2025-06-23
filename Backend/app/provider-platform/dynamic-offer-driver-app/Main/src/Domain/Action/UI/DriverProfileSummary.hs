@@ -40,6 +40,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Feedback.FeedbackBadge as QFB
+import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as RQ
@@ -68,14 +69,27 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
     cancellationRateInWindow :: Maybe Int,
     cancelledRidesCountInWindow :: Maybe Int,
     assignedRidesCountInWindow :: Maybe Int,
+    fleetOwnerMobileNumber :: Maybe Text,
+    fleetOwnerName :: Maybe Text,
     windowSize :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m DriverProfleSummaryRes
-getDriverProfileSummary (driverId, _, mocId) = do
+getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> m DriverProfleSummaryRes
+getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
   person <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicleMB <- B.runInReplica $ QVehicle.findById person.id
+  (fleetOwnerMobileNumber, fleetOwnerName) <- case fleetInfo of
+    Just True -> do
+      mbFda <- FDV.findByDriverId driverId True
+      case mbFda of
+        Nothing -> return (Nothing, Nothing)
+        Just fda -> do
+          fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound $ fda.fleetOwnerId)
+          fleetOwnerMobileNumber_ <- mapM decrypt fleetOwner.mobileNumber
+          return (fleetOwnerMobileNumber_, Just $ fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName)
+    _ -> return (Nothing, Nothing)
+
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   driverStats_ <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
@@ -122,7 +136,7 @@ getDriverProfileSummary (driverId, _, mocId) = do
     case vehicleMB of
       Nothing -> return Nothing
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just [])
         return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
   cancellationRateData <- CR.getCancellationRateData mocId driverId
   return $

@@ -16,6 +16,7 @@ module Storage.Beam.Person where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
@@ -33,10 +34,13 @@ data PersonT f = PersonT
     mobileCountryCode :: B.C f Text,
     passwordHash :: B.C f (Maybe DbHash),
     dashboardAccessType :: B.C f (Maybe DRole.DashboardAccessType),
+    dashboardType :: B.C f DPT.DashboardType, -- Using enum for type safety
     receiveNotification :: B.C f (Maybe Bool),
     verified :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    rejectionReason :: B.C f (Maybe Text),
+    rejectedAt :: B.C f (Maybe Time.UTCTime)
   }
   deriving (Generic, B.Beamable)
 

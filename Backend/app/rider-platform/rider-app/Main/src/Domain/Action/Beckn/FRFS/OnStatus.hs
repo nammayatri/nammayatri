@@ -18,7 +18,6 @@ module Domain.Action.Beckn.FRFS.OnStatus where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.HashMap.Strict as HashMap
-import Data.Tuple.Extra
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -43,6 +42,8 @@ import qualified Utils.Common.JWT.TransitClaim as TC
 
 data DOnStatus = Booking DOrder | TicketVerification DTicketPayload
 
+data DOnStatusResp = Async | TicketVerificationSync Ticket.FRFSTicket
+
 validateRequest :: DOnStatus -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest (Booking DOrder {..}) = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
@@ -51,16 +52,16 @@ validateRequest (Booking DOrder {..}) = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 validateRequest (TicketVerification DTicketPayload {..}) = do
-  _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
-  booking <- runInReplica $ QTBooking.findBySearchId (Id transactionId) >>= fromMaybeM (BookingDoesNotExist transactionId)
+  ticket <- runInReplica $ QTicket.findOneByTicketNumber ticketNumber >>= fromMaybeM (TicketDoesNotExist ticketNumber)
+  booking <- runInReplica $ QTBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingDoesNotExist ticket.frfsTicketBookingId.getId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 
-onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow ()
+onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
   statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
-  let googleWalletStates = map (second GWSA.mapToGoogleTicketStatus) statuses
+  let googleWalletStates = map (\(ticketNumber, status, _vehicleNumber) -> (ticketNumber, GWSA.mapToGoogleTicketStatus status)) statuses
   whenJust dOrder.orderStatus $ \status ->
     case status of
       Spec.COMPLETE | booking.status == Booking.CANCEL_INITIATED -> QTBooking.updateStatusById Booking.TECHNICAL_CANCEL_REJECTED booking.id
@@ -74,9 +75,10 @@ onStatus _merchant booking (Booking dOrder) = do
     let mbClassName = HashMap.lookup booking.merchantOperatingCityId.getId walletPOCfg.className
     whenJust mbClassName $ \_ -> fork ("updating status of tickets in google wallet for bookingId " <> booking.id.getId) $ traverse_ updateStatesForGoogleWallet googleWalletStates
   traverse_ refreshTicket dOrder.tickets
+  return Async
   where
-    updateTicket (ticketNumber, status) =
-      void $ QTicket.updateStatusByTBookingIdAndTicketNumber status booking.id ticketNumber
+    updateTicket (ticketNumber, status, vehicleNumber) =
+      void $ QTicket.updateStatusByTBookingIdAndTicketNumber status vehicleNumber booking.id ticketNumber
     updateStatesForGoogleWallet (ticketNumber, state') = do
       let serviceName = DEMSC.WalletService GW.GoogleWallet
       let mId = booking.merchantId
@@ -98,4 +100,5 @@ onStatus _merchant booking (Booking dOrder) = do
 onStatus _merchant booking (TicketVerification ticketPayload) = do
   ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketPayload.ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
   unless (ticket.status == Ticket.ACTIVE) $ throwError (InvalidRequest "Ticket is not in Active state")
-  void $ QTicket.updateStatusByTBookingIdAndTicketNumber Ticket.USED booking.id ticket.ticketNumber
+  void $ QTicket.updateStatusByTBookingIdAndTicketNumber Ticket.USED Nothing booking.id ticket.ticketNumber
+  return $ TicketVerificationSync ticket

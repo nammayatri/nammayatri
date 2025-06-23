@@ -24,6 +24,7 @@ import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import java.util.Locale;
 
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -37,6 +38,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -61,6 +63,8 @@ import java.util.concurrent.Executors;
 public class RideRequestActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private static RideRequestActivity instance;
+
+    private static final int MAX_RIDE_REQUESTS = 6;
     Context context;
     private final Handler mainLooper = new Handler(Looper.getMainLooper());
     private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
@@ -68,25 +72,25 @@ public class RideRequestActivity extends AppCompatActivity {
     private ViewPager2 viewPager2;
     private Timer countDownTimer;
     private CountDownTimer rideStatusListener;
-    private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
-    private TextView tipBanner1, tipBanner2, tipBanner3;
-    private ImageView tipBannerImage1, tipBannerImage2, tipBannerImage3;
-    private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
-    private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
-    private ArrayList<TextView> indicatorTextList, vehicleVariantList;
+    private TextView indicatorText1, indicatorText2, indicatorText3, indicatorText4, indicatorText5, indicatorText6, vehicleText1, vehicleText2, vehicleText3, vehicleText4, vehicleText5, vehicleText6;
+    private TextView tipBanner1, tipBanner2, tipBanner3, tipBanner4, tipBanner5, tipBanner6;
+    private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3, shimmerTip4, shimmerTip5, shimmerTip6;
+    private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3, progressIndicator4, progressIndicator5, progressIndicator6;
+    private ArrayList<TextView> indicatorTextList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> indicatorTipBannerList;
-    private ArrayList<ImageView> indicatorTipBannerImageList;
     private ArrayList<LinearLayout> indicatorTipList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private SharedPreferences sharedPref;
     private final MediaPlayer[] mediaPlayers = new MediaPlayer[3];
-    private MediaPlayer currentMediaPlayer;
-    private int currentMediaIndex = -1;
+    @Nullable
+    private volatile MediaPlayer currentMediaPlayer;
+    private volatile int currentMediaIndex = -1;
     int isMediaPlayerPrepared = 0;
     private String service = "";
     private String DUMMY_FROM_LOCATION = "dummyFromLocation";
+    private final ExecutorService mediaPlayerExecutor = Executors.newSingleThreadExecutor();
 
     public static RideRequestActivity getInstance() {
         return instance;
@@ -96,29 +100,33 @@ public class RideRequestActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = this;
-        try {
-            for (int i =0; i < 3; i++) {
-                if (mediaPlayers[i] == null) {
-                    mediaPlayers[i] = MediaPlayer.create(this, getRideRequestSound(this,i));
-                    mediaPlayers[i].setLooping(true);
-                    mediaPlayers[i].setOnPreparedListener(mp -> {
-                        isMediaPlayerPrepared++;
-                        mp.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
-                        if (isMediaPlayerPrepared == 3 && currentMediaIndex != -1 && (currentMediaPlayer == null || !currentMediaPlayer.isPlaying())) {
-                            currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                            currentMediaPlayer.start();
-                            if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
-                                increaseVolume(context);
-                            }
+        if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+            mediaPlayerExecutor.execute(() -> {
+                try {
+                    for (int i =0; i < 3; i++) {
+                        if (mediaPlayers[i] == null) {
+                            mediaPlayers[i] = MediaPlayer.create(this, getRideRequestSound(this,i));
+                            mediaPlayers[i].setLooping(true);
+                            mediaPlayers[i].setOnPreparedListener(mp -> {
+                                isMediaPlayerPrepared++;
+                                mp.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
+                                if (isMediaPlayerPrepared == 3 && currentMediaIndex != -1 && (currentMediaPlayer == null || !currentMediaPlayer.isPlaying())) {
+                                    currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                                    if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) currentMediaPlayer.start();
+                                    if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
+                                        increaseVolume(context);
+                                    }
+                                }
+                            });
                         }
-                    });
+                    }
+                } catch (Exception e) {
+                    Exception exception = new Exception("Error in onBind " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
+                    firebaseLogEventWithParams("exception_in_on_bind", "on_create", String.valueOf(e),this);
+                    e.printStackTrace();
                 }
-            }
-        } catch (Exception e) {
-            Exception exception = new Exception("Error in onBind " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);
-            firebaseLogEventWithParams("exception_in_on_bind", "on_create", String.valueOf(e),this);
-            e.printStackTrace();
+            });
         }
         service = getApplicationContext().getResources().getString(R.string.service);
         instance = this;
@@ -131,11 +139,10 @@ public class RideRequestActivity extends AppCompatActivity {
         if (getIntent() != null) {
             addToList(getIntent().getExtras());
         }
-        View v = findViewById(R.id.indicator1);
     }
 
     public void addToList(Bundle rideRequestBundle) {
-        if (rideRequestBundle == null || sheetArrayList == null || sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
+        if (rideRequestBundle == null || sheetArrayList == null || sheetArrayList.size() >= MAX_RIDE_REQUESTS || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
         mainLooper.post(() -> {
             if (findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
                 return;
@@ -187,10 +194,13 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
                     negotiationUnit,
                     rideRequestBundle.getInt("customerExtraFee"),
+                    rideRequestBundle.getInt("congestionCharges"),
+                    rideRequestBundle.getInt("petCharges"),
                     rideRequestBundle.getString("specialLocationTag"),
                     rideRequestBundle.getString("sourcePinCode"),
                     rideRequestBundle.getString("destinationPinCode"),
                     rideRequestBundle.getString("requestedVehicleVariant"),
+                    rideRequestBundle.getInt("coinsRewardedOnGoldTierRide"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
                     rideRequestBundle.getBoolean("gotoTag"),
@@ -218,16 +228,27 @@ public class RideRequestActivity extends AppCompatActivity {
                     stops,
                     roundTrip
                     );
-            if (currentMediaIndex == -1) {
-                currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
+            if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+                mediaPlayerExecutor.execute(() -> {
+                    try {
+                        if (currentMediaIndex == -1) {
+                            currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
+                        }
+                        if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || (!currentMediaPlayer.isPlaying()))) {
+                            currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                            if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                                currentMediaPlayer.start();
+                            }
+                            if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")) {
+                                increaseVolume(context);
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
             }
-            if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || !currentMediaPlayer.isPlaying())) {
-                currentMediaPlayer = mediaPlayers[currentMediaIndex];
-                currentMediaPlayer.start();
-                if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
-                    increaseVolume(context);
-                }
-            }
+
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
@@ -236,33 +257,41 @@ public class RideRequestActivity extends AppCompatActivity {
             RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped_in_activity", this);
         });
     }
-    
+
     @SuppressLint("SetTextI18n")
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
 //            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || model.isFavourite() || model.getRoundTrip()) {
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
+boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip() || model.getCoinsForGoldTierRide() > 0 || model.getCongestionCharges() > 0 || model.getPetCharges() > 0;
+            if (updateTags) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
-                }else {
+                } else {
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
-                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
-                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " " + getString(R.string.points));
+                holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
-                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
+                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.petTagText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getPetCharges() + " " + getString(R.string.pet));
+                holder.petTag.setVisibility(model.getPetCharges() > 0 ? View.VISIBLE : View.GONE);
+                holder.congestionTagText.setText(model.getCongestionCharges() + " " + getString(R.string.extra));
+                holder.congestionTag.setVisibility(model.getCongestionCharges() > 0 ? View.VISIBLE : View.GONE);
+                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-//                holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
+                // Not required.
+                holder.rideTypeTag.setVisibility(View.GONE);
                 holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
                 holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
                 holder.roundTripRideTypeTag.setVisibility(model.getRoundTrip() ? View.VISIBLE : View.GONE);
@@ -306,18 +335,13 @@ public class RideRequestActivity extends AppCompatActivity {
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
             String x = !payloads.isEmpty() ? (String) payloads.get(0) : "";
-            switch (x) {
-                case "inc":
-                    updateIndicators();
-                    holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
-                    holder.currency.setText(String.valueOf(model.getCurrency()));
-                    updateIncreaseDecreaseButtons(holder, model);
-                    RideRequestUtils.updateRateView(holder, model);
-                    return;
-                case "time":
-                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
-                    updateProgressBars(true);
-                    return;
+            if (x.equals("inc")) {
+                updateIndicators();
+                holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+                holder.currency.setText(String.valueOf(model.getCurrency()));
+                updateIncreaseDecreaseButtons(holder, model);
+                RideRequestUtils.updateRateView(holder, model);
+                return;
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
@@ -453,6 +477,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 @Override
                 public void onPageSelected(int position) {
                     updateMediaPlayer(position);
+                    NotificationUtils.firebaseLogEventWithParams(context,"multiple_ride_selected", "position", position + "");
                     super.onPageSelected(position);
                 }
 
@@ -484,14 +509,18 @@ public class RideRequestActivity extends AppCompatActivity {
             public void run() {
                 time++;
                 mainLooper.post(() -> {
-                    for (SheetModel model : sheetArrayList) {
-                        int index = sheetArrayList.indexOf(model);
+                    for (int index = 0; index < sheetArrayList.size(); index++){
+                        SheetModel model = sheetArrayList.get(index);
                         if (model.getReqExpiryTime() + model.getStartTime() - time < 1) {
                             removeCard(index);
                         } else {
-                            sheetAdapter.notifyItemChanged(index, "time");
+                            SheetAdapter.SheetViewHolder holder = sheetAdapter.getHolder(index);
+                            if (holder != null) {
+                                updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
+                            }
                         }
                     }
+                    updateProgressBars(true);
                 });
             }
         };
@@ -502,8 +531,9 @@ public class RideRequestActivity extends AppCompatActivity {
     private void startLoader(String id) {
         if(countDownTimer != null) countDownTimer.cancel();
         for (MediaPlayer mediaPlayer : mediaPlayers) {
-            mediaPlayer.release();
+            if(mediaPlayer != null) mediaPlayer.release();
         }
+        currentMediaPlayer = null;
         View progressDialog = findViewById(R.id.progress_loader);
         View viewPagerParentView = findViewById(R.id.view_pager_parent);
         mainLooper.post(() -> {
@@ -589,8 +619,9 @@ public class RideRequestActivity extends AppCompatActivity {
             updateProgressBars(true);
             if (sheetArrayList.isEmpty()) {
                 for (MediaPlayer mediaPlayer : mediaPlayers) {
-                    mediaPlayer.release();
+                    if(mediaPlayer != null) mediaPlayer.release();
                 }
+                currentMediaPlayer = null;
                 finish();
             }
         });
@@ -599,16 +630,24 @@ public class RideRequestActivity extends AppCompatActivity {
     /*
      * To update the audio sound based on notification type when card changes are driver swipes the cards*/
     private void updateMediaPlayer(int position) {
-        try {
-            if (position < 0 || position >= sheetArrayList.size()) return;
-            if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
-                currentMediaPlayer.pause();
-            }
-            currentMediaIndex = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
-            currentMediaPlayer = mediaPlayers[currentMediaIndex];
-            currentMediaPlayer.start();
-        } catch (Exception e) {
-
+        if (!mediaPlayerExecutor.isShutdown() && !mediaPlayerExecutor.isTerminated()) {
+            mediaPlayerExecutor.execute(() -> {
+                try {
+                    if (position < 0 || position >= sheetArrayList.size()) return;
+                    if (currentMediaPlayer != null && currentMediaPlayer.isPlaying()) {
+                        currentMediaPlayer.pause();
+                    }
+                    int index = getRideRequestSoundId(sheetArrayList.get(position).getRideProductType());
+                    if (index == currentMediaIndex) return;
+                    currentMediaIndex = index;
+                    currentMediaPlayer = mediaPlayers[currentMediaIndex];
+                    if (currentMediaPlayer != null && !currentMediaPlayer.isPlaying()) {
+                        currentMediaPlayer.start();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
         }
     }
 
@@ -619,59 +658,62 @@ public class RideRequestActivity extends AppCompatActivity {
             if (indicatorText1 == null) indicatorText1 = findViewById(R.id.indicatorText1);
             if (indicatorText2 == null) indicatorText2 = findViewById(R.id.indicatorText2);
             if (indicatorText3 == null) indicatorText3 = findViewById(R.id.indicatorText3);
-            if (vehicleText1 == null) vehicleText1 = findViewById(R.id.variant1);
-            if (vehicleText2 == null) vehicleText2 = findViewById(R.id.variant2);
-            if (vehicleText3 == null) vehicleText3 = findViewById(R.id.variant3);
+            if (indicatorText4 == null) indicatorText4 = findViewById(R.id.indicatorText4);
+            if (indicatorText5 == null) indicatorText5 = findViewById(R.id.indicatorText5);
+            if (indicatorText6 == null) indicatorText6 = findViewById(R.id.indicatorText6);
             if (progressIndicator1 == null) progressIndicator1 = findViewById(R.id.progress_indicator_1);
             if (progressIndicator2 == null) progressIndicator2 = findViewById(R.id.progress_indicator_2);
             if (progressIndicator3 == null) progressIndicator3 = findViewById(R.id.progress_indicator_3);
-            if (indicatorTextList == null) indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
-            if (vehicleVariantList == null) vehicleVariantList = new ArrayList<>(Arrays.asList(vehicleText1, vehicleText2, vehicleText3));
-            if (progressIndicatorsList == null) progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
+            if (progressIndicator4 == null) progressIndicator4 = findViewById(R.id.progress_indicator_4);
+            if (progressIndicator5 == null) progressIndicator5 = findViewById(R.id.progress_indicator_5);
+            if (progressIndicator6 == null) progressIndicator6 = findViewById(R.id.progress_indicator_6);
+            if (indicatorTextList == null) indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3, indicatorText4, indicatorText5, indicatorText6));
+            if (progressIndicatorsList == null) progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3, progressIndicator4, progressIndicator5, progressIndicator6));
             if (indicatorList == null) {
                 indicatorList = new ArrayList<>(Arrays.asList(
                         findViewById(R.id.indicator1),
                         findViewById(R.id.indicator2),
-                        findViewById(R.id.indicator3)));
+                        findViewById(R.id.indicator3),
+                        findViewById(R.id.indicator4),
+                        findViewById(R.id.indicator5),
+                        findViewById(R.id.indicator6)));
                 setIndicatorClickListener();
             }
             if (indicatorTipList == null) indicatorTipList = new ArrayList<>(Arrays.asList(
                     findViewById(R.id.tip_indicator_0),
                     findViewById(R.id.tip_indicator_1),
-                    findViewById(R.id.tip_indicator_2)));
+                    findViewById(R.id.tip_indicator_2),
+                    findViewById(R.id.tip_indicator_3),
+                    findViewById(R.id.tip_indicator_4),
+                    findViewById(R.id.tip_indicator_5)));
             if (tipBanner1 == null) tipBanner1 = findViewById(R.id.tip_banner_view_0);
             if (tipBanner2 == null) tipBanner2 = findViewById(R.id.tip_banner_view_1);
             if (tipBanner3 == null) tipBanner3 = findViewById(R.id.tip_banner_view_2);
-            if (indicatorTipBannerList == null) indicatorTipBannerList = new ArrayList<>(Arrays.asList(tipBanner1, tipBanner2, tipBanner3));
-            if (tipBannerImage1 == null) tipBannerImage1 = findViewById(R.id.tip_banner_image_0);
-            if (tipBannerImage2 == null) tipBannerImage2 = findViewById(R.id.tip_banner_image_1);
-            if (tipBannerImage3 == null) tipBannerImage3 = findViewById(R.id.tip_banner_image_2);
-            if (indicatorTipBannerImageList == null) indicatorTipBannerImageList = new ArrayList<>(Arrays.asList(tipBannerImage1, tipBannerImage2, tipBannerImage3));
+            if (tipBanner4 == null) tipBanner4 = findViewById(R.id.tip_banner_view_3);
+            if (tipBanner5 == null) tipBanner5 = findViewById(R.id.tip_banner_view_4);
+            if (tipBanner6 == null) tipBanner6 = findViewById(R.id.tip_banner_view_5);
+            if (indicatorTipBannerList == null) indicatorTipBannerList = new ArrayList<>(Arrays.asList(tipBanner1, tipBanner2, tipBanner3, tipBanner4, tipBanner5, tipBanner6));
             if (shimmerTip1 == null) shimmerTip1 = findViewById(R.id.shimmer_view_container_0);
             if (shimmerTip2 == null) shimmerTip2 = findViewById(R.id.shimmer_view_container_1);
             if (shimmerTip3 == null) shimmerTip3 = findViewById(R.id.shimmer_view_container_2);
-            if (shimmerTipList == null) shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
-            for (int i = 0; i < 3; i++) {
+            if (shimmerTip4 == null) shimmerTip4 = findViewById(R.id.shimmer_view_container_3);
+            if (shimmerTip5 == null) shimmerTip5 = findViewById(R.id.shimmer_view_container_4);
+            if (shimmerTip6 == null) shimmerTip6 = findViewById(R.id.shimmer_view_container_5);
+            if (shimmerTipList == null) shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3, shimmerTip4, shimmerTip5, shimmerTip6));
+            for (int i = 0; i < MAX_RIDE_REQUESTS; i++) {
                 if (i < sheetArrayList.size()) {
                     shimmerTipList.get(i).setVisibility(View.VISIBLE);
                     updateTopBarBackground(i);
-                    //handleIndicatorVariant(i); // Not needed @Rohit
-                    vehicleVariantList.get(i).setVisibility(View.GONE);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
-                    boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
-                    if (viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
-                        indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ?  R.color.green100 : R.color.yellow200));
-                    }
                     updateTopBar(i);
                 } else {
                     indicatorTextList.get(i).setText("--");
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
+                    indicatorTipBannerList.get(i).setText("NoNeed");
                     shimmerTipList.get(i).setVisibility(View.GONE);
-                    vehicleVariantList.get(i).setVisibility(View.GONE);
                     progressIndicatorsList.get(i).setVisibility(View.GONE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
-                    indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
                 }
             }
         });
@@ -690,63 +732,62 @@ public class RideRequestActivity extends AppCompatActivity {
                 case DELIVERY:
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
                     break;
-                default:
-                    indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : R.color.grey900));
+                default: {
+                    indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : sheetArrayList.get(i).getCustomerTip() > 0 ? R.color.yellow200 : sheetArrayList.get(i).getCongestionCharges() > 0 ? R.color.orange100 : R.color.grey900));
                     break;
+                }
             }
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-            shimmerTipList.get(i).stopShimmer();
         } else {
             indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
-            shimmerTipList.get(i).startShimmer();
         }
     }
 
     private void updateTopBar (int i){
         boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
         String rideProductType = sheetArrayList.get(i).getRideProductType();
-
+        int minWidth = indicatorList.get(i).getWidth();
+        if (minWidth > 0) indicatorTipList.get(i).setMinimumWidth((int)(minWidth * 0.8));
+        float cornerRadii = 30.0f;
         switch (rideProductType) {
             case RENTAL:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Rental");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.white));
-                indicatorTipList.get(i).setBackground(getDrawable(R.drawable.rental_banner_rectangle));
-                indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(getColor(R.color.turquoise), cornerRadii));
+
                 break;
             case INTERCITY:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Intercity");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.white));
-                indicatorTipList.get(i).setBackground(getDrawable(R.drawable.intercity_banner_rectangle));
-                indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(getColor(R.color.blue800), cornerRadii));
+
                 break;
             case DELIVERY:
                 indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
                 indicatorTipBannerList.get(i).setText("Delivery");
                 indicatorTipBannerList.get(i).setTextColor(getColor(R.color.Black800));
-                indicatorTipList.get(i).setBackground(getDrawable(R.drawable.delivery_banner_rectangle));
-                indicatorTipBannerImageList.get(i).setVisibility(View.VISIBLE);
-                indicatorTipBannerImageList.get(i).setImageResource(R.drawable.ny_ic_delivery);
+                shimmerTipList.get(i).setBackground(DrawableUtil.createRoundedDrawable(Color.parseColor("#FEEBB9"), cornerRadii));
                 break;
             default:
-                if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
+                if (sheetArrayList.get(i).getCustomerTip() > 0 || sheetArrayList.get(i).getCongestionCharges() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
+                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : sheetArrayList.get(i).getCongestionCharges() > 0 ? sharedPref.getString("CURRENCY", "₹") + sharedPref.getString("CURRENCY", "₹") : "Favourite"));
                     indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
-                    indicatorTipList.get(i).setBackground(getDrawable(isSpecialZone ? R.drawable.zone_curve : (sheetArrayList.get(i).getCustomerTip() > 0 ? R.drawable.rectangle_9506 : R.drawable.blue_curve)));
-                    indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
+                    shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : sheetArrayList.get(i).getCongestionCharges() > 0 ? getColor(R.color.orange900) : getColor(R.color.blue800), cornerRadii));
                 } else {
+                    indicatorTipBannerList.get(i).setText("Favourite");
+                    shimmerTipList.get(i).setVisibility(View.INVISIBLE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
-                    indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
                 }
         }
     }
 
     private void setIndicatorClickListener() {
         if (viewPager2 == null) return;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < MAX_RIDE_REQUESTS; i++) {
             int finalI = i;
             indicatorList.get(i).setOnClickListener(view -> mainLooper.post(() -> {
                 if (viewPager2 == null) return;
@@ -764,7 +805,10 @@ public class RideRequestActivity extends AppCompatActivity {
         progressIndicatorsList = new ArrayList<>(Arrays.asList(
                 findViewById(R.id.progress_indicator_1),
                 findViewById(R.id.progress_indicator_2),
-                findViewById(R.id.progress_indicator_3)));
+                findViewById(R.id.progress_indicator_3),
+                findViewById(R.id.progress_indicator_4),
+                findViewById(R.id.progress_indicator_5),
+                findViewById(R.id.progress_indicator_6)));
 
         for (int i = 0; (i < sheetArrayList.size()) && (i < progressIndicatorsList.size()); i++) {
             int progressCompat = sheetArrayList.get(i).getReqExpiryTime() + sheetArrayList.get(i).getStartTime() - time;
@@ -818,10 +862,12 @@ public class RideRequestActivity extends AppCompatActivity {
         sheetArrayList.clear();
         if(countDownTimer != null) countDownTimer.cancel();
         for (MediaPlayer mediaPlayer : mediaPlayers) {
-            mediaPlayer.release();
+            if(mediaPlayer != null) mediaPlayer.release();
         }
+        currentMediaPlayer = null;
         NotificationUtils.lastRideReq.clear();
         RideRequestUtils.cancelRideReqNotification(this);
+        mediaPlayerExecutor.shutdown();
         super.onDestroy();
     }
 

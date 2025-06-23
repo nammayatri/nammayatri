@@ -40,6 +40,7 @@ import Helpers.Utils (isParentView, emitTerminateApp)
 import Common.Types.App (LazyCheck(..))
 import Log(trackAppScreenEvent)
 
+
 instance showAction :: Show Action where
   show _ = ""
 
@@ -68,6 +69,7 @@ data Action = BackPressed
             | SelectRouteslistView
             | OfferInfoClicked
             | ApplyOffer String
+            | UpdatePaymentOption
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -101,7 +103,9 @@ eval (ApplyOffer offerType) state =
 
 eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
-  continue updatedState
+  if (state.props.currentStage == ST.BusTicketSelection )
+    then continueWithCmd updatedState [ do pure UpdatePaymentOption]
+    else continue updatedState
 
 eval BackPressed state = 
   if isParentView FunctionCall && state.props.ticketServiceType == API.METRO
@@ -115,6 +119,11 @@ eval BackPressed state =
                     _ -> exit $ GotoSearchScreen state 
                 else exit $ GoToHome
 
+eval UpdatePaymentOption state = do
+  if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do
+    continue state 
+  else updateAndExit state $ UpdateAction state
+
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do
      void $ pure $ EHU.showToast $ "Please Select Route"
@@ -125,13 +134,15 @@ eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
 eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
-  if state.data.ticketCount < 6
-    then continue state { data {ticketCount = state.data.ticketCount + 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+  let (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+      ticketLimit = if state.data.ticketType == ST.ROUND_TRIP_TICKET then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
+  if state.data.ticketCount < ticketLimit
+    then continueWithCmd state { data {ticketCount = state.data.ticketCount + 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}} [do pure UpdatePaymentOption]
     else continue state
 
 eval DecrementTicket state = do
   if state.data.ticketCount > 1
-    then continue state { data {ticketCount = state.data.ticketCount - 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+    then continueWithCmd state { data {ticketCount = state.data.ticketCount - 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}} [do pure UpdatePaymentOption]
     else continue state
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap state
@@ -184,7 +195,11 @@ eval SelectRouteslistView state = do
     
     continue state{props{routeList = not old , showRouteOptions = true}}
   -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
-eval (SelectRoutes route routeName) state = continue state{props{isEmptyRoute = route ,routeName = routeName , routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection}}
+eval (SelectRoutes route routeName) state =
+  continueWithCmd 
+    state{props{isEmptyRoute = route ,routeName = routeName , routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection, isButtonActive = false}}
+    [ do pure UpdatePaymentOption ]
+
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId state
 
 eval _ state = update state
@@ -197,7 +212,7 @@ updateQuotes quotes state = do
       void $ pure $ EHU.showToast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (FrfsQuote quoteData) -> do
-      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
+      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote, isButtonActive = (quoteData.quantity == state.data.ticketCount) }}
       updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType

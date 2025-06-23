@@ -4,7 +4,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Prelude
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.RideSummaryScreen.ScreenData
 import Screens.RideSummaryScreen.View as RideSummaryScreen
 import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), GlobalState(..), FlowBT)
@@ -16,7 +16,7 @@ import Debug
 rideSummaryScreen :: FlowBT String RIDE_SUMMARY_SCREEN_OUTPUT
 rideSummaryScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ RideSummaryScreen.screen state.rideSummaryScreen
+  act <- lift $ lift $ runLoggableScreen $ RideSummaryScreen.screen state.rideSummaryScreen
   case act of
     (AcceptScheduleRide bookingId)-> App.BackT $ App.BackPoint <$> pure (ACCEPT_SCHEDULED_RIDE bookingId)
     GoBack  -> App.BackT $ App.BackPoint <$> pure (GO_TO_RIDE_REQUEST state.rideSummaryScreen)

@@ -9,6 +9,7 @@ import Beckn.ACL.IGM.Utils
 import qualified Data.Set as Set
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
+import qualified Domain.Action.UI.Sos as Sos
 import Domain.Types.Booking
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant as DM
@@ -100,7 +101,10 @@ customerIssueHandle =
       mbSyncRide = Just syncRide,
       findByBookingId = castBookingById,
       findOneByBookingId = castRideByBookingId,
-      findByMerchantId = castMerchantById
+      findByMerchantId = castMerchantById,
+      mbSendUnattendedTicketAlert = Just Sos.sendUnattendedSosTicketAlert,
+      findRideByRideShortId = castRideByRideShortId,
+      findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant
     }
 
 castBookingById :: Id Common.Booking -> Flow (Maybe Common.Booking)
@@ -162,7 +166,8 @@ mkPerson person =
       middleName = person.middleName,
       mobileNumber = person.mobileNumber,
       merchantOperatingCityId = cast person.merchantOperatingCityId,
-      blocked = Just person.blocked
+      blocked = Just person.blocked,
+      merchantId = cast person.merchantId
     }
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
@@ -498,7 +503,9 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
           frfsBooking <- QFTB.findById (Id igmIssue.bookingId) >>= fromMaybeM (FRFSTicketBookingNotFound igmIssue.bookingId)
           fromFRFSTicketBooking frfsBooking
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) issueReport.optionId
-      category <- QIC.findById issueReport.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
+      category <- case issueReport.categoryId of
+        Nothing -> throwError $ InvalidRequest "Issue Category not found"
+        Just catId -> QIC.findById catId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
       (becknIssueReq, _, updatedIgmIssue) <- ACL.buildIssueReq rideBooking category option issueReport.description merchant person igmConfig merchantOperatingCity response rating (Just igmIssue)
       QIGM.updateByPrimaryKey updatedIgmIssue
       fork "sending beckn issue" . withShortRetry $ do

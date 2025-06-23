@@ -79,27 +79,32 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             DInit.DriverQuoteId (Id fId) -> fId
             DInit.QuoteId (Id fId) -> fId
     Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
-      validatedRes <- DInit.validateRequest transporterId dInitReq
-      fork "init request processing" $ do
-        Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
-          dInitRes <- DInit.handler transporterId dInitReq validatedRes
-          internalEndPointHashMap <- asks (.internalEndPointHashMap)
-          let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
-          bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-          fork "init received pushing ondc logs" do
-            void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
-          ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-          context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
-          void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-            Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
-              mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
-              let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
-              pure $
-                Spec.OnInitReq
-                  { onInitReqContext = context,
-                    onInitReqError = Nothing,
-                    onInitReqMessage = Just onInitMessage
-                  }
+      mbProcessed :: Maybe Text <- Redis.withMasterRedis $ Redis.get (initProcessedKey initFulfillmentId)
+      unless (isJust mbProcessed) $ do
+        validatedRes <- DInit.validateRequest transporterId dInitReq
+        fork "init request processing" $ do
+          Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
+            dInitRes <- DInit.handler transporterId dInitReq validatedRes
+            internalEndPointHashMap <- asks (.internalEndPointHashMap)
+            let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
+            bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+
+            fork "init received pushing ondc logs" do
+              void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
+            ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+            context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
+            void . handle (errHandler dInitRes.booking dInitRes.transporter) $
+              Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
+                mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
+                let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+                pure $
+                  Spec.OnInitReq
+                    { onInitReqContext = context,
+                      onInitReqError = Nothing,
+                      onInitReqMessage = Just onInitMessage
+                    }
+            Redis.setExp (initProcessedKey initFulfillmentId) ("PROCESSED" :: Text) 300
+
     pure Ack
   where
     errHandler booking transporter exc
@@ -112,6 +117,9 @@ initLockKey id = "Driver:Init:DriverQuoteId-" <> id
 
 initProcessingLockKey :: Text -> Text
 initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
+
+initProcessedKey :: Text -> Text
+initProcessedKey id = "Driver:Init:Processed:FulfillmentId-" <> id
 
 errHandlerV2 :: Spec.Context -> BecknAPIError -> Spec.OnInitReq
 errHandlerV2 context (BecknAPIError err) =

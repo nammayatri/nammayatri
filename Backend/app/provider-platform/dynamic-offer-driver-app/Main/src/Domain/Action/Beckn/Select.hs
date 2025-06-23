@@ -18,19 +18,24 @@ module Domain.Action.Beckn.Select
   )
 where
 
-import Data.Text as Text
+import Data.Either.Extra (eitherToMaybe)
+import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DeliveryDetails as DParcel
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
@@ -51,12 +56,14 @@ data DSelectReq = DSelectReq
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe HighPrecMoney,
+    isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
     disabilityDisable :: Maybe Bool,
-    parcelDetails :: (Maybe Text, Maybe Int)
+    parcelDetails :: (Maybe Text, Maybe Int),
+    preferSafetyPlus :: Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -77,21 +84,34 @@ handler merchant sReq searchReq estimates = do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
       return Nothing
   QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
+  QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
+
+  when sReq.isPetRide $ do
+    let tagData =
+          Y.SelectTagData
+            { isPetRide = sReq.isPetRide
+            -- ,estimates = estimates uncomment this line if you want to use estimates in select tag data
+            }
+    addNammaTags tagData searchReq
+
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId False
-  let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @(DParcel.ParcelType) $ unpack rpt
+          driverAdditionalCharges = filterChargesByApplicability $ fromMaybe [] ((.conditionalCharges) <$> estimate.farePolicy)
+          petCharges' = if sReq.isPetRide then (.petCharges) =<< estimate.farePolicy else Nothing
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 petCharges') Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges'
+  let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @DParcel.ParcelType $ unpack rpt
   when (isJust parcelType) $ QSR.updateParcelDetails parcelType (snd sReq.parcelDetails) searchReq.id
-  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId}
+  upSearchReq <- QSR.findById searchReq.id >>= fromMaybeM (SearchRequestNotFound searchReq.id.getId)
+  -- let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId, DSR.preferSafetyPlus = sReq.preferSafetyPlus}
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
             merchant,
-            searchReq = searchReq',
+            searchReq = upSearchReq,
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
@@ -101,7 +121,10 @@ handler merchant sReq searchReq estimates = do
   initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
   where
-    mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then (Just DRD.MultipleDeviceIdExists) else Nothing) isMultipleOrNoDeviceIdExist
+    mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then Just DRD.MultipleDeviceIdExists else Nothing) isMultipleOrNoDeviceIdExist
+    filterChargesByApplicability conditionalCharges = do
+      let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
+      catMaybes $ [safetyCharges]
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
 validateRequest merchantId sReq = do
@@ -113,3 +136,9 @@ validateRequest merchantId sReq = do
     (estimate : xs) -> do
       searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
       return (merchant, searchReq, [estimate] <> xs)
+
+addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
+addNammaTags tagData sReq = do
+  newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Select tagData)
+  let tags = sReq.searchTags <> eitherToMaybe newSearchTags
+  QSR.updateSearchTags tags sReq.id

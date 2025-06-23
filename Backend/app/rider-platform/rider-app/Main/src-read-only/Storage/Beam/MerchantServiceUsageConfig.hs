@@ -9,6 +9,7 @@ import qualified Domain.Types.UtilsTH
 import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
+import qualified Kernel.External.Insurance.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Notification.Types
@@ -47,6 +48,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     initiateCall :: B.C f Kernel.External.Call.Types.CallService,
+    insuranceService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Insurance.Types.InsuranceService),
     issueTicketService :: B.C f Kernel.External.Ticket.Types.IssueTicketService,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

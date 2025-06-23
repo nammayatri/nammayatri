@@ -172,14 +172,14 @@ parseSafetyAlertEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in SafetyAlert Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in SafetyAlert Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
-  deviation <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.DEVIATION (Just tagGroups) & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
+  safetyReasonCode <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.SAFETY_REASON_CODE (Just tagGroups) & fromMaybeM (InvalidRequest "deviation tag is not present in SafetyAlert Event.")
   return $
     DOnUpdate.OUSafetyAlertReq
       DOnUpdate.SafetyAlertReq
         { bppBookingId = Id bppBookingId,
           bppRideId = Id bppRideId,
-          reason = deviation,
-          code = "deviation"
+          reason = safetyReasonCode,
+          code = safetyReasonCode
         }
 
 parseStopArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq

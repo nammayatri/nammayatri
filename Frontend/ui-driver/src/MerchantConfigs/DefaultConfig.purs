@@ -10,7 +10,73 @@ import Foreign.Object (fromHomogeneous)
 
 config :: AppConfig
 config =
-  { primaryTextColor: "#FCC32C"
+  {
+    logWhitelistConfig: {
+      aadhaarVerificationScreenLogWhitelist : [],
+      aboutUsScreenLogWhitelist : ["props.demoModePopup", "props.enableConfirmPassword", "props.enableDemoModeCount"],
+      acknowledgementScreenLogWhitelist : [],
+      addVehicleDetailsScreenLogWhitelist : [],
+      applicationStatusScreenLogWhitelist : [],
+      bankDetailScreenLogWhitelist : [],
+      benefitsLogWhitelist : {benefitsScreenLogWhitelist : [], lmsQuizScreenLogWhitelist : [], lmsVideoScreenLogWhitelist : []},
+      bookingOptionsScreenLogWhitelist : [],
+      cancellationRateScreenLogWhitelist : [],
+      chooseCityScreenLogWhitelist : [],
+      chooseLanguageScreenLogWhitelist : [],
+      customerReferralTrackerScreenLogWhitelist : [],
+      documentCaptureScreenLogWhitelist : [],
+      documentDetailsScreenLogWhitelist : [],
+      driverCompleteProfileScreenLogWhitelist : [],
+      driverDetailsScreenLogWhitelist : [],
+      driverEarningsScreenLogWhitelist : [],
+      driverProfileScreenLogWhitelist : [],
+      driverRideRatingScreenLogWhitelist : [],
+      driverSavedLocationScreenLogWhitelist : [],
+      editAadhaarDetailsScreenLogWhitelist : [],
+      editBankDetailsScreenLogWhitelist : [],
+      enterMobileNumberScreenLogWhitelist : [],
+      enterOTPScreenLogWhitelist : [],
+      helpAndSupportScreenLogWhitelist : [],
+      homeScreenLogWhitelist : ["data.activeRide.dest_lat"
+        , "data.activeRide.dest_lon"
+        , "data.activeRide.destination.value0"
+        , "data.activeRide.destinationArea.value0"
+        , "data.activeRide.destinationCity.value0"
+        , "data.activeRide.distance"
+        , "data.activeRide.driverVehicle"
+        , "data.activeRide.riderName"
+        , "data.activeRide.source"
+        , "data.activeRide.sourceCity"
+        , "data.activeRide.src_lat"
+        , "data.activeRide.src_lon"],
+      hotspotScreenLogWhitelist : [],
+      metroWarriorsScreenLogWhitelist : [],
+      notificationsScreenLogWhitelist : [],
+      obBoardingSubscriptionScreenLogWhitelist : [],
+      paymentHistoryScreenLogWhitelist : [],
+      permissionsScreenLogWhitelist : [],
+      popUpScreenLogWhitelist : [],
+      rateCardScreenLogWhitelist : [],
+      referralScreenLogWhitelist : [],
+      registrationScreenLogWhitelist : [],
+      reportIssueChatScreenLogWhitelist : [],
+      rideHistoryScreenLogWhitelist : [],
+      rideRequestScreenLogWhitelist : [],
+      rideSelectionScreenLogWhitelist : [],
+      rideSummaryScreenLogWhitelist : [],
+      scheduledRideAcceptedScreenLogWhitelist : [],
+      selectLanguageScreenLogWhitelist : [],
+      splashScreenLogWhitelist : [],
+      subscriptionScreenLogWhitelist : [],
+      tripDetailsScreenLogWhitelist : [],
+      uploadAdhaarScreenLogWhitelist : [],
+      uploadDrivingLicenseScreenLogWhitelist : [],
+      uploadParcelImageScreenLogWhitelist : [],
+      vehicleDetailsScreenLogWhitelist : [],
+      welcomeScreenLogWhitelist : [],
+      writeToUsScreenLogWhitelist : []
+    }
+  ,  primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
@@ -92,7 +158,7 @@ config =
   }
   , profileVerification : {
       aadharVerificationRequired : false
-    } 
+    }
   , gotoConfig : {
     enableGoto : false,
     maxGotoLocations : 5}
@@ -103,10 +169,10 @@ config =
       hearingImpairmentVideo : "",
       genericAccessibilityVideo : ""
   }
-  , profile : { 
+  , profile : {
     bookingOptionMenuForTaxi : false,
     showBookingOption : true
-  , checkRCStatusForBookingOption : true 
+  , checkRCStatusForBookingOption : true
   }
   , waitTimeConfig : {
     enableWaitTime : true,
@@ -117,23 +183,23 @@ config =
     straightLineDist : 0.015
   }
   , bottomNavConfig : {
-      home : 
+      home :
         { isVisible : true,
           showNew : false
         },
-      rideHistory : 
+      rideHistory :
         { isVisible : false,
           showNew : false
         },
-      driverEarnings : 
+      driverEarnings :
         { isVisible : true,
           showNew : false
         },
-      subscription : 
+      subscription :
         { isVisible : true,
           showNew : false
         },
-      referral : 
+      referral :
         { isVisible : true,
           showNew : true
         },
@@ -142,7 +208,7 @@ config =
           showNew : false
         }
     }
-  , mapConfig : 
+  , mapConfig :
       { animationDuration : 500
       }
   , unserviceableThreshold : 250.0
@@ -150,6 +216,8 @@ config =
             {
               cityName : "Bangalore",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_bengalore_map",
               cityCode : "std:080",
               showSubscriptions : true,
@@ -232,6 +300,8 @@ config =
             {
               cityName : "Hyderabad",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_hyderabad_map",
               cityCode : "std:040",
               showSubscriptions : false,
@@ -309,6 +379,8 @@ config =
             {
               cityName : "Mysore",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_mysuru_map",
               cityCode : "std:0821",
               showSubscriptions : false,
@@ -381,6 +453,8 @@ config =
             {
               cityName : "Delhi",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_delhi_map",
               cityCode : "std:011",
               showSubscriptions : false,
@@ -466,6 +540,8 @@ config =
                   "od_in": "ଗ୍ରାହକଙ୍କ ପାଖରୁ ଅତିରିକ୍ତ ଦାବି କରିବେ ନାହିଁ"
                 })
               }),
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
               showSubscriptions : false,
@@ -538,6 +614,8 @@ config =
             {
               cityName : "Coimbatore",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_coimbatore_map",
               cityCode : "std:0422",
               showSubscriptions : false,
@@ -610,6 +688,8 @@ config =
             {
               cityName : "Puducherry",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_puducherry_map",
               cityCode : "std:0413",
               showSubscriptions : false,
@@ -682,6 +762,8 @@ config =
             {
               cityName : "Gurugram",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_gurugram_map",
               cityCode : "std:0124",
               showSubscriptions : false,
@@ -751,9 +833,11 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {             
+            {
               cityName : "Noida",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_noida_map",
               cityCode : "std:01189",
               showSubscriptions : false,
@@ -826,6 +910,8 @@ config =
             {
               cityName : "TamilNaduCities",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_tamilnadu_map",
               cityCode :  "std:0422",
               showSubscriptions : false,
@@ -898,6 +984,8 @@ config =
             {
               cityName : "Kolkata",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "",
               cityCode : "std:033",
               showSubscriptions : true,
@@ -912,7 +1000,7 @@ config =
               showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
-              uploadRCandDL : true, 
+              uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "",
               registration : {
@@ -979,10 +1067,12 @@ config =
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
               }
-            }, 
+            },
             {
               cityName : "Kochi",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
+              openMeter : Nothing,
               mapImage : "ny_ic_kochi_map",
               cityCode : "std:0484",
               showSubscriptions : true,
@@ -1001,7 +1091,7 @@ config =
               enableYatriCoins : true,
               vehicleNSImg : "ny_ic_auto_image",
               registration : {
-                  supportWAN : "918618963188",
+                  supportWAN : "919008021095",
                   callSupport : true,
                   whatsappSupport : true
               },
@@ -1055,11 +1145,99 @@ config =
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
               }
+          },
+          {
+            cityName : "Digha",
+            mapImage : "ys_ic_digha_map",
+            cityCode : "std:03216",
+            showSubscriptions : false,
+            cityLat : 21.6222,
+            cityLong : 87.5066,
+            supportNumber : "",
+            languageKey : "BN_IN",
+            enableYatriCoins : false,
+            enableAdvancedBooking : false,
+            chatFooterBanner: Nothing,
+            enableNammaMeter : Nothing,
+            openMeter : Nothing,
+            enableGullak : false,
+            advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
+            callDriverInfoPost : false,
+            showScheduledRides : false,
+            showDriverReferral : true,
+            showCustomerReferral : true,
+            uploadRCandDL : true,
+            vehicleNSImg : "",
+            registration : {
+                supportWAN : "",
+                callSupport : false,
+                whatsappSupport : false
+            },
+            variantSubscriptionConfig : {
+              enableVariantBasedSubscription : false,
+              variantList : [],
+              enableCabsSubscriptionView : false,
+              staticViewPlans : getStaticViewPlans
+            },
+            showEarningSection : true,
+            referral : {
+                domain : "https://www.yatrisathi.in"
+              , customerAppId : "in.juspay.jatrisaathi"
+              , driverAppId : "in.juspay.jatrisaathidriver"
+            },
+            waitingCharges : 1.50,
+            waitingChargesConfig : defWaitingChargesConfig,
+            rentalWaitingChargesConfig : defRentalWaitingChargesConfig {
+              cab {
+                freeSeconds = 180,
+                perMinCharges = 1.0
+              },
+              auto {
+                freeSeconds = 180,
+                perMinCharges = 1.0
+              }
+            },
+            gstPercentage : "18",
+            rateCardConfig : defRateCardConfig,
+            assets :{
+              auto_image : "ny_ic_auto_side_view",
+              onboarding_auto_image : "ny_ic_auto_side",
+              empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+              empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+            },
+            enableHvSdk : false,
+            purpleRideConfig : {
+              purpleRideConfigForAuto : {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              purpleRideConfigForCabs : {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              purpleRideConfigForBikes : {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              }
+            },
+            rideStartAudio : {
+              acCab : defaultStartAudioUrls,
+              nonAcCab : defaultStartAudioUrls,
+              auto : defaultStartAudioUrls,
+              bike : defaultStartAudioUrls
+            }
           }
             --, For future use
             -- {
             --   cityName : "Madurai",
             --   chatFooterBanner: Nothing,
+            -- enableNammaMeter : Nothing,
             --   mapImage : "ny_ic_madurai_map",
             --   cityCode : "std:0452",
             --   showSubscriptions : false,
@@ -1110,6 +1288,7 @@ config =
   , enableInterOperability : true
   }
   , showCorporateAddress : false
+  , showRegisteredAddress : false
   , engilshInNative: "English"
   , allowAllMobileNumber: false
   , vehicle : {
@@ -1157,6 +1336,7 @@ config =
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }
+  , customerTokenForMeterRide : "c1e973c9-87d3-4921-bddf-f936f52293fa"
 }
 
 registrationConfig :: RegistrationConfig
@@ -1220,7 +1400,7 @@ defRateCardConfig = {
 }
 
 defaultCityConfig :: CityConfig
-defaultCityConfig = 
+defaultCityConfig =
   case MU.getMerchant CTA.FunctionCall of
     MU.YATRISATHI -> ysDefaultCityConfig
     _ -> allCitiesDefaultCityConfig
@@ -1230,6 +1410,8 @@ allCitiesDefaultCityConfig :: CityConfig
 allCitiesDefaultCityConfig = {
   cityName : "",
   chatFooterBanner: Nothing,
+  enableNammaMeter : Nothing,
+  openMeter: Nothing,
   mapImage : "",
   cityCode : "",
   showSubscriptions : false,
@@ -1246,9 +1428,9 @@ allCitiesDefaultCityConfig = {
   showCustomerReferral : false,
   uploadRCandDL : true,
   vehicleNSImg : "",
-  registration : { 
+  registration : {
     callSupport : false,
-    supportWAN : "", 
+    supportWAN : "",
     whatsappSupport : false
   },
   variantSubscriptionConfig : {
@@ -1347,7 +1529,7 @@ defaultStartAudioUrls = {
 }
 
 ysDefaultCityConfig :: CityConfig
-ysDefaultCityConfig = 
+ysDefaultCityConfig =
   allCitiesDefaultCityConfig {
       showSubscriptions = true
     , enableAdvancedBooking = true
@@ -1437,5 +1619,5 @@ ysDefaultCityConfig =
               nonAcCab : defaultStartAudioUrls,
               auto : defaultStartAudioUrls,
               bike : defaultStartAudioUrls
-            } 
+            }
   }

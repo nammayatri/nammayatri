@@ -15,6 +15,7 @@ data MerchantOperatingCity = MerchantOperatingCity
   { city :: Kernel.Types.Beckn.Context.City,
     country :: Kernel.Types.Beckn.Context.Country,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    driverOfferMerchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     lat :: Kernel.Prelude.Double,
     long :: Kernel.Prelude.Double,

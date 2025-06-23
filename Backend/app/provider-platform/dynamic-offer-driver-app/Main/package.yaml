@@ -182,6 +182,7 @@ library:
     - webhook
     - utils
     - external
+    - dashcam
   extra-libraries:
     - cac_client
 

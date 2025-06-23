@@ -9,6 +9,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
+import qualified Domain.Types.SubscriptionConfig
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.WebhookExtra
 import Kernel.External.Encryption
@@ -22,15 +23,19 @@ data SubscriptionConfigT f = SubscriptionConfigT
     allowDueAddition :: B.C f Kernel.Prelude.Bool,
     allowManualPaymentLinks :: B.C f Kernel.Prelude.Bool,
     cgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    dataEntityToSend :: B.C f (Kernel.Prelude.Maybe [Domain.Types.SubscriptionConfig.CurrentPlanEntites]),
     deepLinkExpiryTimeInMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultCityVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     enableCityBasedFeeSwitch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableServiceUsageChargeDefault :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     eventsEnabledForWebhook :: B.C f (Kernel.Prelude.Maybe [Domain.Types.WebhookExtra.WebhookEvent]),
     executionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     extWebhookConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     freeTrialRidesApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     genericBatchSizeForJobs :: B.C f Kernel.Prelude.Int,
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
+    genericNextJobScheduleTimeThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    isFreeTrialDaysApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSubscriptionEnabledAtCategoryLevel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,
     isUIEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -49,6 +54,8 @@ data SubscriptionConfigT f = SubscriptionConfigT
     subscriptionDown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     subscriptionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     useOverlayService :: B.C f Kernel.Prelude.Bool,
+    waiveOffOfferDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    waiveOffOfferTitle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     webhookConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

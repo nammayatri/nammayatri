@@ -29,22 +29,18 @@ import Services.Backend as Remote
 import Constants.Configs (getPolylineAnimationConfig)
 import Debug
 import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData (StopType (..))
+import MapUtils (haversineDistance)
+import Data.Tuple (Tuple(..))
+import Data.Foldable (minimumBy)
 
 transformStationsForMap :: Array API.FRFSStationAPI -> JB.Locations -> String -> String -> JB.RouteConfig
 transformStationsForMap stations route srcCode destCode = do
   let res = DA.foldl (\acc word -> if acc.index == 0 then acc{src = Just word, index = acc.index + 1}
                       else if acc.index == (DA.length stations -1)  then acc{dest = Just word, index = acc.index + 1}
                       else acc{stops = acc.stops <> [word], index = acc.index + 1} ) {src : Nothing, dest : Nothing, stops : [], index : 0} stations
-      _  = spy "res" res
   case res.src, res.dest of
     Just (API.FRFSStationAPI s), Just (API.FRFSStationAPI d) -> do
-  -- let 
-  -- mbSource = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (res.src) 
-  --     mbDest = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (res.dest)
       let stops = res.stops
-          _ = spy "s" s
-          _ = spy "sstops" stops
-          _ = spy "d" d
           markers = HU.normalRoute ""
           len = DA.length stops
           sourcePosition = {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0  s.lon}
@@ -63,60 +59,54 @@ transformStationsForMap stations route srcCode destCode = do
                             else "ny_ic_stop_black"
       markers = HU.normalRoute ""
 
-  -- let mbSrcIndex = DA.findIndex (\(API.FRFSStationAPI item) -> item.code == srcCode) stations
-  --     mbDestIndex = DA.findIndex (\(API.FRFSStationAPI item) -> item.code == destCode) stations
-  -- case mbSrcIndex, mbDestIndex of
-  --   Just srcIndex, Just destIndex -> do
-  --     let mbSource = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (stations DA.!! srcIndex) 
-  --         mbDest = maybe Nothing (\(API.FRFSStationAPI item) -> Just item) (stations DA.!! destIndex)
-  --         stops = DA.slice (srcIndex + 1) destIndex stations
-  --         markers = HU.normalRoute ""
-  --         sourcePosition = case mbSource of
-  --                            Just s -> {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0  s.lon}
-  --                            _ -> {lat : 0.0, lng : 0.0}
-  --         destPosition = case mbDest of
-  --                            Just s -> {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0 s.lon}
-  --                            _ -> {lat : 0.0, lng : 0.0}
-  --         srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "src", pointerIcon = markers.srcMarker, primaryText = fromMaybe "Source" (mbSource <#> _.name), position = sourcePosition}
-  --         destMarkerConfig = JB.defaultMarkerConfig{ markerId = "dest", pointerIcon = markers.destMarker, primaryText = fromMaybe "Dest" (mbDest <#> _.name), position = destPosition}
-  --         stopsConfig = map (\(API.FRFSStationAPI item) -> JB.defaultMarkerConfig{ markerId = item.code, pointerIcon = markers.srcMarker, position = {lat : fromMaybe 0.0 item.lat, lng : fromMaybe 0.0  item.lon}}) stops
-  --     JB.mkRouteConfig (Remote.walkCoordinates route.points) srcMarkerConfig destMarkerConfig (Just stopsConfig) "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig
-  --   _,_ -> JB.routeConfig
-  -- where
-  --   getPosition stop =  {
-  --     lat : fromMaybe 0.0 (stop <#> _.lat)
-  --     lng : fromMaybe 0.0 (stop <#> _.lon)
-  --   }
-
 getStationsFromBusRoute ::  API.FRFSRouteAPI -> Array API.FRFSStationAPI 
 getStationsFromBusRoute (API.FRFSRouteAPI stop) = fromMaybe [] stop.stations
 
-getStopImage :: StopType -> String 
-getStopImage stopType = 
-  case stopType of
-    SOURCE_STOP -> "ny_ic_source_dot"
-    DESTINATION_STOP -> "ny_ic_dest_dot"
-    _ -> "ny_ic_stop_black"
+getStopImage :: StopType -> Maybe RideType -> String 
+getStopImage stopType rideType = 
+  case stopType, rideType of
+    SOURCE_STOP, Just STOP -> "ny_ic_source_dot"
+    SOURCE_STOP, _ -> "ny_ic_stop_black"
+    DESTINATION_STOP, Just STOP -> "ny_ic_dest_dot"
+    DESTINATION_STOP, _ -> "ny_ic_stop_black"
+    ROUTE_SOURCE, _ -> "ny_ic_stop_black"
+    ROUTE_END, _ -> "ny_ic_stop_black"
+    _, _ -> "ny_ic_stop_black"
 
-getStopMarker :: StopType -> String 
-getStopMarker stopType = do
+getStopMarker :: StopType -> Maybe RideType -> Int -> String 
+getStopMarker stopType rideType stopIndex = do
   let markers = HU.normalRoute ""
-  case stopType of
-    SOURCE_STOP -> markers.srcMarker
-    DESTINATION_STOP -> markers.destMarker
-    _ -> "ny_ic_stop_black"
+  case stopType,rideType of
+    SOURCE_STOP, Just STOP -> markers.srcMarker
+    SOURCE_STOP, _ -> if stopIndex == 0 then "ny_ic_route_start_pointer" else markers.srcMarker
+    DESTINATION_STOP, Just STOP -> markers.destMarker
+    DESTINATION_STOP, _ -> "ny_ic_route_end_pointer"
+    ROUTE_SOURCE, _ -> "ny_ic_route_start_pointer"
+    ROUTE_END, _ -> "ny_ic_route_end_pointer"
+    _, _ -> "ny_ic_stop_black"
 
-getStopMarkerSize :: StopType -> Int 
-getStopMarkerSize stopType = 
+getStopMarkerSize :: StopType -> Maybe RideType -> Int -> Int 
+getStopMarkerSize stopType rideType stopIndex = 
+  case stopType, rideType of
+    SOURCE_STOP, Just STOP -> 90
+    SOURCE_STOP, _ -> if stopIndex == 0 then 120 else 90
+    DESTINATION_STOP, Just STOP -> 90
+    DESTINATION_STOP, _ -> 120
+    NORMAL_STOP, _ -> 20
+    ROUTE_SOURCE, _ -> 120
+    ROUTE_END, _ -> 120
+    _, _ -> 50
+
+getZIndex :: StopType -> Number
+getZIndex stopType = do
   case stopType of
-    SOURCE_STOP -> if os == "IOS" then 40 else 90
-    DESTINATION_STOP -> if os == "IOS" then 40 else 90
-    NORMAL_STOP -> if os == "IOS" then 10 else 20
-    _ -> if os == "IOS" then 20 else 50
+    SOURCE_STOP      -> 1.0
+    DESTINATION_STOP -> 1.0
+    _                -> 0.0
 
 getStopType :: String -> Int -> BusTrackingScreenState-> StopType 
 getStopType code index state = do
-  let srcCode = state.data.sourceStation <#> _.stationCode
+  let srcCode = maybe (state.data.nearestStopFromCurrentLoc <#> (\(API.FRFSStationAPI nearestStop) -> nearestStop.code)) (\item -> Just $ item.stationCode) state.data.sourceStation
       destCode = state.data.destinationStation <#> _.stationCode
   if isJust srcCode  && srcCode == Just code then SOURCE_STOP
   else if isJust destCode  && destCode == Just code then DESTINATION_STOP
@@ -125,3 +115,14 @@ getStopType code index state = do
   else if index == 0 then SOURCE_STOP
   else if index == DA.length state.data.stopsList - 1 then DESTINATION_STOP
   else NORMAL_STOP
+
+getNearestStopFromLatLong :: API.LatLong -> Array API.FRFSStationAPI -> Maybe API.FRFSStationAPI
+getNearestStopFromLatLong currentLocation stations =
+  let minDistance = minimumBy (\(Tuple _ d1) (Tuple _ d2) -> compare d1 d2) distances
+  in 
+    case minDistance of
+      Just (Tuple nearestStop _) -> Just nearestStop
+      Nothing -> Nothing
+  where
+    distances :: Array (Tuple API.FRFSStationAPI Number)
+    distances = map (\(API.FRFSStationAPI item) -> Tuple (API.FRFSStationAPI item) $ haversineDistance currentLocation (API.LatLong {lat : fromMaybe 0.0 item.lat, lon : fromMaybe 0.0 item.lon})) stations

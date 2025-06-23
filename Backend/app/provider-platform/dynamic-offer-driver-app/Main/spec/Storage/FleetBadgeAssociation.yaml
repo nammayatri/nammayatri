@@ -1,0 +1,50 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FleetBadge: Domain.Types.FleetBadge
+  FleetBadgeType: Domain.Types.FleetBadgeType
+  Person: Domain.Types.Person
+
+FleetBadgeAssociation:
+  tableName: fleet_badge_association
+
+  fields:
+    id: Id FleetBadgeAssociation
+    badgeId: Id FleetBadge
+    driverId: Id Person
+    isActive: Bool
+    fleetOwnerId: Text
+    badgeType: FleetBadgeType|NoRelation
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    badgeId: "!SecondaryKey"
+    driverId: "!SecondaryKey"
+    fleetOwnerId: "!SecondaryKey"
+    badgeType: "!SecondaryKey"
+
+  default:
+    badgeType: "'DRIVER'"
+
+  queries:
+    deleteByBadgeId:
+      kvFunction: deleteWithKV
+      where: badgeId
+
+  sqlType:
+    id: text
+    badgeId: text
+    fleetOwnerId: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

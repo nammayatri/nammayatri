@@ -19,19 +19,27 @@ module API.UI
 where
 
 import qualified API.Action.UI.BBPS as BBPS
+import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
+import qualified API.Action.UI.DeletedPerson as DeletedPerson
 import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
+import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
+import qualified API.Action.UI.NearbyBuses as NearbyBuses
+import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
+import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
+import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
@@ -57,6 +65,7 @@ import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
+import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
@@ -112,6 +121,7 @@ type API =
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
+           :<|> DeletedPerson.API
            :<|> EditLocation.API
            :<|> SocialLogin.API
            :<|> EstimateBP.API
@@ -121,6 +131,14 @@ type API =
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> RentalsIntercityCache.API
+           :<|> Miscellaneous.API
+           :<|> NearbyDrivers.API
+           :<|> NearbyBuses.API
+           :<|> Places.API
+           :<|> CRIS.API
+           :<|> TicketKapture.API
+           :<|> Insurance.API
        )
 
 handler :: FlowServer API
@@ -165,6 +183,7 @@ handler =
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler
+    :<|> DeletedPerson.handler
     :<|> EditLocation.handler
     :<|> SocialLogin.handler
     :<|> EstimateBP.handler
@@ -174,3 +193,11 @@ handler =
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> RentalsIntercityCache.handler
+    :<|> Miscellaneous.handler
+    :<|> NearbyDrivers.handler
+    :<|> NearbyBuses.handler
+    :<|> Places.handler
+    :<|> CRIS.handler
+    :<|> TicketKapture.handler
+    :<|> Insurance.handler

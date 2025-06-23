@@ -85,3 +85,37 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounts_json text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN old_cache_dump text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN via text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN train_type_code text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN ticket_type_code text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN sdk_token text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_route_id text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN distance integer ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN app_session integer ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN child_price double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN estimated_price double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN integrated_bpp_config_id character varying(36) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN child_ticket_quantity integer ;

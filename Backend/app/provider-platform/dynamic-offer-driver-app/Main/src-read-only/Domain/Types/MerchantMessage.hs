@@ -66,9 +66,16 @@ data MessageKey
   | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
   | WHATSAPP_MANUAL_PAYMENT_LINK
   | FLEET_CONSENT_DEEPLINK_MESSAGE
+  | SEND_FARE_RECEIPT_MESSAGE
+  | WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION
+  | OPERATOR_CONSENT_DEEPLINK_MESSAGE
+  | OPERATOR_JOINING_MESSAGE
+  | OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE
+  | FLEET_LINK_SUCCESS_MESSAGE
+  | FLEET_UNLINK_SUCCESS_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantMessage = MerchantMessageD 'Safe
+type MerchantMessage = MerchantMessageD ('Safe)
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
@@ -78,6 +85,6 @@ instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MediaChannel))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))

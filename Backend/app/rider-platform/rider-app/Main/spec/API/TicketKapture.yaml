@@ -1,0 +1,19 @@
+imports:
+  Text: Data.Text
+  TicketType: Kernel.External.Ticket.Interface.Types
+
+module: TicketKapture
+
+types:
+  TicketKaptureResp:
+    encryptedCc: Text
+    encryptedIv: Text
+
+apis:
+  - POST:
+      endpoint: /kaptureCustomerLogin
+      auth: TokenAuth
+      mandatoryQuery:
+        ticketType: TicketType
+      response:
+        type: TicketKaptureResp

@@ -25,7 +25,8 @@ import Timers (clearTimerWithId)
 
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (AfterRender) = "AfterRender"
+  show (TimerAction _ _ _) = "TimerAction"
 
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog

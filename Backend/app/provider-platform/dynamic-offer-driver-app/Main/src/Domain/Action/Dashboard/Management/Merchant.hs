@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFarePolicyUpsert,
     postMerchantConfigOperatingCityCreate,
     postMerchantUpdateOnboardingVehicleVariantMapping,
+    postMerchantConfigSpecialLocationUpsert,
     postMerchantSpecialLocationUpsert,
     deleteMerchantSpecialLocationDelete,
     postMerchantSpecialLocationGatesUpsert,
@@ -48,8 +49,10 @@ module Domain.Action.Dashboard.Management.Merchant
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -64,6 +67,7 @@ import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDri
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
@@ -115,18 +119,22 @@ import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Types.TimeBound as TB
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
+import Kernel.Utils.Geometry
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.GateInfoGeom as QGIG
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
+import qualified Lib.Queries.SpecialLocationPriority as QSLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as D
+import qualified Lib.Types.GateInfo as DGI
+import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -138,7 +146,6 @@ import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.GoHomeConfig as CQGHC
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -373,6 +380,16 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               createJobIn @_ @'SupplyDemand mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: SupplyDemandRequestJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.CongestionChargeCalculation -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe CongestionChargeCalculationRequestJobData
+          case jobData' of
+            Just jobData -> do
+              mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+              let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
+              createJobIn @_ @'CongestionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CongestionChargeCalculationRequestJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
 
 ---------------------------------------------------------------------
@@ -583,10 +600,10 @@ getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbC
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case (mbReqDocumentType, mbCategory) of
-    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId
-    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType)
-    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category
-    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category
+    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId (Just [])
+    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType) (Just [])
+    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category (Just [])
+    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category (Just [])
 
   pure $ mkDocumentVerificationConfigRes <$> configs
 
@@ -638,7 +655,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just []) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -689,7 +706,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory
+  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just [])
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
   _ <- CQDVC.create newConfig
@@ -728,8 +745,16 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
         updatedAt = now,
         createdAt = now,
+        documentCategory = castDocumentCategory <$> documentCategory,
         ..
       }
+  where
+    castDocumentCategory :: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory -> DVC.DocumentCategory
+    castDocumentCategory = \case
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Driver -> DVC.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle -> DVC.Vehicle
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
 
 ---------------------------------------------------------------------
 postMerchantServiceConfigMapsUpdate ::
@@ -944,6 +969,7 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             govtCharges = req.govtCharges <|> govtCharges,
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             tollCharges = req.tollCharges <|> tollCharges,
+            petCharges = req.petCharges <|> petCharges,
             farePolicyDetails = fPDetails,
             congestionChargeMultiplier = FarePolicy.mkCongestionChargeMultiplier <$> req.congestionChargeMultiplier <|> congestionChargeMultiplier,
             description = req.description <|> description,
@@ -970,6 +996,25 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
           ..
         }
 
+----------------------------------------------- CSV Util Functions -----------------------------------------------
+cleanField :: Text -> Maybe Text
+cleanField = replaceEmpty . T.strip
+
+readCSVField :: Read a => Int -> Text -> Text -> Flow a
+readCSVField idx fieldValue fieldName =
+  cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
+readMaybeCSVField _ fieldValue _ =
+  cleanField fieldValue >>= readMaybe . T.unpack
+
+cleanCSVField :: Int -> Text -> Text -> Flow Text
+cleanCSVField idx fieldValue fieldName =
+  cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
+cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
+
 ---------------------------------------------------------------------
 data FarePolicyCSVRow = FarePolicyCSVRow
   { city :: Text,
@@ -983,6 +1028,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     maxAllowedTripDistance :: Text,
     serviceCharge :: Text,
     tollCharges :: Text,
+    petCharges :: Text,
     tipOptions :: Text,
     govtCharges :: Text,
     farePolicyType :: Text,
@@ -1050,7 +1096,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     defaultWaitTimeAtDestination :: Text,
     enabled :: Text,
     disableRecompute :: Text,
-    stateEntryPermitCharges :: Text
+    stateEntryPermitCharges :: Text,
+    conditionalCharges :: Text
   }
   deriving (Show)
 
@@ -1068,6 +1115,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "max_allowed_trip_distance"
       <*> r .: "service_charge"
       <*> r .: "toll_charges"
+      <*> r .: "pet_charges"
       <*> r .: "tip_options"
       <*> r .: "govt_charges"
       <*> r .: "fare_policy_type"
@@ -1136,6 +1184,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "enabled"
       <*> r .: "disable_recompute"
       <*> r .: "state_entry_permit_charges"
+      <*> r .: "additional_charges"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1160,28 +1209,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     Right res -> return res
     Left _ -> throwError $ InvalidRequest "Someone already triggered this api"
   where
-    cleanField = replaceEmpty . T.strip
-
     readCsv merchantId distanceUnit csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (makeFarePolicy merchantId merchantOpCity distanceUnit) v >>= (pure . V.toList)
-
-    readCSVField :: Read a => Int -> Text -> Text -> Flow a
-    readCSVField idx fieldValue fieldName =
-      cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
-
-    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
-    readMaybeCSVField _ fieldValue _ =
-      cleanField fieldValue >>= readMaybe . T.unpack
-
-    cleanCSVField :: Int -> Text -> Text -> Flow Text
-    cleanCSVField idx fieldValue fieldName =
-      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
-
-    cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
-    cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
     groupFarePolices :: [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> [[(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)]]
     groupFarePolices = DL.groupBy (\a b -> fst7 a == fst7 b) . DL.sortBy (compare `on` fst7)
@@ -1312,7 +1344,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           return (errors, newBoundedAlreadyDeletedMap)
 
-    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier (Just []) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
     makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
     makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
@@ -1353,6 +1385,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
+      let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
@@ -1374,6 +1407,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                   else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
       let perStopCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perStopCharge "Per Stop Charge"
+      let additionalChargesJson :: (Maybe DAT.Value) = readMaybeCSVField idx row.conditionalCharges "Additional Charges"
+      let conditionalCharges' = maybe (DAT.Success []) DAT.fromJSON additionalChargesJson
+      conditionalCharges <- do
+        case conditionalCharges' of
+          DAT.Success (resp :: [DAC.ConditionalCharges]) -> return resp
+          DAT.Error err -> throwError $ InvalidRequest ("Additional charges Parsing failed :: " <> show err)
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
       (freeWatingTime, waitingCharges, mbNightCharges) <- do
@@ -1552,7 +1591,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
@@ -1569,6 +1608,171 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       Map.insert key True mapObj
 
 ---------------------------------------------------------------------
+---------------------------------------------------------------------
+data SpecialLocationCSVRow = SpecialLocationCSVRow
+  { city :: Text,
+    locationName :: Text,
+    enabled :: Text,
+    locationFileName :: Text,
+    locationType :: Text,
+    category :: Text,
+    gateInfoName :: Text,
+    gateInfoFileName :: Text,
+    gateInfoLat :: Text,
+    gateInfoLon :: Text,
+    gateInfoDefaultDriverExtra :: Text,
+    gateInfoAddress :: Text,
+    gateInfoHasGeom :: Text,
+    gateInfoCanQueueUpOnGate :: Text,
+    gateInfoType :: Text
+  }
+  deriving (Show)
+
+instance FromNamedRecord SpecialLocationCSVRow where
+  parseNamedRecord r =
+    SpecialLocationCSVRow
+      <$> r .: "city"
+      <*> r .: "location_name"
+      <*> r .: "enabled"
+      <*> r .: "location_file_name"
+      <*> r .: "location_type"
+      <*> r .: "category"
+      <*> r .: "gate_info_name"
+      <*> r .: "gate_info_file_name"
+      <*> r .: "gate_info_lat"
+      <*> r .: "gate_info_lon"
+      <*> r .: "gate_info_default_driver_extra"
+      <*> r .: "gate_info_address"
+      <*> r .: "gate_info_has_geom"
+      <*> r .: "gate_info_can_queue_up_on_gate"
+      <*> r .: "gate_info_type"
+
+postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  flatSpecialLocationAndGateInfo <- readCsv req.file req.locationGeoms req.gateGeoms merchantOpCity
+  let groupedSpecialLocationAndGateInfo = groupSpecialLocationAndGates flatSpecialLocationAndGateInfo
+  unprocessedEntities <-
+    foldlM
+      ( \unprocessedEntities specialLocationAndGates -> do
+          try @_ @SomeException
+            (processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates)
+            >>= \case
+              Left err -> return $ unprocessedEntities <> ["Unable to add special location : " <> show err]
+              Right _ -> return unprocessedEntities
+      )
+      []
+      groupedSpecialLocationAndGateInfo
+  return $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
+  where
+    readCsv csvFile locationGeomFiles gateGeomFiles merchantOpCity = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector SpecialLocationCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM (makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity) v >>= (pure . V.toList)
+
+    makeSpecialLocation :: [(Text, FilePath)] -> [(Text, FilePath)] -> DMOC.MerchantOperatingCity -> Int -> SpecialLocationCSVRow -> Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))
+    makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
+      now <- getCurrentTime
+      city :: Context.City <- readCSVField idx row.city "City"
+      locationName :: Text <- cleanCSVField idx row.locationName "Location Name"
+      locationFileName :: Text <- cleanCSVField idx row.locationFileName "Location File Name"
+      (_, locationGeomFile) <- find (\(geomFileName, _) -> locationFileName == geomFileName) locationGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for location: " <> locationName)
+      locationGeom <- getGeomFromKML locationGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for location: " <> locationName)
+      category :: Text <- cleanCSVField idx row.category "Category"
+      let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
+      enabled :: Bool <- readCSVField idx row.enabled "Enabled"
+      gateInfoId <- generateGUID
+      gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
+      gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
+      gateInfoLon :: Double <- readCSVField idx row.gateInfoLat "Gate Info (longitude)"
+      let gateInfoDefaultDriverExtra :: Maybe Int = readMaybeCSVField idx row.gateInfoDefaultDriverExtra "Gate Info (default_driver_extra)"
+          gateInfoAddress :: Maybe Text = cleanMaybeCSVField idx row.gateInfoAddress "Gate Info (address)"
+      gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"
+      gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
+      gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
+      gateInfoGeom <- do
+        if gateInfoHasGeom
+          then do
+            gateInfoFileName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (file_name)"
+            (_, gateInfoGeomFile) <- find (\(gateFileName, _) -> gateInfoFileName == gateFileName) gateGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for gateInfo: " <> gateInfoName)
+            gateGeom <- getGeomFromKML gateInfoGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for gateInfo: " <> gateInfoName)
+            return $ Just gateGeom
+          else return Nothing
+      let specialLocation =
+            DSL.SpecialLocation
+              { id = Id locationName,
+                enabled = enabled,
+                locationName = locationName,
+                category = category,
+                merchantId = Just (cast merchantOpCity.merchantId),
+                merchantOperatingCityId = Just (cast merchantOpCity.id),
+                linkedLocationsIds = [],
+                gates = [],
+                locationType = fromMaybe SL.Open locationType,
+                geom = Just $ T.pack locationGeom,
+                createdAt = now,
+                updatedAt = now
+              }
+          gateInfo =
+            DGI.GateInfo
+              { id = gateInfoId,
+                point = LatLong {lat = gateInfoLat, lon = gateInfoLon},
+                specialLocationId = Id locationName,
+                defaultDriverExtra = gateInfoDefaultDriverExtra,
+                name = gateInfoName,
+                address = gateInfoAddress,
+                geom = T.pack <$> gateInfoGeom,
+                canQueueUpOnGate = gateInfoCanQueueUpOnGate,
+                gateType = gateInfoType,
+                merchantId = Just (cast merchantOpCity.merchantId),
+                merchantOperatingCityId = Just (cast merchantOpCity.id),
+                createdAt = now,
+                updatedAt = now
+              }
+      return (city, locationName, (specialLocation, gateInfo))
+
+    groupSpecialLocationAndGates :: [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))]]
+    groupSpecialLocationAndGates = DL.groupBy (\a b -> fst2 a == fst2 b) . DL.sortBy (compare `on` fst2)
+      where
+        fst2 (c, l, _) = (c, l)
+
+    runValidationOnSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> Flow ()
+    runValidationOnSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
+    runValidationOnSpecialLocationAndGatesGroup merchantOpCity (x : _) = do
+      let (city, _locationName, (specialLocation, _)) = x
+      if city /= opCity
+        then throwError $ InvalidRequest ("Can't process special location for different city: " <> show city <> ", please login with this city in dashboard")
+        else do
+          -- TODO :: Add Validation for Overlapping Geometries
+          QSLP.findByMerchantOpCityIdAndCategory merchantOpCity.id.getId specialLocation.category
+            >>= \case
+              Just _ -> return ()
+              Nothing -> throwError $ InvalidRequest ("Special location priority does not exist for category: " <> specialLocation.category)
+
+    processSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> Flow ()
+    processSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
+    processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates@(x : _) = do
+      void $ runValidationOnSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates
+      let (_city, locationName, (specialLocation, _)) = x
+      specialLocationId <-
+        QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
+          |<|>| QSL.findByLocationName locationName
+            >>= \case
+              Just spl -> do
+                void $
+                  runTransaction $ do
+                    QSL.deleteById spl.id
+                    QGI.deleteAll spl.id
+                return $ spl.id
+              Nothing -> generateGUID
+      void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
+      mapM_
+        (\(_, _, (_, gateInfo)) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
+        specialLocationAndGates
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
 postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId request = do
   existingSLWithGeom <- maybe (return Nothing) (Esq.runInReplica . QSL.findByIdWithGeom) mbSpecialLocationId
@@ -1609,6 +1813,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
       return $
         SL.SpecialLocation
           { gates = [],
+            enabled = True,
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
@@ -1747,9 +1952,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- vehicle service tier
   mbVehicleServiceTier <-
-    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId
+        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         newVehicleServiceTiers <- mapM (buildVehicleServiceTier newMerchantId newMerchantOperatingCityId) vehicleServiceTiers
         return $ Just newVehicleServiceTiers
       _ -> return Nothing
@@ -1765,9 +1970,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- leader board configs
   mbLeaderBoardConfig <-
-    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId
+        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newMerchantId newMerchantOperatingCityId) leaderBoardConfigs
         return $ Just newLeaderBoardConfigs
       _ -> return Nothing
@@ -1783,9 +1988,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant overlay
   mbMerchantOverlays <-
-    CQMO.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQMO.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId
+        merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         newMerchantOverlays <- mapM (buildMerchantOverlay newMerchantId newMerchantOperatingCityId) merchantOverlays
         return $ Just newMerchantOverlays
       _ -> return Nothing
@@ -1828,9 +2033,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- onboarding document config
   mbDocumentVerificationConfigs <-
-    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
       [] -> do
-        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
+        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
         let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newMerchantId newMerchantOperatingCityId now) documentVerificationConfigs
         return $ Just newDocumentVerificationConfigs
       _ -> return Nothing
@@ -1891,8 +2096,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- subscription config
   subscriptionConfigs <-
-    mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast newMerchantOperatingCityId)) [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL] >>= \cfgs -> do
-      subscriptionCfgs <- mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast baseOperatingCityId)) $
+    mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast newMerchantOperatingCityId) (Just [])) [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL] >>= \cfgs -> do
+      subscriptionCfgs <- mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast baseOperatingCityId) (Just [])) $
         case cfgs of
           [Nothing, Nothing] -> [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL]
           [Nothing, _] -> [Plan.YATRI_SUBSCRIPTION]
@@ -1925,7 +2130,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
         whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
         whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
-        whenJust mbGoHomeConfig $ \newGoHomeConfig -> CQGHC.create newGoHomeConfig
+        whenJust mbGoHomeConfig $ \newGoHomeConfig -> CGHC.create newGoHomeConfig
         whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
         whenJust mbMerchantMessages $ \newMerchantMessages -> mapM_ CQMM.create newMerchantMessages
         whenJust mbMerchantOverlays $ \newMerchantOverlays -> mapM_ CQMO.create newMerchantOverlays
@@ -2296,20 +2501,20 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
 
     makeConfig :: Int -> VehicleVariantMappingCSVRow -> Flow DVC.VehicleClassVariantMap
     makeConfig idx row = do
-      let cleanField = replaceEmpty . T.toLower . T.strip
+      let cleanFieldToLower = replaceEmpty . T.toLower . T.strip
       vehicleVariant <- readMaybe (T.unpack row.vehicleVariant) & fromMaybeM (InvalidRequest $ "Invalid vehicle variant: " <> show row.vehicleVariant <> " at row: " <> show idx)
-      vehicleClass <- cleanField row.vehicleClass & fromMaybeM (InvalidRequest $ "Vehicle class cannot be empty or without constraint: " <> show row.vehicleClass <> " at row: " <> show idx)
+      vehicleClass <- cleanFieldToLower row.vehicleClass & fromMaybeM (InvalidRequest $ "Vehicle class cannot be empty or without constraint: " <> show row.vehicleClass <> " at row: " <> show idx)
       vehicleModel <- replaceEmpty (T.strip row.vehicleModel) & fromMaybeM (InvalidRequest $ "Vehicle Model cannot be empty or without constraint: " <> show row.vehicleModel <> " at row: " <> show idx)
       return $
         DVC.VehicleClassVariantMap
           { vehicleClass,
-            vehicleCapacity = cleanField row.vehicleCapacity >>= readMaybe . T.unpack,
+            vehicleCapacity = cleanFieldToLower row.vehicleCapacity >>= readMaybe . T.unpack,
             vehicleVariant,
-            manufacturer = cleanField row.manufacturer,
-            manufacturerModel = cleanField row.manufacturerModel,
-            reviewRequired = cleanField row.reviewRequired <&> (mapToBool . T.toLower),
+            manufacturer = cleanFieldToLower row.manufacturer,
+            manufacturerModel = cleanFieldToLower row.manufacturerModel,
+            reviewRequired = cleanFieldToLower row.reviewRequired <&> (mapToBool . T.toLower),
             vehicleModel = Just vehicleModel,
-            priority = cleanField row.priority >>= readMaybe . T.unpack,
+            priority = cleanFieldToLower row.priority >>= readMaybe . T.unpack,
             bodyType = Nothing
           }
 
@@ -2343,6 +2548,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     castServiceName = \case
       Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
       Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION
+      Common.DASHCAM_RENTAL_CAUTIO -> Plan.DASHCAM_RENTAL Plan.CAUTIO
 
 postMerchantConfigFailover :: ShortId DM.Merchant -> Context.City -> Common.ConfigNames -> Common.ConfigFailoverReq -> Flow APISuccess
 postMerchantConfigFailover merchantShortId city configNames req = do

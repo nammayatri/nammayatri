@@ -55,7 +55,8 @@ data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq
     adminFirstName :: Text,
     adminLastName :: Text,
     adminMobileCountryCode :: Text,
-    adminMobileNumber :: Text
+    adminMobileNumber :: Text,
+    dashboardType :: Maybe SP.DashboardType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -137,7 +138,10 @@ buildMerchant req = do
         website = Just req.website,
         authToken = Just encryptedAuthToken,
         enabled = Just True,
-        createdAt = now
+        createdAt = now,
+        requireAdminApprovalForFleetOnboarding = Just False,
+        verifyFleetWhileLogin = Just True,
+        hasFleetMemberHierarchy = Just True
       }
 
 changeMerchantEnableState ::
@@ -219,5 +223,8 @@ buildPersonCreateReq req role = do
         verified = Nothing,
         receiveNotification = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing,
+        dashboardType = fromMaybe SP.DEFAULT_DASHBOARD req.dashboardType
       }

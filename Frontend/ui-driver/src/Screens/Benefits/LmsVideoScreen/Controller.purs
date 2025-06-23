@@ -46,7 +46,15 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (lift)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction) = "NoAction"
+  show (GenericHeaderActionController var1) = "GenericHeaderActionController_" <> show var1
+  show (BackPressed) = "BackPressed"
+  show (TakeQuiz) = "TakeQuiz"
+  show (OpenReelsView _ _) = "OpenReelsView"
+  show (GetCurrentPosition _ _ _ _) = "GetCurrentPosition"
+  show (UpdateVideoList var1) = "UpdateVideoList_" <> show var1
+  show (ErrorOccuredAction) = "ErrorOccuredAction"
+  show (SelectLanguage) = "SelectLanguage"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

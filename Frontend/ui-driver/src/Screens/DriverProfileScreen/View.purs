@@ -40,7 +40,7 @@ import Data.Enum (enumFromThenTo)
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber, round)
 import Data.List (elem)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
@@ -61,9 +61,9 @@ import MerchantConfig.Types
 import Mobility.Prelude as MP
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise, show)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport, rotation)
+import PrestoDOM
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (cornerRadii, scrollBarY)
+import PrestoDOM.Properties
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants (verifiedVehicleOnly, pendingVehicleOnly,decodeVehicleType)
 import Resource.Constants as Const
@@ -87,15 +87,23 @@ import Data.Array (filter)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Types.App (GlobalState(..), FlowBT)
 import Services.API (DriverProfileDataRes(..),DriverProfileSummaryRes(..))
+import Components.ExtraChargeCard as ExtraChargeCard
+import Services.API as API
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
+import Components.DriverProfileScoreCard as DriverProfileScoreCard
+import PrestoDOM.Elements.Elements
+import Mobility.Prelude (capitalize)
 
-screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
+
+screen :: ST.DriverProfileScreenState -> LoggableScreen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "DriverProfileScreen"
   , globalEvents:
       [ ( \push -> do
-            if initialState.props.openSettings then
+            if initialState.props.skipGlobalEvents then
               pure unit
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
@@ -135,11 +143,13 @@ screen initialState =
         let
           _ = spy "DriverProfileScreen state " state
         eval action state
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.driverProfileScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  frameLayout
+  relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ]
@@ -175,6 +185,7 @@ view push state =
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
     , if state.props.showDriverBlockedPopup then driverBlockedPopupView push state else dummyTextView
+    , profileDetailsBottomSheetView state push
     ]
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -431,8 +442,6 @@ manageVehicleItem state vehicle push =
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 profileView push state =
-  let driverBlockedHeaderVisibility = state.data.driverBlocked && (not $ DS.null state.data.blockedExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
-  in
   PrestoAnim.animationSet [ Anim.fadeIn (not state.props.openSettings) ]
     $ linearLayout
         [ height MATCH_PARENT
@@ -442,28 +451,7 @@ profileView push state =
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
         [ headerView state push
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , background Color.red900
-            , padding $ Padding 16 16 16 16
-            , gravity LEFT
-            , visibility $ boolToVisibility driverBlockedHeaderVisibility
-            ]
-            [ textView $ 
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , color Color.white900
-                , text $ getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
-                , weight 1.0
-                ] <> FontStyle.subHeading3 TypoGraphy
-            , imageView 
-                [ height $ V 24
-                , width $ V 24
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
-                , onClick push $ const ShowDrvierBlockedPopup
-                ]
-            ]
+        , driverBlockedHeader state push
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -497,9 +485,9 @@ profileView push state =
                       , width MATCH_PARENT
                       ][
                         tabImageView state push
-                      , completedProfile state push 
+                      , completedProfile state push
                       ]
-                    , infoView state push
+                    , nameAndMoreDetailsView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
                     ]
@@ -511,6 +499,64 @@ profileView push state =
             ]
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
+
+
+nameAndMoreDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+nameAndMoreDetailsView state push =
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS
+  , onClick push $ const OnMoreDetailsClick
+  ][
+    textView $ [
+      text state.data.driverName
+    , color Color.black900
+    ] <> (FontStyle.body6 TypoGraphy)
+  , textView $ [
+      text $ capitalize $ getStringV2 more_details
+    , color Color.blue800
+    ] <> (FontStyle.body3 TypoGraphy)
+  ]
+
+driverBlockedHeader :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverBlockedHeader state push =
+  case state.data.driverInfoResponse of
+    Just (GetDriverInfoResp res) ->
+      let
+        isSuspended = res.overchargingTag == Just API.MediumOverCharging
+        timeFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A"
+        dayFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY"
+        blockedTitle = getString $ if isSuspended then SUSPENDED_TILL timeFormat dayFormat else BLOCKED_TILL timeFormat dayFormat
+        driverBlockedHeaderVisibility = state.data.driverBlocked
+          && (not $ DS.null state.data.blockedExpiryTime)
+          && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
+      in
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , background Color.red900
+          , padding $ Padding 16 16 16 16
+          , gravity LEFT
+          , visibility $ boolToVisibility driverBlockedHeaderVisibility
+          ]
+          [ textView $
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color Color.white900
+              , text blockedTitle
+              , weight 1.0
+              ] <> FontStyle.subHeading3 TypoGraphy
+          , imageView
+              [ height $ V 24
+              , width $ V 24
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
+              , onClick push $ const ShowDrvierBlockedPopup
+              ]
+          ]
+    Nothing -> linearLayout [width $ V 0 , height $ V 0][]
 
 completedProfile :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 completedProfile state push =
@@ -541,36 +587,11 @@ completedProfile state push =
           , fontWeight $ FontWeight 600
           ]
     ]
-  , linearLayout[
-      height WRAP_CONTENT,
-      width MATCH_PARENT,
-      margin $ if ((state.data.profileCompletedModules*100)/4) /= 100 then Margin 0 7 0 12 else Margin 0 20 0 12,
-      onClick push $ const CompleteProfile,
-      gravity CENTER
-    ][
-      imageView
-        [ width $ V 11
-        , height $ V 11
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_pen"
-        , visibility $ boolToVisibility $ ((state.data.profileCompletedModules*100)/4) /= 100
-        ]
-    , textView
-        $ [ text $ getString $ if ((state.data.profileCompletedModules*100)/4) == 100 then EDIT_PROFILE else COMPLETE_PROFILE
-            , width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , color Color.blue900
-            , margin $ MarginLeft 5
-            , lineHeight "15"
-            , textSize FontSize.a_14
-            , fontStyle $ semiBold LanguageStyle
-            , fontWeight $ FontWeight 600
-            ]
-    ]
   ]
 
 getVerifiedVehicleCount :: Array ST.DriverVehicleDetails -> Int
 getVerifiedVehicleCount vehicles = length $ filter (\item -> item.isVerified == true) vehicles
-  
+
 verifiedVehiclesView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 verifiedVehiclesView state push =
   linearLayout
@@ -780,7 +801,7 @@ tabImageView state push =
               linearLayout[
                 height $ V 98,
                 width $ V 100,
-                orientation VERTICAL, 
+                orientation VERTICAL,
                 visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS && per < 100
             ][
                 linearLayout[
@@ -877,16 +898,76 @@ driverDetailsView push state =
       , margin $ MarginHorizontal 16 16
       ] $ if state.data.cancellationRate > configs.warning1 then cancellationRateOnTop configs else cancellationRateOnBottom configs
   where
-    cancellationRateOnTop configs = 
-      [ cancellationRateView state push configs
+    cancellationRateOnTop configs =
+      [ scoreCardsView state push configs
+      -- , extraChargePenaltyView push state
+      -- , cancellationRateView state push configs
       , driverAnalyticsView state push
       , badgeLayoutView state
       ]
     cancellationRateOnBottom configs =
-      [ driverAnalyticsView state push
+      [ scoreCardsView state push configs
+      -- , extraChargePenaltyView push state
+      , driverAnalyticsView state push
       , badgeLayoutView state
-      , cancellationRateView state push configs
+      -- , cancellationRateView state push configs
       ]
+
+
+scoreCardsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> CancellationThresholdConfig -> PrestoDOM (Effect Unit) w
+scoreCardsView state push cancellationThresholdConfig =
+  let
+    cards = driverProfileScoreCardConfigs state cancellationThresholdConfig
+    filteredCards = filter (\card -> isJust card ) cards
+  in
+    if length filteredCards > 1 then
+      horizontalScrollView [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , scrollBarX false
+      ] [
+        linearLayout [
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        ] $
+        map (\driverProfileScoreCardConfig ->
+          case driverProfileScoreCardConfig of
+            Just driverProfileScoreCardConfig ->
+              DriverProfileScoreCard.verticalView (push <<< DriverProfileScoreCardAC) driverProfileScoreCardConfig
+            Nothing ->
+              linearLayout [width $ V 0, height $ V 0][]
+        ) $ driverProfileScoreCardConfigs state cancellationThresholdConfig
+      ]
+    else
+      case filteredCards !! 0 of
+        Just (Just driverProfileScoreCardConfig)->
+          DriverProfileScoreCard.horizontalView (push <<< DriverProfileScoreCardAC) driverProfileScoreCardConfig
+        _ ->
+          linearLayout [width $ V 0, height $ V 0][]
+
+extraChargePenaltyView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+extraChargePenaltyView push state =
+  case state.data.driverInfoResponse of
+    Just (GetDriverInfoResp resp) ->
+       case resp.overchargingTag of
+        Just overchargingTag ->
+          linearLayout[
+            width MATCH_PARENT,
+            height WRAP_CONTENT,
+            orientation VERTICAL,
+            margin $ MarginTop 8
+          ][
+            textView $ [
+              text $ getStringV2 extra_charge_penalty,
+              width MATCH_PARENT,
+              height WRAP_CONTENT,
+              color Color.black
+            , margin $ MarginBottom 12
+            ] <> (FontStyle.subHeading1 TypoGraphy)
+          , ExtraChargeCard.view (push <<< ExtraChargeCardAC) $ ExtraChargeCard.extraChargesConfig overchargingTag resp.ridesWithFareIssues resp.totalRidesConsideredForFareIssues VISIBLE
+          ]
+        Nothing -> linearLayout [width $ V 0, height $ V 0][]
+    Nothing -> linearLayout [width $ V 0, height $ V 0][]
 
 ------------------------------------------- MISSED OPPORTUNITY VIEW -----------------------------------------
 missedOpportunityView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -929,7 +1010,6 @@ driverAnalyticsView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ Margin 0 40 0 0
       ]
       [ textView
           [ width WRAP_CONTENT
@@ -995,7 +1075,7 @@ driverAnalyticsView state push =
                   , margin $ MarginHorizontal 5 5
                   , gravity CENTER_VERTICAL
                   ]
-                  [ imageView 
+                  [ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_heart"
                     , width $ V 15
                     , height $ V 15
@@ -1063,14 +1143,14 @@ cancellationRateView state push configs =
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , margin if cancellationRate > configs.warning2 then MarginBottom 16 else MarginBottom 0
-        ] 
-        [ 
+        ]
+        [
           relativeLayout
           [ height $ V 103
           , width $ V $ ((screenWidth unit)/ 2) - 32
           , gravity CENTER
-          ][ 
-            imageView 
+          ][
+            imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_gauge_image"
             , width $ V $ ((screenWidth unit)/ 2) - 32
             , height $ V 100
@@ -1094,7 +1174,7 @@ cancellationRateView state push configs =
           , weight 1.0
           , orientation VERTICAL
           , gravity CENTER
-          ] [ 
+          ] [
               textView $
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -1132,7 +1212,7 @@ cancellationRateView state push configs =
           , padding $ PaddingVertical 8 8
           , gravity CENTER
           , visibility $ boolToVisibility $ cancellationRate > configs.warning2
-          ] 
+          ]
           [ textView $
             [ text (getString HIGH_CANCELLATION_RATE)
             , textSize FontSize.a_14
@@ -1371,7 +1451,7 @@ additionalDetails push state =
 -------------------------------------------- DRIVER NUMBER AND GENDER VIEW ----------------------------------------------------------------
 driverNumberGenderView :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 driverNumberGenderView state push =
-  linearLayout
+  Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -1491,6 +1571,125 @@ alternateNumberLayoutView state push =
           [ PrimaryEditText.view (push <<< PrimaryEditTextActionController) (alternatePrimaryEditTextConfig state) ]
     ]
 
+profileDetailsBottomSheetView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+profileDetailsBottomSheetView state push =
+  let
+    vc = getVehicleCategory state
+    driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
+      "MALE" | vc == ST.AutoCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
+      "MALE" | vc == ST.BikeCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.TruckCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.BusCategory -> "ny_ic_new_avatar_profile"
+      "FEMALE" -> "ny_ic_profile_female"
+      _ -> "ny_ic_generic_mascot"
+  in
+    linearLayout[
+        height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity BOTTOM
+      , background if state.showDriverDetails then Color.blackLessTrans else Color.transparent
+      , clickable state.showDriverDetails
+      ][
+      coordinatorLayout[
+        height MATCH_PARENT
+      , width MATCH_PARENT
+      ][
+        bottomSheetLayout [
+          width MATCH_PARENT
+        , height MATCH_PARENT
+        , orientation VERTICAL
+        , hideable true
+        , enableShift false
+        , sheetState $ if state.showDriverDetails then EXPANDED else HIDDEN
+        , onStateChanged push $ BottomSheetStageChanged
+        -- , onStateChanged push $ BottomSheetStageChanged
+        -- , onSlide push $ BottomSheetSlide
+        ][
+          linearLayout[
+              height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , gravity BOTTOM
+            ][
+            linearLayout[
+              height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , gravity CENTER
+            , padding $ Padding 16 24 16 16
+            , cornerRadii $ Corners 24.0 true true false false
+            , background Color.white900
+            ][
+              frameLayout[
+                width MATCH_PARENT
+              , height WRAP_CONTENT
+              , margin $ MarginBottom 12
+              ][
+                linearLayout[
+                  width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity RIGHT
+                , margin $ MarginBottom 16
+                ][
+                  imageView[
+                    width $ V 30
+                  , height $ V 30
+                  , onClick push $ const $ OnCloseDriverDetailsClick
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
+                  ]
+                ]
+              , linearLayout[
+                  width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity CENTER
+                ][
+                  imageView [
+                    width $ V 88
+                  , height $ V 88
+                  , cornerRadius 44.0
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET driverImage
+                  , onClick push $ const CompleteProfile
+                  ]
+                ]
+              ]
+            , linearLayout[
+                height WRAP_CONTENT
+              , width MATCH_PARENT
+              , onClick push $ const CompleteProfile
+              , gravity CENTER
+              , margin $MarginBottom 12
+              ][
+                imageView
+                  [ width $ V 11
+                  , height $ V 11
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_pen"
+                  , visibility $ boolToVisibility $ ((state.data.profileCompletedModules*100)/4) /= 100
+                  ]
+              , textView
+                  $ [ text $ getString $ if ((state.data.profileCompletedModules*100)/4) == 100 then EDIT_PROFILE else COMPLETE_PROFILE
+                      , width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , color Color.blue900
+                      , margin $ MarginLeft 5
+                      , lineHeight "15"
+                      , textSize FontSize.a_14
+                      , fontStyle $ semiBold LanguageStyle
+                      , fontWeight $ FontWeight 600
+                      ]
+              ]
+            , infoView state push
+            ]
+            ]
+        ]
+      ]
+    ]
+
+
+
+
 infoView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 infoView state push =
   linearLayout
@@ -1501,7 +1700,7 @@ infoView state push =
     , margin $ MarginHorizontal 16 16
     ]
     [ detailsListViewComponent state push
-        { backgroundColor: Color.white900
+        { backgroundColor: Color.blue600
         , separatorColor: Color.grey700
         , isLeftKeyClickable: false
         , arrayList: driverDetailsArray state
@@ -1793,7 +1992,7 @@ vehicleListItem state push vehicle =
             ]
         ]
     ]
-  
+
 
 getRcDetails :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 getRcDetails state = do
@@ -2037,7 +2236,7 @@ detailsListViewComponent state push config =
                               , weight 1.0
                               ]
                               []
-                          , textView
+                          , textView $
                               [ text $ fromMaybe (getString ADD) item.value
                               , textSize FontSize.a_14
                               , onClick push $ const item.action
@@ -2055,7 +2254,7 @@ detailsListViewComponent state push config =
                                       isPaymentView = val == (getString VIEW)
                                     if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit || isPaymentView then Color.blue900 else Color.black900
                               , fontStyle $ FontStyle.semiBold LanguageStyle
-                              ]
+                              ] <> if item.isEditable && (isJust item.value) then [onClick push $ const item.action] else []
                           ]
                             <> if item.isEditable && (isJust item.value) then
                                 [ imageView
@@ -2276,11 +2475,7 @@ horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight =
 
 -------------------------------------------- DUMMY TEXT VIEW ---------------------------------------------
 dummyTextView :: forall w. PrestoDOM (Effect Unit) w
-dummyTextView =
-  textView
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    ]
+dummyTextView = linearLayout[width $ V 0, height $ V 0] []
 
 rcEditPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 rcEditPopUpView push state =
@@ -2595,8 +2790,8 @@ getVehicleImage :: ST.VehicleCategory -> ST.DriverProfileScreenState -> String
 getVehicleImage category state =
   let vehicleVariant = (getValueToLocalStore VEHICLE_VARIANT)
       showSpecialVariantImage = vehicleVariant == "HERITAGE_CAB"
-  in 
-    if showSpecialVariantImage 
+  in
+    if showSpecialVariantImage
       then HU.getVehicleVariantImage vehicleVariant
       else mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
   where

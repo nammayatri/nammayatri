@@ -46,3 +46,24 @@ updateCachedQuoteByPrimaryKey FRFSQuote {..} = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+updatePriceAndEstimatedPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Price -> Maybe Price -> m ())
+updatePriceAndEstimatedPriceById id price quotePriceBeforeUpdate = do
+  _now <- getCurrentTime
+  updateWithKV
+    ([Se.Set Beam.price ((.amount) price), Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) quotePriceBeforeUpdate), Se.Set Beam.updatedAt _now])
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateValidTillById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> UTCTime -> m ())
+updateValidTillById id validTill = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.validTill validTill, Se.Set Beam.updatedAt _now]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateTicketAndChildTicketQuantityById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> m ())
+updateTicketAndChildTicketQuantityById id quantity childTicketQuantity = do
+  _now <- getCurrentTime
+  updateWithKV
+    ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity (fromJust quantity) | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

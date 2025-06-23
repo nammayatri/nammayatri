@@ -29,7 +29,8 @@ instance JT.JourneyLeg WalkLegRequest m where
               skipBooking = False,
               convenienceCost = 0,
               pricingId = Nothing,
-              isDeleted = Just False
+              isDeleted = Just False,
+              onSearchFailed = Nothing
             }
     let walkLeg =
           DWalkLeg.WalkLegMultimodal
@@ -84,10 +85,7 @@ instance JT.JourneyLeg WalkLegRequest m where
         JT.JourneyLegStateData
           { status = newStatus,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-            vehiclePosition = Nothing,
-            nextStop = Nothing,
-            nextStopTravelDistance = Nothing,
-            nextStopTravelTime = Nothing,
+            vehiclePositions = [],
             legOrder = journeyLegInfo.journeyLegOrder,
             subLegOrder = 1,
             statusChanged,
@@ -97,7 +95,7 @@ instance JT.JourneyLeg WalkLegRequest m where
 
   getInfo (WalkLegRequestGetInfo req) = do
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
-    JT.mkWalkLegInfoFromWalkLegData legData
+    Just <$> JT.mkWalkLegInfoFromWalkLegData legData req.journeyLeg.entrance req.journeyLeg.exit
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (WalkLegRequestGetFare _) = do
@@ -105,6 +103,7 @@ instance JT.JourneyLeg WalkLegRequest m where
       Just $
         JT.GetFareResponse
           { estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0},
-            estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0}
+            estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0},
+            serviceTypes = Nothing
           }
   getFare _ = throwError (InternalError "Not supported")

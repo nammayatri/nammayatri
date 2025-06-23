@@ -36,6 +36,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.CancellationFarePolicy as DTCFP
 import Domain.Types.Common
+import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
@@ -43,7 +44,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
-import EulerHS.Prelude hiding (id, map, sum)
+import EulerHS.Prelude hiding (elem, id, map, sum)
 import Kernel.Prelude as KP
 import Kernel.Types.Id (Id)
 import qualified Kernel.Types.Price as Price
@@ -96,6 +97,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       tollChargesCaption = show Enums.TOLL_CHARGES
       mbTollChargesItem = mkBreakupItem tollChargesCaption . mkPrice <$> fareParams.tollCharges
 
+      petChargesCaption = show Enums.PET_CHARGES
+      mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
+
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
@@ -106,6 +110,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbCardChargesFixedItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFixedCaption . mkPrice <$> cardCharge.fixed
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
+      additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
     [ Just baseFareItem,
       mbCongestionChargeItem,
@@ -113,6 +118,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbParkingChargeItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
+      mbPetChargesItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
       mkCustomerExtraFareItem,
@@ -124,7 +130,11 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbCardChargesFixedItem
     ]
     <> detailsBreakups
+    <> additionalChargesBreakup
   where
+    castAdditionalChargeCategoriesToEnum = \case
+      DAC.SAFETY_PLUS_CHARGES -> Enums.SAFETY_PLUS_CHARGES
+      _ -> Enums.NO_CHARGES
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
@@ -203,15 +213,15 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
 
 -- TODO: make some tests for it
 
-fareSum :: FareParameters -> HighPrecMoney
-fareSum fareParams = do
-  pureFareSum fareParams
+fareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
+fareSum fareParams conditionalChargeCategories = do
+  pureFareSum fareParams conditionalChargeCategories
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
 
 -- Pure fare without customerExtraFee and driverSelectedFare
-pureFareSum :: FareParameters -> HighPrecMoney
-pureFareSum fareParams = do
+pureFareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
+pureFareSum fareParams conditionalChargeCategories = do
   let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
   fareParams.baseFare
     + fromMaybe 0.0 fareParams.serviceCharge
@@ -220,6 +230,7 @@ pureFareSum fareParams = do
     + fromMaybe 0.0 fareParams.nightShiftCharge
     + fromMaybe 0.0 fareParams.rideExtraTimeFare
     + fromMaybe 0.0 fareParams.congestionCharge
+    + fromMaybe 0.0 fareParams.petCharges
     + fromMaybe 0.0 fareParams.stopCharges
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
@@ -228,6 +239,7 @@ pureFareSum fareParams = do
     + fromMaybe 0.0 fareParams.insuranceCharge
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
+    + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do
@@ -269,7 +281,9 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    petCharges :: Maybe HighPrecMoney,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories]
   }
 
 calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -303,11 +317,13 @@ calculateFareParameters params = do
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
       finalCongestionCharge = fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
+      -- petCharges = if params.isPetRide then fp.petCharges else Nothing
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
+          + fromMaybe 0.0 params.petCharges
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -328,6 +344,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
+            petCharges = params.petCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
@@ -368,6 +385,7 @@ calculateFareParameters params = do
             platformFeeChargesBy = fp.platformFeeChargesBy,
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
+            conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
             ..
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)

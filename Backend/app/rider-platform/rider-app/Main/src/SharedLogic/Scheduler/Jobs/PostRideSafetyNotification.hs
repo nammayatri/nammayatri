@@ -18,6 +18,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Notification
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -34,7 +35,8 @@ postRideSafetyNotification ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasKafkaProducer r
   ) =>
   Job 'PostRideSafetyNotification ->
   m ExecutionResult

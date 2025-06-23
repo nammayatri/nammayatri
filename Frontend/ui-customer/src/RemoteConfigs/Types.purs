@@ -67,11 +67,11 @@ type Gate = {
   images :: Array PickupInstructions
 }
 
-type PickupInstructions = 
+type PickupInstructions =
   { image :: String
   , title :: String
   }
-  
+
 newtype FamousDestination = FamousDestination {
   name :: String,
   address :: String,
@@ -102,7 +102,7 @@ type MapLottieConfig = {
   visibility :: Boolean
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE | TICKETING
 
 type SwitchCityConfigs = {
   cities :: Array UserCity
@@ -174,7 +174,8 @@ type BusFlowConfig = {
   showBusTracking :: Boolean,
   showPostBookingTracking :: Boolean,
   liveRoutes :: Int,
-  ticketValidity :: String
+  ticketValidity :: String,
+  showPreBookingTracking :: Boolean
 }
 
 type AppInfoConfig = {
@@ -184,4 +185,42 @@ type AppInfoConfig = {
 type CancellationThreshold = {
   showBanner :: Boolean,
   percentage :: Number
+}
+
+type ReferralPayoutConfig = {
+  youGet :: Maybe Number,
+  theyGet :: Maybe Number,
+  enable :: Maybe Boolean,
+  coverImage :: Maybe String,
+  termsLink :: String
+}
+
+type VehicleEnquiryBannerConfigs = {
+  auto :: Maybe EnquiryBannerConfigs
+, car :: Maybe EnquiryBannerConfigs
+, ambulance :: Maybe EnquiryBannerConfigs
+, bike :: Maybe EnquiryBannerConfigs
+}
+
+type EnquiryBannerConfigs = {
+  question :: Maybe EnquiryBannerConfig
+, firstBtnBanner :: Maybe EnquiryBannerConfig
+, secondBtnBanner :: Maybe EnquiryBannerConfig
+, categoryId :: String
+, optionId :: Maybe String
+}
+
+type EnquiryBannerConfig = {
+  title :: String
+, background :: String
+, color :: String
+, button1 :: Maybe EnquiryBannerButtonConfig
+, button2 :: Maybe EnquiryBannerButtonConfig
+, image :: String
+}
+
+type EnquiryBannerButtonConfig = {
+  title :: String
+, background :: String
+, color :: String
 }

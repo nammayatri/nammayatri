@@ -54,11 +54,30 @@ data SpecialLocationWarrior = SpecialLocationWarrior
 findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
 findById = Esq.findById
 
+findByLocationNameAndCity :: Transactionable m => Text -> Text -> m (Maybe D.SpecialLocation)
+findByLocationNameAndCity locationName merchanOperatingCityId =
+  Esq.findOne $ do
+    specialLocation <- from $ table @SpecialLocationT
+    where_ $
+      specialLocation ^. SpecialLocationLocationName ==. val locationName
+        &&. specialLocation ^. SpecialLocationMerchantOperatingCityId ==. val (Just merchanOperatingCityId)
+    return specialLocation
+
+findByLocationName :: Transactionable m => Text -> m (Maybe D.SpecialLocation)
+findByLocationName locationName =
+  Esq.findOne $ do
+    specialLocation <- from $ table @SpecialLocationT
+    where_ $
+      specialLocation ^. SpecialLocationLocationName ==. val locationName
+    return specialLocation
+
 findByIdWithGeom :: Transactionable m => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))
 findByIdWithGeom specialLocationId =
   Esq.findOne $ do
     specialLocation <- from $ table @SpecialLocationT
-    where_ $ specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
+    where_ $
+      specialLocation ^. SpecialLocationEnabled ==. val True
+        &&. specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
     return (specialLocation, F.mbGetGeomGeoJSON)
 
 filterGates :: Maybe SpecialLocationFull -> Bool -> Maybe SpecialLocationFull
@@ -121,8 +140,10 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
       where_ $
-        specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
-          ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
+        specialLocation ^. SpecialLocationEnabled ==. val True
+          &&. ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
+                  ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
+              )
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
 
@@ -140,9 +161,11 @@ findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
   specialLocationWithoutGates <- Esq.findAll $ do
     specialLocation <- from $ table @SpecialLocationT
     where_ $
-      specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
-        ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
-        &&. specialLocation ^. SpecialLocationCategory ==. val category
+      specialLocation ^. SpecialLocationEnabled ==. val True
+        &&. ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
+                ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
+                &&. specialLocation ^. SpecialLocationCategory ==. val category
+            )
     return specialLocation
   mapM buildSpecialLocationWithGates specialLocationWithoutGates
 
@@ -151,7 +174,7 @@ findSpecialLocationByLatLongFull point = do
   mbRes <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ containsPoint (point.lon, point.lat)
+      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation (listToMaybe mbRes)
 
@@ -160,7 +183,7 @@ findSpecialLocationByLatLongNearby point radius = do
   specialLocations <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
+      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. pointCloseByOrWithin (point.lon, point.lat) (val radius)
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
 
@@ -176,7 +199,7 @@ findSpecialLocationByLatLong' point = do
   specialLocations <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ containsPoint (point.lon, point.lat)
+      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
       return specialLocation
   return $ listToMaybe specialLocations
 
@@ -185,7 +208,7 @@ findSpecialLocationByLatLong point = do
   specialLocations <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ containsPoint (point.lon, point.lat)
+      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
 

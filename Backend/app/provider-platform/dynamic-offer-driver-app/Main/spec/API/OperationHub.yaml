@@ -1,0 +1,58 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  OperationHub: Domain.Types.OperationHub
+  APISuccess: Kernel.Types.APISuccess
+  RequestType: Domain.Types.OperationHubRequests
+  RequestStatus: Domain.Types.OperationHubRequests
+  OperationHubRequests: Domain.Types.OperationHubRequests
+  UTCTime: Kernel.Prelude
+  Summary: Dashboard.Common
+
+module: OperationHub
+
+types:
+  DriverOperationHubRequest:
+    requestType: RequestType
+    operationHubId: Id OperationHub
+    registrationNo: Text
+    creatorId: Text
+  OperationHubRequestsResp:
+    - recordType: NewType
+    - requests: [OperationHubDriverRequest]
+  OperationHubDriverRequest:
+    id: Text
+    operationHubId: Id OperationHub
+    operationHubName: Text
+    driverPhoneNo: Maybe Text
+    registrationNo: Text
+    requestType: RequestType
+    requestStatus: RequestStatus
+    requestTime: UTCTime
+apis:
+  - GET:
+      endpoint: /operation/getAllHubs
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[OperationHub]"
+  - POST:
+      endpoint: /operation/createRequest
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverOperationHubRequest
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /operation/getRequests
+      mandatoryQuery:
+        - rcNo: Text
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbStatus: RequestStatus
+        - mbReqType: RequestType
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: OperationHubRequestsResp

@@ -66,7 +66,7 @@ import Services.API as API
 import Data.String as DS
 import Data.Array as DA
 
-screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
+screen :: BenefitsScreenState -> LoggableScreen Action BenefitsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -104,6 +104,8 @@ screen initialState =
             _ = spy "BenefitsScreen --------action" action
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.benefitsLogWhitelist.benefitsScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
@@ -114,7 +116,7 @@ view push state =
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   , background Color.white900
-  ][ PrestoAnim.animationSet [Anim.fadeIn true] $ 
+  ][ PrestoAnim.animationSet [Anim.fadeIn true] $
      linearLayout
      [ width $ MATCH_PARENT
      , height $ MATCH_PARENT
@@ -136,7 +138,7 @@ referralScreenBody push state =
        ][ scrollView
           [ height $ MATCH_PARENT
           , width MATCH_PARENT
-          , scrollBarY false 
+          , scrollBarY false
           ][referralScreenInnerBody push state]
        ]
     ,  bottomNavBarView push state
@@ -151,7 +153,7 @@ separatorView push state =
   ][]
 
 referralScreenInnerBody :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
-referralScreenInnerBody push state = 
+referralScreenInnerBody push state =
   let loadDynamicModule = fromMaybe false $ runFn3 getAnyFromWindow "loadDynamicModule" Nothing Just
       gullakRemoteConfig = CRC.gullakConfig $ getValueToLocalStore DRIVER_LOCATION
   in linearLayout
@@ -166,7 +168,7 @@ referralScreenInnerBody push state =
       , margin $ Margin 16 0 16 12
       , orientation VERTICAL
       ][ if shouldShowReferral state then driverReferralCode push state else dummyView
-      , if loadDynamicModule && gullakRemoteConfig.enabled then savingWithGullak push state gullakRemoteConfig.image else dummyView
+      , if gullakRemoteConfig.enabled then savingWithGullak push state gullakRemoteConfig.image else dummyView
       , rideLeaderBoardView push state
       ]
     , learnAndEarnShimmerView push state
@@ -174,8 +176,8 @@ referralScreenInnerBody push state =
 
 referralStatsView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralStatsView push state =
-  let referralBonusVideo = RC.getReferralBonusVideo $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION 
-  in 
+  let referralBonusVideo = RC.getReferralBonusVideo $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -196,8 +198,8 @@ referralStatsView push state =
      , margin $ MarginTop 16
      , cornerRadius 6.0
      , onClick (\_ -> if referralBonusVideo /= "" then void $ JB.openUrlInApp referralBonusVideo else pure unit) (const NoAction)
-     ][ textView $ 
-        [ text $ getString LT.REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK 
+     ][ textView $
+        [ text $ getString LT.REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK
         , color $ Color.black700
         , gravity CENTER_VERTICAL
         , weight 1.0
@@ -215,7 +217,7 @@ referralStatsView push state =
   ]
 
 referralBonusView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
-referralBonusView push state = 
+referralBonusView push state =
   let lastPayoutAt = fromMaybe "" state.data.lastPayoutAt
   in
   relativeLayout
@@ -226,19 +228,19 @@ referralBonusView push state =
      , width MATCH_PARENT
      , orientation VERTICAL
      , onClick push $ const $ GoToCustomerReferralTracker false
-     ][textView $ 
+     ][textView $
        [ text $ getString LT.MY_REFERRAL_BONUS
        , color $ Color.black700
        , margin $ MarginRight 36
-       ] <> FontStyle.paragraphText TypoGraphy 
+       ] <> FontStyle.paragraphText TypoGraphy
      , linearLayout
        [ height WRAP_CONTENT
        , width MATCH_PARENT
-       ][ textView $ 
+       ][ textView $
          [ text $ state.data.config.currency <> show state.data.payoutAmountPaid
          , color Color.limeGreen
          ] <> FontStyle.title2 TypoGraphy
-       , textView $ 
+       , textView $
          [ text $ getString $ LT.TILL (convertUTCtoISC lastPayoutAt "DD MMM YYYY")
          , color $ Color.black700
          , visibility $ boolToVisibility $ lastPayoutAt /= ""
@@ -249,7 +251,7 @@ referralBonusView push state =
        [ height WRAP_CONTENT
        , width MATCH_PARENT
        , visibility $ boolToVisibility $ not $ isNothing state.data.payoutVpa
-       ][ textView $ 
+       ][ textView $
           [ textFromHtml $ getString LT.LINKED_UPI_ID <> ": " <> "<b>" <> (fromMaybe "" state.data.payoutVpa) <> "</b>"
           , color $ Color.black700
           ] <> FontStyle.paragraphText TypoGraphy
@@ -258,7 +260,7 @@ referralBonusView push state =
        [ height WRAP_CONTENT
        , width MATCH_PARENT
        , visibility $ boolToVisibility $ isNothing state.data.payoutVpa
-       ][ textView $ 
+       ][ textView $
           [ text $ getString LT.TO_GET_MONEY <> ", "
           , color $ Color.black700
           ] <> FontStyle.paragraphText TypoGraphy
@@ -269,7 +271,7 @@ referralBonusView push state =
           , onClick push $ const $ GoToCustomerReferralTracker true
           , padding $ Padding 6 2 6 2
           , background Color.blue800
-          ][ textView $ 
+          ][ textView $
              [ text $ getString LT.ADD_UPI_ID
              , color Color.white900
              , padding $ PaddingBottom 1
@@ -290,7 +292,7 @@ referralBonusView push state =
    ]
 
 emptyReferralBonusView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
-emptyReferralBonusView push state = 
+emptyReferralBonusView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -301,7 +303,7 @@ emptyReferralBonusView push state =
      , margin $ MarginRight 16
      , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_coins_stack"
      ]
-   , textView $ 
+   , textView $
      [ text $ getString $ LT.EARN_FOR_EACH_REFERRAL (state.data.config.currency <> (show $ fromMaybe 0 state.data.payoutRewardAmount))
      , color Color.black900
      , weight 1.0
@@ -313,7 +315,7 @@ emptyReferralBonusView push state =
      [ height $ V 32
      , width $ V 32
      , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_arrow_right_grey"
-     ] 
+     ]
   ]
 
 tabView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
@@ -476,7 +478,7 @@ driverReferralCode push state =
                     , width MATCH_PARENT
                     , color Color.black900
                     , padding $ Padding 0 4 10 0
-                    , text $ getString LT.SHARE 
+                    , text $ getString LT.SHARE
                     ]
                   <> FontStyle.body1 TypoGraphy
                 ]
@@ -533,7 +535,7 @@ shineAnimation state =
   , gravity CENTER_VERTICAL
   , clipChildren true
   , clipToPadding true
-  ][ PrestoAnim.animationSet [ Anim.shimmerAnimation (-100) ((screenWidth unit) + 100) 2500] $ 
+  ][ PrestoAnim.animationSet [ Anim.shimmerAnimation (-100) ((screenWidth unit) + 100) 2500] $
      linearLayout
      [ width $ V (screenWidth unit)
      , height $ MATCH_PARENT
@@ -897,7 +899,7 @@ moduleCardView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> Lm
 moduleCardView push state (LmsModuleRes moduleInfo) =
   let sWidth = ((toNumber((screenWidth unit) - 32)) * 1.0) / (toNumber 328)
       sHeight = (toNumber 160) * sWidth
-  in 
+  in
   relativeLayout
   [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
@@ -923,7 +925,7 @@ moduleCardView push state (LmsModuleRes moduleInfo) =
         , orientation HORIZONTAL
         , padding $ Padding 16 5 16 12
         , gravity CENTER
-        ][ moduleTitleAndNumberOfVideoView push state (LmsModuleRes moduleInfo)] 
+        ][ moduleTitleAndNumberOfVideoView push state (LmsModuleRes moduleInfo)]
       ]
   ,  imageView
       [ width $ V 15
@@ -965,7 +967,7 @@ moduleTitleAndNumberOfVideoView push state (LmsModuleRes moduleInfo) =
     getStatusForModule = let zeroVideosLeft = moduleInfo.noOfVideos - moduleInfo.noOfVideosCompleted == 0
                          in case moduleInfo.moduleCompletionStatus of
                               MODULE_NOT_YET_STARTED -> {moduleStatus : "NEW", moduleMargin : MarginRight 5, noOfVideosToDisplay : show moduleInfo.noOfVideos <> " " <> getString LT.VIDEOS}
-                              MODULE_ONGOING -> {moduleStatus : "PENDING", moduleMargin : if zeroVideosLeft then MarginRight 0 else MarginRight 5, 
+                              MODULE_ONGOING -> {moduleStatus : "PENDING", moduleMargin : if zeroVideosLeft then MarginRight 0 else MarginRight 5,
                                                 noOfVideosToDisplay : if zeroVideosLeft then "" else show (moduleInfo.noOfVideos - moduleInfo.noOfVideosCompleted) <> " " <> getString LT.VIDEOS}
                               MODULE_COMPLETED -> {moduleStatus : "COMPLETED", moduleMargin : MarginRight 0, noOfVideosToDisplay : ""}
 
@@ -996,7 +998,7 @@ statusPillView push state status pillMargin =
   where
     getPropertyAccordingToStatus :: {text :: String, textColor :: String, fontStyle :: forall properties. (Array (Prop properties)), cornerRadius :: Number, shouldImageBeVisible :: Boolean, pillBackgroundColor :: String, pillImage :: String}
     getPropertyAccordingToStatus = case status of
-      "COMPLETED" -> {text : getString LT.COMPLETED_STR, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : true, pillBackgroundColor : Color.green900, pillImage : "ny_ic_white_tick"} 
+      "COMPLETED" -> {text : getString LT.COMPLETED_STR, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : true, pillBackgroundColor : Color.green900, pillImage : "ny_ic_white_tick"}
       "PENDING" -> {text : getString LT.PENDING_STR_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle,  cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.orange900, pillImage : ""}
       "NEW" -> {text : getString LT.NEW_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.blue800, pillImage : ""}
       _ -> {text : "", textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, shouldImageBeVisible : false,  cornerRadius : 16.0, pillBackgroundColor : Color.white900, pillImage : ""}
@@ -1013,11 +1015,9 @@ checkTokenAndInitSDK push action = do
       isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (HU.getCurrentUTC "")) > 0
   if isTokenValid && not (DS.null cachedToken) then do
     void $ pure $ setValueToLocalStore DONT_CALL_REFRESH "true"
-    void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = cachedToken, param2 = "false"}) push action
+    void $ liftFlow $ JB.startGActivity cachedToken
     pure unit
   else do
-    void $ EHU.loaderText (getString LT.LOADING) (getString LT.PLEASE_WAIT_WHILE_IN_PROGRESS)
-    EHU.toggleLoader true
     response <- HelperAPI.callApi $ API.GetSdkTokenReq "0" API.Gullak
     case response of
       Left _ -> do
@@ -1026,6 +1026,6 @@ checkTokenAndInitSDK push action = do
       Right (API.GetSdkTokenResp resp) -> do
         void $ pure $ setValueToLocalStore GULLAK_TOKEN $ resp.token <> "<$>" <> fromMaybe "" resp.expiry
         void $ pure $ setValueToLocalStore DONT_CALL_REFRESH "true"
-        void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = resp.token, param2 = "false"}) push action
+        void $ liftFlow $ JB.startGActivity resp.token
         pure unit
   pure unit

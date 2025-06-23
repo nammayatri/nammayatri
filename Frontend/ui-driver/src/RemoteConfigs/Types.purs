@@ -79,7 +79,21 @@ type LocationUpdateServiceConfig = {
   rideGFrequencyWithFrequentUpdates :: String,
   rideTFrequency :: String,
   stage :: String,
-  rideGFrequencyWithoutFrequentUpdates :: String
+  rideGFrequencyWithoutFrequentUpdates :: String,
+  freshnessThreshold :: String,
+  updateInterval :: String,
+  batchInterval :: String,
+  batchSize :: String,
+  maxBatchAge :: String,
+  locationRequestInterval :: String,
+  locationRequestIntervalWithFrequentUpdates :: String,
+  maxTimeThreshold :: String,
+  priority :: String
+}
+
+type PerfConfig = {
+  mapRecenter :: Boolean,
+  disableBannerAnimation :: Boolean
 }
 
 type CoinsConfig = {
@@ -134,12 +148,44 @@ type ProfileCompletionReminder = {
 }
 
 type RideAssignedAudioConfig = {
-  rideShare :: Maybe String 
+  rideShare :: Maybe String
 , intercity :: Maybe String
 , roundTrip :: Maybe String
 , oneWay :: Maybe String
 , delivery :: Maybe String
 , rental :: Maybe String
+, sedan :: Maybe String
+, suv :: Maybe String
+, hatchback :: Maybe String
+, autoRickshaw :: Maybe String
+, taxi :: Maybe String
+, taxiPlus :: Maybe String
+, bike :: Maybe String
+, premiumSedan :: Maybe String
+, black :: Maybe String
+, blackXl :: Maybe String
+, ambulanceTaxi :: Maybe String
+, ambulanceTaxiOxy :: Maybe String
+, ambulanceAc :: Maybe String
+, ambulanceAcOxy :: Maybe String
+, ambulanceVentilator :: Maybe String
+, suvPlus :: Maybe String
+, deliveryLightGoodsVehicle :: Maybe String
+, busNonAc :: Maybe String
+, busAc :: Maybe String
+, heritageCab :: Maybe String
+, evAutoRickshaw :: Maybe String
+, deliveryTruckMini :: Maybe String
+, deliveryTruckSmall :: Maybe String
+, deliveryTruckMedium :: Maybe String
+, deliveryTruckLarge :: Maybe String
+, deliveryTruckUltraLarge :: Maybe String
+, comfy :: Maybe String
+, eco :: Maybe String
+, premium :: Maybe String
+, deliveryBike :: Maybe String
+, rentals :: Maybe String
+, local :: Maybe String
 }
 
 type ParcelConfig = {
@@ -161,3 +207,27 @@ type RideEndAudioConfig = {
 , rideEndAudioUrl :: Maybe String
 }
 
+type LanguageTextMapping = {
+  en :: String,
+  hi :: String,
+  bn :: String,
+  kn :: String,
+  ta :: String,
+  te :: String,
+  ml :: String
+}
+
+type PetRidesPopupConfig = {
+  primaryText :: LanguageTextMapping,
+  secondaryText :: LanguageTextMapping,
+  option1Text :: LanguageTextMapping,
+  option2Text :: LanguageTextMapping,
+  popupImage :: Maybe String
+}
+
+type PetRidesFeatureConfig = {
+  enablePetRidesFeature :: Boolean,
+  basePetRidesPopupConfig :: PetRidesPopupConfig,
+  optOutPetRidesPopupConfig :: PetRidesPopupConfig,
+  petRidesPopupDismissableUntil :: String
+}

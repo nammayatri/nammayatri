@@ -114,6 +114,7 @@ view push state =
                 [ linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
+                    , accessibility DISABLE
                     ]
                     $ maybe ([]) (\item -> [ bannersCarousal item state push ]) state.data.bannerData.bannerItem
                 , safetySetupSection state push
@@ -251,6 +252,7 @@ bannersCarousal view state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin $ MarginTop 12
+        , accessibility DISABLE
         ]
         [ CarouselHolder.carouselView push $ carouselConfigTransform view state banners ]
     else

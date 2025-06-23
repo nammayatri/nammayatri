@@ -13,6 +13,11 @@ import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
 
+updateBookingAuthCodeById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
+updateBookingAuthCodeById bookingAuthCode id = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.bookingAuthCode bookingAuthCode, Se.Set Beam.updatedAt now] [Se.Is Beam.id $ Se.Eq (id.getId)]
+
 insertPayerVpaIfNotPresent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
 insertPayerVpaIfNotPresent (Just vpa) bookingId = do
   mbBooking <- findOneWithKV [Se.Is Beam.id $ Se.Eq (bookingId.getId)]
@@ -62,3 +67,15 @@ updateIsSkipped (Id reqId) isSkipped = do
   updateOneWithKV
     [Se.Set Beam.isSkipped isSkipped]
     [Se.Is Beam.id (Se.Eq reqId)]
+
+findAllByJourneyIdAndRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Text -> Int -> m [FRFSTicketBooking]
+findAllByJourneyIdAndRiderId riderId journeyId limit = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (getId riderId),
+          Se.Is Beam.journeyId $ Se.Eq (Just journeyId)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    Nothing

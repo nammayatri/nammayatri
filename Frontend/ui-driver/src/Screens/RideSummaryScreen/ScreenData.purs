@@ -4,11 +4,12 @@ import Prelude
 import Screens.Types as S
 import Services.API
 import Common.Types.App as CTA
+import ConfigProvider
 import Data.Maybe
 import JBridge as JB
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag , getCurrentUTC)
-
+import MerchantConfig.Types (AppConfig)
 
 type RideSummaryScreenState = {
   data :: RideSummaryScreenData,
@@ -21,13 +22,14 @@ type RideSummaryScreenData = {
   fareDetails :: Array RateCardItem,
   cancelRidePopUpData :: S.CancelRidePopUpData,
   activeRideData :: S.ActiveRide,
-  route :: Maybe Route
+  route :: Maybe Route,
+  config :: AppConfig
 }
 
 type RideSummaryScreenProps = {
   termsAndConditionOpen :: Boolean,
   excludedChargesOpen :: Boolean,
-  includedChargesOpen :: Boolean, 
+  includedChargesOpen :: Boolean,
   pickUpOpen :: Boolean ,
   showPopUp :: Boolean,
   throughBanner :: Boolean,
@@ -61,7 +63,7 @@ dummyAPI = BookingAPIEntity{
           deadKmFare : Nothing,
           distBasedFare : Nothing,
           distanceUnit : Nothing,
-          extraDistance : Nothing, 
+          extraDistance : Nothing,
           extraDuration : Nothing,
           timeBasedFare : Nothing
       },
@@ -119,7 +121,7 @@ dummyAPI = BookingAPIEntity{
   vehicleServiceTierSeatingCapacity :Nothing
 }
 
-dummyActiveRideData :: S.ActiveRide 
+dummyActiveRideData :: S.ActiveRide
 dummyActiveRideData = {
   id : "",
   source : "",
@@ -144,6 +146,7 @@ dummyActiveRideData = {
   specialLocationTag : Nothing,
   requestedVehicleVariant : Nothing,
   disabilityTag : Nothing,
+  coinsRewardedOnGoldTierRide : Nothing,
   waitTimeSeconds : 0,
   enableFrequentLocationUpdates : false,
   tripScheduledAt : Nothing,
@@ -180,7 +183,8 @@ dummyActiveRideData = {
   senderPersonDetails : Nothing,
   receiverPersonDetails : Nothing,
   notifiedReachedDestination : false,
-  stops : []
+  stops : [],
+  isPetRide : Nothing
 }
 
 
@@ -197,6 +201,7 @@ initData = {
         }
     , activeRideData :dummyActiveRideData
     , route: Nothing
+    , config : getAppConfig appConfig
   },
   props: {
     pickUpOpen : true,
@@ -211,6 +216,6 @@ initData = {
     shimmerVisibility : true,
     errorPopUp : false
 
-    
+
   }
 }

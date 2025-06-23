@@ -62,7 +62,7 @@ main event callInitUI = do
                   _ <- liftFlow $ main event callInitUI
                   pure unit
       -- required if we need to update Payment page assets in first run
-      -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets 
+      _ <- launchAff $ flowRunner defaultGlobalState $ fetchAssets 
       pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do

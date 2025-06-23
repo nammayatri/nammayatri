@@ -16,8 +16,109 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Mobility.Prelude (boolToVisibility)
 
 
+
+viewV2 :: forall w . Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+viewV2 config push =
+    linearLayout[
+        width MATCH_PARENT
+    ,   height WRAP_CONTENT
+    ,   background Color.white900
+    ,   stroke  ("1," <> Color.grey900)
+    ,   padding $ Padding 16 16 16 16
+    ,   margin $ Margin 16 16 16 16
+    ,   cornerRadius 16.0
+    ,   gravity CENTER
+    ,   orientation VERTICAL
+    ][
+        packageViewV2 config push
+    ,   linearLayout [width MATCH_PARENT, height $ V 1, background Color.grey700] []
+    ,   pickupTimeViewV2 config push
+    ]
+
+
+packageViewV2 ::  forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+packageViewV2 config push =
+    linearLayout[
+        width MATCH_PARENT
+    ,   height WRAP_CONTENT
+    ,   margin $ MarginBottom 12
+    ,   gravity CENTER
+    ][
+        rideTypePillV2 config push
+    ,   linearLayout [height WRAP_CONTENT, weight 1.0] []
+    ,   pillViewV2 config.scheduleInfo.estimatedDuration
+    ,   pillViewV2 config.scheduleInfo.estimatedDistance
+    ]
+
+
+pillViewV2 :: forall w . String ->  PrestoDOM (Effect Unit) w
+pillViewV2 txt =
+    textView $ [
+        width WRAP_CONTENT
+    ,   height WRAP_CONTENT
+    ,   text txt
+    ,   background Color.grey700
+    ,   stroke $ "1," <> Color.grey900
+    ,   cornerRadius 4.0
+    ,   padding $ Padding 8 4 8 4
+    ,   margin $ MarginLeft 8
+    ,   color Color.black900
+    ] <> (FontStyle.subHeading1 TypoGraphy)
+
+
+
+rideTypePillV2 ::  forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rideTypePillV2 config push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation HORIZONTAL
+    , background config.rideTypePill.background
+    , padding $ Padding 8 3 8 3
+    , cornerRadius 8.0
+    ]
+    [ imageView
+        [ height $ V 16
+        , width $ V 16
+        , layoutGravity "center_vertical"
+        , imageWithFallback $ config.rideTypePill.pillImage
+        ]
+    , textView $
+        [ height WRAP_CONTENT
+        , text config.rideTypePill.pillText
+        , color Color.white900
+        , margin $ Margin 4 0 0 1
+        , gravity LEFT
+        ] <> FontStyle.body6 TypoGraphy
+    ]
+
+
+pickupTimeViewV2 :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+pickupTimeViewV2 config push =
+    linearLayout [
+        width MATCH_PARENT
+    ,   height WRAP_CONTENT
+    ,   margin $ MarginTop 12
+    ,   gravity CENTER
+    ][
+        imageView [
+            height $ V 16
+        ,   width $ V 16
+        ,   imageWithFallback $  fetchImage COMMON_ASSET "ny_ic_clock_unfilled_grey"
+        ]
+    ,   textView $ [
+            color Color.black700
+        ,   text config.scheduleInfo.pickupFormattedTime
+        ,   margin $ MarginLeft 4
+        ] <> (FontStyle.body1 TypoGraphy)
+    ,   linearLayout [height WRAP_CONTENT, weight 1.0] []
+    ,   textView $ [text $ config.rideAmount, color Color.black800, padding $ PaddingBottom 4] <> (FontStyle.h2 TypoGraphy)
+    ]
+
+
+
 view :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-view config push = 
+view config push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -27,7 +128,7 @@ view config push =
     , cornerRadius 16.0
     , stroke ("1," <> Color.grey900)
     , gravity CENTER
-    
+
     ]
     [ cabInfoLayout config push
     , linearLayout
@@ -36,12 +137,12 @@ view config push =
         , background Color.grey700
         , margin $ Margin 16 12 16 12
         ][]
-    , scheduleInfoLayout config push 
+    , scheduleInfoLayout config push
     ]
 
 
 cabInfoLayout :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-cabInfoLayout config push = 
+cabInfoLayout config push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -53,10 +154,10 @@ cabInfoLayout config push =
       [ width $ V 47
       , height $ V 35
       , imageWithFallback $ config.vehicleServiceTierImageUrl
-      , margin $ MarginRight 4 
+      , margin $ MarginRight 4
       ]
-  , vehicleInfo config push 
-  , linearLayout 
+  , vehicleInfo config push
+  , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , weight 1.0
@@ -65,13 +166,13 @@ cabInfoLayout config push =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ config.rideAmount
-      , gravity CENTER 
+      , gravity CENTER
       , color Color.black900
       ] <> FontStyle.body8 TypoGraphy
   ]
 
 scheduleInfoLayout :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-scheduleInfoLayout config push = 
+scheduleInfoLayout config push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -82,7 +183,7 @@ scheduleInfoLayout config push =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , padding $ PaddingHorizontal 4 4 
+        , padding $ PaddingHorizontal 4 4
         , gravity CENTER_VERTICAL
         ]
         ([ scheduleTiming config.scheduleInfo.pickUpText config.scheduleInfo.pickUpTime config push
@@ -92,16 +193,16 @@ scheduleInfoLayout config push =
             ][]
         , scheduleTiming config.scheduleInfo.dropText config.scheduleInfo.dropTime config push
         ] else [])
-    , linearLayout 
+    , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , weight 1.0
         ][]
-    , rideTypePill config push 
+    , rideTypePill config push
     ]
 
 vehicleInfo :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-vehicleInfo config push  = 
+vehicleInfo config push  =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -112,7 +213,7 @@ vehicleInfo config push  =
     , gravity CENTER
     , layoutGravity "center"
     ]
-    [ linearLayout 
+    [ linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
@@ -130,7 +231,7 @@ vehicleInfo config push  =
         , layoutGravity "center_vertical"
         , margin $ MarginBottom 1
         ]
-    , textView $ 
+    , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text $ config.vehicleInfo.airConditionedText
@@ -139,7 +240,7 @@ vehicleInfo config push  =
         , layoutGravity "center_vertical"
         ] <> FontStyle.body1 TypoGraphy
     ]
-    , textView $ 
+    , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.vehicleInfo.vehicleServiceTierName
@@ -148,12 +249,12 @@ vehicleInfo config push  =
         , layoutGravity "center"
         , margin $ Margin 5 0 0 1
         ] <> FontStyle.body1 TypoGraphy
-    , imageView 
+    , imageView
         [ width $ V 4
         , height $ V 4
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_inner_fill"
         , margin $ MarginHorizontal 5 0
-        ]  
+        ]
     , linearLayout
     [ height WRAP_CONTENT
     , width $ WRAP_CONTENT
@@ -167,7 +268,7 @@ vehicleInfo config push  =
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_user_filled"
         , layoutGravity "center"
         ]
-    , textView $ 
+    , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (show config.vehicleInfo.vehicleServiceTierSeatingCapacity)
@@ -184,8 +285,8 @@ scheduleTiming dateType dateAndTime config push =
     , orientation HORIZONTAL
     , gravity CENTER
     ]
-    [ textView $ 
-        [ width WRAP_CONTENT 
+    [ textView $
+        [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ dateType <> ": "
         , color Color.black700
@@ -202,16 +303,16 @@ scheduleTiming dateType dateAndTime config push =
             , color Color.black700
             , text $ convertUTCtoISC dateAndTime "DD/MM/YYYY"
             ] <> FontStyle.body1 TypoGraphy
-        , imageView 
+        , imageView
             [ width $ V 5
             , height $ V 5
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_inner_fill"
             , padding $ PaddingTop 2
             , margin $ MarginHorizontal 4 4
             , gravity CENTER
-            ] 
-        , textView $ 
-            [ width WRAP_CONTENT 
+            ]
+        , textView $
+            [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text $ convertUTCtoISC dateAndTime "hh:mm A"
             , color Color.black700
@@ -222,7 +323,7 @@ scheduleTiming dateType dateAndTime config push =
 
 
 rideTypePill :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-rideTypePill config push = 
+rideTypePill config push =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -237,7 +338,7 @@ rideTypePill config push =
         , layoutGravity "center_vertical"
         , imageWithFallback $ config.rideTypePill.pillImage
         ]
-    , textView $ 
+    , textView $
         [ height WRAP_CONTENT
         , text config.rideTypePill.pillText
         , maxWidth $ 55
@@ -247,4 +348,4 @@ rideTypePill config push =
         ] <> FontStyle.body6 TypoGraphy
     ]
 
-    
+

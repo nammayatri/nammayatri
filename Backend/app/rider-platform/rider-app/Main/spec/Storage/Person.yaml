@@ -16,13 +16,14 @@ imports:
   CustomerId: Kernel.External.Payment.Interface.Types
   PaymentMethodId: Kernel.External.Payment.Interface.Types
   TagNameValueExpiry: Lib.Yudhishthira.Types
+  ServiceTierType: Domain.Types.ServiceTierType
 
 Person:
   tableName: person
 
   types:
     Role:
-      enum: "USER, CUSTOMER_SUPPORT"
+      enum: "USER, CUSTOMER_SUPPORT, METER_RIDE_DUMMY, TICKET_DASHBOARD_USER"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:
@@ -47,6 +48,7 @@ Person:
     identifierType : IdentifierType
     email : Maybe (EncryptedHashedField e Text)
     mobileNumber : Maybe (EncryptedHashedField e Text)
+    imeiNumber : Maybe (EncryptedHashedField e Text)
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
     identifier : Maybe Text
@@ -61,6 +63,7 @@ Person:
     deviceToken : Maybe Text
     notificationToken : Maybe Text
     description : Maybe Text
+    lastUsedVehicleServiceTiers : "[ServiceTierType]"
     merchantId : Id Merchant
     currentCity : City
     merchantOperatingCityId : Id MerchantOperatingCity
@@ -81,6 +84,8 @@ Person:
     hasCompletedSafetySetup : Bool
     registrationLat : Maybe Double
     registrationLon : Maybe Double
+    latestLat : Maybe Double
+    latestLon : Maybe Double
     useFakeOtp : Maybe Text
     followsRide : Bool
     falseSafetyAlarmCount : Int
@@ -97,6 +102,7 @@ Person:
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
+    juspayCustomerPaymentID: Maybe CustomerId
     defaultPaymentMethodId: Maybe PaymentMethodId
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
@@ -105,6 +111,12 @@ Person:
     customerNammaTags: "Maybe [TagNameValueExpiry]"
     payoutVpa: Maybe Text
     frequentLocGeohashes: "Maybe [Text]"
+    dateOfBirth: Maybe UTCTime
+    authBlocked : Maybe Bool
+    blockedUntil : Maybe UTCTime
+    profilePicture: Maybe Text
+    verificationChannel: Maybe Text
+    liveActivityToken : Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -120,6 +132,9 @@ Person:
     mobileNumber:
       mobileNumberEncrypted: Maybe Text
       mobileNumberHash: Maybe DbHash
+    imeiNumber :
+      imeiNumberEncrypted: Maybe Text
+      imeiNumberHash: Maybe DbHash
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
@@ -146,12 +161,14 @@ Person:
     clientManufacturer: Maybe Text
     informPoliceSos: Maybe Bool
     customerNammaTags: "Maybe [Text]"
+    lastUsedVehicleServiceTiers: "Maybe [ServiceTierType]"
 
   fromTType:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
     currentCity: Kernel.Prelude.snd updateMerchantOpIdAndCity|E
     email: EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash|E
     mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
+    imeiNumber: EncryptedHashed <$> (Encrypted <$> imeiNumberEncrypted) <*> imeiNumberHash|E
     blockedAt: Data.Time.localTimeToUTC Data.Time.utc <$> blockedAt|E
     falseSafetyAlarmCount: fromMaybe 0 falseSafetyAlarmCount|E
     rating: Just $ fromIntegral totalRatingScore / fromIntegral totalRatings|E
@@ -162,6 +179,7 @@ Person:
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     informPoliceSos : fromMaybe False informPoliceSos|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType|M
+    lastUsedVehicleServiceTiers: fromMaybe [] lastUsedVehicleServiceTiers|E
 
   toTType:
     blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
@@ -170,6 +188,8 @@ Person:
     emailHash: (email <&> (.hash))|E
     mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
     mobileNumberHash: (mobileNumber <&> (.hash))|E
+    imeiNumberEncrypted: (imeiNumber <&> unEncrypted . (.encrypted))|E
+    imeiNumberHash: (imeiNumber <&> (.hash))|E
     merchantOperatingCityId: (Kernel.Prelude.Just . Kernel.Types.Id.getId)|I
     falseSafetyAlarmCount: (Just falseSafetyAlarmCount)|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
@@ -182,6 +202,7 @@ Person:
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     informPoliceSos: Just informPoliceSos|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType
+    lastUsedVehicleServiceTiers: Just lastUsedVehicleServiceTiers|E
 
   constraints:
     id: PrimaryKey
@@ -200,6 +221,8 @@ Person:
     identifierType: character varying(255)
     mobileNumberEncrypted: character varying(255)
     mobileNumberHash: bytea
+    imeiNumberEncrypted: character varying(255)
+    imeiNumberHash: bytea
     mobileCountryCode: character varying(255)
     identifier: character varying(255)
     rating: character varying(255)
@@ -213,6 +236,7 @@ Person:
     language: character varying(255)
     notificationToken: character varying(255)
     current_city: character varying(255)
+    lastUsedVehicleServiceTiers: "text[]"
 
   default:
     followsRide: "false"
@@ -225,6 +249,7 @@ Person:
     totalRatings: "0"
     enabled: "true"
     merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
+    authBlocked : "false"
 
   queries:
     findById:
@@ -308,6 +333,11 @@ Person:
       params: [customerPaymentId]
       where: id
 
+    updateJuspayCustomerPaymentId:
+      kvFunction: updateWithKV
+      params: [juspayCustomerPaymentID]
+      where: id
+
     updateDefaultPaymentMethodId:
       kvFunction: updateWithKV
       params: [defaultPaymentMethodId]
@@ -325,6 +355,16 @@ Person:
     updatePayoutVpa:
       kvFunction: updateWithKV
       params: [payoutVpa]
+      where: id
+
+    updateLiveActivityToken:
+      kvFunction: updateWithKV
+      params: [liveActivityToken]
+      where: id
+
+    updateLastUsedVehicleServiceTiers:
+      kvFunction: updateWithKV
+      params: [lastUsedVehicleServiceTiers]
       where: id
 
   extraOperations:

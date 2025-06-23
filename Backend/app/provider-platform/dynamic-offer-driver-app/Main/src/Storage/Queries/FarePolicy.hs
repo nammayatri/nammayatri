@@ -22,6 +22,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.List.NonEmpty
+import qualified Domain.Types.ConditionalCharges as DTAC
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (toList)
@@ -32,6 +33,7 @@ import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as BeamFPAD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
+import qualified Storage.Queries.ConditionalCharges as QueriesAdditionalCharges
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QueriesFPAD
 import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetails as QueriesFPICD
@@ -53,6 +55,7 @@ update' farePolicy = do
       Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
       Se.Set BeamFP.serviceCharge $ roundToIntegral <$> farePolicy.serviceCharge,
       Se.Set BeamFP.tollCharges $ farePolicy.tollCharges,
+      Se.Set BeamFP.petCharges $ farePolicy.petCharges,
       Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
       Se.Set BeamFP.currency $ Just farePolicy.currency,
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
@@ -149,7 +152,8 @@ data FarePolicyHandler m = FarePolicyHandler
     findAllSlabDetailsSlabs :: m [BeamFPSS.FullFarePolicySlabsDetailsSlab],
     findRentalDetails :: m (Maybe Domain.FullFarePolicyRentalDetails),
     findInterCityDetails :: m (Maybe Domain.FullFarePolicyInterCityDetails),
-    findAllAmbulanceDetailsSlabs :: m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab]
+    findAllAmbulanceDetailsSlabs :: m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab],
+    findAllAdditionalCharges :: m [DTAC.ConditionalCharges]
   }
 
 mkBeamFarePolicyHandler ::
@@ -163,7 +167,8 @@ mkBeamFarePolicyHandler BeamFP.FarePolicyT {..} =
       findAllSlabDetailsSlabs = QueriesFPSDS.findAll' (Id id),
       findRentalDetails = QueriesFPRD.findById' (Id id),
       findInterCityDetails = QueriesFPICD.findById' (Id id),
-      findAllAmbulanceDetailsSlabs = QueriesFPAD.findById' (Id id)
+      findAllAmbulanceDetailsSlabs = QueriesFPAD.findById' (Id id),
+      findAllAdditionalCharges = QueriesAdditionalCharges.findAllByFp id
     }
 
 fromTTypeFarePolicy ::
@@ -203,6 +208,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
         case nonEmpty slabs of
           Just nESlabs -> return $ Just (AmbulanceDetails (FPAmbulanceDetails nESlabs))
           Nothing -> return Nothing
+  conditionalCharges <- handler.findAllAdditionalCharges
   case mFarePolicyDetails of
     Just farePolicyDetails -> do
       return $
@@ -213,6 +219,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               parkingCharge = parkingCharge,
               perStopCharge = perStopCharge,
               tollCharges = tollCharges,
+              petCharges = petCharges,
               tipOptions = tipOptions,
               currency = fromMaybe INR currency,
               distanceUnit = fromMaybe Meter distanceUnit,
@@ -244,6 +251,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               updatedAt = updatedAt,
               merchantId = Id <$> merchantId,
               merchantOperatingCityId = Id <$> merchantOperatingCityId,
+              conditionalCharges = conditionalCharges,
               ..
             }
     Nothing -> return Nothing

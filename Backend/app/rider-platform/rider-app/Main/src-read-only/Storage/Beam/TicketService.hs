@@ -3,6 +3,7 @@
 
 module Storage.Beam.TicketService where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -18,11 +19,13 @@ data TicketServiceT f = TicketServiceT
     businessHours :: B.C f [Kernel.Prelude.Text],
     expiry :: B.C f Domain.Types.TicketService.ExpiryType,
     id :: B.C f Kernel.Prelude.Text,
+    isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxVerification :: B.C f Kernel.Prelude.Int,
     operationalEndDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     operationalStartDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     operationalDays :: B.C f [Kernel.Prelude.Text],
     placesId :: B.C f Kernel.Prelude.Text,
+    rules :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     service :: B.C f Kernel.Prelude.Text,
     shortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

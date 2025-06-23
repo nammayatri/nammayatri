@@ -1,0 +1,38 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  APISuccess: Kernel.Types.APISuccess
+  LocationAddress: Domain.Types.LocationAddress
+  Text: Data.Text
+
+module: MeterRideInternal
+types:
+  CustomerInfoResponse:
+    alreadyReferred: Maybe Bool
+    isMultipleDeviceIdExist: Maybe Bool
+  CustomerInfo:
+    customerMobileNumber: Text
+    customerMobileCountryCode: Text
+  MeterRideAddDestinationReq:
+    destinationLatLong: LatLong
+    destinationLocation: LocationAddress
+apis:
+  - GET:
+      endpoint: /getCustomerInfo
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: CustomerInfo
+      response:
+        type: CustomerInfoResponse
+  - POST:
+      endpoint: /{bppRideId}/addDestination
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bppRideId: Text
+      request:
+        type: MeterRideAddDestinationReq
+      response:
+        type: APISuccess

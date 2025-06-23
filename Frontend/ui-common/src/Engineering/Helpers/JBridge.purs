@@ -78,9 +78,10 @@ foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
 foreign import emitJOSEventWithCb :: forall action. Fn4 String JOSEventInnerPayload (action -> Effect Unit) (String -> action) Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
+foreign import isLocationPermissionEnabledWithoutEff :: Unit ->  Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean
 foreign import checkAndAskNotificationPermission :: Boolean -> Effect Unit
-foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
+foreign import isMicrophonePermissionEnabled :: Unit -> Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
@@ -118,6 +119,8 @@ foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- foreign import addMarkers :: Markers -> Effect Unit
 -- foreign import removePolyLine   :: String -> Effect Unit
 foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
+foreign import startGActivity :: String -> Effect Unit
+foreign import startOpenMeterActivity :: forall action. StartOpenMeterConfig -> (action -> Effect Unit) -> Effect Unit
 foreign import requestLocation  :: Unit -> Effect Unit
 foreign import requestBackgroundLocation  :: Unit -> Effect Unit
 
@@ -131,6 +134,7 @@ foreign import showMapImpl :: forall action. String -> Boolean -> String -> Numb
 foreign import mapSnapShot :: forall action. String -> Locations -> String -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Boolean
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
+foreign import isLocationEnabledWithoutEff :: Unit ->  Boolean
 foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
 foreign import getCurrentPositionWithTimeoutImpl  :: forall action. EffectFn4 (action -> Effect Unit) (String -> String -> String -> action) Int Boolean Unit
 
@@ -148,6 +152,7 @@ foreign import factoryResetApp :: String -> Unit
 foreign import listDownloadedTranslationModels :: forall action. (action -> Effect Unit) -> Int -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 foreign import askNotificationPermission :: Unit -> Effect Unit
+foreign import checkAndAskMicrophonePermission :: Unit -> Effect Unit
 -- foreign import onEvent        :: Foreign -> Effect Unit
 -- foreign import _onEventWithCB :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
 -- -- foreign import getSessionInfo :: { android_id_raw :: String, android_id :: String, os_version :: String, package_name :: String, android_api_level :: String }
@@ -205,6 +210,9 @@ foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -
 foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+
+foreign import storeCallBackMicrophonePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+
 foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import storeCallBackNotificationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
@@ -244,10 +252,7 @@ foreign import setCleverTapUserProp :: Array ClevertapEventParams -> Unit
 foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
-foreign import voipDialer :: forall action. EffectFn6 String Boolean String Boolean (action -> Effect Unit) (String -> String -> String -> Int -> Int -> String -> String -> String -> action) Unit
-foreign import initSignedCall :: String -> Boolean -> Unit
-foreign import isSignedCallInitialized :: Effect Boolean
-foreign import destroySignedCall :: Unit -> Effect Unit
+
 foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
@@ -321,6 +326,10 @@ foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> E
 foreign import pickContact :: EffectFn1 String Boolean
 foreign import getResourceIdentifier :: String -> String -> Int
 foreign import executeJS :: Fn2 (Array String) String String
+foreign import voiceToTextImpl :: forall action. EffectFn4 (action -> Effect Unit) (Maybe String -> Boolean -> action) (String -> Maybe String) (Maybe String) String
+foreign import stopVoiceRecognition :: EffectFn1 String Unit
+foreign import startVoiceRecognition :: EffectFn1 String Unit
+foreign import setupVoiceRecognitionView :: String -> Effect Unit
 
 type SliderConfig = {
   id :: String,
@@ -699,6 +708,7 @@ type MarkerConfig = {
   , anchorV :: Number
   , anchorU :: Number
   , actionImage :: ActionImageConfig
+  , zIndex :: Number
 }
 
 dummyMarkerEdgeInsets :: EdgeInsets
@@ -740,6 +750,7 @@ defaultMarkerConfig = {
   , useDestPoints : true
   , usePosition : false
   , actionImage : defaultActionImageConfig
+  , zIndex : 0.0
 }
 
 type CircleConfig = {
@@ -1111,3 +1122,51 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
 foreign import triggerReloadApp :: String ->Effect Unit
 
 foreign import rsEncryption :: String -> String
+
+voiceToText :: forall action. (action -> Effect Unit) -> (Maybe String -> Boolean -> action) -> (String -> Maybe String) -> (Maybe String) -> Effect String
+voiceToText = runEffectFn4 voiceToTextImpl
+
+
+foreign import updateMarkersOnRoute :: EffectFn1 UpdateMarkerOnRouteConfig Unit
+
+updateMarkerOnRouteConfig :: UpdateMarkerOnRouteConfig
+updateMarkerOnRouteConfig = {
+    eta : ""
+  , currentVehicleLocation : {lat : 0.0, lng : 0.0}
+  , pureScriptID : ""
+  , locationName : ""
+  , srcMarker : defaultMarkerConfig
+  , vehicleRotationFromPrevLatLon : 0.0
+  , srcHeaderArrowMarker : defaultMarkerConfig
+}
+
+type UpdateMarkerOnRouteConfig = {
+    eta :: String
+  , currentVehicleLocation :: {lat :: Number, lng :: Number}
+  , pureScriptID :: String
+  , locationName :: String
+  , srcMarker :: MarkerConfig
+  , vehicleRotationFromPrevLatLon :: Number
+  , srcHeaderArrowMarker :: MarkerConfig
+}
+
+foreign import checkMarkerAvailable :: EffectFn1 String Boolean
+
+foreign import getMarkerPosition :: EffectFn1 String MarkerPositionConfig
+
+type MarkerPositionConfig =
+  { latitude :: Number
+  , longitude :: Number
+  }
+
+foreign import scrollToChildInScrollView :: EffectFn3 String String String Unit
+
+foreign import showDynamicRouteMarker :: EffectFn4 String String String String Unit
+
+
+type StartOpenMeterConfig = {
+  addDestination :: Boolean,
+  shareRideTracking :: Boolean
+}
+
+

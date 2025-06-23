@@ -28,6 +28,8 @@ module Domain.Action.UI.Registration
     logout,
     generateCustomerReferralCode,
     createPersonWithPhoneNumber,
+    buildPerson,
+    getRegistrationTokenE,
   )
 where
 
@@ -35,6 +37,7 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Action.UI.Person as SP
 import Domain.Types.Merchant (Merchant)
@@ -55,9 +58,11 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess as AP
 import qualified Kernel.Types.Beckn.Context as Context
@@ -79,6 +84,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.MerchantConfig as CQM
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -201,8 +207,10 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
+    ClickhouseFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -210,11 +218,23 @@ auth ::
   Maybe Version ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
+auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
+  let mbClientIP =
+        mbXForwardedFor
+          >>= \headerValue ->
+            (listToMaybe $ T.splitOn "," headerValue) >>= \firstIP ->
+              let ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
+               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+  whenJust mbClientIP $ \clientIP -> do
+    logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
+    ipBlocked <- SMC.isIPBlocked clientIP
+    when ipBlocked $ throwError IpHitsLimitExceeded
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
+  now <- getCurrentTime
   merchantTemp <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
@@ -245,10 +265,21 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         return (person, EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
 
+  when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
   void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
-  checkSlidingWindowLimit (authHitsCountKey person)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  merchantConfigs <- CQM.findAllByMerchantOperatingCityId merchantOperatingCityId Nothing
+  fork "Fraud Auth Check Processing" $ do
+    when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
+    whenJust mbClientIP $ \clientIP -> do
+      SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
+      (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
+      when isFraudDetected $ do
+        whenJust mbMerchantConfigId $ \mcId ->
+          SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
+  checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -286,7 +317,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
           EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
-            riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
@@ -303,7 +333,8 @@ signatureAuth ::
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -341,7 +372,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing person
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
@@ -435,6 +466,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         hasCompletedSafetySetup = False,
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
+        latestLat = Nothing,
+        latestLon = Nothing,
         useFakeOtp,
         followsRide = False,
         falseSafetyAlarmCount = 0,
@@ -446,13 +479,22 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         androidId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
+        juspayCustomerPaymentID = Nothing,
         defaultPaymentMethodId = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Just 0,
         customerNammaTags = Nothing,
         informPoliceSos = False,
         payoutVpa = Nothing,
-        frequentLocGeohashes = Just []
+        frequentLocGeohashes = Just [],
+        liveActivityToken = Nothing,
+        dateOfBirth = Nothing,
+        profilePicture = Nothing,
+        verificationChannel = Nothing,
+        blockedUntil = Nothing,
+        authBlocked = Nothing,
+        lastUsedVehicleServiceTiers = [],
+        imeiNumber = Nothing -- TODO: take it from the request
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -492,7 +534,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
@@ -519,7 +561,8 @@ verify ::
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -543,7 +586,7 @@ verify tokenId req = do
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
-  when (isNothing person.referralCode) $ do
+  when (isNothing person.customerReferralCode) $ do
     newCustomerReferralCode <- generateCustomerReferralCode
     checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
     when (isNothing checkIfReferralCodeExists) $
@@ -557,7 +600,8 @@ verify tokenId req = do
 callWhatsappOptApi ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Text ->
   Id SP.Person ->
@@ -647,7 +691,8 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

@@ -12,7 +12,8 @@ import qualified API.Types.UI.WMB
 import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.WMB as Domain.Action.UI.WMB
-import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.AlertRequest
+import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.FleetConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -29,7 +30,20 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "wmb" :> "availableRoutes" :> ReqBody '[JSON] API.Types.UI.WMB.AvailableRouteReq
+  ( TokenAuth :> "wmb" :> "fleetBadges" :> QueryParam "mbSearchString" Data.Text.Text :> QueryParam "mbBadgeType" Domain.Types.FleetBadgeType.FleetBadgeType
+      :> MandatoryQueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> MandatoryQueryParam "offset" Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           [API.Types.UI.WMB.AvailableBadge]
+      :<|> TokenAuth
+      :> "wmb"
+      :> "availableRoutes"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.WMB.AvailableRouteReq
       :> Post
            '[JSON]
            [API.Types.UI.WMB.AvailableRoute]
@@ -37,7 +51,9 @@ type API =
       :> "wmb"
       :> "qr"
       :> "start"
-      :> ReqBody '[JSON] API.Types.UI.WMB.TripQrStartReq
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.WMB.TripQrStartReq
       :> Post
            '[JSON]
            API.Types.UI.WMB.TripTransactionDetails
@@ -112,23 +128,23 @@ type API =
            API.Types.UI.WMB.RequestDetails
       :> Post
            '[JSON]
-           API.Types.UI.WMB.DriverReqResp
+           API.Types.UI.WMB.AlertReqResp
       :<|> TokenAuth
       :> "wmb"
       :> "requests"
       :> Capture
            "approvalRequestId"
-           (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest)
+           (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest)
       :> "status"
       :> Get
            '[JSON]
-           API.Types.UI.WMB.ApprovalRequestResp
+           API.Types.UI.WMB.AlertRequestResp
       :<|> TokenAuth
       :> "wmb"
       :> "requests"
       :> Capture
            "approvalRequestId"
-           (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest)
+           (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest)
       :> "cancel"
       :> Post
            '[JSON]
@@ -148,7 +164,20 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
+handler = getWmbFleetBadges :<|> postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
+
+getWmbFleetBadges ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Domain.Types.FleetBadgeType.FleetBadgeType ->
+    Kernel.Prelude.Int ->
+    Kernel.Prelude.Int ->
+    Environment.FlowHandler [API.Types.UI.WMB.AvailableBadge]
+  )
+getWmbFleetBadges a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbFleetBadges (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postWmbAvailableRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -230,7 +259,7 @@ postWmbTripRequest ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction ->
     API.Types.UI.WMB.RequestDetails ->
-    Environment.FlowHandler API.Types.UI.WMB.DriverReqResp
+    Environment.FlowHandler API.Types.UI.WMB.AlertReqResp
   )
 postWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
@@ -239,8 +268,8 @@ getWmbRequestsStatus ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest ->
-    Environment.FlowHandler API.Types.UI.WMB.ApprovalRequestResp
+    Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest ->
+    Environment.FlowHandler API.Types.UI.WMB.AlertRequestResp
   )
 getWmbRequestsStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbRequestsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -249,7 +278,7 @@ postWmbRequestsCancel ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest ->
+    Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

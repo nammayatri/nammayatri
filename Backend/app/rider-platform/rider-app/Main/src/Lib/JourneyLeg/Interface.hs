@@ -1,8 +1,11 @@
 module Lib.JourneyLeg.Interface where
 
+import API.Types.UI.MultimodalConfirm
+import Control.Applicative ((<|>))
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
@@ -26,12 +29,14 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 getFare ::
   JL.GetFareFlow m r =>
+  Maybe UTCTime ->
+  Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
   m (Maybe JL.GetFareResponse)
-getFare merchantId merchantOperatingCityId leg = \case
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq
@@ -128,15 +133,15 @@ getFare merchantId merchantOperatingCityId leg = \case
     mkRouteDetails :: EMInterface.MultiModalRouteDetails -> Maybe FRFSRouteDetails
     mkRouteDetails routeDetails =
       let mbRouteCode = gtfsIdtoDomainCode <$> routeDetails.gtfsId
-          mbFromStationCode = gtfsIdtoDomainCode <$> (routeDetails.fromStopDetails >>= (.gtfsId))
-          mbToStationCode = gtfsIdtoDomainCode <$> (routeDetails.toStopDetails >>= (.gtfsId))
+          mbFromStationCode = gtfsIdtoDomainCode <$> ((routeDetails.fromStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetails.fromStopDetails >>= (.gtfsId)))
+          mbToStationCode = gtfsIdtoDomainCode <$> ((routeDetails.toStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetails.toStopDetails >>= (.gtfsId)))
        in case (mbRouteCode, mbFromStationCode, mbToStationCode) of
             (Just routeCode, Just startStationCode, Just endStationCode) ->
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> JL.LegInfo -> m ()
-confirm forcedBooked JL.LegInfo {..} =
+confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> JL.LegInfo -> Maybe CrisSdkResponse -> m ()
+confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkResponse =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -178,7 +183,9 @@ confirm forcedBooked JL.LegInfo {..} =
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
-              merchantOperatingCityId
+              merchantOperatingCityId,
+              quantity = ticketQuantity,
+              childTicketQuantity
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -191,7 +198,10 @@ confirm forcedBooked JL.LegInfo {..} =
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
-              merchantOperatingCityId
+              merchantOperatingCityId,
+              crisSdkResponse,
+              quantity = ticketQuantity,
+              childTicketQuantity
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -204,5 +214,7 @@ confirm forcedBooked JL.LegInfo {..} =
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
-              merchantOperatingCityId
+              merchantOperatingCityId,
+              quantity = ticketQuantity,
+              childTicketQuantity
             }

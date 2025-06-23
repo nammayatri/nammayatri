@@ -62,7 +62,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Presto.Core.Types.Language.Flow (doAff, Flow)
-import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor)
+import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -83,7 +83,7 @@ import Locale.Utils
 import Effect.Uncurried (runEffectFn3)
 import Types.App (defaultGlobalState, GlobalState(..))
 
-screen :: ST.DriverEarningsScreenState -> Screen Action ST.DriverEarningsScreenState ScreenOutput
+screen :: ST.DriverEarningsScreenState -> LoggableScreen Action ST.DriverEarningsScreenState ScreenOutput
 screen initialState =
   { initialState: initialState
   , view: view
@@ -135,7 +135,12 @@ screen initialState =
             _ = spy "DriverEarningsScreenState state" state
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.driverEarningsScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
 
 getDatesList :: String -> ST.DriverEarningsScreenState -> Array String
 getDatesList todaysDate state =

@@ -460,7 +460,7 @@ getTa =
     , sec_ago: " இரண்டாவது முன்பு"
     , loading: "ஏற்றுகிறது"
     , app_related: "பயன்பாடு தொடர்பானது"
-    , fare: "கட்டணம் தொடர்பானது"
+    , fare: "கட்டணம்"
     , ride_related: "சவாரி தொடர்பானது"
     , lost_and_found: "தொலைந்து போனது"
     , report_lost_item: "இழந்த பொருளைப் புகாரளிக்கவும"
@@ -772,7 +772,7 @@ getTa =
     , help_centers_location_will_appear_here_once_they_are_active: "உதவி மையங்கள் செயல்பட்டவுடன் அவற்றின் இருப்பிடங்கள் இங்கே தோன்றும்"
     , support: "ஆதரவு"
     , need_help_joining_the_plan: "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?"
-    , need_help: "திட்டத்தில் சேர உதவி வேண்டுமா?"
+    , need_help: "உதவி வேண்டுமா?"
     , setup_autopay_now_to_get_special_discounts: "சிறப்பு தள்ளுபடியைப் பெற இப்போதே ஆட்டோ பேயை அமைக்கவும்"
     , setup_now: "இப்போதே அமைக்கவும்"
     , go_to_vehicle_details: "வாகன விவரங்களுக்குச் செல்லவும்"
@@ -1143,6 +1143,8 @@ getTa =
     , customer_should_complete_a_valid_ride: "வாடிக்கையாளர் சரியான பயணத்தை முடிக்க வேண்டும்"
     , driver_referral: "வாகன பரிந்துரை"
     , purple_ride_completed: "பர்பிள் சவாரி முடிந்தது"
+    , gold_tier_ride_completed: "தங்கம் சவாரி முடிந்தது"
+    , you_will_lose_a_chance_to_earn: (\coins -> "நீங்கள் " <> coins <> " புள்ளிகள் சம்பாதிக்க வாய்ப்பு இழக்கிறீர்கள்" )
     , training_complted: "பயிற்சி முடிந்தது"
     , rides_in_a_day: "ஒரு நாளில் சவாரிகள்"
     , top: "முதல்"
@@ -1197,8 +1199,8 @@ getTa =
     , yatri_points_faqs_ques2_ans2: (\_ -> "தள்ளுபடி புள்ளிகள் அதே காலக்கெடுவில் பயன்படுத்தப்பட வேண்டும்.")
     , yatri_points_faqs_ques2_ans3: "இந்த காலக்கெடுவில் மாற்றம் அல்லது பயன்பாடு நடைபெறாவிட்டால்,புள்ளிகள் இழக்கப்படும்."
     , hotspots: "ஹாட்ஸ்பாட்கள்"
-    , very_high: "மிக உயர்ந்தது"
-    , high: "உயர்"
+    , very_high: "மிக அதிகம்"
+    , high: "அதிகம்"
     , very_high_demand_area: "மிக அதிக தேவை உள்ள பகுதி"
     , high_demand_area: "அதிக தேவை உள்ள பகுதி"
     , moderate: "மிதமான"
@@ -1788,8 +1790,69 @@ getTa =
     , canceling_this_booking_may_affect_the_emergency_medical : "இந்த முன்பதிவு ரத்து செய்யப்படுவது நோயாளிக்கு அவசர மருத்துவ சேவைகளை"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ஓட்டுனர்கள் தங்களின் மருத்துவ காரணங்கள் அல்லது வாகனம் முறிவுக்கான காரணங்களுக்கே ரத்து செய்ய அனுமதிக்கப்படுகிறார்கள்"
     , payment_under_maintenance : "கட்டணம் பராமரிப்பில் உள்ளது"
-    , payments_temporarily_unavailable : "கட்டணங்கள் தற்காலிகமாக கிடைக்கவில்லை, விரைவில் திரும்பும். தயவுசெய்து பிறகு முயற்சிக்கவும்."
+    , payments_temporarily_unavailable : "கட்டணங்கள் தற்காலிகமாக கிடைக்கவில்லை, விரைவில் திரும்பும். தயவுசெய்து பிறகு முயற்சிக்கவும்.",
+    extra_charge_penalty: "கூடுதல் கட்டண அபராதம்",
+    out_of_rides: (\numerator denaminator -> numerator <> " இல் " <> denaminator <> " பயணங்கள்"),
+    extra_charged: "கூடுதல் கட்டணம் விதிக்கப்பட்டது",
+    get_clarified: "சான்றளிக்கப்படுங்கள்",
+    dont_ask_extra_suspend: "சஸ்பென்ஷனை தவிர்க்க கூடுதல் கேட்காதீர்கள்",
+    dont_ask_extra_blocking: "நீக்கம் செய்யப்படுவதை தவிர்க்க கூடுதல் கேட்காதீர்கள்",
+    your_extra_charge_penalty: "உங்கள் கூடுதல் கட்டண அபராதம்",
+    what_does_this_mean: "இதன் பொருள் என்ன?",
+    read_more: "மேலும் வாசிக்க",
+    take_the_course: "பாடநெறியை எடுத்துக்கொள்ளுங்கள்",
+    extra_charge_q1: "கூடுதல் கட்டண அபராதம் என்ன?",
+    extra_charge_a1: "ஓட்டுநர் வாடிக்கையாளரிடமிருந்து கூடுதல் பணம் கேட்டால், அதிக கட்டண மதிப்பெண் அதிகரிக்கும்.",
+    extra_charge_q2: "அபராத மதிப்பெண் அதிகரித்தால் என்ன ஆகும்?",
+    extra_charge_a2: "மதிப்பெண் அதிகமாக இருந்தால், ஓட்டுநருக்கு குறைந்த பயணங்கள் கிடைக்கும்.",
+    extra_charge_q3: "நான் எப்படி அபராதத்தை குறைக்கலாம்?",
+    extra_charge_a3: "பயணங்களை மேற்கொண்டு கூடுதல் கேட்காமல் இருங்கள். காலப்போக்கில் மதிப்பெண் குறையும்.",
+    extra_charge_q4: "ஓட்டுநர் தொடர்ந்து கூடுதல் கேட்டால் என்ன ஆகும்?",
+    extra_charge_a4: "ஓட்டுநர் சில காலத்திற்கு சஸ்பெண்ட் செய்யப்படுவார். தொடர்ந்து கூடுதல் கேட்டால், அவர் நிரந்தரமாக நீக்கப்படுவார்.",
+    zero: "பூஜ்யம்",
+    low: "குறைவு",
+    suspended: "நிலுவையில்",
+    blocked: "தடை செய்யப்பட்டது",
+    overcharging_blocked_desc: "அடிக்கடி கூடுதல் கட்டணம் வசூலிக்க காரணமாக, நீங்கள் பயணங்களை மேற்கொள்வதில் தடைசெய்யப்பட்டுள்ளீர்கள்",
+    overcharging_suspended_desc: "அடிக்கடி கூடுதல் கட்டணம் வசூலிக்க காரணமாக, நீங்கள் ஆன்லைனில் செல்ல தற்காலிகமாக இடைநிறுத்தப்பட்டுள்ளீர்கள்",
+    suspended_till: (\time date -> "இடைநிறுத்தப்பட்டுள்ளது " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver : "நியாயமான ரேட்டுக்ககாரன்"
     , resume_ride : "பயணத்தை மீண்டும் தொடங்கவும்"
-    , end_ride_with_stops : "உங்களிடம் இன்னும் நிறுத்தங்கள் உள்ளன. இருப்பினும் பயணத்தை முடிக்கவா?"  
+    , end_ride_with_stops : "உங்களிடம் இன்னும் நிறுத்தங்கள் உள்ளன. இருப்பினும் பயணத்தை முடிக்கவா?"
     , stop: (\n -> "நிறுத்தம் " <> n)
+    , rate_changes_as_the_distance_changes: "தூரம் மாறும்போது விகிதம் மாறும்"
+    , nammanmeter: "நம்ம\nமீட்டர்"
+    , press_to_cancel: "ரத்து செய்ய அழுத்தவும்"
+    , dist: "தூரம்"
+    , km: "கி.மீ"
+    , updated_at_: "புதுப்பிக்கப்பட்ட நேரம்"
+    , time: "நேரம்"
+    , enter_destination: "இலக்கை உள்ளிடுக"
+    , stop_meter: "மீட்டரை நிறுத்து"
+    , upton2km: "2KM வரை"
+    , meter_running: "மீட்டர் செயல்படுகிறது"
+    , confirm_meter_stop: "மீட்டரை நிறுத்துவதை உறுதி செய்யவா?"
+    , confirm_destination: "இலக்கை உறுதி செய்யவும்"
+    , search_results: "தேடல் முடிவுகள்"
+    , start_typing_to_search_places: "இடங்களை தேட தட்டச்சு செய்ய தொடங்குங்கள்"
+    , bus_number: "பஸ் எண்"
+    , bus_type: "பஸ் வகை"
+    , namma_meter: "நம்ம மீட்டர்"
+    , package: "பொதி"
+    , overcharging_score: "மிகைக்கட்டண\nமதிப்பெண்"
+    , cancellation_score: "ரத்து\nமதிப்பெண்"
+    , safety_score: "பாதுகாப்பு\nமதிப்பெண்"
+    , you_have_been_unsafe: "நீங்கள்\nபாதுகாப்பற்ற ஓட்டுநர்"
+    , you_have_been_watchlisted: "நீங்கள் கண்காணிப்பு\nபட்டியலில் உள்ளீர்கள்"
+    , you_are_safe: "நீங்கள்\nபாதுகாப்பான ஓட்டுநர்"
+    , watchlisted: "கண்காணிப்பு பட்டியல்"
+    , unsafe: "பாதுகாப்பற்றது"
+    , safe: "பாதுகாப்பானது"
+    , good_cancellation_score: "நல்ல ரத்து\nமதிப்பெண்"
+    , poor_cancellation_score: "மோசமான ரத்து\nமதிப்பெண்"
+    , good: "நல்லது"
+    , poor: "மோசமானது"
+    , open_meter: "ஓப்பன் மீட்டர்"
+    , this_ride_includes_a_pet : "இந்த சவாரியில் ஒரு செல்லப்பிராணியும் அடங்கும்."
+    , pet_rides : "பெட் ரைட்ஸ்"
     }

@@ -320,6 +320,17 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const isLocationPermissionEnabledWithoutEff = function(unit) {
+    if (window.__OS == "IOS") {
+      if (window.JBridge.isLocationAuthenticationStatusDetermined() == "1") {
+        return true
+      } else {
+        return false
+      }
+    }
+    return window.JBridge.isLocationPermissionEnabled();
+  };
+
 export const isBackgroundLocationEnabled = function(unit) {
   return function () {
     if(window.JBridge.isBackgroundLocationEnabled){
@@ -1286,6 +1297,16 @@ export const isLocationEnabled = function (unit) {
   };
 };
 
+export const isLocationEnabledWithoutEff = function (unit) {
+  if (window.__OS == "IOS") {
+    if (window.JBridge.isLocationEnabled() == "1")
+      return true;
+    else return false;
+    }
+    return window.JBridge.isLocationEnabled();
+};
+
+
 export const isMockLocation = function (cb) {
   return function (action) {
     return function () {
@@ -1873,6 +1894,35 @@ export const storeCallBackOverlayPermission = function (cb) {
   }
 }
 
+// Can be used to check microphone permission when the app is resumed
+export const storeCallBackMicrophonePermission = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (isMicrophonePermission) {
+          cb(action(isMicrophonePermission))();
+        });
+        const micCallBack = function () {
+          const isPermissionEnabled = JBridge.isMicrophonePermissionEnabled()
+          cb(action(isPermissionEnabled))();
+        }
+        if (window.onResumeListeners) {
+          window.onResumeListeners.push(micCallBack);
+        }
+        console.log("In storeCallBackMicrophonePermission ---------- + " + action);
+      } catch (error) {
+        console.log("Error occurred in storeCallBackMicrophonePermission ------", error);
+      }
+    }
+  }
+}
+
+export const checkAndAskMicrophonePermission = function (unit) {
+  if(window.JBridge.checkAndAskMicrophonePermission){
+    return window.JBridge.checkAndAskMicrophonePermission();
+  }
+}
+
 export const storeCallBackNotificationPermission = function (cb) {
   return function (action) {
     return function () {
@@ -2105,7 +2155,7 @@ export const shareImageMessage = function (message) {
 }
 
 export const showInAppNotification = function (payload) {
-  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))
+  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload));
 }
 
 export const openWhatsAppSupport = function (contactNumber) {
@@ -2377,63 +2427,6 @@ export const cleverTapEvent = function (_event) {
     }
   }
 }
-
-export const voipDialer = function (rideId, isDriver, phoneNum, isMissed, cb, action) {
-  const callback = callbackMapper.map(function (callId, status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
-    cb(action(callId)(status)(rideId)(errorCode)(driverFlag)(networkType)(networkQuality)(merchantId))();
-  });
-  const sanitizedCuid = rideId.replace("-", "");
-  if (sanitizedCuid.length < 10) {
-    window.showDialer(phoneNum);
-    return;
-  }
-  const receiverCuid = isDriver ? "customer" + sanitizedCuid.substring(0, 10) : "driver" + sanitizedCuid.substring(0, 10);
-  const callerCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
-  const config = JSON.stringify({
-    rideId: rideId,
-    isDriver: isDriver,
-    isMissed: isMissed,
-    receiverCuid: receiverCuid,
-    callerCuid: callerCuid,
-    callContext: isDriver ? "Customer" : "Driver",
-    remoteContext: isDriver ? "Driver" : "Customer"
-  });
-  if (JBridge.voipDialer) {
-    window.JBridge.voipDialer(config, phoneNum, callback);
-  }
-};
-
-export const isSignedCallInitialized = function () {
-  if (JBridge.isSignedCallInitialized) {
-    return JBridge.isSignedCallInitialized();
-  } 
-  return false;
-};
-
-export const initSignedCall = function (rideId) {
-  return function (isDriver) {
-    const sanitizedCuid = rideId.replace("-", "");
-    if (sanitizedCuid.length < 10) {
-      return;
-    }
-    const userCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
-    const config = JSON.stringify({
-      rideId: rideId,
-      cuid: userCuid,
-      isDriver: isDriver
-    });
-  
-    if (JBridge.initSignedCall) {
-      return JBridge.initSignedCall(config);
-    }
-  }
-};
-
-export const destroySignedCall = function () {
-  if (JBridge.destroySignedCall) {
-    return window.JBridge.destroySignedCall();
-  } 
-};
 
 export const getLocationNameV2 = function (lat, lon) {
   try {
@@ -2974,7 +2967,7 @@ export const initHVSdk = function (accessToken, workFLowId, transactionId, useLo
       inputJson: inputJson,
       callback: callback
     };
-    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload));
+    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload))();
   }
   catch (err) {
     console.error(err);
@@ -3151,4 +3144,132 @@ export const executeJS = (params, codeString) => {
     return ""
   }
 
+}
+
+export const voiceToTextImpl = function (cb, action, just, nothing) {
+  const callbackFallback = function () {
+    cb(action(nothing)(false))();
+  };
+  if (window.JBridge.voiceToText){
+    try {
+      const callback = callbackMapper.map(function (res, text) {
+        if(res == "SUCCESS"){
+          cb(action(just(text))(true))();
+        }
+        else if (res == "INIT") {
+          cb(action(just(""))(false))();
+        }
+        else if (res == "PARTIAL") {
+          cb(action(just(text))(false))();
+        }else {
+          cb(action(nothing)(false))();
+        }
+      });
+      return JBridge.voiceToText(callback);
+    } catch (err) {
+      callbackFallback();
+      console.log("Error in voiceToText", err);
+    }
+  }else{
+    callbackFallback();
+  }
+}
+
+export const stopVoiceRecognition = function(id) {
+  if (window.JBridge.stopVoiceRecognition){
+    try {
+      return window.JBridge.stopVoiceRecognition();
+    }catch (err) {
+      console.log("Error in stopVoiceRecognition", err);
+    }
+  }
+}
+export const startVoiceRecognition = function(id) {
+  if (window.JBridge.startVoiceRecognition){
+    try {
+      return window.JBridge.startVoiceRecognition();
+    }catch (err) {
+      console.log("Error in startVoiceRecognition", err);
+    }
+  }
+}
+
+export const setupVoiceRecognitionView = function(id) {
+  return function() {
+    console.log("setupVoiceRecognitionView is called with id " , id);
+    if (window.JBridge.setupVoiceRecognitionView){
+      try {
+        return window.JBridge.setupVoiceRecognitionView(id);
+      } catch (err) {
+        console.log("Error in setupVoiceRecognitionView", err);
+      }
+    }
+  }
+}
+
+export const startOpenMeterActivity = (openMeterConfig) => {
+  return function(cb) {
+    return () => {
+      const callback = () => {
+        const isMeterRideActive = window.JBridge.getFromSharedPrefs('METER_RIDE_ACTIVE');
+        console.log("isMeterRideActive", isMeterRideActive);
+        const timeTaken = Date.now() - window.onPauseTime;
+        console.log("timeTaken", timeTaken);
+        if (isMeterRideActive !== "true" && timeTaken > 500) {
+          cb()();
+          window.onResumeListeners = window.onResumeListeners.filter(item => {
+            return item !== callback;
+          })
+        }
+      }
+      console.log("startOpenMeterActivity", callback);
+      window.onResumeListeners.push(callback);
+      JBridge.startOpenMeterActivity(JSON.stringify(openMeterConfig));
+    }
+  }
+}
+
+
+export const startGActivity = (token) => {
+  return () => {
+    console.log("startGActivity...", token);
+    JBridge.startGActivity(token);
+  }
+}
+
+
+export const updateMarkersOnRoute = (configObj) => {
+  if (window.JBridge.updateMarkersOnRoute) {
+    return window.JBridge.updateMarkersOnRoute(
+      JSON.stringify(configObj)
+    );
+  }
+};
+
+export const checkMarkerAvailable = (markerId) => {
+  if (window.JBridge.checkMarkerAvailable) {
+    const res = window.JBridge.checkMarkerAvailable(
+      JSON.stringify({ markerId })
+    );
+    // Normalize Android bridge booleans ("true"/"false") to real booleans
+    return typeof res === "boolean" ? res : res === "false";
+  }
+};
+
+export const getMarkerPosition = (markerId) => {
+  if (window.JBridge.getMarkerPosition) {
+    return JSON.parse(window.JBridge.getMarkerPosition(JSON.stringify({markerId : markerId})));
+  }
+}
+
+export const scrollToChildInScrollView = (scrollViewId, childViewId, index) => {
+  if (window.JBridge.scrollToChildInScrollView) {
+    return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId, index : index}));
+  }
+}
+
+export const showDynamicRouteMarker = (lat, lon, routeId, purescriptId) => {
+  if (window.JBridge.showDynamicRouteMarker) {
+    return window.JBridge.showDynamicRouteMarker(JSON.stringify({lat: lat, lon : lon, routeId : routeId, purescriptId: purescriptId}));
+  }
 }

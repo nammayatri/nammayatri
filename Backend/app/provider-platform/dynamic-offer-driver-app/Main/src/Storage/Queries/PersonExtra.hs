@@ -177,7 +177,7 @@ data FullDriver = FullDriver
   deriving (Generic)
 
 findAllDriversByIdsFirstNameAsc ::
-  (Functor m, MonadFlow m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (Functor m, MonadFlow m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
@@ -332,6 +332,27 @@ findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash (Id merchantId
         ]
     ]
 
+findByMobileNumberAndMerchantAndRoles :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
+findByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash (Id merchantId) roles =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId,
+          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash],
+          Se.Is BeamP.role $ Se.In roles
+        ]
+    ]
+
+updatePersonName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Text -> Maybe Text -> m ()
+updatePersonName (Id personId) mbFirstName mbLastName = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.firstName $ (fromJust mbFirstName) | isJust mbFirstName]
+        <> [Se.Set BeamP.lastName $ mbLastName | isJust mbLastName]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime
@@ -440,7 +461,14 @@ findAllPersonAndDriverInfoWithDriverIds driverIds = do
     Left _ -> pure []
 
 updateMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
-updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
+updateMediaId (Id driverId) faceImageId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateQrMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
+updateQrMediaId (Id driverId) qrImageId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamP.qrImageId (getId <$> qrImageId), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driverId]
 
 findAllMerchantIdByPhoneNo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> m [Person]
 findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
@@ -513,4 +541,14 @@ updatePersonMobileByFleetRole personId encMobileNumber = do
     ]
     [ Se.Is BeamP.id $ Se.Eq personId,
       Se.Is BeamP.role $ Se.Eq Person.FLEET_OWNER
+    ]
+
+updatePersonRole :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Role -> m ()
+updatePersonRole personId role = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.role role,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]

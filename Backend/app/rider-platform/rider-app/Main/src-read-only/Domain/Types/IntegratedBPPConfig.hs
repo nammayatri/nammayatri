@@ -10,8 +10,10 @@ import Domain.Types.Extra.IntegratedBPPConfig as ReExport
 import qualified Domain.Types.Extra.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data IntegratedBPPConfig = IntegratedBPPConfig
@@ -27,13 +29,16 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   }
   deriving (Generic, FromJSON, ToJSON)
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
   | DIRECT Domain.Types.Extra.IntegratedBPPConfig.DIRECTConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
+  | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
   deriving (Generic, FromJSON, ToJSON, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)

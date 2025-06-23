@@ -48,8 +48,6 @@ instance IsHTTPError LocationServiceabilityError where
 
 instance IsAPIError LocationServiceabilityError
 
-instanceExceptionWithParent 'HTTPException ''LocationServiceabilityError
-
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
@@ -174,7 +172,7 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
-data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BlockReasonFlag)
 
@@ -844,7 +842,9 @@ data FleetErrors
   | VehicleBelongsToAnotherFleet
   | VehicleNotPartOfFleet
   | DriverNotPartOfFleet
+  | DriverNotPartOfOperator
   | DriverNotActiveWithFleet
+  | UserAlreadyExists Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -855,7 +855,9 @@ instance IsBaseError FleetErrors where
     VehicleBelongsToAnotherFleet -> Just "Vehicle is already part of another fleet"
     VehicleNotPartOfFleet -> Just "Vehicle is not part of any fleet"
     DriverNotPartOfFleet -> Just "Driver is not part of the fleet"
+    DriverNotPartOfOperator -> Just "Driver is not part of the operator"
     DriverNotActiveWithFleet -> Just "Driver is not active with the fleet"
+    UserAlreadyExists userId -> Just $ "User with id " <> show userId <> " already exists"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
@@ -863,13 +865,17 @@ instance IsHTTPError FleetErrors where
     VehicleBelongsToAnotherFleet -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
     VehicleNotPartOfFleet -> "VEHICLE_NOT_PART_OF_FLEET"
     DriverNotPartOfFleet -> "DRIVER_NOT_PART_OF_FLEET"
+    DriverNotPartOfOperator -> "DRIVER_NOT_PART_OF_OPERATOR"
     DriverNotActiveWithFleet -> "DRIVER_NOT_ACTIVE_WITH_FLEET"
+    UserAlreadyExists _ -> "USER_ALREADY_EXISTS"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
     VehicleNotPartOfFleet -> E400
     DriverNotPartOfFleet -> E400
+    DriverNotPartOfOperator -> E400
     DriverNotActiveWithFleet -> E400
+    UserAlreadyExists _ -> E400
 
 instance IsAPIError FleetErrors
 
@@ -1196,6 +1202,7 @@ data DriverOnboardingError
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
   | RCActivationFailedPaymentDue Text
+  | RCDependentDocExpired Text
   | DLInvalid
   | VehicleServiceTierNotFound Text
   | DocumentUnderManualReview Text
@@ -1205,6 +1212,7 @@ data DriverOnboardingError
   | InvalidImageType Text Text
   | ImageNotFoundForWorkflowId Text
   | PanAlreadyLinked
+  | GstAlreadyLinked
   | RCNotLinkedWithFleet
   | RCAssociationNotFound
   | DriverSSNNotFound Text
@@ -1249,6 +1257,7 @@ instance IsBaseError DriverOnboardingError where
     RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
+    RCDependentDocExpired detail -> Just $ "RC dependent doc not valid : " <> detail
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
     DocumentUnderManualReview docName -> Just $ "Your " <> docName <> " is under manual review."
@@ -1258,6 +1267,7 @@ instance IsBaseError DriverOnboardingError where
     InvalidImageType svcName imageType -> Just $ "Invalid image type from svc : " <> svcName <> ". Value : " <> imageType
     ImageNotFoundForWorkflowId workflowId -> Just $ "Image not found for workflowId : " <> workflowId
     PanAlreadyLinked -> Just "PAN already linked with driver."
+    GstAlreadyLinked -> Just "GST already linked with driver."
     RCNotLinkedWithFleet -> Just "Vehicle Registration Certificate is not linked with Fleet."
     RCAssociationNotFound -> Just "RC association not found."
     DriverSSNNotFound id_ -> Just $ "Driver SSN not found for driverId \"" <> id_ <> "\"."
@@ -1301,6 +1311,7 @@ instance IsHTTPError DriverOnboardingError where
     RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
+    RCDependentDocExpired _ -> "RC_DEPENDENT_DOC_EXPIRED"
     DLInvalid -> "DL_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
     DocumentUnderManualReview _ -> "DOCUMENT_UNDER_MANUAL_REVIEW"
@@ -1310,6 +1321,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidImageType _ _ -> "INVALID_IMAGE_TYPE"
     ImageNotFoundForWorkflowId _ -> "IMAGE_NOT_FOUND_FOR_WORKFLOW_ID"
     PanAlreadyLinked -> "PAN_ALREADY_LINKED"
+    GstAlreadyLinked -> "GST_ALREADY_LINKED"
     RCNotLinkedWithFleet -> "RC_NOT_LINKED_WITH_FLEET"
     RCAssociationNotFound -> "RC_ASSOCIATION_NOT_FOUND"
     DriverSSNNotFound _ -> "DRIVER_SSN_NOT_FOUND"
@@ -1351,6 +1363,7 @@ instance IsHTTPError DriverOnboardingError where
     RCVehicleOnRide -> E400
     RCActiveOnOtherAccount -> E400
     RCActivationFailedPaymentDue _ -> E400
+    RCDependentDocExpired _ -> E400
     DLInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
     DocumentUnderManualReview _ -> E400
@@ -1360,6 +1373,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidImageType _ _ -> E400
     ImageNotFoundForWorkflowId _ -> E400
     PanAlreadyLinked -> E400
+    GstAlreadyLinked -> E400
     RCNotLinkedWithFleet -> E400
     RCAssociationNotFound -> E400
     DriverSSNNotFound _ -> E400
@@ -1526,6 +1540,24 @@ instance IsHTTPError FleetOwnerNotFoundError where
 
 instance IsAPIError FleetOwnerNotFoundError
 
+newtype OperatorError
+  = OperatorNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OperatorError
+
+instance IsBaseError OperatorError where
+  toMessage = \case
+    OperatorNotFound id -> Just $ "Requested Operator not found: " <> id
+
+instance IsHTTPError OperatorError where
+  toErrorCode = \case
+    OperatorNotFound _ -> "OPERATOR_NOT_FOUND"
+  toHttpCode = \case
+    OperatorNotFound _ -> E500
+
+instance IsAPIError OperatorError
+
 data WMBErrors
   = DriverNotInFleet Text Text
   | DriverNotActiveInFleet Text Text
@@ -1548,10 +1580,11 @@ data WMBErrors
   | TripTransactionNotFound Text
   | EndRideRequestAlreadyPresent
   | RideNotEligibleForEnding
-  | ApprovalRequestIdNotFound Text
+  | AlertRequestIdNotFound Text
   | NoActiveFleetAssociated Text
   | FleetConfigNotFound Text
   | InactiveFleetDriverAssociationNotFound Text
+  | InactiveOperatorDriverAssociationNotFound Text -- TODO separate error type
   | VehicleRouteMappingNotFound Text Text
   | InvalidTripStatus Text
   | DriverNotFoundWithId
@@ -1560,6 +1593,19 @@ data WMBErrors
   | VehicleRouteMappingBlocked
   | AlreadyOnActiveTripWithAnotherVehicle Text
   | AlreadyOnActiveTrip
+  | FleetBadgeNotFound Text
+  | FleetBadgeAlreadyLinked Text
+  | AlreadyOnActiveTripWithAnotherBadge Text
+  | VehicleBelongsToFleet
+  | InvalidRequesterRole Text
+  | InvalidRoleForVehicleAdd Text
+  | DriverHasActiveLink Text
+  | FleetNotActiveInOperator Text Text
+  | VehicleAlreadyLinkedToAnotherDriver
+  | InvalidFleetOwner Text
+  | DriverAlreadyLinkedToAnotherVehicle
+  | VehicleNotVerified Text
+  | FleetOwnerOrOperatorIdRequired
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1574,7 +1620,7 @@ instance IsBaseError WMBErrors where
     RequestAlreadyProcessed id -> Just $ "Request already processed" <> id
     FleetOwnerIdRequired -> Just "Fleet Owner Id is required"
     MaxVehiclesLimitExceeded limit -> Just $ "Maximum " <> show limit <> " vehicles can be added in one go"
-    VehicleLinkedToAnotherDriver vehicleNo -> Just $ "Vehicle" <> vehicleNo <> "is linked to some other driver"
+    VehicleLinkedToAnotherDriver vehicleNo -> Just $ "Vehicle" <> vehicleNo <> " is linked to some other driver"
     DriverNotLinkedToFleet id -> Just $ "Driver is not linked to the fleet, driver id :" <> id
     MobileNumberAlreadyLinked mobile -> Just $ "Mobile number is already linked with another fleet owner: " <> mobile
     EmailAlreadyLinked email -> Just $ "Email is already linked with another fleet owner: " <> email
@@ -1588,10 +1634,11 @@ instance IsBaseError WMBErrors where
     TripTransactionNotFound id -> Just $ "Trip transaction not found for :" <> id
     EndRideRequestAlreadyPresent -> Just "EndRide request already present"
     RideNotEligibleForEnding -> Just "Ride Not Eligible For Ending"
-    ApprovalRequestIdNotFound id -> Just $ "Approval Request Id not found" <> id
+    AlertRequestIdNotFound id -> Just $ "Alert Request Id not found" <> id
     NoActiveFleetAssociated id -> Just $ "No Active Fleet Associated for driver :" <> id
     FleetConfigNotFound id -> Just $ "Fleet Config Info not found for owner id : " <> id
     InactiveFleetDriverAssociationNotFound id -> Just $ "Inactive Fleet Driver Association Not Found for driver : " <> id
+    InactiveOperatorDriverAssociationNotFound id -> Just $ "Inactive Operator Driver Association Not Found for driver : " <> id
     VehicleRouteMappingNotFound vhclNo routeCode -> Just $ "Vehicle Route Mapping not found for vehicle no hash : " <> vhclNo <> " and route code :" <> routeCode
     InvalidTripStatus id -> Just $ "Invalid trip status, current status : " <> id
     DriverNotFoundWithId -> Just "Driver Not Found"
@@ -1599,6 +1646,21 @@ instance IsBaseError WMBErrors where
     RouteTripStopMappingNotFound routeCode -> Just $ "Route trip stop mapping not found for route code : " <> routeCode
     VehicleRouteMappingBlocked -> Just "Vehicle Route Mapping is blocked, unblock and try again."
     AlreadyOnActiveTrip -> Just "Driver is already on an Active trip."
+    FleetBadgeNotFound badgeName -> Just $ "Fleet Badge Name Not Found : " <> badgeName
+    FleetBadgeAlreadyLinked driverId -> Just $ "Fleet Badge already linked to driver id : " <> driverId
+    AlreadyOnActiveTripWithAnotherBadge driverName -> Just $ "Driver is already on an Active trip with another badge : " <> driverName
+    VehicleBelongsToFleet -> Just "Vehicle already belongs to a fleet."
+    InvalidRequesterRole role -> Just $ "Requester has invalid role: " <> show role
+    InvalidRoleForVehicleAdd role -> Just $ "Invalid role for adding vehicle: " <> show role
+    DriverHasActiveLink driverId ->
+      Just $ "Driver: " <> driverId <> " already has active association."
+    FleetNotActiveInOperator fleetOwnerId operatorId ->
+      Just $ "FleetOwner: " <> fleetOwnerId <> " is not active under operator: " <> operatorId
+    VehicleAlreadyLinkedToAnotherDriver -> Just "Vehicle is already linked to another driver"
+    InvalidFleetOwner fleetOwnerId -> Just $ "FleetOwner: " <> fleetOwnerId <> " is not valid."
+    DriverAlreadyLinkedToAnotherVehicle -> Just "Driver is already linked to another vehicle"
+    VehicleNotVerified vehicleNo -> Just $ "Vehicle: " <> vehicleNo <> " is not verified"
+    FleetOwnerOrOperatorIdRequired -> Just "Fleet Owner or Operator Id is required"
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1624,10 +1686,11 @@ instance IsHTTPError WMBErrors where
     TripTransactionNotFound _ -> "INVALID_TRIP_TRANSACTION_ID"
     EndRideRequestAlreadyPresent -> "END_RIDE_REQUEST_ALREADY_PRESENT"
     RideNotEligibleForEnding -> "RIDE_NOT_ELIGIBLE_FOR_ENDING"
-    ApprovalRequestIdNotFound _ -> "APPROVAL_REQUEST_ID_NOT_FOUND"
+    AlertRequestIdNotFound _ -> "ALERT_REQUEST_ID_NOT_FOUND"
     NoActiveFleetAssociated _ -> "NO_ACTIVE_FLEET_ASSOCIATED"
     FleetConfigNotFound _ -> "FLEET_CONFIG_NOT_FOUND"
     InactiveFleetDriverAssociationNotFound _ -> "INACTIVE_FLEET_DRIVER_ASSOCIATION_NOT_FOUND"
+    InactiveOperatorDriverAssociationNotFound _ -> "INACTIVE_OPERATOR_DRIVER_ASSOCIATION_NOT_FOUND"
     VehicleRouteMappingNotFound _ _ -> "VEHICLE_ROUTE_MAPPING_NOT_FOUND"
     InvalidTripStatus _ -> "INVALID_TRIP_STATUS"
     DriverNotFoundWithId -> "DRIVER_NOT_FOUND"
@@ -1635,7 +1698,19 @@ instance IsHTTPError WMBErrors where
     RouteTripStopMappingNotFound _ -> "ROUTE_TRIP_STOP_MAPPING_NOT_FOUND"
     VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
     AlreadyOnActiveTrip -> "ALREADY_ON_ACTIVE_TRIP"
-
+    FleetBadgeNotFound _ -> "FLEET_BADGE_NOT_FOUND"
+    FleetBadgeAlreadyLinked _ -> "FLEET_BADGE_ALREADY_LINKED"
+    AlreadyOnActiveTripWithAnotherBadge _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_BADGE"
+    VehicleBelongsToFleet -> "VEHICLE_BELONGS_TO_FLEET"
+    InvalidRequesterRole _ -> "INVALID_REQUESTER_ROLE"
+    InvalidRoleForVehicleAdd _ -> "INVALID_ROLE_FOR_VEHICLE_ADD"
+    DriverHasActiveLink _ -> "DRIVER_HAS_ACTIVE_LINK"
+    FleetNotActiveInOperator _ _ -> "FLEET_NOT_ACTIVE_IN_OPERATOR"
+    VehicleAlreadyLinkedToAnotherDriver -> "VEHICLE_ALREADY_LINKED_TO_ANOTHER_DRIVER"
+    InvalidFleetOwner _ -> "INVALID_FLEET_OWNER"
+    DriverAlreadyLinkedToAnotherVehicle -> "DRIVER_ALREADY_LINKED_TO_ANOTHER_VEHICLE"
+    VehicleNotVerified _ -> "VEHICLE_NOT_VERIFIED"
+    FleetOwnerOrOperatorIdRequired -> "FLEET_OWNER_OR_OPERATOR_ID_REQUIRED"
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
     DriverNotInFleet _ _ -> E400
@@ -1659,10 +1734,11 @@ instance IsHTTPError WMBErrors where
     TripTransactionNotFound _ -> E400
     EndRideRequestAlreadyPresent -> E400
     RideNotEligibleForEnding -> E400
-    ApprovalRequestIdNotFound _ -> E404
+    AlertRequestIdNotFound _ -> E404
     NoActiveFleetAssociated _ -> E400
     FleetConfigNotFound _ -> E404
     InactiveFleetDriverAssociationNotFound _ -> E404
+    InactiveOperatorDriverAssociationNotFound _ -> E404
     VehicleRouteMappingNotFound _ _ -> E404
     InvalidTripStatus _ -> E400
     DriverNotFoundWithId -> E400
@@ -1670,5 +1746,54 @@ instance IsHTTPError WMBErrors where
     RouteTripStopMappingNotFound _ -> E400
     VehicleRouteMappingBlocked -> E400
     AlreadyOnActiveTrip -> E400
+    FleetBadgeNotFound _ -> E400
+    FleetBadgeAlreadyLinked _ -> E400
+    AlreadyOnActiveTripWithAnotherBadge _ -> E400
+    VehicleBelongsToFleet -> E400
+    InvalidRequesterRole _ -> E400
+    InvalidRoleForVehicleAdd _ -> E400
+    DriverHasActiveLink _ -> E400
+    FleetNotActiveInOperator _ _ -> E400
+    VehicleAlreadyLinkedToAnotherDriver -> E400
+    InvalidFleetOwner _ -> E400
+    DriverAlreadyLinkedToAnotherVehicle -> E400
+    VehicleNotVerified _ -> E400
+    FleetOwnerOrOperatorIdRequired -> E400
 
 instance IsAPIError WMBErrors
+
+newtype OperationHubError
+  = OperationHubDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OperationHubError
+
+instance IsBaseError OperationHubError where
+  toMessage = \case
+    OperationHubDoesNotExist operationHubId -> Just $ "No operation hub matches passed data \"" <> show operationHubId <> "\" not exist."
+
+instance IsHTTPError OperationHubError where
+  toErrorCode = \case
+    OperationHubDoesNotExist _ -> "OPERATION_HUB_DOES_NOT_EXIST"
+  toHttpCode = \case
+    OperationHubDoesNotExist _ -> E400
+
+instance IsAPIError OperationHubError
+
+data TripAlertRequestError
+  = TripAlertRequestNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TripAlertRequestError
+
+instance IsBaseError TripAlertRequestError where
+  toMessage = \case
+    TripAlertRequestNotFound tripAlertRequestId -> Just $ "Trip alert request with id \"" <> show tripAlertRequestId <> "\" not found."
+
+instance IsHTTPError TripAlertRequestError where
+  toErrorCode = \case
+    TripAlertRequestNotFound _ -> "TRIP_ALERT_REQUEST_NOT_FOUND"
+  toHttpCode = \case
+    TripAlertRequestNotFound _ -> E404
+
+instance IsAPIError TripAlertRequestError

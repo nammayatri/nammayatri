@@ -19,6 +19,7 @@ import Data.Aeson.TH
 import Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DeliveryDetails as DParcel
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FarePolicy as DFP
@@ -70,6 +71,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
+    congestionCharges :: Maybe Money,
+    petCharges :: Maybe Money,
     specialZoneExtraTip :: Maybe Money,
     driverMinExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     driverMaxExtraFeeWithCurrency :: Maybe PriceAPIEntity,
@@ -103,14 +106,18 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     roundTrip :: Maybe Bool,
     middleStopCount :: Int,
     parcelType :: Maybe DParcel.ParcelType,
-    parcelQuantity :: Maybe Int
+    parcelQuantity :: Maybe Int,
+    conditionalCharges :: [DAC.ConditionalChargesCategories],
+    isSafetyPlus :: Bool,
+    coinsRewardedOnGoldTierRide :: Maybe Int,
+    safetyPlusCharges :: Maybe HighPrecMoney
   }
   deriving (Generic, ToSchema, Show)
 
 $(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge = do
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
@@ -118,6 +125,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
+          congestionCharges = roundToIntegral <$> congestionCharges,
+          petCharges = roundToIntegral <$> petCharges,
           bapName = bapMetadata <&> (.name),
           bapLogo = bapMetadata >>= (.logoUrl),
           startTime = nearbyReq.startTime,
@@ -175,6 +184,10 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           parcelType = nearbyReq.parcelType,
           parcelQuantity = nearbyReq.parcelQuantity,
+          conditionalCharges = nearbyReq.conditionalCharges,
+          isSafetyPlus = fromMaybe False nearbyReq.isSafetyPlus,
+          coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
+          safetyPlusCharges = Just safetyCharges,
           ..
         }
   where

@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as List
+import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
@@ -105,6 +106,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.WAITING_OR_PICKUP_CHARGES),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                      --  Just (show Enums.NIGHT_SHIFT_CHARGE)
@@ -125,6 +127,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         DFParams.Rental ->
@@ -141,6 +144,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         DFParams.InterCity ->
@@ -158,6 +162,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.EXTRA_DISTANCE_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         _ -> True
@@ -314,7 +319,7 @@ mkNewMessageTags message =
             tagValue = Just message
           }
 
-mkSafetyAlertTags :: Text -> Maybe [Spec.TagGroup]
+mkSafetyAlertTags :: Maybe Enums.SafetyReasonCode -> Maybe [Spec.TagGroup]
 mkSafetyAlertTags reason =
   Just
     [ Spec.TagGroup
@@ -338,12 +343,12 @@ mkSafetyAlertTags reason =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DEVIATION,
+                  { descriptorCode = Just $ show Tags.SAFETY_REASON_CODE,
                     descriptorName = Just "Safety Alert Trigger",
                     descriptorShortDesc = Nothing
                   },
             tagDisplay = Just False,
-            tagValue = Just reason
+            tagValue = Just (T.pack $ maybe "" show reason)
           }
 
 mkUpdatedDistanceTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]

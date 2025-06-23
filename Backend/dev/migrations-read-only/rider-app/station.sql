@@ -15,3 +15,15 @@ ALTER TABLE atlas_app.station ADD COLUMN vehicle_type text NOT NULL;
 ALTER TABLE atlas_app.station ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.station ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.station ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.station ADD COLUMN regional_name text ;
+ALTER TABLE atlas_app.station ADD COLUMN hindi_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.station ADD COLUMN suggested_destinations text ;

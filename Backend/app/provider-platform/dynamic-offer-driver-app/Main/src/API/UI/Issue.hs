@@ -76,7 +76,10 @@ driverIssueHandle =
       mbReportIssue = Nothing,
       mbFindLatestBookingByPersonId = Nothing,
       mbFindRideByBookingId = Nothing,
-      mbSyncRide = Nothing
+      mbSyncRide = Nothing,
+      mbSendUnattendedTicketAlert = Nothing,
+      findRideByRideShortId = castRideByRideShortId,
+      findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
@@ -99,7 +102,8 @@ mkPerson person =
       middleName = person.middleName,
       mobileNumber = person.mobileNumber,
       merchantOperatingCityId = cast person.merchantOperatingCityId,
-      blocked = Nothing
+      blocked = Nothing,
+      merchantId = cast person.merchantId
     }
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)

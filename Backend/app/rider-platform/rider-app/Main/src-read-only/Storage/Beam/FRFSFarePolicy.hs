@@ -9,11 +9,13 @@ import qualified Domain.Types.FRFSFarePolicy
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSFarePolicyT f = FRFSFarePolicyT
   { _type :: B.C f Domain.Types.FRFSFarePolicy.FRFSFarePolicyType,
     applicableDiscountIds :: B.C f [Kernel.Prelude.Text],
+    cessCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,

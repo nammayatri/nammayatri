@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    approved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
     certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     dateOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -35,6 +36,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    unencryptedCertificateNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -23,6 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Control.Monad.Except.Trans (runExceptT, lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Function.Uncurried (runFn2)
+import Data.Maybe (Maybe(..))
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug
@@ -52,7 +53,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState, GlobalState(..))
 
-screen :: ST.HotspotScreenState -> Screen Action ST.HotspotScreenState ScreenOutput
+screen :: ST.HotspotScreenState -> LoggableScreen Action ST.HotspotScreenState ScreenOutput
 screen initialState = 
   { initialState
   , view
@@ -83,6 +84,8 @@ screen initialState =
           let _ = spy "HotspotScreen action ----> " action
           eval action state
       ) 
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.hotspotScreenLogWhitelist
   }
 
 
@@ -169,7 +172,7 @@ view push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , margin $ MarginTop 20
-          ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (navigateButtonConfig) ]
+          ] [ PrimaryButton.view (push <<< PrimaryButtonAC) (navigateButtonConfig state) ]
         ]
       ]
     ]

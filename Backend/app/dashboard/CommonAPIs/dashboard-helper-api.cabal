@@ -36,6 +36,7 @@ library
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
+      Dashboard.ProviderPlatform.Fleet.RegistrationV2
       Dashboard.ProviderPlatform.Management.Driver
       Dashboard.ProviderPlatform.Management.DriverCoins
       Dashboard.ProviderPlatform.Management.DriverReferral
@@ -43,6 +44,7 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Operator.Registration
       Dashboard.RiderPlatform.Management.FRFSTicket
       Dashboard.RiderPlatform.Management.Merchant
       Dashboard.RiderPlatform.Management.Ride
@@ -50,7 +52,12 @@ library
       API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver
       API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+      API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+      API.Types.ProviderPlatform.Fleet.Onboarding
+      API.Types.ProviderPlatform.Fleet.RegistrationV2
       API.Types.ProviderPlatform.Management
+      API.Types.ProviderPlatform.Management.Account
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.CoinsConfig
       API.Types.ProviderPlatform.Management.Driver
@@ -58,6 +65,7 @@ library
       API.Types.ProviderPlatform.Management.DriverGoHome
       API.Types.ProviderPlatform.Management.DriverReferral
       API.Types.ProviderPlatform.Management.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
       API.Types.ProviderPlatform.Management.Endpoints.Driver
@@ -73,6 +81,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
@@ -81,6 +90,14 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.VehicleInfo
+      API.Types.ProviderPlatform.Operator
+      API.Types.ProviderPlatform.Operator.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
+      API.Types.ProviderPlatform.Operator.Endpoints.Registration
+      API.Types.ProviderPlatform.Operator.FleetManagement
+      API.Types.ProviderPlatform.Operator.Registration
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer

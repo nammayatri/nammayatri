@@ -15,6 +15,7 @@
 
 module Storage.Queries.FareParameters where
 
+import qualified Data.Aeson
 import Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FarePolicy as FP
 import Kernel.Beam.Functions
@@ -122,6 +123,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
             Just (_, fPAD) -> return (Just $ AmbulanceDetails fPAD)
             Nothing -> return Nothing
     now <- getCurrentTime
+    let conditionalCharges' = fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< conditionalCharges
     case mFareParametersDetails of
       Just fareParametersDetails -> do
         return $
@@ -144,6 +146,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 customerCancellationDues = customerCancellationDues,
                 congestionCharge = mkAmountWithDefault congestionChargeAmount <$> congestionCharge,
                 tollCharges = tollCharges,
+                petCharges = petCharges,
                 insuranceCharge,
                 cardCharge =
                   Just $
@@ -155,6 +158,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 updatedAt = fromMaybe now updatedAt,
                 merchantId = Id <$> merchantId,
                 merchantOperatingCityId = Id <$> merchantOperatingCityId,
+                conditionalCharges = conditionalCharges',
                 ..
               }
       Nothing -> return Nothing
@@ -195,5 +199,6 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.updatedAt = Just updatedAt,
         merchantId = getId <$> merchantId,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        BeamFP.conditionalCharges = Just $ toJSON conditionalCharges,
         ..
       }

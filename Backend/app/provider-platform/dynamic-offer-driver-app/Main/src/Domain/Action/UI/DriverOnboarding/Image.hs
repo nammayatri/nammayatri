@@ -29,7 +29,7 @@ import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Types (base64Encode)
+import EulerHS.Types (base64Decode, base64Encode)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Verification.Interface as VI
 import Kernel.Prelude
@@ -60,7 +60,8 @@ data ImageValidateRequest = ImageValidateRequest
     rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
     validationStatus :: Maybe Domain.ValidationStatus,
     workflowTransactionId :: Maybe Text,
-    vehicleCategory :: Maybe VehicleCategory
+    vehicleCategory :: Maybe VehicleCategory,
+    sdkFailureReason :: Maybe Text -- used when frontend sdk is used for extraction.
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -127,8 +128,12 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   let merchantId = person.merchantId
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-
-  let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate]
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  imageSizeInBytes <- fromMaybeM (InvalidRequest "Failed to decode base64 image") $ base64Decode image
+  let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
+  when (BS.length imageSizeInBytes > maxSizeInBytes) $
+    throwError $ InvalidRequest $ "Image size " <> show (BS.length imageSizeInBytes) <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show (fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB) <> "MB)"
+  let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC, DVC.VehicleBack, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleFrontInterior, DVC.VehicleRight, DVC.VehicleLeft, DVC.Odometer]
   mbRcId <-
     if imageType `elem` rcDependentDocuments
       then case rcNumber of
@@ -148,33 +153,32 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
 
   images <- filter ((\txnId -> isNothing txnId || (txnId /= workflowTransactionId)) . (.workflowTransactionId)) <$> Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
-    transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
-    when (length images > onboardingTryLimit * bool 1 2 (imageType == DVC.AadhaarCard)) $ do
+    when (length images > onboardingTryLimit * bool 1 2 (imageType == DVC.AadhaarCard || imageType == DVC.DriverLicense)) $ do
       -- not needed now
       driverPhone <- mapM decrypt person.mobileNumber
       notifyErrorToSupport person org.id merchantOpCityId driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
   -- WorkflowTransactionId is used only in case of hyperverge request
-  when (isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
-  when (isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
+  when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
+  when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   fork "S3 Put Image" do
     Redis.withLockRedis (imageS3Lock imagePath) 5 $
       S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
+  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
   isImageValidationRequired <- case person.role of
     Person.FLEET_OWNER -> do
       --------------- Image validation for fleet
-      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType
+      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
       return $ maybe True (.isImageValidationRequired) docConfigs
     _ -> do
-      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory)
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing
       return $ maybe True (.isImageValidationRequired) docConfigs
   if isImageValidationRequired && isNothing validationStatus
     then do
@@ -239,6 +243,7 @@ castImageType DVC.VehiclePermit = Verification.VehiclePermit
 castImageType DVC.VehiclePUC = Verification.VehiclePUC
 castImageType DVC.VehicleInsurance = Verification.VehicleInsurance
 castImageType DVC.VehicleFitnessCertificate = Verification.VehicleFitnessCertificate
+castImageType DVC.VehicleNOC = Verification.VehicleNOC
 castImageType _ = Verification.VehicleRegistrationCertificate -- Fix Later
 
 validateImageFile ::
@@ -248,7 +253,7 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -260,8 +265,9 @@ mkImage ::
   Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   Maybe Documents.VerificationStatus ->
   Maybe Text ->
+  Maybe Text ->
   m Domain.Image
-mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId verificationStatus workflowTransactionId = do
+mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId verificationStatus workflowTransactionId sdkFailureReason = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -272,7 +278,7 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
         s3Path,
         imageType = documentType_,
         verificationStatus = Just $ fromMaybe Documents.PENDING verificationStatus,
-        failureReason = Nothing,
+        failureReason = ImageNotValid <$> sdkFailureReason,
         rcId = getId <$> mbRcId,
         workflowTransactionId,
         reviewerEmail = Nothing,

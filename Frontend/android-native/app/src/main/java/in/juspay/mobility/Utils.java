@@ -4,21 +4,17 @@ import static android.app.Activity.RESULT_OK;
 
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
-import in.juspay.mobility.app.CleverTapSignedCall;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 
-import com.clevertap.android.sdk.CleverTapAPI;
-import com.clevertap.android.signedcall.fcm.SignedCallNotificationHandler;
-import com.clevertap.android.signedcall.init.SignedCallAPI;
-import com.clevertap.android.signedcall.interfaces.SCNetworkQualityHandler;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import com.google.android.play.core.splitinstall.SplitInstallHelper;
 import com.google.android.play.core.splitinstall.SplitInstallManager;
@@ -27,6 +23,7 @@ import com.google.android.play.core.splitinstall.SplitInstallRequest;
 import com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener;
 import com.google.android.play.core.splitinstall.model.SplitInstallErrorCode;
 import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.json.JSONException;
@@ -36,7 +33,6 @@ import java.util.UUID;
 
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.KeyValueStore;
-import in.juspay.mobility.app.MissedCallActionsHandler;
 import in.juspay.services.HyperServices;
 
 public class Utils {
@@ -48,9 +44,9 @@ public class Utils {
                 String token = innerPayload.getString("param1");
                 String cbIdentifier = jsonObject.getString("action");
                 boolean installOnly = innerPayload.getString("param2").equals("true");
-                if (sharedPref != null &&
-                        (sharedPref.getString("GLSDK_INSTALLED", "false").equals("true") || sharedPref.getBoolean("GLSDK_INSTALLED", false)) &&
-                        !installOnly){
+                boolean sdkInstalled = booleanStrWithFallback(sharedPref, "GLSDK_INSTALLED").equals("true") || getBooleanWithFallback(sharedPref, "GLSDK_INSTALLED");
+
+                if (sdkInstalled && !installOnly){
                     Intent intent = new Intent();
                     intent.putExtra("token", token);
                     intent.putExtra("cbIdentifier", cbIdentifier);
@@ -59,8 +55,11 @@ public class Utils {
                 }else {
                     initGlSdk(cbIdentifier,token, installOnly, context, activityResultLauncher, sharedPref);
                 }
+            } else {
+                FirebaseAnalytics.getInstance(context).logEvent("gullak_init_failed", new Bundle());
             }
         } catch (Exception exception) {
+            FirebaseAnalytics.getInstance(context).logEvent("gullak_init_exception", new Bundle());
             FirebaseCrashlytics.getInstance().recordException(exception);
             exception.printStackTrace();
         }
@@ -152,7 +151,11 @@ public class Utils {
                             break;
 
                         case SplitInstallSessionStatus.INSTALLED:
-                            if (sharedPref!= null) sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
+                            if (sharedPref!= null) {
+                                sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
+                                sharedPref.edit().putString("GLSDK_INSTALLED_V2", "true").apply();
+
+                            }
                             if (!installOnly){
                                 Intent intent = new Intent();
                                 intent.putExtra("token", token);
@@ -185,29 +188,20 @@ public class Utils {
                 })
                 .addOnFailureListener(exception -> FirebaseCrashlytics.getInstance().recordException(exception));
     }
-    public static void initCTSignedCall(Context context, Activity activity, MobilityRemoteConfigs remoteConfigs){
-        String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
-        String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
-        CleverTapSignedCall cleverTapSignedCall = new CleverTapSignedCall(context, activity, true, SC_API_KEY, SC_ACCOUNT_ID);
-        CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
-        if (BuildConfig.DEBUG) {
-            SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
-        }        
-        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
-        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
-            @Override
-            public boolean onNetworkQualityResponse(final int score) {
-                Log.d("SC", "Signed Call Network quality score: " + score);
-                JSONObject voipCallConfig = null;
-                int scoreThreshold = 70;
-                try {
-                    voipCallConfig = new JSONObject(remoteConfigs.getString("voip_call_config"));
-                    scoreThreshold = voipCallConfig.optInt("score",70);
-                } catch (JSONException e) {
-                    Log.d("SC","Failed to fetch voip call config");
-                }
-                return score >= scoreThreshold;
-            }
-        });  
+   
+    private static boolean getBooleanWithFallback (SharedPreferences sharedPref, String key) {
+        try {
+            return sharedPref.getBoolean(key, false);
+        }catch (Exception e){
+            return false;
+        }
+    }
+
+    private static String booleanStrWithFallback(SharedPreferences sharedPref, String key){
+        try {
+            return sharedPref.getString(key, "false");
+        }catch (Exception e){
+            return "false";
+        }
     }
 }

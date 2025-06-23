@@ -23,6 +23,9 @@ import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 
+instance showAction :: Show Action where
+  show (GoBack) = "GoBack"
+
 data Action = GoBack
 
 type Config = {

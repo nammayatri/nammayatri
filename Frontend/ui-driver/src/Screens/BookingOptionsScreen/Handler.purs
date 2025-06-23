@@ -4,7 +4,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.BookingOptionsScreen.Controller (ScreenOutput(..))
 import Screens.BookingOptionsScreen.View as BookingOptionsScreen
 import Types.App (BOOKING_OPTIONS_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
@@ -13,7 +13,7 @@ import Types.ModifyScreenState (modifyScreenState)
 bookingOptions :: FlowBT String BOOKING_OPTIONS_SCREEN_OUTPUT
 bookingOptions = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
+  action <- lift $ lift $ runLoggableScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
   case action of
     ChangeRidePreference updatedState service -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
@@ -21,9 +21,9 @@ bookingOptions = do
     ToggleACAvailability updatedState toogleVal -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_AC_AVAILABILITY updatedState toogleVal)
-    ToggleRentalIntercityRide updatedState -> do
+    ToggleRentalIntercityPetRide updatedState -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ ENABLE_RENTAL_INTERCITY_RIDE updatedState)
+      App.BackT $ App.NoBack <$> (pure $ ENABLE_RENTAL_INTERCITY_PET_RIDE updatedState)
     GoBack state -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> state{props{ fromDeepLink = false }})
       if state.props.fromDeepLink

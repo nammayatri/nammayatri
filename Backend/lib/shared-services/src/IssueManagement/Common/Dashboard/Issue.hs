@@ -79,7 +79,7 @@ data IssueInfoRes = IssueInfoRes
     rideId :: Maybe (Id Ride),
     chats :: Maybe [ChatDetail],
     comments :: [IssueReportCommentItem],
-    category :: Text,
+    category :: Maybe Text,
     mediaFiles :: [MediaFile],
     option :: Maybe Text,
     description :: Text,
@@ -429,4 +429,22 @@ instance ToMultipart Tmp UpsertIssueMessageReq where
       encodeJson = DTE.decodeUtf8 . BL.toStrict . encode
 
 instance HideSecrets UpsertIssueMessageReq where
+  hideSecrets = identity
+
+-----------------------------------------------------
+-- Issue Report V2 API ------------------------------
+
+data IssueReportReqV2 = IssueReportReqV2
+  { ticketId :: Text,
+    rideId :: Maybe (Id Ride),
+    personId :: Id Common.Person,
+    mediaFiles :: [Text],
+    chats :: [Text],
+    issueReportType :: Maybe IssueReportType,
+    createIssue :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets IssueReportReqV2 where
   hideSecrets = identity

@@ -68,6 +68,7 @@ window.getMerchantConfig = function () {
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
+    "showRegisteredAddress" : false,
     "imageUploadOptional" : true,
     "clientName" : "Yatri Sathi",
     "languageList": [{
@@ -248,7 +249,7 @@ window.getMerchantConfig = function () {
       "overlayYoutubeLink" : "https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtu.be/RSKNT3NccPo-*$*-https://youtu.be/RSKNT3NccPo",
       "earnAmountInADay" : 5000,
       "showFeeBreakup" : true
-    } 
+    }
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
     , "rideActionModelConfig" : {
@@ -260,14 +261,14 @@ window.getMerchantConfig = function () {
         }
     , "profileVerification" : {
       "aadharVerificationRequired" : false // HV Integration is done with Aadhaar as Compulsory on onboarding
-    } 
+    }
     , "bottomNavConfig" : {
-      "subscription" : 
+      "subscription" :
         { "isVisible" : true,
           "showNew" : true
         },
-      "referral" : 
-        { 
+      "referral" :
+        {
           "showNew" : true
         }
     }
@@ -453,7 +454,7 @@ let getAllCityConfig = () => {
       }
     }
   };
-  
+
   let cityConfigs = [
     Object.assign({}, baseCityConfig, {
       cityName: "Kolkata",
@@ -604,6 +605,14 @@ let getAllCityConfig = () => {
       cityCode: "std:03215",
       cityLat: 22.40117,
       cityLong: 88.58293,
+      showSubscriptions: false
+    }),
+    Object.assign({}, baseCityConfig, {
+      cityName: "Digha",
+      mapImage: "ys_ic_digha_map",
+      cityCode: "std:03216",
+      cityLat: 21.6222,
+      cityLong: 87.5066,
       showSubscriptions: false
     })
   ];

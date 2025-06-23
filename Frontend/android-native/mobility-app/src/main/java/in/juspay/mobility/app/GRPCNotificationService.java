@@ -65,7 +65,6 @@ public class GRPCNotificationService extends Service implements NotificationList
         super.onDestroy();
         Log.i("GRPC", "Destroying GRPC service");
         closeChannel();
-        stopSelf();
     }
 
     /* Initialize channel and connection for bi-directional notification streaming */
@@ -74,7 +73,7 @@ public class GRPCNotificationService extends Service implements NotificationList
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         Log.i("GRPC", "Registration token - " + token);
         if(token.equals("null")){
-            onDestroy();
+            stopSelf();
             return;
         }
 
@@ -96,7 +95,7 @@ public class GRPCNotificationService extends Service implements NotificationList
         }
 
         if(!isGRPCEnabled){
-            onDestroy();
+            stopSelf();
             return;
         }
 

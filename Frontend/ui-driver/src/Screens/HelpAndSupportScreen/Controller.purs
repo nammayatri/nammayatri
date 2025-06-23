@@ -42,7 +42,24 @@ import Components.PopUpModal as PopUpModal
 import Constants
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction ) = "NoAction"
+  show (BackPressed ) = "BackPressed"
+  show (SourceToDestinationAction _) = "SourceToDestinationAction"
+  show (OptionClick _) = "OptionClick"
+  show (SelectRide _) = "SelectRide"
+  show (OpenChat _) = "OpenChat"
+  show (RideHistoryAPIResponse _) = "RideHistoryAPIResponse"
+  show (AfterRender ) = "AfterRender"
+  show (NoRidesAction ) = "NoRidesAction"
+  show (IssueScreenModal _) = "IssueScreenModal"
+  show (OnClickOngoingIssues ) = "OnClickOngoingIssues"
+  show (OnClickResolvedIssues ) = "OnClickResolvedIssues"
+  show (FetchIssueListApiCall _) = "FetchIssueListApiCall"
+  show (CheckDummyRide ) = "CheckDummyRide"
+  show (ClearTimer ) = "ClearTimer"
+  show (UpdateTimer _ _ _) = "UpdateTimer"
+  show (PopUpModalAction _) = "PopUpModalAction"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -77,6 +94,7 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToProfileScreen HelpAndSupportScreenState
                   | GoToHomeScreen HelpAndSupportScreenState
                   | GoToTripDetailsScreen HelpAndSupportScreenState
+                  | GotoMeterRideScreen HelpAndSupportScreenState
 data Action = NoAction
              | BackPressed
              | SourceToDestinationAction SourceToDestinationController.Action
@@ -109,6 +127,7 @@ eval BackPressed state = do
         DRIVER_PROFILE_SCREEN -> exit (GoToProfileScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         HOME_SCREEN -> exit (GoToHomeScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         TRIP_DETAILS_SCREEN -> exit (GoToTripDetailsScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
+        METER_RIDE_SCREEN -> exit (GotoMeterRideScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         _ -> continue state
 eval (SelectRide selectedCategory) state = do
   when (not (DS.null state.data.timerId)) $ do

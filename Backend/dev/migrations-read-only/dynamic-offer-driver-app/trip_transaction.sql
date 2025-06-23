@@ -37,3 +37,28 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN end_ride_approval
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_termination_source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN driver_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN fleet_badge_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_start_source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN conductor_fleet_badge_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN conductor_name text ;

@@ -36,6 +36,7 @@ import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Payout as TP
@@ -124,9 +125,10 @@ postPayoutCreateOrder ::
 postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  let serviceName = DEMSC.PayoutService PT.Juspay
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   let entityName = DLP.MANUAL
-      createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
+      createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
   pure Kernel.Types.APISuccess.Success
@@ -142,13 +144,14 @@ getPayoutOrderStatus ::
   )
 getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
-      serviceName = DEMSC.PayoutService PT.Juspay
-  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
+  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId payoutServiceName (Just $ getId personId) payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
     whenJust payoutOrder.entityIds $ \dStatsIds -> do

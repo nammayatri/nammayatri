@@ -3,6 +3,7 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
 import qualified Domain.Types.Location
@@ -10,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.Trip
 import qualified Kernel.External.Maps
@@ -24,7 +26,8 @@ import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data SearchRequest = SearchRequest
-  { autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { allJourneysLoaded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoAssignEnabledV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod],
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -38,6 +41,7 @@ data SearchRequest = SearchRequest
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
@@ -53,33 +57,38 @@ data SearchRequest = SearchRequest
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMeterRideSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    originStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    validTill :: Kernel.Prelude.UTCTime
+    validTill :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
-data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery | PublicTransport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RiderPreferredOption))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RiderPreferredOption)
 
-$(mkHttpInstancesForEnum (''RiderPreferredOption))
+$(mkHttpInstancesForEnum ''RiderPreferredOption)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
 
-$(mkHttpInstancesForEnum (''SearchRequestStatus))
+$(mkHttpInstancesForEnum ''SearchRequestStatus)

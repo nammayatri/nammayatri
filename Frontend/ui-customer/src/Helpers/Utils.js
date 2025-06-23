@@ -111,9 +111,10 @@ export const secondsToHms = function (d) {
   const h = Math.floor(d / 3600);
   const m = Math.floor(d % 3600 / 60);
 
-  const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
   const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "--";
-  return hDisplay + mDisplay;
+  const hDisplay = h > 0 ? h + (h == 1 ? " hr" : " hrs") : "";
+  if(hDisplay != "" && mDisplay == "--") return hDisplay
+  else return hDisplay + ((hDisplay != "") ? ", " : "") + mDisplay;
 }
 
 export const toIST = function (date) {
@@ -635,3 +636,15 @@ export const releaseBackpress = function (unit) {
   }
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 }
+
+export const isItSameDay = (date) => {
+  if (date == "__failed" || date == "(null)") return false;
+  const dateObj = new Date(parseInt(date));
+  const today = new Date();
+  return today.getDate() == dateObj.getDate() && (today.getMonth() == dateObj.getMonth()) && (today.getFullYear() == dateObj.getFullYear())
+}
+
+export const launchAppSettings = function (unit) {
+  return JBridge.openApp(null,"package:" + JSON.parse(JBridge.getSessionInfo()).package_name,"android.settings.APPLICATION_DETAILS_SETTINGS",268435456,2000);
+};
+

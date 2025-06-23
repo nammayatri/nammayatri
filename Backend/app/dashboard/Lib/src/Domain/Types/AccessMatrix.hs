@@ -24,6 +24,7 @@ import qualified "rider-app" API.Types.Dashboard.RideBooking as RiderRideBooking
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as ProviderFleet
 import qualified "shared-services" API.Types.ProviderPlatform.IssueManagement as ProviderIssueManagement
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator as ProviderOperator
 import qualified "shared-services" API.Types.RiderPlatform.IssueManagement as RiderIssueManagement
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as RiderManagement
 import qualified Data.Aeson as A
@@ -55,6 +56,7 @@ newtype UserActionTypeWrapper = UserActionTypeWrapper {getUserActionType :: User
 instance Text.Show.Show UserActionTypeWrapper where
   show (UserActionTypeWrapper uat) = case uat of
     PROVIDER_FLEET uat1 -> "PROVIDER_FLEET/" <> show uat1
+    PROVIDER_OPERATOR uat1 -> "PROVIDER_OPERATOR/" <> show uat1
     PROVIDER_MANAGEMENT uat1 -> "PROVIDER_MANAGEMENT/" <> show uat1
     PROVIDER_APP_MANAGEMENT uat1 -> "PROVIDER_APP_MANAGEMENT/" <> show uat1
     PROVIDER_ISSUE_MANAGEMENT uat1 -> "PROVIDER_ISSUE_MANAGEMENT/" <> show uat1
@@ -74,6 +76,10 @@ instance Text.Read.Read UserActionTypeWrapper where
             | r1 <- stripPrefix "PROVIDER_FLEET/" r,
               (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
           ]
+            ++ [ (UserActionTypeWrapper $ PROVIDER_OPERATOR v1, r2)
+                 | r1 <- stripPrefix "PROVIDER_OPERATOR/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ (UserActionTypeWrapper $ PROVIDER_MANAGEMENT v1, r2)
                  | r1 <- stripPrefix "PROVIDER_MANAGEMENT/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
@@ -379,6 +385,7 @@ data UserActionType
   | EXEMPT_DRIVER_FEE
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
+  | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
   | PROVIDER_APP_MANAGEMENT ProviderAppManagement.AppManagementUserActionType
   | PROVIDER_ISSUE_MANAGEMENT ProviderIssueManagement.IssueManagementUserActionType

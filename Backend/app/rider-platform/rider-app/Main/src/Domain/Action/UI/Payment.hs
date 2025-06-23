@@ -38,6 +38,7 @@ import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -102,7 +103,7 @@ createOrder (personId, merchantId) rideId = do
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal -- api call
+      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
   DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
@@ -113,16 +114,18 @@ getStatus ::
     L.MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   ticketBooking <- QTB.findById (cast orderId)
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   mocId <- ticketBooking <&> (.merchantOperatingCityId) & fromMaybeM (InternalError "MerchantOperatingCityId not found in booking") ----- fix the api and pass mocId in params
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId mocId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal -- api call
+      orderStatusCall = Payment.orderStatus merchantId mocId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
   DPayment.orderStatusService commonPersonId orderId orderStatusCall
 
 getOrder ::
@@ -130,7 +133,8 @@ getOrder ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
@@ -141,7 +145,7 @@ getOrder (personId, _) orderId = do
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 
-mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
+mkOrderAPIEntity :: (EncFlow m r, HasKafkaProducer r) => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
   clientAuthToken_ <- decrypt `mapM` clientAuthToken
   return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}

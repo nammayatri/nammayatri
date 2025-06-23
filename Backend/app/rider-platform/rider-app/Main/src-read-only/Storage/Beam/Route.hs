@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data RouteT f = RouteT
   { code :: B.C f Kernel.Prelude.Text,
     color :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dailyTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     endLat :: B.C f Kernel.Prelude.Double,
     endLon :: B.C f Kernel.Prelude.Double,
     id :: B.C f Kernel.Prelude.Text,
@@ -26,6 +27,7 @@ data RouteT f = RouteT
     shortName :: B.C f Kernel.Prelude.Text,
     startLat :: B.C f Kernel.Prelude.Double,
     startLon :: B.C f Kernel.Prelude.Double,
+    stopCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

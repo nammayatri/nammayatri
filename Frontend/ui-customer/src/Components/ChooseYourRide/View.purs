@@ -18,10 +18,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import JBridge (getLayoutBounds, getHeightFromPercent)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, bind, negate, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=), (<), (<>), otherwise)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout, alpha)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout, alpha, onStateChanged)
 import PrestoDOM.Properties (cornerRadii)
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -29,6 +30,7 @@ import Styles.Colors as Color
 import ConfigProvider
 import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil, fromString)
+import Data.Int as Int
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
 import Screens.Types (ZoneType(..), TipViewStage(..), FareProductType(..))
@@ -46,8 +48,13 @@ import Data.Function (on)
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 import RemoteConfig as RC
+import Common.RemoteConfig.Utils as RemoteConfig
 import Storage as ST
 import Components.ChooseVehicle.Controller as CCC
+import LocalStorage.Cache
+import Debug
+import Foreign.Object (Object, empty, insert, lookup)
+import Locale.Utils
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -67,14 +74,15 @@ view push config =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ][bottomSheetLayout
-          [ height WRAP_CONTENT
+          ([ height WRAP_CONTENT
           , width MATCH_PARENT
           , accessibility DISABLE
           , enableShift false
           , peakHeight $ if null config.quoteList then 300 else getPeekHeight config
           , sheetState COLLAPSED
           , orientation VERTICAL
-          ][linearLayout
+          ] <> if config.pushSheetChangedAction then [onStateChanged push SheetStateChanged] else [])
+          [linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
@@ -90,10 +98,11 @@ view push config =
   where
     getPeekHeight :: Config -> Int
     getPeekHeight config =
-      let variantBasedList = filterVariantAndEstimate config.quoteList
+      let configLen = length if config.showMultiProvider then variantBasedList else topProviderList
+          variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
-          currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
-      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if EHC.os /= "IOS" && config.fareProductType == DELIVERY then 100 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
+          currentPeekHeight = getQuoteListViewHeight config configLen
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if EHC.os /= "IOS" && config.fareProductType == DELIVERY then 100 + (if configLen == 1 then 30 else 0) + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
 
 bottomLayoutView :: forall w. (Action -> Effect Unit) -> Config -> Visibility -> String -> PrestoDOM (Effect Unit) w
 bottomLayoutView push config visibility' id' =
@@ -421,7 +430,11 @@ chooseYourRideView push config =
     tagConfig = HS.specialZoneTagConfig config.zoneType
     showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
     nearByDrivers = fromMaybe 0 config.nearByDrivers
-
+    offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
+    offerText = fromMaybe "" $ lookup (DS.toLower (getLanguageLocale languageKey)) offerConfig.translations
+    hasOffer = case config.quoteList !! config.activeIndex of 
+                  Nothing -> offerConfig.enableAllVariant 
+                  Just item -> if item.vehicleVariant == "BOOK_ANY" then false else (getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)) > 0.0
   in
   PrestoAnim.animationSet anims $
   linearLayout
@@ -530,9 +543,22 @@ chooseYourRideView push config =
                   [ height $ V 1
                   , width MATCH_PARENT
                   , margin $ MarginTop 12
+                  , visibility $ boolToVisibility $ not ((offerText /= "") && (hasOffer || offerConfig.enableAllVariant))
                   , background Color.grey900
                   ][]
                 ]
+          , linearLayout
+            [ gravity CENTER
+            , visibility $ boolToVisibility $ (offerText /= "") && (hasOffer || offerConfig.enableAllVariant)
+            , background Color.blue800
+            , width MATCH_PARENT
+            , height WRAP_CONTENT
+            , padding $ PaddingVertical 4 4
+            ][ textView $
+               [ text $ offerText
+               , color Color.white900 
+               ] <> FontStyle.body9 TypoGraphy
+            ]
           , textView $
             [ text $ getString SHOWING_FARE_FROM_MULTI_PROVIDER
             , color Color.black700
@@ -677,7 +703,15 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                                isBookAny = item.vehicleVariant == "BOOK_ANY"
+                                fromPrice =  Int.toNumber $ fromMaybe 0 item.minPrice
+                                toPrice = Int.toNumber $ fromMaybe 0 item.maxPrice
+                                actualPrice = Int.toNumber $ item.basePrice
+                                offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
+                                ratio = getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)
+                                enableOffer = ratio > 0.0 && not isBookAny
+                                finalPrice = if fromPrice /= toPrice && (fromPrice > 0.0) && (toPrice > 0.0) then "₹" <> EHC.parseFloat (fromPrice * ratio) 0 <> " - " <> "₹" <> EHC.parseFloat (toPrice * ratio) 0 else "₹" <> EHC.parseFloat (actualPrice * ratio) 0
+                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services, actualPrice = finalPrice, enableOffer = enableOffer})
                         ) variantBasedList
                   else
                     Tuple "TopProvider" $ linearLayout
@@ -692,7 +726,15 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, activeIndex = config.activeIndex, services = services})
+                                isBookAny = item.vehicleVariant == "BOOK_ANY"
+                                fromPrice =  Int.toNumber $ fromMaybe 0 item.minPrice
+                                toPrice = Int.toNumber $ fromMaybe 0 item.maxPrice
+                                actualPrice = Int.toNumber $ item.basePrice
+                                offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
+                                ratio = getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)
+                                enableOffer = ratio > 0.0 && not isBookAny
+                                finalPrice = if fromPrice /= toPrice && (fromPrice > 0.0) && (toPrice > 0.0) then "₹" <> EHC.parseFloat (fromPrice * ratio) 0 <> " - " <> "₹" <> EHC.parseFloat (toPrice * ratio) 0 else "₹" <> EHC.parseFloat (actualPrice * ratio) 0
+                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, activeIndex = config.activeIndex, services = services, actualPrice = finalPrice, enableOffer = enableOffer})
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]

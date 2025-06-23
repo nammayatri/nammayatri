@@ -18,7 +18,7 @@ public class SheetModel {
     private int startTime, driverDefaultStepFee;
     private double updatedAmount, parkingCharge;
     private double offeredPrice;
-    private int customerExtraFee;
+    private int customerExtraFee, congestionCharges, petCharges;
     private final int airConditioned;
     private final int ventilator;
     private final int baseFare;
@@ -30,6 +30,7 @@ public class SheetModel {
     private final int negotiationUnit;
     private final int tollCharges;
     private final int stops;
+    private final int coinsRewardedOnGoldTierRide;
 
     private final Boolean disabilityTag, isFavourite;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
@@ -54,10 +55,13 @@ public class SheetModel {
                       int rideRequestPopupDelayDuration,
                       int negotiationUnit,
                       int customerExtraFee,
+                      int congestionCharges,
+                      int petCharges,
                       String specialLocationTag,
                       String sourcePinCode,
                       String destinationPinCode,
                       String requestedVehicleVariant,
+                      int coinsRewardedOnGoldTierRide,
                       Boolean disabilityTag,
                       Boolean isTranslated,
                       Boolean gotoTag,
@@ -114,9 +118,12 @@ public class SheetModel {
         this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
+        this.petCharges = petCharges;
+        this.congestionCharges = congestionCharges;
         this.sourcePinCode = sourcePinCode;
         this.destinationPinCode = destinationPinCode;
         this.requestedVehicleVariant = requestedVehicleVariant;
+        this.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide;
         this.disabilityTag = disabilityTag;
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
@@ -209,7 +216,12 @@ public class SheetModel {
 
     public int getCustomerTip() {return customerExtraFee;}
 
+    public int getCongestionCharges() {return congestionCharges;}
+    public int getPetCharges() {return petCharges;}
+
     public Boolean isFavourite() {return isFavourite;}
+
+    public int getCoinsForGoldTierRide() {return coinsRewardedOnGoldTierRide;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
 

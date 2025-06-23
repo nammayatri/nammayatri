@@ -19,6 +19,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
+    fleetOwnerEnabledCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fromTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     gatewayAndRegistryPriorityList :: [Domain.Types.GatewayAndRegistryService],
     geoHashPrecisionValue :: Kernel.Prelude.Int,
@@ -33,6 +34,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
     onlinePayment :: Kernel.Prelude.Bool,
+    overwriteAssociation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registryUrl :: Kernel.Prelude.BaseUrl,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
@@ -59,7 +61,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED deriving (Eq, Ord, Show
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-type Merchant = MerchantD 'Safe
+type Merchant = MerchantD ('Safe)
 
 instance FromJSON (MerchantD 'Unsafe)
 
@@ -69,6 +71,6 @@ instance FromJSON (MerchantD 'Safe)
 
 instance ToJSON (MerchantD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
 
-$(mkHttpInstancesForEnum ''Status)
+$(mkHttpInstancesForEnum (''Status))

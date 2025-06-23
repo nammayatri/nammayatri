@@ -39,3 +39,15 @@ ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_category_level_subs
 
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN total_amount_charged_for_service integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN last_bill_generated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN waiver_off_percentage double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN waive_of_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN waive_off_valid_till timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN waive_off_enabled_on timestamp with time zone ;

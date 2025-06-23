@@ -23,6 +23,7 @@ import Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
+import Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
 import Kernel.External.Payment.Interface as Payment
@@ -52,7 +53,8 @@ data DRideAssignedReq = DRideAssignedReq
     driverAccountId :: Maybe Payment.AccountId,
     estimateId :: Maybe Text,
     isAlreadyFav :: Bool,
-    favCount :: Int
+    favCount :: Int,
+    isSafetyPlus :: Bool
   }
 
 data DRideStartedReq = DRideStartedReq
@@ -84,6 +86,7 @@ data DDriverArrivedReq = DDriverArrivedReq
 
 data CurrentSearchInfo = CurrentSearchInfo
   { routeDistance :: Maybe Meters,
-    dropLocation :: Maybe LatLong
+    dropLocation :: Maybe LatLong,
+    searchTry :: DST.SearchTry
   }
   deriving (Generic, Show)

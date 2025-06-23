@@ -42,6 +42,8 @@ updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.enabled enabled,
+      Se.Set Beam.fraudAuthCountThreshold fraudAuthCountThreshold,
+      Se.Set Beam.fraudAuthCountWindow fraudAuthCountWindow,
       Se.Set Beam.fraudBookingCancellationCountThreshold fraudBookingCancellationCountThreshold,
       Se.Set Beam.fraudBookingCancellationCountWindow fraudBookingCancellationCountWindow,
       Se.Set Beam.fraudBookingCancelledByDriverCountThreshold fraudBookingCancelledByDriverCountThreshold,
@@ -64,6 +66,8 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
         Domain.Types.MerchantConfig.MerchantConfig
           { createdAt = createdAt,
             enabled = enabled,
+            fraudAuthCountThreshold = fraudAuthCountThreshold,
+            fraudAuthCountWindow = fraudAuthCountWindow,
             fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
             fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
             fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
@@ -84,6 +88,8 @@ instance ToTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConfig
     Beam.MerchantConfigT
       { Beam.createdAt = createdAt,
         Beam.enabled = enabled,
+        Beam.fraudAuthCountThreshold = fraudAuthCountThreshold,
+        Beam.fraudAuthCountWindow = fraudAuthCountWindow,
         Beam.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
         Beam.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
         Beam.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,

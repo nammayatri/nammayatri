@@ -23,6 +23,7 @@ import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DIssue
+import qualified IssueManagement.Domain.Action.UI.Issue as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
@@ -32,16 +33,8 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 
-dashboardIssueHandle :: DIssue.ServiceHandle Environment.Flow
-dashboardIssueHandle =
-  DIssue.ServiceHandle
-    { findPersonById = AUI.castPersonById,
-      findByMerchantShortIdAndCity = AUI.castMOCityByMerchantShortIdAndCity,
-      findMerchantConfig = AUI.buildMerchantConfig,
-      mbSendUnattendedTicketAlert = Nothing,
-      findRideByRideShortId = AUI.castRideByRideShortId,
-      findByMobileNumberAndMerchantId = AUI.castPersonByMobileNumberAndMerchant
-    }
+dashboardIssueHandle :: DAI.ServiceHandle Environment.Flow
+dashboardIssueHandle = AUI.driverIssueHandle
 
 getIssueCategoryList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

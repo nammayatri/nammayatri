@@ -2,7 +2,7 @@ module SharedLogic.Booking where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
-import Data.Text
+import Data.Text hiding (map)
 import Data.Time (UTCTime (..), defaultTimeLocale, formatTime, utctDay)
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -15,6 +15,7 @@ import qualified Domain.Types.Ride as SRide
 import Domain.Types.Trip
 import Domain.Types.VehicleVariant
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -46,7 +47,8 @@ cancelBooking ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasShortDurationRetryCfg r c
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -70,7 +72,7 @@ cancelBooking booking mbDriver transporter = do
     void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id SRide.CANCELLED
     updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
-    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing Nothing
+    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
 
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing

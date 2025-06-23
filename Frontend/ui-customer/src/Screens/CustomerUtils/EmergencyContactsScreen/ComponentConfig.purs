@@ -48,7 +48,7 @@ genericHeaderConfig state =
         , padding = (Padding 0 5 0 5)
         , textConfig
           { text = titleText
-          , accessibilityHint = if state.props.showContactList then (show (length state.data.emergencyContactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
+          , accessibilityHint = if state.props.showContactList then (show (length state.data.emergencyContactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString TRUSTED_CONTACT)
           , color = Color.darkCharcoal
           }
         , suffixImageConfig
@@ -72,6 +72,7 @@ primaryEditTextConfig state = let
         -- , placeholder = "9999......"
         , textStyle = FontStyle.SubHeading3
         , pattern = Just "[0-9]*,10"
+        , accessibilityHint = "Enter Number"
         -- , text = state.data.
         }
       , background = Color.white900
@@ -103,6 +104,7 @@ primaryEditTextConfigName state = let
         -- , placeholder = "Enter Name"
         , textStyle = FontStyle.SubHeading3
         , pattern = Just "[a-zA-Z0-9'‘’. ]*,30"
+        , accessibilityHint = "Enter Name"
         -- , text = state.data.placeName
         }
       , background = Color.white900

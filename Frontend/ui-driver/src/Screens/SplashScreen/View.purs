@@ -27,14 +27,18 @@ import JBridge as JB
 import Common.Types.App as CTA
 import Data.Maybe (Maybe(..))
 import RemoteConfig as RemoteConfig
+import Animation as Anim
+import PrestoDOM.Animation as PrestoAnim
 
-screen :: ST.SplashScreenState -> Screen Action ST.SplashScreenState ScreenOutput
+screen :: ST.SplashScreenState -> LoggableScreen Action ST.SplashScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "SplashScreen"
   , globalEvents: globalEvents'
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.splashScreenLogWhitelist
   }
   where 
     globalEvents' = [
@@ -45,7 +49,9 @@ screen initialState =
 
 view ::forall w. (Action -> Effect Unit) -> ST.SplashScreenState -> PrestoDOM (Effect Unit) w
 view push _ =
-  relativeLayout
+  PrestoAnim.exitAnimationSetForward [ Anim.translateOutXForwardAnim true, Anim.fadeOut true]
+  $ PrestoAnim.exitAnimationSetBackward [Anim.translateOutXBackwardAnim true, Anim.fadeOut true] 
+  $ relativeLayout
     [ height $ MATCH_PARENT
     , width $ MATCH_PARENT
     , background "#111112"

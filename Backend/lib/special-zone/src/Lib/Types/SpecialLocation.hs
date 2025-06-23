@@ -43,6 +43,7 @@ data SpecialLocation = SpecialLocation
     geom :: Maybe Text,
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
+    enabled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -45,7 +45,8 @@ data RideLite = RideLite
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
-    showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool
+    showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
+    isSafetyPlus :: Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -64,5 +65,6 @@ instance FromTType' RideLiteTable RideLite where
             shortId = Kernel.Types.Id.ShortId shortId,
             driversPreviousRideDropLoc = Storage.Queries.Extra.Transformers.Ride.mkLatLong driversPreviousRideDropLat driversPreviousRideDropLon,
             showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc,
+            isSafetyPlus = Kernel.Prelude.fromMaybe False isSafetyPlus,
             ..
           }

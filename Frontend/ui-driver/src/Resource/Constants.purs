@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -18,14 +18,20 @@ module Resource.Constants where
 import Common.Types.App as Common
 import Data.Array as DA
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), split, toLower)
-import Data.String (trim)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Array (length, filter, reverse, (!!), null)
+import Data.String (Pattern(..), split, toLower, trim, contains, joinWith, replaceAll, Replacement(..))
 import Language.Strings (getString)
+-- import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
 import Language.Types (STR(..))
-import Prelude ((==), (&&), (<>), ($))
+import Prelude ((==), (&&), (<>), ($), (/=), (>), map, (-))
 import Screens.Types as ST
-import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..))
+import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..), AddressComponents(..))
+import JBridge as JB
+import Data.String as DS
+import Data.Function.Uncurried (runFn2, Fn2)
+
+foreign import extractKeyByRegex :: Fn2 String String String
 
 type Language =
     {
@@ -33,8 +39,11 @@ type Language =
         value :: String
     }
 
+whiteListedInputString :: Array String
+whiteListedInputString = ["Hospital"]
+
 getLanguages :: Array Language
-getLanguages = 
+getLanguages =
     [
         {name:"English",value:"EN_US"},
         {name:"ಕನ್ನಡ",value:"KN_IN"},
@@ -45,7 +54,7 @@ getLanguages =
 
 decodeAddress :: LocationInfo -> Boolean -> String
 decodeAddress ( LocationInfo address) fullAddress =
-        if fullAddress then 
+        if fullAddress then
              if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
                     ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
             else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
@@ -58,7 +67,7 @@ decodeAddress ( LocationInfo address) fullAddress =
                     ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
                     else
                     ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-        else 
+        else
             if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == ""  ) then
                     (trim (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
             else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" ) then
@@ -79,10 +88,10 @@ decodeShortAddress (LocationInfo loc) =
 tripDatesCount :: Int
 tripDatesCount = 15
 
-getPspIcon :: String -> String 
+getPspIcon :: String -> String
 getPspIcon vpa = do
     let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
-    case handleName of 
+    case handleName of
         Nothing -> "ny_ic_defaultpg"
         Just handle -> case handle of
             "ybl" -> "ny_ic_phonepe"
@@ -109,7 +118,7 @@ waitTimeConstructor key = case key of
   _ -> ST.NoStatus
 
 transformDocText :: ST.RegisterationStep -> String
-transformDocText stage = 
+transformDocText stage =
   case stage of
     ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
     ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
@@ -125,7 +134,7 @@ transformDocText stage =
     ST.NO_OPTION -> ""
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
-transformToRegisterationStep doctype = 
+transformToRegisterationStep doctype =
   case doctype of
         "DriverLicense" -> ST.DRIVING_LICENSE_OPTION
         "VehicleRegistrationCertificate" -> ST.VEHICLE_DETAILS_OPTION
@@ -141,7 +150,7 @@ transformToRegisterationStep doctype =
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
-transformToDoctype step = 
+transformToDoctype step =
   case step of
     ST.DRIVING_LICENSE_OPTION -> "DriverLicense"
     ST.VEHICLE_DETAILS_OPTION -> "VehicleRegistrationCertificate"
@@ -177,12 +186,12 @@ decodeVehicleType value = case value of
     "BusCategory" -> Just ST.BusCategory
     _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
-rideTypeConstructor ( tripCategory) = 
+rideTypeConstructor ( tripCategory) =
   case tripCategory of
     Nothing -> ST.OneWay
     Just (TripCategory tripCategory') ->
         case toLower tripCategory'.tag of
-                "oneway" -> ST.OneWay 
+                "oneway" -> ST.OneWay
                 "roundtrip" -> ST.RoundTrip
                 "rental" -> ST.Rental
                 "intercity" -> ST.Intercity
@@ -192,9 +201,9 @@ rideTypeConstructor ( tripCategory) =
 
 
 constructLocationInfo :: Maybe Number -> Maybe Number -> Maybe LocationInfo
-constructLocationInfo (latitude) (longitude) = 
+constructLocationInfo (latitude) (longitude) =
     case latitude,longitude of
-        Just latitude',Just longitude' -> 
+        Just latitude',Just longitude' ->
                 Just $ LocationInfo {
                         area :  Just "",
                         state :  Just "",
@@ -213,8 +222,8 @@ constructLocationInfo (latitude) (longitude) =
         _,_ -> Nothing
 
 getLocationInfoFromStopLocation :: StopLocationAddress -> Number -> Number -> LocationInfo
-getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, area, city, state, country, areaCode}) lat lon = 
-     LocationInfo 
+getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, area, city, state, country, areaCode}) lat lon =
+     LocationInfo
         {
                 area :  area,
                 state :  state,
@@ -232,7 +241,7 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
         }
 
 getHomeStageFromString :: String -> ST.HomeScreenStage
-getHomeStageFromString localStage = 
+getHomeStageFromString localStage =
   case localStage of
         "HomeScreen" -> ST.HomeScreen
         "RideRequested" -> ST.RideRequested
@@ -271,7 +280,7 @@ dayEndTime :: String
 dayEndTime = "23:59:59"
 
 serviceTierMapping :: Boolean -> String -> Maybe Boolean -> String
-serviceTierMapping hideAcNonAc tierName acRide = 
+serviceTierMapping hideAcNonAc tierName acRide =
   case hideAcNonAc, acRide, tierName of
     _ ,Just true, "AC Mini" -> "Mini"
     _ , _ , "DELIVERY_BIKE" -> "Delivery"
@@ -284,7 +293,7 @@ serviceTierMapping hideAcNonAc tierName acRide =
     true,Just true,"Ventilator" ->  "Ventilator"
     true,Just false,"Non-AC ∙ O̶₂̶" -> "Non-AC ∙ O̶₂̶"
     true,Just false,"Non-AC ∙ O₂" ->  "Non-AC ∙ O₂"
-    true,Just true,"AC ∙ O̶₂̶" -> "AC ∙ O̶₂̶" 
+    true,Just true,"AC ∙ O̶₂̶" -> "AC ∙ O̶₂̶"
     true,Just true,"AC ∙ O₂" -> "AC ∙ O₂"
     _ , _ , _ -> tierName
 
@@ -305,3 +314,65 @@ twoHrsInSec = 7200
 
 fiveMinInSec :: Int
 fiveMinInSec = 300
+
+getDelayForAutoComplete :: Int
+getDelayForAutoComplete = 800
+
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
+encodeAddress fullAddress addressComponents placeId lat lon =
+  let
+    splitedAddress = split (Pattern ", ") fullAddress
+    totalAddressComponents = length splitedAddress
+    areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
+    areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
+    areaCodeComp = if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
+    areaCodeVal = Just if (trim areaCodeComp) == "" then (runFn2 extractKeyByRegex areaCodeRegex $ runFn2 JB.getLocationNameV2 lat lon) else areaCodeComp
+    gateName = getValueByComponent addressComponents "sublocality"
+  in
+    { area: if DS.null gateName then splitedAddress !! (totalAddressComponents - 4) else (Just gateName)
+    , areaCode: Just if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
+    , building: splitedAddress !! (totalAddressComponents - 6)
+    , city: splitedAddress !! (totalAddressComponents - 3)
+    , country: splitedAddress !! (totalAddressComponents - 1)
+    , state: splitedAddress !! (totalAddressComponents - 2)
+    , door:
+        if totalAddressComponents > 7 then
+          splitedAddress !! 0 <> Just ", " <> splitedAddress !! 1
+        else if totalAddressComponents == 7 then
+          splitedAddress !! 0
+        else
+          Nothing
+    , street: splitedAddress !! (totalAddressComponents - 5)
+    , ward:
+        if null addressComponents then
+          getWard Nothing (splitedAddress !! (totalAddressComponents - 4)) (splitedAddress !! (totalAddressComponents - 5)) (splitedAddress !! (totalAddressComponents - 6))
+        else
+          Just $ getValueByComponent addressComponents "sublocality"
+    , placeId: placeId
+    }
+
+getValueByComponent :: Array AddressComponents -> String -> String
+getValueByComponent address componentName = getAddress $ filter (\(AddressComponents item) -> length (getByTag item.types componentName) > 0) address
+
+getByTag :: Array String -> String -> Array String
+getByTag tags componentName = (filter (\item -> contains (Pattern componentName) item) tags)
+
+getAddress :: Array AddressComponents -> String
+getAddress address = joinWith ", " (reverse (map (\(AddressComponents item) -> item.longName) address))
+
+areaCodeRegex :: String
+areaCodeRegex = "\\b\\d{6}\\b"
+
+
+getWard :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String
+getWard ward area street building =
+  let
+    actualWard = if (trim (replaceAll (Pattern ",") (Replacement "") (fromMaybe "" ward))) == "" then Nothing else ward
+
+    actualArea = if (trim (fromMaybe "" area)) == "" then Nothing else (area <> Just ", ")
+
+    actualStreet = if (trim (fromMaybe "" street)) == "" then Nothing else (street <> Just ", ")
+
+    actualBuilding = if (trim (fromMaybe "" building)) == "" then Nothing else building
+  in
+    if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)

@@ -40,7 +40,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentRight, id, afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), alignParentRight, id, afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig, popupModalConfig)
@@ -61,7 +61,7 @@ import RemoteConfig (ReelItem(..))
 import Common.RemoteConfig.Utils as RemoteConfig
 import Helpers.Utils as HU
 
-screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
+screen :: ST.OnBoardingSubscriptionScreenState -> LoggableScreen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -83,6 +83,8 @@ screen initialState =
           let _ = spy "OnBoarding SubscriptionScreen --------action" action
           eval state action
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.obBoardingSubscriptionScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -251,7 +253,7 @@ headerLayout push state =
         ]
       ]
     ]
-  , commonTV push (getString MY_PLAN_TITLE) Color.white900 FontStyle.h1 LEFT 20 NoAction false
+  , commonTV push (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE") Color.white900 FontStyle.h1 LEFT 20 NoAction false
   ]
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w

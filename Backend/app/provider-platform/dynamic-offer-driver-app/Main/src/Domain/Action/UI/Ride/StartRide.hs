@@ -25,6 +25,7 @@ where
 
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
+import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
@@ -89,7 +90,7 @@ data ServiceHandle m = ServiceHandle
 
 buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
 buildStartRideHandle merchantId merchantOpCityId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False Nothing
   pure
     ServiceHandle
       { findRideById = QRide.findById,
@@ -104,18 +105,18 @@ buildStartRideHandle merchantId merchantOpCityId = do
 type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int])
 
 driverStartRide ::
-  (StartRideFlow m r, SchedulerFlow r) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
   m APISuccess.APISuccess
 driverStartRide handle rideId req =
-  withLogTag ("requestorId-" <> req.requestor.id.getId)
-    . startRide handle rideId
-    $ DriverReq req
+  withLogTag ("requestorId-" <> req.requestor.id.getId) $ do
+    result <- startRide handle rideId (DriverReq req)
+    pure result
 
 dashboardStartRide ::
-  (StartRideFlow m r, SchedulerFlow r) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -126,7 +127,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r, SchedulerFlow r) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -188,6 +189,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
       else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
+  void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point

@@ -28,14 +28,18 @@ instance ToJSON Payload
 data TransitObject = TransitObject
   { id :: Text,
     classId :: Text,
+    tripId :: Text,
     state :: Text,
     tripType :: Text,
+    customCardTitle :: Name,
     passengerType :: Text,
     passengerNames :: Text,
     validTimeInterval :: TimeInterval,
     ticketLeg :: TicketLeg,
     barcode :: Barcode,
-    textModulesData :: [TextModule]
+    textModulesData :: [TextModule],
+    groupingInfo :: GroupingInfo,
+    linksModuleData :: Maybe LinksModuleData
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -82,6 +86,12 @@ instance FromJSON Barcode where
 instance ToJSON Barcode where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
+data GroupingInfo = GroupingInfo
+  { groupingId :: Text,
+    sortIndex :: Int
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
 data ServiceAccount = ServiceAccount
   { saPrivateKeyId :: !T.Text,
     saClientEmail :: !T.Text,
@@ -101,6 +111,17 @@ data TextModule = TextModule
     id :: Text
   }
   deriving (Show, Generic)
+
+data URI = URI
+  { uri :: Maybe Text,
+    description :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+newtype LinksModuleData = LinksModuleData
+  { uris :: [URI]
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 instance FromJSON TextModule where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

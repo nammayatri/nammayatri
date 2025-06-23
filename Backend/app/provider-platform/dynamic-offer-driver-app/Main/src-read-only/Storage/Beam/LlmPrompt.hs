@@ -13,14 +13,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LlmPromptT f = LlmPromptT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    promptKey :: B.C f Domain.Types.LlmPrompt.PromptKey,
-    promptTemplate :: B.C f Kernel.Prelude.Text,
-    serviceName :: B.C f Domain.Types.Extra.MerchantServiceConfig.ServiceName,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    useCase :: B.C f Domain.Types.LlmPrompt.UseCase
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    promptKey :: (B.C f Domain.Types.LlmPrompt.PromptKey),
+    promptTemplate :: (B.C f Kernel.Prelude.Text),
+    serviceName :: (B.C f Domain.Types.Extra.MerchantServiceConfig.ServiceName),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    useCase :: (B.C f Domain.Types.LlmPrompt.UseCase)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table LlmPromptT where
 
 type LlmPrompt = LlmPromptT Identity
 
-$(enableKVPG ''LlmPromptT ['merchantOperatingCityId, 'promptKey, 'serviceName, 'useCase] [])
+$(enableKVPG (''LlmPromptT) [('merchantOperatingCityId), ('promptKey), ('serviceName), ('useCase)] [])
 
-$(mkTableInstances ''LlmPromptT "llm_prompt")
+$(mkTableInstances (''LlmPromptT) "llm_prompt")

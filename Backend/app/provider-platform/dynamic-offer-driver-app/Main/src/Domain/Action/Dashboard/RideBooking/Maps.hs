@@ -35,11 +35,11 @@ postMapsAutoComplete merchantId city personId req = withPersonIdLogTag personId 
   m <- findMerchantByShortId merchantId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing m (Just city)
   withPersonIdLogTag personId $
-    DMaps.autoComplete m.id merchantOpCityId req
+    DMaps.autoComplete m.id merchantOpCityId (Just personId.getId) req
 
 postMapsGetPlaceName :: ShortId DM.Merchant -> City.City -> Id DP.Person -> DMaps.GetPlaceNameReq -> Flow DMaps.GetPlaceNameResp
 postMapsGetPlaceName merchantId city personId req = withPersonIdLogTag personId $ do
   m <- findMerchantByShortId merchantId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing m (Just city)
   withPersonIdLogTag personId $
-    DMaps.getPlaceName m.id merchantOpCityId req
+    DMaps.getPlaceName m.id merchantOpCityId (Just personId.getId) req

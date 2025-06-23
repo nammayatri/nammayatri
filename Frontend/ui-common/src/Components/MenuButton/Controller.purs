@@ -15,7 +15,7 @@
 
 module Components.MenuButton.Controller where
 
-import Prelude((<>))
+import Prelude((<>), class Show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style (Style(..))
@@ -23,6 +23,9 @@ import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = OnClick Config
+
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
 
 type Config =
   {

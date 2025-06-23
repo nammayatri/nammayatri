@@ -14,7 +14,7 @@ import Helpers.Utils (getDistanceBwCordinates)
 import JBridge (firebaseLogEvent, getCurrentLatLong, isLocationPermissionEnabled, minimizeApp, requestLocation)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Types (CityConfig)
-import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard, (<), (&&), (<=))
+import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard, (<), (&&), (<=), (<>), show)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
@@ -24,7 +24,21 @@ import Components.ErrorModal.Controller as ErrorModalController
 import Locale.Utils
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (MenuButtonAction var1) = "MenuButtonAction_" <> show var1
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+  show (ChangeStage _) = "ChangeStage"
+  show (LocationPermissionCallBack _) = "LocationPermissionCallBack"
+  show (UpdatePermission _) = "UpdatePermission"
+  show (UpdateLocationPermissionState) = "UpdateLocationPermissionState"
+  show (NoAction) = "NoAction"
+  show (CurrentLocationCallBack _ _ _) = "CurrentLocationCallBack"
+  show (IsMockLocation _) = "IsMockLocation"
+  show (ErrorModalActionController var1) = "ErrorModalActionController_" <> show var1
+
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "ChooseCityScreen"

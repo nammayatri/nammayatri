@@ -2,16 +2,18 @@ imports:
   FareParameters: Domain.Types.FareParameters
   FarePolicy: Domain.Types.FarePolicy
   TripCategory: Domain.Types.Common
+  Seconds: Kernel.Types.Common
   ServiceTierType: Domain.Types.Common
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Centesimal: Kernel.Types.Common
 
 Estimate:
     tableName: estimate
 
-    derives: "Generic,Show"
+    derives: "Generic,Show,FromJSON,ToJSON"
 
     beamInstance: MakeTableInstancesWithTModifier []
 
@@ -26,12 +28,25 @@ Estimate:
       dpVersion : Maybe Text
       currency: Currency
       estimatedDistance: Maybe Meters
+      estimatedDuration : Maybe Seconds
+      fromLocGeohash: Maybe Text
       supplyDemandRatioFromLoc : Maybe Double
       supplyDemandRatioToLoc : Maybe Double
+      mbActualQARFromLocGeohashDistance : Maybe Double
       mbActualQARFromLocGeohash : Maybe Double
       mbActualQARCity : Maybe Double
+      mbActualQARFromLocGeohashDistancePast : Maybe Double
+      mbActualQARFromLocGeohashPast : Maybe Double
+      mbActualQARCityPast : Maybe Double
+      mbCongestionFromLocGeohashDistance : Maybe Double
+      mbCongestionFromLocGeohashDistancePast : Maybe Double
+      mbCongestionFromLocGeohash : Maybe Double
+      mbCongestionFromLocGeohashPast : Maybe Double
+      mbCongestionCity : Maybe Double
+      mbCongestionCityPast : Maybe Double
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
+      congestionMultiplier : Maybe Centesimal
       distanceUnit: DistanceUnit
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation

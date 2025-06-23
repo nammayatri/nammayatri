@@ -59,7 +59,19 @@ import Common.Styles.Colors as Color
 import Helpers.Utils (getCityConfig)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (OnFadeComplete _) = "OnFadeComplete"
+  show (Refresh) = "Refresh"
+  show (BackPressed) = "BackPressed"
+  show (ErrorModalActionController var1) = "ErrorModalActionController_" <> show var1
+  show (NotificationCardClick var1) = "NotificationCardClick_" <> show var1
+  show (Scroll _) = "Scroll"
+  show (ScrollStateChanged _) = "ScrollStateChanged"
+  show (NotificationDetailModelAC var1) = "NotificationDetailModelAC_" <> show var1
+  show (MessageListResAction _) = "MessageListResAction"
+  show (NoAction) = "NoAction"
+  show (LoadMore) = "LoadMore"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

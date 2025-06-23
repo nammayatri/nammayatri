@@ -42,10 +42,10 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 34
-    versionCode 177
-    versionName "3.0.36"
+    versionCode 192
+    versionName "3.0.39"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,7 +60,7 @@ android {
         }
     }
 
-    // If you are not able to generate signed APK uncomment this 
+    // If you are not able to generate signed APK uncomment this
     // packagingOptions {
     //     exclude 'META-INF/DEPENDENCIES'
     //     exclude 'META-INF/LICENSE'
@@ -103,7 +103,7 @@ android {
                     appIcon     : "@mipmap/ic_launcher",
                     appIconRound: "@mipmap/ic_launcher_round"
             ]
-            
+
         }
     }
     Properties properties = new Properties()
@@ -118,6 +118,7 @@ android {
             buildConfigField "String", "flavor", "\"prod\""
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CUSTOMER_REG_TOKEN", properties.getProperty("CUSTOMER_REG_TOKEN", "\"NA\"")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
 
@@ -125,9 +126,6 @@ android {
             buildConfigField "String", "RS_ALGO", properties.getProperty("RS_ALGO", "")
             buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
             buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
-
-            buildConfigField "String", "CLEVERTAP_SC_API_KEY", properties.getProperty("CLEVERTAP_SC_API_KEY", "")
-            buildConfigField "String", "CLEVERTAP_SC_ACCOUNT_ID", properties.getProperty("CLEVERTAP_SC_ACCOUNT_ID", "")
 
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
@@ -143,15 +141,13 @@ android {
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CUSTOMER_REG_TOKEN", properties.getProperty("CUSTOMER_REG_TOKEN", "\"NA\"")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
 
             buildConfigField "String", "RS_ENC_KEY", properties.getProperty("RS_ENC_KEY", "")
             buildConfigField "String", "RS_ALGO", properties.getProperty("RS_ALGO", "")
             buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
             buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
-
-            buildConfigField "String", "CLEVERTAP_SC_API_KEY", properties.getProperty("CLEVERTAP_SC_API_KEY","")
-            buildConfigField "String", "CLEVERTAP_SC_ACCOUNT_ID", properties.getProperty("CLEVERTAP_SC_ACCOUNT_ID","")
 
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
@@ -200,6 +196,12 @@ android {
         }
         myDriver {
             applicationId "in.mobility.manayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        apDriver {
+            applicationId "in.mobility.aapleyatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
@@ -257,6 +259,7 @@ android {
         bridgeUser.setRoot('src/user/bridge')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
         myDriver.setRoot('src/driver/manaYatriPartner')
+        apDriver.setRoot('src/driver/aapleYatriPartner')
         oyDriver.setRoot('src/driver/odishaYatriPartner')
         ksDriver.setRoot('src/driver/keralaSavaariPartner')
         bridgeDriver.setRoot('src/driver/bridgeDriver')
@@ -272,6 +275,7 @@ android {
         yatriUser.res.srcDir('src/user/common/res')
         nyDriver.res.srcDir('src/driver/common/res')
         myDriver.res.srcDir('src/driver/common/res')
+        apDriver.res.srcDir('src/driver/common/res')
         bridgeDriver.res.srcDir('src/driver/common/res')
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
@@ -320,7 +324,7 @@ android {
 }
 
 ext {
-    jpSDKversion = '2.1.33-nammayatri.07'
+    jpSDKversion = '2.1.33-nammayatri.17'
 }
 
 def cameraxVersion = "1.1.0-alpha05"
@@ -340,6 +344,7 @@ dependencies {
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
+    apDriverImplementation project(path: ':mobility-driver')
     oyDriverImplementation project(path: ':mobility-driver')
     ksDriverImplementation project(path: ':mobility-driver')
     bridgeDriverImplementation project(path: ':mobility-driver')
@@ -415,6 +420,7 @@ dependencies {
     implementation files('libs/android-jsc-r250231.aar')
     nyDriverImplementation 'com.google.code.gson:gson:2.8.8'
     myDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    apDriverImplementation 'com.google.code.gson:gson:2.8.8'
     oyDriverImplementation 'com.google.code.gson:gson:2.8.8'
     bridgeDriverImplementation 'com.google.code.gson:gson:2.8.8'
     passCulturePartnerImplementation 'com.google.code.gson:gson:2.8.8'
@@ -422,6 +428,7 @@ dependencies {
     yatriDriverImplementation 'com.google.code.gson:gson:2.8.8'
     nyDriverImplementation 'com.facebook.react:react-android:0.72.3'
     myDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    apDriverImplementation 'com.facebook.react:react-android:0.72.3'
     oyDriverImplementation 'com.facebook.react:react-android:0.72.3'
     bridgeDriverImplementation 'com.facebook.react:react-android:0.72.3'
     passCulturePartnerImplementation 'com.facebook.react:react-android:0.72.3'
@@ -429,6 +436,7 @@ dependencies {
     yatriDriverImplementation 'com.facebook.react:react-android:0.72.3'
     nyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     myDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    apDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     oyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     bridgeDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     passCulturePartnerImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
@@ -436,6 +444,7 @@ dependencies {
     yatriDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
@@ -443,6 +452,7 @@ dependencies {
     yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
     nyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     myDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    apDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     oyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     bridgeDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
     passCulturePartnerImplementation 'com.google.android.play:feature-delivery:2.1.0'

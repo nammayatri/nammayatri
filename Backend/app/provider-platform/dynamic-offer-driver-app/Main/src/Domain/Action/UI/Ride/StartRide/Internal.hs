@@ -14,15 +14,16 @@
 
 module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
 
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Dmerch
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, HasShortDurationRetryCfg)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -31,10 +32,11 @@ import qualified Storage.Queries.DriverInformation as SQD
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
 
-startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, LT.HasLocationService m r) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> Maybe SRide.OdometerReading -> m ()
+startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, LT.HasLocationService m r, HasField "minDistanceBetweenTwoPoints" r Int, HasShortDurationRetryCfg r c) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> Maybe SRide.OdometerReading -> m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
-  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId Nothing
+  minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
+  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = firstPoint, minDistanceBetweenTwoPoints = minDistanceBetweenTwoPoints, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops}))
   QRide.updateStatus ride.id SRide.INPROGRESS
   SQD.updateHasRideStarted driverId True
   QRide.updateStartTimeAndLoc ride.id firstPoint

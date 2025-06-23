@@ -21,6 +21,7 @@ import Data.Default.Class
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Common as DI (DriverMode (..))
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
@@ -38,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.Scheduler.Types
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DTS
 import Tools.Maps as Google
 
@@ -62,7 +64,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     currentSearchInfo :: DTS.CurrentSearchInfo,
-    transporterConfig :: DTC.TransporterConfig
+    transporterConfig :: DTC.TransporterConfig,
+    configsInExperimentVersions :: [LYT.ConfigVersionMap]
   }
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -158,7 +161,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
-data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver
+data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver | SafetyPlusDriver
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
@@ -239,6 +242,9 @@ data TripQuoteDetail = TripQuoteDetail
     driverDefaultStepFee :: Maybe HighPrecMoney,
     driverPickUpCharge :: Maybe HighPrecMoney,
     driverParkingCharge :: Maybe HighPrecMoney,
+    conditionalCharges :: [DAC.ConditionalCharges],
+    congestionCharges :: Maybe HighPrecMoney,
+    petCharges :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text,
     eligibleForUpgrade :: Bool
   }

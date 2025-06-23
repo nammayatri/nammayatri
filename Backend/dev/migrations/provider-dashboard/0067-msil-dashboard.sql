@@ -1,0 +1,1 @@
+UPDATE atlas_bpp_dashboard.role set dashboard_access_type = 'FLEET_OWNER' where name = 'FLEET';

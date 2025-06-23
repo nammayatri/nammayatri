@@ -49,8 +49,9 @@
     <string name="customer_is_waiting">Customer is waiting!</string>
     <string name="please_start_moving_towards_the_pickup_location">Please start moving towards the pickup location</string>
     <string name="quick_chats">Quick Chats:</string>
-    <string name="assistance_required">Assistance Required</string>
+    <string name="assistance_required">Assisted</string>
     <string name="tip">Tip</string>
+    <string name="pet">Pet</string>
     <string name="merchant_id" translatable="false">for_compilation</string>
     <string name="client_id" translatable="false">for_compilation</string>
     <string name="qr_for_your_vpa_is_downloaded">QR for your vpa is downloaded!!!</string>
@@ -99,4 +100,5 @@
     <string name="voip_logo" translatable="false">https://raw.githubusercontent.com/nammayatri/asset-store/865e27035399a315dbeda13eabba9a2a851fae29/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
     <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
     <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
+    <string name="points">Points</string>
 </resources>

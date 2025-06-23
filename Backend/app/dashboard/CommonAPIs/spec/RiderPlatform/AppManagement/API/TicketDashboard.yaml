@@ -1,0 +1,115 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  TicketServiceResp: API.Types.UI.TicketService
+  TicketBookingUpdateSeatsReq: API.Types.UI.TicketService
+  TicketBookingCancelReq: API.Types.UI.TicketService
+  TicketServiceCancelReq: API.Types.UI.TicketService
+  TicketBookingDetails: API.Types.UI.TicketService
+  TicketServiceVerificationResp: API.Types.UI.TicketService
+  TicketService: Domain.Types.TicketService
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketPlace: Domain.Types.TicketPlace
+  TicketBooking: Domain.Types.TicketBooking
+  BankAccountType: Domain.Types.TicketMerchantDetails
+  ContactDetails: Domain.Types.TicketMerchantDetails
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
+  TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
+  File: Dashboard.Common
+  FileType: AWS.S3
+  FilePath: Kernel.Prelude
+
+importPackageOverrides:
+  API.Types.UI.TicketService: "rider-app"
+  Domain.Types.TicketService: "rider-app"
+  Domain.Types.TicketBookingService: "rider-app"
+  Domain.Types.TicketPlace: "rider-app"
+  Domain.Types.TicketBooking: "rider-app"
+  Domain.Types.TicketMerchantDetails: "rider-app"
+  Domain.Types.MerchantOnboarding: "rider-app"
+  Domain.Types.TicketDashboard: "rider-app"
+
+
+module: TicketDashboard
+apiPrefix: ""
+
+apis:
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/uploadAsset
+      name: TicketDashboardUploadAsset
+      multipart:
+        type: UploadPublicFileRequest
+      auth: ApiAuthV2
+      response:
+        type: UploadPublicFileResponse
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/deleteAsset
+      name: TicketDashboardDeleteAsset
+      auth: ApiAuthV2
+      request:
+        type: DeletePublicFileRequest
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/currentSeatStatus
+      name: TicketDashboardCurrentSeatStatus
+      auth: ApiAuthV2
+      request:
+        type: CurrentSeatStatusReq
+      response:
+        type: CurrentSeatStatusResp
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/seatManagement
+      name: TicketDashboardSeatManagement
+      auth: ApiAuthV2
+      request:
+        type: SeatManagementReq
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+
+types:
+  UploadPublicFileRequest:
+    - file: FilePath
+    - reqContentType: Text
+    - fileType: FileType
+    - derive: "'HideSecrets"
+  UploadPublicFileResponse:
+    - publicUrl: Text
+  DeletePublicFileRequest:
+    - assetId: Text
+  CurrentSeatStatusReq:
+    - serviceCategory: Text
+    - date: Day
+  CurrentSeatStatusResp:
+    - maxCapacity: Maybe Int
+    - remainingCapacity: Maybe Int
+    - bookedCount: Int
+    - unlimitedCapacity: Bool
+  SeatManagementReq:
+    - serviceCategory: Text
+    - date: Day
+    - maxCapacityChange: Maybe Int
+    - updateBookedSeats: Maybe Int
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

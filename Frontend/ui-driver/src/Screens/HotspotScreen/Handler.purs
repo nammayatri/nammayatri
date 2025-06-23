@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (pure, discard, ($), (<$>), bind, void)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Screens.HotspotScreen.Controller (ScreenOutput(..))
 import Screens.HotspotScreen.View as HotspotScreen
@@ -30,7 +30,7 @@ hotspotScreen :: FlowBT String HOTSPOT_SCREEN_OUTPUT
 hotspotScreen = do
     (GlobalState state) <- getState
     logField_ <- lift $ lift $ getLogFields
-    action <- lift $ lift $ runScreen $ HotspotScreen.screen state.hotspotScreen{data{logField = logField_}}
+    action <- lift $ lift $ runLoggableScreen $ HotspotScreen.screen state.hotspotScreen{data{logField = logField_}}
     case action of
         RefreshingHotspots updatedState -> do
           modifyScreenState $ HotspotScreenStateType (\_ -> updatedState)

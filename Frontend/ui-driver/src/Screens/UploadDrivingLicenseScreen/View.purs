@@ -49,7 +49,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
@@ -69,7 +69,7 @@ import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
 
 
-screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
+screen :: ST.UploadDrivingLicenseState -> LoggableScreen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -89,7 +89,10 @@ screen initialState =
       let _ = spy  "UploadDrivingLicenseScreen state -----" state
           _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.uploadDrivingLicenseScreenLogWhitelist
   }
+
 
 view
   :: forall w

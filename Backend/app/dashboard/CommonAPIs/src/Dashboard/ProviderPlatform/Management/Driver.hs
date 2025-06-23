@@ -19,7 +19,7 @@ module Dashboard.ProviderPlatform.Management.Driver
   )
 where
 
-import API.Types.ProviderPlatform.Management.Endpoints.Driver
+import API.Types.ProviderPlatform.Management.Endpoints.Driver as Reexport
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
 import Kernel.Prelude
@@ -40,7 +40,7 @@ validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
 validateUpdateDriverNameReq :: Validate UpdateDriverNameReq
 validateUpdateDriverNameReq UpdateDriverNameReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+    [ validateField "firstName" firstName $ MinLength 1 `And` P.name,
       validateField "middleName" middleName $ InMaybe P.name,
       validateField "lastName" lastName $ InMaybe P.name
     ]

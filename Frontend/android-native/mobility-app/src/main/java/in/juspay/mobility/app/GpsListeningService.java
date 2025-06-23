@@ -57,7 +57,12 @@ public class GpsListeningService extends Service {
     public void startLocationService(Context context) {
         try{
             Log.i(LOG_TAG, "able to access service");
-            Intent locationUpdateService = new Intent(this, LocationUpdateService.class);
+            Intent locationUpdateService;
+            if (context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                locationUpdateService = new Intent(context, LocationUpdateService.class);
+            } else {
+                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+            }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && sharedPrefs.getString("ACTIVITY_STATUS", "null").equals("onPause")) {
@@ -230,7 +235,12 @@ public class GpsListeningService extends Service {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
+            Intent locationUpdateService;
+            if (context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                locationUpdateService = new Intent(context, LocationUpdateService.class);
+            } else {
+                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+            }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(locationUpdateService);

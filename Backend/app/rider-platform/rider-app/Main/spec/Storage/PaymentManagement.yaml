@@ -1,0 +1,30 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CustomerId: Kernel.External.Payment.Interface.Types
+
+
+PaymentCustomer:
+  tableName: payment_customer
+
+  derives: "Generic, ToJSON, FromJSON, Show"
+
+  fields:
+    clientAuthToken : Maybe Text
+    clientAuthTokenExpiry : Maybe UTCTime
+    customerId : CustomerId
+
+  queries:
+    findByCustomerId:
+      kvFunction: findOneWithKV
+      where: customerId
+
+    updateCATAndExipry:
+      kvFunction: updateWithKV
+      params: [clientAuthToken, clientAuthTokenExpiry]
+      where: customerId
+
+  constraints:
+    customerId: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]

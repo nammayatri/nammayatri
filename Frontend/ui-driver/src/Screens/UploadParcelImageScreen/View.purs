@@ -10,7 +10,7 @@ import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
 import Common.Types.App (LazyCheck(..))
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -36,7 +36,7 @@ import Screens.UploadParcelImageScreen.ComponentConfig
 import Effect.Uncurried (runEffectFn2)
 
 
-screen :: ST.UploadParcelImageScreenState -> Screen Action ST.UploadParcelImageScreenState ScreenOutput
+screen :: ST.UploadParcelImageScreenState -> LoggableScreen Action ST.UploadParcelImageScreenState ScreenOutput
 screen initialState = 
     {
         initialState
@@ -52,7 +52,10 @@ screen initialState =
             let _ = spy "UploadParcelImage state -----" state
             let _ = spy "UploadParcelImage--------action" action
             eval state action)
-    }
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.uploadParcelImageScreenLogWhitelist
+  }
+
 
 view :: forall w. (Action -> Effect Unit) -> ST.UploadParcelImageScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -152,7 +155,7 @@ howToUpload push state =
       , margin $ MarginTop 20
       , stroke $ "1," <> Color.borderGreyColor
       , padding $ Padding 16 16 16 0
-      ]( map rightWrongView uploadParcelInstructionData)
+      ]( map rightWrongView (uploadParcelInstructionData unit))
     ]
   ]
 

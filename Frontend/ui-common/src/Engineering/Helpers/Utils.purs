@@ -54,12 +54,15 @@ import ConfigProvider
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Data.Number (fromString)
 import JBridge (toast, setKeyInSharedPref, getResourceIdentifier)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
 import DecodeUtil
+import Types.App (defaultGlobalState)
+
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -83,13 +86,17 @@ toggleLoader =
     pure unit
   else do
     doAff $ liftEffect $ terminateLoader ""
-showToast :: String -> Flow GlobalState Unit
+showToast :: String -> Effect Unit
 showToast message = do
-  void $ modifyState (\(GlobalState state) -> GlobalState state { toast { data { title = "", message = message } } })
-  doAff $ liftEffect $ terminateToast ""
-  state <- getState
-  _ <- liftFlow $ launchAff $ flowRunner state UI.toastScreen
-  pure unit
+  if os == "IOS" then do
+    _ <- launchAff $ flowRunner defaultGlobalState $ do 
+      void $ modifyState (\(GlobalState state) -> GlobalState state { toast { data { title = "", message = message } } })
+      doAff $ liftEffect $ terminateToast ""
+      state <- getState
+      UI.toastScreen
+      pure unit
+    pure unit
+  else void $ pure $ JB.toast message
 
 terminateToast :: String -> Effect Unit
 terminateToast _ = terminateUI $ Just "Toast"

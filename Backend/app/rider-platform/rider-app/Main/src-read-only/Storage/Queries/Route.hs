@@ -27,6 +27,9 @@ createMany = traverse_ create
 deleteByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
 deleteByRouteCode code integratedBppConfigId = do deleteWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
+findAllByBppConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.Route.Route])
+findAllByBppConfigId integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
+
 findAllByVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.Route.Route])
@@ -61,6 +64,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
   updateWithKV
     [ Se.Set Beam.code code,
       Se.Set Beam.color color,
+      Se.Set Beam.dailyTripCount dailyTripCount,
       Se.Set Beam.endLat ((.lat) endPoint),
       Se.Set Beam.endLon ((.lon) endPoint),
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
@@ -71,6 +75,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.shortName shortName,
       Se.Set Beam.startLat ((.lat) startPoint),
       Se.Set Beam.startLon ((.lon) startPoint),
+      Se.Set Beam.stopCount stopCount,
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

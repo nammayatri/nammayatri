@@ -9,6 +9,8 @@
 
 package in.juspay.mobility.app;
 
+import static in.juspay.mobility.app.Utils.DRIVER_STATUS;
+
 import android.animation.ValueAnimator;
 import android.app.ActivityManager;
 import android.app.Service;
@@ -82,6 +84,11 @@ public class WidgetService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        SharedPreferences sharedPreferences = this.getSharedPreferences(this.getString(R.string.preference_file_key), MODE_PRIVATE);
+        String driverStatus = sharedPreferences.getString(DRIVER_STATUS,Utils.DRIVER_STATUS_OFFLINE);
+        if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+            return START_NOT_STICKY;
+        }
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String intentMessage = intent != null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
@@ -494,6 +501,11 @@ public class WidgetService extends Service {
 
     private void addWidgetToWindowManager() {
         if (!Settings.canDrawOverlays(this)) return;
+        SharedPreferences sharedPreferences = this.getSharedPreferences(this.getString(R.string.preference_file_key), MODE_PRIVATE);
+        String driverStatus = sharedPreferences.getString(DRIVER_STATUS,Utils.DRIVER_STATUS_OFFLINE);
+        if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+            return;
+        }
         float scale = getResources().getDisplayMetrics().density;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;

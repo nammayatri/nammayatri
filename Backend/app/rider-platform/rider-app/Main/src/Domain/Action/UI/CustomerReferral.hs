@@ -16,6 +16,7 @@ import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Types as PT
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -44,7 +45,7 @@ postPersonApplyReferral :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> A
 postPersonApplyReferral (mbPersonId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  res <- Referral.applyReferralCode person shouldShareReferrerInfo req.code
+  res <- Referral.applyReferralCode person shouldShareReferrerInfo req.code req.gps
   let mbAndroidId = bool req.androidId Nothing (isJust person.androidId)
       mbDeviceId = bool req.deviceId Nothing (isJust person.deviceId)
   void $ QPerson.updateAndroidIdAndDeviceId personId mbAndroidId mbDeviceId
@@ -66,7 +67,7 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
             customerId = Just personId.getId,
             vpa = vpa
           }
-      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
   resp <- try @_ @SomeException $ DP.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
@@ -103,7 +104,9 @@ processBacklogReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasKafkaProducer r
   ) =>
   Id Person.Person ->
   Text ->
@@ -132,12 +135,15 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
           uid <- generateGUID
-          let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType
+          let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-          let serviceName = DEMSC.PayoutService PT.Juspay
-              createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId serviceName
+          payoutServiceName <- TPayout.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+          let createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          void $ try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          case mbPayoutOrderResp of
+            Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
+            _ -> pure ()
         Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found During Backlog Payout for cityId: " <> merchantOpCityId.getId
 
     getEntityName toPayReferredByReward toPayBacklogAmount = case (toPayReferredByReward, toPayBacklogAmount) of

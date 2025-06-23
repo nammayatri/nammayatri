@@ -15,6 +15,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -25,6 +26,8 @@ import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Lib.Dashcam.Domain.Interface as DashcamInter
+import qualified Lib.Dashcam.Domain.Types as Dashcam
 
 getConfigJSON :: Domain.ServiceConfig -> Data.Aeson.Value
 getConfigJSON = \case
@@ -38,8 +41,10 @@ getConfigJSON = \case
     Sms.MyValueFirstConfig cfg -> toJSON cfg
     Sms.GupShupConfig cfg -> toJSON cfg
     Sms.TwillioSmsConfig cfg -> toJSON cfg
+    Sms.DigoEngageSmsConfig cfg -> toJSON cfg
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> toJSON cfg
+    Whatsapp.TataCommunicationsConfig cfg -> toJSON cfg
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig cfg -> toJSON cfg
     Verification.FaceVerificationConfig cfg -> toJSON cfg
@@ -51,6 +56,7 @@ getConfigJSON = \case
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> toJSON cfg
     Call.TwillioCallConfig cfg -> toJSON cfg
+    Call.TataClickToCallConfig cfg -> toJSON cfg
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig cfg -> toJSON cfg
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
@@ -83,6 +89,8 @@ getConfigJSON = \case
   Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
     CIT.AzureOpenAI cfg -> toJSON cfg
     CIT.Gemini cfg -> toJSON cfg
+  Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
+    DashcamInter.CautioConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -96,8 +104,10 @@ getServiceName = \case
     Sms.MyValueFirstConfig _ -> Domain.SmsService Sms.MyValueFirst
     Sms.GupShupConfig _ -> Domain.SmsService Sms.GupShup
     Sms.TwillioSmsConfig _ -> Domain.SmsService Sms.TwillioSms
+    Sms.DigoEngageSmsConfig _ -> Domain.SmsService Sms.DigoEngage
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> Domain.WhatsappService Whatsapp.GupShup
+    Whatsapp.TataCommunicationsConfig _ -> Domain.WhatsappService Whatsapp.TataCommunications
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig _ -> Domain.VerificationService Verification.Idfy
     Verification.FaceVerificationConfig _ -> Domain.VerificationService Verification.InternalScripts
@@ -109,20 +119,27 @@ getServiceName = \case
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> Domain.CallService Call.Exotel
     Call.TwillioCallConfig _ -> Domain.CallService Call.TwillioCall
+    Call.TataClickToCallConfig _ -> Domain.CallService Call.TataClickToCall
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig _ -> Domain.AadhaarVerificationService AadhaarVerification.Gridline
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> Domain.PaymentService Payment.Juspay
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.PaymentService Payment.AAJuspay
+      _ -> Domain.PaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.PaymentService Payment.Stripe
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> Domain.RentalPaymentService Payment.Juspay
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
+      _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.RentalPaymentService Payment.Stripe
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> Domain.CautioPaymentService Payment.Juspay
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
+      _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.CautioPaymentService Payment.Stripe
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
@@ -141,6 +158,8 @@ getServiceName = \case
   Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
     CIT.AzureOpenAI _ -> Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI
     CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
+  Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
+    DashcamInter.CautioConfig _ -> Domain.DashCamService Dashcam.Cautio
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -153,7 +172,9 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> eitherValue configJSON
   Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> eitherValue configJSON
   Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> eitherValue configJSON
+  Domain.SmsService Sms.DigoEngage -> Domain.SmsServiceConfig . Sms.DigoEngageSmsConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> eitherValue configJSON
+  Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.GovtData -> Right $ Domain.VerificationServiceConfig Verification.GovtDataConfig
@@ -162,15 +183,21 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> eitherValue configJSON
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
   Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON
+  Domain.CallService Call.TataClickToCall -> Domain.CallServiceConfig . Call.TataClickToCallConfig <$> eitherValue configJSON
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.PaymentService Payment.AAJuspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.PayoutService Payout.AAJuspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RentalPayoutService Payout.AAJuspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RentalPaymentService Payment.AAJuspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.CautioPaymentService Payment.Juspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.CautioPaymentService Payment.AAJuspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.CautioPaymentService Payment.Stripe -> Domain.CautioPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
@@ -183,6 +210,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
+  Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a
     eitherValue value = case A.fromJSON value of

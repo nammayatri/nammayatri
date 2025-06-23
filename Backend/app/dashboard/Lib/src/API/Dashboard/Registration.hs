@@ -17,7 +17,6 @@ module API.Dashboard.Registration where
 import qualified Domain.Action.Dashboard.Registration as DReg
 import Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.BeamFlow
@@ -45,10 +44,6 @@ type API =
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantAndCityReq
              :> Post '[JSON] DReg.LoginRes
-           :<|> "fleet"
-             :> "register"
-             :> ReqBody '[JSON] DReg.FleetRegisterReq
-             :> Post '[JSON] APISuccess
        )
 
 handler :: BeamFlow' => FlowServer API
@@ -59,7 +54,6 @@ handler =
     :<|> enable2fa
     :<|> switchMerchant
     :<|> switchMerchantAndCity
-    :<|> registerFleetOwner
 
 login :: BeamFlow' => DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI' . DReg.login
@@ -78,6 +72,3 @@ switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token
 
 switchMerchantAndCity :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
 switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
-
-registerFleetOwner :: BeamFlow' => DReg.FleetRegisterReq -> FlowHandler APISuccess
-registerFleetOwner req = withFlowHandlerAPI' $ DReg.registerFleetOwner req Nothing

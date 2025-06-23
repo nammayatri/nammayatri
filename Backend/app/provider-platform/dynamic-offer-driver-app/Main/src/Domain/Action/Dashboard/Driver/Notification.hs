@@ -34,6 +34,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -64,7 +65,8 @@ triggerDummyRideRequest ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasKafkaProducer r
   ) =>
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -112,6 +114,8 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           searchTryId = Id fromLocData.dummyId,
           startTime = now,
           distance = Just fromLocData.distance,
+          congestionCharges = Nothing,
+          petCharges = Nothing,
           distanceWithUnit = Just $ convertMetersToDistance Meter fromLocData.distance,
           distanceToPickup = Meters 149,
           distanceToPickupWithUnit = Distance 149.0 Meter,
@@ -154,6 +158,10 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           middleStopCount = 0,
           parcelQuantity = Nothing,
           parcelType = Nothing,
+          conditionalCharges = [],
+          isSafetyPlus = False,
+          safetyPlusCharges = Nothing,
+          coinsRewardedOnGoldTierRide = Nothing,
           ..
         }
 

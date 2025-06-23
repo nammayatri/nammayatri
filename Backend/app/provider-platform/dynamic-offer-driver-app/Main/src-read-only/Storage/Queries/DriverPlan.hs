@@ -152,6 +152,10 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.totalAmountChargedForService (Kernel.Prelude.Just totalAmountChargedForService),
       Se.Set Beam.totalCoinsConvertedCash totalCoinsConvertedCash,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.waiveOfMode (Kernel.Prelude.Just waiveOfMode),
+      Se.Set Beam.waiveOffEnabledOn waiveOffEnabledOn,
+      Se.Set Beam.waiveOffValidTill waiveOffValidTill,
+      Se.Set Beam.waiverOffPercentage (Kernel.Prelude.Just waiverOffPercentage)
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

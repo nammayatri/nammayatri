@@ -85,7 +85,7 @@ type IssueInfoAPI =
 data IssueInfoRes = IssueInfoRes
   { issueReportId :: Id IssueReport,
     issueReportShortId :: Maybe (ShortId IssueReport),
-    categoryLabel :: Text,
+    categoryLabel :: Maybe Text,
     option :: Maybe Text,
     assignee :: Maybe Text,
     description :: Text,
@@ -94,7 +94,7 @@ data IssueInfoRes = IssueInfoRes
     createdAt :: UTCTime,
     chats :: [ChatDetail],
     options :: [IssueOptionRes],
-    categoryId :: Id IssueCategory
+    categoryId :: Maybe (Id IssueCategory)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

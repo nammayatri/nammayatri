@@ -349,3 +349,110 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN end_ride_distan
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_threshold integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN requires_onboarding_inspection boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_overcharging_blocker boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN normal_ride_bulk_loc_update_batch_size integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN meter_ride_bulk_loc_update_batch_size integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_valid_for_minutes integer ;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_enabled boolean ;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_referral_entities text[]  default '{DRIVER}';
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN qar_cal_radius_in_km double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_dynamic_pricing_qar_cal_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN generate_referral_code_for_operator boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN generate_referral_code_for_fleet boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_doc_size_in_mb integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bulk_waive_off_limit integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_expiry_checks boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN require_route_mapping_in_vehicle boolean  default true;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_existing_vehicle_in_bulk_upload boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN onboarding_docs_count_limit integer  default 50;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN safety_team_numbers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_police_numbers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_ambulance_numbers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN week_start_mode int  default 3;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN earnings_window_size int  default 7;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN live_ekd boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN deactivate_rc_on_unlink boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_aa_enabled_for_recurring boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN aa_enabled_client_sdk_version text  default '999.999.999';

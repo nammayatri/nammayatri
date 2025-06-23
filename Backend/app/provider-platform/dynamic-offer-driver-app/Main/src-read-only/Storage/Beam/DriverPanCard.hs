@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 data DriverPanCardT f = DriverPanCardT
   { consent :: B.C f Kernel.Prelude.Bool,
     consentTimestamp :: B.C f Kernel.Prelude.UTCTime,
+    docType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanType),
     documentImageId1 :: B.C f Kernel.Prelude.Text,
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

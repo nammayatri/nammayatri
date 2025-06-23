@@ -62,4 +62,4 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon isPickUpRoute = do
             mode = Just CAR,
             calcPoints = True
           }
-  getTripRoutes booking.riderId booking.merchantId (Just merchantOperatingCityId) mkGetRoutesResp
+  getTripRoutes booking.riderId booking.merchantId (Just merchantOperatingCityId) (Just rideId.getId) mkGetRoutesResp

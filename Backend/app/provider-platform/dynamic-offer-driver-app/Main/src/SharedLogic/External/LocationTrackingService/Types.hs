@@ -14,6 +14,7 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.Merchant as DM
@@ -41,7 +42,8 @@ data EndRideReq = EndRideReq
     lon :: Double,
     merchantId :: Id DM.Merchant,
     driverId :: Id DP.Person,
-    nextRideId :: Maybe (Id DRide.Ride)
+    nextRideId :: Maybe (Id DRide.Ride),
+    rideInfo :: Maybe RideInfo
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -51,7 +53,8 @@ data NearByReq = NearByReq
     onRide :: Maybe Bool,
     vehicleType :: Maybe [VehicleVariant],
     radius :: Int,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    groupId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -110,20 +113,69 @@ data DriverBlockTillReq = DriverBlockTillReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-data RideInfo = Bus
+data BusRideInfo = BusRideInfo
   { routeCode :: Text,
     busNumber :: Text,
-    destination :: LatLong
+    source :: LatLong,
+    destination :: LatLong,
+    routeLongName :: Maybe Text,
+    driverName :: Maybe Text,
+    groupId :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToSchema)
 
+data CarRideInfo = CarRideInfo
+  { pickupLocation :: LatLong,
+    minDistanceBetweenTwoPoints :: Maybe Int,
+    rideStops :: Maybe [LatLong]
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo
+  deriving (Show, Eq, Generic, ToSchema)
+
+instance FromJSON RideInfo where
+  parseJSON = withObject "RideInfo" $ \obj ->
+    ( Bus
+        <$> ( obj .: "bus" >>= \busObj ->
+                BusRideInfo <$> busObj .: "routeCode"
+                  <*> busObj .: "busNumber"
+                  <*> busObj .: "source"
+                  <*> busObj .: "destination"
+                  <*> busObj .:? "routeLongName"
+                  <*> busObj .:? "driverName"
+                  <*> busObj .:? "groupId"
+            )
+    )
+      <|> ( Car
+              <$> ( obj .: "car" >>= \carObj ->
+                      CarRideInfo <$> carObj .: "pickupLocation"
+                        <*> carObj .:? "minDistanceBetweenTwoPoints"
+                        <*> carObj .:? "rideStops"
+                  )
+          )
+
 instance ToJSON RideInfo where
-  toJSON (Bus routeCode busNumber destination) =
-    object
-      [ "bus"
-          .= object
-            [ "routeCode" .= routeCode,
-              "busNumber" .= busNumber,
-              "destination" .= destination
-            ]
-      ]
+  toJSON = \case
+    Bus (BusRideInfo routeCode busNumber source destination routeLongName driverName groupId) ->
+      object
+        [ "bus"
+            .= object
+              [ "routeCode" .= routeCode,
+                "busNumber" .= busNumber,
+                "source" .= source,
+                "destination" .= destination,
+                "routeLongName" .= routeLongName,
+                "driverName" .= driverName,
+                "groupId" .= groupId
+              ]
+        ]
+    Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints rideStops) ->
+      object
+        [ "car"
+            .= object
+              [ "pickupLocation" .= pickupLocation,
+                "minDistanceBetweenTwoPoints" .= minDistanceBetweenTwoPoints,
+                "rideStops" .= rideStops
+              ]
+        ]

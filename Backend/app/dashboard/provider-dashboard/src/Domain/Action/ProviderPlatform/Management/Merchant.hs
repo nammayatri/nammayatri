@@ -45,6 +45,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigClearCacheSubscription,
     postMerchantConfigFailover,
     postMerchantPayoutConfigUpdate,
+    postMerchantConfigSpecialLocationUpsert,
   )
 where
 
@@ -429,3 +430,9 @@ postMerchantPayoutConfigUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantPayoutConfigUpdate) req
+
+postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigSpecialLocationUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigSpecialLocationUpsert)) req

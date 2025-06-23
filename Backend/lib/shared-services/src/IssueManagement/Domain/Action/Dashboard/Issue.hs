@@ -13,9 +13,11 @@ import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
+import IssueManagement.Domain.Action.UI.Issue (ServiceHandle)
 import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
+import qualified IssueManagement.Domain.Types.Issue.IssueChat as DICT
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as DIM
 import IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as DIO
@@ -30,13 +32,14 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QC
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.Queries.Issue.IssueChat as QICT
 import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -45,22 +48,13 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, generateShortId, throwError)
 import Kernel.Utils.Logging
-
-data ServiceHandle m = ServiceHandle
-  { findPersonById :: Id Person -> m (Maybe Person),
-    findByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),
-    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
-    mbSendUnattendedTicketAlert :: Maybe (Text -> m ()),
-    findRideByRideShortId :: Id Merchant -> ShortId Ride -> m (Maybe Ride),
-    findByMobileNumberAndMerchantId :: Text -> DbHash -> Id Merchant -> m (Maybe Person)
-  }
 
 -- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
 getDefaultMerchantOperatingCityId :: BeamFlow m r => ServiceHandle m -> Identifier -> m (Id MerchantOperatingCity)
 getDefaultMerchantOperatingCityId issueHandle identifier =
-  ( issueHandle.findByMerchantShortIdAndCity shortId Context.Bangalore
+  ( issueHandle.findMOCityByMerchantShortIdAndCity shortId Context.Bangalore
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show Context.Bangalore)
   )
     <&> (.id)
@@ -72,7 +66,7 @@ getDefaultMerchantOperatingCityId issueHandle identifier =
 checkMerchantCityAccess :: BeamFlow m r => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m MerchantOperatingCity
 checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle = do
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId opCity
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
   case issueReport.merchantOperatingCityId of
     Nothing -> do
@@ -91,7 +85,7 @@ checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle 
 issueCategoryList :: BeamFlow m r => ShortId Merchant -> Context.City -> ServiceHandle m -> Identifier -> m Common.IssueCategoryListRes
 issueCategoryList merchantShortId city issueHandle identifier = do
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   issueCategoryTranslationList <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage merchantOperatingCity.id ENGLISH identifier
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -108,6 +102,85 @@ issueCategoryList merchantShortId city issueHandle identifier = do
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses
         }
+
+createIssueReportV2 ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.IssueReportReqV2 ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHandle identifier = do
+  when (identifier == DRIVER) $ do
+    throwError $ InvalidRequest "Driver cannot create issue report v2"
+  person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbRide <- forM rideId \justRideId -> do
+    B.runInReplica (issueHandle.findRideById justRideId person.merchantId) >>= fromMaybeM (RideNotFound justRideId.getId)
+  let mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
+  config <- issueHandle.findMerchantConfig person.merchantId mocId (Just person.id)
+  UIR.processIssueReportTypeActions (person.id, person.merchantId) issueReportType mbRide (Just config) True identifier issueHandle
+  mbIssueChats <- QICT.findByTicketId ticketId
+  case mbIssueChats of
+    Just issueChats -> do
+      let updatedChats = issueChats.chats ++ chats
+      let updateMediaFiles = issueChats.mediaFiles ++ mediaFiles
+      mbIssueReportId <-
+        if createIssue
+          then do
+            issueReport <- makeIssueReport mocId person
+            QIR.create issueReport
+            return $ Just issueReport.id
+          else return Nothing
+      QICT.updateChats ticketId updatedChats updateMediaFiles mbIssueReportId
+    Nothing -> do
+      issueChat <- createIssueChat chats rideId mediaFiles
+      QICT.create issueChat
+  pure Success
+  where
+    createIssueChat chatList mbRide mediaFilesList = do
+      now <- getCurrentTime
+      issueChatId <- generateGUID
+      pure $
+        DICT.IssueChat
+          { id = issueChatId,
+            rideId = mbRide,
+            chats = chatList,
+            mediaFiles = mediaFilesList,
+            issueReportId = Nothing,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    makeIssueReport mocId person = do
+      id <- generateGUID
+      shortId <- generateShortId
+      now <- getCurrentTime
+      pure $
+        DIR.IssueReport
+          { shortId = Just shortId,
+            driverId = if identifier == CUSTOMER then Nothing else Just personId,
+            merchantOperatingCityId = Just mocId,
+            optionId = Nothing,
+            categoryId = Nothing,
+            mediaFiles = [],
+            assignee = Nothing,
+            status = OPEN,
+            deleted = False,
+            ticketId = Just ticketId,
+            createdAt = now,
+            updatedAt = now,
+            description = "",
+            chats = [],
+            merchantId = Just (person.merchantId),
+            reopenedCount = 0,
+            becknIssueId = Nothing,
+            ..
+          }
 
 issueList ::
   ( BeamFlow m r,
@@ -129,7 +202,7 @@ issueList ::
   m Common.IssueReportListResponse
 issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbMobileCountryCode mbPhoneNumber mbRideShortId issueHandle identifier = do
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId opCity
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
   mbPerson <- forM mbPhoneNumber $ \phoneNumber -> do
     let mobileCountryCode = maybe "+91" (\code -> "+" <> T.strip code) mbMobileCountryCode
@@ -139,7 +212,8 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
   issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide)
-  let count = length issueReports
+  let filteredIssueReports = filter (isJust . (.categoryId)) issueReports
+  let count = length filteredIssueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <-
     catMaybes
@@ -156,12 +230,12 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
                   then return Nothing
                   else Just <$> mkIssueReport issueReport
         )
-        issueReports
+        filteredIssueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
-      category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
+      category <- CQIC.findById (fromJust issueReport.categoryId) identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
       pure $
         Common.IssueReportListItem
           { issueReportId = cast issueReport.id,
@@ -202,7 +276,11 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
-      category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
+      category <- case issueReport.categoryId of
+        Nothing -> pure Nothing
+        Just catId -> do
+          fetchedCategory <- CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
+          pure $ Just fetchedCategory.category
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
       issueConfig <-
         CQI.findByMerchantOpCityId merchantOpCityId identifier
@@ -216,7 +294,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
             issueReportShortId = issueReport.shortId,
             personDetail,
             rideId = cast <$> issueReport.rideId,
-            category = category.category,
+            category = category,
             chats = issueChats,
             option = option <&> (.option),
             mediaFiles = mediaFiles,
@@ -423,7 +501,7 @@ createIssueCategory ::
 createIssueCategory merchantShortId city Common.CreateIssueCategoryReq {..} issueHandle identifier = do
   validateCreateIssueMessageReq categoryType messages identifier
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   newIssueCategory <- mkIssueCategory merchantOperatingCity
   QIC.create newIssueCategory
@@ -501,7 +579,7 @@ updateIssueCategory :: BeamFlow m r => ShortId Merchant -> Context.City -> Id DI
 updateIssueCategory merchantShortId city issueCategoryId req issueHandle identifier = do
   exIssueCategory <- CQIC.findById issueCategoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist issueCategoryId.getId)
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   when (exIssueCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
   updatedIssueCategory <- mkIssueCategory exIssueCategory
@@ -549,7 +627,7 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
       >>= fromMaybeM (IssueCategoryDoesNotExist issueCategoryId.getId)
   merchantOperatingCity <-
     maybe
-      ( issueHandle.findByMerchantShortIdAndCity merchantShortId city
+      ( issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
           >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
       )
       return
@@ -603,7 +681,7 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
 updateIssueOption :: BeamFlow m r => ShortId Merchant -> Context.City -> Id DIO.IssueOption -> Common.UpdateIssueOptionReq -> ServiceHandle m -> Identifier -> m APISuccess
 updateIssueOption merchantShortId city issueOptionId req issueHandle identifier = do
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   case (req.issueCategoryId, req.issueMessageId) of
     (Just catId, Just msgId) -> do
@@ -653,7 +731,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       )
       req.issueMessageId
   merchantOperatingCity <-
-    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   whenJust existingIssueMessage $ \issueMessage ->
     when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied

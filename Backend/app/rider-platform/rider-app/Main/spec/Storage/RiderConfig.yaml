@@ -4,21 +4,47 @@ imports:
   EmailOTPConfig: Email.Types
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
+  VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
   CxAgentDetails: IssueManagement.Common
   GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
+  ServiceTierType : Domain.Types.ServiceTierType
+  RentalsConfig: Domain.Types.RentalsIntercityCache
+  IntercitySearchLocation: Domain.Types.RentalsIntercityCache
+  VehicleVariant: Domain.Types.VehicleVariant
+  Minutes: Kernel.Types.Common
+  TimeOfDay: Data.Time
 
 RiderConfig:
+  types:
+    RingBucketCfg:
+      derive: "Eq"
+      radiusInMeters: Meters
+      vehVariant: VehicleVariant
+      size: Int
+    BusTrackingConfig:
+      derive: "Eq"
+      maxScoreDistanceInMeters: Double
+      goodScoreDistanceInMeters: Double
+      fairScoreDistanceInMeters: Double
+      maxScore: Double
+      goodScore: Double
+      fairScore: Double
+      thresholdFactor: Double
+      thresholdSeconds: Double
+      movementThresholdInMeters: Double
+
   tableName: rider_config
 
-  derives: "Show, Generic, ToJSON, FromJSON,Eq"
+  derives: "Show, Generic, ToJSON, FromJSON, Eq"
 
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     enableLocalPoliceSupport: Bool
     metroBookingAllowed: Maybe Bool
+    suburbanBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int
@@ -58,6 +84,7 @@ RiderConfig:
     makeMultiModalSearch: Bool
     maximumWalkDistance: Meters
     minimumWalkDistance: Meters
+    straightLineThreshold: Meters
     permissibleModes: "Maybe [GeneralVehicleType]"
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
@@ -73,6 +100,26 @@ RiderConfig:
     autoSendBookingDetailsViaWhatsapp: Maybe Bool
     multimodalTesting: Bool
     isFirstReferredRideEnabled: Bool
+    excludedVehicleVariants: "Maybe [ServiceTierType]"
+    rentalsConfig: "Maybe [RentalsConfig]"
+    intercitySearchLocations : "Maybe [IntercitySearchLocation]"
+    payoutReferralThresholdPerDay: Int
+    payoutReferralThresholdPerMonth: Int
+    variantListForNearByReq: "Maybe [VehicleVariant]"
+    nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
+    nearbyDriverSearchRadius: Maybe Double
+    isDeviceIdCheckDisabled: Maybe Bool
+    enableBusFiltering: Maybe Bool
+    fareCacheRentalsConfig: "Maybe [RentalsConfig]"
+    fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
+    blockedUntilInMins : Maybe Minutes
+    ticketAssetDomain: Maybe Text
+    qrTicketRestrictionStartTime: Maybe TimeOfDay
+    qrTicketRestrictionEndTime: Maybe TimeOfDay
+    ticketingPermissionConfig: Maybe Value
+    userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    noOfRideRequestsConfig: Int
+    busTrackingConfig: "Maybe BusTrackingConfig"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -88,6 +135,7 @@ RiderConfig:
     makeMultiModalSearch: Maybe Bool
     maximumWalkDistance: Maybe Meters
     minimumWalkDistance: Maybe Meters
+    straightLineThreshold: Maybe Meters
     maxAllowedPublicTransportLegs: Maybe Int
     dynamicLogicUpdatePassword: Maybe Text
     feedbackAlertRatingThreshold: Maybe Int
@@ -97,6 +145,15 @@ RiderConfig:
     multimodalTesting: Maybe Bool
     payoutReferralStartDate: Maybe UTCTime
     isFirstReferredRideEnabled: Maybe Bool
+    payoutReferralThresholdPerDay: Maybe Int
+    payoutReferralThresholdPerMonth: Maybe Int
+    variantListForNearByReq: Maybe [Text]
+    nearByDriverRingBucketCfg: Maybe Value
+    fareCacheRentalsConfig : Maybe Value
+    fareCacheInterCitySearchLocations : Maybe Value
+    userServiceTierOrderConfig: Maybe Value
+    noOfRideRequestsConfig: Maybe Int
+    busTrackingConfig: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -119,6 +176,7 @@ RiderConfig:
     makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
     maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
     minimumWalkDistance: fromMaybe (100) minimumWalkDistance|E
+    straightLineThreshold: fromMaybe (300) straightLineThreshold|E
     maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
@@ -128,6 +186,15 @@ RiderConfig:
     payoutReferralStartDate: payoutReferralStartDate_|E
     multimodalTesting: fromMaybe False multimodalTesting|E
     isFirstReferredRideEnabled: fromMaybe False isFirstReferredRideEnabled|E
+    payoutReferralThresholdPerDay: fromMaybe 5 payoutReferralThresholdPerDay|E
+    payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
+    userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
+    busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -143,6 +210,7 @@ RiderConfig:
     makeMultiModalSearch: Just makeMultiModalSearch|E
     maximumWalkDistance: Just maximumWalkDistance|E
     minimumWalkDistance: Just minimumWalkDistance|E
+    straightLineThreshold: Just straightLineThreshold|E
     maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
@@ -152,6 +220,15 @@ RiderConfig:
     payoutReferralStartDate: Just payoutReferralStartDate|E
     multimodalTesting: Just multimodalTesting|E
     isFirstReferredRideEnabled: Just isFirstReferredRideEnabled|E
+    payoutReferralThresholdPerDay: Just payoutReferralThresholdPerDay|E
+    payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
+    userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
+    noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
+    busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -174,6 +251,7 @@ RiderConfig:
     makeMultiModalSearch: "false"
     maximumWalkDistance: "600"
     minimumWalkDistance: "100"
+    straightLineThreshold: "300"
     permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
     maxAllowedPublicTransportLegs: "2"
     postRideSafetyNotificationDelay : "60"
@@ -181,6 +259,8 @@ RiderConfig:
     payoutReferralProgram: "false"
     payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
     multimodalTesting: "false"
+    blockedUntilInMins: "1440"
+    busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
 
   queries:
     findByMerchantOperatingCityId:
@@ -203,6 +283,17 @@ RiderConfig:
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
     permissibleModes: text []
+    excludedVehicleVariants: text []
+    rentalsConfig: text []
+    intercitySearchLocations : text []
+    variantListForNearByReq: text []
+    nearByDriverRingBucketCfg: "json"
+    fareCacheRentalsConfig : "json"
+    fareCacheInterCitySearchLocations : "json"
+    userServiceTierOrderConfig : "json"
+    blockedUntilInMins: int
+    ticketingPermissionConfig: "json"
+    busTrackingConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

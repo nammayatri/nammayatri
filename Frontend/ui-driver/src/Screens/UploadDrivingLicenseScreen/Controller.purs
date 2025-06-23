@@ -52,9 +52,38 @@ import Screens.Types as ST
 import JBridge as JB
 import Engineering.Helpers.Events as EHE
 
-
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed _) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (RegistrationModalAction var1) = "RegistrationModalAction_" <> show var1
+  show (OnboardingHeaderAction var1) = "OnboardingHeaderAction_" <> show var1
+  show (PrimaryButtonAction var1) = "PrimaryButtonAction_" <> show var1
+  show (DriverLicenseManual) = "DriverLicenseManual"
+  show (TutorialModalAction var1) = "TutorialModalAction_" <> show var1
+  show (TutorialModal _) = "TutorialModal"
+  show (RemoveUploadedFile _) = "RemoveUploadedFile"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (UploadFileAction _) = "UploadFileAction"
+  show (UploadImage) = "UploadImage"
+  show (DatePicker _ _ _ _ _) = "DatePicker"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (PrimaryEditTextActionControllerReEnter var1) = "PrimaryEditTextActionControllerReEnter_" <> show var1
+  show (GenericMessageModalAction var1) = "GenericMessageModalAction_" <> show var1
+  show (PreviewAction) = "PreviewAction"
+  show (SelectDateOfBirthAction) = "SelectDateOfBirthAction"
+  show (SelectDateOfIssueAction) = "SelectDateOfIssueAction"
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (ValidateDocumentModalAction var1) = "ValidateDocumentModalAction_" <> show var1
+  show (RenderProfileImage _ _) = "RenderProfileImage"
+  show (PopUpModalActions var1) = "PopUpModalActions_" <> show var1
+  show (RedirectScreen) = "RedirectScreen"
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
+  show (SkipButton) = "SkipButton"
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (ChangeVehicleAC var1) = "ChangeVehicleAC_" <> show var1
+  show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
+  show (WhatsAppClick) = "WhatsAppClick"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

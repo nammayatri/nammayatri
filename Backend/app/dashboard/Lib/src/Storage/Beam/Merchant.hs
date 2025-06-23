@@ -34,7 +34,10 @@ data MerchantT f = MerchantT
     authTokenEncrypted :: B.C f (Maybe Text),
     authTokenHash :: B.C f (Maybe DbHash),
     enabled :: B.C f (Maybe Bool),
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.UTCTime,
+    requireAdminApprovalForFleetOnboarding :: B.C f (Maybe Bool),
+    verifyFleetWhileLogin :: B.C f (Maybe Bool),
+    hasFleetMemberHierarchy :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

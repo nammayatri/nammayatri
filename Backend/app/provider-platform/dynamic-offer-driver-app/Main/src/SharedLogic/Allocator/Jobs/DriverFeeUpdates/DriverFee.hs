@@ -49,6 +49,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
@@ -81,7 +82,8 @@ calculateDriverFeeForDrivers ::
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->
   m ExecutionResult
@@ -98,7 +100,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
@@ -128,16 +130,16 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         Nothing -> pure ()
         Just plan -> do
           let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
-              (mandateSetupDate, mandateId) = case mbDriverPlan of
-                Nothing -> (now, Nothing)
-                Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
+              (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage) = case mbDriverPlan of
+                Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0)
+                Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage)
               coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
           let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
           --------- calculations based of frequency happens here ------------
           (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
-            calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee
+            calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode
           ---------------------------------------------------------------------
           ------------- update driver fee with offer and plan details ---------
           let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -200,7 +202,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
 processDriverFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
@@ -228,7 +230,7 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFee.id
 
 processRestFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
@@ -262,7 +264,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
     }
 
 getFinalOrderAmount ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   HighPrecMoney ->
   Id Merchant ->
   TransporterConfig ->
@@ -271,23 +273,33 @@ getFinalOrderAmount ::
   UTCTime ->
   Int ->
   DriverFee ->
+  HighPrecMoney ->
+  DPlan.WaiveOffMode ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
-getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee = do
+getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee waiveOffPercentage waiveOffMode = do
   now <- getCurrentTime
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
+      waiveOffMultiplier = if waiveOffMode == DPlan.NO_WAIVE_OFF then 1.0 else (1.0 - (waiveOffPercentage / 100))
+      feeWithoutDiscountWithWaiveOff = feeWithoutDiscount * waiveOffMultiplier
+      feeWithoutDiscountWithWaiveOffAndSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
       feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
-  if feeWithOutDiscountPlusSpecialZone == 0
+  if (feeWithOutDiscountPlusSpecialZone == 0 || feeWithoutDiscountWithWaiveOffAndSpecialZone == 0)
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+      offerResp <- do
+        case waiveOffMode of
+          DPlan.WITHOUT_OFFER -> return []
+          _ -> do
+            offers <- SPayment.offerListCache merchantId driverFee.driverId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscountWithWaiveOff driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+            return offers.offerResp
       (finalOrderAmount, offerId, offerTitle) <-
-        if null offers.offerResp
-          then pure (feeWithoutDiscount, Nothing, Nothing)
+        if null offerResp
+          then pure (feeWithoutDiscountWithWaiveOff, Nothing, Nothing)
           else do
-            let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
+            let bestOffer = minimumBy (comparing (.finalOrderAmount)) offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       if finalOrderAmount + driverFee.specialZoneAmount == 0
         then do
@@ -326,7 +338,7 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
 driverFeeSplitter ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   Plan ->
   HighPrecMoney ->
@@ -565,7 +577,8 @@ calcFinalOrderAmounts ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   Id Merchant ->
   TransporterConfig ->
@@ -576,18 +589,20 @@ calcFinalOrderAmounts ::
   Text ->
   HighPrecMoney ->
   DriverFee ->
+  HighPrecMoney ->
+  DPlan.WaiveOffMode ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
-calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee =
+calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode =
   case (planBaseFrequcency, plan.basedOnEntity) of
     ("PER_RIDE", RIDE) -> do
       let feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRidesForPlanCharges)))
-      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode
     ("DAILY", RIDE) -> do
       let feeWithoutDiscount = if numRidesForPlanCharges > 0 then baseAmount else 0
-      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode
     ("DAILY", NONE) -> do
       let feeWithoutDiscount = baseAmount
-      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode
     _ -> return (0.0, 0.0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
 
 manualInvoiceGeneratedNudgeKey :: Text
@@ -607,7 +622,8 @@ sendManualPaymentLink ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "smsCfg" r SmsConfig,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasKafkaProducer r
   ) =>
   Job 'SendManualPaymentLink ->
   m ExecutionResult
@@ -618,7 +634,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       endTime = jobData.endTime
       serviceName = jobData.serviceName
   now <- getCurrentTime
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   let deepLinkExpiry = subscriptionConfigs.deepLinkExpiryTimeInMinutes
   driverPlansToProccess <- findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId endTime subscriptionConfigs.genericBatchSizeForJobs
   if null driverPlansToProccess
@@ -628,7 +644,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
   [DPlan.DriverPlan] ->
   SubscriptionConfig ->
   Id Merchant ->

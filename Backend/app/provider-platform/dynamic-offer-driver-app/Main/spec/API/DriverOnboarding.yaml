@@ -2,6 +2,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
+  DocumentCategory: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
@@ -17,6 +18,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Minutes: Kernel.Types.Common
   Image: Domain.Types.Image
+  PanType: Domain.Types.DriverPanCard
 
 module: DriverOnboardingV2
 types:
@@ -32,6 +34,7 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
+    documentCategory: Maybe DocumentCategory
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -99,6 +102,7 @@ types:
     verifiedBy: Maybe VerifiedBy
     transactionId: Maybe Text
     nameOnGovtDB: Maybe Text
+    docType: Maybe PanType
   GetLiveSelfieResp:
     recordType: NewType
     image: Text
@@ -128,8 +132,21 @@ types:
     status : Maybe Text
     callbackResponse : Maybe Text
     failureReason : Maybe Text
-
-
+  VehiclePhotosResp:
+    left: [Text]
+    right: [Text]
+    front: [Text]
+    back: [Text]
+    frontInterior: [Text]
+    backInterior: [Text]
+    odometer: [Text]
+  DriverGstinReq:
+    imageId1 : Id Image
+    imageId2 : Maybe (Id Image)
+    gstNumber : Text
+    transactionId : Maybe Text
+    validationStatus : Maybe ValidationStatus
+    verifiedBy : Maybe VerifiedBy
 
 apis:
   - GET:
@@ -144,11 +161,35 @@ apis:
       endpoint: /driver/rateCard
       query:
         vehicleServiceTier: ServiceTierType
+        tripCategory: TripCategory
         distance: Meters
         durationInMin: Minutes
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: '[RateCardResp]'
+  - GET:
+      endpoint: /driver/vehiclePhotos
+      mandatoryQuery:
+        rcNo: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehiclePhotosResp
+  - GET:
+      endpoint: /driver/vehiclePhotosB64
+      mandatoryQuery:
+        rcNo: Text
+      query:
+        onlyLatest: Bool
+        left: Bool
+        right: Bool
+        front: Bool
+        back: Bool
+        frontInterior: Bool
+        backInterior: Bool
+        odometer: Bool
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehiclePhotosResp
   - POST:
       endpoint: /driver/updateAirCondition
       auth: TokenAuth PROVIDER_TYPE

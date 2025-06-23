@@ -1,4 +1,6 @@
 const JBridge = window.JBridge;
+
+let fibers = [];
 const isDebug =  JSON.parse(JBridge.getDeviceInfo()).package_name.includes(".debug") || JSON.parse(JBridge.getDeviceInfo()).package_name.includes(".staging")
 export const getFromWindow = function (key,nothing,just) {
   if (typeof window[key] !== "undefined") {
@@ -68,4 +70,23 @@ export const unsafeGet = function (key,obj) {
 
 export const unsafeHas = function (key,obj) {
   return obj[key] !== undefined && obj[key] !== null;
+};
+
+
+export const storeFiber = (fiber) => {
+  return  () => {
+    fibers.push(fiber);
+  }
+};
+
+export const getFibers = () => {
+  return () => {
+    return fibers;
+  }
+};
+
+export const resetFibers = () => {
+  return () => {
+    fibers = [];
+  }
 };

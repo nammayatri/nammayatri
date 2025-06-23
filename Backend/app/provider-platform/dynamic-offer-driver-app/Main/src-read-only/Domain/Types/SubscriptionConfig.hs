@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.WebhookExtra
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -22,15 +23,19 @@ data SubscriptionConfig = SubscriptionConfig
     allowDueAddition :: Kernel.Prelude.Bool,
     allowManualPaymentLinks :: Kernel.Prelude.Bool,
     cgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    dataEntityToSend :: [Domain.Types.SubscriptionConfig.CurrentPlanEntites],
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
+    enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
     executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     extWebhookConfigs :: Kernel.Prelude.Maybe Domain.Types.WebhookExtra.ExternalWebhookConfigs,
     freeTrialRidesApplicable :: Kernel.Prelude.Bool,
     genericBatchSizeForJobs :: Kernel.Prelude.Int,
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
+    genericNextJobScheduleTimeThreshold :: Data.Time.NominalDiffTime,
+    isFreeTrialDaysApplicable :: Kernel.Prelude.Bool,
     isSubscriptionEnabledAtCategoryLevel :: Kernel.Prelude.Bool,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
     isUIEnabled :: Kernel.Prelude.Bool,
@@ -49,6 +54,8 @@ data SubscriptionConfig = SubscriptionConfig
     subscriptionDown :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     subscriptionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     useOverlayService :: Kernel.Prelude.Bool,
+    waiveOffOfferDescription :: Kernel.Prelude.Text,
+    waiveOffOfferTitle :: Kernel.Prelude.Text,
     webhookConfig :: Kernel.Prelude.Maybe Domain.Types.SubscriptionConfig.WebhookConfig,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
@@ -56,6 +63,8 @@ data SubscriptionConfig = SubscriptionConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+data CurrentPlanEntites = SAFETY_PLUS deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
 
 data WebhookConfig = WebhookConfig
   { batchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -65,3 +74,5 @@ data WebhookConfig = WebhookConfig
     webhookDeliveryMode :: Domain.Types.WebhookExtra.WebhookDeliveryType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CurrentPlanEntites)

@@ -60,9 +60,11 @@ import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowCounters
 import Lib.Queries.GateInfo
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
@@ -105,7 +107,11 @@ prepareDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -139,7 +145,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         EsqDBReplicaFlow m r,
         EsqDBFlow m r,
         CacheFlow m r,
-        LT.HasLocationService m r
+        LT.HasLocationService m r,
+        HasKafkaProducer r
       ) =>
       Maybe Bool ->
       m [Id Driver]
@@ -199,6 +206,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               isRental = isRentalTrip searchTry.tripCategory,
                               isInterCity = isInterCityTrip searchTry.tripCategory,
                               onlinePayment = merchant.onlinePayment,
+                              configsInExperimentVersions = searchReq.configInExperimentVersions,
                               ..
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) driversInQueue) goHomeReq merchantOpCityId_
@@ -361,7 +369,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum
+            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum driverPoolCfg
             Intelligent -> do
               pool <- makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
               return $ (Nothing, pool)
@@ -435,6 +443,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isRental = isRentalTrip searchTry.tripCategory,
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
+                        configsInExperimentVersions = searchReq.configInExperimentVersions,
                         ..
                       }
                   )
@@ -466,7 +475,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     onlinePayment = merchant.onlinePayment,
                     ..
                   }
-          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo
+          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId batchNum' = do
           let merchantId = searchReq.providerId
           now <- getCurrentTime
@@ -514,7 +523,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
               Tagged -> do
-                (_, taggedPool) <- makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags (mbVersion <|> searchReq.poolingLogicVersion) batchNum -- TODO: Fix isOnRidePool flag
+                (_, taggedPool) <- makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags (mbVersion <|> searchReq.poolingLogicVersion) batchNum driverPoolCfg -- TODO: Fix isOnRidePool flag
                 return taggedPool
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
@@ -573,7 +582,9 @@ previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
 makeTaggedDriverPool ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   Id MerchantOperatingCity ->
   Seconds ->
@@ -584,20 +595,32 @@ makeTaggedDriverPool ::
   Maybe [LYT.TagNameValue] ->
   Maybe Int ->
   PoolBatchNum ->
+  DriverPoolConfig ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
-makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum = do
+makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion Nothing
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool, batchNum}
-  resp <- LYTU.runLogics allLogics taggedDriverPoolInput
-  sortedPool <-
+  resp <- withTimeAPI "driverPooling" "runLogics" $ LYTU.runLogics allLogics taggedDriverPoolInput
+  sortedPool' <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
       A.Success sortedPoolData -> pure sortedPoolData.drivers
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
         pure onlyNewDriversWithCustomerInfo
+
+  sortedPool <-
+    filterM
+      ( \driverPoolResult -> do
+          now <- getCurrentTime
+          let valueToPut = addUTCTime (fromIntegral driverPoolCfg.singleBatchProcessTime) now
+          let fromScore = addUTCTime (-1 * (fromIntegral driverPoolCfg.singleBatchProcessTime)) now
+          fork "removeExpiredSearchRequestInfoFromCache" $ removeExpiredSearchRequestInfoFromCache driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId
+          isLessThenNParallelRequests searchReq.id driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId valueToPut driverPoolCfg.maxParallelSearchRequests fromScore
+      )
+      sortedPool'
   return (mbVersion, take batchSize sortedPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
@@ -749,7 +772,11 @@ getNextDriverPoolBatch ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -760,7 +787,7 @@ getNextDriverPoolBatch ::
 getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goHomeConfig = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchTry.id
   incrementBatchNum searchTry.id
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId searchReq.merchantOperatingCityId
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId searchReq.configInExperimentVersions
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig
 

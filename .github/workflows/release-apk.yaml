@@ -145,8 +145,11 @@ jobs:
         run: |
           echo "" >> local.properties
           echo "$ADDITIONAL_LOCAL_PROPERTIES" >> local.properties
+          echo "" >> local.properties
+          echo "$CT_KEYS_PRD" >> local.properties
         env:
           ADDITIONAL_LOCAL_PROPERTIES: ${{ secrets.ADDITIONAL_LOCAL_PROPERTIES }}
+          CT_KEYS_PRD: ${{ secrets.CT_KEYS }}
 
       - name: Distribute app to Production 🚀
         run: |

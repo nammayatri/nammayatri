@@ -50,6 +50,11 @@ updateAirConditioned airConditioned id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateApproved ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateApproved approved id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.approved approved, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -87,6 +92,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
+      Se.Set Beam.approved approved,
       Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
       Se.Set Beam.certificateNumberHash (certificateNumber & hash),
       Se.Set Beam.dateOfRegistration dateOfRegistration,
@@ -104,6 +110,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.reviewRequired reviewRequired,
       Se.Set Beam.reviewedAt reviewedAt,
+      Se.Set Beam.unencryptedCertificateNumber unencryptedCertificateNumber,
       Se.Set Beam.userPassedVehicleCategory userPassedVehicleCategory,
       Se.Set Beam.vehicleCapacity vehicleCapacity,
       Se.Set Beam.vehicleClass vehicleClass,

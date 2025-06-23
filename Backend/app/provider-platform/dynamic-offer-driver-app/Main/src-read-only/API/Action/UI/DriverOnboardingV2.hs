@@ -41,11 +41,56 @@ type API =
            "durationInMin"
            Kernel.Types.Common.Minutes
       :> QueryParam
+           "tripCategory"
+           Domain.Types.Common.TripCategory
+      :> QueryParam
            "vehicleServiceTier"
            Domain.Types.Common.ServiceTierType
       :> Get
            '[JSON]
            [API.Types.UI.DriverOnboardingV2.RateCardResp]
+      :<|> TokenAuth
+      :> "driver"
+      :> "vehiclePhotos"
+      :> MandatoryQueryParam
+           "rcNo"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
+      :<|> TokenAuth
+      :> "driver"
+      :> "vehiclePhotosB64"
+      :> QueryParam
+           "back"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "backInterior"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "front"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "frontInterior"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "left"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "odometer"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "onlyLatest"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "right"
+           Kernel.Prelude.Bool
+      :> MandatoryQueryParam
+           "rcNo"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
       :<|> TokenAuth
       :> "driver"
       :> "updateAirCondition"
@@ -145,7 +190,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -165,10 +210,39 @@ getDriverRateCard ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
     Kernel.Prelude.Maybe Kernel.Types.Common.Minutes ->
+    Kernel.Prelude.Maybe Domain.Types.Common.TripCategory ->
     Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType ->
     Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getDriverRateCard a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+
+getDriverVehiclePhotos ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
+  )
+getDriverVehiclePhotos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDriverVehiclePhotosB64 ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
+  )
+getDriverVehiclePhotosB64 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotosB64 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

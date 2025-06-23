@@ -17,7 +17,7 @@ module Screens.DocumentCaptureScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>))
+import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>), show)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -43,7 +43,18 @@ import Common.Types.App
 import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (ValidateDocumentModalAction var1) = "ValidateDocumentModalAction_" <> show var1
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (ChangeVehicleAC var1) = "ChangeVehicleAC_" <> show var1
+  show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
+  show (WhatsAppClick) = "WhatsAppClick"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

@@ -205,9 +205,9 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
                 QDS.updatePayoutOrderId (Just uid) dailyStats.id
               createOrderReq <- createReq payoutConfig vpa uid req.driverId payoutConfig.referralRewardAmountPerRide
-              let serviceName = DEMSC.PayoutService PT.Juspay
+              payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
               let entityName = DLP.DAILY_STATS_VIA_DASHBOARD
-                  createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
+                  createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id payoutServiceName (Just driver.id.getId)
               void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Just $ Kernel.Types.Id.cast merchantOpCity.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
             Nothing -> do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
@@ -243,6 +243,8 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
                     payoutStatus = DDS.Processing,
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
+                    numDriversOnboarded = 0,
+                    numFleetsOnboarded = 0,
                     createdAt = now,
                     updatedAt = now,
                     merchantId = ride.merchantId,
@@ -301,13 +303,14 @@ postPayoutPayoutDriversSetBlockState _merchantShortId _opCity req = do
 postPayoutPayoutUpdateVPA :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateVpaReq -> Environment.Flow APISuccess
 postPayoutPayoutUpdateVPA _merchantShortId _opCity req = do
   person <- QPerson.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+  paymentServiceName <- TPayment.decidePaymentService (DEMSC.PaymentService Payment.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   let verifyVPAReq =
         KT.VerifyVPAReq
           { orderId = Nothing,
             customerId = Just person.id.getId,
             vpa = req.vpa
           }
-      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId (DEMSC.PaymentService Payment.Juspay)
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId paymentServiceName (Just person.id.getId)
   resp <- try @_ @SomeException $ Payout.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
@@ -322,6 +325,7 @@ postPayoutPayoutUpdateVPA _merchantShortId _opCity req = do
 postPayoutPayoutRefundRegistrationAmount :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.RefundRegAmountReq -> Environment.Flow APISuccess
 postPayoutPayoutRefundRegistrationAmount merchantShortId opCity req = do
   driverInfo <- QDI.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+  driver <- QPerson.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
   if driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded && isJust driverInfo.payoutVpa
     then do
       mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] (cast req.driverId) DPlan.YATRI_SUBSCRIPTION
@@ -339,9 +343,9 @@ postPayoutPayoutRefundRegistrationAmount merchantShortId opCity req = do
             payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
             uid <- generateGUID
             createOrderReq <- createReq payoutConfig (fromMaybe "" driverInfo.payoutVpa) uid req.driverId registrationAmount
-            let serviceName = DEMSC.PayoutService PT.Juspay
-                entityName = DLP.BACKLOG
-                createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
+            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
+            let entityName = DLP.BACKLOG
+                createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id payoutServiceName (Just req.driverId.getId)
             logDebug $ "calling payoutOrder with driverId: " <> req.driverId.getId <> " | registration amount: " <> show registrationAmount <> " | orderId: " <> show uid
             void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Just $ Kernel.Types.Id.cast merchantOpCity.id) (cast req.driverId) (Just [driverFee.id.getId]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
         _ -> logDebug $ "No registration fee found for driverId: " <> req.driverId.getId
@@ -354,6 +358,7 @@ callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
   when (isJust payoutOrder.retriedOrderId) $ throwError $ InvalidRequest "Payout Order Already Retried"
   let driverId = Id payoutOrder.customerId
   dInfo <- QDI.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+  driver <- QPerson.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
   mbVehicle <- QVeh.findById (cast driverId)
   let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
@@ -362,9 +367,9 @@ callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
   when (orderStatusRep.status `elem` [TPayout.FULFILLMENTS_FAILURE, TPayout.FULFILLMENTS_CANCELLED, TPayout.FAILURE, TPayout.ERROR]) do
     uid <- generateGUID
     createOrderReq <- createReq payoutConfig (fromMaybe "" dInfo.payoutVpa) uid driverId payoutOrder.amount.amount -- payout vpa will always exist here
-    let serviceName = DEMSC.PayoutService PT.Juspay
-        entityName = DLP.RETRY_VIA_DASHBOARD
-        createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
+    payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
+    let entityName = DLP.RETRY_VIA_DASHBOARD
+        createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id payoutServiceName (Just driver.id.getId)
     QPayoutOrder.updateRetriedOrderId (Just uid) payoutOrder.orderId
     void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Just $ Kernel.Types.Id.cast merchantOpCity.id) (cast driverId) payoutOrder.entityIds (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
     updateDailyStatsStatus uid (Id payoutOrder.customerId) payoutOrder.entityIds
@@ -380,13 +385,14 @@ createReq :: DPC.PayoutConfig -> Text -> Text -> Id Dashboard.Common.Driver -> H
 createReq payoutConfig vpa uid driverId amount = do
   person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   phoneNo <- mapM decrypt person.mobileNumber
-  pure $ Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email person.id.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
+  pure $ Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email person.id.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
 
 getPayoutOrderStatus :: (Id Dashboard.Common.Driver, Id Domain.Types.Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> PO.PayoutOrder -> DPC.PayoutConfig -> Environment.Flow Juspay.PayoutOrderStatusResp
 getPayoutOrderStatus (driverId, merchantId, merchantOpCityId) payoutOrder payoutConfig = do
+  person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let payoutOrderStatusReq = Juspay.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
-      serviceName = DEMSC.PayoutService PT.Juspay
-  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
+  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId payoutServiceName (Just $ getId driverId) payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status payoutOrder.orderId (Just statusResp)
   when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG, DLP.DAILY_STATS_VIA_DASHBOARD, DLP.RETRY_VIA_DASHBOARD]) payoutOrder.entityName) do
     whenJust payoutOrder.entityIds $ \dStatsIds -> do

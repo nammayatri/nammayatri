@@ -61,7 +61,40 @@ import Resource.Constants as Const
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction) = "NoAction"
+  show (ChangeTab _) = "ChangeTab"
+  show (BackPressed) = "BackPressed"
+  show (PrimaryButtonActionController _) = "PrimaryButtonActionController"
+  show (BottomNavBarAction _) = "BottomNavBarAction"
+  show (RideHistoryAPIResponseAction _) = "RideHistoryAPIResponseAction"
+  show (RideSummaryAPIResponseAction _ _ _) = "RideSummaryAPIResponseAction"
+  show (UpdateRidesEver _) = "UpdateRidesEver"
+  show (DriverSummary _) = "DriverSummary"
+  show (CoinTransactionResponseAction _) = "CoinTransactionResponseAction"
+  show (CoinUsageResponseAction _) = "CoinUsageResponseAction"
+  show (CountDown _ _ _) = "CountDown"
+  show (AfterRender) = "AfterRender"
+  show (SelectPlan _) = "SelectPlan"
+  show (GenericHeaderAC _) = "GenericHeaderAC"
+  show (PopUpModalAC _) = "PopUpModalAC"
+  show (CalendarAC _) = "CalendarAC"
+  show (ShowCalendarPopup) = "ShowCalendarPopup"
+  show (RenderSlider) = "RenderSlider"
+  show (SliderCallback _) = "SliderCallback"
+  show (RequestInfoCardAction _) = "RequestInfoCardAction"
+  show (ShowCoinsUsagePopup) = "ShowCoinsUsagePopup"
+  show (ErrorModalActionController _) = "ErrorModalActionController"
+  show (BarViewSelected _) = "BarViewSelected"
+  show (LeftChevronClicked _) = "LeftChevronClicked"
+  show (RightChevronClicked _) = "RightChevronClicked"
+  show (OpenFaqQuestion _) = "OpenFaqQuestion"
+  show (ShowPaymentHistory) = "ShowPaymentHistory"
+  show (FaqViewAction) = "FaqViewAction"
+  show (RemoveLottie) = "RemoveLottie"
+  show (OpenTripDetails _) = "OpenTripDetails"
+  show (LoadMore) = "LoadMore"
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
+  show (ShowMyPlanPage) = "ShowMyPlanPage"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -740,6 +773,7 @@ dummyRideHistoryItem = RidesInfo {
       requestedVehicleVariant : Nothing,
       customerExtraFee : Nothing,
       disabilityTag : Nothing,
+      coinsRewardedOnGoldTierRide : Nothing,
       payerVpa : Nothing,
       autoPayStatus : Nothing,
       driverGoHomeRequestId : Nothing,
@@ -773,5 +807,6 @@ dummyRideHistoryItem = RidesInfo {
       senderDetails : Nothing,
       receiverDetails : Nothing,
       coinsEarned : Nothing,
-      stops : Nothing
+      stops : Nothing,
+      isPetRide : Nothing
 }

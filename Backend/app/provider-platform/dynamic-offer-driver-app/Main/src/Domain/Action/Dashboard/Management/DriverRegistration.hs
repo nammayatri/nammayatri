@@ -23,25 +23,34 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationUnderReviewDrivers,
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
+    postDriverRegistrationRegisterAadhaar,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified API.Types.UI.DriverOnboardingV2
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Tuple.Extra as TE
+import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
+import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
+import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
+import qualified Domain.Types.VehicleNOC as DNOC
 import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (map, whenJust)
+import EulerHS.Prelude hiding (find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -56,12 +65,16 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverLicense as QDL
+import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
+import qualified Storage.Queries.VehicleNOC as QVNOC
 import qualified Storage.Queries.VehiclePUC as QVPUC
 import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
@@ -69,25 +82,31 @@ import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 import Tools.Notifications as Notify
 
-getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
-getDriverRegistrationDocumentsList merchantShortId city driverId = do
+getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
+getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   merchant <- findMerchantByShortId merchantShortId
-  pucImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePUC)
-  permitImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePermit)
-  dlImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
-  vInspectionImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInspectionForm)
-  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRegistrationCertificate)
-  uploadProfImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.UploadProfile)
-  vehicleFitnessCertImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFitnessCertificate)
-  vehicleInsImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInsurance)
-  profilePics <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.ProfilePhoto)
-  vehicleFrontImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFront)
-  vehicleBackImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBack)
-  vehicleRightImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRight)
-  vehicleLeftImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleLeft)
-  vehicleFrontInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFrontInterior)
-  vehicleBackInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBackInterior)
-  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) dlImgs))
+  odometerImg <- getVehicleImages merchant.id Domain.Odometer
+  vehicleFrontImgs <- getVehicleImages merchant.id Domain.VehicleFront
+  vehicleBackImgs <- getVehicleImages merchant.id Domain.VehicleBack
+  vehicleRightImgs <- getVehicleImages merchant.id Domain.VehicleRight
+  vehicleLeftImgs <- getVehicleImages merchant.id Domain.VehicleLeft
+  vehicleFrontInteriorImgs <- getVehicleImages merchant.id Domain.VehicleFrontInterior
+  vehicleBackInteriorImgs <- getVehicleImages merchant.id Domain.VehicleBackInterior
+  pucImages <- getDriverImages merchant.id Domain.VehiclePUC
+  permitImages <- getDriverImages merchant.id Domain.VehiclePermit
+  dlImgs <- groupByTxnIdInHM <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
+  vInspectionImgs <- getDriverImages merchant.id Domain.VehicleInspectionForm
+  vehRegImgs <- getDriverImages merchant.id Domain.VehicleRegistrationCertificate
+  uploadProfImgs <- getDriverImages merchant.id Domain.UploadProfile
+  vehicleFitnessCertImgs <- getDriverImages merchant.id Domain.VehicleFitnessCertificate
+  vehicleInsImgs <- getDriverImages merchant.id Domain.VehicleInsurance
+  profilePics <- getDriverImages merchant.id Domain.ProfilePhoto
+  gstImgs <- getDriverImages merchant.id Domain.GSTCertificate
+  panImgs <- getDriverImages merchant.id Domain.PanCard
+  businessLicenseImgs <- getDriverImages merchant.id Domain.BusinessLicense
+  aadhaarImgs <- getDriverImages merchant.id Domain.AadhaarCard
+  vehicleNOCImgs <- getDriverImages merchant.id Domain.VehicleNOC
+  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
   allRCDetails <- mapM convertRCToRCDetails allRCImgs
@@ -116,14 +135,29 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
         vehicleRight = vehicleRightImgs,
         vehicleLeft = vehicleLeftImgs,
         vehicleFrontInterior = vehicleFrontInteriorImgs,
-        vehicleBackInterior = vehicleBackInteriorImgs
+        vehicleBackInterior = vehicleBackInteriorImgs,
+        pan = panImgs,
+        businessLicense = businessLicenseImgs,
+        aadhaar = aadhaarImgs,
+        vehicleNOC = vehicleNOCImgs,
+        odometer = odometerImg,
+        gstCertificate = gstImgs
       }
   where
+    getVehicleImages merchantId imageType = case mbRcId of
+      Just rcId -> map (.id.getId) <$> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing)
+      Nothing -> pure []
+
+    getDriverImages merchantId imageType = map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchantId (cast driverId) imageType)
+
+    groupByTxnIdInHM = handleNullTxnIds . foldl' (\acc img -> HM.insertWith (++) (fromMaybe "Nothing" img.workflowTransactionId) [img.id.getId] acc) (HM.empty :: HM.HashMap Text [Text])
+    handleNullTxnIds hm = (maybe [] (map (: [])) $ HM.lookup "Nothing" hm) ++ (HM.elems $ HM.delete "Nothing" hm)
     convertDLToDLDetails dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
       pure $
         Common.DLDetails
-          { driverLicenseNumber = driverLicenseNumberDec,
+          { driverName = dl.driverName,
+            driverLicenseNumber = driverLicenseNumberDec,
             operatingCity = show city,
             driverDateOfBirth = dl.driverDob,
             classOfVehicles = dl.classOfVehicles,
@@ -150,7 +184,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
             vehicleSeatBelts = rc.vehicleSeatBelts,
             createdAt = rc.createdAt,
             dateOfRegistration = rc.dateOfRegistration,
-            vehicleModelYear = rc.vehicleModelYear
+            vehicleModelYear = rc.vehicleModelYear,
+            failedRules = rc.failedRules
           }
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
@@ -178,11 +213,35 @@ mapDocumentType Common.VehicleFitnessCertificateImage = Domain.VehicleFitnessCer
 mapDocumentType Common.VehicleInspectionImage = Domain.VehicleInspectionForm
 mapDocumentType Common.ProfilePhotoImage = Domain.ProfilePhoto
 mapDocumentType Common.PanCard = Domain.PanCard
+mapDocumentType Common.Permissions = Domain.Permissions
+mapDocumentType Common.SubscriptionPlan = Domain.SubscriptionPlan
+mapDocumentType Common.ProfileDetails = Domain.ProfileDetails
+mapDocumentType Common.AadhaarCard = Domain.AadhaarCard
+mapDocumentType Common.SocialSecurityNumber = Domain.SocialSecurityNumber
+mapDocumentType Common.GSTCertificate = Domain.GSTCertificate
+mapDocumentType Common.BackgroundVerification = Domain.BackgroundVerification
+mapDocumentType Common.UploadProfileImage = Domain.UploadProfile
+mapDocumentType Common.VehicleNOC = Domain.VehicleNOC
+mapDocumentType Common.BusinessLicense = Domain.BusinessLicense
+mapDocumentType Common.VehicleFront = Domain.VehicleFront
+mapDocumentType Common.VehicleBack = Domain.VehicleBack
+mapDocumentType Common.VehicleFrontInterior = Domain.VehicleFrontInterior
+mapDocumentType Common.VehicleBackInterior = Domain.VehicleBackInterior
+mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
+mapDocumentType Common.VehicleRight = Domain.VehicleRight
+mapDocumentType Common.Odometer = Domain.Odometer
+mapDocumentType Common.InspectionHub = Domain.InspectionHub
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  whenJust req.requestorId $ \requestorId -> do
+    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
+    entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
+    requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+    isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
   res <-
     validateImage
       True
@@ -193,7 +252,8 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           rcNumber = req.rcNumber,
           validationStatus = Nothing,
           workflowTransactionId = Nothing,
-          vehicleCategory = Nothing
+          vehicleCategory = Nothing,
+          sdkFailureReason = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
@@ -209,6 +269,9 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
         vehicleCategory = Nothing,
+        nameOnCardFromSdk = Nothing,
+        requestId = Nothing,
+        sdkTransactionId = Nothing,
         ..
       }
 
@@ -227,6 +290,20 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
           ..
         }
     )
+
+postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
+postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  DOV.postDriverRegisterAadhaarCard (Just (cast driverId), merchant.id, merchantOpCityId) (castAadharReq req)
+  where
+    castAadharReq Common.AadhaarCardReq {..} = API.Types.UI.DriverOnboardingV2.AadhaarCardReq {aadhaarBackImageId = cast <$> aadhaarBackImageId, aadhaarFrontImageId = cast <$> aadhaarFrontImageId, validationStatus = convertValidationStatus validationStatus, ..}
+    convertValidationStatus status = case status of
+      Common.APPROVED -> API.Types.UI.DriverOnboardingV2.APPROVED
+      Common.DECLINED -> API.Types.UI.DriverOnboardingV2.DECLINED
+      Common.AUTO_APPROVED -> API.Types.UI.DriverOnboardingV2.AUTO_APPROVED
+      Common.AUTO_DECLINED -> API.Types.UI.DriverOnboardingV2.AUTO_DECLINED
+      Common.NEEDS_REVIEW -> API.Types.UI.DriverOnboardingV2.NEEDS_REVIEW
 
 --make a separate function casting the driverVehiclereq
 
@@ -292,8 +369,7 @@ approveAndUpdateRC req = do
 approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehicleInsurance
-  QImage.updateDocumentExpiry req.policyExpiry imageId
+  QImage.updateVerificationStatusAndExpiry (Just VALID) req.policyExpiry Domain.VehicleInsurance imageId
   vinsurance <- QVI.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -345,8 +421,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
 approveAndUpdatePUC :: Common.VPUCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehiclePUC
-  QImage.updateDocumentExpiry (Just req.pucExpiry) imageId
+  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.pucExpiry) Domain.VehiclePUC imageId
   vpuc <- QVPUC.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -385,8 +460,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
 approveAndUpdatePermit :: Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehiclePermit
-  QImage.updateDocumentExpiry (Just req.permitExpiry) imageId
+  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.permitExpiry) Domain.VehiclePermit imageId
   vPremit <- QVPermit.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -484,7 +558,126 @@ approveAndUpdateDL req = do
             DDL.verificationStatus = VALID
           }
   QDL.updateByPrimaryKey updatedDL
-  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.DriverLicense
+  void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) Domain.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
+
+approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
+  let imageId = Id req.documentImageId.getId
+  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.nocExpiry) Domain.VehicleNOC imageId
+  vnoc <- QVNOC.findByImageId imageId
+  now <- getCurrentTime
+  uuid <- generateGUID
+  rcNoEnc <- encrypt rcNumber
+  rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+  nocNoEnc <- encrypt req.nocNumber
+  case vnoc of
+    Just noc -> do
+      let updatednoc =
+            noc{DNOC.nocNumber = nocNoEnc,
+                DNOC.nocExpiry = req.nocExpiry,
+                DNOC.rcId = rc.id,
+                DNOC.verificationStatus = VALID
+               }
+      QVNOC.updateByPrimaryKey updatednoc
+    Nothing -> do
+      nocImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      let noc =
+            DNOC.VehicleNOC
+              { documentImageId = imageId,
+                driverId = nocImage.personId,
+                id = uuid,
+                nocExpiry = req.nocExpiry,
+                nocNumber = nocNoEnc,
+                rcId = rc.id,
+                verificationStatus = VALID,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mOpCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QVNOC.create noc
+
+approveAndUpdateBusinessLicense :: Common.BusinessLicenseApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateBusinessLicense req mId mOpCityId = do
+  let imageId = Id req.documentImageId.getId
+  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.licenseExpiry) Domain.BusinessLicense imageId
+  mbBl <- QBL.findByImageId imageId
+  now <- getCurrentTime
+  uuid <- generateGUID
+  businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
+  case mbBl of
+    Just bl -> do
+      let updatedBl =
+            bl{DBL.licenseNumber = businessLicenseNumberEnc,
+               DBL.licenseExpiry = req.licenseExpiry,
+               DBL.verificationStatus = VALID
+              }
+      QBL.updateByPrimaryKey updatedBl
+    Nothing -> do
+      blImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      let bl =
+            DBL.BusinessLicense
+              { documentImageId = imageId,
+                driverId = blImage.personId,
+                id = uuid,
+                licenseExpiry = req.licenseExpiry,
+                licenseNumber = businessLicenseNumberEnc,
+                verificationStatus = VALID,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mOpCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QBL.create bl
+
+approveAndUpdatePan :: Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdatePan req mId mOpCityId = do
+  let imageId = Id req.documentImageId.getId
+  QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) Domain.PanCard
+  mbPan <- QPan.findByImageId imageId
+  now <- getCurrentTime
+  uuid <- generateGUID
+  panNoEnc <- encrypt req.panNumber
+  case mbPan of
+    Just pan -> do
+      let updatedPan =
+            pan{DPan.panCardNumber = panNoEnc,
+                DPan.verificationStatus = VALID,
+                docType = castReqTypeToDomain <$> req.docType,
+                driverNameOnGovtDB = req.driverNameOnGovtDB,
+                driverDob = req.driverDob
+               }
+      QPan.updateByPrimaryKey updatedPan
+    Nothing -> do
+      panImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      person <- QPerson.findById panImage.personId >>= fromMaybeM (PersonNotFound panImage.personId.getId)
+      let pan =
+            DPan.DriverPanCard
+              { panCardNumber = panNoEnc,
+                documentImageId1 = imageId,
+                driverId = panImage.personId,
+                id = uuid,
+                verificationStatus = VALID,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mOpCityId,
+                createdAt = now,
+                updatedAt = now,
+                consent = True,
+                consentTimestamp = now,
+                docType = castReqTypeToDomain <$> req.docType,
+                documentImageId2 = Nothing,
+                driverDob = req.driverDob,
+                driverName = Just person.firstName,
+                driverNameOnGovtDB = req.driverNameOnGovtDB,
+                failedRules = [],
+                verifiedBy = Just DPan.DASHBOARD
+              }
+      QPan.create pan
+
+castReqTypeToDomain :: Common.PanType -> DPan.PanType
+castReqTypeToDomain = \case
+  Common.INDIVIDUAL -> DPan.INDIVIDUAL
+  Common.BUSINESS -> DPan.BUSINESS
 
 handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleApproveRequest approveReq merchantId merchantOperatingCityId = do
@@ -503,6 +696,9 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId = do
     Common.SSNApprove ssnNum -> do
       ssnEnc <- encrypt ssnNum
       QSSN.updateVerificationStatusAndReasonBySSN VALID Nothing (ssnEnc & hash)
+    Common.NOC req -> approveAndUpdateNOC req merchantId merchantOperatingCityId
+    Common.BusinessLicenseImg req -> approveAndUpdateBusinessLicense req merchantId merchantOperatingCityId
+    Common.Pan req -> approveAndUpdatePan req merchantId merchantOperatingCityId
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleRejectRequest rejectReq _ merchantOperatingCityId = do
@@ -524,8 +720,9 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
           whenJust vInsurance $ \_ -> do
             QVI.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
         Domain.DriverLicense -> do
+          dl <- QDL.findByImageId imageId >>= fromMaybeM (InternalError "DL not found by image id")
           QDL.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
-          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason))) (Just dl.documentImageId1, dl.documentImageId2)
         Domain.VehicleRegistrationCertificate -> do
           QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
@@ -535,6 +732,15 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         Domain.VehiclePUC -> do
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
           QVPUC.updateVerificationStatusByImageId INVALID imageId
+        Domain.VehicleNOC -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QVNOC.updateVerificationStatusByImageId INVALID imageId
+        Domain.BusinessLicense -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QBL.updateVerificationStatusByImageId INVALID imageId
+        Domain.PanCard -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QPan.updateVerificationStatusByImageId INVALID imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
       Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken

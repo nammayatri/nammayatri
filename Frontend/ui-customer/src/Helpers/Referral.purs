@@ -14,6 +14,7 @@ import JBridge as JB
 import Helpers.Utils (decodeError)
 import ConfigProvider
 import Helpers.Utils (getCityConfig)
+import Mobility.Prelude (startsWith)
 
 applyReferralCode :: String -> FlowBT String ReferralStatus
 applyReferralCode referralCode  = do
@@ -33,7 +34,7 @@ applyReferralCode referralCode  = do
         pure REFERRAL_APPLIED
       Left err -> do
         if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")
-            || decodeError err.response.errorMessage "errorMessage" == "Referral Code must have 6 digits"
+            || startsWith "Referral Code must" (decodeError err.response.errorMessage "errorMessage") 
             || decodeError err.response.errorMessage "errorMessage" == "Cannot refer yourself"
             || decodeError err.response.errorMessage "errorMessage" == "Invalid ReferralCode") then do
             setValueToLocalStore REFERRER_URL ""

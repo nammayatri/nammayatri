@@ -18,8 +18,9 @@ import Data.Aeson
 import Data.Default.Class
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.CallFeedbackFCM as CallFeedbackFCM
 import Domain.Action.UI.SearchRequestForDriver
-import Domain.Types.ApprovalRequest as DTR
+import Domain.Types.AlertRequest as DAR
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -87,6 +88,12 @@ data EditPickupLocationReq = EditPickupLocationReq
 data CancellationRateBaseNudgeData = CancellationRateBaseNudgeData
   { driverId :: Text,
     driverCancellationRate :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data DrunkAndDriveViolationWarningData = DrunkAndDriveViolationWarningData
+  { driverId :: Text,
+    drunkAndDriveViolationCount :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -944,6 +951,33 @@ sendCancellationRateNudgeOverlay mOpCityId person fcmType req entityData = do
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
     body = FCMNotificationBody $ fromMaybe "Description" req.description
 
+drunkAndDriveViolationWarningOverlay ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FCM.FCMOverlayReq ->
+  DrunkAndDriveViolationWarningData ->
+  m ()
+drunkAndDriveViolationWarningOverlay mOpCityId person req entityData = do
+  transporterConfig <- findByMerchantOpCityId mOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.DRUNK_AND_DRIVE_VIOLATION_WARNING,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.driverId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.DRUNK_AND_DRIVE_VIOLATION_WARNING Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
+    body = FCMNotificationBody $ fromMaybe "Description" req.description
+
 driverStopDetectionAlert ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -1116,7 +1150,8 @@ data WMBTripAssignedData = WMBTripAssignedData
     vehicleNumber :: Text,
     vehicleServiceTierType :: ServiceTierType,
     roundRouteCode :: Maybe Text,
-    isFirstBatchTrip :: Bool
+    isFirstBatchTrip :: Bool,
+    status :: DTT.TripStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -1198,6 +1233,29 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
           ]
 
 {- Run this to trigger realtime GRPC notifications -}
+notifyFleetWithGRPCProvider ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ToJSON a
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Text ->
+  Text ->
+  Id Person ->
+  a ->
+  m ()
+notifyFleetWithGRPCProvider merchantOpCityId category title body driverId entityData = do
+  clientId <-
+    QFDA.findByDriverId driverId True
+      >>= \case
+        Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
+        Nothing -> pure driverId
+  notifyWithGRPCProvider merchantOpCityId category title body clientId entityData
+
+{- Run this to trigger realtime GRPC notifications -}
 notifyWithGRPCProvider ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -1212,22 +1270,17 @@ notifyWithGRPCProvider ::
   Id Person ->
   a ->
   m ()
-notifyWithGRPCProvider merchantOpCityId category title body driverId entityData = do
+notifyWithGRPCProvider merchantOpCityId category title body clientId entityData = do
   merchantNotificationServiceConfig <-
     QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
       notificationId <- generateGUID
-      clientId <-
-        QFDA.findByDriverId driverId True
-          >>= \case
-            Just fleetDriverAssociation -> pure fleetDriverAssociation.fleetOwnerId
-            Nothing -> pure driverId.getId
-      GRPC.notifyPerson cfg (notificationData clientId) notificationId
+      GRPC.notifyPerson cfg notificationData notificationId
     _ -> throwError $ InternalError "Unknow Service Config"
   where
-    notificationData clientId =
+    notificationData =
       Notification.NotificationReq
         { category = category,
           subCategory = Nothing,
@@ -1237,7 +1290,7 @@ notifyWithGRPCProvider merchantOpCityId category title body driverId entityData 
           dynamicParams = EmptyDynamicParam,
           body = body,
           title = title,
-          auth = Notification.Auth clientId Nothing Nothing,
+          auth = Notification.Auth clientId.getId Nothing Nothing,
           ttl = Nothing,
           sound = Nothing
         }
@@ -1255,7 +1308,7 @@ runWithServiceConfigForProviders ::
   (FCMData a -> FCMData c) ->
   m () ->
   m ()
-runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification.notifyPersonWithAllProviders handler req
+runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification.notifyPersonWithAllProviders handler req Nothing
   where
     handler = Notification.NotficationServiceHandler {..}
 
@@ -1319,7 +1372,7 @@ requestRejectionNotification ::
   Text ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
-  DTR.ApprovalRequest ->
+  DAR.AlertRequest ->
   m ()
 requestRejectionNotification merchantOpCityId notificationTitle message driver mbToken entityData = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
@@ -1378,3 +1431,27 @@ sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToke
     title = FCM.FCMNotificationTitle notificationTitle
     body =
       FCMNotificationBody message
+
+sendDriverEKDLiveFCM ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  CallFeedbackFCM.CallFeedbackEntity ->
+  m ()
+sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language entityData = do
+  logDebug $ "We are in EKD live call feedback"
+  let fcmReq = createFCMReq "EKD_LIVE_CALL_FEEDBACK" driverId.getId FCM.Person (\r -> r {showType = FCM.DO_NOT_SHOW})
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    mbDeviceToken
+    language
+    Nothing
+    fcmReq
+    (pure entityData)
+    []
+    Nothing

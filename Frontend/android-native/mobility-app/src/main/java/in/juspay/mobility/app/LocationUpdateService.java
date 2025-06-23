@@ -37,6 +37,7 @@ import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -66,8 +67,15 @@ import com.google.firebase.perf.metrics.AddTrace;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -91,11 +99,14 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
+@Deprecated
 public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
     private static final String LOCATION_PAYLOAD = "LOCATION_PAYLOAD";
     private static final String LAST_LOCATION_TIME = "LAST_LOCATION_TIME";
+    private static final String DRIVER_CURRENT_LOCATION_PRIORITY_KEY = "driver_current_location_priority";
+    private static final String DRIVER_FUSED_LOCATION_PRIORITY_KEY = "driver_fused_location_priority";
     final int notificationServiceId = 15082022; // ARDU pilot launch date : DDMMYYYY
     final int alertNotificationId = 07102022;
     FusedLocationProviderClient fusedLocationProviderClient, fusedLocClientForDistanceCal;
@@ -145,6 +156,7 @@ public class LocationUpdateService extends Service {
     private boolean isSpecialpickup = false;
     private String driverId = "empty";
 
+
     enum LocationSource {
         CurrentLocation,
         LastLocation
@@ -179,13 +191,54 @@ public class LocationUpdateService extends Service {
     }
 
     private final LocalBinder binder = new LocalBinder();
+    private boolean storeLocationInFile = false;
+    private final String FILE_NAME = "lat_long.txt";
+
+    @Override
+    public void onRebind(Intent intent) {
+        super.onRebind(intent);
+        System.out.println("NammaMater: onRebind");
+    }
 
     @Nullable
     @Override
-    public IBinder onBind(Intent intent)
-    {
+    public IBinder onBind(Intent intent) {
+        System.out.println("NammaMeter: onBind");
+        storeLocationInFile = false;
         return binder;
     }
+
+    @Nullable
+    @Override
+    public boolean onUnbind(Intent intent){
+        System.out.println("NammaMeter: onUnbind");
+        storeLocationInFile = true;
+         super.onUnbind(intent);
+         return true;
+    }
+
+    public void appendLatLngToFile(String value) {
+//        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+        File path = getFilesDir();
+
+        File newDir = new File(path + "/" + FILE_NAME );
+
+        try {
+            if(!newDir.exists()){
+                newDir.createNewFile();
+            }
+
+            FileOutputStream writer = new FileOutputStream(new File(path, FILE_NAME), true);
+            writer.write((value + "\n").getBytes());
+            writer.close();
+//            emitReactEvent();
+            System.out.println("NammaMeter: Writen to file " + newDir);
+            System.out.println("NammaMeter: value "+ value);
+        } catch (Exception e) {
+           System.out.println("Exception e "+ e.toString());
+        }
+    }
+
 
     @Override
     public void onCreate() {
@@ -207,11 +260,11 @@ public class LocationUpdateService extends Service {
         initialiseJSONObjects();
         isLocationUpdating = false;
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
         executorLocUpdate = Executors.newSingleThreadExecutor();
         executorLocUpdate.shutdown();
         timer = new Timer();
         resetTimer(delayForGNew, minDispDistanceNew, delayForTNew);
+
 
         internetBroadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -240,6 +293,7 @@ public class LocationUpdateService extends Service {
             context.registerReceiver(internetBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
     }
+
 
     private boolean isNetworkAvailable(Context context) {
         ConnectivityManager connectivityManager
@@ -273,11 +327,8 @@ public class LocationUpdateService extends Service {
                 updateStorage("TRIP_DISTANCE", "0");
                 finalDistanceWithAcc = 0;
                 finalDistance = 0;
-                startDistanceCalculation();
             } else if (startDistanceCalStr != null && startDistanceCalStr.equals("ended")) {
                 Log.d(LOG_TAG, "OnStart - StopDistanceCalculation with values - FinalDistance: " + finalDistance + ", FinalAccDistance: " + finalDistanceWithAcc + " LFinalDistance - " + getValueFromStorage("TRIP_DISTANCE") + " LFinalAccDistance - " + getValueFromStorage("TRIP_DISTANCE_ACC"));
-                if (fusedLocClientForDistanceCal != null && calDistanceCallback != null)
-                    fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
                 finalDistanceWithAcc = 0;
                 finalDistance = 0;
                 isDistanceCalulation = false;
@@ -309,20 +360,18 @@ public class LocationUpdateService extends Service {
         return START_STICKY;
     }
 
-    private void startDistanceCalculation() {
-        LocationCallback locCallback = getDistanceCalCallback();
-        LocationRequest locReq = createDistanceCalculation(3000, 20, 3000);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
+    public void checkVersionMismatch() {
+        String locationServiceVersion = getValueFromStorage("LOCATION_SERVICE_VERSION");
+        if (locationServiceVersion != null && !locationServiceVersion.equals("V1")) {
+            stopSelf();
         }
-        fusedLocClientForDistanceCal.requestLocationUpdates(locReq, locCallback, Looper.getMainLooper());
     }
 
+
     private int getLocationPriority() {
-        int priority = Priority.PRIORITY_HIGH_ACCURACY;
+        int priority = Utils.getLocationPriority(DRIVER_CURRENT_LOCATION_PRIORITY_KEY);
         if( !driverRideStatus.equals("ON_PICKUP")) {
-            String configPriority = remoteConfigs.getString("driver_location_priority");
-            priority = Utils.getPriority(configPriority);
+            priority = Utils.getLocationPriority(DRIVER_FUSED_LOCATION_PRIORITY_KEY);
         }
         Log.d(LOG_TAG, "Location Priority is " + priority + " for driver app and ride status " + driverRideStatus);
         return priority;
@@ -335,34 +384,6 @@ public class LocationUpdateService extends Service {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                fusedLocClientForDistanceCal.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
-                        .addOnSuccessListener(location -> {
-                            if (location != null) {
-                                isDistanceCalulation = true;
-                                int distanceBtLatLng, distanceBtLatLngWithAcc;
-                                String accHolder = getValueFromStorage("ACCURACY_THRESHOLD");
-                                String accuracyThreshold = accHolder == null ? "100.0" : accHolder;
-                                if (prevLocation != null && prevAccLocation != null) {
-                                    distanceBtLatLng = (int) location.distanceTo(prevLocation);
-
-                                    finalDistance += distanceBtLatLng;
-                                    Log.d(LOG_TAG, "LiveFinalDistanceVal - " + finalDistance);
-                                    if (checkLocationAcc(location, accuracyThreshold)) {
-                                        distanceBtLatLngWithAcc = (int) location.distanceTo(prevAccLocation);
-                                        finalDistanceWithAcc += distanceBtLatLngWithAcc;
-                                        Log.d(LOG_TAG, "LiveFinalDistanceVal With Acc - " + finalDistanceWithAcc);
-                                        updateStorage("TRIP_DISTANCE_ACC", Integer.toString(finalDistanceWithAcc));
-                                        prevAccLocation = location;
-                                    }
-                                    updateStorage("TRIP_DISTANCE", Integer.toString(finalDistance));
-                                } else {
-                                    if (checkLocationAcc(location, accuracyThreshold))
-                                        prevAccLocation = location;
-                                }
-                                prevLocation = location;
-                            } else
-                                Log.d(LOG_TAG, "Got NULL in location service to calculate distance");
-                        });
             }
         };
         return calDistanceCallback;
@@ -455,9 +476,6 @@ public class LocationUpdateService extends Service {
         if (fusedLocationProviderClient != null && locationCallback != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         }
-        if (fusedLocClientForDistanceCal != null && calDistanceCallback != null) {
-            fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
-        }
         if (executorLocUpdate != null) executorLocUpdate.shutdown();
         stopForeground(true);
 
@@ -498,6 +516,7 @@ public class LocationUpdateService extends Service {
             timer.scheduleAtFixedRate(tt, 0, delayForT);
         }
     }
+
 
     /* To update driver status if location is disabled. To prevent false location updates*/
     private void updateDriverStatus(Boolean status) {
@@ -750,6 +769,7 @@ public class LocationUpdateService extends Service {
     private void callDriverCurrentLocationAPI(Location location, String locTime, String log, String locationSource, String triggerFunctionValue) {
         try {
             float accuracy = location != null ? location.getAccuracy() : 0;
+            float locationBearing  = location != null ? location.hasBearing() ? location.getBearing() : 0.0f : 0.0f;
             double latitude = location != null ? location.getLatitude() : 0.0;
             double longitude = location != null ? location.getLongitude() : 0.0;
             double locSpeed = location != null && location.hasSpeed() ? location.getSpeed() : 0.0;
@@ -764,16 +784,21 @@ public class LocationUpdateService extends Service {
                 return;
             }
 
+            System.out.println("NammaMeter: storeLocationInFile "+storeLocationInFile);
+
+
             JSONObject locationData = new JSONObject();
 
             locationData.put("pt", point);
             locationData.put("ts", locTime);
             locationData.put("acc", accuracy);
+            locationData.put("bear", locationBearing);
             locationData.put("source", locationSource);
             locationData.put("v", locSpeed);
             if (!locationData.has("pt")) return;
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
+
 
             Log.d(LOG_TAG, "DriverUpdateLoc Payload Created - " + locationPayload);
             Log.d(LOG_TAG, "DriverUpdateLoc Executor Status - " + executorLocUpdate.isShutdown() + " ExecutorOffFor - " + executorBusy + " delayForGNew - " + delayForGNew);
@@ -906,17 +931,9 @@ public class LocationUpdateService extends Service {
     // HELPER FUNCTIONS
     /* creates location request */
     private LocationRequest createLocationRequest(int intervalForLocationUpdate, float minDispDistance) {
-        return new LocationRequest.Builder(getLocationPriority())
+        return new LocationRequest.Builder(getLocationPriority(),intervalForLocationUpdate)
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
-                .build();
-    }
-
-    private LocationRequest createDistanceCalculation(int intervalForLocationUpdate, float minDispDistance, int minInterval) {
-        return new LocationRequest.Builder(getLocationPriority())
-                .setIntervalMillis(intervalForLocationUpdate)
-                .setMinUpdateDistanceMeters(minDispDistance)
-                .setMinUpdateIntervalMillis(minInterval)
                 .build();
     }
 
@@ -1073,69 +1090,113 @@ public class LocationUpdateService extends Service {
     /* create timer task */
     @SuppressLint("MissingPermission")
     private TimerTask createTimer() {
-//        System.out.println("LOCATION_UPDATE: Created Timer");
         timer = new Timer();
-        /* triggering the location update explicitly if we are not getting any updates for 5sec */
+
         timerTask = new TimerTask() {
             @Override
             public void run() {
-
-                if (timerTask != null) {
-                    Log.d(LOG_TAG, "TimerTriggered ");
-                    timer = new Timer();
-                    checkLocation();
-                    if (gpsMethodSwitch.equals("CURRENT")) {
-                        Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
-                        fusedLocationProviderClient.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
-                                .addOnSuccessListener(location -> {
-                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                    if (location != null) {
-                                        long locTimeMilliSeconds = location.getTime();
-                                        Date locTime = new Date(locTimeMilliSeconds);
-                                        String thisLocationTimeStamp = sdf.format(locTime);
-                                        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                        callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        checkNearByPickupZone(location);
-                                    } else {
-                                        System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
-                                        callDriverCurrentLocationAPI(location, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        Exception exception = new Exception("Null Location in fusedLocationProviderClient$getCurrentLocation for ID : " + driverId);
-                                        FirebaseCrashlytics.getInstance().recordException(exception);
-                                    }
-                                })
-                                .addOnFailureListener(Throwable::printStackTrace);
-                    } else {
-                        Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS ELSE");
-                        fusedLocationProviderClient.getLastLocation()
-                                .addOnSuccessListener(location -> {
-                                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                    if (location != null) {
-                                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                        long locTimeMilliSeconds = location.getTime();
-                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                        Date locTime = new Date(locTimeMilliSeconds);
-                                        String thisLocationTimeStamp = sdf.format(locTime);
-                                        callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        checkNearByPickupZone(location);
-                                    } else {
-                                        Exception exception = new Exception("Null Location in fusedLocationProviderClient$getLastLocation for ID : " + driverId);
-                                        FirebaseCrashlytics.getInstance().recordException(exception);
-                                    }
-                                })
-                                .addOnFailureListener(Throwable::printStackTrace);
-                    }
-
-                    System.out.println("Inside else of handler");
+                checkVersionMismatch();
+                // Location strategy: Use either getCurrentLocation with fallbacks or getLastKnownLocation based on GPS method setting
+                if (timerTask == null) return;
+                Log.d(LOG_TAG, "TimerTriggered");
+                timer = new Timer();
+                checkLocation();
+                if (gpsMethodSwitch.equals("CURRENT")) {
+                    Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
+                    fetchCurrentLocationWithFallback();
+                } else {
+                    Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS ELSE");
+                    fetchLastKnownLocation();
                 }
+
+                Log.d(LOG_TAG, "Inside else of handler");
             }
         };
+
         return timerTask;
     }
+
+    @SuppressLint("MissingPermission")
+    private void fetchCurrentLocationWithFallback() {
+        fusedLocationProviderClient.getCurrentLocation(
+                Utils.getLocationPriority(DRIVER_CURRENT_LOCATION_PRIORITY_KEY),
+                cancellationTokenSource.getToken()
+        ).addOnSuccessListener(location -> {
+            long currentTimeMillis = System.currentTimeMillis();
+            SimpleDateFormat sdf = getUTCDateFormatter();
+
+            if (location != null) {
+                long locTimeMillis = location.getTime();
+                long locationTimeThreshold = remoteConfigs.getLong("location_time_expiry");
+                if( locationTimeThreshold == 0L ) locationTimeThreshold = 45000L;
+                if ((currentTimeMillis - locTimeMillis) > locationTimeThreshold) {
+                    Log.d(LOG_TAG, "LOCATION_UPDATE: Location too old, retrying with high accuracy...");
+                    fetchFreshLocationWithHighAccuracy(sdf);
+                    return;
+                }
+                processLocation(location, sdf.format(new Date(locTimeMillis)), "timer_task");
+            } else {
+                Log.d(LOG_TAG, "LOCATION_UPDATE: CURRENT LOCATION IS NULL");
+                processLocation(null, sdf.format(new Date()), "timer_task_null_location");
+            }
+        }).addOnFailureListener(e -> {
+            FirebaseCrashlytics.getInstance().recordException(e);
+            Log.e(LOG_TAG, "fetchCurrentLocationWithFallback Failure: " + e.getMessage());
+        });
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private void fetchFreshLocationWithHighAccuracy(SimpleDateFormat sdf) {
+        fusedLocationProviderClient.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                cancellationTokenSource.getToken()
+        ).addOnSuccessListener(freshLocation -> {
+            if (freshLocation != null) {
+                String timestamp = sdf.format(new Date(freshLocation.getTime()));
+                processLocation(freshLocation, timestamp, "fallback_high_accuracy");
+            } else {
+                System.out.println("FALLBACK_LOCATION: Still null");
+                processLocation(null, sdf.format(new Date()), "fallback_null_location");
+            }
+        }).addOnFailureListener(Throwable::printStackTrace);
+    }
+
+    private void processLocation(Location location, String timestamp, String trigger) {
+        if (location != null) {
+            updateStorage("LAST_KNOWN_LAT", String.valueOf(location.getLatitude()));
+            updateStorage("LAST_KNOWN_LON", String.valueOf(location.getLongitude()));
+            callDriverCurrentLocationAPI(location, timestamp, trigger, LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+            checkNearByPickupZone(location);
+        } else {
+            callDriverCurrentLocationAPI(null, timestamp, trigger, LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+            FirebaseCrashlytics.getInstance().recordException(new Exception("Null Location even after fallback for ID: " + driverId));
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchLastKnownLocation() {
+        fusedLocationProviderClient.getLastLocation()
+                .addOnSuccessListener(location -> {
+                    if (location != null) {
+                        updateStorage("LAST_KNOWN_LAT", String.valueOf(location.getLatitude()));
+                        updateStorage("LAST_KNOWN_LON", String.valueOf(location.getLongitude()));
+
+                        String timestamp = getUTCDateFormatter().format(new Date(location.getTime()));
+                        callDriverCurrentLocationAPI(location, timestamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
+                        checkNearByPickupZone(location);
+                    } else {
+                        FirebaseCrashlytics.getInstance().recordException(new Exception("Null Location in fusedLocationProviderClient$getLastLocation for ID : " + driverId));
+                    }
+                }).addOnFailureListener(Throwable::printStackTrace);
+    }
+    private SimpleDateFormat getUTCDateFormatter() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return sdf;
+    }
+
+
 
     // to cancel timer
     private void cancelTimer() {
@@ -1180,54 +1241,54 @@ public class LocationUpdateService extends Service {
     }
 
     @AddTrace(name = "checkNearByPickupZoneTrace", enabled = true)
-     private void checkNearByPickupZone(Location location) {
-            try {
-                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
-                String enableSpecialPickupWidget = getValueFromStorage("ENABLE_SPECIAL_PICKUP_WIDGET");
-                if (location != null && rideStatus != null && enableSpecialPickupWidget != null && rideStatus.equals("false") && enableSpecialPickupWidget.equals("true")) {
-                    String stringifiedZones = sharedPref.getString("SPECIAL_LOCATION_LIST", null);
-                    JSONArray zones = new JSONArray(stringifiedZones);
-                    GeoHash geoHash = new GeoHash();
-                    String currentGeoHash = geoHash.encode(location.getLatitude(), location.getLongitude(), 7);
-                    Double nearbyGeoHashRadius = Double.parseDouble(sharedPref.getString("SEARCH_SPECIAL_PICKUP_WITHIN_RADIUS", "150.0"));
-                    ArrayList<String> nearbyGeohashes = geoHash.nearbyGeohashes(currentGeoHash, nearbyGeoHashRadius);
-                    nearbyGeohashes.add(currentGeoHash);
+    private void checkNearByPickupZone(Location location) {
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
+            String enableSpecialPickupWidget = getValueFromStorage("ENABLE_SPECIAL_PICKUP_WIDGET");
+            if (location != null && rideStatus != null && enableSpecialPickupWidget != null && rideStatus.equals("false") && enableSpecialPickupWidget.equals("true")) {
+                String stringifiedZones = sharedPref.getString("SPECIAL_LOCATION_LIST", null);
+                JSONArray zones = new JSONArray(stringifiedZones);
+                GeoHash geoHash = new GeoHash();
+                String currentGeoHash = geoHash.encode(location.getLatitude(), location.getLongitude(), 7);
+                Double nearbyGeoHashRadius = Double.parseDouble(sharedPref.getString("SEARCH_SPECIAL_PICKUP_WITHIN_RADIUS", "150.0"));
+                ArrayList<String> nearbyGeohashes = geoHash.nearbyGeohashes(currentGeoHash, nearbyGeoHashRadius);
+                nearbyGeohashes.add(currentGeoHash);
 
-                    currentZoneGeoHash = getValueFromStorage("CURRENT_ZONE_GEO_HASH");
-                    if (getValueFromStorage("CURRENT_ZONE_GEO_HASH") == null) {
-                        updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
-                        currentZoneGeoHash = currentGeoHash;
+                currentZoneGeoHash = getValueFromStorage("CURRENT_ZONE_GEO_HASH");
+                if (getValueFromStorage("CURRENT_ZONE_GEO_HASH") == null) {
+                    updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
+                    currentZoneGeoHash = currentGeoHash;
+                }
+                boolean nearBySpecialPickup = false;
+                for (int i = 0; i < zones.length(); i++) {
+                    JSONArray zoneMap = (JSONArray) zones.get(i);
+                    String zoneGeoHash = (String) zoneMap.get(0);
+                    nearBySpecialPickup = nearbyGeohashes.contains(zoneGeoHash);
+                    if (!currentZoneGeoHash.equals(zoneGeoHash) && nearBySpecialPickup) {
+                        isSpecialpickup = true;
+                        showWidget(true);
+                        currentZoneGeoHash = zoneGeoHash;
+                        updateStorage("CURRENT_ZONE_GEO_HASH", zoneGeoHash);
                     }
-                    boolean nearBySpecialPickup = false;
-                    for (int i = 0; i < zones.length(); i++) {
-                        JSONArray zoneMap = (JSONArray) zones.get(i);
-                        String zoneGeoHash = (String) zoneMap.get(0);
-                        nearBySpecialPickup = nearbyGeohashes.contains(zoneGeoHash);
-                        if (!currentZoneGeoHash.equals(zoneGeoHash) && nearBySpecialPickup) {
-                            isSpecialpickup = true;
-                            showWidget(true);
-                            currentZoneGeoHash = zoneGeoHash;
-                            updateStorage("CURRENT_ZONE_GEO_HASH", zoneGeoHash);
-                        }
-                        if (nearBySpecialPickup) {
-                            isSpecialpickup = true;
-                            break;
-                        }
-                    }
-                    if (!nearBySpecialPickup && isSpecialpickup) {
-                        currentZoneGeoHash = currentGeoHash;
-                        isSpecialpickup = false;
-                        updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
-                        showWidget(false);
+                    if (nearBySpecialPickup) {
+                        isSpecialpickup = true;
+                        break;
                     }
                 }
-            } catch (Exception e) {
-                Exception exception = new Exception("Error in CheckNearByPickupZones " + e);
-                FirebaseCrashlytics.getInstance().recordException(exception);
-                e.printStackTrace();
+                if (!nearBySpecialPickup && isSpecialpickup) {
+                    currentZoneGeoHash = currentGeoHash;
+                    isSpecialpickup = false;
+                    updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
+                    showWidget(false);
+                }
             }
-     }
+        } catch (Exception e) {
+            Exception exception = new Exception("Error in CheckNearByPickupZones " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            e.printStackTrace();
+        }
+    }
 
 
     private void showWidget(boolean isSpecialPickupZone) {

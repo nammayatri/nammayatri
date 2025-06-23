@@ -39,8 +39,12 @@ library
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.Overlay
       Domain.Action.ProviderPlatform.AppManagement.Subscription
+      Domain.Action.ProviderPlatform.CheckVerification
       Domain.Action.ProviderPlatform.Fleet.Driver
+      Domain.Action.ProviderPlatform.Fleet.Onboarding
+      Domain.Action.ProviderPlatform.Fleet.RegistrationV2
       Domain.Action.ProviderPlatform.IssueManagement.Issue
+      Domain.Action.ProviderPlatform.Management.Account
       Domain.Action.ProviderPlatform.Management.Booking
       Domain.Action.ProviderPlatform.Management.CoinsConfig
       Domain.Action.ProviderPlatform.Management.Driver
@@ -56,10 +60,16 @@ library
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.System
+      Domain.Action.ProviderPlatform.Management.VehicleInfo
+      Domain.Action.ProviderPlatform.Operator.Driver
+      Domain.Action.ProviderPlatform.Operator.FleetManagement
+      Domain.Action.ProviderPlatform.Operator.Registration
       Domain.Action.ProviderPlatform.RideBooking.Driver
       Domain.Action.ProviderPlatform.RideBooking.DriverRegistration
       Domain.Action.ProviderPlatform.RideBooking.Maps
+      Domain.Action.ProviderPlatform.RideBooking.MeterRide
       Domain.Action.ProviderPlatform.RideBooking.Ride
+      Domain.Action.ProviderPlatform.RideBooking.SearchRequest
       Domain.Action.ProviderPlatform.RideBooking.Volunteer
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
@@ -74,9 +84,12 @@ library
       API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.Fleet.Onboarding
+      API.Action.ProviderPlatform.Fleet.RegistrationV2
       API.Action.ProviderPlatform.IssueManagement
       API.Action.ProviderPlatform.IssueManagement.Issue
       API.Action.ProviderPlatform.Management
+      API.Action.ProviderPlatform.Management.Account
       API.Action.ProviderPlatform.Management.Booking
       API.Action.ProviderPlatform.Management.CoinsConfig
       API.Action.ProviderPlatform.Management.Driver
@@ -92,21 +105,25 @@ library
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.Management.System
+      API.Action.ProviderPlatform.Management.VehicleInfo
+      API.Action.ProviderPlatform.Operator
+      API.Action.ProviderPlatform.Operator.Driver
+      API.Action.ProviderPlatform.Operator.FleetManagement
+      API.Action.ProviderPlatform.Operator.Registration
       API.Action.ProviderPlatform.RideBooking
       API.Action.ProviderPlatform.RideBooking.Driver
       API.Action.ProviderPlatform.RideBooking.DriverRegistration
       API.Action.ProviderPlatform.RideBooking.Maps
+      API.Action.ProviderPlatform.RideBooking.MeterRide
       API.Action.ProviderPlatform.RideBooking.Ride
+      API.Action.ProviderPlatform.RideBooking.SearchRequest
       API.Action.ProviderPlatform.RideBooking.Volunteer
       API.Client.ProviderPlatform.AppManagement
       API.Client.ProviderPlatform.Fleet
       API.Client.ProviderPlatform.IssueManagement
       API.Client.ProviderPlatform.Management
+      API.Client.ProviderPlatform.Operator
       API.Client.ProviderPlatform.RideBooking
-      Domain.Types.FleetMemberAssociation
-      Storage.Beam.FleetMemberAssociation
-      Storage.CachedQueries.FleetMemberAssociation
-      Storage.Queries.FleetMemberAssociation
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

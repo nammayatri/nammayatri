@@ -40,6 +40,7 @@ import qualified Data.Text as T hiding (count, map)
 import qualified Data.Text as Text
 import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
+import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Location as DLoc
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types as DTC
@@ -75,6 +76,7 @@ import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -215,6 +217,7 @@ data DriverRideRes = DriverRideRes
     customerExtraFee :: Maybe Money,
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     disabilityTag :: Maybe Text,
+    coinsRewardedOnGoldTierRide :: Maybe Int,
     requestedVehicleVariant :: DVeh.VehicleVariant,
     isOdometerReadingsRequired :: Bool,
     vehicleServiceTier :: DVST.ServiceTierType,
@@ -256,7 +259,10 @@ data DriverRideRes = DriverRideRes
     receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
     extraFareMitigationFlag :: Maybe Bool,
     parcelType :: Maybe DParcel.ParcelType,
-    parcelQuantity :: Maybe Int
+    parcelQuantity :: Maybe Int,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text,
+    isPetRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -344,10 +350,7 @@ mkDriverRideRes ::
   m DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo = do
   let fareParams = booking.fareParams
-      estimatedBaseFare =
-        fareSum $
-          fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
-                    }
+      estimatedBaseFare = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -395,6 +398,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         bapName = bapMetadata <&> (.name),
         bapLogo = bapMetadata >>= (.logoUrl),
         disabilityTag = booking.disabilityTag,
+        coinsRewardedOnGoldTierRide = booking.coinsRewardedOnGoldTierRide,
         requestedVehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
         vehicleServiceTier = booking.vehicleServiceTier,
@@ -436,7 +440,10 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
         extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag),
         parcelType = booking.parcelType,
-        parcelQuantity = booking.parcelQuantity
+        parcelQuantity = booking.parcelQuantity,
+        isInsured = Just $ ride.isInsured,
+        insuredAmount = ride.insuredAmount,
+        isPetRide = booking.isPetRide
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
@@ -486,7 +493,7 @@ arrivedAtPickup rideId req = do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       mbVehicle <- QVeh.findById driverId
       let mbVehicleCategory = mbVehicle >>= (.category)
-      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory moCityId "EXTRA_FARE_MITIGATION_WARNING" L.ENGLISH Nothing mbVehicleCategory >>= fromMaybeM (OverlayKeyNotFound "EXTRA_FARE_MITIGATION_WARNING")
+      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory moCityId "EXTRA_FARE_MITIGATION_WARNING" L.ENGLISH Nothing mbVehicleCategory Nothing >>= fromMaybeM (OverlayKeyNotFound "EXTRA_FARE_MITIGATION_WARNING")
       TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
       QDI.updateExtraFareMitigation (Just False) driverId
 
@@ -522,7 +529,7 @@ otpRideCreate driver otpCode booking clientId = do
       | otherwise = throwM exc
 
     isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId bookingServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
       return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
@@ -566,6 +573,15 @@ stopAction rideId pt stopLocId action = do
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      let currentPassStop = LatLong stopInfo.stopStartLatLng.lat stopInfo.stopStartLatLng.lon
+      existingStops <- Redis.get (VID.mkReachedStopKey rideId)
+      case existingStops of
+        Just reachedStopList -> do
+          unless (currentPassStop `elem` reachedStopList) $ do
+            let updatedList = reachedStopList ++ [currentPassStop]
+            Redis.setExp (VID.mkReachedStopKey rideId) updatedList 86400
+        Nothing -> do
+          Redis.setExp (VID.mkReachedStopKey rideId) [currentPassStop] 86400
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)

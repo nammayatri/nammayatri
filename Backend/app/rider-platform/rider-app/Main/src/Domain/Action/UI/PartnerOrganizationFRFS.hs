@@ -19,6 +19,8 @@ module Domain.Action.UI.PartnerOrganizationFRFS
     shareTicketInfo,
     mkLatLong,
     upsertPersonAndQuoteConfirm,
+    partnerOrgAuthVerify,
+    partnerOrgAuth,
     GetFareReq (..),
     GetFareResp (..),
     GetConfigResp (..),
@@ -30,6 +32,9 @@ module Domain.Action.UI.PartnerOrganizationFRFS
     GetFareRespV2 (..),
     UpsertPersonAndQuoteConfirmResBody (..),
     QuoteConfirmStatus (..),
+    PartnerOrgAuthRes (..),
+    PartnerOrgAuthVerifyRes (..),
+    PartnerOrgAuthVerifyReq (..),
   )
 where
 
@@ -56,10 +61,10 @@ import qualified Domain.Types.RegistrationToken as SR
 import Domain.Types.Station
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, map, null, whenJust)
+import EulerHS.Prelude hiding (id, length, map, null, whenJust, whenM)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (sequenceA_)
 import Kernel.Sms.Config
@@ -68,16 +73,19 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common as Kernel
 import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.FRFSUtils as Utils
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
@@ -86,13 +94,12 @@ import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QFT
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFTBP
-import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import qualified Storage.Queries.Route as QRoute
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 data GetFareReq = GetFareReq
   { fromStationCode :: Text,
@@ -192,6 +199,28 @@ data ShareTicketInfoResp = ShareTicketInfoResp
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data PartnerOrgAuthVerifyReq = PartnerOrgAuthVerifyReq
+  { otp :: Text,
+    tokenId :: Id SR.RegistrationToken
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+validateAuthVerifyReq' :: Validate PartnerOrgAuthVerifyReq
+validateAuthVerifyReq' PartnerOrgAuthVerifyReq {..} =
+  sequenceA_
+    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit
+    ]
+
+newtype PartnerOrgAuthVerifyRes = PartnerOrgAuthVerifyRes
+  {token :: RegToken}
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PartnerOrgAuthRes = PartnerOrgAuthRes
+  { authId :: Id SR.RegistrationToken,
+    maskedMobileNumber :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 upsertPersonAndGetToken ::
   Id PartnerOrganization ->
   DPOC.RegistrationConfig ->
@@ -216,19 +245,19 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
     moc <- B.runInReplica $ CQMOC.findById fromStationMOCId >>= fromMaybeM (MerchantOperatingCityNotFound fromStationMOCId.getId)
     CQP.updateCityInfoById person.id moc.city moc.id
 
-  regToken <- getRegToken person.id pOrgId regPOCfg mId
+  (regToken, _) <- getRegToken person.id pOrgId regPOCfg mId True
 
   return (person.id, regToken.token)
 
-getRegToken :: Id SP.Person -> Id PartnerOrganization -> DPOC.RegistrationConfig -> Id DM.Merchant -> Flow SR.RegistrationToken
-getRegToken personId pOrgId regPOCfg mId = do
+getRegToken :: Id SP.Person -> Id PartnerOrganization -> DPOC.RegistrationConfig -> Id DM.Merchant -> Bool -> Flow (SR.RegistrationToken, Bool)
+getRegToken personId pOrgId regPOCfg mId isApiKeyAuth = do
   let entityId = personId
   RegistrationToken.findAllByPersonId entityId
     <&> listToMaybe . sortOn (.updatedAt) . filter (isJust . (.createdViaPartnerOrgId))
     >>= validateToken pOrgId
-    >>= maybe (makeSessionViaPartner regPOCfg.sessionConfig entityId.getId mId.getId regPOCfg.fakeOtp pOrgId) return
+    >>= maybe (makeSessionViaPartner regPOCfg.sessionConfig entityId.getId mId.getId regPOCfg.fakeOtp pOrgId isApiKeyAuth) return
 
-validateToken :: Id PartnerOrganization -> Maybe SR.RegistrationToken -> Flow (Maybe SR.RegistrationToken)
+validateToken :: Id PartnerOrganization -> Maybe SR.RegistrationToken -> Flow (Maybe (SR.RegistrationToken, Bool))
 validateToken pOrgId = \case
   Nothing -> pure Nothing
   Just regToken -> do
@@ -237,7 +266,7 @@ validateToken pOrgId = \case
     let res = bool Nothing (Just regToken) $ regToken.verified && not expired && regToken.createdViaPartnerOrgId == Just pOrgId
     when (isNothing res && regToken.createdViaPartnerOrgId == Just pOrgId) $ do
       RegistrationToken.deleteByTokenCreatedViaPartnerOrgId regToken.token pOrgId
-    pure res
+    return $ (,False) <$> res
 
 createPersonViaPartner ::
   GetFareReq ->
@@ -285,13 +314,15 @@ makeSessionViaPartner ::
   Text ->
   Text ->
   Id PartnerOrganization ->
-  Flow SR.RegistrationToken
-makeSessionViaPartner sessionConfig entityId mId fakeOtp partnerOrgId = do
+  Bool ->
+  Flow (SR.RegistrationToken, Bool)
+makeSessionViaPartner sessionConfig entityId mId fakeOtp partnerOrgId isApiKeyAuth = do
+  logDebug $ "We are in makeSessionViaPartner Creating session for entityId:" +|| entityId ||+ " merchantId:" +|| mId ||+ " partnerOrgId:" +|| partnerOrgId ||+ ""
   let authMedium = SR.PARTNER_ORG
   regToken <- makeSession authMedium sessionConfig entityId mId (Just fakeOtp) partnerOrgId
   void $ RegistrationToken.create regToken
-  void $ RegistrationToken.setDirectAuth regToken.id authMedium
-  return regToken
+  when isApiKeyAuth $ void $ RegistrationToken.setDirectAuth regToken.id authMedium
+  return (regToken, True)
 
 makeSession ::
   SR.Medium ->
@@ -424,7 +455,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          route' <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
           return $ Just route'
       )
       routeCode
@@ -435,7 +466,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
               endStationCode = toStation.code
             }
         ]
-  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
+  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route integratedBPPConfig
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
     CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails integratedBPPConfig
@@ -456,7 +487,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             quotes = Nothing
           }
   where
-    mkSearchReq frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route = do
+    mkSearchReq frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route integratedBPPConfig = do
       now <- getCurrentTime
       uid <- generateGUID
       return
@@ -470,14 +501,16 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             quantity = 1,
             fromStationId = fromStation'.id,
             toStationId = toStation'.id,
-            routeId = route <&> (.id),
+            routeId = route <&> (.code),
             riderId = Utils.partnerOrgRiderId,
             partnerOrgTransactionId = partnerOrgTransactionId',
             partnerOrgId = Just partnerOrg'.orgId,
             journeyLegInfo = Nothing,
             isOnSearchReceived = Nothing,
             journeyLegStatus = Nothing,
+            integratedBppConfigId = Just integratedBPPConfig.id,
             journeyRouteDetails = [],
+            recentLocationId = Nothing,
             ..
           }
 
@@ -518,7 +551,7 @@ upsertPersonAndQuoteConfirm partnerOrg req = do
     else do
       pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrg.orgId.getId $ show DPOC.REGISTRATION)
       regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
-      mbBooking <- QBooking.findByQuoteId req.quoteId
+      mbBooking <- QFTB.findByQuoteId req.quoteId
       case mbBooking of
         Just booking -> cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg
         Nothing -> createNewBookingAndTriggerInit partnerOrg req regPOCfg
@@ -564,6 +597,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.fromStationId = fromStation'.id,
                 DFRFSQuote.id = quoteId,
                 DFRFSQuote.price = frfsCachedData.price,
+                DFRFSQuote.childPrice = Nothing,
+                DFRFSQuote.estimatedPrice = Just frfsCachedData.price,
                 DFRFSQuote.providerDescription = Nothing,
                 DFRFSQuote.providerId = fromMaybe "metro_provider_id" frfsConfig'.providerId,
                 DFRFSQuote.providerName = fromMaybe "metro_provider_name" frfsConfig'.providerName,
@@ -585,6 +620,9 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.bppDelayedInterest = Nothing,
                 DFRFSQuote.discountedTickets = Nothing,
                 DFRFSQuote.eventDiscountAmount = Nothing,
+                DFRFSQuote.integratedBppConfigId = Just fromStation'.integratedBppConfigId,
+                DFRFSQuote.fareDetails = Nothing,
+                DFRFSQuote.childTicketQuantity = Nothing,
                 DFRFSQuote.oldCacheDump = Nothing
               }
       return $ Just quote
@@ -618,7 +656,7 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             validTill = booking.validTill,
             vehicleType = booking.vehicleType
           }
-  regToken <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId
+  (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True
   let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token = regToken.token}
   return
     UpsertPersonAndQuoteConfirmRes
@@ -653,11 +691,11 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       (personId, token) <- upsertPersonAndGetToken partnerOrg.orgId regPOCfg fromStation.merchantOperatingCityId fromStation.merchantId mbRegCoordinates getFareReq
       QSearch.updateRiderIdById personId req.searchId
       let isEventOngoing = fromMaybe False frfsConfig.isEventOngoing
-      stats <- QPStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+      stats <- B.runInMasterDbAndRedis $ QPStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
           (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirm (Just personId, fromStation.merchantId) quote.id
+      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id DIBC.PARTNERORG Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return
@@ -667,3 +705,59 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
           }
   where
     lockKey = "FRFS:PartnerOrgId:" <> partnerOrg.orgId.getId <> ":UpsertPersonAndQuoteConfirm:SearchId:" <> req.searchId.getId
+
+partnerOrgAuth :: Id DFTB.FRFSTicketBooking -> Flow PartnerOrgAuthRes
+partnerOrgAuth ticketBookingId = do
+  ticketBooking <- B.runInReplica $ QFTB.findById ticketBookingId >>= fromMaybeM (FRFSTicketBookingNotFound ticketBookingId.getId)
+  case ticketBooking.partnerOrgId of
+    Nothing -> throwError $ FRFSBookingNotMadeThroughPartnerOrg ticketBookingId.getId
+    Just partnerOrgId -> do
+      let entityId = ticketBooking.riderId
+      person <- B.runInReplica $ Person.findById entityId >>= fromMaybeM (PersonNotFound ticketBooking.riderId.getId)
+      pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrgId.getId $ show DPOC.REGISTRATION)
+      regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
+      smsCfg <- asks (.smsCfg)
+      let isApiKeyAuth = False
+          scfg = smsCfg.sessionConfig
+      newOtp <- generateOTPCode
+      let updatedSessionConfig = regPOCfg.sessionConfig{authExpiry = scfg.authExpiry}
+      (regToken, isTokenNew) <- getRegToken entityId partnerOrgId regPOCfg{fakeOtp = newOtp, sessionConfig = updatedSessionConfig} ticketBooking.merchantId isApiKeyAuth
+      unless isTokenNew $ RegistrationToken.updateOtpByIdForPartnerOrgId regToken.id partnerOrgId newOtp scfg.authExpiry
+      let mRiderMobileCountryCode = person.mobileCountryCode
+      mobileNumber <- mapM decrypt person.mobileNumber
+      sendTicketCancelOTPSMS mobileNumber mRiderMobileCountryCode ticketBooking newOtp
+      maskedMobileNumber <- (maskMobileNumber <$> mobileNumber) & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      return $ PartnerOrgAuthRes regToken.id maskedMobileNumber
+      where
+        sendTicketCancelOTPSMS :: Maybe Text -> Maybe Text -> DFTB.FRFSTicketBooking -> Text -> Flow ()
+        sendTicketCancelOTPSMS mRiderNumber mRiderMobileCountryCode ticketBooking' otpCode' =
+          withLogTag ("SMS:PersonId:" <> ticketBooking'.riderId.getId) $ do
+            mobileNumber <- mRiderNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            let mocId = ticketBooking'.merchantOperatingCityId
+                countryCode = fromMaybe "+91" mRiderMobileCountryCode
+                phoneNumber = countryCode <> mobileNumber
+            buildSmsReq <-
+              MessageBuilder.buildFRFSTicketCancelOTPMessage mocId $
+                MessageBuilder.BuildFRFSTicketCancelOTPMessageReq
+                  { otp = otpCode'
+                  }
+
+            Sms.sendSMS ticketBooking'.merchantId mocId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
+        maskMobileNumber :: Text -> Text
+        maskMobileNumber text = if (T.length text) > 4 then T.take 2 text <> "XXXXXX" <> T.takeEnd 2 text else "XXXXXX"
+
+partnerOrgAuthVerify ::
+  PartnerOrgAuthVerifyReq ->
+  Flow PartnerOrgAuthVerifyRes
+partnerOrgAuthVerify req = do
+  runRequestValidation validateAuthVerifyReq' req
+  regToken@SR.RegistrationToken {..} <- DReg.getRegistrationTokenE req.tokenId
+  when verified $ throwError $ AuthBlocked "Already verified."
+  checkForExpiry authExpiry updatedAt
+  unless (regToken.authValueHash == req.otp && isJust regToken.createdViaPartnerOrgId) $ throwError InvalidAuthData
+  void $ RegistrationToken.setDirectAuth regToken.id SR.SMS
+  return $ PartnerOrgAuthVerifyRes regToken.token
+  where
+    checkForExpiry authExpiry updatedAt =
+      whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
+        throwError TokenExpired

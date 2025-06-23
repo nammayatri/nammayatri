@@ -40,12 +40,14 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
+import Domain.Action.External.LiveEKD as LiveEKD
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus as CallStatus
 import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Exophone as DExophone
+import Domain.Types.External.LiveEKD as TLiveEKD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -74,6 +76,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.Booking as QRB
@@ -247,7 +250,7 @@ getDecryptedMobileNumberByDriverId driverId = do
     Just mobNum -> decrypt mobNum
     Nothing -> throwError $ InvalidRequest "Mobile Number not found."
 
-callStatusCallback :: (CacheFlow m r, EsqDBFlow m r, CallBAPConstraints m r c) => CallCallbackReq -> m CallCallbackRes
+callStatusCallback :: (CacheFlow m r, EsqDBFlow m r, CallBAPConstraints m r c, HasFlowEnv m r '["vocalyticsCnfg" ::: TLiveEKD.VocalyticsCnfg], EventStreamFlow m r) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   callStatus <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
@@ -256,6 +259,12 @@ callStatusCallback req = do
   isSendFCMSuccess <- sendFCMToBAPOnFailedCallStatus interfaceStatus (Right callStatus.entityId)
   let callAttemptStatus = if isSendFCMSuccess then Just DCallStatus.Resolved else dCallStatus
   QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus callAttemptStatus callStatusId
+  case callStatus.merchantOperatingCityId of
+    Just merchantOpCityId -> do
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      when (interfaceStatus == CallTypes.COMPLETED && transporterConfig.liveEKD == Just True) $ do
+        void $ LiveEKD.liveEKDProdLoop req.recordingUrl req.callSid "driver"
+    Nothing -> return ()
   return Ack
 
 directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CallBAPConstraints m r c) => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes

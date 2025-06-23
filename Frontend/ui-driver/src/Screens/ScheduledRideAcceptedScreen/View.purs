@@ -12,6 +12,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
 import Data.Int (ceil, fromString, round, toNumber)
+import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -41,7 +42,7 @@ import Types.App (FlowBT, GlobalState(..))
 import Types.App (defaultGlobalState)
 import PrestoDOM 
 
-screen :: ScheduleRideAcceptedScreenState -> Screen Action ScheduleRideAcceptedScreenState ScreenOutput
+screen :: ScheduleRideAcceptedScreenState -> LoggableScreen Action ScheduleRideAcceptedScreenState ScreenOutput
 screen initialState =  
   { initialState
   , view : view
@@ -51,6 +52,8 @@ screen initialState =
     let _ = spy "ScheduleRideAcceptScreen state -----" state
     let _ = spy "ScheduleRideAcceptScreen action --------" action
     eval action state)
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.scheduledRideAcceptedScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ScheduleRideAcceptedScreenState -> PrestoDOM (Effect Unit) w 

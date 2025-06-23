@@ -22,6 +22,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
+import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
@@ -83,7 +84,8 @@ data CreatePersonReq = CreatePersonReq
     email :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
-    password :: Text
+    password :: Text,
+    dashboardType :: Maybe DPT.DashboardType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -192,8 +194,18 @@ createPerson ::
   m CreatePersonRes
 createPerson _ personEntity = do
   runRequestValidation validateCreatePerson personEntity
-  unlessM (isNothing <$> QP.findByEmail personEntity.email) $ throwError (InvalidRequest "Email already registered")
-  unlessM (isNothing <$> QP.findByMobileNumber personEntity.mobileNumber personEntity.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
+  unlessM
+    ( isNothing
+        <$> DPT.withDashboardType personEntity.dashboardType
+          (\(_ :: Proxy t) -> QP.findByEmailWithType @t personEntity.email)
+    )
+    $ throwError (InvalidRequest "Email already registered")
+  unlessM
+    ( isNothing
+        <$> DPT.withDashboardType personEntity.dashboardType
+          (\(_ :: Proxy t) -> QP.findByMobileNumberWithType @t personEntity.mobileNumber personEntity.mobileCountryCode)
+    )
+    $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   person <- buildPerson personEntity (role.dashboardAccessType)
@@ -239,8 +251,8 @@ assignRole ::
   m APISuccess
 assignRole _ personId roleId = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  QP.updatePersonRole personId roleId
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  QP.updatePersonRole personId role
   pure Success
 
 assignMerchantCityAccess ::
@@ -472,10 +484,13 @@ buildPerson req dashboardAccessType = do
         mobileCountryCode = req.mobileCountryCode,
         passwordHash = Just passwordHash,
         dashboardAccessType = Just dashboardAccessType,
+        dashboardType = fromMaybe DPT.DEFAULT_DASHBOARD req.dashboardType,
         receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now,
-        verified = Nothing
+        verified = Nothing,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq

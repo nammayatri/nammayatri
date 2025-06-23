@@ -31,7 +31,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (/), (<$>), (<<<), (<>), (==), (>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, rippleColor, cornerRadius)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, rippleColor, cornerRadius)
 import PrestoDOM.Elements.Elements (imageView)
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (alpha, fontStyle, imageUrl, imageWithFallback, layoutGravity, lineHeight)
@@ -54,7 +54,7 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Data.Maybe(Maybe(..), fromMaybe)
 
-screen :: RideSelectionScreenState -> PrestoList.ListItem -> Screen Action RideSelectionScreenState ScreenOutput
+screen :: RideSelectionScreenState -> PrestoList.ListItem -> LoggableScreen Action RideSelectionScreenState ScreenOutput
 screen initialState rideListItem =
   { initialState : initialState {
       shimmerLoader = AnimatedIn
@@ -71,7 +71,12 @@ screen initialState rideListItem =
       )
     ]
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.config.logWhitelistConfig.rideSelectionScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> RideSelectionScreenState -> PrestoDOM (Effect Unit) w
 view rideListItem push state =
@@ -268,7 +273,7 @@ ridesView rideListItem push state =
            , visibility $ case state.shimmerLoader of
                             AnimatedOut ->  if length state.prestoListArrayItems > 0 then GONE else VISIBLE
                             _ -> GONE
-           ][ ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig)]
+           ][ ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
          ]
         )
       ]

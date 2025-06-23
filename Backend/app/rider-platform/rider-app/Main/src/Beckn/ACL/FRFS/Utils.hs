@@ -20,6 +20,7 @@ import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson as A
+import qualified Data.UUID as UU
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Domain.Types
@@ -41,14 +42,16 @@ buildContext ::
   Maybe Text ->
   Maybe BppData ->
   Context.City ->
+  Spec.VehicleCategory ->
   m Spec.Context
-buildContext action bapConfig txnId msgId mTTL bppData city = do
+buildContext action bapConfig txnId msgId mTTL bppData city vehicleCategory = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
       contextBppId = bppData <&> (.bppId)
       contextBppUri = bppData <&> (.bppUri)
   cityCode <- getCodeFromCity city
+  let contextVersion = if vehicleCategory == Spec.BUS then "2.0.1" else "2.0.0"
   return $
     Spec.Context
       { contextAction = encodeToText' action,
@@ -63,7 +66,7 @@ buildContext action bapConfig txnId msgId mTTL bppData city = do
         contextTimestamp = Just now,
         contextTransactionId = Just txnId,
         contextTtl = mTTL,
-        contextVersion = Just "2.0.0"
+        contextVersion = Just contextVersion
       }
   where
     getCodeFromCity city_ = do
@@ -118,12 +121,12 @@ parseTickets item fulfillments = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
   when (null fulfillmentIds) $ throwError $ InvalidRequest "Empty fulfillmentIds"
 
-  let ticketFulfillments = filterByIds fulfillmentIds
-  when (null ticketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
-
-  traverse parseTicket ticketFulfillments
+  let ticketFulfillments = filterByIds fulfillmentIds "TICKET"
+      finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds fulfillmentIds "TRIP"
+  when (null finalTicketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
+  traverse parseTicket finalTicketFulfillments
   where
-    filterByIds fIds = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds)) fulfillments
+    filterByIds fIds fullfillmentType = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds) && f.fulfillmentType == Just fullfillmentType) fulfillments
 
 parseTicket :: (MonadFlow m) => Spec.Fulfillment -> m Domain.DTicket
 parseTicket fulfillment = do
@@ -135,12 +138,12 @@ parseTicket fulfillment = do
   validTill <- startStopAuth.authorizationValidTo & fromMaybeM (InvalidRequest "TicketValidTill not found")
   status <- startStopAuth.authorizationStatus & fromMaybeM (InvalidRequest "TicketStatus not found")
 
-  tags <- fulfillment.fulfillmentTags & fromMaybeM (InvalidRequest "FulfillmentTags not found")
-  ticketNumber <- Utils.getTag "TICKET_INFO" "NUMBER" tags & fromMaybeM (InvalidRequest "TicketNumber not found")
-
+  let mbTags = fulfillment.fulfillmentTags
+  ticketNumber <- (pure (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") |<|>| getTicketNumber) >>= fromMaybeM (InvalidRequest "TicketNumber not found")
   pure $
     Domain.DTicket
       { qrData,
+        vehicleNumber = Nothing,
         validTill,
         bppFulfillmentId = fId,
         ticketNumber,
@@ -148,6 +151,12 @@ parseTicket fulfillment = do
         description = Nothing,
         qrRefreshAt = Nothing
       }
+  where
+    getTicketNumber :: (MonadFlow m) => m (Maybe Text)
+    getTicketNumber = do
+      id <- generateGUID
+      pure $
+        UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
 
 type TxnId = Text
 
@@ -157,6 +166,60 @@ type DelayInterest = Text
 
 mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
 mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency mbDelayInterest =
+  Spec.Payment
+    { paymentCollectedBy = Just $ show Enums.BAP,
+      paymentId = mTxnId,
+      paymentParams =
+        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
+          else Nothing,
+      paymentStatus = encodeToText' paymentStatus,
+      paymentTags = Just $ mkPaymentTags mSettlementType mAmount mbDelayInterest,
+      paymentType = encodeToText' Spec.PRE_ORDER
+    }
+  where
+    anyTrue = or
+
+mkPaymentForInitReq :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
+mkPaymentForInitReq paymentStatus mAmount _ _ mSettlementType _ mbDelayInterest =
+  Spec.Payment
+    { paymentCollectedBy = Just $ show Enums.BAP,
+      paymentId = Nothing,
+      paymentParams = Nothing,
+      paymentStatus = encodeToText' paymentStatus,
+      paymentTags = Just $ mkPaymentTags mSettlementType mAmount mbDelayInterest,
+      paymentType = encodeToText' Spec.PRE_ORDER
+    }
+
+mkPaymentForSearchReq :: Maybe Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
+mkPaymentForSearchReq _ mAmount mTxnId mPaymentParams mSettlementType mCurrency mbDelayInterest =
+  Spec.Payment
+    { paymentCollectedBy = Just $ show Enums.BAP,
+      paymentId = mTxnId,
+      paymentParams =
+        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
+          else Nothing,
+      paymentStatus = Nothing,
+      paymentTags = Just $ mkPaymentTags mSettlementType mAmount mbDelayInterest,
+      paymentType = Nothing
+    }
+  where
+    anyTrue = or
+
+mkPaymentForSelectReq :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
+mkPaymentForSelectReq paymentStatus _ _ _ _ _ _ =
+  Spec.Payment
+    { paymentCollectedBy = Just $ show Enums.BAP,
+      paymentId = Nothing,
+      paymentParams = Nothing,
+      paymentStatus = encodeToText' paymentStatus,
+      paymentTags = Nothing, --Just $ mkPaymentTags mSettlementType mAmount mbDelayInterest,
+      paymentType = encodeToText' Spec.PRE_ORDER
+    }
+
+mkPaymentForConfirmReq :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
+mkPaymentForConfirmReq paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency mbDelayInterest =
   Spec.Payment
     { paymentCollectedBy = Just $ show Enums.BAP,
       paymentId = mTxnId,
@@ -186,8 +249,7 @@ mkPaymentTags :: Maybe Text -> Maybe Amount -> Maybe DelayInterest -> [Spec.TagG
 mkPaymentTags mSettlementType mAmount mbDelayInterest =
   catMaybes
     [ Just mkBuyerFinderFeeTagGroup,
-      Just $ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest,
-      mkSettlementDetailsTagGroup mSettlementType
+      Just $ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest
     ]
 
 mkBuyerFinderFeeTagGroup :: Spec.TagGroup
@@ -292,17 +354,6 @@ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = Just "MANDATORY_ARBITRATION",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just "TRUE"
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
                       { descriptorCode = Just "STATIC_TERMS",
                         descriptorImages = Nothing,
                         descriptorName = Nothing
@@ -311,47 +362,19 @@ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
               }
         ]
 
-mkSettlementDetailsTagGroup :: Maybe Text -> Maybe Spec.TagGroup
-mkSettlementDetailsTagGroup mSettlementType = do
-  st <- mSettlementType
-  return $
-    Spec.TagGroup
-      { tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just "SETTLEMENT_DETAILS",
-                descriptorImages = Nothing,
-                descriptorName = Nothing
-              },
-        tagGroupDisplay = Just False,
-        tagGroupList = Just [stTag st]
-      }
-  where
-    stTag st =
-      Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just "SETTLEMENT_TYPE",
-                  descriptorImages = Nothing,
-                  descriptorName = Nothing
-                },
-          tagValue = Just st
-        }
-
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
 
 type TicketNumber = Text
 
-getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus)
+getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus, Maybe Text)
 getTicketStatus booking dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
   ticketStatus <- castTicketStatus dTicket.status booking
   if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
-    then return (dTicket.ticketNumber, Ticket.EXPIRED)
-    else return (dTicket.ticketNumber, ticketStatus)
+    then return (dTicket.ticketNumber, Ticket.EXPIRED, dTicket.vehicleNumber)
+    else return (dTicket.ticketNumber, ticketStatus, dTicket.vehicleNumber)
 
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE

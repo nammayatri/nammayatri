@@ -18,8 +18,11 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Aeson
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Lazy as BL
 import Data.HashMap.Strict
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
@@ -49,6 +52,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
@@ -63,6 +67,7 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
@@ -70,16 +75,16 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
+import qualified Utils.QRCode.Scanner as QRScanner
 import Web.JWT hiding (claims)
 
-validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
-validateRequest DOrder {..} = do
+validateRequest :: DOrder -> DIBC.PlatformType -> Flow (Merchant, Booking.FRFSTicketBooking)
+validateRequest DOrder {..} platformType = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
-
   if booking.validTill < now
     then do
       -- Booking is expired
@@ -88,7 +93,7 @@ validateRequest DOrder {..} = do
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
-      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking DIBC.APPLICATION
+      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking platformType
       throwM $ InvalidRequest "Booking expired, initated cancel request"
     else return (merchant, booking)
 
@@ -98,7 +103,14 @@ onConfirmFailure bapConfig ticketBooking = do
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
   void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING ticketBooking.id
-  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking DIBC.APPLICATION
+  platformType' <- case (ticketBooking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
+  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType'
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
@@ -222,17 +234,18 @@ mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTick
 mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
-  (_, status_) <- Utils.getTicketStatus booking dTicket
-
+  (_, status_, vehicleNumber) <- Utils.getTicketStatus booking dTicket
+  processedQrData <- processQRData dTicket.qrData
   return
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
         Ticket.id = ticketId,
         Ticket.description = dTicket.description,
-        Ticket.qrData = dTicket.qrData,
+        Ticket.qrData = processedQrData,
         Ticket.qrRefreshAt = dTicket.qrRefreshAt,
         Ticket.riderId = booking.riderId,
         Ticket.status = status_,
+        Ticket.scannedByVehicleNumber = vehicleNumber,
         Ticket.ticketNumber = dTicket.ticketNumber,
         Ticket.validTill = dTicket.validTill,
         Ticket.merchantId = booking.merchantId,
@@ -244,8 +257,43 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.isTicketFree = Just isTicketFree
       }
 
-mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Flow TC.TransitObject
-mkTransitObjects pOrgId booking ticket person serviceAccount className = do
+processQRData :: Text -> Flow Text
+processQRData qrData = do
+  if isBase64Image qrData
+    then do
+      scanResult <- liftIO $ scanQRFromBase64 qrData
+      case scanResult of
+        Right extractedText -> pure extractedText
+        Left err -> do
+          logError $ "Failed to process QR image: " <> err
+          pure qrData -- fallback to original qrData if processing fails
+    else pure qrData
+
+-- | Check if text likely represents a base64 encoded image
+isBase64Image :: Text -> Bool
+isBase64Image txt =
+  let prefix = T.take 50 txt
+   in (T.isPrefixOf "data:image/" prefix && T.isInfixOf ";base64," prefix)
+        || any -- data URI format
+        -- Check for common image format headers in base64
+          (`T.isPrefixOf` prefix)
+          ["iVBORw0", "/9j/", "R0lGOD", "UklGR", "PD94bW"] -- PNG, JPEG, GIF, WEBP, XML SVG headers
+
+scanQRFromBase64 :: Text -> IO (Either Text Text)
+scanQRFromBase64 txt = do
+  let base64Content = case T.splitOn ";base64," txt of
+        [_, content] -> content
+        _ -> txt -- Not a data URI, use as is
+  case B64.decode (TE.encodeUtf8 base64Content) of
+    Left _ -> pure $ Left "Invalid base64 encoding"
+    Right imgBytes -> do
+      result <- QRScanner.scanQRCode (BL.fromStrict imgBytes)
+      case result of
+        Nothing -> pure $ Left "No QR code found in image"
+        Just text -> pure $ Right text
+
+mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Int -> Flow TC.TransitObject
+mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex = do
   toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
   fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
   let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
@@ -258,6 +306,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
           { TC._type = show GWSA.QR_CODE,
             TC.value = ticket.qrData
           }
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId fromStation.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName
   let istTimeText = GWSA.showTimeIst ticket.validTill
   let textModuleTicketNumber = TC.TextModule {TC._header = "Ticket number", TC.body = ticket.ticketNumber, TC.id = "myfield1"}
@@ -271,12 +320,28 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
   let fromStationGMMLocationId = maybe (fromStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbFromStationPartnerOrg
   mbToStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId toStation.id pOrgId
   let toStationGMMLocationId = maybe (toStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbToStationPartnerOrg
+  let groupingInfo = TC.GroupingInfo {TC.groupingId = "Group." <> booking.id.getId, TC.sortIndex = sortIndex}
+  let customCardTitleValue = GWSA.getCustomCardTitleValueByTripType tripType'
+  let customCardTitle = TC.Name {TC.defaultValue = TC.LanguageValue {TC.language = "en-US", TC._value = customCardTitleValue}}
+  linkModuleData <-
+    if frfsConfig.isCancellationAllowed
+      then do
+        smsPOCfg <- do
+          pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
+          DPOC.getTicketSMSConfig pOrgCfg.config
+        forM smsPOCfg.publicUrl $
+          \baseUrlTemplate -> do
+            let smsUrl = baseUrlTemplate & T.replace (MessageBuilder.templateText "FRFS_BOOKING_ID") booking.id.getId
+            pure $ TC.LinksModuleData {TC.uris = [TC.URI {TC.uri = Just smsUrl, TC.description = "Cancel Ticket"}]}
+      else pure Nothing
   return
     TC.TransitObject
       { TC.id = serviceAccount.saIssuerId <> "." <> ticket.id.getId,
         TC.classId = serviceAccount.saIssuerId <> "." <> className,
+        TC.tripId = booking.id.getId,
         TC.state = show GWSA.ACTIVE,
         TC.tripType = show tripType',
+        TC.customCardTitle = customCardTitle,
         TC.passengerType = show GWSA.SINGLE_PASSENGER,
         TC.passengerNames = passengerName',
         TC.ticketLeg =
@@ -288,7 +353,9 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
             },
         TC.barcode = barcode',
         TC.textModulesData = textModules,
-        TC.validTimeInterval = timeInterval
+        TC.groupingInfo = groupingInfo,
+        TC.validTimeInterval = timeInterval,
+        TC.linksModuleData = linkModuleData
       }
 
 createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
@@ -302,12 +369,12 @@ createTickets booking dTickets discountedTickets = go dTickets discountedTickets
       go ds newFreeTickets (ticket : acc)
 
 createTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
-createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets []
+createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets 1 []
   where
-    go [] acc = return (Prelude.reverse acc)
-    go (x : xs) acc = do
-      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className
-      go xs (transitObject : acc)
+    go [] _ acc = return (Prelude.reverse acc)
+    go (x : xs) sortIndex acc = do
+      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className sortIndex
+      go xs (sortIndex + 1) (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do

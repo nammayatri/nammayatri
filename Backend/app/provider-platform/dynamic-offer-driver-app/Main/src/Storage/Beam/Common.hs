@@ -23,10 +23,15 @@ import Storage.Beam.DriverFee
 import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLicense
+import Storage.Beam.DriverOperatorAssociation
 import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
+import Storage.Beam.FleetBadge
+import Storage.Beam.FleetBadgeAssociation
 import Storage.Beam.FleetDriverAssociation
+import Storage.Beam.FleetOperatorAssociation
+import Storage.Beam.FleetOwnerInformation
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
@@ -36,6 +41,8 @@ import Storage.Beam.Message
 import Storage.Beam.MessageReport
 import Storage.Beam.MessageTranslation
 import Storage.Beam.Notification
+import Storage.Beam.OperationHub
+import Storage.Beam.OperationHubRequests
 import Storage.Beam.Person
 import Storage.Beam.Quote
 import Storage.Beam.Rating (RatingT, ratingTable)
@@ -43,6 +50,7 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Route
+import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
 import Storage.Beam.VehicleRegistrationCertificate
 
@@ -78,7 +86,15 @@ atlasDB =
         driverGoHomeRequest = driverGoHomeRequestTable,
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
-        route = routeTable
+        fleetOperatorAssociation = fleetOperatorAssociationTable,
+        driverOperatorAssociation = driverOperatorAssociationTable,
+        route = routeTable,
+        operationHub = operationHubTable,
+        operationHubRequests = operationHubRequestsTable,
+        fleetBadge = fleetBadgeTable,
+        tripTransaction = tripTransactionTable,
+        fleetBadgeAssociation = fleetBadgeAssociationTable,
+        fleetOwnerInformation = fleetOwnerInformationTable
       }
 
 data AtlasDB f = AtlasDB
@@ -110,6 +126,14 @@ data AtlasDB f = AtlasDB
     notification :: f (B.TableEntity NotificationT),
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
-    route :: f (B.TableEntity RouteT)
+    fleetOperatorAssociation :: f (B.TableEntity FleetOperatorAssociationT),
+    driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
+    route :: f (B.TableEntity RouteT),
+    operationHub :: f (B.TableEntity OperationHubT),
+    operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
+    fleetBadge :: f (B.TableEntity FleetBadgeT),
+    tripTransaction :: f (B.TableEntity TripTransactionT),
+    fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT),
+    fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT)
   }
   deriving (Generic, B.Database be)

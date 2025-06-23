@@ -39,6 +39,7 @@ data SosType
   | SafetyFlow
   | CSAlertSosTicket
   | AudioRecording
+  | KaptureDashboard
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)

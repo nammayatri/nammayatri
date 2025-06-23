@@ -34,7 +34,16 @@ import Helpers.Utils (getCityConfig)
 import Constants as Const
 
 instance showAction :: Show Action where
-    show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (NoAction ) = "NoAction"
+  show (GoToRegisteration ) = "GoToRegisteration"
+  show (LoadPlans _) = "LoadPlans"
+  show (SelectPlan _) = "SelectPlan"
+  show (JoinPlanAC var1) = "JoinPlanAC_" <> show var1
+  show (CallSupport ) = "CallSupport"
+  show (PopUpModalAC var1) = "PopUpModalAC_" <> show var1
+  show (OpenReelsView _) = "OpenReelsView"
+  show (GetCurrentPosition _ _ _ _) = "GetCurrentPosition"
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of

@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.JourneyLeg where
 
+import qualified Data.Aeson
 import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions
@@ -14,6 +15,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.RouteDetails
 import qualified Storage.Queries.Transformers.RouteDetails
@@ -26,11 +28,15 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
       Just
         Domain.Types.JourneyLeg.JourneyLeg
           { agency = agencyDetails,
+            changedBusesInSequence = changedBusesInSequence,
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
             endLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon,
+            entrance = entrance >>= Kernel.Utils.JSON.valueToMaybe,
             estimatedMaxFare = estimatedMaxFare,
             estimatedMinFare = estimatedMinFare,
+            exit = exit >>= Kernel.Utils.JSON.valueToMaybe,
+            finalBoardedBusNumber = finalBoardedBusNumber,
             fromArrivalTime = fromArrivalTime,
             fromDepartureTime = fromDepartureTime,
             fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId,
@@ -42,6 +48,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             mode = mode,
             routeDetails = Storage.Queries.Transformers.RouteDetails.getTransformedRouteDetails routeDetailsList,
             sequenceNumber = sequenceNumber,
+            serviceTypes = serviceTypes,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,
             toArrivalTime = toArrivalTime,
             toDepartureTime = toDepartureTime,
@@ -55,13 +62,17 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
 instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   toTType' (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
     Beam.JourneyLegT
-      { Beam.distance = (.value) <$> distance,
+      { Beam.changedBusesInSequence = changedBusesInSequence,
+        Beam.distance = (.value) <$> distance,
         Beam.distanceUnit = (.unit) <$> distance,
         Beam.duration = duration,
         Beam.endLocationLat = endLocation & (.latitude),
         Beam.endLocationLon = endLocation & (.longitude),
+        Beam.entrance = entrance >>= Just . Data.Aeson.toJSON,
         Beam.estimatedMaxFare = estimatedMaxFare,
         Beam.estimatedMinFare = estimatedMinFare,
+        Beam.exit = exit >>= Just . Data.Aeson.toJSON,
+        Beam.finalBoardedBusNumber = finalBoardedBusNumber,
         Beam.fromArrivalTime = fromArrivalTime,
         Beam.fromDepartureTime = fromDepartureTime,
         Beam.fromStopCode = fromStopDetails >>= (.stopCode),
@@ -75,6 +86,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.legId = legSearchId,
         Beam.mode = mode,
         Beam.sequenceNumber = sequenceNumber,
+        Beam.serviceTypes = serviceTypes,
         Beam.startLocationLat = startLocation & (.latitude),
         Beam.startLocationLon = startLocation & (.longitude),
         Beam.toArrivalTime = toArrivalTime,

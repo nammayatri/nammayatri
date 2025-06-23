@@ -33,6 +33,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     name :: B.C f Kernel.Prelude.Text,
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     priority :: B.C f Kernel.Prelude.Int,
+    scheduleBookingListEligibilityTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     serviceTierType :: B.C f Domain.Types.Common.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

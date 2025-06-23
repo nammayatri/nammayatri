@@ -15,52 +15,43 @@
 
 module Storage.CachedQueries.UiDriverConfig where
 
-import Data.Aeson as A
 import qualified Data.Text as Text
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.UiDriverConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
-import Kernel.Utils.Common (CacheFlow, fromMaybeM)
-import Kernel.Utils.Logging
-import Kernel.Utils.Time
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
+import Kernel.Utils.Common (CacheFlow, throwError)
+-- import Kernel.Utils.Time
+-- import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as CTC
+-- import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Queries.UiDriverConfig as Queries
-import qualified Tools.DynamicLogic as TDL
 
-findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe UiDriverConfig, Maybe Int)
-findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
-  let key = makeDriverUiConfigKey merchantOperatingCityId os platform
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
-  config' <-
-    Hedis.safeGet key >>= \case
-      Just config -> pure config
-      Nothing -> do
-        cacheAllTollsByMerchantOperatingCity merchantOperatingCityId os platform /=<< Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId
-  case config' of
-    Just config -> do
-      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.UI_DRIVER os platform) localTime Nothing toss
-      resp <- LYTU.runLogics allLogics config
-      case (fromJSON resp.result :: Result UiDriverConfig) of
-        Success dpc'' -> pure (Just dpc'', version)
-        A.Error e -> do
-          logError $ "Error in applying dynamic logic: " <> show e
-          incrementSystemConfigsFailedCounter "driver_ui_config_dynamic_logic_failure"
-          pure (Just config, version)
-    Nothing -> pure (Nothing, Nothing)
+-- import qualified Tools.DynamicLogic as TDL
 
-cacheAllTollsByMerchantOperatingCity :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiDriverConfig -> m ()
-cacheAllTollsByMerchantOperatingCity merchantOpCityId os plt config = do
+findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe UiDriverConfig, Maybe Int)
+findUIConfig _ _ _ = do
+  throwError $ InvalidRequest $ "UI config not supported yet"
+
+-- transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+-- localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
+-- version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) (LYT.DRIVER_CONFIG (LYT.UiConfig os platform)) localTime toss >>= fromMaybeM (InvalidRequest $ "No version found. No dynamic logic found for merchantOpCityId: " <> show merchantOperatingCityId <> " and domain: " <> show (LYT.DRIVER_CONFIG (LYT.UiConfig os platform)))
+-- let mbConfigInExperimentVersions = Just [YType.ConfigVersionMap {config = LYT.DRIVER_CONFIG (LYT.UiConfig os platform), version = version}]
+-- TDL.findOneUiConfig
+--   (cast merchantOperatingCityId)
+--   (LYT.DRIVER_CONFIG (LYT.UiConfig os platform))
+--   mbConfigInExperimentVersions
+--   Nothing
+--   (Queries.findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId)
+--   isBaseLogic
+
+cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType :: (CacheFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> Maybe UiDriverConfig -> m ()
+cacheAllUIConfigByMerchantOperatingCityDeviceTypePlatformType merchantOpCityId os plt config = do
   let key = makeDriverUiConfigKey merchantOpCityId os plt
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp key config expTime
@@ -74,3 +65,12 @@ create = Queries.create
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UiDriverConfig -> m ()
 updateByPrimaryKey = Queries.updateByPrimaryKey
+
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> m ()
+clearCache _ _ _ = do
+  throwError $ InvalidRequest $ "UI config not supported yet"
+
+-- TDL.clearConfigCache
+--   (cast mocid)
+--   (LYT.DRIVER_CONFIG (LYT.UiConfig dt pt))
+--   Nothing

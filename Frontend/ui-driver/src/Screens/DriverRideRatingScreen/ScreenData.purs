@@ -17,6 +17,7 @@ module Screens.DriverRideRatingScreen.ScreenData where
 
 import Screens.Types
 import Data.Maybe
+import ConfigProvider
 
 initData :: DriverRideRatingScreenState
 initData = {
@@ -27,6 +28,7 @@ initData = {
   , customerName : "Customer"
   , activeFeedBackOption : Nothing
   , selectedFeedbackOption : ""
+  , config: getAppConfig appConfig
   },
   
   props: { }

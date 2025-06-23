@@ -16,9 +16,8 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Data.Show.Generic (genericShow) 
-import Language.Types (STR(..))
 
-foreign import getStringFromConfig :: forall a. STR -> (a -> Maybe a) -> (Maybe a) -> Maybe String
+foreign import getStringFromConfig :: forall a b. b -> (a -> Maybe a) -> (Maybe a) -> Maybe String
 
 foreign import getMerchantId :: String -> Foreign
 

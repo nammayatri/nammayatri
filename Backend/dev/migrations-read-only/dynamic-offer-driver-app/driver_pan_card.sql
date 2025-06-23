@@ -27,3 +27,13 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN merchant_operating
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN driver_name_on_govt_db text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN doc_type text ;

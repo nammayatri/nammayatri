@@ -34,18 +34,22 @@ createOrder config booking mRiderNumber = do
         { origin = fromStation.code,
           destination = toStation.code,
           ticketType = "SJT", -- TODO: FIX THIS
-          noOfTickets = booking.quantity,
-          ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice),
+          noOfTickets = 1, -- Always set to 1 as per requirement
+          ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice) `div` max 1 booking.quantity,
           customerMobileNo = fromMaybe "9999999999" mRiderNumber,
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,
-          paymentMode = "UPI" -- TODO: fix this
+          paymentMode = "UPI",
+          appType = cmrlAppType,
+          paxCount = booking.quantity, -- Number of tickets
+          qrTypeCode = "FQR"
         }
   tickets <-
     ticketsData `forM` \TicketInfo {..} -> do
       return $
         ProviderTicket
           { ticketNumber = ticketNumber,
+            vehicleNumber = Nothing,
             qrData = qrBytes,
             qrStatus = "UNCLAIMED",
             qrValidity = expiryTime,
@@ -63,7 +67,10 @@ data GenerateQRReq = GenerateQRReq
     customerMobileNo :: T.Text,
     uniqueTxnRefNo :: T.Text,
     bankRefNo :: T.Text,
-    paymentMode :: T.Text
+    paymentMode :: T.Text,
+    appType :: T.Text,
+    paxCount :: Int,
+    qrTypeCode :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -83,7 +90,7 @@ data GenerateQRRes = GenerateQRRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type GenerateQRAPI =
-  "cumta" :> "generateqrticket"
+  "CmrlThirdParty" :> "generateqrticket"
     :> Header "Authorization" T.Text
     :> ReqBody '[JSON] GenerateQRReq
     :> Post '[JSON] GenerateQRRes
@@ -94,10 +101,8 @@ generateQRAPI = Proxy
 generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> GenerateQRReq -> m [TicketInfo]
 generateQRTickets config qrReq = do
   let modifiedQrReq = qrReq {origin = getStationCode qrReq.origin, destination = getStationCode qrReq.destination}
-  accessToken <- getAuthToken config
-  qrResponse <-
-    callAPI config.networkHostUrl (ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq) "generateQRTickets" generateQRAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_GENERATE_QR_TICKET_API") config.networkHostUrl)
+      eulerClient = \accessToken -> ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq
+  qrResponse <- callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
   return qrResponse.result
   where
     getStationCode :: Text -> Text

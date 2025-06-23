@@ -29,6 +29,15 @@ let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 
 let logger_cfg = { level = LogLevel.INFO, log_to_file = False }
 
+let stop_detection_config =
+      { stop_detection_update_callback_url =
+          "http://127.0.0.1:8016/internal/stopDetection"
+      , max_eligible_stop_speed_threshold = 2
+      , radius_threshold_meters = 25
+      , min_points_within_radius_threshold = 5
+      , enable_onride_stop_detection = False
+      }
+
 in  { logger_cfg
     , redis_cfg
     , replica_redis_cfg = Some replica_redis_cfg
@@ -42,9 +51,13 @@ in  { logger_cfg
     , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
     , bulk_location_callback_url =
         "http://127.0.0.1:8016/internal/bulkLocUpdate"
+    , stop_detection = stop_detection_config
     , auth_token_expiry = 86400
     , min_location_accuracy = 50.0
     , driver_location_accuracy_buffer = 25.0
+    , driver_reached_destination_buffer = 25.0
+    , driver_reached_destination_callback_url =
+        "http://127.0.0.1:8016/internal/destinationReached"
     , redis_expiry = 86400
     , last_location_timstamp_expiry = 86400
     , location_update_limit = 6000000000
@@ -62,8 +75,14 @@ in  { logger_cfg
       , "HITS_LIMIT_EXCEEDED"
       ]
     , max_allowed_req_size = 512000
-    , driver_location_delay_in_sec = 60
+    , -- 500 KB
+      driver_location_delay_in_sec = 60
+    , driver_location_delay_for_new_ride_sec = 60
     , trigger_fcm_callback_url =
         "http://127.0.0.1:8016/internal/driverInactiveFCM"
     , apns_url = "https://api.sandbox.push.apple.com:443"
+    , pickup_notification_threshold = 40.0
+    , arriving_notification_threshold = 100.0
+    , trigger_fcm_callback_url_bap =
+        "http://127.0.0.1:8013/internal/driverArrivalNotification"
     }

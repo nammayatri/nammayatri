@@ -5,21 +5,22 @@ import Kernel.Types.Price
 
 -- Encrypted QR code generation
 data TicketPayload = TicketPayload
-  { transactionId :: Text,
-    fromRouteProviderCode :: Text,
+  { fromRouteProviderCode :: Text,
     toRouteProviderCode :: Text,
     adultQuantity :: Int,
     childQuantity :: Int,
     vehicleTypeProviderCode :: Text,
-    expiry :: Text,
     ticketNumber :: Text,
     ticketAmount :: Money,
-    refreshAt :: Maybe UTCTime
+    expiry :: Text,
+    refreshAt :: Maybe UTCTime,
+    otpCode :: Maybe Int
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq)
 
 data ProviderTicket = ProviderTicket
   { ticketNumber :: Text,
+    vehicleNumber :: Maybe Text,
     description :: Maybe Text,
     qrData :: Text,
     qrStatus :: Text,

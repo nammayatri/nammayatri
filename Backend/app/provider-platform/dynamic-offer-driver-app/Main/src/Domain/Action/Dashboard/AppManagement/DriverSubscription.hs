@@ -23,7 +23,6 @@ import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import Control.Applicative ((<|>))
 import qualified Data.Map as M
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
@@ -89,9 +88,9 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
     case channel of
       SMS -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
-        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : WHATSAPP") messageKey -- whenJust messageKey $ \mkey -> do
@@ -99,12 +98,12 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
           QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey mbVehicleCategory Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       OVERLAY -> do
         oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
-        manualDues <- getManualDues personId transporterConfig.timeDiffFromUtc transporterConfig.driverFeeOverlaySendingTimeLimitInDays
-        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing mbVehicleCategory >>= fromMaybeM (OverlayKeyNotFound oKey)
+        manualDues <- getManualDues personId
+        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing mbVehicleCategory Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
         let overlay' = overlay{okButtonText, description}
@@ -128,15 +127,9 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
     addTranslation Domain.RawMessage {..} trans =
       (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
 
-    getManualDues personId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
-      windowEndTime <- getLocalCurrentTime timeDiffFromUtc
-      let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName personId YATRI_SUBSCRIPTION
-      let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
-      return $
-        if null filteredDriverFees
-          then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+    getManualDues personId = do
+      sum . map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst))
+        <$> QDF.findAllOverdueDriverFeeByDriverIdForServiceName personId YATRI_SUBSCRIPTION
 
     templateText txt = "{#" <> txt <> "#}"
 

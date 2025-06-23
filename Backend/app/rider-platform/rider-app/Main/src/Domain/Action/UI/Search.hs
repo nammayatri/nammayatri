@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Search where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
 import Control.Monad
@@ -37,6 +38,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RiderConfig
 import Domain.Types.SavedReqLocation
@@ -137,6 +139,102 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation mbHotSpotConfig =
         Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
         Nothing -> return ()
 
+extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
+extractSearchDetails now = \case
+  OneWaySearch reqDetails@OneWaySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.OneWay,
+        roundTrip = False,
+        stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        hasStops = reqDetails.stops >>= \s -> Just $ not (null s),
+        driverIdentifier_ = driverIdentifier,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        vehicleCategory = Nothing,
+        ..
+      }
+  RentalSearch RentalSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.Rental,
+        roundTrip = False,
+        stops = fromMaybe [] stops,
+        hasStops = Nothing,
+        returnTime = Nothing,
+        driverIdentifier_ = Nothing,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        vehicleCategory = Nothing,
+        ..
+      }
+  InterCitySearch InterCitySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.InterCity,
+        stops = fromMaybe [] stops,
+        hasStops = Nothing,
+        driverIdentifier_ = Nothing,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        vehicleCategory = Nothing,
+        ..
+      }
+  AmbulanceSearch OneWaySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.Ambulance,
+        roundTrip = False,
+        stops = maybe [] pure destination,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        hasStops = Nothing,
+        driverIdentifier_ = driverIdentifier,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        vehicleCategory = Nothing,
+        ..
+      }
+  DeliverySearch OneWaySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.Delivery,
+        roundTrip = False,
+        stops = maybe [] pure destination,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        hasStops = Nothing,
+        driverIdentifier_ = driverIdentifier,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        vehicleCategory = Nothing,
+        ..
+      }
+  PTSearch PublicTransportSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.PublicTransport,
+        stops = maybe [] pure destination,
+        hasStops = Nothing,
+        driverIdentifier_ = Nothing,
+        roundTrip = False,
+        isSourceManuallyMoved = Nothing,
+        isSpecialLocation = Nothing,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        isReallocationEnabled = Nothing,
+        fareParametersInRateCard = Nothing,
+        quotesUnifiedFlow = Nothing,
+        placeNameSource = Nothing,
+        destinationStopCode = Just destinationStopCode,
+        originStopCode = Just originStopCode,
+        ..
+      }
+
 {-
 # /search
 #  -> Make one normal search to BAP (no change in this)
@@ -159,8 +257,9 @@ search ::
   Maybe Text ->
   Bool ->
   Maybe JPT.JourneySearchData ->
+  Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
@@ -178,7 +277,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let stopsLatLong = map (.gps) stops
   originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
-  updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
+  unless justMultimodalSearch $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
   -- merchant operating city of search-request-origin-location
   merchantOperatingCity <-
@@ -190,6 +289,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let merchantOperatingCityId = merchantOperatingCity.id
   let isMeterRide = getIsMeterRideSearch req
 
+  when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
+    throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID
@@ -229,6 +330,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       driverIdentifier'
       configVersionMap
       isMeterRide
+      recentLocationId
+      routeCode
+      destinationStopCode
+      originStopCode
+      vehicleCategory
+
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -278,6 +385,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
+      let isMultimodalSearch = case journeySearchData of
+            Just _ -> True
+            Nothing -> False
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
@@ -289,7 +399,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
                 (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
                 (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
-                (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText)
+                (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
+                (Beckn.IS_MULTIMODAL_SEARCH, Just $ show isMultimodalSearch)
               ],
             Beckn.paymentTags =
               [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
@@ -335,60 +446,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
       DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-
-    extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
-    extractSearchDetails now = \case
-      OneWaySearch reqDetails@OneWaySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.OneWay,
-            roundTrip = False,
-            stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            hasStops = reqDetails.stops >>= \s -> Just $ length s > 0,
-            driverIdentifier_ = driverIdentifier,
-            ..
-          }
-      RentalSearch RentalSearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.Rental,
-            roundTrip = False,
-            stops = fromMaybe [] stops,
-            hasStops = Nothing,
-            returnTime = Nothing,
-            driverIdentifier_ = Nothing,
-            ..
-          }
-      InterCitySearch InterCitySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.InterCity,
-            stops = fromMaybe [] stops,
-            hasStops = Nothing,
-            driverIdentifier_ = Nothing,
-            ..
-          }
-      AmbulanceSearch OneWaySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.Ambulance,
-            roundTrip = False,
-            stops = maybe [] pure destination,
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            hasStops = Nothing,
-            driverIdentifier_ = driverIdentifier,
-            ..
-          }
-      DeliverySearch OneWaySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.Delivery,
-            roundTrip = False,
-            stops = maybe [] pure destination,
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            hasStops = Nothing,
-            driverIdentifier_ = driverIdentifier,
-            ..
-          }
+      PTSearch _ -> processOneWaySearch person merchant merchantOperatingCity searchRequestId Nothing Nothing Nothing stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
 
     processOneWaySearch ::
       SearchRequestFlow m r =>
@@ -480,8 +538,13 @@ buildSearchRequest ::
   Maybe DRL.DriverIdentifier ->
   [LYT.ConfigVersionMap] ->
   Maybe Bool ->
+  Maybe (Id DTRL.RecentLocation) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Enums.VehicleCategory ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -517,6 +580,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         selectedPaymentMethodId = Nothing,
+        isPetRide = Nothing,
         isAdvanceBookingEnabled = Nothing,
         availablePaymentMethods = [],
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
@@ -531,6 +595,9 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         hasMultimodalSearch = Just False,
         configInExperimentVersions = configVersionMap,
         isMeterRideSearch = isMeterRide,
+        destinationStopCode = destinationStopCode,
+        originStopCode = originStopCode,
+        allJourneysLoaded = Just False,
         ..
       }
   where
@@ -556,7 +623,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) request
+  routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
   let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
   when collectMMIData $ do
@@ -564,7 +631,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
       mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
-          routeResp <- MapsRoutes.getRoutes True mapsCfg request
+          routeResp <- MapsRoutes.getRoutes (Just searchRequestId.getId) True mapsCfg request
           logInfo $ "MMI route response: " <> show routeResp
           let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
           triggerRouteDataEvent routeData
@@ -580,8 +647,8 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
             MapsK.NextBillionConfig msc -> do
               let nbFastestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "fastest") Nothing
               let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
-              nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbFastestReq
-              nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbShortestReq
+              nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbFastestReq
+              nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters (Just searchRequestId.getId) msc nbShortestReq
               logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
               let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
               let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now

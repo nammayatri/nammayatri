@@ -59,3 +59,65 @@ ALTER TABLE atlas_app.journey ADD COLUMN is_payment_success boolean ;
 
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN recent_journal_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN recent_location_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN relevance_score double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_service_tier boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN has_preferred_transit_modes boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN to_location_address text ;
+ALTER TABLE atlas_app.journey ADD COLUMN from_location_address text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN is_public_transport_included boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN payment_order_short_id character varying(36) ;
+
+
+------- SQL updates -------
+

@@ -15,7 +15,7 @@
 
 module Screens.TripDetailsScreen.Controller where
 
-import Prelude (class Show, pure, unit, not, bind, ($), discard)
+import Prelude (class Show, pure, unit, not, bind, ($), discard, show, (<>))
 import Screens.Types as ST
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, update, exit, continue, continueWithCmd)
@@ -30,7 +30,16 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
-    show _ = ""
+  show (PrimaryButtonActionController _ var1) = "PrimaryButtonActionController_" <> show var1
+  show (GenericHeaderActionController var1) = "GenericHeaderActionController_" <> show var1
+  show (SourceToDestinationActionController var1) = "SourceToDestinationActionController_" <> show var1
+  show (BackPressed ) = "BackPressed"
+  show (ReportIssue ) = "ReportIssue"
+  show (MessageTextChanged _) = "MessageTextChanged"
+  show (Copy ) = "Copy"
+  show (HelpAndSupport ) = "HelpAndSupport"
+  show (NoAction ) = "NoAction"
+  show (AfterRender ) = "AfterRender"
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of

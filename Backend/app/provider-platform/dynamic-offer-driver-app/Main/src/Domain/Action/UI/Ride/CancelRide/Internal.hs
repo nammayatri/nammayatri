@@ -30,7 +30,8 @@ import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude
-import Kernel.Prelude hiding (any, elem)
+import Kernel.External.Maps.Types
+import Kernel.Prelude hiding (any, elem, map)
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -45,6 +46,7 @@ import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.CallBAPInternal
 import SharedLogic.Cancel
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -97,7 +99,11 @@ cancelRideImpl ::
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -146,7 +152,8 @@ cancelRideTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -160,9 +167,8 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
   when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId
-  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing Nothing
-  void $ QRide.updateStatus ride.id DRide.CANCELLED
-  void $ QRide.updateRideEndedBy ride.id rideEndedBy
+  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+  void $ QRide.updateStatusAndRideEndedBy ride.id DRide.CANCELLED rideEndedBy
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId

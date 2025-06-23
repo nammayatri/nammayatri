@@ -23,7 +23,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (AfterRender ) = "AfterRender"
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of 

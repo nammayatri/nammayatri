@@ -39,7 +39,7 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import MerchantConfig.Types (MetroConfig)
 import Storage
-import Services.API (FRFSConfigAPIRes(..),TicketServiceType(..), FRFSDiscountReq(..))
+import Services.API (FRFSConfigAPIRes(..),TicketServiceType(..), FRFSDiscountReq(..), SearchRideType(..))
 import Mobility.Prelude (getNumberWithSuffix)
 import Debug
 import Data.Array as DA
@@ -82,15 +82,19 @@ updateButtonConfig state = let
     priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100.0) + price)
     discountText = if price /= priceAfterExtraDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show price)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
+    showFare = state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection
+    showBusFareButton = (state.data.searchRideType /= BUS_DESTINATION) || (showFare && priceAfterExtraDiscount /= 0.0)
     updateButtonConfig' = config 
-        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection ) then (getString BOOK_AND_PAY <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) else (getString GET_FARE)}
+        { textConfig { textFromHtml = Just $ 
+            if (showFare &&  priceAfterExtraDiscount /= 0.0 && state.props.isButtonActive) then (getString BOOK_AND_PAY <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) 
+            else "Getting Fare ..."}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
         , id = "PrimaryButtonUpdate"
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
-        , isClickable = state.props.termsAndConditionsSelected && state.props.isButtonActive
-        , alpha = if (state.props.termsAndConditionsSelected && state.props.isButtonActive) then 1.0 else 0.5
+        , isClickable = state.props.termsAndConditionsSelected && state.props.isButtonActive && showBusFareButton
+        , alpha = if (state.props.termsAndConditionsSelected && state.props.isButtonActive && showBusFareButton) then 1.0 else 0.5
         }
     in updateButtonConfig'
     where

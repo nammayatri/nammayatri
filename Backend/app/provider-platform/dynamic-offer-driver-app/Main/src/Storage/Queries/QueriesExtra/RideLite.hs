@@ -15,6 +15,7 @@
 
 module Storage.Queries.QueriesExtra.RideLite where
 
+import qualified Domain.Types
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -39,6 +40,9 @@ findByRBIdLite bookingId = findOneWithKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.T
 findActiveByRBIdLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe RideLite)
 findActiveByRBIdLite (Kernel.Types.Id.Id rbId) = findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq rbId, Se.Is Beam.status $ Se.Not $ Se.Eq Domain.Types.Ride.CANCELLED]]
 
+findInProgressByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
+findInProgressByDriverId (Kernel.Types.Id.Id driverId) = findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.status $ Se.Eq Domain.Types.Ride.INPROGRESS]]
+
 findRideByRideShortIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId RideLite -> m (Maybe RideLite))
 findRideByRideShortIdLite shortId = findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
@@ -53,7 +57,8 @@ data RideLite = RideLite
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     status :: Domain.Types.Ride.RideStatus,
-    driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    tripCategory :: Maybe Domain.Types.TripCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -71,5 +76,6 @@ instance FromTType' RideLiteTable RideLite where
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             shortId = Kernel.Types.Id.ShortId shortId,
             status = status,
-            driverArrivalTime = driverArrivalTime
+            driverArrivalTime = driverArrivalTime,
+            tripCategory = tripCategory
           }

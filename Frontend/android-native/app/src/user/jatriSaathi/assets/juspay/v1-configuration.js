@@ -121,7 +121,7 @@ window.getMerchantConfig = function () {
       "showDriverAddition" : false, // Temporary Fix until properly handled in backend's estimateFareBreakup
       "enableRateCard" : false
     },
-    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP","META"],
     "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
     "feedbackBackground": "#2C2F3A",
     "sideBarList": ["MyRides", "Tickets", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
@@ -249,15 +249,15 @@ window.getMerchantConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subTitle": "ইংরেজি"
+      "subtitle": "ইংরেজি"
     }, {
       "name": "বাংলা",
       "value": "BN_IN",
-      "subTitle": "Bengali"
+      "subtitle": "Bengali"
     }, {
       "name": "हिंदी",
       "value": "HI_IN",
-      "subTitle": "Hindi"
+      "subtitle": "Hindi"
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"

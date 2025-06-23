@@ -14,7 +14,7 @@
 
 module SharedLogic.Confirm where
 
-import Control.Monad.Extra (anyM)
+import Control.Monad.Extra (anyM, maybeM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -53,6 +53,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
@@ -94,7 +95,9 @@ data DConfirmRes = DConfirmRes
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     confirmResDetails :: Maybe DConfirmResDetails,
-    isAdvanceBookingEnabled :: Maybe Bool
+    isAdvanceBookingEnabled :: Maybe Bool,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -128,7 +131,7 @@ confirm ::
 confirm DConfirmReq {..} = do
   now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
-  bppQuoteId <- getBppQuoteId now quote.quoteDetails
+  (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -136,7 +139,7 @@ confirm DConfirmReq {..} = do
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
-    Just booking -> DQuote.processActiveBooking booking OnConfirm
+    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -170,7 +173,7 @@ confirm DConfirmReq {..} = do
   void $ QBPL.createMany bookingParties
   unless isScheduled $
     void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
-  void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
+  whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
     _ -> return Nothing
@@ -189,27 +192,33 @@ confirm DConfirmReq {..} = do
         paymentMethodInfo = Nothing, -- can be removed later
         confirmResDetails,
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
+        isInsured = Just $ booking.isInsured,
+        insuredAmount = booking.driverInsuredAmount,
         ..
       }
   where
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 
+    isMeterRide = \case
+      DQuote.MeterRideDetails _ -> True
+      _ -> False
+
     getBppQuoteId now = \case
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
       DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
-      DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
+      DQuote.RentalDetails rentalDetails -> pure (rentalDetails.id.getId, Nothing)
       DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
-      DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
-      DQuote.InterCityDetails details -> pure details.id.getId
-      DQuote.MeterRideDetails details -> pure details.quoteId
+      DQuote.OneWaySpecialZoneDetails details -> pure (details.quoteId, Nothing)
+      DQuote.InterCityDetails details -> pure (details.id.getId, Nothing)
+      DQuote.MeterRideDetails details -> pure (details.quoteId, Nothing)
 
     getBppQuoteIdFromDriverOffer driverOffer now = do
       estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
       when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
       when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
-      pure driverOffer.bppQuoteId
+      pure (driverOffer.bppQuoteId, Just estimate.id)
 
     checkIfActiveRidePresentForParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DBPL.BookingPartiesLink] -> m ()
     checkIfActiveRidePresentForParties bookingParties = do
@@ -280,6 +289,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   let (skipBooking, journeyId) = fromMaybe (Nothing, Nothing) $ (\j -> (Just j.skipBooking, Just (Id j.journeyId))) <$> searchRequest.journeyLegInfo
+  (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
   return $
     ( DRB.Booking
         { id = Id id,
@@ -309,6 +319,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           estimatedDuration = searchRequest.estimatedRideDuration,
           estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
           bookingDetails,
+          isPetRide = fromMaybe False searchRequest.isPetRide,
           tripTerms = quote.tripTerms,
           merchantId = searchRequest.merchantId,
           merchantOperatingCityId = searchRequest.merchantOperatingCityId,
@@ -341,6 +352,9 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isDeleted = Just False,
           isSkipped = skipBooking,
           journeyId,
+          journeyLegStatus = Nothing,
+          preferSafetyPlus = quote.isSafetyPlus,
+          recentLocationId = searchRequest.recentLocationId,
           ..
         },
       bookingParties
@@ -411,6 +425,21 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
                 }
         )
         allSearchReqParties
+
+    isBookingInsured :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m (Bool, Maybe Text, Maybe Text)
+    isBookingInsured = do
+      insuranceConfig <- maybeM (pure Nothing) (\tp -> CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tp (DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType)) (pure quote.tripCategory)
+      pure $
+        maybe
+          (False, Nothing, Nothing)
+          ( \inc ->
+              case inc.allowedVehicleServiceTiers of
+                Just allowedTiers -> case quote.vehicleServiceTierType `elem` allowedTiers of
+                  True -> (True, inc.insuredAmount, inc.driverInsuredAmount)
+                  False -> (False, inc.insuredAmount, inc.driverInsuredAmount)
+                Nothing -> (True, inc.insuredAmount, inc.driverInsuredAmount)
+          )
+          insuranceConfig
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do

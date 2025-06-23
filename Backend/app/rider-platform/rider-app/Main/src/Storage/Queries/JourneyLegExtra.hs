@@ -39,7 +39,8 @@ create journeyLeg = do
               routeShortName = routeDetail.shortName,
               routeColorName = routeDetail.shortName,
               routeColorCode = routeDetail.color,
-              frequency = routeDetail.frequency,
+              frequency = Nothing,
+              alternateShortNames = Just routeDetail.alternateShortNames,
               journeyLegId = journeyLeg.id,
               agencyGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
               agencyName = routeDetail.longName,
@@ -73,50 +74,3 @@ create journeyLeg = do
     RD.create routeDetails
 
   create' journeyLeg
-
-upsert :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLeg.JourneyLeg -> m ())
-upsert journeyLeg = do
-  findByPrimaryKey journeyLeg.id >>= \case
-    Just _ -> updateByPrimaryKey journeyLeg
-    Nothing -> create journeyLeg
-
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLeg.JourneyLeg -> m ())
-updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.distance ((.value) <$> distance),
-      Se.Set Beam.distanceUnit ((.unit) <$> distance),
-      Se.Set Beam.duration duration,
-      Se.Set Beam.endLocationLat (endLocation & (.latitude)),
-      Se.Set Beam.endLocationLon (endLocation & (.longitude)),
-      Se.Set Beam.estimatedMaxFare estimatedMaxFare,
-      Se.Set Beam.estimatedMinFare estimatedMinFare,
-      Se.Set Beam.fromArrivalTime fromArrivalTime,
-      Se.Set Beam.fromDepartureTime fromDepartureTime,
-      Se.Set Beam.fromStopCode (fromStopDetails >>= (.stopCode)),
-      Se.Set Beam.fromStopGtfsId ((fromStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
-      Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
-      Se.Set Beam.fromStopPlatformCode (fromStopDetails >>= (.platformCode)),
-      Se.Set Beam.isDeleted isDeleted,
-      Se.Set Beam.isSkipped isSkipped,
-      Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
-      Se.Set Beam.legId legSearchId,
-      Se.Set Beam.mode mode,
-      Se.Set Beam.sequenceNumber sequenceNumber,
-      Se.Set Beam.startLocationLat (startLocation & (.latitude)),
-      Se.Set Beam.startLocationLon (startLocation & (.longitude)),
-      Se.Set Beam.toArrivalTime toArrivalTime,
-      Se.Set Beam.toDepartureTime toDepartureTime,
-      Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),
-      Se.Set Beam.toStopGtfsId ((toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
-      Se.Set Beam.toStopName (toStopDetails >>= (.name)),
-      Se.Set Beam.toStopPlatformCode (toStopDetails >>= (.platformCode)),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

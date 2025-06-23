@@ -31,6 +31,7 @@ import Kernel.External.Types (VerificationFlow)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -50,7 +51,8 @@ retryDocumentVerificationJob ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    MonadReader r m
+    MonadReader r m,
+    HasKafkaProducer r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -58,7 +60,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
   let jobData = jobDetails.jobInfo.jobData
   verificationReq <- IVQuery.findByRequestId jobData.requestId >>= fromMaybeM (InternalError "Verification request not found")
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId verificationReq.docType (fromMaybe DVC.CAR verificationReq.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
+  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId verificationReq.docType (fromMaybe DVC.CAR verificationReq.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
   let maxRetryCount = documentVerificationConfig.maxRetryCount
   if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
     then do

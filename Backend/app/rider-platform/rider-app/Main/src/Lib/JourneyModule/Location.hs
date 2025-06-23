@@ -47,14 +47,14 @@ updateJourneyLegStatus travelMode recentLocations endLatLang currentStatus isLas
   let (arrivedThreshold, finishingThreshold) =
         case travelMode of
           Walk -> (50, 100)
-          Subway -> (150, 400)
-          Metro -> (150, 400)
+          Subway -> (300, 500)
+          Metro -> (300, 500)
           Bus -> (100, 300)
           Taxi -> (50, 100)
   case currentStatus of
     JLT.Ongoing -> checkThreshold finishingThreshold JLT.Finishing
     JLT.Finishing -> checkThreshold arrivedThreshold JLT.Completed
-    JLT.InPlan -> if isLastCompleted then (True, JLT.Ongoing) else (False, currentStatus)
+    cs | cs `elem` [JLT.InPlan, JLT.Booked] -> if isLastCompleted then (True, bool JLT.OnTheWay JLT.Ongoing (travelMode == Walk)) else (False, currentStatus)
     JLT.Completed -> (False, currentStatus) -- No change once the leg is completed
     _ -> (False, currentStatus)
   where

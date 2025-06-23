@@ -141,3 +141,89 @@ ALTER TABLE atlas_app.person ADD COLUMN frequent_loc_geohashes text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN verification_channel text ;
+ALTER TABLE atlas_app.person ADD COLUMN profile_picture text ;
+ALTER TABLE atlas_app.person ADD COLUMN date_of_birth timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN juspay_customer_payment_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN live_activity_token text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN imei_number_hash bytea ;
+ALTER TABLE atlas_app.person ADD COLUMN imei_number_encrypted character varying(255) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN blocked_until timestamp with time zone;
+ALTER TABLE atlas_app.person ADD COLUMN auth_blocked boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN latest_lon double precision ;
+ALTER TABLE atlas_app.person ADD COLUMN latest_lat double precision ;
+
+
+------- SQL updates -------
+
+
+ALTER TABLE atlas_app.person ADD COLUMN last_used_vehicle_service_tiers text[] ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

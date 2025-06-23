@@ -19,6 +19,8 @@ data SpecialOccasion = SpecialOccasion
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialDayType :: Domain.Types.SpecialOccasion.SpecialDayType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

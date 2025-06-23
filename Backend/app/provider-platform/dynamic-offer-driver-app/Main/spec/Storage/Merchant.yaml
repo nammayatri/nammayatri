@@ -45,6 +45,7 @@ imports:
   LLMChatCompletionService: ChatCompletion.Types
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
+  Role: Domain.Types.Person
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -88,6 +89,8 @@ Merchant:
     registryUrl: BaseUrl
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    fleetOwnerEnabledCheck: Maybe Bool
+    overwriteAssociation: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -112,6 +115,8 @@ Merchant:
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: '''{"NY"}'''
+    fleetOwnerEnabledCheck: "false"
+    overwriteAssociation: "false"
 
   excludedFields:
     - merchantId
@@ -161,7 +166,7 @@ MerchantMessage:
   derives: Generic,Show,'UsageSafety,Eq
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE
 
     MediaChannel:
       enum: SMS,WHATSAPP,OVERLAY,ALERT
@@ -526,6 +531,8 @@ MerchantServiceUsageConfig:
     driverBackgroundVerificationService: DriverBackgroundVerificationService
     aadhaarVerificationService: AadhaarVerificationService
     faceVerificationService: VerificationService
+    panVerificationService: Maybe VerificationService
+    gstVerificationService: Maybe VerificationService
     issueTicketService: IssueTicketService
     rectifyDistantPointsFailure: MapsService
     getExophone: CallService
@@ -577,6 +584,8 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: text
     aadhaarVerificationService: character varying(30)
     faceVerificationService: character varying(30)
+    panVerificationService: character varying(30)
+    gstVerificationService: character varying(30)
     issueTicketService: character varying(30)
     getExophone: character varying(255)
     snapToRoadProvidersList: "text[]"
@@ -602,6 +611,7 @@ MerchantServiceUsageConfig:
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"
     llmChatCompletion: "'AzureOpenAI'"
+    panVerificationService: "'HyperVerge'"
 
   queries:
     findByMerchantOpCityId:
@@ -826,6 +836,8 @@ TransporterConfig:
     thresholdCancellationScore: Maybe Int
     minRidesForCancellationScore: Maybe Int
     thresholdCancellationPercentageToUnlist: Maybe Int
+    qarCalRadiusInKm : Maybe Double
+    isDynamicPricingQARCalEnabled : Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
@@ -997,6 +1009,31 @@ TransporterConfig:
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
+    requiresOnboardingInspection: Maybe Bool
+    allowedReferralEntities: "[Role]"
+    enableOverchargingBlocker: Bool
+    normalRideBulkLocUpdateBatchSize: Integer
+    meterRideBulkLocUpdateBatchSize: Integer
+    dynamicReferralCodeValidForMinutes: Integer
+    dynamicReferralCodeEnabled: Bool
+    generateReferralCodeForFleet: Maybe Bool
+    generateReferralCodeForOperator: Maybe Bool
+    maxAllowedDocSizeInMB: Maybe Int
+    bulkWaiveOffLimit : Int
+    rcExpiryChecks : Maybe Bool
+    requireRouteMappingInVehicle: Bool
+    enableExistingVehicleInBulkUpload: Bool
+    onboardingDocsCountLimit: Maybe Int
+    localPoliceNumbers: Maybe [Text]
+    localAmbulanceNumbers: Maybe [Text]
+    safetyTeamNumbers: Maybe [Text]
+    weekStartMode : Int
+    earningsWindowSize : Int
+    liveEKD: Maybe Bool
+    deactivateRCOnUnlink: Maybe Bool
+    aaEnabledClientSdkVersion : Text
+    isAAEnabledForRecurring : Maybe Bool
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1045,7 +1082,18 @@ TransporterConfig:
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
     minThresholdForPassThroughDestination: Maybe Meters
-
+    allowedReferralEntities: "Maybe [Text]"
+    enableOverchargingBlocker: Maybe Bool
+    normalRideBulkLocUpdateBatchSize: Maybe Integer
+    meterRideBulkLocUpdateBatchSize: Maybe Integer
+    dynamicReferralCodeValidForMinutes: Maybe Integer
+    dynamicReferralCodeEnabled: Maybe Bool
+    bulkWaiveOffLimit : Maybe Int
+    requireRouteMappingInVehicle: Maybe Bool
+    enableExistingVehicleInBulkUpload: Maybe Bool
+    weekStartMode : Maybe Int
+    earningsWindowSize : Maybe Int
+    aaEnabledClientSdkVersion: Maybe Text
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1098,11 +1146,23 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    enableOverchargingBlocker: Just enableOverchargingBlocker|E
+    normalRideBulkLocUpdateBatchSize: Just normalRideBulkLocUpdateBatchSize|E
+    meterRideBulkLocUpdateBatchSize: Just meterRideBulkLocUpdateBatchSize|E
+    dynamicReferralCodeValidForMinutes: Just dynamicReferralCodeValidForMinutes|E
+    dynamicReferralCodeEnabled: Just dynamicReferralCodeEnabled|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
+    bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
+    requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
+    enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
+    weekStartMode : Just weekStartMode|E
+    earningsWindowSize : Just earningsWindowSize|E
+    aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1159,6 +1219,12 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    enableOverchargingBlocker: fromMaybe False enableOverchargingBlocker|E
+    normalRideBulkLocUpdateBatchSize: fromMaybe 98 normalRideBulkLocUpdateBatchSize|E
+    meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
+    dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
+    dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
+    aaEnabledClientSdkVersion: fromMaybe "99999999999" aaEnabledClientSdkVersion| E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
@@ -1166,6 +1232,12 @@ TransporterConfig:
     recomputeDistanceThresholds: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    allowedReferralEntities:  maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities|E
+    bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
+    requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
+    enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
+    weekStartMode : fromMaybe 3 weekStartMode|E
+    earningsWindowSize : fromMaybe 7 earningsWindowSize|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1222,7 +1294,9 @@ TransporterConfig:
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
-
+    allowedReferralEntities: "text[]"
+    weekStartMode : int
+    earningsWindowSize : int
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1351,9 +1425,21 @@ TransporterConfig:
     disableListScheduledBookingAPI: "false"
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
+    allowedReferralEntities: "'{DRIVER}'"
     recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
-
     minThreshildForPassThroughDestination: "1000"
+    enableOverchargingBlocker: "false"
+    generateReferralCodeForFleet: "false"
+    generateReferralCodeForOperator: "false"
+    requireRouteMappingInVehicle: "true"
+    enableExistingVehicleInBulkUpload: "false"
+    onboardingDocsCountLimit: "50"
+    liveEKD: "false"
+    weekStartMode : "3"
+    earningsWindowSize : "7"
+    deactivateRCOnUnlink: "true"
+    aaEnabledClientSdkVersion : "'999.999.999'"
+    isAAEnabledForRecurring : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

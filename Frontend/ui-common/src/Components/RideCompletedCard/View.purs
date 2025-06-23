@@ -229,6 +229,7 @@ priceAndDistanceUpdateView config push =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
+          , orientation if config.topCard.fareUpdatedVisiblity then VERTICAL else HORIZONTAL
           , margin $ MarginHorizontal 16 16
           ][ textView $ 
               [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
@@ -248,7 +249,33 @@ priceAndDistanceUpdateView config push =
               , color Color.black600
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
-          ]
+          ,linearLayout
+            [  width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , background Color.yellow800
+              , visibility $ boolToVisibility (fromMaybe 0 config.coinsRewardedOnGoldTierRide > 0)
+              , gravity CENTER
+              , margin $ Margin 6 12 0 3
+              , padding $ PaddingLeft 2
+              , cornerRadius 10.0
+              ][ textView $
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text $ "+" <> show (fromMaybe 0 config.coinsRewardedOnGoldTierRide)
+                  , color Color.black800
+                  , ellipsize true
+                  , singleLine true
+                  , margin $ MarginLeft 2
+                  , fontSize 16
+                  ] <> FontStyle.body9 TypoGraphy
+                , imageView
+                  [ height $ V 18
+                  , width  $ V 18
+                  , margin $ MarginLeft 4
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_yatri_coin"
+                  ]
+              ]    
+          ] 
         , textView 
           $ [   height WRAP_CONTENT
               , width WRAP_CONTENT

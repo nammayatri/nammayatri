@@ -57,7 +57,11 @@ createInitialDriverStats currency distanceUnit driverId = do
             updatedAt = now,
             validCustomerCancellationTagCount = 0,
             validDriverCancellationTagCount = 0,
-            validCancellationTagsStatsStartDate = Just now
+            validCancellationTagsStatsStartDate = Just now,
+            numDriversOnboarded = 0,
+            numFleetsOnboarded = 0,
+            safetyPlusEarnings = 0.0,
+            safetyPlusRideCount = 0
           }
   createWithKV dStats
 
@@ -233,3 +237,15 @@ fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVeh
 
 mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
+
+incSafetyPlusRiderCountAndEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
+incSafetyPlusRiderCountAndEarnings driverId safetyPlusEarnings = do
+  mbDriverDetail <- findById driverId
+  case mbDriverDetail of
+    Just driverDetail -> do
+      updateOneWithKV
+        [ Se.Set BeamDS.safetyPlusRideCount $ Just (driverDetail.safetyPlusRideCount + 1),
+          Se.Set BeamDS.safetyPlusEarnings $ Just (driverDetail.safetyPlusEarnings + safetyPlusEarnings)
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]
+    Nothing -> pure ()

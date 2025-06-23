@@ -16,6 +16,10 @@
 module Components.SwitchButtonView.Controller where
 
 import Styles.Colors as Color
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
 
 data Action = OnClick
 

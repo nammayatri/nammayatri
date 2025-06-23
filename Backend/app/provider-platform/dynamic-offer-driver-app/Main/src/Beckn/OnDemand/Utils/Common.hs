@@ -581,7 +581,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
@@ -609,8 +609,8 @@ tfCustomer riderPhone riderName =
               }
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount isSafetyPlus =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -632,6 +632,7 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
                 ++ driverAlternateNumberSingleton
                 ++ isAlreadyFavSingleton
                 ++ favCountSingleton
+                ++ isSafetyPlusSingleton
         }
     ]
   where
@@ -770,6 +771,21 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
                     },
               tagDisplay = Just False,
               tagValue = driverAlternateNumber
+            }
+    isSafetyPlusSingleton
+      | not isSafetyPlus = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
+                      descriptorName = Just "is safety plus driver",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isSafetyPlus
             }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
@@ -1586,7 +1602,7 @@ mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp 
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
       fareParamsBreakups =
         case fareParametersInRateCard of
-          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardBreakupItem) fareParams
+          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams
           _ -> []
       filteredFareParamsBreakups = filter (not . findDup farePolicyBreakups) fareParamsBreakups
       combainedParams = farePolicyBreakups <> filteredFareParamsBreakups
@@ -1644,6 +1660,9 @@ mkVehicleIconTag mbBaseUrl =
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem
+
+mkRateCardFareParamsBreakupItem :: Text -> Text -> RateCardBreakupItem
+mkRateCardFareParamsBreakupItem title value = RateCardBreakupItem {title = title <> "_FARE_PARAM", ..}
 
 buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
 buildRateCardTags RateCardBreakupItem {..} =
@@ -1772,7 +1791,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
@@ -1808,6 +1827,39 @@ castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
 castPaymentType "ON_ORDER" = return DMPM.ON_FULFILLMENT
 castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
 castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
+
+mkIsSafetyPlusTagGroupV2 :: Bool -> Maybe [Spec.TagGroup]
+mkIsSafetyPlusTagGroupV2 isSafetyPlus =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
+                  descriptorName = Just "Driver Details",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just isSafetyPlusSingleton
+        }
+    ]
+  where
+    isSafetyPlusSingleton
+      | not isSafetyPlus = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
+                      descriptorName = Just "is safety plus driver",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isSafetyPlus
+            }
 
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkForwardBatchTagGroupV2 previousRideDropLocation' =

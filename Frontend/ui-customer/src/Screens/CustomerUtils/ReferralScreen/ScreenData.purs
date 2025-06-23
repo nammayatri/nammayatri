@@ -37,5 +37,6 @@ initData =
                               , showReferredUserInfoPopup : false
                               , showReferralProgramInfoPopup : false
                               , isInvalidCode : false
+                              , isFocused : false
                              }
   }

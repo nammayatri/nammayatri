@@ -30,6 +30,21 @@ import Debug
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons 
 
+instance showAction :: Show Action where
+  show (Support) = "Support"
+  show (RideDetails) = "RideDetails"
+  show (SelectButton _ _) = "SelectButton"
+  show (RateClick _) = "RateClick"
+  show (SkipButtonActionController var1) = "SkipButtonActionController_" <> show var1
+  show (ContactSupportPopUpAC var1) = "ContactSupportPopUpAC_" <> show var1
+  show (UpiQrRendered _) = "UpiQrRendered"
+  show (BannerAction var1) = "BannerAction_" <> show var1
+  show (HelpAndSupportAC) = "HelpAndSupportAC"
+  show (GoToSOS) = "GoToSOS"
+  show (NoAction) = "NoAction"
+  show (BannerChanged _) = "BannerChanged"
+  show (BannerMoving _) = "BannerMoving"
+
 data Action = Support
             | RideDetails
             | SelectButton Boolean Int
@@ -93,7 +108,8 @@ type Config = {
   interCityTextConfig :: IntercityRideTextConfig,
   variant :: String,
   driverCity :: String,
-  driverInvoiceText :: String
+  driverInvoiceText :: String,
+  coinsRewardedOnGoldTierRide :: Maybe Int
 }
 
 data Theme = DARK | LIGHT
@@ -259,7 +275,8 @@ config = {
   },
   variant : "",
   driverCity : "",
-  driverInvoiceText : ""
+  driverInvoiceText : "",
+  coinsRewardedOnGoldTierRide : Nothing
 }
 
 type CustomerIssue = {

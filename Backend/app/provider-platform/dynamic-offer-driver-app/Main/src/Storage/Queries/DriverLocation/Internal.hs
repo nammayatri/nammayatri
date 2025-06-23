@@ -27,7 +27,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 
 getDriverLocsWithCond ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
@@ -35,5 +35,5 @@ getDriverLocsWithCond ::
   Maybe [VehicleVariant] ->
   m [DriverLocation]
 getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radiusMeters vehicle = do
-  locations <- LF.nearBy lat lon Nothing vehicle radiusMeters.getMeters merchantId
+  locations <- LF.nearBy lat lon Nothing vehicle radiusMeters.getMeters merchantId Nothing
   return $ DL.nubBy (\x y -> x.driverId == y.driverId) locations

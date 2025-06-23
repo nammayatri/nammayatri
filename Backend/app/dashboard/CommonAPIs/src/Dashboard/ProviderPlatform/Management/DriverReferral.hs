@@ -15,7 +15,7 @@
 
 module Dashboard.ProviderPlatform.Management.DriverReferral where
 
-import API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
+import API.Types.ProviderPlatform.Management.Endpoints.DriverReferral as Reexport
 import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart

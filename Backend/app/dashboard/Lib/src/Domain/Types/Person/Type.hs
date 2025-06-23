@@ -15,10 +15,13 @@
 
 module Domain.Types.Person.Type where
 
+import Data.Aeson
 import qualified Domain.Types.Role as DRole
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.TH
 
 data PersonE e = Person
   { id :: Id Person,
@@ -30,10 +33,13 @@ data PersonE e = Person
     mobileCountryCode :: Text,
     passwordHash :: Maybe DbHash,
     dashboardAccessType :: Maybe DRole.DashboardAccessType,
+    dashboardType :: DashboardType, -- Using enum for type safety
     createdAt :: UTCTime,
     receiveNotification :: Maybe Bool,
     updatedAt :: UTCTime,
-    verified :: Maybe Bool
+    verified :: Maybe Bool,
+    rejectionReason :: Maybe Text,
+    rejectedAt :: Maybe UTCTime
   }
   deriving (Generic)
 
@@ -56,3 +62,35 @@ instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+data DashboardType = DEFAULT_DASHBOARD | TICKET_DASHBOARD
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data DashboardTypeTag = DefaultDashboard | TicketDashboard
+
+data SingDashboardType (t :: DashboardTypeTag) where
+  SingDefaultDashboard :: SingDashboardType 'DefaultDashboard
+  SingTicketDashboard :: SingDashboardType 'TicketDashboard
+
+class KnownDashboardType (t :: DashboardTypeTag) where
+  dashboardTypeVal :: proxy t -> DashboardType
+
+instance KnownDashboardType 'DefaultDashboard where
+  dashboardTypeVal _ = DEFAULT_DASHBOARD
+
+instance KnownDashboardType 'TicketDashboard where
+  dashboardTypeVal _ = TICKET_DASHBOARD
+
+withDashboardType :: forall m a. Monad m => Maybe DashboardType -> (forall (t :: DashboardTypeTag). KnownDashboardType t => Proxy t -> m a) -> m a
+withDashboardType (Just TICKET_DASHBOARD) f = f (Proxy @'TicketDashboard)
+withDashboardType _ f = f (Proxy @'DefaultDashboard)
+
+isFleetOwner :: Person -> Bool
+isFleetOwner person = person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
+
+isAdmin :: Person -> Bool
+isAdmin person = person.dashboardAccessType == Just DRole.DASHBOARD_ADMIN
+
+$(mkBeamInstancesForEnum ''DashboardType)
+
+$(mkHttpInstancesForEnum ''DashboardType)

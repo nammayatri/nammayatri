@@ -15,6 +15,7 @@
 
 module Domain.Types.FareParameters where
 
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.FarePolicy as FP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -41,6 +42,7 @@ data FareParameters = FareParameters
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
+    petCharges :: Maybe HighPrecMoney,
     congestionChargeViaDp :: Maybe HighPrecMoney,
     insuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
@@ -51,7 +53,8 @@ data FareParameters = FareParameters
     currency :: Currency,
     updatedAt :: UTCTime,
     merchantId :: Maybe (Id DM.Merchant),
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    conditionalCharges :: [DAC.ConditionalCharges]
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

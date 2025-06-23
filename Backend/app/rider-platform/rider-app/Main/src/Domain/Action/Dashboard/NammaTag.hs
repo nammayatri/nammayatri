@@ -31,14 +31,14 @@ module Domain.Action.Dashboard.NammaTag
   )
 where
 
+import qualified ConfigPilotFrontend.Flow as CPF
+import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
-import qualified Data.Aeson as A
 import Data.Singletons
-import qualified Data.Text as Text
+-- import qualified Data.Text as Text
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.Person as DP
@@ -46,7 +46,6 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.RiderConfig as DTR
 import Domain.Types.UiRiderConfig (UiRiderConfig (..))
 import qualified Domain.Types.UiRiderConfig as DTRC
-import qualified Domain.Types.UiRiderConfig as DTURC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -58,34 +57,23 @@ import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
-import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
+-- import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
-import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.FRFSConfig as SCFRFS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.CachedQueries.MerchantConfig as SCMC
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRN
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
-import qualified Storage.Queries.FRFSConfig as SQFRFS
-import qualified Storage.Queries.MerchantConfig as SQMC
-import qualified Storage.Queries.MerchantPushNotification as SQMPN
-import qualified Storage.Queries.PayoutConfig as SQPC
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRN
-import qualified Storage.Queries.RiderConfig as SQR
-import qualified Tools.DynamicLogic as TDL
+-- import qualified Storage.Queries.UiRiderConfig as SQU
+import qualified Tools.ConfigPilot as TC
+-- import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
@@ -121,40 +109,40 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let merchantOpCityId = merchantOperatingCity.id
   _riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
-    LYTU.UI_RIDER _ _ -> do
-      let def'' = Prelude.listToMaybe $ LYTU.genDef (Proxy @DTURC.UiRiderConfig)
-      def' <- maybe (throwError $ InternalError "No default found") pure def''
-      logicData :: UiRiderConfig <- YudhishthiraFlow.createLogicData def' (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy UiRiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
-    -- TODO add defaults for config
+    -- LYTU.RIDER_CONFIG (LYTU.UiConfig dt pt) -> do
+    --   let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+    --   defaultConfig <- SQU.getUiConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiRiderConfig")
+    --   let configWrap = LYTU.Config defaultConfig.config Nothing 1
+    --   logicData :: (LYTU.Config Value) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+    --   url <- TC.getTSServiceUrl
+    --   YudhishthiraFlow.verifyAndUpdateUIDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config Value)) _riderConfig.dynamicLogicUpdatePassword req logicData url
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-      -- fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @TagData)
-      def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig)) >>= fromMaybeM (InvalidRequest "RiderConfig not found")
+      def <- fromMaybeM (InvalidRequest "RiderConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig))
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DTR.RiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTR.RiderConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
-      def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig)) >>= fromMaybeM (InvalidRequest "PayoutConfig not found")
+      def <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTP.PayoutConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
-      def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig)) >>= fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found")
+      def <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTRN.RideRelatedNotificationConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
-      def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig)) >>= fromMaybeM (InvalidRequest "MerchantConfig not found")
+      def <- fromMaybeM (InvalidRequest "MerchantConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig))
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DTM.MerchantConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTM.MerchantConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
-      def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification)) >>= fromMaybeM (InvalidRequest "MerchantPushNotification not found")
+      def <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTPN.MerchantPushNotification)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
-      def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig)) >>= fromMaybeM (InvalidRequest "FRFSConfig not found")
+      def <- fromMaybeM (InvalidRequest "FRFSConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig))
       let configWrap = LYTU.Config def Nothing 1
       logicData :: (LYTU.Config DFRFS.FRFSConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DFRFS.FRFSConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
@@ -232,7 +220,7 @@ getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity timeBound domai
 postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [LYTU.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq
+  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq TC.returnConfigs opCity
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYTU.LogicDomain -> Environment.Flow LYTU.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions
@@ -265,31 +253,50 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
     QPerson.updateCustomerTags (Just tag) personId
   pure Success
 
-postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow Text
-postNammaTagConfigPilotGetVersion _ _ uicr = do
-  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
-  let merchantOpCityId = merchantOperatingCity.id
-  (_, version) <- UIRC.findUiConfig uicr merchantOpCityId
-  case version of
-    Just ver -> pure $ (Text.pack . show) ver
-    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow LYTU.UiConfigGetVersionResponse
+postNammaTagConfigPilotGetVersion _ _ _ = do
+  throwError $ InvalidRequest "UI config not supported yet"
+
+-- merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
+-- let merchantOpCityId = merchantOperatingCity.id
+-- (_, version) <- UIRC.findUiConfig uicr merchantOpCityId False
+-- baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) (LYTU.RIDER_CONFIG $ LYTU.UiConfig uicr.os uicr.platform) >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+-- let baseVersion = Just baseRollout.version
+-- case version of
+--   Just _ -> pure $ LYTU.UiConfigGetVersionResponse (Text.pack . show <$> version) (Text.pack . show <$> baseVersion)
+--   Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
 postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow LYTU.UiConfigResponse
-postNammaTagConfigPilotGetConfig _ _ uicr = do
-  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
-  let merchantOpCityId = merchantOperatingCity.id
-  (config, version) <- UIRC.findUiConfig uicr merchantOpCityId
-  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform)
-  case config of
-    Just cfg -> pure (LYTU.UiConfigResponse cfg.config (Text.pack . show <$> version) isExp)
-    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+postNammaTagConfigPilotGetConfig _ _ _ = do
+  throwError $ InvalidRequest "UI config not supported yet"
+
+-- merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
+-- let merchantOpCityId = merchantOperatingCity.id
+-- (config, version) <- UIRC.findUiConfig uicr merchantOpCityId False
+-- isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.RIDER_CONFIG $ LYTU.UiConfig uicr.os uicr.platform)
+-- baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) (LYTU.RIDER_CONFIG $ LYTU.UiConfig uicr.os uicr.platform) >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+-- let baseVersion = Just baseRollout.version
+-- case config of
+--   Just cfg -> pure (LYTU.UiConfigResponse cfg.config (Text.pack . show <$> version) (Text.pack . show <$> baseVersion) isExp)
+--   Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
+  url <- TC.getTSServiceUrl
+  when (ccr.platform == LYTU.TypeScript) $ do
+    configValidateResp <- CPF.configValidate url (ccr.config)
+    case configValidateResp.status of
+      CPT.VALID_CONFIG -> pure ()
+      CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
+      CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id ccr.merchantId) ccr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> ccr.merchantId <> " ,city: " <> show ccr.city)
   let merchantOpCityId = merchantOperatingCity.id
   now <- getCurrentTime
   id' <- generateGUID
+  let uicr = LYTU.UiConfigRequest {merchantId = ccr.merchantId, city = ccr.city, os = ccr.os, platform = ccr.platform, bundle = ccr.bundle, language = Nothing, toss = Nothing}
+  (config, _) <- UIRC.findUiConfig uicr merchantOpCityId False
+  when (isJust config) $ do
+    throwError $ InvalidRequest "Config already exists"
   UIRC.create $ cfg now merchantOpCityId id'
   return Kernel.Types.APISuccess.Success
   where
@@ -308,287 +315,26 @@ getNammaTagConfigPilotAllConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchan
 getNammaTagConfigPilotAllConfigs _merchantShortId _opCity mbUnderExp = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  YudhishthiraFlow.getNammaTagConfigPilotAllConfigsRider (cast merchantOpCityId) mbUnderExp
+  YudhishthiraFlow.getNammaTagConfigPilotAllConfigs (cast merchantOpCityId) mbUnderExp LYTU.RiderCfg
 
 getNammaTagConfigPilotConfigDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow [LYTU.ConfigDetailsResp]
 getNammaTagConfigPilotConfigDetails _merchantShortId _opCity configType = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  YudhishthiraFlow.getNammaTagConfigPilotConfigDetailsRider (cast merchantOpCityId) configType
+  YudhishthiraFlow.getNammaTagConfigPilotConfigDetails (cast merchantOpCityId) (LYTU.RIDER_CONFIG configType)
 
 getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
+  merchant <- findMerchantByShortId _merchantShortId
   let merchantOpCityId = merchantOperatingCity.id
-  mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) (LYTU.RIDER_CONFIG configType)
-  case mbBaseRollout of
-    Just baseRollout -> do
-      baseElements <- CADLE.findByDomainAndVersion (LYTU.RIDER_CONFIG configType) baseRollout.version
-      let logics = map (.logic) baseElements
-      returnConfigs configType logics merchantOpCityId
-    Nothing -> returnConfigs configType [] merchantOpCityId
-  where
-    returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.ConfigType -> [Value] -> Id MerchantOperatingCity -> m LYTU.TableDataResp
-    returnConfigs cfgType logics merchantOpCityId = do
-      case cfgType of
-        LYTU.RiderConfig -> do
-          riderCfg <- QRC.findByMerchantOperatingCityId merchantOpCityId (Just []) >>= fromMaybeM (RiderConfigNotFound merchantOpCityId.getId)
-          let configWrapper :: [LYTU.Config DTR.RiderConfig] =
-                zipWith
-                  (\id cfg -> cfg {LYTU.identifier = id})
-                  [0 ..]
-                  [(\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) riderCfg]
-          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return LYTU.TableDataResp {configs = map (.result) patchedConfigs}
-        LYTU.PayoutConfig -> do
-          payoutCfg <- SCMPC.findAllByMerchantOpCityId merchantOpCityId (Just [])
-          let configWrapper :: [LYTU.Config DTP.PayoutConfig] =
-                zipWith
-                  (\id cfg -> cfg {LYTU.identifier = id})
-                  [0 ..]
-                  (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) payoutCfg)
-          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return LYTU.TableDataResp {configs = map (.result) patchedConfigs}
-        LYTU.RideRelatedNotificationConfig -> do
-          rideRelatedNotificationCfg <- SCRRN.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
-          let configWrapper :: [LYTU.Config DTRN.RideRelatedNotificationConfig] =
-                zipWith
-                  (\id cfg -> cfg {LYTU.identifier = id})
-                  [0 ..]
-                  (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) rideRelatedNotificationCfg)
-          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return LYTU.TableDataResp {configs = map (.result) patchedConfigs}
-        LYTU.MerchantConfig -> do
-          merchantCfg <- SCMC.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
-          let configWrapper :: [LYTU.Config DTM.MerchantConfig] =
-                zipWith
-                  (\id cfg -> cfg {LYTU.identifier = id})
-                  [0 ..]
-                  (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantCfg)
-          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return LYTU.TableDataResp {configs = map (.result) patchedConfigs}
-        LYTU.MerchantPushNotification -> do
-          merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId merchantOpCityId (Just [])
-          let configWrapper :: [LYTU.Config DTPN.MerchantPushNotification] =
-                zipWith
-                  (\id cfg -> cfg {LYTU.identifier = id})
-                  [0 ..]
-                  (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantPushNotification)
-          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return LYTU.TableDataResp {configs = map (.result) patchedConfigs}
-        LYTU.FRFSConfig -> do
-          frfsConfig <- SCFRFS.findByMerchantOperatingCityId merchantOpCityId (Just []) >>= fromMaybeM (FRFSConfigNotFound merchantOpCityId.getId)
-          let configWrapper :: [LYTU.Config DFRFS.FRFSConfig] =
-                zipWith
-                  (\id cfg -> cfg {LYTU.identifier = id})
-                  [0 ..]
-                  [(\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) frfsConfig]
-          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return LYTU.TableDataResp {configs = map (.result) patchedConfigs}
-        _ -> throwError $ InvalidRequest "Unsupported config type."
+  TC.returnConfigs configType (cast merchantOpCityId) (cast merchant.id) _opCity
 
 postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just _opCity)
-  case req of
-    LYTU.Conclude concludeReq -> do
-      expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain (cast merchantOpCityId) "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
-      logDebug $ show expRollout
-      mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) concludeReq.domain
-      case mbBaseRollout of
-        Just baseRollout -> do
-          when (concludeReq.version == baseRollout.version) $ throwError $ InvalidRequest "Cannot conclude the base rollout"
-          baseElements <- CADLE.findByDomainAndVersion concludeReq.domain baseRollout.version
-          let baseLogics = fmap (.logic) baseElements
-          case concludeReq.domain of
-            LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-              riderCfg <- QRC.findByMerchantOperatingCityId merchantOpCityId (Just []) >>= fromMaybeM (RiderConfigNotFound merchantOpCityId.getId)
-              let configWrapper :: [LYTU.Config DTR.RiderConfig] =
-                    zipWith
-                      (\id cfg -> cfg {LYTU.identifier = id})
-                      [0 ..]
-                      [(\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) riderCfg]
-              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              cfgs :: [LYTU.Config DTR.RiderConfig] <-
-                mapM
-                  ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (LYTU.Config DTR.RiderConfig)) of
-                        A.Success dpc -> pure dpc
-                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
-                  )
-                  patchedConfigs
-              let sortedCfgs :: [LYTU.Config DTR.RiderConfig] = sortOn LYTU.identifier cfgs
-                  configsToUpdate :: [DTR.RiderConfig] =
-                    catMaybes $
-                      zipWith
-                        ( \cfg1 cfg2 ->
-                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
-                              then Just cfg2.config
-                              else Nothing
-                        )
-                        configWrapper
-                        sortedCfgs
-              mapM_ SQR.updateByPrimaryKey configsToUpdate
-              QRC.clearCache merchantOpCityId
-            LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
-              payoutCfg <- SCMPC.findAllByMerchantOpCityId merchantOpCityId (Just [])
-              let configWrapper :: [LYTU.Config DTP.PayoutConfig] =
-                    zipWith
-                      (\id cfg -> cfg {LYTU.identifier = id})
-                      [0 ..]
-                      (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) payoutCfg)
-              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              cfgs :: [LYTU.Config DTP.PayoutConfig] <-
-                mapM
-                  ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (LYTU.Config DTP.PayoutConfig)) of
-                        A.Success dpc -> pure dpc
-                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
-                  )
-                  patchedConfigs
-              let sortedCfgs :: [LYTU.Config DTP.PayoutConfig] = sortOn LYTU.identifier cfgs
-                  configsToUpdate :: [DTP.PayoutConfig] =
-                    catMaybes $
-                      zipWith
-                        ( \cfg1 cfg2 ->
-                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
-                              then Just cfg2.config
-                              else Nothing
-                        )
-                        configWrapper
-                        sortedCfgs
-              mapM_ SQPC.updateByPrimaryKey configsToUpdate
-            -- TODO add clearCache
-            LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
-              rideRelatedNotificationCfg <- SCRRN.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
-              let configWrapper :: [LYTU.Config DTRN.RideRelatedNotificationConfig] =
-                    zipWith
-                      (\id cfg -> cfg {LYTU.identifier = id})
-                      [0 ..]
-                      (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) rideRelatedNotificationCfg)
-              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              cfgs :: [LYTU.Config DTRN.RideRelatedNotificationConfig] <-
-                mapM
-                  ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (LYTU.Config DTRN.RideRelatedNotificationConfig)) of
-                        A.Success dpc -> pure dpc
-                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
-                  )
-                  patchedConfigs
-              let sortedCfgs :: [LYTU.Config DTRN.RideRelatedNotificationConfig] = sortOn LYTU.identifier cfgs
-                  configsToUpdate :: [DTRN.RideRelatedNotificationConfig] =
-                    catMaybes $
-                      zipWith
-                        ( \cfg1 cfg2 ->
-                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
-                              then Just cfg2.config
-                              else Nothing
-                        )
-                        configWrapper
-                        sortedCfgs
-              mapM_ SQRRN.updateByPrimaryKey configsToUpdate
-            -- TODO add clearCache
-            LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
-              merchantCfg <- SCMC.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
-              let configWrapper :: [LYTU.Config DTM.MerchantConfig] =
-                    zipWith
-                      (\id cfg -> cfg {LYTU.identifier = id})
-                      [0 ..]
-                      (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantCfg)
-              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              cfgs :: [LYTU.Config DTM.MerchantConfig] <-
-                mapM
-                  ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (LYTU.Config DTM.MerchantConfig)) of
-                        A.Success dpc -> pure dpc
-                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
-                  )
-                  patchedConfigs
-              let sortedCfgs :: [LYTU.Config DTM.MerchantConfig] = sortOn LYTU.identifier cfgs
-                  configsToUpdate :: [DTM.MerchantConfig] =
-                    catMaybes $
-                      zipWith
-                        ( \cfg1 cfg2 ->
-                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
-                              then Just cfg2.config
-                              else Nothing
-                        )
-                        configWrapper
-                        sortedCfgs
-              mapM_ SQMC.updateByPrimaryKey configsToUpdate
-              SCMC.clearCache merchantOpCityId
-            LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
-              merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId merchantOpCityId (Just [])
-              let configWrapper :: [LYTU.Config DTPN.MerchantPushNotification] =
-                    zipWith
-                      (\id cfg -> cfg {LYTU.identifier = id})
-                      [0 ..]
-                      (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantPushNotification)
-              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              cfgs :: [LYTU.Config DTPN.MerchantPushNotification] <-
-                mapM
-                  ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (LYTU.Config DTPN.MerchantPushNotification)) of
-                        A.Success dpc -> pure dpc
-                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
-                  )
-                  patchedConfigs
-              let sortedCfgs :: [LYTU.Config DTPN.MerchantPushNotification] = sortOn LYTU.identifier cfgs
-                  configsToUpdate :: [DTPN.MerchantPushNotification] =
-                    catMaybes $
-                      zipWith
-                        ( \cfg1 cfg2 ->
-                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
-                              then Just cfg2.config
-                              else Nothing
-                        )
-                        configWrapper
-                        sortedCfgs
-              mapM_ SQMPN.updateByPrimaryKey configsToUpdate
-            -- TODO add clearCache
-            LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
-              frfsConfig <- SCFRFS.findByMerchantOperatingCityId merchantOpCityId (Just []) >>= fromMaybeM (FRFSConfigNotFound merchantOpCityId.getId)
-              let configWrapper :: [LYTU.Config DFRFS.FRFSConfig] =
-                    zipWith
-                      (\id cfg -> cfg {LYTU.identifier = id})
-                      [0 ..]
-                      [(\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) frfsConfig]
-              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              cfgs :: [LYTU.Config DFRFS.FRFSConfig] <-
-                mapM
-                  ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (LYTU.Config DFRFS.FRFSConfig)) of
-                        A.Success dpc -> pure dpc
-                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
-                  )
-                  patchedConfigs
-              let sortedCfgs :: [LYTU.Config DFRFS.FRFSConfig] = sortOn LYTU.identifier cfgs
-                  configsToUpdate :: [DFRFS.FRFSConfig] =
-                    catMaybes $
-                      zipWith
-                        ( \cfg1 cfg2 ->
-                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
-                              then Just cfg2.config
-                              else Nothing
-                        )
-                        configWrapper
-                        sortedCfgs
-              mapM_ SQFRFS.updateByPrimaryKey configsToUpdate
-              SCFRFS.clearCache merchantOpCityId
-            _ -> throwError $ InvalidRequest $ "Logic Domain not supported" <> show concludeReq.domain
-          let originalBasePercentage = baseRollout.percentageRollout
-              updatedBaseRollout =
-                baseRollout
-                  { LYTADLR.isBaseVersion = Nothing,
-                    LYTADLR.experimentStatus = Just LYTU.CONCLUDED,
-                    LYTADLR.percentageRollout = 0
-                  }
-          LYSQADLR.updateByPrimaryKey updatedBaseRollout
-          YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req (Just originalBasePercentage)
-        _ -> YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req Nothing
-    _ ->
-      YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req Nothing
+  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
 
 addCustomerTag :: Maybe [Text] -> Text -> [Text]
 addCustomerTag Nothing tag = [tag]

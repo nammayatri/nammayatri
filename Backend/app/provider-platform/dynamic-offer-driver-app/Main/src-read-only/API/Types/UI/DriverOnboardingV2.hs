@@ -53,6 +53,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
@@ -75,10 +76,22 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverGstinReq = DriverGstinReq
+  { gstNumber :: Kernel.Prelude.Text,
+    imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
+    verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverPanReq = DriverPanReq
   { consent :: Kernel.Prelude.Bool,
     consentTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docType :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanType,
     imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -172,4 +185,16 @@ data ValidationStatus
   | AUTO_DECLINED
   | NEEDS_REVIEW
   deriving stock (Eq, Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehiclePhotosResp = VehiclePhotosResp
+  { back :: [Kernel.Prelude.Text],
+    backInterior :: [Kernel.Prelude.Text],
+    front :: [Kernel.Prelude.Text],
+    frontInterior :: [Kernel.Prelude.Text],
+    left :: [Kernel.Prelude.Text],
+    odometer :: [Kernel.Prelude.Text],
+    right :: [Kernel.Prelude.Text]
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -28,8 +28,8 @@ import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
 
 initData :: HomeScreenState
-initData = 
-  { data: 
+initData =
+  { data:
       { linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
@@ -184,7 +184,7 @@ initData =
         , pledge : []
         , vehicalOffer : []
         , languages : []
-        , aspirations : [] 
+        , aspirations : []
         , homeTown : Nothing
         , calendarState:
           { calendarPopup: false
@@ -203,6 +203,9 @@ initData =
         }
       , isSpecialLocWarrior : false
       , bus_number : ""
+      , overchargingTag : Nothing
+      , driverBlocked : false
+      , blockedExpiryTime : ""
     }
   , props:
       { isFreeRide: false
@@ -265,6 +268,8 @@ initData =
       , accountBlockedPopup: false
       , accountBlockedPopupDueToCancellations: false
       , showCoinsPopup: false
+      , showPetRidesPopup: false
+      , showOptOutPetRidesPopup: false
       , isStatsModelExpanded: false
       , tobeLogged: false
       , safetyAudioAutoPlay: false
@@ -285,7 +290,7 @@ initData =
       , showInterOperablePopUp : false
       , showReferralEarnedPopUp : false
       , showReferNowPopUp : false
-      , showAddUPIPopUp : false 
+      , showAddUPIPopUp : false
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
       , checkUpcomingRide : true
@@ -300,12 +305,13 @@ initData =
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
       , retryRideList : false
-      , showParcelIntroductionPopup : false 
+      , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
+      , showBlockerPopup : false
       }
   }
 
@@ -336,7 +342,7 @@ datePickerState' = {
 }
 
 initialTollState :: TollState
-initialTollState = { 
+initialTollState = {
   showTollChargePopup: true
 , showTollChargeAmbigousPopup: true
 , finalCharge : 0.0
@@ -391,6 +397,7 @@ dummyRideData = {
       , driverVehicle : ""
       , requestedVehicleVariant: Nothing
       , disabilityTag: Nothing
+      , coinsRewardedOnGoldTierRide: Nothing
       , enableFrequentLocationUpdates: false
       , tripScheduledAt: Nothing
       , tripType: ST.OneWay
@@ -424,6 +431,7 @@ dummyRideData = {
       , receiverPersonDetails : Nothing
       , notifiedReachedDestination : false
       , stops : []
+      , isPetRide : Nothing
       }
 
 initialParkingData :: ParkingData
@@ -431,3 +439,6 @@ initialParkingData = {
   estimatedCharge : Nothing
 , finalCharge : Nothing
 }
+
+
+data DriverStatusChangeEntry = DriverStatusChangeNormalEntry | DriverStatusChangeMeterRideEntry

@@ -1,4 +1,5 @@
 {-
+JB
 
   Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -25,12 +26,14 @@ import Common.Styles.Colors as Color
 import Components.TipsView as TipsView
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
+import Data.String as DS
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Timers
-import Animation (fadeIn) as Anim
+import Animation (fadeIn, translateOutXBackwardAnimY) as Anim
+import Animation.Config (AnimConfig, animConfig)
 import Common.Styles.Colors as Color
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
@@ -38,7 +41,7 @@ import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
 import Control.Monad.Trans.Class (lift)
 import Data.Function.Uncurried (runFn5)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -70,6 +73,9 @@ import Locale.Utils (getLanguageLocale)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
+  PrestoAnim.animationSet
+  [ Anim.fadeIn state.enableAnim
+  ] $
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -106,6 +112,7 @@ view push state =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dismiss" 
             ]
         ]
+     , maybe noView (\layout -> layout) state.externalHeader
      , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -173,7 +180,15 @@ view push state =
             , cornerRadii state.cornerRadius
             , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
-            ][  textView $
+            , id state.voiceToTextConfig.id
+            , afterRender
+                ( \action -> do
+                if state.voiceToTextConfig.enabled then do
+                    setupVoiceRecognitionView state.voiceToTextConfig.id
+                else pure unit
+            )(const NoAction)
+            ]if not state.voiceToTextConfig.enabled then 
+              [textView $
                 [ width state.topTitle.width
                 , height state.topTitle.height
                 , margin state.topTitle.margin
@@ -191,7 +206,8 @@ view push state =
                 , visibility state.coverImageConfig.visibility
                 , onClick push $ const OnCoverImageClick
                 ]
-            ]
+              ]
+              else []
         ,   Anim.screenAnimationFadeInOut
             $ lottieAnimationView
                 [ id state.coverLottieConfig.id
@@ -363,6 +379,36 @@ view push state =
                     , visibility $ state.headerInfo.visibility
                     ] <> (FontStyle.body1 TypoGraphy)
                 ]
+            ]     
+        , linearLayout
+           [ height WRAP_CONTENT
+            , gravity CENTER
+            , background state.goldTierRewardConfig.backgroundColor
+            , cornerRadius state.goldTierRewardConfig.cornerRadius
+            , padding state.goldTierRewardConfig.padding
+            , margin state.goldTierRewardConfig.margin
+            , visibility $ boolToVisibility 
+                (state.primaryText.text == state.goldTierRewardConfig.cancellationWarningText 
+                && isJust state.goldTierRewardConfig.coinsLoss)
+            ]
+            [ textView
+                [ text state.goldTierRewardConfig.text
+                , color state.goldTierRewardConfig.textColor
+                , margin $ MarginRight 8
+                , padding $ PaddingLeft 8
+                ]
+            , imageView
+                [ imageWithFallback state.goldTierRewardConfig.coinImage.imageUrl
+                , height state.goldTierRewardConfig.coinImage.height
+                , width state.goldTierRewardConfig.coinImage.width
+                , margin state.goldTierRewardConfig.coinImage.margin
+                ]
+            , imageView
+                [ imageWithFallback state.goldTierRewardConfig.arrowImage.imageUrl
+                , height state.goldTierRewardConfig.arrowImage.height
+                , width state.goldTierRewardConfig.arrowImage.width
+                , margin state.goldTierRewardConfig.arrowImage.margin
+                ]
             ]
         , linearLayout
           [ width MATCH_PARENT
@@ -412,7 +458,7 @@ view push state =
         , case state.layout of
             Just layout -> layout { visibility : VISIBLE }
             Nothing -> textView [ visibility GONE]
-        , linearLayout
+        , relativeLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , gravity CENTER
@@ -476,7 +522,7 @@ view push state =
                             [ width WRAP_CONTENT
                             , height WRAP_CONTENT
                             , accessibility ENABLE
-                            , text  (if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text)
+                            , text  (if state.option1.enableTimer && state.option1.timerValue > 0 && not state.voiceToTextConfig.enabled then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text)
                             , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                             , color $ state.option1.color
                             , gravity CENTER
@@ -527,6 +573,23 @@ view push state =
                         ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
                     ]
                 ]
+               , if state.option1.enableTimer && state.option1.animate then
+                 PrestoAnim.animationSet [ 
+                   Anim.translateOutXBackwardAnimY animConfig
+                     { duration = 4000
+                     , toX = 0 
+                     , fromX = (screenWidth unit)
+                     , ifAnim = true
+                     }
+                 ] $ 
+                    linearLayout [ 
+                      height $ state.option1.height
+                    , width MATCH_PARENT
+                    , alpha 0.5
+                    , background Color.white900
+                    , visibility $ boolToVisibility state.option1.enableTimer
+                    ][]
+                else noView
             ]
         , linearLayout [
             height state.optionWithHtml.height

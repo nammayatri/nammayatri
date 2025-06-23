@@ -18,6 +18,7 @@ data FleetDriverAssociation = FleetDriverAssociation
     fleetOwnerId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation,
     isActive :: Kernel.Prelude.Bool,
+    onboardedOperatorId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     updatedAt :: Kernel.Prelude.UTCTime
   }

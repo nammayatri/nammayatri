@@ -598,7 +598,7 @@ getMl =
     , ride_type: "റൈഡ് തരം"
     , place_call_request: "കോൾ അഭ്യർത്ഥന സ്ഥാപിക്കുക"
     , rc_status: "RC നില"
-    , rated_by_users1: ""
+    , rated_by_users1: "റേറ്റുചെയ്തത്"
     , rated_by_users2: "ഉപയോക്താക്കൾ റേറ്റുചെയ്തത്"
     , months: "മാസങ്ങൾ"
     , rc_added_successfully: "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് വിജയകരമായി ചേർത്തു"
@@ -775,7 +775,7 @@ getMl =
     , tip_earned_from_customer: "ഉപഭോക്താവിൽ നിന്ന്\nലഭിച്ച നുറുങ്ങ്"
     , collect_via_case_upi: "പണം/UPI വഴി ശേഖരിക്കുക"
     , fare_collected: "ക്കൂലി ശേഖരിച്ചു"
-    , rate_your_ride_with1: ""
+    , rate_your_ride_with1: "നിങ്ങളുടെ യാത്ര റേറ്റുചെയ്യുക "
     , rate_your_ride_with2: "ഉപയോഗിച്ച് നിങ്ങളുടെ യാത്ര റേറ്റ്"
     , help_us_with_your_feedback: "നിങ്ങളുടെ ഫീഡ്‌ബാക്കിൽ ഞങ്ങളെ സഹായിക്കുന്നു (ഓപ്ഷണൽ)"
     , collect_cash: "പണം ശേഖരിക്കുക"
@@ -1033,76 +1033,76 @@ getMl =
     , referral_code_number: ""
     , welcome_text: "Welcome to {} App"
     , about_text: " ഡ്രൈവർമാരെ റൈഡറുകളുമായി ബന്ധിപ്പിക്കുന്നതിനുള്ള ഒരു തുറന്ന പ്ലാറ്റ്ഫോമാണ്. നിർദ്ദേശിച്ച ആവശ്യമുള്ള നിരക്കുകളുള്ള റൈഡർമാരെ കണ്ടെത്താൻ ആപ്പ് ഡ്രൈവർമാർക്ക് സൗകര്യപ്രദമാക്കുന്നു. റൈഡ് അടിസ്ഥാനമാക്കിയുള്ള കമ്മീഷനില്ല, പ്രതിമാസ സബ്‌സ്‌ക്രിപ്‌ഷന്റെ രൂപത്തിൽ ചെറിയ തുക അടച്ചാൽ മതി"
-    , choose_language: ""
-    , corporate_address: (\_ -> "")
-    , corporate_address_description: (\_ -> "")
-    , corporate_address_description_additional: (\_ -> "")
-    , earned_on_app: (\_ -> "")
-    , travelled_on_app: (\_ -> "")
-    , with: ""
-    , you_dont_have_any_payments: ""
+    , choose_language: "ഭാഷ തിരഞ്ഞെടുക്കുക"
+    , corporate_address: (\_ -> "കോർപ്പറേറ്റ് വിലാസം")
+    , corporate_address_description: (\_ -> "Moving Tech Innovations Private Limited <br> ഗിരിജ ബിൽഡിംഗ്, നമ്പർ 817, ഗണപതി ടെംപിള്‍ റോഡ്, 8th ബ്ലോക്ക്, കൊരമംഗല, ബെംഗളൂരു, കര്‍ണാടക 560095, ഇന്ത്യ.")
+    , corporate_address_description_additional: (\_ -> "വെബ്സൈറ്റ്: <u>https://nammayatri.in/</u>")
+    , earned_on_app: (\_ -> "ആപ്പിൽ സമ്പാദിച്ചു")
+    , travelled_on_app: (\_ -> "ആപ്പിൽ യാത്ര ചെയ്തു")
+    , with: "കൂടെ"
+    , you_dont_have_any_payments: "നിങ്ങൾ ഇതുവരെ ഒരു പേയ്മെന്റും നടത്തിയിട്ടില്ല"
     , resumed_autopay: "ഓട്ടോപേ പുനരാരംഭിച്ചു"
-    , onetime: ""
-    , fortnightly: ""
-    , monthly: ""
-    , bimonthly: ""
-    , quarterly: ""
-    , halfyearly: ""
-    , yearly: ""
-    , aspresented: ""
-    , first_free_ride: ""
-    , daily_per_ride_desc: ""
-    , join_the_unlimited_plan: ""
-    , maybe_later: ""
+    , onetime: "ഒന്ന് മാത്രം"
+    , fortnightly: "രണ്ടാഴ്ചയ്ക്കൊന്ന്"
+    , monthly: "മാസത്തിൽ ഒരിക്കൽ"
+    , bimonthly: "രണ്ടുമാസത്തിൽ ഒരിക്കൽ"
+    , quarterly: "ത്രൈമാസികം"
+    , halfyearly: "അർദ്ധവാർഷികം"
+    , yearly: "വാർഷികം"
+    , aspresented: "സമർപ്പിച്ചപ്പോൾ പോലെ"
+    , first_free_ride: "ആദ്യ യാത്ര സൗജന്യം"
+    , daily_per_ride_desc: "സെപ്റ്റംബർ 19 വരെ ചാർജ് ഇല്ല"
+    , join_the_unlimited_plan: "പ്രത്യേക ഡിസ്‌കൗണ്ടുകൾക്കായി DAILY UNLIMITED പ്ലാനിൽ ചേരൂ"
+    , maybe_later: "പിന്നീട്"
     , your_payment_was_unsuccessful: "നിങ്ങളുടെ പേയ്‌മെൻ്റ് ശ്രമം പരാജയപ്പെട്ടു."
-    , join_a_plan_to_start_earning: ""
-    , go_online_prompt_subscribe: ""
-    , go_online_prompt_payment_pending: ""
-    , retry_autopay: ""
+    , join_a_plan_to_start_earning: "സമ്പാദനം ആരംഭിക്കാൻ ഒരു പ്ലാനിൽ ചേരൂ!"
+    , go_online_prompt_subscribe: "നിങ്ങൾ ഇപ്പോൾ ഓഫ്‌ലൈനിലാണ്. \n യാത്രകൾ സ്വീകരിക്കാൻ ഒരു പ്ലാനിൽ ചേരൂ"
+    , go_online_prompt_payment_pending: "നിങ്ങൾ ഇപ്പോൾ ഓഫ്‌ലൈനിലാണ്.\n യാത്രകൾ സ്വീകരിക്കാൻ പ്ലാൻ പേയ്മെന്റ് പൂർത്തിയാക്കൂ"
+    , retry_autopay: "ഓട്ടോപേ വീണ്ടും ശ്രമിക്കുക"
     , retry_str: "വീണ്ടും ശ്രമിക്കുക"
-    , ongoing_payment_execution: ""
-    , cancel_anyway: ""
-    , validity_expired_str: ""
-    , driver_go_home_request_not_present: ""
-    , total_money_collected: ""
-    , fare_earned_of_the_day: ""
-    , gst_plus_payable: ""
-    , to_continue_using_yatri_sathi: ""
-    , pay: ""
+    , ongoing_payment_execution: " ongoing payment നടക്കുന്നു, ദയവായി കാത്തിരിക്കുക"
+    , cancel_anyway: "എങ്കിലും റദ്ദാക്കുക"
+    , validity_expired_str: "കാലാവധി കഴിഞ്ഞു!"
+    , driver_go_home_request_not_present: "ഡ്രൈവർ ഹോം റിക്വസ്റ്റ് ലഭ്യമല്ല"
+    , total_money_collected: "ആകെ പണം ശേഖരിച്ചു"
+    , fare_earned_of_the_day: "ഇന്നത്തെ യാത്രകളിൽ സമ്പാദിച്ചത്"
+    , gst_plus_payable: "ജിഎസ്ടി + ഫീസ് അടയ്ക്കേണ്ടത്"
+    , to_continue_using_yatri_sathi: "ആപ്പ് ഉപയോഗം തുടരാൻ, ദയവായി പേയ്മെന്റ് പൂർത്തിയാക്കൂ"
+    , pay: "പേയ് ചെയ്യുക"
     , later: "പിന്നീട്"
-    , great_job: ""
-    , fee_breakup: ""
-    , yatri_sathi_fee_payable_for_date: (\_ -> "")
-    , fee_corresponding_to_the_distance: ""
-    , platform_fee: ""
-    , gst: ""
-    , total_payable: ""
-    , view_details: ""
-    , payment_successful: ""
+    , great_job: "നല്ല ജോലി!"
+    , fee_breakup: "ഫീസ് വിശദീകരണം"
+    , yatri_sathi_fee_payable_for_date: (\_ -> "ഈ തീയതിക്ക് അടയ്ക്കേണ്ട ഫീസ്")
+    , fee_corresponding_to_the_distance: "യാത്ര ചെയ്ത ദൂരത്തിന് അനുസരിച്ച് ഫീസ് കണക്കാക്കപ്പെടും."
+    , platform_fee: "പ്ലാറ്റ്ഫോം ഫീസ്"
+    , gst: "ജിഎസ്ടി"
+    , total_payable: "ആകെ അടയ്ക്കേണ്ടത്"
+    , view_details: "വിശദാംശങ്ങൾ കാണുക"
+    , payment_successful: "പേയ്മെന്റ് വിജയകരമായി പൂർത്തിയായി!"
     , payment_failed: "പേയ്‌മെൻ്റ് പരാജയപ്പെട്ടു!"
-    , payment_pending_desc: ""
-    , payment_failed_desc: (\_ -> "")
-    , we_will_notify_when_payment_success: ""
-    , continue_taking_rides: ""
-    , your_previous_payment_is_pending: ""
-    , goverment_charges: ""
-    , enter_aadhaar_details: ""
-    , no_mobile_number_registered: ""
-    , exceed_otp_generation_limit: ""
-    , aadhaar_number_not_exist: ""
-    , invalid_otp: ""
-    , no_share_code: ""
-    , wrong_share_code: ""
-    , invalid_share_code: ""
-    , session_expired: ""
-    , otp_attempt_exceeded: ""
-    , upstream_internal_server_error: ""
-    , transaction_already_completed: ""
-    , goto_your_nearest_booth: ""
-    , call_request_has_been_placed: ""
-    , your_dues_description_manual: ""
-    , complete_payment_to_continue: (\_ -> "")
-    , by_clicking_next_you_will_be_agreeing_to_our: ""
+    , payment_pending_desc: "ചിന്തിക്കേണ്ട, ഇന്ന് യാത്രകൾ തുടരാം!"
+    , payment_failed_desc: (\_ -> "നിങ്ങൾ വീണ്ടും പേയ്മെന്റ് ശ്രമിക്കാം, അല്ലെങ്കിൽ അടുത്ത ബൂത്തിൽ പേയ്മെന്റ് ചെയ്യാം")
+    , we_will_notify_when_payment_success: "പേയ്മെന്റ് വിജയകരമായാൽ അറിയിക്കും"
+    , continue_taking_rides: "യാത്രകൾ തുടരുക"
+    , your_previous_payment_is_pending: "നിങ്ങളുടെ മുമ്പത്തെ പേയ്മെന്റ് ഇപ്പോഴും ബാക്കി ഉണ്ട്"
+    , goverment_charges: "സർക്കാർ ചാർജുകൾ"
+    , enter_aadhaar_details: "ആധാർ വിശദാംശങ്ങൾ നൽകുക"
+    , no_mobile_number_registered: "ആധാറിൽ മൊബൈൽ നമ്പർ രജിസ്റ്റർ ചെയ്തിട്ടില്ല."
+    , exceed_otp_generation_limit: "പരമാവധി ഒടിപി ജനറേഷൻ പരിധി കഴിഞ്ഞു. ദയവായി കുറച്ച് സമയത്തിന് ശേഷം ശ്രമിക്കുക."
+    , aadhaar_number_not_exist: "ആധാർ നമ്പർ നിലവിലില്ല."
+    , invalid_otp: "തെറ്റായ ഒടിപി"
+    , no_share_code: "ഷെയർ കോഡ് നൽകിയിട്ടില്ല"
+    , wrong_share_code: "തെറ്റായ ഷെയർ കോഡ്"
+    , invalid_share_code: "തെറ്റായ ഷെയർ കോഡ്. 4 അക്കവും സംഖ്യകളും മാത്രം അനുവദനീയമാണ്."
+    , session_expired: "സെഷൻ കാലഹരണപ്പെട്ടു. ദയവായി വീണ്ടും ആരംഭിക്കുക."
+    , otp_attempt_exceeded: "ഒടിപി ശ്രമങ്ങൾ കഴിഞ്ഞു. ദയവായി വീണ്ടും ആരംഭിക്കുക"
+    , upstream_internal_server_error: "ഉയർന്ന തലത്തിലുള്ള/സർക്കാർ സോഴ്‌സ് ഇന്റേണൽ സെർവർ എറർ. ദയവായി വീണ്ടും ആരംഭിക്കുക."
+    , transaction_already_completed: "ട്രാൻസാക്ഷൻ ഇതിനകം പൂർത്തിയായി. കൂടുതൽ പ്രവർത്തനം സാധ്യമല്ല."
+    , goto_your_nearest_booth: "ആധാർ സ്ഥിരീകരിക്കാൻ അടുത്ത ബൂത്തിൽ എത്തുക"
+    , call_request_has_been_placed: "നിങ്ങളുടെ കോളിന്റെ അഭ്യർത്ഥന ലഭിച്ചു"
+    , your_dues_description_manual: "ദയവായി നിങ്ങളുടെ ബാക്കി തീർക്കുക, അല്ലെങ്കിൽ UPI ഓട്ടോപേ സജ്ജമാക്കുക"
+    , complete_payment_to_continue: (\_ -> "ആപ്പ് ഉപയോഗം തുടരാൻ, ദയവായി പേയ്മെന്റ് പൂർത്തിയാക്കൂ")
+    , by_clicking_next_you_will_be_agreeing_to_our: "അടുത്തത് ക്ലിക്ക് ചെയ്യുന്നതിലൂടെ നിങ്ങൾ ഞങ്ങളുടെ നിബന്ധനകൾക്ക് സമ്മതിക്കുന്നു"
     , this_extra_amount_the_customer_will_pay: "നിങ്ങൾ {} മിനിറ്റിലധികം കാത്തിരുന്നതിനാൽ ഉപഭോക്താവ് നിങ്ങൾക്ക് നൽകുന്ന അധിക തുകയാണിത്"
     , ten_digit_mobile_number: "10 അക്ക മൊബൈൽ നമ്പർ"
     , booth_charges: "ബൂത്ത് ചാർജ്"
@@ -1142,6 +1142,8 @@ getMl =
     , customer_should_complete_a_valid_ride: "ഉപഭോക്താവ് സാധുവായ ഒരു റൈഡ് പൂർത്തിയാക്കണം"
     , driver_referral: "ഡ്രൈവർ റഫറൽ"
     , purple_ride_completed: "പർപ്പിൾ റൈഡ് പൂർത്തിയാക്കി"
+    , gold_tier_ride_completed: "ഗോൾഡ് ടിയർ റൈഡ് പൂർത്തിയാക്കി"
+    , you_will_lose_a_chance_to_earn: (\coins -> "നിങ്ങൾ " <> coins <> " പോയിന്റുകൾ സമ്പാദിക്കാൻ ഒരു അവസരം നഷ്ടപ്പെടും" )
     , training_complted: "പരിശീലനം പൂർത്തിയാക്കി"
     , rides_in_a_day: "ഒരു ദിവസത്തിൽ റൈഡുകൾ"
     , top: "മുകളിൽ"
@@ -1173,7 +1175,7 @@ getMl =
     , you_have_not_completed_a_ride_yet: "നിങ്ങൾ ഇതുവരെ ഒരു റൈഡ് പൂർത്തിയാക്കിയിട്ടില്ല"
     , complete_first_ride_to_unlock_points: "പോയിൻ്റുകൾ അൺലോക്ക് ചെയ്യാൻ ആദ്യ സവാരി പൂർത്തിയാക്കുക"
     , destination: "ലക്ഷ്യസ്ഥാനം"
-    , you_did_not_take_any_rides_on_prefix: ""
+    , you_did_not_take_any_rides_on_prefix: "നിങ്ങൾ ഈ ദിവസം യാത്ര ചെയ്തിട്ടില്ല"
     , you_did_not_take_any_rides_on_suffix: "നിങ്ങൾ റൈഡുകളൊന്നും നടത്തിയില്ല"
     , convert: "പരിവർത്തനം ചെയ്യുക"
     , convert_points: "പോയിന്റുകൾ പരിവർത്തനം ചെയ്യുക"
@@ -1782,14 +1784,75 @@ getMl =
     , disable_metro_warriors_info : "ഗോ ടു മോഡ് സജീവമാക്കുന്നത് മെട്രോ വാരിയർസ് മോഡ് പ്രവർത്തനരഹിതമാക്കും."
     , choose_preferred_metro : "പ്രിയപ്പെട്ട മെട്രോ തിരഞ്ഞെടുക്കുക"
     , metro_warriors : "മെട്രോ വാരിയേഴ്സ്"
-    , search : "തിരയുക" 
+    , search : "തിരയുക"
     , bus__ : "ബസ്"
     , driver_unsubscribed : "ഡ്രൈവർ പ്ലാറ്റ്ഫോം നിലവിലില്ല. താഴെ കൊടുക്കേണ്ട തുക അടയ്ക്കാൻ വേണ്ടി പുനഃ സബ്സ്ക്രൈബ് ചെയ്യുക"
     , canceling_this_booking_may_affect_the_emergency_medical : "ഈ ബുക്കിംഗ്キャンസル ചെയ്യുന്നത് രോഗിക്ക് അടിയന്തര മെഡിക്കൽ സേവനങ്ങൾക്ക് പ്രഭാവം വരുത്താം"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ഡ്രൈവർമാർ അവരുടെ വൈദ്യശാസ്ത്ര കാരണം അല്ലെങ്കിൽ veículo തകരാറുകൾ മൂലം മാത്രമേ റദ്ദുചെയ്യേണ്ടു"
     , payment_under_maintenance : "പേയ്മെന്റ് പരിപാലനത്തിലാണ്"
-    , payments_temporarily_unavailable : "പേയ്മെന്റുകൾ താൽക്കാലികമായി ലഭ്യമല്ല, ഉടൻ തിരിച്ചുവരും. ദയവായി പിന്നീടു ശ്രമിക്കുക."
+    , payments_temporarily_unavailable : "പേയ്മെന്റുകൾ താൽക്കാലികമായി ലഭ്യമല്ല, ഉടൻ തിരിച്ചുവരും. ദയവായി പിന്നീടു ശ്രമിക്കുക.",
+    extra_charge_penalty: "അധിക ചാർജ് പിഴ",
+    out_of_rides: (\numerator denaminator -> numerator <> " ൽ നിന്ന് " <> denaminator <> " യാത്രകൾ"),
+    extra_charged: "അധികം ചാർജ് ചെയ്തു",
+    get_clarified: "സർട്ടിഫൈഡ് ആകുക",
+    dont_ask_extra_suspend: "താൽക്കാലിക വിലക്ക് ഒഴിവാക്കാൻ അധികം ചോദിക്കരുത്",
+    dont_ask_extra_blocking: "ബ്ലോക്ക് ഒഴിവാക്കാൻ അധികം ചോദിക്കരുത്",
+    your_extra_charge_penalty: "നിങ്ങളുടെ അധിക ചാർജ് പിഴ",
+    what_does_this_mean: "ഇത് എന്താണ് അർത്ഥമാക്കുന്നത്?",
+    read_more: "കൂടുതൽ വായിക്കുക",
+    take_the_course: "കോഴ്സ് എടുത്തുക",
+    extra_charge_q1: "അധിക ചാർജ് പിഴ എന്താണ്?",
+    extra_charge_a1: "ഡ്രൈവർ ഉപഭോക്താവിൽ നിന്ന് അധികം ചോദിച്ചാൽ, ഈ സ്കോർ ഉയരും.",
+    extra_charge_q2: "പിഴ വർദ്ധിച്ചാൽ എന്ത് സംഭവിക്കും?",
+    extra_charge_a2: "സ്കോർ കൂടുതലായാൽ ഡ്രൈവർക്ക് കുറച്ച് യാത്രകൾ മാത്രമേ ലഭിക്കൂ.",
+    extra_charge_q3: "ഞാൻ എങ്ങനെ എന്റെ പിഴ കുറയ്ക്കാം?",
+    extra_charge_a3: "യാത്രകൾ നടത്തുക, അധികം ചോദിക്കരുത്. സമയത്തിനൊപ്പം സ്കോർ കുറയും.",
+    extra_charge_q4: "ഡ്രൈവർ തുടർന്നും അധികം ചോദിച്ചാൽ?",
+    extra_charge_a4: "ഡ്രൈവർക്ക് താൽക്കാലിക വിലക്ക് ലഭിക്കും. തുടർന്നും ചോദിച്ചാൽ, അവർ ബ്ലോക്ക് ചെയ്യപ്പെടും.",
+    zero: "പൂജ്യം",
+    low: "കുറവ്",
+    suspended: "താൽക്കാലിക വിലക്ക്",
+    blocked: "തടയുക",
+    overcharging_blocked_desc: "പതിവായി അധിക ചാർജ് ഈടാക്കിയതിനാൽ, നിങ്ങൾ റൈഡുകൾ എടുക്കുന്നതിൽ നിന്ന് തടയപ്പെട്ടിരിക്കുന്നു",
+    overcharging_suspended_desc: "പതിവായി അധിക ചാർജ് ഈടാക്കിയതിനാൽ, നിങ്ങൾ ഓൺലൈനിൽ പോകുന്നത് താൽക്കാലികമായി നിർത്തിയിരിക്കുന്നു",
+    suspended_till: (\time date -> "താൽക്കാലികമായി സസ്‌പെൻഡ് ചെയ്‌തിരിക്കുന്നു " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver: "ന്യായമായ നിരക്കുള്ള ഡ്രൈവർ"
     , resume_ride : "യാത്ര പുനരാരംഭിക്കുക"
     , end_ride_with_stops : "നിങ്ങൾക്ക് ഇനിയും நிறുത്തലുകൾ ഉണ്ട്. എങ്കിലും യാത്ര അവസാനിപ്പിക്കണോ?"
     , stop: (\n -> "തുറക്ക് " <> n)
+    , rate_changes_as_the_distance_changes: "Rate changes as the distance changes"
+    , nammanmeter: "namma\nmeter"
+    , press_to_cancel: "Press to Cancel"
+    , dist: "DIST."
+    , km: "KM"
+    , updated_at_: "UPDATED AT "
+    , time: "TIME"
+    , enter_destination: "Enter Destination"
+    , stop_meter: "STOP METER"
+    , upton2km: "Upto\n2KM"
+    , meter_running: "METER RUNNING"
+    , confirm_meter_stop: "Confirm Meter Stop"
+    , confirm_destination: "Confirm Destination"
+    , search_results: "Search Results"
+    , start_typing_to_search_places: "Start typing to search places"
+    , bus_number: "Bus Number"
+    , bus_type: "Bus Type"
+    , namma_meter: "Namma Meter"
+    , package: "പാക്കേജ്"
+    , overcharging_score : "അതിരിക്ക ചാർജ് സ്കോർ"
+    , cancellation_score : "റദ്ദുചെയ്യുന്ന സ്കോർ"
+    , safety_score : "സുരക്ഷിതതാ സ്കോർ"
+    , you_have_been_unsafe : "നിങ്ങളുടെ അനുമതിയുണ്ട്\nഅനുമതിയുണ്ട്"
+    , you_have_been_watchlisted : "നിങ്ങളുടെ പര്യാപ്തതാ സ്കോർ ഉണ്ട്\nപര്യാപ്തതാ സ്കോർ ഉണ്ട്"
+    , you_are_safe : "നിങ്ങളുടെ സുരക്ഷിതതാ സ്കോർ ഉണ്ട്\nസുരക്ഷിതതാ സ്കോർ ഉണ്ട്"
+    , watchlisted : "പര്യാപ്തതാ സ്കോർ ഉണ്ട്\nപര്യാപ്തതാ സ്കോർ ഉണ്ട്"
+    , unsafe : "അനുമതിയുണ്ട്\nഅനുമതിയുണ്ട്"
+    , safe : "സുരക്ഷിതതാ സ്കോർ ഉണ്ട്\nസുരക്ഷിതതാ സ്കോർ ഉണ്ട്"
+    , good_cancellation_score : "നിങ്ങളുടെ റദ്ദുചെയ്യുന്ന സ്കോർ ഉത്തമവും"
+    , poor_cancellation_score : "നിങ്ങളുടെ റദ്ദുചെയ്യുന്ന സ്കോർ ഖാരാബിസ്തു"
+    , good : "ഉത്തമം"
+    , poor : "ഖാരാബിസ്തു"
+    , open_meter : "മೀറ്റർ ഓപ്പൺ"
+    , this_ride_includes_a_pet : "ഈ യാത്രയിൽ ഒരു വളർത്തുമൃഗവും ഉൾപ്പെടുന്നു"
+    , pet_rides : "പെറ്റ് റൈഡ്സ്"
     }

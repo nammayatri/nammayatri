@@ -8,6 +8,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.VehicleCategory
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -28,6 +29,8 @@ data SearchTry = SearchTry
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Text,
+    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    preferSafetyPlus :: Kernel.Prelude.Bool,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRepeatCounter :: Kernel.Prelude.Int,
     searchRepeatType :: Domain.Types.SearchTry.SearchRepeatType,
@@ -37,6 +40,7 @@ data SearchTry = SearchTry
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Text
   }

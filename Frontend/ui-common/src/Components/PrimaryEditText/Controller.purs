@@ -15,7 +15,7 @@
 
 module Components.PrimaryEditText.Controller where
 
-import Prelude((<>))
+import Prelude((<>), class Show)
 import Font.Size as FontSize
 import Common.Styles.Colors as Color
 import Font.Style (Style(..)) 
@@ -23,6 +23,11 @@ import Data.Maybe(Maybe(..))
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..), Accessiblity(..))
 import Common.Types.App
+
+instance showAction :: Show Action where
+  show (TextChanged _ _) = "TextChanged"
+  show (FocusChanged _) = "FocusChanged"
+  show (TextImageClicked) = "TextImageClicked"
 
 data Action = TextChanged String String | FocusChanged Boolean | TextImageClicked
 

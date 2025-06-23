@@ -73,6 +73,7 @@ import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DDriverStats
@@ -366,6 +367,7 @@ rideAssignedCommon booking ride driver veh = do
       Just _ -> pure True
       Nothing -> pure False
   let favCount = driverStats.favRiderCount
+  let isSafetyPlus = booking.isSafetyPlus
   driverAccountId <-
     if ride.onlinePayment && isValueAddNP
       then do
@@ -680,7 +682,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
   callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
@@ -716,12 +718,17 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
 
     getTags :: Bool -> Tags.Taggings
     getTags isValueAddNP = do
+      let isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges
       def{Tags.itemTags =
             [ (Tags.DISTANCE_TO_NEAREST_DRIVER_METER, Just $ show driverQuote.distanceToPickup.getMeters),
               (Tags.ETA_TO_NEAREST_DRIVER_MIN, Just . show $ driverQuote.durationToPickup.getSeconds `div` 60),
               (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest)
             ]
-              <> if isJust driverQuote.specialLocationTag && isValueAddNP then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)] else []
+              <> if (isJust driverQuote.specialLocationTag && isValueAddNP)
+                then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)]
+                else
+                  []
+                    <> if (isSafetyPlus && isValueAddNP) then [(Tags.IS_SAFETY_PLUS, Just $ show isSafetyPlus)] else []
          }
 
 sendDriverArrivalUpdateToBAP ::
@@ -995,11 +1002,12 @@ sendSafetyAlertToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
-  T.Text ->
+  Enums.SafetyReasonCode ->
   DP.Person ->
   DVeh.Vehicle ->
   m ()
 sendSafetyAlertToBAP booking ride reason driver vehicle = do
+  logDebug $ "sendSafetyAlertToBAP: reason: " <> T.pack (show reason)
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1015,7 +1023,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
-        safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
+        safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {reason = T.pack (show reason), ..}
 
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq

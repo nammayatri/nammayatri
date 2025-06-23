@@ -7,6 +7,7 @@ import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -21,11 +22,13 @@ import Tools.Beam.UtilsTH
 data PersonT f = PersonT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
     androidId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    authBlocked :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blocked :: B.C f Kernel.Prelude.Bool,
     blockedAt :: B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime),
     blockedByRuleId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blockedCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    blockedUntil :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -39,6 +42,7 @@ data PersonT f = PersonT
     customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     customerPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     customerReferralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dateOfBirth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     defaultPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -59,11 +63,18 @@ data PersonT f = PersonT
     id :: B.C f Kernel.Prelude.Text,
     identifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     identifierType :: B.C f Domain.Types.Person.IdentifierType,
+    imeiNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    imeiNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     informPoliceSos :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isNew :: B.C f Kernel.Prelude.Bool,
     isValidRating :: B.C f Kernel.Prelude.Bool,
+    juspayCustomerPaymentID :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     lastName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lastUsedVehicleServiceTiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
+    latestLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    latestLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    liveActivityToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     middleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -74,6 +85,7 @@ data PersonT f = PersonT
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -89,6 +101,7 @@ data PersonT f = PersonT
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     useFakeOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    verificationChannel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     whatsappNotificationEnrollStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods)
   }
   deriving (Generic, B.Beamable)

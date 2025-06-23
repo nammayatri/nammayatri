@@ -33,11 +33,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class Utils {
 
     private static final String UTILS = "UTILS";
+    public static final String DRIVER_STATUS = "DRIVER_STATUS_N";
+    public static final String DRIVER_STATUS_OFFLINE = "Offline";
 
 
     public static void minimizeApp(Context context) {
@@ -54,11 +57,26 @@ public class Utils {
             "PRIORITY_PASSIVE", 105
     );
 
-    private static final int DEFAULT_PRIORITY = 100; // Default priority to PRIORITY_HIGH_ACCURACY if invalid
+    private static final int DEFAULT_PRIORITY = 102; // Default priority to PRIORITY_HIGH_ACCURACY if invalid
 
     public static int getPriority(String priority) {
         Integer value = PRIORITY_MAP.get(priority);
         return (value != null) ? value : DEFAULT_PRIORITY;
+    }
+
+    public static int getLocationPriority(String priority) {
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
+        try {
+            String priorityMap = remoteConfigs.getString("perf_config");
+            JSONObject config = new JSONObject(priorityMap);
+            int finalConfig = getPriority(config.optString(priority));
+            Log.i("RemoteConfig", "Location Update Priority: " + config + " " + finalConfig);
+            return finalConfig;
+
+        } catch (Exception e) {
+            Log.e("RemoteConfig", "Failed to parse JSON for location Update", e);
+            return getPriority("");
+        }
     }
 
     public static int getResIdentifier (Context context, String resName, String resType) {
@@ -106,7 +124,7 @@ public class Utils {
             Log.e(UTILS, "Error sending user data: " + e);
         }
     }
-    
+
     public static VariantType getVariantType(String variant) {
         if (variant.equals("Non AC Taxi")) {
             return VariantType.NON_AC;

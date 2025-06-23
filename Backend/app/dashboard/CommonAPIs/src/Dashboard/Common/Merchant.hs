@@ -295,7 +295,8 @@ buildSmsServiceConfig = \case
     username' <- encrypt gusername
     password' <- encrypt gpassword
     templateId' <- encrypt templateId
-    pure . SMS.GupShupConfig $ SMS.GupShupCfg {userName = username', password = password', templateId = templateId', ..}
+    entityId' <- encrypt entityId
+    pure . SMS.GupShupConfig $ SMS.GupShupCfg {userName = username', password = password', entityId = entityId', templateId = templateId', ..}
 
 instance ToJSON SmsServiceConfigUpdateReq where
   toJSON = genericToJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
@@ -347,6 +348,7 @@ data GupShupCfgUpdateReq = GupShupCfgUpdateReq
   { gusername :: Text,
     gpassword :: Text,
     url :: BaseUrl,
+    entityId :: Text,
     templateId :: Text
   }
   deriving stock (Show, Generic)
@@ -598,7 +600,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
-    merchantData :: Maybe MerchantData
+    merchantData :: Maybe MerchantData,
+    driverOfferMerchantOperatingCityId :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -621,6 +624,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "currency" form
       <*> parseMaybeInput "distanceUnit" form
       <*> parseMaybeJsonInput "merchantData" form
+      <*> parseMaybeJsonInput "driverOfferMerchantOperatingCityId" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -660,7 +664,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
-    merchantData :: Maybe MerchantData
+    merchantData :: Maybe MerchantData,
+    driverOfferMerchantOperatingCityId :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -850,4 +855,33 @@ data PriorityListWrapperType = PriorityListWrapperType
     whatsappProviders :: [WhatsappService]
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+--- Upsert special location using csv file ----
+
+data UpsertSpecialLocationCsvReq = UpsertSpecialLocationCsvReq {locationGeoms :: [(Text, Kernel.Prelude.FilePath)], gateGeoms :: [(Text, Kernel.Prelude.FilePath)], file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertSpecialLocationCsvReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpsertSpecialLocationCsvReq where
+  fromMultipart form = do
+    let locationGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "locationGeoms") $ files form)
+        gateGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "gateGeoms") $ files form)
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    return $ UpsertSpecialLocationCsvReq locationGeoms gateGeoms csvFile
+
+instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
+  toMultipart form =
+    MultipartData
+      []
+      ( [FileData "file" (T.pack form.file) "" (form.file)]
+          <> (map (\(fileName, file) -> FileData "locationGeoms" fileName (T.pack file) file) form.locationGeoms)
+          <> (map (\(fileName, file) -> FileData "gateGeoms" fileName (T.pack file) file) form.gateGeoms)
+      )
+
+newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {unprocessedEntities :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

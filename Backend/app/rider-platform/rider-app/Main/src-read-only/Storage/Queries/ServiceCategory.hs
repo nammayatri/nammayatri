@@ -4,10 +4,12 @@
 
 module Storage.Queries.ServiceCategory (module Storage.Queries.ServiceCategory, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,6 +22,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceCategory.ServiceCategory] -> m ())
 createMany = traverse_ create
+
+findAllByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.ServiceCategory.ServiceCategory])
+findAllByPlaceId placeId = do findAllWithKV [Se.Is Beam.placeId $ Se.Eq placeId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -34,8 +39,11 @@ updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
     [ Se.Set Beam.allowedSeats allowedSeats,
       Se.Set Beam.availableSeats availableSeats,
       Se.Set Beam.description description,
+      Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.name name,
       Se.Set Beam.peopleCategory (Kernel.Types.Id.getId <$> peopleCategory),
+      Se.Set Beam.placeId placeId,
+      Se.Set Beam.rules (Data.Aeson.toJSON <$> rules),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

@@ -15,7 +15,7 @@
 module Common.RemoteConfig.Types where
 
 import Prelude
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, Maybe(..))
 import Foreign.Class  (class Decode, decode, class Encode, encode)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
@@ -28,6 +28,7 @@ import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import Foreign.Object (Object)
 
 type RemoteConfig a
   = { bangalore :: Maybe a
@@ -175,6 +176,7 @@ defaultForwardBatchConfigData = ForwardBatchConfigData
 
 newtype FeaturesConfigData = FeaturesConfigData
   { enableDeliveryBike :: Boolean
+  , enableDriverRateCard :: Maybe Boolean
   }
 derive instance genericFeaturesConfigData :: Generic FeaturesConfigData _
 
@@ -187,6 +189,7 @@ instance encodeFeaturesConfigData :: Encode FeaturesConfigData where
 defaultFeaturesConfigData :: FeaturesConfigData
 defaultFeaturesConfigData = FeaturesConfigData
   { enableDeliveryBike: false
+  , enableDriverRateCard: Nothing
   }
 
 type TipsConfig
@@ -267,7 +270,7 @@ type RCSubscriptionDues = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus | AmbulanceBooking
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus | AmbulanceBooking | ReferralBanner
 
 instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
 instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson
@@ -337,4 +340,46 @@ type VoipConfig = {
     enableVoipFeature :: Boolean,
     enableVoipCalling :: Boolean
   }
+}
+
+type EstimateOfferConfig = {
+  conditions :: Array Conditions,
+  enableAllVariant :: Boolean,
+  translations :: Object String
+}
+
+type Conditions = {
+  minDistance ::  Int,
+  maxDistance :: Int,
+  variant :: Maybe String,
+  ratio :: Number
+}
+
+type WmbFlowConfig = {
+  maxDeviatedDistanceInMeters :: Number,
+  showAllDeviatedBus :: Boolean,
+  maxAllowedTimeDiffInLTSinSec :: Int,
+  maxSnappingOnRouteDistance :: Number,
+  defaultRadiusForFindingBus :: Number,
+  minimumRadiusForFindingBus :: Number,
+  defaultZoomLevelOnMap :: Number,
+  maxRadiusCanBeSearched :: Number,
+  radiusMultiplier :: Number,
+  updatePollingRadiusToClosestBus :: Boolean
+}
+
+type PollingConfigList = {
+  pollingConfigList :: Array PollingConfig
+}
+
+type PollingConfig = {
+  functionName :: String,
+  disable :: Boolean,
+  pollingIntervalInMilliSecond :: Int,
+  pollingIntervalDelayMultiplier :: Int,
+  pollingRetryCount :: Int
+}
+
+type PushEventsConfig = {
+  loggingIntervalInS :: Int
 }

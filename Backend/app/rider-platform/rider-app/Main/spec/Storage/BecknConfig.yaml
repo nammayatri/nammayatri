@@ -11,6 +11,7 @@ imports:
   DIRECTConfig: Domain.Types.Extra.IntegratedBPPConfig
   CMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
   ONDCBecknConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CRISConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -104,9 +105,14 @@ IntegratedBPPConfig:
   types:
     PlatformType:
       enum: "MULTIMODAL, PARTNERORG, APPLICATION"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     ProviderConfig:
-      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, ONDC ONDCBecknConfig"
+      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, ONDC ONDCBecknConfig, CRIS CRISConfig"
       derive': "Generic, FromJSON, ToJSON, Eq"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PlatformType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PlatformType>
 
   fromTType:
     providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
@@ -134,6 +140,9 @@ IntegratedBPPConfig:
     platformType: "'APPLICATION'"
 
   queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
     findByDomainAndCityAndVehicleCategory:
       kvFunction: findOneWithKV
       where:

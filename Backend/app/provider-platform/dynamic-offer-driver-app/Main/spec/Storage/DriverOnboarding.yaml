@@ -1,5 +1,6 @@
 imports:
   Person: Domain.Types.Person
+  Role: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
@@ -129,8 +130,8 @@ DriverLicense:
     driverName: Maybe Text
     licenseNumber: EncryptedHashedField e Text
     licenseExpiry: UTCTime
-    classOfVehicles: '[Text]'
-    failedRules: '[Text]'
+    classOfVehicles: "[Text]"
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     vehicleCategory: Maybe VehicleCategory
     consent: Bool
@@ -159,9 +160,6 @@ DriverLicense:
       kvFunction: updateWithKV
       params: [verificationStatus]
       where: documentImageId1
-    findByImageId:
-      kvFunction: findOneWithKV
-      where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -171,13 +169,14 @@ VehicleRegistrationCertificate:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
     certificateNumber: EncryptedHashedField e Text
+    unencryptedCertificateNumber: Maybe Text
     fitnessExpiry: UTCTime
     permitExpiry: Maybe UTCTime
     pucExpiry: Maybe UTCTime
     insuranceValidity: Maybe UTCTime
     vehicleClass: Maybe Text
     vehicleVariant: Maybe VehicleVariant|NoRelation
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     vehicleManufacturer: Maybe Text
     vehicleCapacity: Maybe Int
     vehicleModel: Maybe Text
@@ -200,6 +199,9 @@ VehicleRegistrationCertificate:
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
+    approved: Maybe Bool
+  default:
+    approved: "false"
   constraints:
     id: PrimaryKey
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
@@ -242,6 +244,10 @@ VehicleRegistrationCertificate:
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
+    updateApproved:
+      kvFunction: updateOneWithKV
+      params: [approved]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -313,9 +319,15 @@ Image:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, personId, imageType]
+      orderBy:
+        field: createdAt
+        order: desc
     findByMerchantId:
       kvFunction: findAllWithDb
       where: merchantId
+    findAllByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     addFailureReason:
       kvFunction: updateWithKV
       params: [failureReason]
@@ -333,6 +345,10 @@ Image:
     updateDocumentExpiry:
       kvFunction: updateOneWithKV
       params: [documentExpiry]
+      where: id
+    updateVerificationStatusAndExpiry:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, documentExpiry, imageType]
       where: id
     deleteById:
       kvFunction: deleteWithKV
@@ -359,9 +375,11 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
+    DocumentCategory:
+      enum: "Driver,Vehicle,Permission,Training"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
@@ -373,18 +391,19 @@ DocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     checkExtraction: Bool
     checkExpiry: Bool
     supportedVehicleClasses: SupportedVehicleClasses
     vehicleClassCheckType: VehicleClassCheckType
-    rcNumberPrefixList: '[Text]'
+    rcNumberPrefixList: "[Text]"
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
     doStrictVerifcation: Bool
     order: Int
     filterForOldApks: Maybe Bool
+    documentCategory: Maybe DocumentCategory
   default:
     order: "0"
     doStrictVerifcation: "true"
@@ -400,7 +419,7 @@ DocumentVerificationConfig:
     supportedVehicleClassesJSON: json
   beamFields:
     supportedVehicleClasses:
-     supportedVehicleClassesJSON: Value
+      supportedVehicleClassesJSON: Value
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
   fromTType:
@@ -510,6 +529,57 @@ VehicleFitnessCertificate:
     rcId: SecondaryKey
     documentImageId: SecondaryKey
 
+VehicleNOC:
+  tableName: vehicle_noc
+  fields:
+    id: Id VehicleNOC
+    nocNumber: EncryptedHashedField e Text
+    rcId: Id VehicleRegistrationCertificate
+    driverId: Id Person
+    documentImageId: Id Image
+    nocExpiry: UTCTime
+    verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    rcId: SecondaryKey
+    documentImageId: SecondaryKey
+  queries:
+    findByRcIdAndDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, driverId]
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+
+BusinessLicense:
+  tableName: business_license
+  fields:
+    id: Id BusinessLicense
+    licenseNumber: EncryptedHashedField e Text
+    driverId: Id Person
+    documentImageId: Id Image
+    licenseExpiry: UTCTime
+    verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    documentImageId: SecondaryKey
+  queries:
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+
 VehiclePUC:
   tableName: vehicle_puc
   fields:
@@ -567,7 +637,6 @@ FleetRCAssociation:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-
 DriverSSN:
   tableName: driver_ssn
   fields:
@@ -593,6 +662,8 @@ DriverPanCard:
   types:
     VerifiedBy:
       enum: "FRONTEND_SDK,DASHBOARD"
+    PanType:
+      enum: "INDIVIDUAL,BUSINESS"
   fields:
     id: Id DriverPanCard
     driverId: Id Person
@@ -601,12 +672,13 @@ DriverPanCard:
     driverDob: Maybe UTCTime
     driverName: Maybe Text
     panCardNumber: EncryptedHashedField e Text
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     consent: Bool
     consentTimestamp: UTCTime
     verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
@@ -627,6 +699,62 @@ DriverPanCard:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
       where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId1
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId1
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+DriverGstin:
+  fields:
+    id: Id DriverGstin
+    driverId: Id Person
+    documentImageId1: Id Image
+    documentImageId2: Maybe (Id Image)
+    dateOfLiability: Maybe UTCTime
+    driverName: Maybe Text
+    gstin: EncryptedHashedField e Text
+    verificationStatus: VerificationStatus
+    address: Maybe Text
+    constitutionOfBusiness: Maybe Text
+    isProvisional: Maybe Bool
+    legalName: Maybe Text
+    tradeName: Maybe Text
+    typeOfRegistration: Maybe Text
+    validFrom: Maybe UTCTime
+    validUpto: Maybe UTCTime
+    verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    gstin: "!SecondaryKey" # forcing to be a secondary key
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId1
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -672,7 +800,7 @@ FleetOwnerDocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
     checkExtraction: Bool
@@ -680,11 +808,15 @@ FleetOwnerDocumentVerificationConfig:
     maxRetryCount: Int
     doStrictVerifcation: Bool
     order: Int
+    role: Role
+    documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
   default:
     order: "0"
+    role: "'FLEET_OWNER'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     documentType: PrimaryKey
+    role: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
   queries:
@@ -694,7 +826,10 @@ FleetOwnerDocumentVerificationConfig:
       orderBy:
         field: order
         order: asc
-
+    findAllByMerchantOpCityIdAndRole:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, role]
 
 AadhaarCard:
   tableName: aadhaar_card
@@ -721,6 +856,12 @@ AadhaarCard:
   constraints:
     driverId: PrimaryKey
   queries:
+    findByFrontImageId:
+      kvFunction: findOneWithKV
+      where: aadhaarFrontImageId
+    findByBackImageId:
+      kvFunction: findOneWithKV
+      where: aadhaarBackImageId
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
@@ -733,7 +874,14 @@ AadhaarCard:
       where: aadhaarNumberHash
     findByPhoneNumberAndUpdate:
       kvFunction: updateWithKV
-      params: [nameOnCard, driverGender, dateOfBirth, aadhaarNumberHash, verificationStatus]
+      params:
+        [
+          nameOnCard,
+          driverGender,
+          dateOfBirth,
+          aadhaarNumberHash,
+          verificationStatus,
+        ]
       where: driverId
     updateDriverImagePath:
       kvFunction: updateOneWithKV
@@ -811,7 +959,6 @@ HyperVergeSdkLogs:
         field: createdAt
         order: asc
 
-
 HyperVergeVerification:
   tableName: hyperverge_verification
   fields:
@@ -872,3 +1019,20 @@ HyperVergeVerification:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: driverId
+
+RCValidationRules:
+  tableName: rc_validation_rules
+  fields:
+    id: Id RCValidationRules
+    maxVehicleAge: Maybe Int
+    fuelType: Maybe [Text]
+    vehicleClass: Maybe [Text]
+    vehicleOEM: Maybe [Text]
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId

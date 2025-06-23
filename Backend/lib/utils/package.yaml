@@ -107,6 +107,8 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - process
+  - temporary
   - JuicyPixels
   - JuicyPixels-extra
   - base64-bytestring
@@ -116,6 +118,8 @@ dependencies:
   - jwt
   - fieldInspector
   - fdep
+  - process
+  - temporary
 
 ghc-options:
   - -fwrite-ide-info

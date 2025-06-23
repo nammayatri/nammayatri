@@ -13,20 +13,23 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types 
+module Screens.Types
   ( module Screens.Types
   , module ReExport
   ) where
 
 import Common.Types.Config
-
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Either as Either
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
@@ -34,11 +37,11 @@ import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Domain.Payments as PP
 import Foreign (Foreign)
-import Foreign (Foreign)
+import Foreign.Generic (class Encode)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Control.Alt ((<|>))
-import Foreign (ForeignError(..), fail) 
+import Foreign (ForeignError(..), fail)
 import Halogen.VDom.DOM.Prop (PropValue)
 import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, Language(..))
 import Prelude (class Eq, class Show, ($), (<$>))
@@ -48,6 +51,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode,defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import PrestoDOM.List (ListItem)
+import Presto.Core.Utils.Encoding (defaultEncode)
 import Prim.TypeError as String
 import RemoteConfig.Types as RC
 import Screens (ScreenName)
@@ -59,7 +63,6 @@ import Control.Monad.Except (runExcept)
 import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
-import Screens (ScreenName)
 import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..),CoinEntity(..), PayoutVpaStatus(..))
 import Styles.Types (FontSize)
 import MerchantConfig.Types
@@ -70,6 +73,7 @@ import Common.Types.App (CalendarDate)
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
+import JBridge as JB
 
 
 type EditTextInLabelState =
@@ -127,7 +131,8 @@ type SplashScreenState =  {
  }
 
 type SplashScreenData =  {
-   message :: String
+   message :: String,
+   config :: AppConfig
  }
 
 type NoInternetScreenState =  { }
@@ -231,6 +236,8 @@ instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus | EV_Auto | HERITAGE_CAB
 
+derive instance genericVehicalTypes :: Generic VehicalTypes _
+instance encodeVehicalTypes :: Encode VehicalTypes where encode = defaultEncode
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
   data :: UploadDrivingLicenseStateData,
@@ -273,7 +280,7 @@ type UploadDrivingLicenseStateProps = {
   , openHowToUploadManual :: Boolean
   , logoutPopupModal :: Boolean
   , validateProfilePicturePopUp :: Boolean
-  , imageCaptureLayoutView :: Boolean 
+  , imageCaptureLayoutView :: Boolean
   , fileCameraPopupModal :: Boolean
   , fileCameraOption :: Boolean
   , validating :: Boolean
@@ -367,34 +374,38 @@ type RegistrationScreenProps = {
 
 data AnimType = HIDE | SHOW | ANIMATING
 derive instance genericAnimType :: Generic AnimType _
+instance encodeAnimType :: Encode AnimType where encode = defaultEncode
 instance eqAnimType :: Eq AnimType where eq = genericEq
 
-data RegisterationStep = 
-    DRIVING_LICENSE_OPTION 
-  | VEHICLE_DETAILS_OPTION 
-  | GRANT_PERMISSION 
+data RegisterationStep =
+    DRIVING_LICENSE_OPTION
+  | VEHICLE_DETAILS_OPTION
+  | GRANT_PERMISSION
   | SUBSCRIPTION_PLAN
   | PROFILE_PHOTO
   | AADHAAR_CARD
-  | PAN_CARD 
-  | VEHICLE_PERMIT 
-  | FITNESS_CERTIFICATE 
+  | PAN_CARD
+  | VEHICLE_PERMIT
+  | FITNESS_CERTIFICATE
   | VEHICLE_INSURANCE
   | VEHICLE_PUC
   | NO_OPTION
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
+instance encodeRegisterationStep :: Encode RegisterationStep where encode = defaultEncode
 
 data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | MANUAL_VERIFICATION_REQUIRED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
+instance encodeStageStatus :: Encode StageStatus where encode = defaultEncode
 
 data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | TruckCategory | BusCategory | UnKnown
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
 instance showVehicleCategory :: Show VehicleCategory where show = genericShow
+instance encodeVehicleCategory :: Encode VehicleCategory where encode = defaultEncode
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
 
@@ -405,7 +416,8 @@ type UploadAdhaarScreenState = {
 type UploadAdhaarScreenData = {
   imageFront :: String,
   imageBack :: String,
-  imageName :: String
+  imageName :: String,
+  config :: AppConfig
 }
 
 type UploadAdhaarScreenProps = {
@@ -430,7 +442,8 @@ type PrimaryEditTextState = {
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------
 type DriverProfileScreenState = {
   data :: DriverProfileScreenData,
-  props :: DriverProfileScreenProps
+  props :: DriverProfileScreenProps,
+  showDriverDetails :: Boolean
 }
 
 type DriverProfileScreenData = {
@@ -483,7 +496,8 @@ type DriverProfileScreenData = {
   profileCompletedModules :: Int,
   driverBlocked :: Boolean,
   blockedExpiryTime :: String,
-  favCount :: Maybe Int
+  favCount :: Maybe Int,
+  goBackTo :: ScreenName
 }
 
 type CompletingProfileRes = {
@@ -598,7 +612,9 @@ type DriverProfileScreenProps = {
   canSwitchToRental :: Maybe Boolean,
   canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean,
-  showDriverBlockedPopup :: Boolean
+  showDriverBlockedPopup :: Boolean,
+  skipGlobalEvents :: Boolean,
+  isPetModeEnabled :: Maybe Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -607,6 +623,8 @@ data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
 instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
 instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq
+instance encodeDriverProfileScreenType :: Encode DriverProfileScreenType where encode = defaultEncode
+
 
 
 data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME | PAYMENT
@@ -614,6 +632,8 @@ data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME | PAYMENT
 derive instance genericUpdateType :: Generic UpdateType _
 instance showUpdateType :: Show UpdateType where show = genericShow
 instance eqUpdateType :: Eq UpdateType where eq = genericEq
+instance encodeUpdateType :: Encode UpdateType where encode = defaultEncode
+
 
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
@@ -624,7 +644,8 @@ type ApplicationStatusScreenData =  {
   rcVerificationStatus :: String,
   dlVerificationStatus :: String,
   mobileNumber :: String,
-  otpValue :: String
+  otpValue :: String,
+  config :: AppConfig
 }
 type ApplicationStatusScreenProps =  {
   isSelected :: Boolean,
@@ -666,7 +687,8 @@ type BankDetailScreenState = {
 
 type BankDetailScreenStateData =  {
   beneficiaryNumber :: String,
-  ifsc :: String
+  ifsc :: String,
+  config :: AppConfig
 }
 
 type BankDetailScreenStateProps =  {
@@ -689,7 +711,6 @@ type EnterOTPScreenStateData = {
   timer :: String,
   capturedOtp :: String,
   focusedIndex :: Int,
-  editTextId :: String,
   config :: AppConfig
 }
 
@@ -768,6 +789,7 @@ instance decodeCallOptions :: Decode CallOptions where decode = defaultEnumDecod
 
 type RideSelectionScreenState =
   {
+    config :: AppConfig,
     shimmerLoader :: AnimationState,
     prestoListArrayItems :: Array ItemState,
     rideList :: Array IndividualRideCardState,
@@ -923,7 +945,10 @@ data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
+instance encodeKeyboardModalType :: Encode KeyboardModalType where encode = defaultEncode
+
 type DriverDetailsScreenStateData =  {
+  config :: AppConfig,
   driverName :: String,
   driverVehicleType :: String,
   driverRating :: Maybe Number,
@@ -960,6 +985,7 @@ type VehicleDetailsScreenState = {
 }
 
 type VehicleDetailsScreenData =  {
+  config :: AppConfig,
   imageName :: String,
   vehicleTypes :: Array VehicalTypes,
   base64Image :: String,
@@ -1064,7 +1090,7 @@ type HomeScreenData =  {
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
   paymentState :: PaymentState,
-  profileImg :: Maybe String, 
+  profileImg :: Maybe String,
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
@@ -1092,8 +1118,8 @@ type HomeScreenData =  {
 , coinsEarned :: Array API.CoinsEarned
 , plansState :: PlansState
 , scheduledRideListResponse ::  Int
-, upcomingRide :: Maybe ActiveRide 
-, homeScreenBannerTimerID :: String 
+, upcomingRide :: Maybe ActiveRide
+, homeScreenBannerTimerID :: String
 , homeScreenBannerTimer :: Int
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
@@ -1104,6 +1130,9 @@ type HomeScreenData =  {
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
 
+, overchargingTag :: Maybe API.OverchargingTag
+, driverBlocked :: Boolean
+, blockedExpiryTime :: String
 }
 
 type FavouritePopUp = {
@@ -1180,7 +1209,7 @@ type EndRideData = {
     rideId :: String,
     zeroCommision :: Int,
     tip :: Maybe Int,
-    finalAmount :: Int, 
+    finalAmount :: Int,
     riderName :: String,
     rating :: Int,
     feedback :: String,
@@ -1295,6 +1324,7 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
+  coinsRewardedOnGoldTierRide :: Maybe Int,
   waitTimeSeconds :: Int,
   enableFrequentLocationUpdates :: Boolean,
   tripScheduledAt :: Maybe String,
@@ -1331,7 +1361,8 @@ type ActiveRide = {
   senderPersonDetails :: Maybe API.PersonDetails,
   receiverPersonDetails :: Maybe API.PersonDetails,
   notifiedReachedDestination :: Boolean,
-  stops :: Array API.Stop
+  stops :: Array API.Stop,
+  isPetRide :: Maybe Boolean
 }
 
 type HomeScreenProps =  {
@@ -1379,7 +1410,7 @@ type HomeScreenProps =  {
   showOffer :: Boolean,
   autoPayBanner :: SubscriptionBannerType,
   subscriptionPopupType :: SubscriptionPopupType,
-  rcActive :: Boolean, 
+  rcActive :: Boolean,
   rcDeactivePopup :: Boolean,
   showAccessbilityPopup :: Boolean,
   rentalInfoPopUp :: Boolean,
@@ -1393,6 +1424,8 @@ type HomeScreenProps =  {
   accountBlockedPopup :: Boolean,
   accountBlockedPopupDueToCancellations :: Boolean,
   showCoinsPopup :: Boolean,
+  showPetRidesPopup :: Boolean,
+  showOptOutPetRidesPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
   safetyAudioAutoPlay :: Boolean,
@@ -1431,7 +1464,8 @@ type HomeScreenProps =  {
   setBusOnline :: Boolean,
   bus_input_data :: String,
   showEndRideWithStopPopup :: Boolean,
-  triggerGMapsIntent :: Boolean
+  triggerGMapsIntent :: Boolean,
+  showBlockerPopup :: Boolean
  }
 
 type RideRequestPill = {
@@ -1613,7 +1647,8 @@ type HelpAndSupportScreenData = {
   issueListType :: IssueModalType,
   timerId :: String,
   goBackTo :: ScreenName,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  config :: AppConfig
 }
 
 type HelpAndSupportScreenProps = {
@@ -1629,6 +1664,7 @@ type ReportIssueChatScreenState = {
 }
 
 type ReportIssueChatScreenData = {
+  config :: AppConfig,
   tripId :: Maybe String,
   categoryName :: String,
   messageToBeSent :: String,
@@ -1670,7 +1706,7 @@ type ReportIssueChatScreenData = {
              }
 }
 type Image = {
-  image :: String, 
+  image :: String,
   imageName :: String
 }
 
@@ -1701,12 +1737,15 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RES
 
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+instance encodeIssueModalType :: Encode IssueModalType where encode = defaultEncode
+
 
 data UpdateDummyTestPopUpType = TEST_RIDE_RECIEVED | PROBLEM_WITH_TEST | EVERYTHING_OK
 
 derive instance genericUpdateDummyTestPopUpType :: Generic UpdateDummyTestPopUpType _
 instance showUpdateDummyTestPopUpType :: Show UpdateDummyTestPopUpType where show = genericShow
 instance eqUpdateDummyTestPopUpType :: Eq UpdateDummyTestPopUpType where eq = genericEq
+instance encodeUpdateDummyTestPopUpType :: Encode UpdateDummyTestPopUpType where encode = defaultEncode
 --------------------------------------------- AboutUsScreenState ---------------------------
 type WriteToUsScreenState = {
   data :: WriteToUsScreenData,
@@ -1714,7 +1753,7 @@ type WriteToUsScreenState = {
 }
 
 type WriteToUsScreenData = {
-
+  config :: AppConfig
 }
 
 type WriteToUsScreenProps = {
@@ -1800,7 +1839,7 @@ type EditBankDetailsScreenState = {
 }
 
 type EditBankDetailsScreenData = {
-
+  config :: AppConfig
 }
 
 type EditBankDetailsScreenProps = {
@@ -1814,7 +1853,7 @@ type EditAadhaarDetailsScreenState = {
 }
 
 type EditAadhaarDetailsScreenData = {
-
+  config :: AppConfig
 }
 
 type EditAadhaarDetailsScreenProps = {
@@ -1851,7 +1890,8 @@ type PopUpScreenState = {
 }
 
 type PopUpScreenData = {
-  availableRides :: Array Rides
+  availableRides :: Array Rides,
+  config :: AppConfig
 }
 
 type PopUpScreenProps = {}
@@ -1919,6 +1959,7 @@ type DriverRideRatingScreenData = {
   , customerName :: String
   , activeFeedBackOption :: Maybe FeedbackSuggestions
   , selectedFeedbackOption :: String
+  , config :: AppConfig
 }
 
 type DriverRideRatingScreenProps = {
@@ -1947,6 +1988,7 @@ data UpdatePopupType =  AppVersion
 derive instance genericUpdatePopupType :: Generic UpdatePopupType _
 instance showUpdatePopupType :: Show UpdatePopupType where show = genericShow
 instance eqUpdatePopupType :: Eq UpdatePopupType where eq = genericEq
+instance encodeUpdatePopupType :: Encode UpdatePopupType where encode = defaultEncode
 
 data FeedbackSuggestions
  = CUSTOMER_RUDE_BEHAVIOUR
@@ -1956,6 +1998,8 @@ data FeedbackSuggestions
 
 derive instance genericFeedbackSuggestions :: Generic FeedbackSuggestions _
 instance eqFeedbackSuggestions :: Eq FeedbackSuggestions where eq = genericEq
+instance encodeFeedbackSuggestions :: Encode FeedbackSuggestions where encode = defaultEncode
+
 
 data HomeScreenStage =  HomeScreen
                       | RideRequested
@@ -2088,6 +2132,7 @@ data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen |
 
 derive instance genericReferralType :: Generic ReferralType _
 instance eqReferralType :: Eq ReferralType where eq = genericEq
+instance encodeReferralType :: Encode ReferralType where encode = defaultEncode
 
 type DocumentDetailsScreenState = {
   data :: DocumentDetailsScreenData,
@@ -2095,7 +2140,7 @@ type DocumentDetailsScreenState = {
 }
 
 type DocumentDetailsScreenData = {
-
+  config :: AppConfig
 }
 
 type DocumentDetailsScreenProps = {
@@ -2108,7 +2153,8 @@ type DriverCompleteProfileScreenState = {
 }
 
 type DriverCompleteProfileScreenData = {
-    pledge :: Array String
+    config :: AppConfig
+  ,  pledge :: Array String
   , vehicalOffer :: Array String
   , languages :: Array String
   , aspirations :: Array String
@@ -2133,6 +2179,9 @@ data Component = Pledge | Aspirations | Empty
 
 derive instance genericComponent :: Generic Component _
 instance eqComponent :: Eq Component where eq = genericEq
+instance encodeComponent :: Encode Component where encode = defaultEncode
+
+
 type InputTextState = {
   feedback :: String,
   component :: Component,
@@ -2151,7 +2200,7 @@ type DriverCompleteProfileScreenProps = {
 }
 
 type DatePickersState = {
-    activeIndex :: Int 
+    activeIndex :: Int
   , dates :: Array CalendarDate
   , id :: String
 }
@@ -2206,6 +2255,7 @@ type BookingOptionsScreenProps = {
   fromDeepLink :: Boolean,
   canSwitchToInterCity :: Maybe Boolean,
   canSwitchToIntraCity :: Maybe Boolean,
+  isPetModeEnabled :: Maybe Boolean,
   showRateCard :: Boolean,
   rateCardLoaded :: Boolean,
   peakTime :: Boolean
@@ -2215,6 +2265,8 @@ data LeaderBoardType = Daily | Weekly | Monthly
 
 derive instance genericLeaderBoardType :: Generic LeaderBoardType _
 instance eqLeaderBoardType :: Eq LeaderBoardType where eq = genericEq
+instance encodeLeaderBoardType :: Encode LeaderBoardType where encode = defaultEncode
+
 
 
 data DateSelector = DaySelector Common.CalendarDate | WeekSelector Common.CalendarWeek |  MonthSelector Common.CalendarMonth
@@ -2238,7 +2290,8 @@ type AcknowledgementScreenData = {
   description ::Maybe String,
   primaryButtonText :: Maybe String,
   orderId  :: Maybe String,
-  amount :: String
+  amount :: String,
+  config :: AppConfig
 }
 
 type AcknowledgementScreenProps = {
@@ -2252,6 +2305,7 @@ data IllustrationType = Image | Lottie
 derive instance genericIllustrationType:: Generic IllustrationType _
 instance showIllustrationType :: Show IllustrationType where show = genericShow
 instance eqIllustrationType :: Eq IllustrationType where eq = genericEq
+instance encodeIllustrationType :: Encode IllustrationType where encode = defaultEncode
 
 type PaymentHistoryModelState = {
   paymentHistoryList :: Array PaymentHistoryListItem.Config
@@ -2269,6 +2323,7 @@ type EnterAadhaarNumberScreenStateData = {
   , driverName :: String
   , driverGender :: String
   , driverDob :: String
+  , config :: AppConfig
 }
 
 type EnterAadhaarNumberScreenStateProps = {
@@ -2286,6 +2341,7 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+instance encodeAadhaarStage :: Encode AadhaarStage where encode = defaultEncode
 
 type GlobalProps = {
   aadhaarVerificationRequired :: Boolean,
@@ -2428,7 +2484,7 @@ type DueItem = {
   isSplit :: Boolean,
   specialZoneRideCount :: Maybe Int,
   totalSpecialZoneCharges :: Maybe Number,
-  amountPaidByYatriCoins :: Maybe Number 
+  amountPaidByYatriCoins :: Maybe Number
 }
 
 type KioskLocation = {
@@ -2478,7 +2534,7 @@ instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
 instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
 instance encodeAutoPayStatus :: Encode AutoPayStatus where encode = defaultEnumEncode
 
-data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView 
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView
 
 derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
 instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
@@ -2487,6 +2543,7 @@ instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = 
 instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
 
 data OptionsMenuState = ALL_COLLAPSED | PLAN_MENU  -- SUPPORT_MENU  | CALL_MENU disabled for now.
+instance encodeOptionsMenuState :: Encode OptionsMenuState where encode = defaultEncode
 
 derive instance genericOptionsMenuState :: Generic OptionsMenuState _
 instance showOptionsMenuState :: Show OptionsMenuState where show = genericShow
@@ -2506,6 +2563,7 @@ type PaymentHistoryScreenState = {
 }
 
 type PaymentHistoryScreenData = {
+  config :: AppConfig,
   transactionDetails :: TransactionInfo,
   planData :: PlanCardConfig,
   autoPayList :: Array PaymentListItem,
@@ -2594,6 +2652,7 @@ type DriverSavedLocationScreenState = {
 
 type DriverSavedLocationScreenData = {
   address :: String,
+  config :: AppConfig,
   currentLat :: Maybe String,
   currentLon :: Maybe String,
   savedLocationsArray :: Array GoToLocation,
@@ -2643,11 +2702,15 @@ data GoToScrEntryType = FromEdit | FromPrediction
 
 derive instance genericGoToScrEntryType :: Generic GoToScrEntryType _
 instance eqGoToScrEntryType :: Eq GoToScrEntryType where eq = genericEq
+instance encodeGoToScrEntryType :: Encode GoToScrEntryType where encode = defaultEncode
+
 
 data SavedLocationScreenType = GoToList | SearchLocation | LOCATE_ON_MAP | ConfirmLocation
 
 derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
 instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq
+instance encodeSavedLocationScreenType :: Encode SavedLocationScreenType where encode = defaultEncode
+
 
 data GoToPopUpType = REDUCED Int | MORE_GOTO_RIDES | VALIDITY_EXPIRED | REACHED_HOME | NO_POPUP_VIEW
 
@@ -2683,10 +2746,10 @@ type SaveLocationObject = {
 }
 
 type Tag = {
-  background :: String, 
-  image :: String, 
-  visibility :: Boolean, 
-  text :: String, 
+  background :: String,
+  image :: String,
+  visibility :: Boolean,
+  text :: String,
   textColor :: String
 }
 
@@ -2722,6 +2785,7 @@ data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DET
 derive instance genericChooseCityScreenStage :: Generic ChooseCityScreenStage _
 instance showChooseCityScreenStage :: Show ChooseCityScreenStage where show = genericShow
 instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where eq = genericEq
+instance encodeChooseCityScreenStage :: Encode ChooseCityScreenStage where encode = defaultEncode
 
 ---------------------------------------------WelcomeScreen -------------------------------------
 
@@ -2730,7 +2794,8 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  config :: AppConfig
 }
 ---------------------------------------------------- DriverEarningsScreen ----------------------------------
 
@@ -2792,7 +2857,7 @@ type DriverEarningsScreenProps = {
   offsetValue :: Int
 }
 
-type CalendarState = { 
+type CalendarState = {
   calendarPopup :: Boolean,
   endDate :: Maybe Common.CalendarModalDateObject,
   selectedTimeSpan :: Common.CalendarModalDateObject,
@@ -2812,6 +2877,8 @@ data CoinsQuestionTag = HowEarnLosePoints | DiscountPoints | PointsValidity | Ho
 
 derive instance genericCoinsQuestionTag :: Generic CoinsQuestionTag _
 instance eqCoinsQuestionTag :: Eq CoinsQuestionTag where eq = genericEq
+instance encodeCoinsQuestionTag :: Encode CoinsQuestionTag where encode = defaultEncode
+
 
 
 type AnswerConfig = {
@@ -2880,6 +2947,8 @@ data DriverEarningsPopupType = COIN_TO_CASH_POPUP | COIN_TO_CASH_FAIL_POPUP | NO
 derive instance genericDriverEarningsPopupType :: Generic DriverEarningsPopupType _
 instance showDriverEarningsPopupType :: Show DriverEarningsPopupType where show = genericShow
 instance eqDriverEarningsPopupType :: Eq DriverEarningsPopupType where eq = genericEq
+instance encodeDriverEarningsPopupType :: Encode DriverEarningsPopupType where encode = defaultEncode
+
 
 
 --------------------------------------------- Benefits.BenefitsScreen -------------------------------------
@@ -2930,12 +2999,15 @@ data DriverReferralType = DRIVER | CUSTOMER
 derive instance genericDriverReferralType :: Generic DriverReferralType _
 instance showDriverReferralType :: Show DriverReferralType where show = genericShow
 instance eqDriverReferralType :: Eq DriverReferralType where eq = genericEq
+instance encodeDriverReferralType :: Encode DriverReferralType where encode = defaultEncode
+
 
 data ReferralInfoPopType = REFERRED_DRIVERS_POPUP | REFERRED_CUSTOMERS_POPUP | ACTIVATED_CUSTOMERS_POPUP | NO_REFERRAL_POPUP
 
 derive instance genericReferralInfoPopType :: Generic ReferralInfoPopType _
 instance showReferralInfoPopType :: Show ReferralInfoPopType where show = genericShow
 instance eqReferralInfoPopType :: Eq ReferralInfoPopType where eq = genericEq
+instance encodeReferralInfoPopType :: Encode ReferralInfoPopType where encode = defaultEncode
 
 data GoBackToScreen = Earning | Home
 
@@ -3019,6 +3091,7 @@ data QuestionStatus = QUESTION_NOT_ATTEMPTED | QUESTION_CORRECT | QUESTION_INCOR
 instance eqQuestionStatus :: Eq QuestionStatus where eq = genericEq
 derive instance genericQuestionStatus :: Generic QuestionStatus _
 instance showQuestionStatus :: Show QuestionStatus where show = genericShow
+instance encodeQuestionStatus :: Encode QuestionStatus where encode = defaultEncode
 
 type CurrentQuestionSelectedOptionData = {
   selectedSingleOption :: Maybe SelectedOption,
@@ -3049,8 +3122,9 @@ type DocumentCaptureScreenData = {
   vehicleCategory :: Maybe VehicleCategory,
   docId :: String,
   linkedRc :: Maybe String,
-  cityConfig :: CityConfig
-} 
+  cityConfig :: CityConfig,
+  config :: AppConfig
+}
 
 type DocumentCaptureScreenProps = {
   validateDocModal :: Boolean,
@@ -3059,7 +3133,7 @@ type DocumentCaptureScreenProps = {
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
   contactSupportModal :: AnimType
-} 
+}
 
 
 type UpdateRouteSrcDestConfig = {
@@ -3071,22 +3145,23 @@ type UpdateRouteSrcDestConfig = {
   destination :: String
 }
 
-data CoinEarnedPopupType = 
-    RIDE_MORE_EARN_COIN 
-  | TWO_MORE_RIDES 
-  | ONE_MORE_RIDE 
-  | TWO_RIDE_COMPLETED 
-  | FIVE_RIDE_COMPLETED 
+data CoinEarnedPopupType =
+    RIDE_MORE_EARN_COIN
+  | TWO_MORE_RIDES
+  | ONE_MORE_RIDE
+  | TWO_RIDE_COMPLETED
+  | FIVE_RIDE_COMPLETED
   | EIGHT_RIDE_COMPLETED
-  | TEN_RIDE_COMPLETED 
-  | REFER_AND_EARN_COIN 
-  | CONVERT_COINS_TO_CASH 
+  | TEN_RIDE_COMPLETED
+  | REFER_AND_EARN_COIN
+  | CONVERT_COINS_TO_CASH
   | NO_COIN_POPUP
   | SIX_RIDE_COMPLETED
 
 derive instance genericCoinEarnedPopupType :: Generic CoinEarnedPopupType _
 instance showCoinEarnedPopupType :: Show CoinEarnedPopupType where show = genericShow
 instance eqCoinEarnedPopupType :: Eq CoinEarnedPopupType where eq = genericEq
+instance encodeCoinEarnedPopupType :: Encode CoinEarnedPopupType where encode = defaultEncode
 
 type CoinEarnedPopupTypeShown = {
   rideMoreEarnCoin :: String,
@@ -3211,7 +3286,7 @@ data LiveSelfie = LiveSelfie
     declineReason :: Maybe String,
     errorCode :: Maybe String
   }
-  
+
 derive instance genericLiveSelfie :: Generic LiveSelfie _
 instance decodeLiveSelfie :: Decode LiveSelfie where decode = defaultDecode
 instance encodeLiveSelfie  :: Encode LiveSelfie where encode = defaultEncode
@@ -3269,6 +3344,8 @@ data AppUpdatePoppupFlowType = REG_PROF_PAN_AADHAAR | NORMAL
 derive instance genericAppUpdatePoppupFlowType :: Generic AppUpdatePoppupFlowType _
 instance showAppUpdatePoppupFlowType :: Show AppUpdatePoppupFlowType where show = genericShow
 instance eqAppUpdatePoppupFlowType :: Eq AppUpdatePoppupFlowType where eq = genericEq
+instance encodeAppUpdatePoppupFlowType :: Encode AppUpdatePoppupFlowType where encode = defaultEncode
+
 
 type GullakSDKResp = {
   amount :: Number,
@@ -3317,7 +3394,7 @@ type PointsWithWeight = {
 type NotificationBody = {
   title :: String,
   message :: String
-} 
+}
 
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 
@@ -3330,14 +3407,15 @@ type UploadParcelImageScreenData = {
   rideId :: String,
   imagePath :: String,
   errorMessage :: Maybe String,
-  imageId :: String
-} 
+  imageId :: String,
+  config :: AppConfig
+}
 
 type UploadParcelImageScreenProps = {
   showConfirmAndUploadButton :: Boolean,
   isStartRideActive :: Boolean,
   uploading :: Boolean
-} 
+}
 
 type MetroWarriorsScreenState = {
   data :: MetroWarriorsScreenData,
@@ -3345,6 +3423,7 @@ type MetroWarriorsScreenState = {
 }
 
 type MetroWarriorsScreenData = {
+  config :: AppConfig,
   listItem :: Maybe ListItem,
   stationList :: Array API.SpecialLocation,
   searchString :: Maybe String,
@@ -3362,3 +3441,146 @@ type MetroWarriorData = {
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
 }
+
+type MeterScreenState = {
+  data :: MeterScreenData,
+  props :: MeterScreenProps
+}
+
+type MeterScreenData = {
+  searchString :: Maybe String,
+  destination :: String,
+  destinationAddress :: Address,
+  locationList :: Array LocationListItemState,
+  voiceToText :: String
+}
+
+type MeterScreenProps = {
+  searchLocationModelProps :: SearchLocationModelProps,
+  isSearchLocation :: SearchLocationModelType,
+  destinationLat :: Number,
+  destinationLng :: Number,
+  destinationPlaceId :: Maybe String,
+  currentLocation :: JB.Location,
+  showVoiceToText :: Boolean,
+  voiceToTextSuccess :: Boolean,
+  confirmButtonText :: String,
+  voiceToTextSearchString :: String
+}
+
+data SearchLocationModelType = SearchLocationType | LocateOnMap | NoView | RouteMap | SelectTripType
+
+derive instance genericSearchLocationModelType :: Generic SearchLocationModelType _
+instance eqSearchLocationModelType :: Eq SearchLocationModelType where eq = genericEq
+
+type LocationListItemState = {
+    prefixImageUrl :: String
+  , postfixImageUrl :: String
+  , postfixImageVisibility :: Boolean
+  , title :: String
+  , subTitle :: String
+  , placeId :: Maybe String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , description :: String
+  , tag :: String
+  , tagType :: Maybe String
+  , cardType :: Maybe String
+  , address :: String
+  , tagName :: String
+  , isEditEnabled :: Boolean
+  , savedLocation :: String
+  , placeName :: String
+  , isClickable :: Boolean
+  , alpha :: Number
+  , fullAddress :: Address
+  , locationItemType :: Maybe LocationItemType
+  , distance :: Maybe String
+  , showDistance :: Maybe Boolean
+  , actualDistance :: Maybe Int
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
+  , dynamicAction :: Maybe CommonRC.RemoteAC
+  , types :: Maybe (Array String)
+}
+
+type SearchLocationModelProps = {
+    isAutoComplete :: Boolean
+  , crossBtnDestVisibility :: Boolean
+}
+
+type Address =
+  { area :: Maybe String
+  , state :: Maybe String
+  , country :: Maybe String
+  , building  :: Maybe String
+  , door :: Maybe String
+  , street :: Maybe String
+  , city :: Maybe String
+  , areaCode :: Maybe String
+  , ward :: Maybe String
+  , placeId :: Maybe String
+  }
+
+data CustomerLocationSelectType = SEARCH | MAP | FAVOURITE | REPEAT_RIDE | RETRY_SEARCH | SUGGESTION
+derive instance genericCustomerLocationSelectType :: Generic CustomerLocationSelectType _
+instance eqCustomerLocationSelectType :: Eq CustomerLocationSelectType where eq = genericEq
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION | SUGGESTED_DESTINATIONS
+
+derive instance genericLocationItemType :: Generic LocationItemType _
+instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
+instance showLocationItemType :: Show LocationItemType where show = genericShow
+instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
+instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
+instance encodeJsonLocationItemType :: EncodeJson LocationItemType where
+  encodeJson = genericEncodeJson
+instance decodeJsonLocationItemType :: DecodeJson LocationItemType where
+  decodeJson = genericDecodeJson
+
+data LocItemType = LOC_LIST | CURR_LOC | LOC_ON_MAP
+derive instance genericLocItemType :: Generic LocItemType _
+instance eqLocItemType :: Eq LocItemType where eq = genericEq
+instance showLocItemType :: Show LocItemType where show = genericShow
+instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
+instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
+
+type MeterRideScreenState = {
+  data :: MeterRideScreenData,
+  props :: MeterRideScreenProps
+}
+
+type MeterRideScreenData = {
+  distance :: Number,
+  timeSec :: Int,
+  destinationAddress :: String,
+  destinationLat :: Number,
+  destinationLng :: Number,
+  ridesInfo :: Maybe RidesInfo,
+  rateCard :: Maybe Common.RateCard,
+  lastUpdatedTime :: String
+}
+
+type MeterRideScreenProps = {
+  meterFare :: Int,
+  showRateCard :: Boolean,
+  startButtonCountDown :: Int,
+  rateCardConfig :: {
+    sliderMaxValue :: Int,
+    sliderMinValue :: Int,
+    sliderDefVal :: Int,
+    incrementUnit :: Int,
+    sliderVal :: Int,
+    ratePerKM :: Number,
+    sliderFare :: Int
+  },
+  isMeterRideStarted :: Boolean,
+  isMeterClockRunning :: Boolean,
+  confirmMeterRideStop :: Boolean,
+  isRateCardLoading :: Boolean,
+  refreshAnimation :: Boolean,
+  rideStartingLoader :: Boolean
+}
+
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY

@@ -45,10 +45,11 @@ buildConfirmReq rider booking bapConfig txnId bppData city = do
       messageId = booking.id.getId
 
   now <- getCurrentTime
-  let ttl = diffUTCTime booking.validTill now
+  let confirmTtl = maybe booking.validTill (\ttlSec -> addUTCTime (intToNominalDiffTime ttlSec) now) bapConfig.confirmTTLSec
+      ttl = diffUTCTime confirmTtl now
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
-  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city
+  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city booking.vehicleType
 
   pure $
     Spec.ConfirmReq
@@ -84,7 +85,7 @@ tfBilling :: (Maybe RiderName, Maybe RiderNumber) -> Maybe Spec.Billing
 tfBilling (mRiderName, mRiderNumber) =
   Just $
     Spec.Billing
-      { billingEmail = Nothing,
+      { billingEmail = Just "john.doe@example.com",
         billingName = Just (fromMaybe "NY User" mRiderName),
         billingPhone = mRiderNumber
       }
@@ -121,7 +122,7 @@ tfPayments booking txnId mPaymentParams mSettlementType = do
   let mCurrency = Just booking.price.currency
   Just $
     singleton $
-      Utils.mkPayment Spec.PAID (Just $ encodeToText booking.price.amount) (Just txnId) mPaymentParams mSettlementType mCurrency Nothing
+      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText booking.price.amount) (Just txnId) mPaymentParams mSettlementType mCurrency Nothing
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

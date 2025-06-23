@@ -10,6 +10,11 @@ imports:
   TicketBookingService: Domain.Types.TicketBookingService
   TicketPlace: Domain.Types.TicketPlace
   TicketBooking: Domain.Types.TicketBooking
+  BankAccountType: Domain.Types.TicketMerchantDetails
+  ContactDetails: Domain.Types.TicketMerchantDetails
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
+  TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
 
 importPackageOverrides:
   API.Types.UI.TicketService: "rider-app"
@@ -17,6 +22,10 @@ importPackageOverrides:
   Domain.Types.TicketBookingService: "rider-app"
   Domain.Types.TicketPlace: "rider-app"
   Domain.Types.TicketBooking: "rider-app"
+  Domain.Types.TicketMerchantDetails: "rider-app"
+  Domain.Types.MerchantOnboarding: "rider-app"
+  Domain.Types.TicketDashboard: "rider-app"
+
 
 module: Tickets
 apiPrefix: ""
@@ -89,4 +98,132 @@ apis:
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS GET_TICKET_BOOKING_DETAILS
 
-types: {}
+  - POST: # RegisterTicketDashboardAPI
+      endpoint: /ticketdashboard/register
+      auth: NoAuth
+      request:
+        type: TicketDashboardRegisterReq
+      response:
+        type: TicketDashboardRegisterResp
+  - POST: # LoginTicketDashboardAPI
+      endpoint: /ticketdashboard/login/auth
+      auth: NoAuth
+      request:
+        type: TicketDashboardLoginReq
+      response:
+        type: APISuccess
+  - POST: # LoginTicketDashboardVerifyAPI
+      endpoint: /ticketdashboard/login/verify
+      auth: NoAuth
+      request:
+        type: TicketDashboardLoginReq
+      response:
+        type: TicketDashboardLoginResp
+  - GET: # GetTicketAggrementTemplateAPI
+      endpoint: /ticketdashboard/agreement/{templateName}
+      auth: ApiAuthV2
+      params:
+        templateName: Text
+      response:
+        type: TicketDashboardAgreementTemplateResp
+  - GET:
+      endpoint: /ticketdashboard/user/info
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - userRole: RequestorRole
+        - requestorRole: RequestorRole
+      response:
+        type: TicketDashboardUserInfo
+  - GET:
+      endpoint: /ticketdashboard/file/{fileId}
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        fileId: Text
+      response:
+        type: GetFileResponse
+  - POST: # RegisterTicketDashboardAPI
+      endpoint: /ticketdashboard/sendverifyotp
+      auth: NoAuth
+      request:
+        type: SendVerifyOtpReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/info
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: TicketPlaceDashboardDetails
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/update
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      request:
+        type: TicketPlaceDashboardDetails
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /ticketdashboard/ticketplaces
+      auth: ApiAuthV2
+      query:
+        - status: Text
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: "[TicketPlace]"
+
+
+
+types:
+  SendVerifyOtpReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  TicketDashboardRegisterReq:
+    - firstName: Text
+    - lastName: Text
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - merchantId: Text
+    - city: Maybe Text
+    - email: Maybe Text
+    - otp: Text
+  TicketDashboardRegisterResp:
+    - success: Bool
+    - message: Maybe Text
+    - id: Maybe Text
+  TicketDashboardLoginReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otp: Maybe Text
+  TicketDashboardLoginResp:
+    - authToken: Maybe Text
+  TicketDashboardAgreementTemplateResp:
+    - template: Text
+  TicketDashboardUserInfo:
+    - firstName: Maybe Text
+    - lastName: Maybe Text
+    - role: RequestorRole
+    - registeredNumber: Text
+    - agreementLetter: Maybe Text
+    - bankAccountNumber: Maybe Text
+    - bankAccountType: Maybe BankAccountType
+    - bankBeneficiaryName: Maybe Text
+    - bankIfsc: Maybe Text
+    - contactDetails: Maybe ContactDetails
+    - docCancelledCheque: Maybe Text
+    - docPan: Maybe Text
+    - gstin: Maybe Text
+    - orgAddress: Maybe Text
+    - orgName: Maybe Text
+    - pan: Maybe Text
+    - state: Maybe Text

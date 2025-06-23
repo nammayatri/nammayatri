@@ -21,7 +21,13 @@ import Effect.Uncurried (runEffectFn3, runEffectFn5)
 import Common.Types.App (UploadFileConfig(..))
 
 instance showAction :: Show Action where
-    show _ =  ""
+  show (AfterRender ) = "AfterRender"
+  show (BackPressed ) = "BackPressed"
+  show (NoAction ) = "NoAction"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (UploadMultiPartDataCallback _ _) = "UploadMultiPartDataCallback"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
     
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of

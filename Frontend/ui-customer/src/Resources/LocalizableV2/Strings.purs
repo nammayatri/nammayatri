@@ -106,8 +106,22 @@ getOD :: STR -> String
 getOD = getString "OD_IN"
 
 getProxy :: STR -> (Keymap -> String)
-getProxy str =
-  case str of
+getProxy str = case str of
+    TAKE_A_RIDE__CLAIM_50 arg1 -> \a -> (a @~ take_a_ride__claim_50) arg1
+    TAKE_A_RIDE_NOW -> \a -> a @~ take_a_ride_now
+    GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE ab -> \a -> (a @~ get_50_referral_benefit_for_your_first_ride) ab
+    YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE ab -> \a -> (a @~ youve_earned_50_for_taking_your_first_ride) ab
+    COLLECT_EARNINGS_NOW -> \a -> a @~ collect_earnings_now
+    UPDATE_UPI_ID -> \a -> a @~ update_upi_id
+    RIDE_IS_CONSIDERED_VALID_BASED_ON_CERTAIN_RIDE_DISTANCE_RIDE_TIME_AND_FRAUD_CHECKS_MAINTAINED_INTERNALLY -> \a -> a @~ ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally
+    YOU_GET_50__THEY_GET_50 aa b -> \a -> (a @~ you_get_50__they_get_50) aa b 
+    WHEN_YOUR_FRIEND_USES_YOUR_REFERRAL_CODE_N_AND_TAKES_THEIR_FIRST_RIDE -> \a -> a @~ when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride
+    READ_TERMS_AND_CONDITIONS -> \a -> a @~ read_terms_and_conditions
+    ENTER_UPI_ID -> \a -> a @~ enter_upi_id
+    EARNINGS -> \a -> a @~ earnings
+    ADD_UPI_ID -> \a -> a @~ add_upi_id
+    EARN_ arg1 -> \a -> (a @~ earn_) arg1
+    COLLECT_ arg1 -> \a -> (a @~ collect_) arg1
     ABOUT -> \a -> a @~ about
     SAFETY -> \a -> a @~ safety
     SAFETY_CHECK_IN -> \a -> a @~ safety_check_in
@@ -1801,7 +1815,6 @@ getProxy str =
     METRO_TICKETS -> \a -> a @~ metro_tickets
     OFFERS -> \a -> a @~ offers
     TICKETS_FOR_CHENNAI_BUS -> \a -> a @~ tickets_for_chennai_bus
-    BUS__ -> \a -> a @~ bus__
     BUY_BUS_TICKETS -> \a -> a @~ buy_bus_tickets
     BOOK_AND_PAY -> \a -> a @~ book_and_pay
     BUS_TICKET -> \a -> a @~ bus_ticket
@@ -1828,5 +1841,45 @@ getProxy str =
     NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
     AMBULANCE_ -> \a -> a @~ ambulance_
-
-
+    SELECT_ROUTE -> \a -> a @~ select_route
+    AC_BUS -> \a -> a @~ ac_bus
+    EARLY_DEPARTURE -> \a -> a @~ early_departure
+    TICKET_PRICE -> \a -> a @~ ticket_price
+    NO_INCOMING_BUS -> \a -> a @~ no_incoming_bus
+    CHEAPEST -> \a -> a @~ cheapest
+    FASTEST -> \a -> a @~ fastest
+    YOUR_EARNINGS_WILL_BE_CREDITED_TO_THIS_ACCOUNT -> \a -> a @~ your_earnings_will_be_credited_to_this_account 
+    TRANSACTION_HISTORY -> \a -> a @~ transaction_history 
+    TOTAL_EARNED -> \a -> a @~ total_earned 
+    TOOK_CAB_RIDE_USING_REFERRAL_CODE -> \a -> a @~ took_cab_ride_using_referral_code 
+    SUCCESS -> \a -> a @~ success 
+    INVITE_AND_EARN_ str -> \a -> (a @~ invite_and_earn_) str
+    ENJOY_EXTRA_KEKKADHA_RIDES -> \a -> a @~ enjoy_extra_kekkadha_rides 
+    YOUR_INVITE_CODE -> \a -> a @~ your_invite_code 
+    SHARE -> \a -> a @~ share 
+    YOU_GET -> \a -> a @~ you_get 
+    THEY_GET -> \a -> a @~ they_get 
+    CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE arg -> \a -> (a @~ credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride) arg
+    CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE arg -> \a -> (a @~ credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride) arg
+    HAVE_QUESTIONS -> \a -> a @~ have_questions 
+    VIEW_THE_FAQS -> \a -> a @~ _view_the_faqs 
+    REFERRAL_FAQS -> \a -> a @~ referral_faqs 
+    TO_GET_THE_REFERRAL_REWARD_NEW_USER_SHOULD_INSTALL_THE_APP_AND_ENTER_THE_REFERRAL_CODE_BEFORE_TAKING_THEIR_FIRST_RIDE -> \a -> a @~ to_get_the_referral_reward_new_user_should_install_the_app_and_enter_the_referral_code_before_taking_their_first_ride 
+    THE_REFERRAL_REWARD_WILL_BE_GIVEN_ONLY_FOR_THE_FIRST_RIDE_POST_CHECKING_THE_RIDE_VALIDITY -> \a -> a @~ the_referral_reward_will_be_given_only_for_the_first_ride_post_checking_the_ride_validity 
+    THE_REFERRAL_REWARD_PROGRAM_IS_A_TIME_BOUND_PROGRAM_AND_CAN_BE_STOPPED_AT_ANY_TIME_WITHOUT_PRIOR_INTIMATION -> \a -> a @~ the_referral_reward_program_is_a_time_bound_program_and_can_be_stopped_at_any_time_without_prior_intimation 
+    NAMMA_YATRI_RESERVES_THE_RIGHT_TO_DETERMINE_THE_ELIGIBILITY_OF_A_CUSTOMER_TO_BE_VALID_FOR_REFERRAL_REWARD_OR_NOT -> \a -> a @~ namma_yatri_reserves_the_right_to_determine_the_eligibility_of_a_customer_to_be_valid_for_referral_reward_or_not 
+    COLLECT_REFERRAL_EARNINGS -> \a -> a @~ collect_referral_earnings 
+    VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS -> \a -> a @~ verify_your_upi_id_to_receive_your_referral_earnings 
+    UPI_ID_VERIFIED -> \a -> a @~ upi_id_verified 
+    ENTER_UPI_ID_IN_THE_FORMAT_NUMBERBANKNAME -> \a -> a @~ enter_upi_id_in_the_format_numberbankname 
+    UPI_ID_IS_INVALID_PLEASE_CHECK_AND_REENTER -> \a -> a @~ upi_id_is_invalid_please_check_and_reenter 
+    GO_BACK -> \a -> a @~ go_back 
+    YAY_YOU_HAVE_REFERRAL_EARNINGS -> \a -> a @~ yay_you_have_referral_earnings 
+    YOUR_EARNINGS_N_ -> \a -> a @~ your_earnings_n_ 
+    COLLECT_NOW -> \a -> a @~ collect_now 
+    SUBMITTED -> \a -> a @~ submitted 
+    UPDATED -> \a -> a @~ updated 
+    PENDINGAMOUNT_WILL_BE_CREDITED_SOON_TO_N_STATEDATAVPA arg1 arg2 -> \a -> (a @~ pendingamount_will_be_credited_soon_to_n_statedatavpa) arg1 arg2 
+    AMOUNT -> \a -> a @~ amount 
+    DOWNLOAD_APP -> \a -> a @~ download_app 
+    SCAN_QR_CODE_TO_DOWNLOAD_THE_APP_AND_APPLY_YOUR_INVITE_CODE_AUTOMATICALLY -> \a -> a @~ scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically 

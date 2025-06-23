@@ -5,6 +5,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   Ride: Domain.Types.Ride
   PriceAPIEntity: Kernel.Types.Common
+  CreateCustomerResp : Kernel.External.Payment.Interface.Types
 
 module: RidePayment
 types:
@@ -69,3 +70,8 @@ apis:
         type: AddTipRequest
       response:
         type: APISuccess
+  - GET:
+      endpoint : /payment/customer
+      auth: TokenAuth
+      response:
+        type: CreateCustomerResp

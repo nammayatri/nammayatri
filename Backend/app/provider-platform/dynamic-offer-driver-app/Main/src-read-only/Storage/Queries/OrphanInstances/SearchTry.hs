@@ -34,6 +34,8 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             messageId = messageId,
+            petCharges = Kernel.Types.Common.mkAmountWithDefault petChargesAmount <$> petCharges,
+            preferSafetyPlus = fromMaybe False preferSafetyPlus,
             requestId = Kernel.Types.Id.Id requestId,
             searchRepeatCounter = searchRepeatCounter,
             searchRepeatType = searchRepeatType,
@@ -43,6 +45,7 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
             tripCategory = getTripCategory tripCategory,
             updatedAt = updatedAt,
             validTill = validTill,
+            vehicleCategory = vehicleCategory,
             vehicleServiceTier = vehicleVariant,
             vehicleServiceTierName = fromMaybe (Kernel.Prelude.show vehicleVariant) vehicleServiceTierName
           }
@@ -64,6 +67,9 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
+        Beam.petCharges = Kernel.Prelude.roundToIntegral <$> petCharges,
+        Beam.petChargesAmount = petCharges,
+        Beam.preferSafetyPlus = Kernel.Prelude.Just preferSafetyPlus,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.searchRepeatCounter = searchRepeatCounter,
         Beam.searchRepeatType = searchRepeatType,
@@ -73,6 +79,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
+        Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleVariant = vehicleServiceTier,
         Beam.vehicleServiceTierName = Kernel.Prelude.Just vehicleServiceTierName
       }

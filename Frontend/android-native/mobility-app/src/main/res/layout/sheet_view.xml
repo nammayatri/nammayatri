@@ -184,6 +184,75 @@
                                 </LinearLayout>
 
                                 <LinearLayout
+                                    android:id="@+id/congestionTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="10dp"
+                                    android:background="@drawable/ic_congestion_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:includeFontPadding="true"
+                                        android:lineHeight="20dp"
+                                        android:paddingLeft="6dp"
+                                        android:paddingRight="2dp"
+                                        android:paddingBottom="1dp"
+                                        android:text="₹₹"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+
+                                    <TextView
+                                        android:id="@+id/congestionTag_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingVertical="6dp"
+                                        android:paddingRight="8dp"
+                                        android:text="10 Extra"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/petTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="10dp"
+                                    android:background="@drawable/ic_pet_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:layout_marginRight="2dp"
+                                        android:src="@drawable/ny_ic_pet_rides_label" />
+
+                                    <TextView
+                                        android:id="@+id/pet_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingTop="5dp"
+                                        android:paddingRight="7dp"
+                                        android:text="₹10 Pet"
+                                        android:paddingBottom="8dp"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
                                     android:id="@+id/rentalRideTypeTag"
                                     android:layout_width="wrap_content"
                                     android:layout_height="match_parent"
@@ -335,6 +404,36 @@
                                         android:paddingVertical="6dp"
                                         android:text="AC SUV"
                                         android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+                        
+                                <LinearLayout
+                                    android:id="@+id/pointsTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="10dp"
+                                    android:background="@drawable/ic_gold_tier_ride_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_yatri_coin" />
+
+                                    <TextView
+                                        android:id="@+id/pointsTagText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/points"
+                                        android:textColor="@color/Black900"
                                         android:textSize="12dp" />
                                 </LinearLayout>
 

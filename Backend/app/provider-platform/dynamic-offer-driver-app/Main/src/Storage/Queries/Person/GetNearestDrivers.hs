@@ -72,7 +72,7 @@ data NearestDriversReq = NearestDriversReq
   }
 
 getNearestDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversReq ->
   m [NearestDriversResult]
 getNearestDrivers NearestDriversReq {..} = do
@@ -162,6 +162,6 @@ getNearestDrivers NearestDriversReq {..} = do
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
-                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : fromMaybe [] person.driverTag,
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : (map LYT.TagNameValueExpiry (fromMaybe [] vehicle.vehicleTags) ++ fromMaybe [] person.driverTag),
                 score = Nothing
               }

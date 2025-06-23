@@ -113,13 +113,13 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList, disableChat, isParentView)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, itsBeenOneDay, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList, disableChat, isParentView)
 import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Engineering.Helpers.Utils as EHU
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache
 import Log (printLog, logStatus)
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -134,7 +134,7 @@ import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.LocalizableV2.Strings (getEN, getStringV2)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
+import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired, getExoPhoneNumber)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType, formatContacts)
@@ -223,6 +223,15 @@ screen initialState =
                     else pure unit
             else pure unit
           pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer")
+      , ( \push -> do
+           let isHomeScreen = initialState.props.currentStage == HomeScreen 
+           idMapVal <-  runEffectFn1 getValueFromIdMap "FirstHomeScreenVisit"
+           if (isHomeScreen && idMapVal.shouldPush) then do
+              void $ getCurrentPosition push UpdateLocationOnSignInSignUp
+              pure unit
+            else pure unit
+           pure (pure unit)
+        )
       , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
@@ -334,7 +343,6 @@ screen initialState =
               PickUpFarFromCurrentLocation ->
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                initVoipIfEnabled initialState
                 when
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -458,8 +466,22 @@ screen initialState =
               runEffectFn3 JB.initialiseShakeListener push ShakeActionCallback JB.defaultShakeListenerConfig
               pure unit
             when (Arr.elem initialState.props.currentStage [RideAccepted, RideCompleted]) $ void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push initialState
-            pure (pure unit))
-
+            pure (pure unit)),
+        (\push -> do 
+            case initialState.data.profile of
+              Just (GetProfileRes profile) -> do
+                if (fromMaybe false profile.isPayoutEnabled) then do
+                  let totalEarningPending = fromMaybe 0 $ fromNumber ((fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid))
+                  if ((fromMaybe 0.0 profile.referredByEarnings) > 0.0) && (fromMaybe false profile.hasTakenValidRide) && totalEarningPending > 0 && isNothing profile.payoutVpa && itsBeenOneDay "COLLECT_EARNINGS" then
+                    push $ AddVPA $ totalEarningPending
+                  else do
+                    let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
+                    if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
+                      then push $ TakeFirstRide
+                      else pure unit
+                  else pure unit
+              Nothing -> pure unit
+            pure $ pure unit)
       ]
   , eval:
       \action state -> do
@@ -471,13 +493,6 @@ screen initialState =
 
 isCurrentLocationEnabled :: Boolean
 isCurrentLocationEnabled = isLocalStageOn HomeScreen
-
-initVoipIfEnabled :: HomeScreenState -> Effect Unit
-initVoipIfEnabled state = do
-  let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-  if voipConfig.customer.enableVoipFeature 
-    then void $ pure $ JB.initSignedCall state.data.driverInfoCardState.bppRideId false
-    else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -679,6 +694,7 @@ view push state =
                       , background Color.black9000
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
                     else []
+              <> if state.showTakeFirstRidePopup then [PopUpModal.view (push <<< GetReferralPopup) (referralDonePopUp state)] else []
               <> if state.props.bookAmbulanceModal then [PopUpModal.view (push <<< AgreePopUp) (PopUpConfigs.bookAmbulanceModalConfig state)] else [])
         ]
   ]
@@ -730,9 +746,11 @@ scheduledRideExistsPopUpView push state =
   ][PopUpModal.view (push <<< ScheduledRideExistsAction) (scheduledRideExistsPopUpConfig state)]
 
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-bottomNavBarView push state = let
-  viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen
-  enableBusBooking = state.data.config.feature.enableBusBooking -- && isJust (Arr.find (\service -> service.type == RemoteConfig.BUS) (nammaServices FunctionCall))
+bottomNavBarView push state = let 
+  viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
+  enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+  enableBusBooking = isJust $ Arr.find (_ == (show RemoteConfig.BUS)) enabledServices
+  enableTicketBooking = isJust $ Arr.find (_ == (show RemoteConfig.TICKETING)) enabledServices
   in
   linearLayout
     [ height MATCH_PARENT
@@ -742,38 +760,41 @@ bottomNavBarView push state = let
     , visibility viewVisibility
     , gravity BOTTOM
     , orientation VERTICAL
-    ][  separator (V 1) Color.grey900 state.props.currentStage
-      , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , padding $ PaddingVertical 10 (10+safeMarginBottom)
-          , background Color.white900
-          ](map (\item ->
-              linearLayout
-              [ height WRAP_CONTENT
-              , weight 1.0
-              , gravity CENTER
-              , onClick push $ const $ BottomNavBarAction item.id
-              , orientation VERTICAL
-              , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
-              ][  imageView
-                    [ height $ V 24
-                    , width $ V 24
-                    , imageWithFallback $ fetchImage FF_ASSET $ item.image
-                    ]
-                , textView $
-                    [ text item.text
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , color $ Color.black800
-                    ] <> FontStyle.body9 TypoGraphy
-
+    , visibility $ boolToVisibility $ enableBusBooking || enableTicketBooking
+    ]
+    [ separator (V 1) Color.grey900 state.props.currentStage
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      ]
+      ( map (\item ->
+        linearLayout
+        [ height WRAP_CONTENT
+        , weight 1.0
+        , gravity CENTER
+        , onClick push $ const $ BottomNavBarAction item.id
+        , orientation VERTICAL
+        , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
+        , padding $ PaddingVertical 10 (10+safeMarginBottom)
+        ][  imageView
+              [ height $ V 24
+              , width $ V 24
+              , imageWithFallback $ fetchImage FF_ASSET $ item.image
               ]
-            ) ([{text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}]
-                <> (if enableBusBooking then [{text : "Bus" , image : "ny_ic_bus_black", id : BUS_}] else [])
-                <> [{text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]
-              )
-            )
+          , textView $
+              [ text item.text
+              , height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color $ Color.black800
+              ] <> FontStyle.body9 TypoGraphy
+
+        ]
+        )( [{text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}]
+          <> (if enableBusBooking then [{text : "Bus" , image : "ny_ic_bus_black", id : BUS_}] else [])
+          <> (if enableTicketBooking then [{text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING_ }] else [])
+          )
+        )
     ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3)
@@ -1478,7 +1499,7 @@ settingSideBarView push state =
     , width MATCH_PARENT
     , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED && not (state.props.isPopUp /= NoPopUp) then DISABLE else DISABLE_DESCENDANT
     ]
-    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config}) ]
+    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config, isPayoutEnabled = maybe false (\(GetProfileRes resp) -> fromMaybe false resp.isPayoutEnabled) state.data.profile}) ]
 
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
@@ -3742,6 +3763,7 @@ servicesView push state =
       height WRAP_CONTENT
       , margin $ MarginTop $ if itemLen > 2 then 9 else 12
       , width MATCH_PARENT
+      , orientation HORIZONTAL
     ] ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
   ]
 
@@ -3805,6 +3827,7 @@ verticalServiceView push index service =
   relativeLayout
   [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
   , weight 1.0
+  , width $ V 0 
   , orientation VERTICAL
   , gravity CENTER
   , accessibility ENABLE
@@ -3956,7 +3979,19 @@ getHeaderLogo state =
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state =
-  linearLayout
+  let applyReferral = not $ state.props.isReferred
+      referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      youGet = fromMaybe 0.0 referralPayoutConfig.youGet
+      theyGet = fromMaybe 0.0 referralPayoutConfig.theyGet
+      hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
+      {isPayoutEnabled, totalEarningPending, takeFirstRide} = 
+          case state.data.profile of 
+            Nothing -> {takeFirstRide:false,  isPayoutEnabled : false, totalEarningPending: 0.0 }
+            Just (GetProfileRes profile) -> {takeFirstRide: (not hasTakenRide) && isJust profile.referralCode , isPayoutEnabled : fromMaybe false profile.isPayoutEnabled, totalEarningPending: (fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid)}
+      showEarnNow = if isPayoutEnabled then youGet > 0.0 && totalEarningPending == 0.0 else false 
+      showCollect = if isPayoutEnabled then totalEarningPending > 0.0 else false
+  in 
+    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -4038,21 +4073,42 @@ pickupLocationView push state =
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity RIGHT
+              , visibility $ boolToVisibility (state.data.config.feature.enableReferral)
               ][ linearLayout
                  [ width WRAP_CONTENT
                  , height WRAP_CONTENT
-                 , cornerRadius 8.0
+                 , cornerRadius 24.0
                  , background Color.blue600
                  , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-                 , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide)
-                 ][ textView
-                    [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
-                    , color Color.blue800
+                 , visibility $ boolToVisibility $ (applyReferral || not isPayoutEnabled) && not hasTakenRide
+                 ][ textView $
+                    [ text $ if applyReferral then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
+                    , color Color.blue900
                     , gravity CENTER_HORIZONTAL
-                    , textSize FontSize.a_14
-                    , padding $ Padding 12 8 12 8
-                    ]
+                    , padding $ Padding 10 8 10 8
+                    ] <> FontStyle.body4 TypoGraphy
                  ]
+                  , linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , cornerRadius 24.0
+                    , background if showCollect then Color.blue900 else Color.blue600
+                    , onClick push $ const $ if showCollect then ReferralPayout else if takeFirstRide then WhereToClick else ReferralPayout
+                    , visibility $ boolToVisibility $ (isPayoutEnabled) && (not applyReferral) && (showEarnNow ||  showCollect) 
+                    , padding $ Padding 10 8 10 8
+                    , gravity CENTER
+                    ][ imageView
+                        [ imageWithFallback $ fetchImage COMMON_ASSET $ if showCollect then "ny_ic_invite_and_earn_white" else "ny_ic_invite_earn"
+                        , height $ V 20
+                        , width $ V 38
+                        , padding $ PaddingRight 4
+                        ]
+                      , textView $
+                        [ text $ if showCollect then getString $ COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else if takeFirstRide then getString $ TAKE_A_RIDE__CLAIM_50 (show $ fromMaybe 0 $ fromNumber theyGet) else getString $ INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
+                        , color if showCollect then Color.white900 else Color.blue900
+                        , gravity CENTER
+                        ] <> FontStyle.body4 TypoGraphy
+                    ]
               ]
             ]
         ]

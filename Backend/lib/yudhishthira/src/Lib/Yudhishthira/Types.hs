@@ -56,7 +56,7 @@ module Lib.Yudhishthira.Types
     ConfigDetailsResp (..),
     ConfigVersionMap (..),
     Config (..),
-    Action (..),
+    ConfigTypeChoice (..),
     ActionChangeRequest (..),
     ConcludeReq (..),
     AbortReq (..),
@@ -67,6 +67,8 @@ module Lib.Yudhishthira.Types
     UiConfigResponse (..),
     CreateConfigRequest (..),
     PlatformType (..),
+    ConfigHistory (..),
+    UiConfigGetVersionResponse (..),
   )
 where
 
@@ -96,11 +98,6 @@ import qualified Text.Show (show)
 
 class Enumerable a where
   allValues :: [a]
-
-data PlatformType = TypeScript | PureScript
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
-
-$(mkBeamInstancesForEnumAndList ''PlatformType)
 
 data Source
   = Application ApplicationEvent
@@ -189,18 +186,12 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-deriving instance Enum DeviceType
-
-deriving instance Bounded DeviceType
-
 data LogicDomain
   = POOLING
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
   | FRFS_DISCOUNTS
   | CONFIG ConfigType
-  | UI_DRIVER DeviceType PlatformType
-  | UI_RIDER DeviceType PlatformType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
   | RIDER_CONFIG_OVERRIDES ConfigType
@@ -214,11 +205,12 @@ instance Enumerable LogicDomain where
       FRFS_DISCOUNTS
     ]
       ++ map CONFIG [minBound .. maxBound]
-      ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
-      ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
       ++ map RIDER_CONFIG [minBound .. maxBound]
       ++ map DRIVER_CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
+
+instance Enumerable ConfigType where
+  allValues = [minBound .. maxBound]
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -227,15 +219,11 @@ generateLogicDomainShowInstances =
     ++ [show DYNAMIC_PRICING_UNIFIED]
     ++ [show FRFS_DISCOUNTS]
     ++ [show (CONFIG configType) | configType <- configTypes]
-    ++ [show (UI_DRIVER a b) | a <- a', b <- b']
-    ++ [show (UI_RIDER a b) | a <- a', b <- b']
     ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
     ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
   where
     configTypes = [minBound .. maxBound]
-    a' = [minBound .. maxBound]
-    b' = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -251,8 +239,6 @@ instance Show LogicDomain where
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show FRFS_DISCOUNTS = "FRFS-DISCOUNTS"
   show (CONFIG configType) = "CONFIG_" ++ show configType
-  show (UI_DRIVER a b) = "UI-DRIVER_" ++ show a ++ "_" ++ show b
-  show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
   show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
   show (DRIVER_CONFIG configType) = "DRIVER-CONFIG_" ++ show configType
   show (RIDER_CONFIG_OVERRIDES configType) = "RIDER-CONFIG-OVERRIDES_" ++ show configType
@@ -274,24 +260,6 @@ instance Read LogicDomain where
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
                   Just configType -> [(CONFIG configType, rest1)]
-                  Nothing -> []
-          "UI-DRIVER" ->
-            let (configType', rest1) = break (== '_') (drop 1 rest)
-             in case readMaybe configType' of
-                  Just configType'' ->
-                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
-                     in case readMaybe configType''' of
-                          Just configType -> [(UI_DRIVER configType'' configType, rest2)]
-                          Nothing -> []
-                  Nothing -> []
-          "UI-RIDER" ->
-            let (configType', rest1) = break (== '_') (drop 1 rest)
-             in case readMaybe configType' of
-                  Just configType'' ->
-                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
-                     in case readMaybe configType''' of
-                          Just configType -> [(UI_RIDER configType'' configType, rest2)]
-                          Nothing -> []
                   Nothing -> []
           "RIDER-CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
@@ -323,12 +291,6 @@ data ExperimentStatus
 $(mkBeamInstancesForEnumAndList ''ExperimentStatus)
 $(mkHttpInstancesForEnum ''ExperimentStatus)
 
-data Action
-  = CONCLUDE
-  | ABORT
-  | REVERT
-  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
-
 data ActionChangeRequest
   = Conclude ConcludeReq
   | Abort AbortReq
@@ -339,22 +301,19 @@ instance HideSecrets ActionChangeRequest where
   hideSecrets = identity
 
 data ConcludeReq = ConcludeReq
-  { action :: Action,
-    version :: Int,
+  { version :: Int,
     domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data AbortReq = AbortReq
-  { action :: Action,
-    version :: Int,
+  { version :: Int,
     domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data RevertReq = RevertReq
-  { action :: Action,
-    domain :: LogicDomain
+  { domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
@@ -367,9 +326,12 @@ data ConfigDetailsResp = ConfigDetailsResp
   { modifiedBy :: Maybe (Id Person),
     percentageRollout :: Int,
     version :: Int,
-    configPatch :: [Value]
+    configPatch :: [Value],
+    isBasePatch :: Bool
   }
   deriving (Show, Read, Generic, ToSchema, ToJSON, FromJSON)
+
+data ConfigTypeChoice = DriverCfg | RiderCfg deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
@@ -472,8 +434,7 @@ data LogicRolloutObject = LogicRolloutObject
   { domain :: LogicDomain,
     timeBounds :: Text,
     rollout :: [RolloutVersion],
-    modifiedBy :: Maybe (Id Person),
-    experimentStatus :: Maybe ExperimentStatus
+    modifiedBy :: Maybe (Id Person)
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -644,7 +605,14 @@ data UiConfigRequest = UiConfigRequest
 data UiConfigResponse = UiConfigResponse
   { config :: Value,
     version :: Maybe Text,
+    baseVersion :: Maybe Text,
     isExperimentRunning :: Bool
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UiConfigGetVersionResponse = UiConfigGetVersionResponse
+  { version :: Maybe Text,
+    baseVersion :: Maybe Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -667,5 +635,17 @@ instance HideSecrets CreateConfigRequest where
 data ConfigVersionMap = ConfigVersionMap
   { config :: LogicDomain,
     version :: Int
+  }
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data ConfigHistory = ConfigHistory
+  { id :: Id ConfigHistory,
+    domain :: LogicDomain,
+    version :: Int,
+    status :: Maybe ExperimentStatus,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    configJson :: [Value],
+    baseVersionUsed :: Int,
+    createdAt :: UTCTime
   }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

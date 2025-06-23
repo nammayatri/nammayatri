@@ -18,15 +18,20 @@ module SharedLogic.DriverOnboarding
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+import qualified API.Types.ProviderPlatform.Fleet.Onboarding
+import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
 import qualified Domain.Types.FleetRCAssociation as FRCA
 import qualified Domain.Types.HyperVergeVerification as DHV
 import qualified Domain.Types.IdfyVerification as DIdfy
@@ -35,6 +40,7 @@ import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
@@ -45,7 +51,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (VerificationFlow)
+import Kernel.External.Types (Language, VerificationFlow)
 import Kernel.Prelude
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
@@ -61,21 +67,24 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Ticket as TT
-import Tools.Whatsapp as Whatsapp
+import qualified Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
 driverDocumentTypes :: [DVC.DocumentType]
-driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification]
+driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense]
 
 vehicleDocumentTypes :: [DVC.DocumentType]
-vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan]
+vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
 
 notifyErrorToSupport ::
   Person ->
@@ -137,7 +146,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
       QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing Nothing
         >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
     let jsonData = merchantMessage.jsonData
-    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
+    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
     when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
 
 enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
@@ -193,42 +202,72 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
     safeMaximum [] = Nothing
     safeMaximum xs = Just (maximum xs)
 
-makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
-makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    DriverRCAssociation
-      { id,
-        driverId,
-        rcId,
-        associatedOn = now,
-        associatedTill = end,
-        consent = True,
-        consentTimestamp = now,
-        isRcActive = False,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOperatingCityId,
-        createdAt = now,
-        updatedAt = now
-      }
+createDriverRCAssociationIfPossible ::
+  forall m r.
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  Id Person ->
+  VehicleRegistrationCertificate ->
+  m ()
+createDriverRCAssociationIfPossible transporterConfig driverId rc = do
+  if transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID
+    then do
+      driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id (convertTextToUTC (Just "2099-12-12"))
+      DAQuery.create driverRCAssoc
+    else do
+      logWarning $ "Unable to create driver rc association: " <> "; driverId: " <> driverId.getId <> "; rcId: " <> rc.id.getId <> "; verification status: " <> show rc.verificationStatus
+  where
+    makeRCAssociation :: Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
+    makeRCAssociation merchantId merchantOperatingCityId rcId end = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DriverRCAssociation
+          { id,
+            driverId,
+            rcId,
+            associatedOn = now,
+            associatedTill = end,
+            consent = True,
+            consentTimestamp = now,
+            isRcActive = False,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
 
-makeFleetRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m FRCA.FleetRCAssociation
-makeFleetRCAssociation merchantId merchantOperatingCityId fleetOwnerId rcId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    FRCA.FleetRCAssociation
-      { id,
-        rcId,
-        fleetOwnerId,
-        associatedOn = now,
-        associatedTill = end,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOperatingCityId,
-        createdAt = now,
-        updatedAt = now
-      }
+createFleetRCAssociationIfPossible ::
+  forall m r.
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  Id Person ->
+  VehicleRegistrationCertificate ->
+  m ()
+createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
+  if transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID
+    then do
+      fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id (convertTextToUTC (Just "2099-12-12"))
+      FRCAssoc.create fleetRCAssoc
+    else do
+      logWarning $ "Unable to create fleet rc association: " <> "; fleetOwnerId: " <> fleetOwnerId.getId <> "; rcId: " <> rc.id.getId <> "; verification status: " <> show rc.verificationStatus
+  where
+    makeFleetRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m FRCA.FleetRCAssociation
+    makeFleetRCAssociation merchantId merchantOperatingCityId rcId end = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        FRCA.FleetRCAssociation
+          { id,
+            rcId,
+            fleetOwnerId,
+            associatedOn = now,
+            associatedTill = end,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
 
 data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
   { certificateNumber :: Text,
@@ -260,17 +299,17 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
-makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now = do
-  let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now
+makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
+makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
+  let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo vehicle vehicleServiceTiers
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
     addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}
 
-makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
-makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now = do
+makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
+makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now vehicleTag = do
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -296,7 +335,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       selectedServiceTiers = [],
       downgradeReason = Nothing,
       createdAt = now,
-      updatedAt = now
+      updatedAt = now,
+      vehicleTags = vehicleTag
     }
 
 makeVehicleAPIEntity :: Maybe DVST.ServiceTierType -> Vehicle -> VehicleAPIEntity
@@ -324,17 +364,19 @@ data CreateRCInput = CreateRCInput
     fuelType :: Maybe Text,
     color :: Maybe Text,
     dateOfRegistration :: Maybe UTCTime,
-    vehicleModelYear :: Maybe Int
+    vehicleModelYear :: Maybe Int,
+    grossVehicleWeight :: Maybe Float,
+    unladdenWeight :: Maybe Float
   }
 
-buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> m (Maybe VehicleRegistrationCertificate)
-buildRC merchantId merchantOperatingCityId input = do
+buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> m (Maybe VehicleRegistrationCertificate)
+buildRC merchantId merchantOperatingCityId input failedRules = do
   now <- getCurrentTime
   id <- generateGUID
-  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
+  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
-  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessExpiry
+  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules <$> mEncryptedRC <*> mbFitnessExpiry
 
 createRC ::
   Id DTM.Merchant ->
@@ -343,15 +385,18 @@ createRC ::
   DVC.DocumentVerificationConfig ->
   Id VehicleRegistrationCertificate ->
   UTCTime ->
+  [Text] ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNumber expiry = do
+createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
   let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
       airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
+        Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
+      finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
   VehicleRegistrationCertificate
     { id,
       documentImageId = input.documentImageId,
@@ -373,7 +418,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       reviewRequired,
       insuranceValidity = input.insuranceValidity,
       mYManufacturing = input.mYManufacturing,
-      verificationStatus,
+      verificationStatus = finalVerificationStatus,
       fleetOwnerId = input.fleetOwnerId,
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,
@@ -383,11 +428,13 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       ventilator = input.ventilator,
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
-      failedRules = [],
+      failedRules = failedRules,
       dateOfRegistration = input.dateOfRegistration,
       vehicleModelYear = input.vehicleModelYear,
       rejectReason = Nothing,
       createdAt = now,
+      unencryptedCertificateNumber = input.registrationNumber,
+      approved = Just False,
       updatedAt = now
     }
 
@@ -538,3 +585,73 @@ makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
       verificaitonResponse = hypervergeResponse,
       ..
     }
+
+toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
+toMaybe [] = Kernel.Prelude.Nothing
+toMaybe xs = Kernel.Prelude.Just xs
+
+filterVehicleDocuments :: [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> Maybe Bool -> [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]
+filterVehicleDocuments docs onlyVehicle =
+  if onlyVehicle == Just True
+    then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
+    else docs
+
+filterInCompatibleFlows ::
+  HasField "filterForOldApks" documentVerificationConfigAPIEntity (Maybe Bool) =>
+  Maybe Bool ->
+  [documentVerificationConfigAPIEntity] ->
+  [documentVerificationConfigAPIEntity]
+filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
+
+mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
+mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
+  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
+  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
+  return $
+    API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
+      { title = maybe title (.message) mbTitle,
+        description = maybe description (Just . (.message)) mbDescription,
+        filterForOldApks = Nothing,
+        rcNumberPrefixList = [],
+        documentType = castDocumentType documentType,
+        dependencyDocumentType = map castDocumentType dependencyDocumentType,
+        documentCategory = castDocumentCategory <$> documentCategory,
+        ..
+      }
+
+castDocumentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
+castDocumentCategory = \case
+  Domain.Types.DocumentVerificationConfig.Driver -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Driver
+  Domain.Types.DocumentVerificationConfig.Vehicle -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle
+  Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
+  Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
+
+castDocumentType :: Domain.Types.DocumentVerificationConfig.DocumentType -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType
+castDocumentType = \case
+  Domain.Types.DocumentVerificationConfig.DriverLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverLicense
+  Domain.Types.DocumentVerificationConfig.VehicleRegistrationCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRegistrationCertificate
+  Domain.Types.DocumentVerificationConfig.Permissions -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Permissions
+  Domain.Types.DocumentVerificationConfig.SubscriptionPlan -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SubscriptionPlan
+  Domain.Types.DocumentVerificationConfig.ProfilePhoto -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfilePhotoImage
+  Domain.Types.DocumentVerificationConfig.AadhaarCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.AadhaarCard
+  Domain.Types.DocumentVerificationConfig.PanCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanCard
+  Domain.Types.DocumentVerificationConfig.VehiclePermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePermitImage
+  Domain.Types.DocumentVerificationConfig.VehicleFitnessCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFitnessCertificateImage
+  Domain.Types.DocumentVerificationConfig.VehicleInsurance -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInsuranceImage
+  Domain.Types.DocumentVerificationConfig.VehiclePUC -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePUCImage
+  Domain.Types.DocumentVerificationConfig.ProfileDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfileDetails
+  Domain.Types.DocumentVerificationConfig.SocialSecurityNumber -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SocialSecurityNumber
+  Domain.Types.DocumentVerificationConfig.VehicleInspectionForm -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage
+  Domain.Types.DocumentVerificationConfig.GSTCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.GSTCertificate
+  Domain.Types.DocumentVerificationConfig.BackgroundVerification -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BackgroundVerification
+  Domain.Types.DocumentVerificationConfig.UploadProfile -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UploadProfileImage
+  Domain.Types.DocumentVerificationConfig.VehicleNOC -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleNOC
+  Domain.Types.DocumentVerificationConfig.BusinessLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessLicense
+  Domain.Types.DocumentVerificationConfig.VehicleFront -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFront
+  Domain.Types.DocumentVerificationConfig.VehicleBack -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBack
+  Domain.Types.DocumentVerificationConfig.VehicleRight -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRight
+  Domain.Types.DocumentVerificationConfig.VehicleLeft -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft
+  Domain.Types.DocumentVerificationConfig.VehicleFrontInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior
+  Domain.Types.DocumentVerificationConfig.VehicleBackInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior
+  Domain.Types.DocumentVerificationConfig.Odometer -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Odometer
+  Domain.Types.DocumentVerificationConfig.InspectionHub -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.InspectionHub

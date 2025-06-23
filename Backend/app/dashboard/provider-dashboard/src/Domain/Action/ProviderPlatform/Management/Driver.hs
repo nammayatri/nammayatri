@@ -51,11 +51,15 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
+    postDriverBulkSubscriptionServiceUpdate,
+    getDriverStats,
+    getDriverEarnings,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
+import Data.Time.Calendar (Day)
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -325,3 +329,19 @@ getDriverPanAadharSelfieDetailsList :: (ShortId DM.Merchant -> City.City -> ApiT
 getDriverPanAadharSelfieDetailsList merchantShortId opCity apiTokenInfo docType driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverPanAadharSelfieDetailsList) docType driverId
+
+postDriverBulkSubscriptionServiceUpdate :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkServiceUpdateReq -> Environment.Flow APISuccess)
+postDriverBulkSubscriptionServiceUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverBulkSubscriptionServiceUpdate) req)
+
+getDriverStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Flow Common.DriverStatsRes
+getDriverStats merchantShortId opCity apiTokenInfo entityId fromDate toDate = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverStats) entityId fromDate toDate apiTokenInfo.personId.getId
+
+getDriverEarnings :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Environment.Flow Common.EarningPeriodStatsRes)
+getDriverEarnings merchantShortId opCity apiTokenInfo from to earningType entityId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverEarnings) from to earningType entityId apiTokenInfo.personId.getId

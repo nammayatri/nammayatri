@@ -69,7 +69,7 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
   let currentDate = RideEndInt.getCurrentDate now
       dateDiff = diffDays currentDate day
-  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId Nothing >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless dailyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = fromIntegral dailyLeaderBoardConfig.numberOfSets
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
@@ -93,7 +93,7 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
       (reqWeekNumber, reqDayIndex) = sundayStartWeek fromDate
       (lastWeekOfYear, _) = sundayStartWeek $ getLastDayOfYear $ getYearFromDay fromDate
   let weekDiff = (currWeekNumber - reqWeekNumber + lastWeekOfYear) `mod` lastWeekOfYear
-  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId Nothing >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless weeklyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = weeklyLeaderBoardConfig.numberOfSets
   when (weekDiff > numberOfSets - 1 || weekDiff < 0) $ throwError $ InvalidRequest "Week outside Range"
@@ -107,7 +107,7 @@ getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = do
   let currentDay = RideEndInt.getCurrentDate now
       fromDate = fromGregorian (getYearFromDay currentDay) month 1
       monthDiff = RideEndInt.getMonth currentDay - month
-  monthlyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.MONTHLY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  monthlyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.MONTHLY merchantOpCityId Nothing >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless monthlyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   when ((monthDiff < 0 && 12 + monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) || monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) $ throwError $ InvalidRequest "Month outside Range"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate fromDate monthDiff monthlyLeaderBoardConfig distanceUnit

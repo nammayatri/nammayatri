@@ -58,6 +58,7 @@ data SearchRequest = SearchRequest
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    preferSafetyPlus :: Kernel.Prelude.Bool,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),

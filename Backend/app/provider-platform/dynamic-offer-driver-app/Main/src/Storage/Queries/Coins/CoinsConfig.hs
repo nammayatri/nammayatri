@@ -37,6 +37,18 @@ fetchCoins eventFunction (Id merchantId) =
         ]
     ]
 
+fetchCoinConfigByFunctionAndMerchant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m (Maybe CoinsConfig)
+fetchCoinConfigByFunctionAndMerchant eventFunction (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDC.eventFunction $ Se.Eq eventFunction,
+          Se.Is BeamDC.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
+          Se.Is BeamDC.active $ Se.Eq True,
+          Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id CoinsConfig -> m (Maybe CoinsConfig)
 findById (Id coinsConfigId) =
   findOneWithKV [Se.Is BeamDC.id $ Se.Eq coinsConfigId]

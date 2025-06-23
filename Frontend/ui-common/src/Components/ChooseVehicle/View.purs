@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchResultType
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..), accessibilityFocusable)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..), accessibilityFocusable, textFromHtml)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -28,6 +28,9 @@ import Engineering.Helpers.Commons(os)
 import Common.Animation.Config (estimateExpandingAnimationConfig)
 import Data.Array as DA
 import Data.String as DS
+import Data.Int as Int
+import Common.RemoteConfig.Utils as RemoteConfig
+import Data.Function.Uncurried
 
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -321,7 +324,7 @@ getVehicleName config =
     "HERITAGE_CAB" -> "Heritage Cab"
     _ -> "Non-AC Mini"
 
-priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+priceDetailsView :: forall w. (Action -> Effect Unit) -> Config ->PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
@@ -340,13 +343,14 @@ priceDetailsView push config =
     , accessibility DISABLE
     ][linearLayout
       ([ height MATCH_PARENT
-      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
+      , width $ if ((isBookAny || config.enableOffer) && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
       , orientation VERTICAL
-      ] <> if isBookAny then [gravity RIGHT] else [])
+      ] <> if isBookAny || config.enableOffer then [gravity RIGHT] else [])
       [ linearLayout
          [ height WRAP_CONTENT
          , width WRAP_CONTENT
          , accessibility DISABLE
+         , gravity CENTER
          ][ textView $ 
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -369,6 +373,21 @@ priceDetailsView push config =
                    ]
                 else []
          ]
+        , linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , visibility $ boolToVisibility config.enableOffer
+            ]
+            [ textView
+                $ [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , textFromHtml $ "<s>" <> config.actualPrice <> "</s>" 
+                  , color Color.black700
+                  , accessibility DISABLE
+                  ]
+                <> FontStyle.body9 TypoGraphy
+            ]
        , linearLayout
          [ height $ V 20
          , width WRAP_CONTENT

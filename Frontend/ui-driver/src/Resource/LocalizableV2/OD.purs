@@ -463,7 +463,7 @@ getOd =
     , sec_ago: " ସେକେଣ୍ଡ ପୂର୍ବରୁ"
     , loading: "ଲୋଡ଼ିଂ"
     , app_related: "ଆପ୍ ସମ୍ବନ୍ଧୀୟ"
-    , fare: "ଭାଡା ସମ୍ବନ୍ଧୀୟ"
+    , fare: "ଭଡା"
     , ride_related: "ରାଇଡ଼ ସମ୍ବନ୍ଧୀୟ"
     , lost_and_found: "ଖୋଇଯାଇଥିବା ଏବଂ ମିଳିଲା"
     , report_lost_item: "ଖୋଇଯାଇଥିବା ସାମାନ୍ତ ରିପୋର୍ଟ କରନ୍ତୁ"
@@ -1139,6 +1139,8 @@ getOd =
     , customer_should_complete_a_valid_ride: "ଗ୍ରାହକ ଏକ ବୈଧ ଯାତ୍ରା ସମାପ୍ତ କରିବା ଉଚିତ"
     , driver_referral: "ଡ୍ରାଇଭର ରେଫରେଲ୍"
     , purple_ride_completed: "ପର୍ପଲ୍ ରାଇଡ୍ ସମାପ୍ତ ହୋଇଛି"
+    , gold_tier_ride_completed: "ଗୋଲ୍ଡ ଟିୟର୍ ରାଇଡ୍ ସମାପ୍ତ ହୋଇଛି"
+    , you_will_lose_a_chance_to_earn: (\coins -> "ଆପଣ " <> coins <> " ପଏଣ୍ଟଗୁଡିକ ଅର୍ଜନ କରିବାରେ ଏକ ସୁଯୋଗ ହାରାଇବେ")
     , training_complted: "ପ୍ରଶିକ୍ଷଣ ସମାପ୍ତ"
     , rides_in_a_day: "ଏକ ଦିନରେ ଯାତ୍ରାଗୁଡିକ"
     , top: "ଶୀର୍ଷ"
@@ -1784,12 +1786,73 @@ getOd =
     , search : "ଖୋଜନ୍ତୁ"
     , we_are_not_able_to_fetch_your_current_location : "ଆମେ ଆପଣଙ୍କର ବର୍ତ୍ତମାନ ସ୍ଥାନ ଅନ୍ଧାର କରିପାରୁ ନାହିଁ।"
     , bus__ : "ବସ୍"
-    , driver_unsubscribed : "ଡ୍ରାଇଭର ପ୍ଲାଟଫର୍ମ ଥିବା ଅନାବନ୍ଧିତ କରାଯାଇଛି। ପୁନଃ ସବସ୍କ୍ରାଇବ୍ କରିବା ପାଇଁ ବକି ଅଛି ପେଣ୍ଡିଂ ରାଶି।"  
+    , driver_unsubscribed : "ଡ୍ରାଇଭର ପ୍ଲାଟଫର୍ମ ଥିବା ଅନାବନ୍ଧିତ କରାଯାଇଛି। ପୁନଃ ସବସ୍କ୍ରାଇବ୍ କରିବା ପାଇଁ ବକି ଅଛି ପେଣ୍ଡିଂ ରାଶି।"
     , canceling_this_booking_may_affect_the_emergency_medical : "ଏହି ବୁକିଂ ରଦ୍ଦ କରିବାରୁ ରୋଗୀଙ୍କର ଆତିକ୍ରମିକ ଚିକିତ୍ସା ସେବାଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରିପାରେ"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ଡ୍ରାଇଭର୍ମାନେ ସେମାନଙ୍କର ଚିକିତ୍ସା କାରଣ କିମ୍ବା ଗାଡ଼ିର ତ୍ରୁଟି ଦ୍ୱାରା ପରିବାହନ ବୁକିଂ ରଦ୍ଦ କରିବାକୁ ଅନୁମତି ଦିଆଯାଇଛି"
     , payment_under_maintenance : "ଅଦାନ-ପ୍ରଦାନ ରକ୍ଷାଣବେକ୍ଷଣ ଅଧୀନରେ ଅଛି"
-    , payments_temporarily_unavailable : "ଅଦାନ-ପ୍ରଦାନ ସମୟୀନ ଭାବେ ଅପଲବ୍ଧ ନୁହଁ, ଶୀଘ୍ର ଫେରି ଆସିବ। ଦୟାକରି ପରେ ପୁଣିଥରେ ଚେଷ୍ଟା କରନ୍ତୁ।"
+    , payments_temporarily_unavailable : "ଅଦାନ-ପ୍ରଦାନ ସମୟୀନ ଭାବେ ଅପଲବ୍ଧ ନୁହଁ, ଶୀଘ୍ର ଫେରି ଆସିବ। ଦୟାକରି ପରେ ପୁଣିଥରେ ଚେଷ୍ଟା କରନ୍ତୁ।",
+    extra_charge_penalty: "ଅତିରିକ୍ତ ଶୁଳ୍କ ଦଣ୍ଡ",
+    out_of_rides: (\numerator denaminator -> numerator <> " ମଧ୍ୟରୁ " <> denaminator <> " ରାଇଡ୍"),
+    extra_charged: "ଅତିରିକ୍ତ ଶୁଳ୍କ ଅପ୍ଲାଇ ହୋଇଛି",
+    get_clarified: "ପ୍ରମାଣିତ ହୁଅନ୍ତୁ",
+    dont_ask_extra_suspend: "ସସ୍ପେନ୍ସନ୍ ଏଡ଼ାଇବାକୁ ଅତିରିକ୍ତ ଶୁଳ୍କ ଚାହିବେନାହିଁ",
+    dont_ask_extra_blocking: "ବ୍ଲକ୍ ହେବାରୁ ରକ୍ଷା କରିବାକୁ ଅତିରିକ୍ତ ଶୁଳ୍କ ଚାହିବେନାହିଁ",
+    your_extra_charge_penalty: "ଆପଣଙ୍କର ଅତିରିକ୍ତ ଶୁଳ୍କ ଦଣ୍ଡ",
+    what_does_this_mean: "ଏହି ଅର୍ଥ କ'ଣ?",
+    read_more: "ଅଧିକ ପଢନ୍ତୁ",
+    take_the_course: "କୋର୍ସ ନିଅନ୍ତୁ",
+    extra_charge_q1: "ଅତିରିକ୍ତ ଶୁଳ୍କ ଦଣ୍ଡ କ'ଣ?",
+    extra_charge_a1: "ଯଦି ଡ୍ରାଇଭର୍ ଗ୍ରାହକଙ୍କ ଠାରୁ ଅତିରିକ୍ତ ଟଙ୍କା ଚାହେ, ତେବେ ଓଭର୍‌ଚାର୍ଜିଂ ସ୍କୋର ବଢ଼ିଯାଏ।",
+    extra_charge_q2: "ଦଣ୍ଡ ବଢ଼ିଲେ କ'ଣ ହେବ?",
+    extra_charge_a2: "ଯଦି ସ୍କୋର ବଢ଼ିଯାଏ, ଡ୍ରାଇଭର୍ କମ୍ ରାଇଡ୍ ପାଇବେ।",
+    extra_charge_q3: "ମୁଁ ମୋର ଦଣ୍ଡ କିପରି କମ୍ କରିପାରିବି?",
+    extra_charge_a3: "ରାଇଡ୍ ନିଅନ୍ତୁ ଏବଂ ଅତିରିକ୍ତ ଟଙ୍କା ଚାହିବେନାହିଁ। ସମୟ ସହିତ ସ୍କୋର କମିଯିବ।",
+    extra_charge_q4: "ଯଦି ଡ୍ରାଇଭର୍ ଅତିରିକ୍ତ ଟଙ୍କା ଚାହିବା ଛାଡ଼ନାହିଁ?",
+    extra_charge_a4: "ଡ୍ରାଇଭର୍ କିଛି ସମୟ ପାଇଁ ସସ୍ପେନ୍ଡ ହେବେ। ଯଦି ଡ୍ରାଇଭର୍ ଚାଲୁ ରଖନ୍ତି, ତେବେ ସେମାନେ ବ୍ଲକ୍ ହେଇଯିବେ।",
+    zero: "ଶୂନ୍ୟ",
+    low: "କମ୍",
+    suspended: "ସସ୍ପେନ୍ଡ ହୋଇଛି",
+    blocked: "ବ୍ଲକ୍ ହୋଇଛି",
+    overcharging_blocked_desc: "ବାରମ୍ବାର ଅତିରିକ୍ତ ଶୁଳ୍କ ନେବାର ଦ୍ୱାରା, ଆପଣ ରାଇଡ୍ ନେବାରୁ ବନ୍ଦ ହୋଇଛନ୍ତି",
+    overcharging_suspended_desc: "ବାରମ୍ବାର ଅତିରିକ୍ତ ଶୁଳ୍କ ନେବାର ଦ୍ୱାରା, ଆପଣ ଅନଲାଇନ୍ ଯିବାରୁ ସସ୍ପେନ୍ଡ ହୋଇଛନ୍ତି",
+    suspended_till: (\time date -> "ସସ୍ପେନ୍ଡ ରହିବ " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver: "ନ୍ୟାୟସଙ୍ଗତ ମୂଲ୍ୟ ଡ୍ରାଇଭର୍"
     , resume_ride : "ଯାତ୍ରା ପୁନରାରମ୍ଭ କରନ୍ତୁ"
     , end_ride_with_stops : "ଆପଣଙ୍କ ଗମନ ଅବସ୍ଥାକୁ ପହଞ୍ଚିବା ପୂର୍ବରୁ ଆଉ କିଛି ଠିଆ ଅଛି। ଏହା ସତ୍ତ୍ୱେ ଯାତ୍ରା ସମାପ୍ତ କରିବେ?"
     , stop: (\n -> "ଠିଆ " <> n)
+    , rate_changes_as_the_distance_changes: "ଦୂରତା ପରିବର୍ତ୍ତନ ସହିତ ଦର ପରିବର୍ତ୍ତିତ ହୁଏ"
+    , nammanmeter: "ନମ୍ମ\nମିଟର୍"
+    , press_to_cancel: "ବାତିଲ କରିବାକୁ ଦବାନ୍ତୁ"
+    , dist: "ଦୂରତା"
+    , km: "କି.ମି"
+    , updated_at_: "ଅପଡେଟ୍ କରାଯାଇଥିବା ସମୟ"
+    , time: "ସମୟ"
+    , enter_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ଭରଣ କରନ୍ତୁ"
+    , stop_meter: "ମିଟର୍ ବନ୍ଦ କରନ୍ତୁ"
+    , upton2km: "2KM ପର୍ଯ୍ୟନ୍ତ"
+    , meter_running: "ମିଟର୍ ଚାଲିଛି"
+    , confirm_meter_stop: "ମିଟର୍ ବନ୍ଦ କରିବାକୁ ନିଶ୍ଚିତ କରନ୍ତୁ?"
+    , confirm_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ନିଶ୍ଚିତ କରନ୍ତୁ"
+    , search_results: "ସନ୍ଧାନ ଫଳାଫଳ"
+    , start_typing_to_search_places: "ସ୍ଥାନ ଖୋଜିବାକୁ ଟାଇପ୍ କରିବା ଆରମ୍ଭ କରନ୍ତୁ"
+    , bus_number: "ବସ୍ ନମ୍ବର୍"
+    , bus_type: "ବସ୍ ପ୍ରକାର"
+    , namma_meter: "ନମ୍ମ ମିଟର୍"
+    , package: "ପ୍ୟାକେଜ୍"
+    , overcharging_score : "ଅତିରିକ୍ତ ଶୁଳ୍କ ସ୍କୋର"
+    , cancellation_score : "ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର"
+    , safety_score : "ସୁରକ୍ଷିତତା ସ୍କୋର"
+    , you_have_been_unsafe : "ଆପଣଙ୍କର ଅନୁମତି ଦିଆଯାଇଛି\nଅନୁମତି ଦିଆଯାଇଛି"
+    , you_have_been_watchlisted : "ଆପଣଙ୍କର ପର୍ଯ୍ୟନ୍ତତା ସ୍କୋର ପରିବର୍ତ୍ତନ କରାଯାଇଛି\nପର୍ଯ୍ୟନ୍ତତା ସ୍କୋର ପରିବର୍ତ୍ତନ କରାଯାଇଛି"
+    , you_are_safe : "ଆପଣଙ୍କର ସୁରକ୍ଷିତତା ସ୍କୋର ପରିବର୍ତ୍ତନ କରାଯାଇଛି\nସୁରକ୍ଷିତତା ସ୍କୋର ପରିବର୍ତ୍ତନ କରାଯାଇଛି"
+    , safe : "ସୁରକ୍ଷିତତା ସ୍କୋର"
+    , watchlisted : "ପର୍ଯ୍ୟନ୍ତତା ସ୍କୋର"
+    , unsafe : "ଅନୁମତି ଦିଆଯାଇଛି\nଅନୁମତି ଦିଆଯାଇଛି"
+    , good_cancellation_score : "ଆପଣଙ୍କର ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର ଭାଲୋ ହୋଇଛି"
+    , poor_cancellation_score : "ଆପଣଙ୍କର ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର ଖାରାପ ହୋଇଛି"
+    , good : "ଭାଲୋ"
+    , poor : "ଖାରାପ"
+    , open_meter : "ମିଟର୍ ଖୋଲନ୍ତୁ"
+    , this_ride_includes_a_pet : "ଏହି ଯାତ୍ରାରେ ଗୋଟିଏ ପାଳିତ ପଶୁ ଅନ୍ତର୍ଭୁକ୍ତ"
+    , pet_rides : "ପେଟ ରାଇଡସ"
   }

@@ -47,6 +47,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
@@ -95,7 +96,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
-  rideDetails <- buildRideDetails ride driver vehicle
+  rideDetails <- buildRideDetails booking ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -108,7 +109,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) Nothing
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
@@ -147,14 +148,15 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 buildRideDetails ::
+  DBooking.Booking ->
   DRide.Ride ->
   DPerson.Person ->
   DVeh.Vehicle ->
   Flow SRD.RideDetails
-buildRideDetails ride driver vehicle = do
+buildRideDetails booking ride driver vehicle = do
   now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId booking.configInExperimentVersions
   let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails
@@ -224,6 +226,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
         previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
+        isPetRide = booking.isPetRide,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct
@@ -272,7 +275,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         estimatedEndTimeRange = Nothing,
         rideTags = Nothing,
         hasStops = booking.hasStops,
-        isPickupOrDestinationEdited = Just False
+        isPickupOrDestinationEdited = Just False,
+        isInsured = booking.isInsured,
+        insuredAmount = booking.insuredAmount
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -298,8 +303,8 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == quoteDriverId) $ do
-      DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.searchTryId
-      DP.removeSearchReqIdFromMap merchantId driverId driverReq.searchTryId
+      DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.requestId
+      DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare

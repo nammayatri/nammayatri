@@ -152,6 +152,7 @@ data QuoteBreakupTitle
   | DISTANCE_FARE
   | CANCELLATION_CHARGES
   | TOLL_CHARGES
+  | PET_CHARGES
   | STATE_ENTRY_PERMIT_CHARGES
   | CONGESTION_CHARGE
   | -- Custom Titles not in ONDC Spec
@@ -175,6 +176,8 @@ data QuoteBreakupTitle
   | INSURANCE_CHARGES
   | CARD_CHARGES_ON_FARE
   | CARD_CHARGES_FIXED
+  | SAFETY_PLUS_CHARGES
+  | NO_CHARGES
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId
@@ -225,3 +228,18 @@ data CancellationSource
   = CONSUMER
   | PROVIDER
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+
+data SafetyReasonCode
+  = DEVIATION
+  | RIDE_STOPPAGE
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show SafetyReasonCode where
+  show DEVIATION = "DEVIATION"
+  show RIDE_STOPPAGE = "RIDE_STOPPAGE"
+
+instance Read SafetyReasonCode where
+  readsPrec _ = \case
+    "DEVIATION" -> [(DEVIATION, "")]
+    "RIDE_STOPPAGE" -> [(RIDE_STOPPAGE, "")]
+    _ -> []

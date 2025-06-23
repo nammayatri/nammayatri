@@ -19,6 +19,8 @@ MerchantConfig:
     fraudSearchCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     fraudRideCountThreshold : Int
     fraudRideCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudAuthCountThreshold : Maybe Int
+    fraudAuthCountWindow : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     createdAt : Maybe UTCTime
     updatedAt : Maybe UTCTime
     enabled : Bool
@@ -41,6 +43,7 @@ MerchantConfig:
     fraudRideCountWindow: json
     fraudBookingCancelledByDriverCountWindow: json
     fraudSearchCountWindow: json
+    fraudAuthCountWindow: json
 
   default:
     fraudBookingCancellationCountWindow: |-
@@ -54,6 +57,9 @@ MerchantConfig:
     fraudSearchCountWindow: |-
       '{"period":24, "periodType":"Hours"}'
     fraudRideCountThreshold: "0"
+    fraudAuthCountThreshold: "8"
+    fraudAuthCountWindow: |-
+      '{"period":20, "periodType":"Minutes"}'
     enabled: "True"
 
 

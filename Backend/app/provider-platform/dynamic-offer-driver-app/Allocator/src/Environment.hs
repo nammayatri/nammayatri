@@ -49,6 +49,7 @@ import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
@@ -104,15 +105,20 @@ data HandlerEnv = HandlerEnv
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
     searchRequestExpirationSeconds :: NominalDiffTime,
+    searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     s3Env :: S3Env Flow,
     passettoContext :: PassettoContext,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
-    broadcastMessageTopic :: KafkaTopic
+    broadcastMessageTopic :: KafkaTopic,
+    selfBaseUrl :: BaseUrl,
+    appBackendBapInternal :: AppBackendBapInternal
   }
   deriving (Generic)
 
@@ -149,7 +155,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let s3Env = buildS3Env s3Config
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', ..}
+      searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

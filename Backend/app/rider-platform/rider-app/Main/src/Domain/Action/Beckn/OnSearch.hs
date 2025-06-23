@@ -39,6 +39,9 @@ import qualified API.UI.Confirm as DConfirm
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import Data.List (sortBy)
+import Data.Maybe ()
+import Data.Ord (comparing)
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import qualified Domain.Types as DT
 import Domain.Types.BppDetails
@@ -69,6 +72,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
+import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -135,6 +139,7 @@ data EstimateInfo = EstimateInfo
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
     tipOptions :: Maybe [Int],
+    -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text
   }
@@ -192,6 +197,7 @@ data QuoteInfo = QuoteInfo
     specialLocationName :: Maybe Text,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
+    -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl
   }
@@ -271,8 +277,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles) -- add to SR
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
       updateRiderPreferredOption quotes
-
-      let mbRequiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
+      let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
@@ -293,6 +298,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       let selectReq =
             DSelect.DSelectReq
               { customerExtraFee = Nothing,
+                isPetRide = Nothing,
                 customerExtraFeeWithCurrency = Nothing,
                 autoAssignEnabled = True,
                 autoAssignEnabledV2 = Just True,
@@ -300,7 +306,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 otherSelectedEstimates = Nothing,
                 isAdvancedBookingEnabled = Nothing,
                 deliveryDetails = Nothing,
-                disabilityDisable = Nothing
+                disabilityDisable = Nothing,
+                preferSafetyPlus = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
     {- Author: Hemant Mangla
@@ -367,7 +374,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
@@ -378,6 +385,8 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
+  insuranceConfig <- CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)
+  let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
   pure
     DEstimate.Estimate
       { id = uid,
@@ -427,6 +436,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
+        insuredAmount = insuranceConfig >>= (.insuredAmount),
         ..
       }
 
@@ -480,6 +490,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
               },
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
+        isSafetyPlus = False,
         ..
       }
 

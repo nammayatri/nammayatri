@@ -16,6 +16,24 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data AadhaarCardReq = AadhaarCardReq
+  { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    aadhaarFrontImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    consent :: Kernel.Prelude.Bool,
+    consentTimestamp :: Kernel.Prelude.UTCTime,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    transactionId :: Kernel.Prelude.Text,
+    validationStatus :: ValidationStatus
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets AadhaarCardReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data ApproveDetails
   = RC RCApproveDetails
   | DL DLApproveDetails
@@ -27,6 +45,13 @@ data ApproveDetails
   | VehicleInsurance VInsuranceApproveDetails
   | VehicleFitnessCertificate FitnessApproveDetails
   | VehicleInspectionForm VInspectionApproveDetails
+  | Pan PanApproveDetails
+  | NOC NOCApproveDetails
+  | BusinessLicenseImg BusinessLicenseApproveDetails
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BusinessLicenseApproveDetails = BusinessLicenseApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, businessLicenseNumber :: Kernel.Prelude.Text, licenseExpiry :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -40,7 +65,8 @@ data DLApproveDetails = DLApproveDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DLDetails = DLDetails
-  { driverLicenseNumber :: Kernel.Prelude.Text,
+  { driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverLicenseNumber :: Kernel.Prelude.Text,
     operatingCity :: Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     classOfVehicles :: [Kernel.Prelude.Text],
@@ -66,11 +92,29 @@ data DocumentType
   | VehicleFitnessCertificateImage
   | VehicleInspectionImage
   | ProfilePhotoImage
+  | VehicleNOC
+  | Permissions
+  | SubscriptionPlan
+  | AadhaarCard
+  | ProfileDetails
+  | SocialSecurityNumber
+  | GSTCertificate
+  | BackgroundVerification
+  | UploadProfileImage
+  | BusinessLicense
+  | VehicleFront
+  | VehicleBack
+  | VehicleRight
+  | VehicleLeft
+  | VehicleFrontInterior
+  | VehicleBackInterior
+  | Odometer
+  | InspectionHub
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentsListResponse = DocumentsListResponse
-  { driverLicense :: [Kernel.Prelude.Text],
+  { driverLicense :: [[Kernel.Prelude.Text]],
     vehicleRegistrationCertificate :: [Kernel.Prelude.Text],
     driverLicenseDetails :: [DLDetails],
     vehicleRegistrationCertificateDetails :: [RCDetails],
@@ -87,7 +131,13 @@ data DocumentsListResponse = DocumentsListResponse
     vehicleRight :: [Kernel.Prelude.Text],
     vehicleLeft :: [Kernel.Prelude.Text],
     vehicleFrontInterior :: [Kernel.Prelude.Text],
-    vehicleBackInterior :: [Kernel.Prelude.Text]
+    vehicleBackInterior :: [Kernel.Prelude.Text],
+    pan :: [Kernel.Prelude.Text],
+    vehicleNOC :: [Kernel.Prelude.Text],
+    businessLicense :: [Kernel.Prelude.Text],
+    odometer :: [Kernel.Prelude.Text],
+    aadhaar :: [Kernel.Prelude.Text],
+    gstCertificate :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -139,6 +189,26 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data NOCApproveDetails = NOCApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, nocNumber :: Kernel.Prelude.Text, nocExpiry :: Kernel.Prelude.UTCTime, rcNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PanApproveDetails = PanApproveDetails
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    panNumber :: Kernel.Prelude.Text,
+    docType :: Kernel.Prelude.Maybe PanType,
+    driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverNameOnGovtDB :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PanType
+  = INDIVIDUAL
+  | BUSINESS
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RCApproveDetails = RCApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
     vehicleVariant :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
@@ -170,7 +240,8 @@ data RCDetails = RCDetails
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    createdAt :: Kernel.Prelude.UTCTime
+    createdAt :: Kernel.Prelude.UTCTime,
+    failedRules :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -240,7 +311,7 @@ data UpdateDocumentRequest
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDocumentRequest where
   hideSecrets = Kernel.Prelude.identity
 
-data UploadDocumentReq = UploadDocumentReq {imageBase64 :: Kernel.Prelude.Text, imageType :: DocumentType, rcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data UploadDocumentReq = UploadDocumentReq {imageBase64 :: Kernel.Prelude.Text, imageType :: DocumentType, rcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text, requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -295,6 +366,15 @@ data VPermitApproveDetails = VPermitApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ValidationStatus
+  = APPROVED
+  | DECLINED
+  | AUTO_APPROVED
+  | AUTO_DECLINED
+  | NEEDS_REVIEW
+  deriving stock (Eq, Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq {otp :: Kernel.Prelude.Int, shareCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -317,9 +397,14 @@ data VerifyAadhaarOtpRes = VerifyAadhaarOtpRes
 instance Kernel.Types.HideSecrets.HideSecrets VerifyAadhaarOtpRes where
   hideSecrets = Kernel.Prelude.identity
 
-type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate)
+type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate)
 
-type GetDriverRegistrationDocumentsList = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> Get '[JSON] DocumentsListResponse)
+type GetDriverRegistrationDocumentsList =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "rcId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           DocumentsListResponse
+  )
 
 type GetDriverRegistrationGetDocument = ("getDocument" :> Capture "imageId" (Kernel.Types.Id.Id Dashboard.Common.Image) :> Get '[JSON] GetDocumentResponse)
 
@@ -339,6 +424,13 @@ type PostDriverRegistrationRegisterDl =
 
 type PostDriverRegistrationRegisterRc =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "register" :> "rc" :> ReqBody '[JSON] RegisterRCReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostDriverRegistrationRegisterAadhaar =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "register" :> "aadhaar" :> ReqBody '[JSON] AadhaarCardReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -367,11 +459,12 @@ type GetDriverRegistrationDocumentsInfo = (Capture "driverId" (Kernel.Types.Id.I
 type PostDriverRegistrationDocumentsUpdate = ("documents" :> "update" :> ReqBody '[JSON] UpdateDocumentRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
-  { getDriverRegistrationDocumentsList :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DocumentsListResponse,
+  { getDriverRegistrationDocumentsList :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DocumentsListResponse,
     getDriverRegistrationGetDocument :: Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient GetDocumentResponse,
     postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp,
     postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationRegisterRc :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverRegistrationRegisterAadhaar :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AadhaarCardReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationRegisterGenerateAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> GenerateAadhaarOtpReq -> EulerHS.Types.EulerClient GenerateAadhaarOtpRes,
     postDriverRegistrationRegisterVerifyAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyAadhaarOtpReq -> EulerHS.Types.EulerClient VerifyAadhaarOtpRes,
     getDriverRegistrationUnderReviewDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient UnderReviewDriversListResponse,
@@ -382,7 +475,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)
 mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..})
   where
-    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
+    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
 
 data DriverRegistrationUserActionType
   = GET_DRIVER_REGISTRATION_DOCUMENTS_LIST
@@ -390,6 +483,7 @@ data DriverRegistrationUserActionType
   | POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD
   | POST_DRIVER_REGISTRATION_REGISTER_DL
   | POST_DRIVER_REGISTRATION_REGISTER_RC
+  | POST_DRIVER_REGISTRATION_REGISTER_AADHAAR
   | POST_DRIVER_REGISTRATION_REGISTER_GENERATE_AADHAAR_OTP
   | POST_DRIVER_REGISTRATION_REGISTER_VERIFY_AADHAAR_OTP
   | GET_DRIVER_REGISTRATION_UNDER_REVIEW_DRIVERS

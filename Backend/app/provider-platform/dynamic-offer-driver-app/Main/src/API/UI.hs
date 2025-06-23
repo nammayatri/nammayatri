@@ -19,12 +19,19 @@ module API.UI
 where
 
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
+import qualified API.Action.UI.Insurance as Insurance
+import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.Merchant as Merchant
+import qualified API.Action.UI.MeterRide as MeterRide
+import qualified API.Action.UI.OperationHub as OH
+import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
@@ -71,6 +78,7 @@ type HealthCheckAPI = Get '[JSON] Text
 type API =
   "ui"
     :> ( HealthCheckAPI
+           :<|> Merchant.API
            :<|> Registration.API
            :<|> DemandHotspots.API
            :<|> DriverOnboarding.API
@@ -110,16 +118,23 @@ type API =
            :<|> SocialLogin.API
            :<|> VehicleDetails.API
            :<|> PriceBreakup.API
+           :<|> MeterRide.API
            :<|> Tokenization.API
            :<|> FareCalculator.API
            :<|> ReferralPayout.API
            :<|> SpecialLocationWarrior.API
            :<|> WMB.API
+           :<|> OH.API
+           :<|> Operator.API
+           :<|> CallFeedback.API
+           :<|> Invoice.API
+           :<|> Insurance.API
        )
 
 handler :: FlowServer API
 handler =
   pure "App is UP"
+    :<|> Merchant.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler
     :<|> DriverOnboarding.handler
@@ -159,8 +174,14 @@ handler =
     :<|> SocialLogin.handler
     :<|> VehicleDetails.handler
     :<|> PriceBreakup.handler
+    :<|> MeterRide.handler
     :<|> Tokenization.handler
     :<|> FareCalculator.handler
     :<|> ReferralPayout.handler
     :<|> SpecialLocationWarrior.handler
     :<|> WMB.handler
+    :<|> OH.handler
+    :<|> Operator.handler
+    :<|> CallFeedback.handler
+    :<|> Invoice.handler
+    :<|> Insurance.handler

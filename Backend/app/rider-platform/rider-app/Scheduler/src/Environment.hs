@@ -96,7 +96,8 @@ data HandlerEnv = HandlerEnv
     cacConfig :: CacConfig,
     passettoContext :: PassettoContext,
     serviceClickhouseEnv :: ClickhouseEnv,
-    serviceClickhouseCfg :: ClickhouseCfg
+    serviceClickhouseCfg :: ClickhouseCfg,
+    selfBaseUrl :: BaseUrl
   }
   deriving (Generic)
 

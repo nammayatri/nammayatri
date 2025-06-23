@@ -17,7 +17,7 @@ module Engineering.Helpers.LogEvent where
 
 import Effect (Effect, foreachE)
 import Data.Maybe as Maybe
-import Data.Array (find)
+import Data.Array as DA
 import Data.Either (Either(..))
 import Tracker.Labels (Label(..))
 import Foreign (Foreign, readString, unsafeToForeign)
@@ -32,12 +32,13 @@ import JBridge (firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWi
 import Log (rootLevelKeyWithRefId)
 import Effect.Class (liftEffect)
 import Common.Types.App (ClevertapEventParams)
-import Effect.Uncurried (EffectFn1, mkEffectFn1)
+import Effect.Uncurried (EffectFn1, mkEffectFn1, EffectFn2, runEffectFn2)
+import Data.Tuple (Tuple(..))
 
 foreign import getLogDestination :: Effect (Array String)
 
 isElement :: String -> Array String -> Boolean
-isElement logBrand logBrands = Maybe.isJust $ find (\el -> el == logBrand) logBrands
+isElement logBrand logBrands = Maybe.isJust $ DA.find (\el -> el == logBrand) logBrands
 
 triggerLog :: String -> Object Foreign -> String -> Effect Unit
 triggerLog event logField logDestination = do
@@ -156,3 +157,10 @@ handleLogStream = mkEffectFn1 \payload -> do
         Maybe.Nothing, Maybe.Just value1 ->  logEventParamsWithCD getPPLogDestinations "ny_driver_payment_upi_app_selected" "package_name" value1
         _,_ -> pure unit
     _ -> pure unit
+
+firebaseLogEventWithArrayOfKeyValue :: String -> Array (Tuple String String) -> Effect Unit
+firebaseLogEventWithArrayOfKeyValue eventKey arr =
+  let keyValueParams = map (\(Tuple key value) -> { key: key, value: value }) arr
+  in firebaseLogEventWithArrayOfKeyValueImpl {event: eventKey, object: keyValueParams}
+
+foreign import firebaseLogEventWithArrayOfKeyValueImpl :: {event :: String, object :: Array {key :: String, value :: String}} -> Effect Unit

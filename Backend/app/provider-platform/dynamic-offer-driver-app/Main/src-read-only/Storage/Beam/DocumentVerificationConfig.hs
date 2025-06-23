@@ -20,6 +20,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disableWarning :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     doStrictVerifcation :: B.C f Kernel.Prelude.Bool,
+    documentCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDefaultEnabledOnManualVerification :: B.C f Kernel.Prelude.Bool,

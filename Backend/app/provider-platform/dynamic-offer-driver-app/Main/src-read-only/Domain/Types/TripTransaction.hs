@@ -5,8 +5,9 @@ module Domain.Types.TripTransaction where
 
 import Data.Aeson
 import qualified Data.Text
-import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.Common
+import qualified Domain.Types.FleetBadge
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -19,11 +20,15 @@ import qualified Tools.Beam.UtilsTH
 
 data TripTransaction = TripTransaction
   { allowEndingMidRoute :: Kernel.Prelude.Bool,
+    conductorFleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
+    conductorName :: Kernel.Prelude.Maybe Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     deviationCount :: Kernel.Prelude.Int,
+    driverFleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
+    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     endStopCode :: Data.Text.Text,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
@@ -37,6 +42,7 @@ data TripTransaction = TripTransaction
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    tripStartSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripTerminationSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -45,9 +51,17 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data ActionSource
+  = DriverDirect
+  | DriverOnApproval
+  | AutoDetect
+  | Dashboard
+  | ForceDashboard
+  | CronJob
+  | AutoRecovery
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
 

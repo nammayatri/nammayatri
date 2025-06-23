@@ -17,11 +17,13 @@ module Screens.PopUpScreen.ScreenData where
 
 import Prelude
 import Screens.Types(PopUpScreenState)
+import ConfigProvider
 
 initData :: PopUpScreenState
 initData = {
     data : {
-        availableRides : []
+        availableRides : [],
+        config : getAppConfig appConfig
     },
     props : {}
 }

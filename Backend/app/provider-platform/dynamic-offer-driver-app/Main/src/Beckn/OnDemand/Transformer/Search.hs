@@ -52,6 +52,7 @@ buildSearchReq messageId subscriber req context = do
       multipleRoutes = Beckn.OnDemand.Utils.Search.buildMultipleRoutesTag req
       driverIdentifier = Beckn.OnDemand.Utils.Search.getDriverIdentifier req
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
+      isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req

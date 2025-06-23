@@ -23,7 +23,16 @@ import Font.Size as FontSize
 import Styles.Colors as Color
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types (AppConfig)
+import Prelude (show, class Show, (<>))
 
+instance showAction :: Show Action where
+  show (Button1 var1) = "Button1_" <> show var1
+  show (Button2 var1) = "Button2_" <> show var1
+  show (UpdateIndex _) = "UpdateIndex"
+  show (NoAction) = "NoAction"
+  show (OnGoBack) = "OnGoBack"
+  show (TextChanged _ _) = "TextChanged"
+  show (ClearOptions) = "ClearOptions"
 
 data Action = Button1 PrimaryButtonController.Action
             | Button2 PrimaryButtonController.Action

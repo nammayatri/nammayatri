@@ -33,6 +33,10 @@ import Common.RemoteConfig.Types
 data Action = OnClick Int
             | NoAction
 
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
+  show (NoAction) = "NoAction"
+
 data BannerType = AutoPay
   | Disability
   | Gender

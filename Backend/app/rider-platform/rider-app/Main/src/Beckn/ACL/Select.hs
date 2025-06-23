@@ -144,10 +144,8 @@ mkItemTags res =
   let itemTags = [mkAutoAssignEnabledTagGroup res] <> mkSelectResDetailsTagGroup res
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
-      itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
-      itemTags'''' = mkDeviceIdTagGroup res : itemTags'''
-      itemTags''''' = mkDisabilityDisableTagGroup res : itemTags''''
-   in itemTags'''''
+      itemTags''' = [mkAdvancedBookingEnabledTagGroup res, mkDeviceIdTagGroup res, mkDisabilityDisableTagGroup res, mkSafetyPlusTagGroup res, mkPetRideTagGroup res] <> itemTags''
+   in itemTags'''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkCustomerTipTagGroup res =
@@ -322,6 +320,33 @@ mkDisabilityDisableTagGroup res =
           ]
     }
 
+mkPetRideTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkPetRideTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.PET_ORDER_INFO,
+              descriptorName = Just "Pet Order Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.IS_PET_RIDE,
+                        descriptorName = Just "Is Pet Ride",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = (Just . T.pack . show) =<< res.isPetRide
+              }
+          ]
+    }
+
 mkSelectResDetailsTagGroup :: DSelect.DSelectRes -> [Spec.TagGroup]
 mkSelectResDetailsTagGroup res =
   maybe
@@ -367,6 +392,33 @@ mkSelectResDetailsTagGroup res =
                   }
               ]
         }
+
+mkSafetyPlusTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkSafetyPlusTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.SAFETY_PLUS_INFO,
+              descriptorName = Just "Safety plus data",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.PREFER_SAFETY_PLUS,
+                        descriptorName = Just "Safety Plus Enabled",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.preferSafetyPlus
+              }
+          ]
+    }
 
 tfPrice :: DSelect.DSelectRes -> Spec.Price
 tfPrice res =

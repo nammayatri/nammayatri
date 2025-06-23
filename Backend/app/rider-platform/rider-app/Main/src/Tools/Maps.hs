@@ -28,6 +28,7 @@ module Tools.Maps
     getDistanceForScheduledRides,
     getMerchantOperatingCityId,
     getMultimodalWalkDistance,
+    getMultimodalJourneyDistances,
   )
 where
 
@@ -59,10 +60,13 @@ import Tools.Error
 getDistance ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
@@ -70,10 +74,13 @@ getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
 getDistanceForCancelRide ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
@@ -81,10 +88,13 @@ getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesF
 getDistanceForScheduledRides ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistancesForScheduledRides)
@@ -92,10 +102,13 @@ getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistan
 getDistances ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
@@ -103,80 +116,105 @@ getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 getMultimodalWalkDistance ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getMultimodalWalkDistance = runWithServiceConfig Maps.getDistance (.getMultimodalWalkDistance)
 
-getRoutes :: ServiceFlow m r => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getRoutes isAvoidToll personId merchantId mbMOCId req = do
+getMultimodalJourneyDistances ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Maybe Text ->
+  GetDistancesReq a b ->
+  m (GetDistancesResp a b)
+getMultimodalJourneyDistances = runWithServiceConfig Maps.getDistances (.getMultimodalWalkDistance)
+
+getRoutes :: ServiceFlow m r => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getRoutes isAvoidToll personId merchantId mbMOCId entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes $ fromMaybe merchant.isAvoidToll isAvoidToll) (.getRoutes) merchantId mOCId req
+  runWithServiceConfig (callGetRoutesWrapper $ fromMaybe merchant.isAvoidToll isAvoidToll) (.getRoutes) merchantId mOCId entityId req
 
-getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes merchantId merchantOperatingCityId service req = do
+getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes merchantId merchantOperatingCityId service entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantMapsServiceConfig <-
     QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService service)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
   case merchantMapsServiceConfig.serviceConfig of
-    DMSC.MapsServiceConfig msc -> Maps.getRoutes merchant.isAvoidToll msc req
+    DMSC.MapsServiceConfig msc -> Maps.getRoutes entityId merchant.isAvoidToll msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getFrfsAutocompleteDistances ::
   ( ServiceFlow m r,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getFrfsAutocompleteDistances = runWithServiceConfig Maps.getDistances (.getFrfsAutocompleteDistances)
 
-getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getTripRoutes personId merchantId mbMOCId req = do
+getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes personId merchantId mbMOCId entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId req
+  runWithServiceConfig (callGetRoutesWrapper merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId entityId req
 
 snapToRoad ::
   ( ServiceFlow m r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   SnapToRoadReq ->
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
-getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
-getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+
+callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
+callGetRoutesWrapper isAvoidToll entityId = Maps.getRoutes entityId isAvoidToll
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (MapsServiceConfig -> req -> m resp) ->
+  (Maybe Text -> MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe Text ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOperatingCityId req = do
+runWithServiceConfig func getCfg merchantId merchantOperatingCityId entityId req = do
   merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantMapsServiceConfig <-
     QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
-    DMSC.MapsServiceConfig msc -> func msc req
+    DMSC.MapsServiceConfig msc -> func entityId msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getMerchantOperatingCityId :: ServiceFlow m r => Id Person -> Maybe (Id MerchantOperatingCity) -> m (Id MerchantOperatingCity)

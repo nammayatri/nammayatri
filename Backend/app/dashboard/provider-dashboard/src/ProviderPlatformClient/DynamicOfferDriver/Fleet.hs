@@ -35,7 +35,7 @@ import "lib-dashboard" Tools.Metrics
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
     fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerRegister :: Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
+    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
   }
 
 newtype FleetAPIs = FleetAPIs
@@ -46,7 +46,6 @@ mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> T
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
   let registration = FleetRegistrationAPIs {..}
 
-  -- TODO rename to operations
   FleetAPIs {..}
   where
     fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token

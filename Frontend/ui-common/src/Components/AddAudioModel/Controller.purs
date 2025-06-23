@@ -21,6 +21,14 @@ import Common.Styles.Colors (black900, primaryButtonColor) as Color
 import PrestoDOM.Types.DomAttributes (Length(..), Margin(..))
 import Data.Maybe (Maybe(..))
 
+instance showAction :: Show Action where
+  show (OnClickDone var1) = "OnClickDone_" <> show var1
+  show (OnClickCross) = "OnClickCross"
+  show (OnClickDelete) = "OnClickDelete"
+  show (AddAudio) = "AddAudio"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+
 data Action = OnClickDone PrimaryButton.Action
             | OnClickCross
             | OnClickDelete

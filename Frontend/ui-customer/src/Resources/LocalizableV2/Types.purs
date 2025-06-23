@@ -44,6 +44,56 @@ odia :: Proxy "odia"
 odia = a
 
 newtype Keymap = Keymap {
+    take_a_ride__claim_50  :: String -> String,
+    take_a_ride_now  :: String ,
+    get_50_referral_benefit_for_your_first_ride  :: String -> String,
+    youve_earned_50_for_taking_your_first_ride  :: String -> String ,
+    collect_earnings_now  :: String ,
+    update_upi_id  :: String ,
+    ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally  :: String ,
+    you_get_50__they_get_50  :: String -> String -> String ,
+    when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride  :: String ,
+    read_terms_and_conditions  :: String ,
+    enter_upi_id  :: String ,
+    earnings  :: String ,
+    add_upi_id  :: String ,
+    earn_  :: String -> String ,
+    collect_  :: String -> String ,
+    download_app  :: String ,
+    scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically  :: String ,
+    amount  :: String ,
+    your_earnings_will_be_credited_to_this_account  :: String ,
+    transaction_history  :: String ,
+    total_earned  :: String ,
+    took_cab_ride_using_referral_code  :: String ,
+    success  :: String ,
+    invite_and_earn_  :: String -> String,
+    enjoy_extra_kekkadha_rides  :: String ,
+    your_invite_code  :: String ,
+    share  :: String ,
+    you_get  :: String ,
+    they_get  :: String ,
+    credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride  :: String -> String ,
+    credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride  :: String -> String ,
+    have_questions  :: String ,
+    _view_the_faqs  :: String ,
+    referral_faqs  :: String ,
+    to_get_the_referral_reward_new_user_should_install_the_app_and_enter_the_referral_code_before_taking_their_first_ride  :: String ,
+    the_referral_reward_will_be_given_only_for_the_first_ride_post_checking_the_ride_validity  :: String ,
+    the_referral_reward_program_is_a_time_bound_program_and_can_be_stopped_at_any_time_without_prior_intimation  :: String ,
+    namma_yatri_reserves_the_right_to_determine_the_eligibility_of_a_customer_to_be_valid_for_referral_reward_or_not  :: String ,
+    collect_referral_earnings  :: String ,
+    verify_your_upi_id_to_receive_your_referral_earnings  :: String ,
+    upi_id_verified  :: String ,
+    enter_upi_id_in_the_format_numberbankname  :: String ,
+    upi_id_is_invalid_please_check_and_reenter  :: String ,
+    go_back  :: String ,
+    yay_you_have_referral_earnings  :: String ,
+    your_earnings_n_  :: String ,
+    collect_now  :: String ,
+    submitted  :: String ,
+    updated  :: String ,
+    pendingamount_will_be_credited_soon_to_n_statedatavpa :: String -> String -> String ,
   about :: String
 , safety :: String
 , safety_check_in :: String
@@ -1775,7 +1825,15 @@ newtype Keymap = Keymap {
 , uncomfortable_ambulance :: String
 , clean_ambulance :: String
 , ambulance_booking_disclaimer :: String
+--, different_ambulance :: String
 , no_remaining_tickets :: String
+, select_route :: String
+, ac_bus :: String
+, early_departure :: String
+, ticket_price :: String
+, no_incoming_bus :: String
+, cheapest :: String
+, fastest :: String
 }
 
 
@@ -6982,3 +7040,177 @@ ambulance_booking_disclaimer = a
 
 no_remaining_tickets :: Proxy "no_remaining_tickets"
 no_remaining_tickets = a
+
+
+
+select_route :: Proxy "select_route"
+select_route = a
+your_earnings_will_be_credited_to_this_account :: Proxy "your_earnings_will_be_credited_to_this_account"
+your_earnings_will_be_credited_to_this_account = a
+
+transaction_history :: Proxy "transaction_history"
+transaction_history = a
+
+total_earned :: Proxy "total_earned"
+total_earned = a
+
+took_cab_ride_using_referral_code :: Proxy "took_cab_ride_using_referral_code"
+took_cab_ride_using_referral_code = a
+
+success :: Proxy "success"
+success = a
+
+invite_and_earn_ :: Proxy "invite_and_earn_"
+invite_and_earn_ = a
+
+enjoy_extra_kekkadha_rides :: Proxy "enjoy_extra_kekkadha_rides"
+enjoy_extra_kekkadha_rides = a
+
+your_invite_code :: Proxy "your_invite_code"
+your_invite_code = a
+
+share :: Proxy "share"
+share = a
+
+you_get :: Proxy "you_get"
+you_get = a
+
+they_get :: Proxy "they_get"
+they_get = a
+
+credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride :: Proxy "credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride"
+credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride = a
+
+credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride :: Proxy "credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride"
+credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride = a
+
+have_questions :: Proxy "have_questions"
+have_questions = a
+
+_view_the_faqs :: Proxy "_view_the_faqs"
+_view_the_faqs = a
+
+referral_faqs :: Proxy "referral_faqs"
+referral_faqs = a
+
+to_get_the_referral_reward_new_user_should_install_the_app_and_enter_the_referral_code_before_taking_their_first_ride :: Proxy "to_get_the_referral_reward_new_user_should_install_the_app_and_enter_the_referral_code_before_taking_their_first_ride"
+to_get_the_referral_reward_new_user_should_install_the_app_and_enter_the_referral_code_before_taking_their_first_ride = a
+
+the_referral_reward_will_be_given_only_for_the_first_ride_post_checking_the_ride_validity :: Proxy "the_referral_reward_will_be_given_only_for_the_first_ride_post_checking_the_ride_validity"
+the_referral_reward_will_be_given_only_for_the_first_ride_post_checking_the_ride_validity = a
+
+the_referral_reward_program_is_a_time_bound_program_and_can_be_stopped_at_any_time_without_prior_intimation :: Proxy "the_referral_reward_program_is_a_time_bound_program_and_can_be_stopped_at_any_time_without_prior_intimation"
+the_referral_reward_program_is_a_time_bound_program_and_can_be_stopped_at_any_time_without_prior_intimation = a
+
+namma_yatri_reserves_the_right_to_determine_the_eligibility_of_a_customer_to_be_valid_for_referral_reward_or_not :: Proxy "namma_yatri_reserves_the_right_to_determine_the_eligibility_of_a_customer_to_be_valid_for_referral_reward_or_not"
+namma_yatri_reserves_the_right_to_determine_the_eligibility_of_a_customer_to_be_valid_for_referral_reward_or_not = a
+
+collect_referral_earnings :: Proxy "collect_referral_earnings"
+collect_referral_earnings = a
+
+verify_your_upi_id_to_receive_your_referral_earnings :: Proxy "verify_your_upi_id_to_receive_your_referral_earnings"
+verify_your_upi_id_to_receive_your_referral_earnings = a
+
+upi_id_verified :: Proxy "upi_id_verified"
+upi_id_verified = a
+
+enter_upi_id_in_the_format_numberbankname :: Proxy "enter_upi_id_in_the_format_numberbankname"
+enter_upi_id_in_the_format_numberbankname = a
+
+upi_id_is_invalid_please_check_and_reenter :: Proxy "upi_id_is_invalid_please_check_and_reenter"
+upi_id_is_invalid_please_check_and_reenter = a
+
+go_back :: Proxy "go_back"
+go_back = a
+
+yay_you_have_referral_earnings :: Proxy "yay_you_have_referral_earnings"
+yay_you_have_referral_earnings = a
+
+your_earnings_n_ :: Proxy "your_earnings_n_"
+your_earnings_n_ = a
+
+collect_now :: Proxy "collect_now"
+collect_now = a
+
+submitted :: Proxy "submitted"
+submitted = a
+
+updated :: Proxy "updated"
+updated = a
+
+pendingamount_will_be_credited_soon_to_n_statedatavpa :: Proxy "pendingamount_will_be_credited_soon_to_n_statedatavpa"
+pendingamount_will_be_credited_soon_to_n_statedatavpa = a
+
+
+
+amount :: Proxy "amount"
+amount = a
+
+download_app :: Proxy "download_app"
+download_app = a
+
+scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically :: Proxy "scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically"
+scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically = a
+
+earn_ :: Proxy "earn_"
+earn_ = a
+
+collect_ :: Proxy "collect_"
+collect_ = a
+
+add_upi_id :: Proxy "add_upi_id"
+add_upi_id = a
+
+earnings :: Proxy "earnings"
+earnings = a
+
+enter_upi_id :: Proxy "enter_upi_id"
+enter_upi_id = a
+
+you_get_50__they_get_50 :: Proxy "you_get_50__they_get_50"
+you_get_50__they_get_50 = a
+
+when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride :: Proxy "when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride"
+when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride = a
+
+read_terms_and_conditions :: Proxy "read_terms_and_conditions"
+read_terms_and_conditions = a
+
+ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally :: Proxy "ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally"
+ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally = a
+
+collect_earnings_now :: Proxy "collect_earnings_now"
+collect_earnings_now = a
+
+update_upi_id :: Proxy "update_upi_id"
+update_upi_id = a
+
+youve_earned_50_for_taking_your_first_ride :: Proxy "youve_earned_50_for_taking_your_first_ride"
+youve_earned_50_for_taking_your_first_ride = a
+
+get_50_referral_benefit_for_your_first_ride :: Proxy "get_50_referral_benefit_for_your_first_ride"
+get_50_referral_benefit_for_your_first_ride = a
+
+take_a_ride_now :: Proxy "take_a_ride_now"
+take_a_ride_now = a
+
+take_a_ride__claim_50 :: Proxy "take_a_ride__claim_50"
+take_a_ride__claim_50 = a
+
+ac_bus :: Proxy "ac_bus"
+ac_bus = a
+
+early_departure :: Proxy "early_departure"
+early_departure = a
+
+ticket_price :: Proxy "ticket_price"
+ticket_price = a
+
+no_incoming_bus :: Proxy "no_incoming_bus"
+no_incoming_bus = a
+
+cheapest :: Proxy "cheapest"
+cheapest = a
+
+fastest :: Proxy "fastest"
+fastest = a

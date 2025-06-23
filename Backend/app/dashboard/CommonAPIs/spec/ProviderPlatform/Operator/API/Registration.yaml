@@ -1,0 +1,39 @@
+imports:
+  Operator: Dashboard.Common
+
+module: Registration
+apiPrefix: operator
+
+apis:
+  - POST:
+      endpoint: /register
+      auth: ApiAuthV2
+      name: postOperatorRegister
+      request:
+        type: OperatorRegisterReq
+      response:
+        type: APISuccess
+      helperApi:
+      - POST:
+          endpoint: /register
+          auth: ApiAuthV2
+          request:
+            type: OperatorRegisterReq
+          response:
+            type: OperatorRegisterResp
+types:
+  OperatorRegisterReq:
+    firstName: Text
+    lastName: Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    email: Maybe Text
+  OperatorRegisterTReq: # hide secrets
+    firstName: Text
+    lastName: Text
+  OperatorRegisterResp:
+    recordType: NewType
+    personId: Id Operator
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

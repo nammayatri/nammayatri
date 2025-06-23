@@ -33,6 +33,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..), SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -63,7 +64,7 @@ type ScheduleNotificationFlow m r =
   )
 
 sendScheduledRideNotificationsToDriver ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   Job 'ScheduledRideNotificationsToDriver ->
   m ExecutionResult
 sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -79,7 +80,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   let isNotificationRequired = not onlyIfOffline || (driverInfo.mode /= Just DInfo.ONLINE)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  when (isNotificationRequired && booking.status /= DB.CANCELLED) do
+  when (isNotificationRequired && booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
     sendCommunicationToDriver $ SendCommunicationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
@@ -102,7 +103,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
       (formattedTitle, formattedBody)
 
 sendTagActionNotification ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   Job 'ScheduleTagActionNotification ->
   m ExecutionResult
 sendTagActionNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -128,7 +129,7 @@ data SendCommunicationToDriverReq = SendCommunicationToDriverReq
   }
 
 sendCommunicationToDriver ::
-  ScheduleNotificationFlow m r =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
   SendCommunicationToDriverReq ->
   m ()
 sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
@@ -155,7 +156,7 @@ sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
       notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken entityData merchantPN.fcmNotificationType
     OVERLAY -> do
       overlayKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid overlay key for Notification")
-      merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
+      merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
       let (title, description) = messageTransformer ((fromMaybe "" merchantOverlay.title), (fromMaybe "" merchantOverlay.description))
       let overlay :: DOverlay.Overlay = overlay {DOverlay.title = Just title, DOverlay.description = Just description}
       sendOverlay merchantOpCityId driver $ mkOverlayReq overlay
@@ -165,7 +166,7 @@ sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
       merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
           (_, messageBody) = messageTransformer ("", merchantMessage.message)
-      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender) >>= Sms.checkSmsResult
+      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender merchantMessage.templateId) >>= Sms.checkSmsResult
     _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
   where
     generateReq notifTitle notifBody = do

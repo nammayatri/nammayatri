@@ -19,7 +19,7 @@ import Prelude (Unit, pure, unit, class Show, bind, (==))
 
 import Effect (Effect)
 import PrestoDOM (Eval, update, Props, exit, continue, continueWithCmd)
-import Prelude (($), discard, void)
+import Prelude (($), discard, void, class Show, show, (<>))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpScreenState, AppUpdatePoppupFlowType (..))
 import Components.PopUpModal as PopUpModal
@@ -34,7 +34,15 @@ import Effect.Uncurried (runEffectFn1)
 data ScreenOutput = Decline | Accept | Exit
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (OnCloseClick) = "OnCloseClick"
+  show (OnAccept) = "OnAccept"
+  show (AfterRender) = "AfterRender"
+  show (BackPressed) = "BackPressed"
+  show (OnResumeCallBack) = "OnResumeCallBack"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (AppUpdatedModelAction var1) = "AppUpdatedModelAction_" <> show var1
+  show (NoAction) = "NoAction"
+  show (ExitScreen) = "ExitScreen"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

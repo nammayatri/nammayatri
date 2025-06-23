@@ -14,6 +14,7 @@
 
 module SharedLogic.Payment where
 
+import Control.Applicative ((<|>))
 import Data.List (groupBy, sortBy)
 import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
@@ -34,6 +35,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto as Esq hiding (Value, groupBy, on)
 import Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -68,7 +70,8 @@ createOrder ::
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    MonadFlow m
+    MonadFlow m,
+    HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DMSC.ServiceName ->
@@ -119,10 +122,11 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      createOrderCall = TPayment.createOrder merchantId opCity serviceName -- api call
+  paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
+  (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName (Just driver.id.getId) -- api call
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
-    Just createOrderRes -> return (createOrderRes, cast invoiceId)
+    Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
       createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled -- call same function with no existing order
@@ -155,7 +159,8 @@ mkSplitSettlementDetails vendorFees totalAmount = do
             Split
               { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> VF.amount fee) feesForVendor,
                 merchantCommission = 0,
-                subMid = firstFee.vendorId
+                subMid = firstFee.vendorId,
+                uniqueSplitId = Nothing
               }
 
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
@@ -185,19 +190,21 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       createdAt = now
     }
 
-offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
-offerListCache merchantId merchantOpCityId serviceName req = do
+offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DP.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
+offerListCache merchantId driverId merchantOpCityId serviceName req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  paymentServiceName <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   if transporterConfig.useOfferListCache
     then do
       key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req
       Hedis.get key >>= \case
         Just a -> return a
-        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId merchantOpCityId subscriptionConfig.paymentServiceName req
-    else TPayment.offerList merchantId merchantOpCityId subscriptionConfig.paymentServiceName req
+        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId merchantOpCityId paymentServiceName (Just driver.id.getId) req
+    else TPayment.offerList merchantId merchantOpCityId paymentServiceName (Just driver.id.getId) req
 
 cacheOfferListResponse :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> Payment.OfferListResp -> m ()
 cacheOfferListResponse includeDriverId req resp = do
@@ -244,7 +251,7 @@ makeOfferListCacheVersionKey :: Text
 makeOfferListCacheVersionKey = "OfferList:Version"
 
 sendLinkTroughChannelProvided ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
   Maybe Payment.PaymentLinks ->
   Id DP.Person ->
   Maybe HighPrecMoney ->
@@ -268,13 +275,7 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
             Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
               { sendTo = phoneNumber,
                 templateId = merchantMessage.templateId,
-                var1 = amount,
-                var2 = Nothing,
-                var3 = Nothing,
-                var4 = Nothing,
-                var5 = Nothing,
-                var6 = Nothing,
-                var7 = Nothing,
+                variables = [amount], -- Accepts at most 7 variables using GupShup
                 ctaButtonUrl = Just webPaymentLink,
                 containsUrlButton = Just merchantMessage.containsUrlButton
               }
@@ -282,14 +283,14 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
       when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
     Just MessageKey.SMS -> do
       smsCfg <- asks (.smsCfg)
-      (mbSender, message) <-
+      (mbSender, message, templateId) <-
         MessageBuilder.buildSendPaymentLink merchantOpCityId $
           MessageBuilder.BuildSendPaymentLinkReq
             { paymentLink = webPaymentLink,
               amount = show (fromMaybe 0 mbAmount)
             }
       let sender = fromMaybe smsCfg.sender mbSender
-      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
         >>= Sms.checkSmsResult
     _ -> pure ()
   return ()

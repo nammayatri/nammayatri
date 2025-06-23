@@ -74,3 +74,14 @@ UPDATE atlas_bpp_dashboard.transaction
 
 -- {"api":"PostSubscriptionCollectManualPayments","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION COLLECT_MANUAL_PAYMENTS","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_COLLECT_MANUAL_PAYMENTS' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'SUBSCRIPTION' AND T1.user_action_type = 'COLLECT_MANUAL_PAYMENTS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostSubscriptionFeeWaiveOff","migration":"endpoint","param":"SubscriptionAPI FeeWaiveOffEndPoint","schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_FEE_WAIVE_OFF'
+  WHERE endpoint = 'SubscriptionAPI FeeWaiveOffEndPoint';
+
+-- {"api":"PostSubscriptionFeeWaiveOff","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION FEE_WAIVE_OFF","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_FEE_WAIVE_OFF' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'SUBSCRIPTION' AND T1.user_action_type = 'FEE_WAIVE_OFF' ) ON CONFLICT DO NOTHING;

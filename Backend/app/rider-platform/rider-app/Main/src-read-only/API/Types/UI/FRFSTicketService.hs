@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -24,6 +25,15 @@ import Servant
 import Tools.Auth
 
 data AutocompleteRes = AutocompleteRes {routes :: [FRFSRouteAPI], stops :: [FRFSStationAPI]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BookingFareAcceptedReq = BookingFareAcceptedReq {isFareAccepted :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingFeedbackReq
+  = BookingFareAccepted BookingFareAcceptedReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -90,6 +100,10 @@ data FRFSDiscountRes = FRFSDiscountRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types.Beckn.Context.City, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -145,6 +159,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
   { fromStationCode :: Data.Text.Text,
     journeySearchData :: Data.Maybe.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     quantity :: Kernel.Prelude.Int,
+    recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     toStationCode :: Data.Text.Text
   }
@@ -162,7 +177,8 @@ data FRFSStationAPI = FRFSStationAPI
     distance :: Data.Maybe.Maybe Kernel.Types.Common.Meters,
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
-    name :: Data.Text.Text,
+    name :: Data.Maybe.Maybe Data.Text.Text,
+    routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
     towards :: Data.Maybe.Maybe Data.Text.Text
@@ -174,6 +190,7 @@ data FRFSTicketAPI = FRFSTicketAPI
   { createdAt :: Kernel.Prelude.UTCTime,
     description :: Data.Maybe.Maybe Data.Text.Text,
     qrData :: Data.Text.Text,
+    scannedByVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: Data.Text.Text,
     validTill :: Kernel.Prelude.UTCTime

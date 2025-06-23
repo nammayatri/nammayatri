@@ -9,34 +9,41 @@
 package in.juspay.mobility.app;
 
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
-import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import androidx.cardview.widget.CardView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.card.MaterialCardView;
 
-import org.json.JSONObject;
-
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHolder> {
     private ArrayList<SheetModel> sheetList;
     private final OnItemClickListener listener;
     private ViewPager2 viewPager;
+
+    @Nullable
+    public SheetViewHolder getHolder(int index) {
+        if (index >= holders.size()) return null;
+        WeakReference<SheetViewHolder> weakReference = holders.get(index);
+        if(weakReference == null) return null;
+        return weakReference.get();
+    }
+
+    private final HashMap<Integer, WeakReference<SheetViewHolder>> holders = new HashMap<>(6);
 
     public void setViewPager(ViewPager2 viewPager) {
         this.viewPager = viewPager;
@@ -61,12 +68,19 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position) {
+        this.holders.put(position,new WeakReference<>(holder));
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, null);
     }
 
     @Override
+    public void onViewRecycled(@NonNull SheetViewHolder holder) {
+        super.onViewRecycled(holder);
+    }
+
+    @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position, @NonNull List<Object> payloads) {
+        this.holders.put(position,new WeakReference<>(holder));
         holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, payloads);
     }
@@ -78,12 +92,13 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
         Context context;
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText, pointsTagText, congestionTagText, petTagText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
         MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag;
+        LinearLayout tagsBlock, pointsTag, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag, petTag, congestionTag;
+        
         CardView locationDestinationPinTag;
         
         public SheetViewHolder(@NonNull View itemView) {
@@ -109,6 +124,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             textIncPrice = itemView.findViewById(R.id.textIncPrice);
             tagsBlock = itemView.findViewById(R.id.tags_block);
             customerTipText = itemView.findViewById(R.id.tip_text);
+            pointsTag = itemView.findViewById(R.id.pointsTag);
+            pointsTagText = itemView.findViewById(R.id.pointsTagText);
             accessibilityTagText = itemView.findViewById(R.id.accessibilityTagText);
             textIncludesCharges = itemView.findViewById(R.id.textIncludesCharges);
             assetZoneDrop = itemView.findViewById(R.id.assetZoneDrop);
@@ -150,6 +167,10 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             stopsTag = itemView.findViewById(R.id.stopsTag);
             stopsTagText = itemView.findViewById(R.id.stopsTagText);
             roundTripRideTypeTag = itemView.findViewById(R.id.roundTripRideTypeTag);
+            congestionTag = itemView.findViewById(R.id.congestionTag);
+            congestionTagText = itemView.findViewById(R.id.congestionTag_text);
+            petTag = itemView.findViewById(R.id.petTag);
+            petTagText = itemView.findViewById(R.id.pet_text);
         }
 
         private void setTheme(String type,Context context) {

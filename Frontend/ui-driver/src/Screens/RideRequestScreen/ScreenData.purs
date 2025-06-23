@@ -10,8 +10,9 @@ import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Language.Types (STR(..)) as LType
 import Language.Strings (getString)
+import ConfigProvider
 import PrestoDOM (Length(..), Margin(..), Padding(..), Prop, toPropValue)
-
+import MerchantConfig.Types (AppConfig)
 type RideRequestScreenState = {
   data :: RideRequestScreenData,
   props :: RideRequestScreenProps
@@ -19,7 +20,6 @@ type RideRequestScreenState = {
 }
 type RideRequestScreenData = {
   pillViewArray :: Array PillViewConfig 
-  ,dayArray :: Array PillViewConfig
   ,offset :: Int
   ,limit  ::  String
   ,tripCategory ::  String
@@ -38,6 +38,7 @@ type RideRequestScreenData = {
   ,vehicleType :: String
   ,driverLat :: Maybe String
   ,driverLong :: Maybe String
+  ,config :: AppConfig
 }
 
 dummyResp = ScheduledBookingListResponse {
@@ -172,11 +173,11 @@ type PillViewConfig ={
 initData :: String -> RideRequestScreenState
 initData _ = {
     data: {
+      config : getAppConfig appConfig,
       activeRideIndex : 0,
       activeDayIndex : 0,
       shimmerLoader: ST.AnimatingIn,
       pillViewArray : []
-       ,dayArray : dayPills ""
             ,offset : 0
             ,limit  :  "0"
             , tripCategory :  ""
@@ -249,18 +250,3 @@ rideTypePills includeIntercity =
         ]
       else
         [])
-
-dayPills :: String -> Array PillViewConfig
-dayPills _ = [
-              {
-                rideType : Nothing,
-                pillViewText : getString LType.TODAY,
-                isSelected : true,
-                activeColor : Color.black900
-                },{
-                 rideType : Nothing,
-                pillViewText : getString LType.TOMORROW,
-                isSelected : false,
-                activeColor : Color.black900
-              }
-]

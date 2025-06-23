@@ -84,6 +84,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               isAlreadyFav = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
               favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
               driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
+              isSafetyPlus' = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_SAFETY_PLUS tagGroups
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right
@@ -91,7 +92,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
           let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
-          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {fareBreakups = Just fareBreakups, ..}
+          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {fareBreakups = Just fareBreakups, isSafetyPlus = isSafetyPlus', ..}
         else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {specialZoneOtp = mbRideOtp, ..}
 
 handleErrorV2 ::

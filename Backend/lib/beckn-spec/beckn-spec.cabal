@@ -212,8 +212,14 @@ library
       BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
       Domain.Types
+      Domain.Types.Alert
+      Domain.Types.Alert.AlertRequestData
+      Domain.Types.Alert.AlertRequestStatus
+      Domain.Types.Alert.AlertRequestType
+      Domain.Types.Alert.DetectionData
       Domain.Types.EmptyDynamicParam
       Domain.Types.FareProductType
+      Domain.Types.FleetBadgeType
       Domain.Types.FRFSRouteDetails
       Domain.Types.RefereeLink
       Domain.Types.ServiceTierType

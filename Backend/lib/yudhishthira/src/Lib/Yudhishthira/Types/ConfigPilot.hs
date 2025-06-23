@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Yudhishthira.Types.ConfigPilot where
 
@@ -7,7 +8,17 @@ import Data.Aeson
 import Data.OpenApi as OpenApi hiding (description, name, tags, version)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+
+data PlatformType = TypeScript | PureScript
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
+
+$(mkBeamInstancesForEnumAndList ''PlatformType)
+
+deriving instance Enum DeviceType
+
+deriving instance Bounded DeviceType
 
 data ConfigType
   = DriverPoolConfig
@@ -33,13 +44,59 @@ data ConfigType
   | FareProduct
   | Plan
   | PlanTranslation
+  | VehicleServiceTier
   | Toll
   | CancellationFarePolicy
   | SurgePricing
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
+-- class ConfigTypeEnumerable a where
+--   allValuesConfigTypes :: [a]
+
+-- instance ConfigTypeEnumerable ConfigType where
+--   allValuesConfigTypes =
+--     [ DriverPoolConfig,
+--       TransporterConfig,
+--       RiderConfig,
+--       FRFSConfig,
+--       PayoutConfig,
+--       MerchantServiceUsageConfig,
+--       HotSpotConfig,
+--       MerchantConfig,
+--       RideRelatedNotificationConfig,
+--       MerchantMessage,
+--       MerchantPushNotification,
+--       DriverIntelligentPoolConfig,
+--       LeaderBoardConfig,
+--       CoinsConfig,
+--       DocumentVerificationConfig,
+--       FleetOwnerDocumentVerificationConfig,
+--       GoHomeConfig,
+--       SubscriptionConfig,
+--       Overlay,
+--       FarePolicy,
+--       FareProduct,
+--       Plan,
+--       PlanTranslation,
+--       Toll,
+--       CancellationFarePolicy,
+--       SurgePricing
+--     ]
+--       ++ (UiConfig <$> [minBound .. maxBound] <*> [minBound .. maxBound])
+
 $(mkHttpInstancesForEnum ''ConfigType)
 $(mkBeamInstancesForEnum ''ConfigType)
+
+-- generateConfigTypeShowInstances :: [String]
+-- generateConfigTypeShowInstances =
+--   map show (Lib.Yudhishthira.Types.ConfigPilot.allValuesConfigTypes :: [ConfigType])
+
+-- instance ToParamSchema ConfigType where
+--   toParamSchema _ =
+--     mempty
+--       & title ?~ "ConfigType"
+--       & type_ ?~ OpenApiString
+--       & enum_ ?~ map (String . T.pack) generateConfigTypeShowInstances
 
 data Config a = Config
   { config :: a,

@@ -24,8 +24,10 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 
 data ConfigPilotFrontendReq = ConfigPilotFrontendReq
-  { domain :: Text,
-    experiment :: Bool
+  { city :: Text,
+    os :: Text,
+    platform :: Text,
+    isOnGoingRelease :: Bool
   }
   deriving (Generic, Read, Show, FromJSON, ToJSON)
 

@@ -4,9 +4,10 @@ import qualified API.Types.UI.DriverProfileQuestions
 import qualified AWS.S3 as S3
 import ChatCompletion.Interface.Types as CIT
 import qualified Data.Text as T
-import Data.Time.Calendar (diffDays)
 import Data.Time.Clock (utctDay)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Types.DriverProfileQuestions as DTDPQ
+import qualified Domain.Types.DriverStats as DTS
 import Domain.Types.LlmPrompt as DTL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -46,7 +47,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     driverStats <- QDS.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     now <- getCurrentTime
     fork "generating about_me" $ do
-      aboutMe <- generateAboutMe person driverStats now req
+      aboutMe <- generateAboutMe person driverStats req
       DPQ.upsert
         ( DTDPQ.DriverProfileQuestions
             { updatedAt = now,
@@ -66,10 +67,10 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
   where
     toMaybe xs = guard (not (null xs)) >> Just xs
 
-    generateAboutMe person driverStats now req' = do
-      gptGenProfile <- try $ genAboutMeWithAI person driverStats now req'
+    generateAboutMe person driverStats req' = do
+      gptGenProfile <- try $ genAboutMeWithAI person driverStats req'
       either
-        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
+        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been part of this platform since " <> (joinedNY person.createdAt) <> ". " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
         pure
         gptGenProfile
 
@@ -77,7 +78,8 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
       Just hometown' -> "Hailing from " <> hometown' <> ", "
       Nothing -> ""
 
-    withNY now createdAt = T.pack $ show $ diffDays (utctDay now) (utctDay createdAt) `div` 30
+    joinedNY :: UTCTime -> Text
+    joinedNY createdAt = T.pack $ formatTime defaultTimeLocale "%b %Y" (utctDay createdAt)
 
     writeDriverStats driverStats = ratingStat driverStats <> cancellationStat driverStats
 
@@ -87,32 +89,32 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
       | otherwise = a
 
     ratingStat driverStats =
-      if driverStats.rating > Just 4.75 && isJust driverStats.rating
+      if driverStats.rating > Just 4.79 && isJust driverStats.rating
         then "I rank among the top 10 percentile in terms of rating "
         else ""
 
     cancellationStat driverStats =
       let cancRate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int)
        in if cancRate < 7
-            then "I " <> if (ratingStat driverStats :: Text) == "" then "" else "also " <> "have a very low cancellation rate that ranks among top 10 percentile. "
+            then if (ratingStat driverStats :: Text) == "" then "I have a very low cancellation rate that ranks among top 10 percentile. " else "I also have a very low cancellation rate that ranks among top 10 percentile. "
             else ""
 
     genAspirations aspirations' = if null aspirations' then "" else "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
 
-    genAboutMeWithAI person driverStats now req' = do
+    genAboutMeWithAI person driverStats req' = do
       orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       prompt <-
         SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.AzureOpenAI_DriverProfileGen_1 >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig)) (show DTL.DriverProfileGen) (show DTL.AzureOpenAI_DriverProfileGen_1))
-          >>= buildPrompt person driverStats now req' . (.promptTemplate)
+          >>= buildPrompt person driverStats req' . (.promptTemplate)
       gccresp <- TC.getChatCompletion merchantId merchantOpCityId (buildChatCompletionReq prompt)
       logDebug $ "generated - " <> gccresp.genMessage.genContent
       pure $ gccresp.genMessage.genContent
 
-    buildPrompt person driverStats now req' promptTemplate = do
+    buildPrompt person driverStats req' promptTemplate = do
       merchant <- CQM.findById merchantId
+      cancRate <- calculateCancellationRate driverStats
       pure $
         T.replace "{#homeTown#}" (hometownDetails req'.hometown)
-          . T.replace "{#withNY#}" (withNY now person.createdAt)
           . T.replace "{#rating#}" (show driverStats.rating)
           . T.replace "{#drivingSince#}" (maybe "" show req'.drivingSince)
           . T.replace "{#aspirations#}" (T.intercalate ", " req'.aspirations)
@@ -121,9 +123,19 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
           . T.replace "{#onPlatformSince#}" (show person.createdAt)
           . T.replace "{#merchant#}" (maybe "" (.name) merchant)
           . T.replace "{#driverName#}" ((.firstName) person)
+          . T.replace "{#cancellationRate#}" cancRate
           $ promptTemplate
 
     buildChatCompletionReq prompt = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
+
+    calculateCancellationRate :: DTS.DriverStats -> Flow Text
+    calculateCancellationRate driverStats = do
+      let cancelled = fromMaybe 0 driverStats.ridesCancelled
+          total = nonZero driverStats.totalRidesAssigned
+          cancRate = div (cancelled * 100 :: Int) (total :: Int)
+          result = T.pack (show cancRate)
+      logDebug $ "Cancellation rate: " <> result
+      pure result
 
 getDriverProfileQues ::
   ( ( Maybe (Id SP.Person),

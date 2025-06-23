@@ -44,7 +44,7 @@ getLanguageFromLocalStore :: Unit -> String
 getLanguageFromLocalStore _ = getLanguageLocale languageKey
 
 getFontType :: String ->  FontType
-getFontType dummy = 
+getFontType dummy =
   let config = (getAppConfig appConfig).fontConfig
   in maybe Assets identity $ decodeFont $ encode $ config."type"
 
@@ -53,9 +53,12 @@ decodeFont :: Foreign -> Maybe FontType
 decodeFont = hush <<< runExcept <<< decode
 
 italic :: FontStyle
-italic = do 
+italic = do
   let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-Italic") (font <> "-Italic") "Arial"
+
+sevenSegment :: FontStyle
+sevenSegment = fontByOS ("DigitalNumbers-Regular") ("DigitalNumbers-Regular") "DigitalNumbers-Regular"
 
 light :: LazyCheck -> FontStyle
 light style = do
@@ -70,7 +73,7 @@ light style = do
     _ -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
 
 lightItalic :: FontStyle
-lightItalic = do 
+lightItalic = do
   let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-LightItalic") (font <> "-LightItalic") "Arial"
 
@@ -87,7 +90,7 @@ extraLight style = do
     _ -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
 
 extraLightItalic :: FontStyle
-extraLightItalic = do 
+extraLightItalic = do
   let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-ExtraLightItalic") (font <> "-ExtraLightItalic") "Arial"
 
@@ -133,7 +136,7 @@ semiBold style = do
     _ -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
 
 semiBoldItalic :: FontStyle
-semiBoldItalic = do 
+semiBoldItalic = do
   let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-SemiBoldItalic") (font <> "-SemiBoldItalic") "Arial"
 
@@ -149,8 +152,8 @@ bold style = do
     "HI_IN" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
     _ -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
 
-boldItalic :: FontStyle
-boldItalic = do 
+boldItalic :: LazyCheck -> FontStyle
+boldItalic _ = do
   let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-BoldItalic") (font <> "-BoldItalic") "Arial"
 
@@ -287,7 +290,7 @@ body4 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body4 typography = [
   textSize FontSize.a_14
 , lineHeight "18"
-]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700] 
+]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body5 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body5 typography = [
@@ -363,13 +366,13 @@ body19 typography = [
 
 body18 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body18 typography = [
-  textSize FontSize.a_8 
+  textSize FontSize.a_8
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body22 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body22 typography = [
   textSize FontSize.a_14
-]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700] 
+]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body23 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body23 typography = [
@@ -415,12 +418,12 @@ body29 typography = [
 body30 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body30 typography = [
   textSize FontSize.a_20
-  , lineHeight "26" 
+  , lineHeight "26"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body31 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body31 typography = [
-  textSize FontSize.a_8 
+  textSize FontSize.a_8
   , lineHeight "10"
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 500]
 
@@ -435,6 +438,29 @@ body33 typography = [
   textSize FontSize.a_12
 , lineHeight "18"
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
+
+body34 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body34 typography = [
+  textSize FontSize.a_27
+, lineHeight "23"
+]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
+
+body35 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body35 typography = [
+  textSize FontSize.a_52
+, lineHeight "62"
+]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 400]
+
+body36 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body36 typography = [
+  textSize FontSize.a_26
+]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
+
+
+body37 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body37 typography = [
+  textSize FontSize.a_12
+]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [
@@ -462,6 +488,43 @@ title2 typography = [
   textSize FontSize.a_32
 , lineHeight "40"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
+title3 :: LazyCheck -> forall properties. (Array (Prop properties))
+title3 typography = [
+  textSize FontSize.a_38
+, lineHeight "42"
+] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
+title4 :: LazyCheck -> forall properties. (Array (Prop properties))
+title4 typography = [
+  textSize FontSize.a_28
+, lineHeight "27"
+] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
+title5 :: LazyCheck -> forall properties. (Array (Prop properties))
+title5 typography = [
+  textSize FontSize.a_80
+, lineHeight "80"
+] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 600]
+
+title6 :: LazyCheck -> forall properties. (Array (Prop properties))
+title6 typography = [
+  textSize FontSize.a_16
+, lineHeight "20"
+] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
+title2Italic :: LazyCheck -> forall properties. (Array (Prop properties))
+title2Italic typography = [
+  textSize FontSize.a_32
+, lineHeight "40"
+] <> if (getFontType "") == Assets then [fontStyle $ boldItalic LanguageStyle] else [fontWeight $ FontWeight 800]
+
+title7 :: LazyCheck -> forall properties. (Array (Prop properties))
+title7 typography = [
+  textSize FontSize.a_12
+, lineHeight "16"
+] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
 
 data Style = Body1
   | Body2
@@ -539,17 +602,17 @@ getFontStyle style styleType = case style of
   Title1 -> title1 styleType
 
 getDefaultFont :: LazyCheck -> String
-getDefaultFont _ = 
+getDefaultFont _ =
   let config = (getAppConfig appConfig).fontConfig
   in config.default
 
 getKannadaFont :: LazyCheck -> String
-getKannadaFont _ = 
+getKannadaFont _ =
   let config = (getAppConfig appConfig).fontConfig
   in config.kannada
 
 getTeluguFont :: LazyCheck -> String
-getTeluguFont _ = 
+getTeluguFont _ =
   let config = (getAppConfig appConfig).fontConfig
   in config.telugu
 

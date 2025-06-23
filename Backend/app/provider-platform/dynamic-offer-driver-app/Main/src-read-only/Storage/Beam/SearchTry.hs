@@ -7,6 +7,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.SearchTry
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -28,6 +29,9 @@ data SearchTryT f = SearchTryT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f Kernel.Prelude.Text,
+    petCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
+    petChargesAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requestId :: B.C f Kernel.Prelude.Text,
     searchRepeatCounter :: B.C f Kernel.Prelude.Int,
     searchRepeatType :: B.C f Domain.Types.SearchTry.SearchRepeatType,
@@ -37,6 +41,7 @@ data SearchTryT f = SearchTryT
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleVariant :: B.C f Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }

@@ -19,3 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-dontwarn com.google.firebase.analytics.FirebaseAnalytics
+-dontwarn com.google.mlkit.nl.translate.TranslateRemoteModel
+-dontwarn com.google.mlkit.nl.translate.Translator
+-dontwarn com.google.mlkit.nl.translate.TranslatorOptions

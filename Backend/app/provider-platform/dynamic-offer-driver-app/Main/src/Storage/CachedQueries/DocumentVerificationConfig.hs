@@ -33,41 +33,44 @@ import Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.VehicleCategory
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.DocumentVerificationConfig as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DocumentVerificationConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DTO.DocumentVerificationConfig]
-findAllByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return a
-    Nothing -> cacheDocumentVerificationConfigs id /=<< Queries.findAllByMerchantOpCityId Nothing Nothing id
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationConfig]
+findAllByMerchantOpCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs
+    (cast id)
+    (LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityId Nothing Nothing id)
 
-findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> VehicleCategory -> m (Maybe DTO.DocumentVerificationConfig)
-findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category = find (\config -> config.vehicleCategory == category && config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe DTO.DocumentVerificationConfig)
+findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category mbConfigVersionMap =
+  find (\config -> config.vehicleCategory == category && config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
-findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m [DTO.DocumentVerificationConfig]
-findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = filter (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType mbConfigVersionMap =
+  filter (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
-findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m [DTO.DocumentVerificationConfig]
-findByMerchantOpCityIdAndCategory merchantOpCityId category = filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId
-
-cacheDocumentVerificationConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.DocumentVerificationConfig] -> m ()
-cacheDocumentVerificationConfigs merchantOpCityId configs = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeMerchantOpCityIdKey merchantOpCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp key configs expTime
-
-makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQueries:DocumentVerificationConfig:MerchantOpCityId-" <> merchantOpCityId.getId
+findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndCategory merchantOpCityId category mbConfigVersionMap =
+  filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache merchantOpCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig)
+    Nothing
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DocumentVerificationConfig -> m ()
 update = Queries.update

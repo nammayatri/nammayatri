@@ -23,6 +23,10 @@ import Styles.Colors as Color
 import Prelude
 import Effect (Effect)
 
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (OnIconClick) = "OnIconClick"
+
 data Action = NoAction | OnIconClick
 
 type Config =

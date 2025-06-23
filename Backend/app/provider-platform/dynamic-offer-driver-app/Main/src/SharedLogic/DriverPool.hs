@@ -49,17 +49,24 @@ module SharedLogic.DriverPool
     scheduledRideFilter,
     getVehicleAvgSpeed,
     getBatchSize,
+    addSearchRequestInfoToCache,
+    isLessThenNParallelRequests,
+    removeExpiredSearchRequestInfoFromCache,
+    SearchTryBatchData (..),
+    SearchTryBatchPoolData (..),
+    FilterStage (..),
   )
 where
 
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed
 import qualified Data.Geohash as DG
-import Data.List (find, partition)
-import Data.List.Extra (notNull)
+import Data.List (find, length)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Text as T
+import Data.Time.Clock hiding (getCurrentTime)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Tuple.Extra (snd3)
 import qualified Data.Vector as V
 import Domain.Action.UI.Route as DRoute
@@ -74,26 +81,30 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
-import Domain.Types.SearchTry
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
-import EulerHS.Prelude hiding (find, id)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (find, id, length)
 import qualified Kernel.Beam.Functions as B
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Types
-import Kernel.Prelude (NominalDiffTime, head, listToMaybe)
+import Kernel.Prelude (head, listToMaybe)
 import qualified Kernel.Prelude as KP
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified SharedLogic.Beckn.Common as DST
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -107,6 +118,7 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import qualified Storage.Queries.Transformers.DriverInformation as TDI
+import qualified System.Environment as SE
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
@@ -185,12 +197,9 @@ decrementTotalQuotesCount ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
-  Id SearchTry ->
+  Id SearchRequest ->
   m ()
-decrementTotalQuotesCount merchantId merchantOpCityId driverId sreqId = do
-  mbSreqCounted <- find (\(srId, (_, isCounted)) -> srId == sreqId.getId && isCounted) <$> getSearchRequestInfoMap merchantId driverId
-  whenJust mbSreqCounted $
-    const . Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantOpCityId $ SWC.decrementWindowCount (mkTotalQuotesKey driverId.getId)
+decrementTotalQuotesCount merchantId _ driverId sreqId = removeSearchReqIdFromMap merchantId driverId sreqId
 
 incrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
@@ -204,17 +213,29 @@ incrementTotalQuotesCount ::
   UTCTime ->
   ExpirationTime ->
   m ()
-incrementTotalQuotesCount merchantId merchantOpCityId driverId searchReq validTill singleBatchProcessTime = do
-  now <- getCurrentTime
-  srCount <- getValidSearchRequestCount merchantId (cast driverId) now
-  Redis.withCrossAppRedis $ withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
-  let shouldCount = srCount < 1
-  addSearchRequestInfoToCache searchReq.id merchantId (cast driverId) (validTill, shouldCount) singleBatchProcessTime
-  when shouldCount $
-    Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
+incrementTotalQuotesCount merchantId _ driverId searchReq validTill = addSearchRequestInfoToCache searchReq.id merchantId driverId validTill
 
 mkParallelSearchRequestKey :: Id DM.Merchant -> Id DP.Driver -> Text
-mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-" <> mId.getId <> dId.getId
+mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-:" <> mId.getId <> dId.getId
+
+isLessThenNParallelRequests ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id SearchRequest ->
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  UTCTime ->
+  Int ->
+  UTCTime ->
+  m Bool
+isLessThenNParallelRequests searchReqId merchantId driverId valueToPut maxSize fromScore = do
+  parallelCount <- Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zAddIfPossible (mkParallelSearchRequestKey merchantId driverId) (searchReqId.getId, (realToFrac . utcTimeToPOSIXSeconds) valueToPut) maxSize ((realToFrac . utcTimeToPOSIXSeconds) fromScore)
+  if parallelCount == 1
+    then return True
+    else do
+      return False
 
 addSearchRequestInfoToCache ::
   ( Redis.HedisFlow m r,
@@ -224,18 +245,26 @@ addSearchRequestInfoToCache ::
   Id SearchRequest ->
   Id DM.Merchant ->
   Id DP.Driver ->
-  (UTCTime, Bool) ->
+  UTCTime ->
   Redis.ExpirationTime ->
   m ()
-addSearchRequestInfoToCache searchReqId merchantId driverId valueToPut singleBatchProcessTime = do
-  Redis.withCrossAppRedis $ Redis.hSetExp (mkParallelSearchRequestKey merchantId driverId) searchReqId.getId valueToPut singleBatchProcessTime
+addSearchRequestInfoToCache _ merchantId driverId _ _ = Redis.withMasterRedis $
+  Redis.withCrossAppRedis $ do
+    let parallelCountKey = mkParallelSearchRequestKey merchantId driverId
+    now <- getCurrentTime
+    void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRemRangeByScore parallelCountKey 0 ((realToFrac . utcTimeToPOSIXSeconds) $ addUTCTime (-2) now)
 
-getSearchRequestInfoMap ::
-  Redis.HedisFlow m r =>
+removeExpiredSearchRequestInfoFromCache ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   Id DM.Merchant ->
   Id DP.Driver ->
-  m [(Text, (UTCTime, Bool))]
-getSearchRequestInfoMap mId dId = Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
+  m ()
+removeExpiredSearchRequestInfoFromCache merchantId driverId = do
+  now <- getCurrentTime
+  void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRemRangeByScore (mkParallelSearchRequestKey merchantId driverId) 0 ((realToFrac . utcTimeToPOSIXSeconds) $ addUTCTime (-2) now)
 
 getValidSearchRequestCount ::
   Redis.HedisFlow m r =>
@@ -243,11 +272,10 @@ getValidSearchRequestCount ::
   Id DP.Driver ->
   UTCTime ->
   m Int
-getValidSearchRequestCount merchantId driverId now = Redis.withCrossAppRedis $ do
-  searchRequestValidityMap <- getSearchRequestInfoMap merchantId driverId
-  let (valid, old) = partition ((> now) . fst . snd) searchRequestValidityMap
-  when (notNull old) $ Redis.hDel (mkParallelSearchRequestKey merchantId driverId) (map fst old)
-  pure $ length valid
+getValidSearchRequestCount merchantId driverId now = Redis.withMasterRedis $
+  Redis.withCrossAppRedis $ do
+    validCount <- Redis.zCount (mkParallelSearchRequestKey merchantId driverId) ((realToFrac . utcTimeToPOSIXSeconds) $ now) ((realToFrac . utcTimeToPOSIXSeconds) (addUTCTime 5000 now))
+    pure $ fromIntegral validCount
 
 removeSearchReqIdFromMap ::
   ( Redis.HedisFlow m r,
@@ -255,9 +283,10 @@ removeSearchReqIdFromMap ::
   ) =>
   Id DM.Merchant ->
   Id DP.Person ->
-  Id SearchTry ->
+  Id SearchRequest ->
   m ()
-removeSearchReqIdFromMap merchantId driverId = Redis.withCrossAppRedis . Redis.hDel (mkParallelSearchRequestKey merchantId $ cast driverId) . (: []) .(.getId)
+removeSearchReqIdFromMap merchantId driverId searchReqId = do
+  void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRem (mkParallelSearchRequestKey merchantId driverId) [searchReqId.getId]
 
 incrementQuoteAcceptedCount ::
   ( Redis.HedisFlow m r,
@@ -507,14 +536,16 @@ calculateGoHomeDriverPool ::
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
   m [DriverPoolWithActualDistResult]
 calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   now <- getCurrentTime
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId configsInExperimentVersions
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QP.getNearestGoHomeDrivers $
@@ -533,7 +564,13 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             isValueAddNP
           }
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
+    DriverSelection ->
+      filterM
+        ( \nearestGoHomeDriversRes ->
+            parallelRequestsFilter nearestGoHomeDriversRes.clientSdkVersion 3 driverPoolCfg.maxParallelSearchRequests
+              =<< getParallelSearchRequestCount now nearestGoHomeDriversRes
+        )
+        approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take goHomeCfg.numDriversForDirCheck <$> Rnd.randomizeList driversWithLessThanNParallelRequests
   logDebug $ "random driver pool" <> show randomDriverPool
@@ -555,7 +592,9 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   [QP.NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -641,7 +680,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       mapM
         ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
             routes <-
-              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) $
+              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) Nothing $
                 Maps.GetRoutesReq
                   { waypoints = getCoordinates driver :| [getCoordinates ghReq],
                     mode = Just Maps.CAR,
@@ -713,10 +752,12 @@ calculateDriverPool ::
     CoreMetrics m,
     MonadFlow m,
     HasCoordinates a,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
-  m [DriverPoolResult]
+  m ([DriverPoolResult], [QP.NearestDriversResult])
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
@@ -730,14 +771,22 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             ..
           }
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount) approxDriverPool
+    DriverSelection ->
+      filterM
+        ( \nearestDriversRes ->
+            parallelRequestsFilter nearestDriversRes.clientSdkVersion 3 driverPoolCfg.maxParallelSearchRequests
+              =<< getParallelSearchRequestCount nearestDriversRes
+        )
+        approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
   logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
-  pure driverPoolResult
+  pure (driverPoolResult, approxDriverPool)
   where
+    getParallelSearchRequestCount :: Redis.HedisFlow m r => QP.NearestDriversResult -> m Int
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
+
     getRadius mRadiusStep_ = do
       let maxRadius = driverPoolCfg.maxRadiusOfSearch
       case mRadiusStep_ of
@@ -746,6 +795,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           let radiusStepSize = driverPoolCfg.radiusStepSize
           min (minRadius + radiusStepSize * radiusStep) maxRadius
         Nothing -> maxRadius
+
     makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
@@ -754,6 +804,25 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           ..
         }
 
+data FilterStage = NearBy | MaxParallelRequests | ActualDistance | TaggedPool
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data SearchTryBatchData = SearchTryBatchData
+  { searchTryId :: Text,
+    driverIds :: [Text],
+    filterStage :: FilterStage,
+    batchNum :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data SearchTryBatchPoolData = SearchTryBatchPoolData
+  { searchTryId :: Text,
+    driverPoolData :: [DriverPoolWithActualDistResult],
+    filterStage :: FilterStage,
+    batchNum :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -761,18 +830,23 @@ calculateDriverPoolWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
   DST.CurrentSearchInfo ->
+  Int ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType currentSearchInfo = do
-  driverPool <- calculateDriverPool calculateReq
+calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType currentSearchInfo batchNum = do
+  (driverPool, approxDriverPool) <- calculateDriverPool calculateReq
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      filtDriverPoolWithActualDist' <-
+      filtDriverPoolWithActualDist' <- withTimeAPI "driverPooling" "computeActualDistance" $ do
         case poolType of
           SpecialZoneQueuePool -> pure $ map mkSpecialZoneQueueActualDistanceResult driverPool
           _ -> do
@@ -780,9 +854,40 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
             pure $ case driverPoolCfg.actualDistanceThreshold of
               Nothing -> NE.toList driverPoolWithActualDist
               Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) driverPoolWithActualDist) (NE.sortOn (.driverId) $ a :| pprox)
-      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist'
-      filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
-      logDebug $ "thirdly scheduled filtered driver pool" <> show filtDriverPoolWithActualDist
+      filtDriverPoolWithActualDist <- withTimeAPI "driverPooling" "filterM scheduledRideFilter" $ filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
+      fork "Driver Pool Search Try Batch - Analytics" $ do
+        pushToKafka
+          ( SearchTryBatchData
+              { searchTryId = currentSearchInfo.searchTry.id.getId,
+                driverIds = map ((.getId) . (.driverId)) approxDriverPool,
+                filterStage = NearBy,
+                batchNum = batchNum
+              }
+          )
+          "search-try-batch"
+          currentSearchInfo.searchTry.id.getId
+
+        pushToKafka
+          ( SearchTryBatchData
+              { searchTryId = currentSearchInfo.searchTry.id.getId,
+                driverIds = map ((.getId) . (.driverId)) driverPool,
+                filterStage = MaxParallelRequests,
+                batchNum = batchNum
+              }
+          )
+          "search-try-batch"
+          currentSearchInfo.searchTry.id.getId
+
+        pushToKafka
+          ( SearchTryBatchData
+              { searchTryId = currentSearchInfo.searchTry.id.getId,
+                driverIds = map ((.getId) . (.driverId) . (.driverPoolResult)) filtDriverPoolWithActualDist,
+                filterStage = ActualDistance,
+                batchNum = batchNum
+              }
+          )
+          "search-try-batch"
+          currentSearchInfo.searchTry.id.getId
       return filtDriverPoolWithActualDist
   where
     mkSpecialZoneQueueActualDistanceResult dpr = do
@@ -822,7 +927,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
         case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
           (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
             currentDroptoScheduledPickupDistance <-
-              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId $
+              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId Nothing $
                 TMaps.GetDistanceReq
                   { origin = dropLoc,
                     destination = scheduledPickup,
@@ -899,7 +1004,9 @@ calculateDriverPoolCurrentlyOnRide ::
     MonadFlow m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
   Maybe Integer ->
@@ -919,7 +1026,13 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               ..
             }
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequestsOnRide) . getParallelSearchRequestCount) approxDriverPool
+    DriverSelection ->
+      filterM
+        ( \nearestDriversResultCurrentlyOnRideRes ->
+            parallelRequestsFilter nearestDriversResultCurrentlyOnRideRes.clientSdkVersion 1 driverPoolCfg.maxParallelSearchRequestsOnRide
+              =<< getParallelSearchRequestCount nearestDriversResultCurrentlyOnRideRes
+        )
+        approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   pure (radius, makeDriverPoolResult <$> driversWithLessThanNParallelRequests)
   where
@@ -956,7 +1069,9 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -1025,7 +1140,9 @@ computeActualDistanceOneToOne ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1042,7 +1159,9 @@ computeActualDistance ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1055,14 +1174,15 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
   let pickupLatLong = getCoordinates pickup
   transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
-      Maps.GetDistancesReq
-        { origins = driverPoolResults,
-          destinations = pickupLatLong :| [],
-          travelMode = Just Maps.CAR,
-          sourceDestinationMapping = Nothing,
-          distanceUnit
-        }
+    withShortRetry $
+      Maps.getEstimatedPickupDistances orgId merchantOpCityId Nothing $
+        Maps.GetDistancesReq
+          { origins = driverPoolResults,
+            destinations = pickupLatLong :| [],
+            travelMode = Just Maps.CAR,
+            sourceDestinationMapping = Nothing,
+            distanceUnit
+          }
   logDebug $ "get distance results" <> show getDistanceResults
   prevRideDropGeoHash <- case prevRideDropLatLn of
     Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
@@ -1090,7 +1210,9 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
 computeActualDistanceOneToOneSrcAndDestMapping ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1102,14 +1224,15 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
 computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults = do
   transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
-      Maps.GetDistancesReq
-        { origins = driverPoolResults,
-          destinations = destinationLatLons,
-          travelMode = Just Maps.CAR,
-          sourceDestinationMapping = Just Maps.OneToOne,
-          distanceUnit
-        }
+    withShortRetry $
+      Maps.getEstimatedPickupDistances orgId merchantOpCityId Nothing $
+        Maps.GetDistancesReq
+          { origins = driverPoolResults,
+            destinations = destinationLatLons,
+            travelMode = Just Maps.CAR,
+            sourceDestinationMapping = Just Maps.OneToOne,
+            distanceUnit
+          }
   logDebug $ "get distance results one to one mapping" <> show getDistanceResults
   let distanceAndDropPointsZipped = zip previousDropPoints (NE.toList getDistanceResults)
   driverPoolEntities <-
@@ -1140,6 +1263,18 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score
         }
+
+parallelRequestsFilter :: (Redis.HedisFlow m r, MonadFlow m) => Maybe Version -> Int -> Int -> Int -> m Bool
+parallelRequestsFilter clientSdkVersion defaultMaxParallelReq maxParallelSearchRequests getParallelSearchRequestCount = do
+  limParallelSRClientSdkVersion <- L.runIO (T.pack . fromMaybe "" <$> SE.lookupEnv "LIMITED_PARALLEL_SEARCH_REQUEST_CLIENT_SDK_VERSION")
+  let allowedMaxParallelSearchRequests =
+        maybe
+          defaultMaxParallelReq
+          ( \sdkVersion ->
+              bool defaultMaxParallelReq maxParallelSearchRequests (versionToText sdkVersion >= limParallelSRClientSdkVersion)
+          )
+          clientSdkVersion
+  return $ getParallelSearchRequestCount < allowedMaxParallelSearchRequests
 
 refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult)
 refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, driverGoHomePoolWithActualDistance)

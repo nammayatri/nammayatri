@@ -126,6 +126,7 @@ goToTripDetailsHandler state = do
         , rideEndTimeUTC = state.data.rideEndTimeUTC
         , rideId = state.data.rideId
         , vehicleNumber = state.data.vehicleNumber
+        , vehicleVariant = state.data.vehicleVariant
         , time = state.data.time
         , source = state.data.source
         , destination = state.data.destination 
@@ -175,21 +176,12 @@ updateStateHandler updatedState = do
   App.BackT $ App.BackPoint <$> (pure HelpAndSupportScreenFlow )
 
 
-confirmDeleteAccountHandler :: HelpAndSupportScreenState -> FlowBT String FlowState 
+confirmDeleteAccountHandler :: HelpAndSupportScreenState -> FlowBT String FlowState
 confirmDeleteAccountHandler updatedState = do
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  void $ Remote.sendIssueBT (Remote.makeSendIssueReq (Just updatedState.data.email) Nothing "Request To Delete Account" updatedState.data.description $ Just false)
-  modifyScreenState $ HelpAndSupportScreenStateType (
-    \helpAndSupportScreen -> helpAndSupportScreen {
-      props{
-        showDeleteAccountView = true
-      }, 
-      data {
-        accountStatus = ST.DEL_REQUESTED
-      }
-    }
-  )
-  App.BackT $ App.NoBack <$> (pure HelpAndSupportScreenFlow )
+  void $ lift $ lift $ Remote.deletePerson updatedState.data.description
+  App.BackT $ App.BackPoint <$> (pure DeleteAccountFlow)
+
 
 
 goToHelpAndSupportScreenHanlder :: HelpAndSupportScreenState -> FlowBT String FlowState

@@ -24,15 +24,21 @@ imports:
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
 
 module: FRFSTicketService
 types:
+  FRFSDiscoverySearchAPIReq:
+    city: City
+    vehicleType: VehicleCategory
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
     routeCode: Maybe Text
     quantity: Int
     journeySearchData: Maybe JourneySearchData
+    recentLocationId: Maybe (Id RecentLocation)
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -115,6 +121,7 @@ types:
 
   FRFSTicketAPI:
     status: FRFSTicketStatus
+    scannedByVehicleNumber: Maybe Text
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
@@ -132,8 +139,9 @@ types:
     enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
 
   FRFSStationAPI:
-    name: Text
+    name: Maybe Text
     code: Text
+    routeCodes: Maybe [Text]
     lat: Maybe Double
     lon: Maybe Double
     address: Maybe Text
@@ -188,7 +196,24 @@ types:
   FRFSTicketVerifyReq:
     qrData: Text
 
+  BookingFareAcceptedReq:
+    isFareAccepted: Bool
+
+  FRFSBookingFeedbackReq:
+    enum: "BookingFareAccepted BookingFareAcceptedReq"
+
 apis:
+  # Booking Fare Accepted
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/feedback
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
   # GET metro/bus routes for the merchant city
   - GET:
       endpoint: /frfs/routes
@@ -217,6 +242,8 @@ apis:
         startStationCode: Text
         endStationCode: Text
         location: LatLong
+        platformType: PlatformType
+        minimalData: Bool
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -227,6 +254,8 @@ apis:
       mandatoryQuery:
         city: City
         vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
       params:
         routeCode: Text
       response:
@@ -244,6 +273,15 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+
+  # Discovery Search for finding metro/bus providers for a given city
+  - POST:
+      endpoint: /frfs/discovery/search
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   # Get quotes for metro/bus tickets
   - GET:
@@ -345,6 +383,8 @@ apis:
       mandatoryQuery:
         city: City
         vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
       auth: TokenAuth
       request:
         type: API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
@@ -372,5 +412,6 @@ apis:
         input: Text
         limit: Int
         offset: Int
+        platformType: PlatformType
       response:
         type: "API.Types.UI.FRFSTicketService.AutocompleteRes"

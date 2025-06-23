@@ -22,6 +22,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified EulerHS.Prelude as EP
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -54,9 +55,12 @@ data VehicleVariant
   | BUS_AC
   | HERITAGE_CAB
   | EV_AUTO_RICKSHAW
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded, EP.Hashable)
 
 instance CH.ClickhouseValue VehicleVariant
+
+allVehicleVariants :: [VehicleVariant]
+allVehicleVariants = [minBound .. maxBound]
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
 
@@ -193,3 +197,16 @@ getVehicleCategoryFromVehicleVariantDefault :: Maybe VehicleVariant -> DVC.Vehic
 getVehicleCategoryFromVehicleVariantDefault = maybe defaultCategory castVehicleVariantToVehicleCategory
   where
     defaultCategory = DVC.AUTO_CATEGORY
+
+getTruckVehicleVariant :: Maybe Float -> Maybe Float -> VehicleVariant -> VehicleVariant
+getTruckVehicleVariant mbGrossVehicleWeight mbUnladdenWeight currentVariant = flip (maybe currentVariant) ((,) <$> mbGrossVehicleWeight <*> mbUnladdenWeight) $
+  \(grossVehicleWeight, unladdenWeight) -> getVariantBasedOnWeight (grossVehicleWeight - unladdenWeight)
+  where
+    getVariantBasedOnWeight weight
+      | weight > 4000 = DELIVERY_LIGHT_GOODS_VEHICLE
+      | weight >= 2500 = DELIVERY_TRUCK_ULTRA_LARGE
+      | weight >= 1500 = DELIVERY_TRUCK_LARGE
+      | weight >= 1000 = DELIVERY_TRUCK_MEDIUM
+      | weight >= 500 = DELIVERY_TRUCK_SMALL
+      | weight >= 350 = DELIVERY_TRUCK_MINI
+      | otherwise = DELIVERY_LIGHT_GOODS_VEHICLE

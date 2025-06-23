@@ -17,9 +17,14 @@ instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour whe
     pure $
       Just
         Domain.Types.BusinessHour.BusinessHour
-          { btype = btype,
+          { bookingClosingTime = bookingClosingTime,
+            btype = btype,
             categoryId = Kernel.Types.Id.Id <$> categoryId,
+            expiryDate = expiryDate,
+            hash = hash,
             id = Kernel.Types.Id.Id id,
+            name = name,
+            placeId = placeId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -29,9 +34,14 @@ instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour whe
 instance ToTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour where
   toTType' (Domain.Types.BusinessHour.BusinessHour {..}) = do
     Beam.BusinessHourT
-      { Beam.btype = btype,
+      { Beam.bookingClosingTime = bookingClosingTime,
+        Beam.btype = btype,
         Beam.categoryId = Kernel.Types.Id.getId <$> categoryId,
+        Beam.expiryDate = expiryDate,
+        Beam.hash = hash,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.name = name,
+        Beam.placeId = placeId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

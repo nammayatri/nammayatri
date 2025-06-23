@@ -70,6 +70,7 @@ jobs:
             echo "should_push_docker=false" >> $GITHUB_OUTPUT
           fi
   build:
+    name: ${{ matrix.name }}
     needs: [check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
     if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
@@ -79,14 +80,12 @@ jobs:
           - system: x86_64-linux
             host: x86_64-linux
             arch: amd64
+            name: Master Release Build
             continue-on-error: false
           - system: aarch64-darwin
             host: aarch64-darwin
+            name: Mac Cache Server
             continue-on-error: false
-          - system: aarch64-linux
-            host: aarch64-darwin
-            arch: arm64
-            continue-on-error: ${{ github.event.pull_request.merged == 'true' && github.ref == 'refs/heads/backend/ci/add-fail-fast-check' }}
       fail-fast: false
     runs-on: ${{ matrix.host }}
     outputs:
@@ -123,37 +122,38 @@ jobs:
 
           gunzip -c ./result > image.tar || cp ./result image.tar
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
-          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}"
+          # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
 
-  create-manifest:
-    needs: [build, check-conditions]
-    if: needs.check-conditions.outputs.should-push-docker == 'true'
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      BASE_IMAGE_NAME: ${{ needs.build.outputs.docker-image-name }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create and push MultiArch manifest
-        run: |
-          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+  # create-manifest:
+  #   needs: [build, check-conditions]
+  #   if: needs.check-conditions.outputs.should-push-docker == 'true'
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     BASE_IMAGE_NAME: ${{ needs.build.outputs.docker-image-name }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Create and push MultiArch manifest
+  #       run: |
+  #         echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-          # Check if both architecture-specific images exist
-          if docker manifest inspect "${BASE_IMAGE_NAME}-amd64" > /dev/null 2>&1 && \
-             docker manifest inspect "${BASE_IMAGE_NAME}-arm64" > /dev/null 2>&1; then
-            # Create the manifest
-            docker manifest create "$BASE_IMAGE_NAME" \
-                --amend "${BASE_IMAGE_NAME}-amd64" \
-                --amend "${BASE_IMAGE_NAME}-arm64"
+  #         # Check if both architecture-specific images exist
+  #         if docker manifest inspect "${BASE_IMAGE_NAME}-amd64" > /dev/null 2>&1 && \
+  #            docker manifest inspect "${BASE_IMAGE_NAME}-arm64" > /dev/null 2>&1; then
+  #           # Create the manifest
+  #           docker manifest create "$BASE_IMAGE_NAME" \
+  #               --amend "${BASE_IMAGE_NAME}-amd64" \
+  #               --amend "${BASE_IMAGE_NAME}-arm64"
 
-            # Push the manifest
-            docker manifest push "$BASE_IMAGE_NAME"
-          else
-            echo "One or more architecture-specific images are missing"
-            exit 1
-          fi
+  #           # Push the manifest
+  #           docker manifest push "$BASE_IMAGE_NAME"
+  #         else
+  #           echo "One or more architecture-specific images are missing"
+  #           exit 1
+  #         fi
 
-          docker logout ghcr.io
+  #         docker logout ghcr.io
 
 
   # The previous job would have already built for macOS but we must do it again

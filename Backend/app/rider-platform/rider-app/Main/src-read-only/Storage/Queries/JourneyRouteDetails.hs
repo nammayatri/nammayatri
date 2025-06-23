@@ -26,6 +26,11 @@ createMany = traverse_ create
 findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.JourneyRouteDetails.JourneyRouteDetails])
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
+updateAlternateShortNames :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
+updateAlternateShortNames alternateShortNames searchId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.alternateShortNames alternateShortNames, Se.Set Beam.updatedAt _now] [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
+
 updateJourneyStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ())
@@ -48,13 +53,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyRouteDetails.JourneyRouteDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.frequency frequency,
+    [ Se.Set Beam.alternateShortNames alternateShortNames,
+      Se.Set Beam.frequency frequency,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId <$> fromStationId),
       Se.Set Beam.journeyStatus journeyStatus,
       Se.Set Beam.lineColor lineColor,
       Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.platformNumber platformNumber,
-      Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
+      Se.Set Beam.routeId routeId,
       Se.Set Beam.routeLongName routeLongName,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.subLegOrder subLegOrder,
@@ -71,14 +77,15 @@ instance FromTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jo
     pure $
       Just
         Domain.Types.JourneyRouteDetails.JourneyRouteDetails
-          { frequency = frequency,
+          { alternateShortNames = alternateShortNames,
+            frequency = frequency,
             fromStationId = Kernel.Types.Id.Id <$> fromStationId,
             id = Kernel.Types.Id.Id id,
             journeyStatus = journeyStatus,
             lineColor = lineColor,
             lineColorCode = lineColorCode,
             platformNumber = platformNumber,
-            routeId = Kernel.Types.Id.Id <$> routeId,
+            routeId = routeId,
             routeLongName = routeLongName,
             searchId = Kernel.Types.Id.Id searchId,
             subLegOrder = subLegOrder,
@@ -92,14 +99,15 @@ instance FromTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jo
 instance ToTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.JourneyRouteDetails where
   toTType' (Domain.Types.JourneyRouteDetails.JourneyRouteDetails {..}) = do
     Beam.JourneyRouteDetailsT
-      { Beam.frequency = frequency,
+      { Beam.alternateShortNames = alternateShortNames,
+        Beam.frequency = frequency,
         Beam.fromStationId = Kernel.Types.Id.getId <$> fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.journeyStatus = journeyStatus,
         Beam.lineColor = lineColor,
         Beam.lineColorCode = lineColorCode,
         Beam.platformNumber = platformNumber,
-        Beam.routeId = Kernel.Types.Id.getId <$> routeId,
+        Beam.routeId = routeId,
         Beam.routeLongName = routeLongName,
         Beam.searchId = Kernel.Types.Id.getId searchId,
         Beam.subLegOrder = subLegOrder,

@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 data StationT f = StationT
   { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     code :: B.C f Kernel.Prelude.Text,
+    hindiName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -24,6 +25,8 @@ data StationT f = StationT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     possibleTypes :: B.C f (Kernel.Prelude.Maybe [Domain.Types.StationType.StationType]),
+    regionalName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    suggestedDestinations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

@@ -50,6 +50,17 @@ let hcfg =
       , connectReadOnly = True
       }
 
+let ltsRedis =
+      { connectHost = "localhost"
+      , connectPort = 6379
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -80,6 +91,12 @@ let autoCompleteKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "AutoCompleteData"
       , kafkaKey = "rider-app-autocomplete-events"
+      }
+
+let marketingParamsKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsData"
+      , kafkaKey = "rider-app-marketing-events"
       }
 
 let routeDataKafkaConfig
@@ -146,6 +163,11 @@ let eventStreamMappings =
             globalCommon.streamConfig.KafkaStream routeDataKafkaConfig
         , eventTypes = [ globalCommon.eventType.RouteCollection ]
         }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream marketingParamsKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsData ]
+        }
       ]
 
 let apiRateLimitOptions = { limit = +8000, limitResetTimeInSec = +1 }
@@ -205,6 +227,8 @@ let RiderJobType =
       | MonthlyUpdateTag
       | QuarterlyUpdateTag
       | PostRideSafetyNotification
+      | UpdateCrisUtsData
+      | MetroBusinessHour
       >
 
 let jobInfoMapx =
@@ -235,6 +259,8 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.MonthlyUpdateTag, mapValue = True }
       , { mapKey = RiderJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = RiderJobType.PostRideSafetyNotification, mapValue = False }
+      , { mapKey = RiderJobType.UpdateCrisUtsData, mapValue = True }
+      , { mapKey = RiderJobType.MetroBusinessHour, mapValue = True }
       ]
 
 let cacConfig =
@@ -280,7 +306,11 @@ let riderClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
+
 let dashboardClickhouseCfg = riderClickhouseCfg
+
+let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -289,6 +319,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = False
+    , ltsRedis
     , cutOffHedisCluster = False
     , cutOffNonCriticalHedisCluster = True
     , smsCfg = smsConfig
@@ -298,6 +329,7 @@ in  { esqDBCfg
     , hostName = "localhost"
     , nwAddress = "http://localhost:8013/beckn/cab/v1"
     , selfUIUrl = "http://localhost:8013/v2/"
+    , selfBaseUrl = "http://localhost:8013/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
@@ -352,6 +384,7 @@ in  { esqDBCfg
     , hotSpotExpiry = +604800
     , cacConfig
     , cacTenants
+    , tsServiceConfig
     , superPositionConfig
     , collectRouteData = True
     , kafkaClickhouseCfg
@@ -369,4 +402,6 @@ in  { esqDBCfg
     , ltsCfg = LocationTrackingeServiceConfig
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
+    , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , nearByDriverAPIRateLimitOptions
     }

@@ -102,7 +102,6 @@ enterReferralCodeView push state =
             , width WRAP_CONTENT
             , color Color.black900
             , text $ getString HAVE_REFERRAL_CODE
-            , padding $ Padding 0 7 0 0
             ] <> FontStyle.body7 TypoGraphy
           , imageView
             [ height $ V 30
@@ -128,11 +127,13 @@ enterReferralCodeView push state =
           , onChange push $ OnClickDone
           , gravity CENTER
           , cornerRadius 8.0
-          , hint $ getString ENTER_REFERRAL_CODE_
+          , hint "------"
           , hintColor Color.black600
+          , cursorColor Color.blue900
+          , onFocus push  ReferralTextFocused
           , pattern "[a-zA-Z0-9]*,9"
           , id $ EHC.getNewIDWithTag "RefferalCode"
-          , stroke $ "1," <> (if state.isInvalidCode then Color.red900 else Color.grey900)
+          , stroke $ "1," <> (if state.isInvalidCode then Color.red900 else if state.isFocused then Color.blue900 else Color.grey900)
           , afterRender (\_ -> 
                 if state.stage == ENTER_REFERRAL_CODE then
                   void $ pure $ JB.showKeyboard (EHC.getNewIDWithTag "RefferalCode")

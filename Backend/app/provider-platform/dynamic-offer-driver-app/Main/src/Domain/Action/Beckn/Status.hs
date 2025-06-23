@@ -103,4 +103,5 @@ handler transporterId req = do
       let driverAccountId = Nothing
       let isAlreadyFav = False
       let favCount = 0
+      let isSafetyPlus = booking.isSafetyPlus
       pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}

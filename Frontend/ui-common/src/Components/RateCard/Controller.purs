@@ -18,12 +18,26 @@ module Components.RateCard.Controller where
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show, show, (<>))
 import Common.Types.App (RateCardType(..), FareList(..), WaitingTimeInfo(..))
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Styles.Colors as Color
+
+instance showAction :: Show Action where
+  show (Close) = "Close"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (GoToDefaultStart) = "GoToDefaultStart"
+  show (GoToDriverAddition) = "GoToDriverAddition"
+  show (GoToFareUpdate) = "GoToFareUpdate"
+  show (GoToWaitingCharges) = "GoToWaitingCharges"
+  show (GoToTollOrParkingCharges) = "GoToTollOrParkingCharges"
+  show (GoToDriverAllowance) = "GoToDriverAllowance"
+  show (GoToNightShiftCharges) = "GoToNightShiftCharges"
+  show (GoToTollAndParkingCharges) = "GoToTollAndParkingCharges"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
 
 data Action = Close 
               | BackPressed 

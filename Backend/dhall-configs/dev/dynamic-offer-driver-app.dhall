@@ -213,6 +213,7 @@ let AllocatorJobType =
       | OrderAndNotificationStatusUpdate
       | SendOverlay
       | SupplyDemand
+      | CongestionCharge
       | BadDebtCalculation
       | RetryDocumentVerification
       | SendManualPaymentLink
@@ -231,6 +232,7 @@ let AllocatorJobType =
       | FleetAlert
       | SendWebhookToExternal
       | ScheduledFCMS
+      | CheckDashCamInstallationStatus
       >
 
 let jobInfoMapx =
@@ -239,6 +241,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
+      , { mapKey = AllocatorJobType.CongestionCharge, mapValue = True }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
         }
@@ -277,9 +280,14 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
+      , { mapKey = AllocatorJobType.CheckDashCamInstallationStatus
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
+let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
 let cacConfig =
       { host = "http://localhost:8080"
@@ -331,6 +339,7 @@ in  { esqDBCfg
     , hostName = "localhost"
     , nwAddress = "http://localhost:8016/beckn"
     , selfUIUrl = "http://localhost:8016/ui/"
+    , selfBaseUrl = "http://localhost:8016/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
@@ -363,6 +372,7 @@ in  { esqDBCfg
     , jobInfoMapx
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
+    , searchRequestExpirationSecondsForMultimodal = +14400
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
@@ -407,4 +417,8 @@ in  { esqDBCfg
     , nyGatewayUrl = common.nyGatewayUrl
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , urlShortnerConfig = common.urlShortnerConfig
+    , vocalyticsCnfg = VocaliticsConfig
+    , meterRideReferralLink =
+        "https://nammayatri.in/refer?referrer=utm_source%3DChennai%26utm_medium%3Dqrcode%26utm_term%3Dreferral%26utm_content%3Dcoins%26utm_campaign%{referralCode}%26anid%3Dadmob&id=in.juspay.nammayatri"
+    , minDistanceBetweenTwoPoints = +25
     }

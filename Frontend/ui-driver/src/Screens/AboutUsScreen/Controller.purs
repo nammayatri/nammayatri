@@ -29,7 +29,13 @@ import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Data.Array (elem)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed _) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (ShowDemoPopUp) = "ShowDemoPopUp"
+  show (PopUpModalDemoModeAction var1) = "PopUpModalDemoModeAction_" <> show var1
+  show (TermsAndConditionAction) = "TermsAndConditionAction"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ABOUT_US_SCREEN)

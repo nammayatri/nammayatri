@@ -166,3 +166,5 @@ runLogTracking = do
   let _ = printLog "Logging Onboarding Events for Customer" ""
   void $ pushEvent eventsConfig.pushEventChunkSize
   runLogTracking
+  
+foreign import addEventAggregate :: String -> Effect Unit

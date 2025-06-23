@@ -4,7 +4,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, ($), pure, (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.Benefits.BenefitsScreen.Controller (ScreenOutput(..))
 import Screens.Benefits.BenefitsScreen.View as BenefitsScreen
 import Types.App (FlowBT, GlobalState(..), BENEFITS_SCREEN_OUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
@@ -14,7 +14,7 @@ import Screens.Benefits.BenefitsScreen.ScreenData as BenefitsScreenData
 benefitsScreen :: FlowBT String BENEFITS_SCREEN_OUTPUT
 benefitsScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ BenefitsScreen.screen state.benefitsScreen
+  act <- lift $ lift $ runLoggableScreen $ BenefitsScreen.screen state.benefitsScreen
   case act of
     GoBack -> do
       modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> BenefitsScreenData.initData)

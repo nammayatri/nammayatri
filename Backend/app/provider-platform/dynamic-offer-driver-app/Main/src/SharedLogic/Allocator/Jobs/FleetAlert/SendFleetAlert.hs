@@ -18,17 +18,18 @@ module SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
 where
 
 import Domain.Action.UI.Call
-import qualified Domain.Types.ApprovalRequest as DTR
+import qualified Domain.Types.Alert as DA
 import qualified Domain.Types.CallStatus as SCS
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
-import qualified Storage.Queries.ApprovalRequest as QDR
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import Tools.Call as TCall
@@ -40,7 +41,8 @@ sendFleetAlert ::
     CacheFlow m r,
     MonadFlow m,
     SchedulerFlow r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasKafkaProducer r
   ) =>
   Job 'FleetAlert ->
   m ExecutionResult
@@ -49,8 +51,8 @@ sendFleetAlert Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let fleetOwnerId = jobData.fleetOwnerId
       entityId = jobData.entityId
       appletId = jobData.appletId
-  driverRequest <- B.runInReplica $ QDR.findByPrimaryKey entityId >>= fromMaybeM (InvalidRequest "DriverRequest not found")
-  unless (driverRequest.status == DTR.AWAITING_APPROVAL) $ do
+  driverRequest <- B.runInReplica $ QAR.findByPrimaryKey entityId >>= fromMaybeM (InvalidRequest "DriverRequest not found")
+  unless (driverRequest.status == DA.AWAITING_APPROVAL) $ do
     callStatusId <- generateGUID
     fleetOwner <- B.runInReplica $ QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
     mobileNumber <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")

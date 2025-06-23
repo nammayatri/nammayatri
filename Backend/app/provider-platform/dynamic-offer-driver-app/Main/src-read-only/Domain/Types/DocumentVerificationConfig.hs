@@ -19,6 +19,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doStrictVerifcation :: Kernel.Prelude.Bool,
+    documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
@@ -39,6 +40,8 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DocumentCategory = Driver | Vehicle | Permission | Training deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentType
   = DriverLicense
@@ -64,6 +67,10 @@ data DocumentType
   | VehicleLeft
   | VehicleFrontInterior
   | VehicleBackInterior
+  | VehicleNOC
+  | BusinessLicense
+  | Odometer
+  | InspectionHub
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
@@ -85,6 +92,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentCategory)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 

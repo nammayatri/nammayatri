@@ -383,3 +383,36 @@ _requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -
 
 _vehicleType :: forall a b c. Newtype a { vehicleType :: b | c } => Lens' a b
 _vehicleType = lens (unwrap >>> _.vehicleType) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleType = newVal }))
+
+_refundDetails :: forall a b c. Newtype a { refundDetails :: b | c } => Lens' a b
+_refundDetails = lens (unwrap >>> _.refundDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { refundDetails = newVal }))
+
+_parcelQuantity :: forall a b c. Newtype a { parcelQuantity :: b | c } => Lens' a b
+_parcelQuantity = lens (unwrap >>> _.parcelQuantity) (\oldRec newVal -> wrap ((unwrap oldRec) { parcelQuantity = newVal }))
+
+_parcelType :: forall a b c. Newtype a { parcelType :: b | c } => Lens' a b
+_parcelType = lens (unwrap >>> _.parcelType) (\oldRec newVal -> wrap ((unwrap oldRec) { parcelType = newVal }))
+
+_tag :: forall a b c. Newtype a { tag :: b | c } => Lens' a b
+_tag = lens (unwrap >>> _.tag) (\oldRec newVal -> wrap ((unwrap oldRec) { tag = newVal }))
+
+_driverArrivalTime :: forall a b c. Newtype a { driverArrivalTime :: b | c } => Lens' a b
+_driverArrivalTime = lens (unwrap >>> _.driverArrivalTime) (\oldRec newVal -> wrap ((unwrap oldRec) { driverArrivalTime = newVal }))
+
+_destinationReachedAt :: forall a b c. Newtype a { destinationReachedAt :: b | c } => Lens' a b
+_destinationReachedAt = lens (unwrap >>> _.destinationReachedAt) (\oldRec newVal -> wrap ((unwrap oldRec) { destinationReachedAt = newVal }))
+
+_stopPoint :: forall a b c. Newtype a { stopPoint :: b | c } => Lens' a b
+_stopPoint = lens (unwrap >>> _.stopPoint) (\oldRec newVal -> wrap ((unwrap oldRec) { stopPoint = newVal }))
+
+_sequenceNum :: forall a b c. Newtype a { sequenceNum :: b | c } => Lens' a b
+_sequenceNum = lens (unwrap >>> _.sequenceNum) (\oldRec newVal -> wrap ((unwrap oldRec) { sequenceNum = newVal }))
+
+_code :: forall a b c. Newtype a { code :: b | c } => Lens' a b
+_code = lens (unwrap >>> _.code) (\oldRec newVal -> wrap ((unwrap oldRec) { code = newVal }))
+
+_stopCode :: forall a b c. Newtype a { stopCode :: b | c } => Lens' a b
+_stopCode = lens (unwrap >>> _.stopCode) (\oldRec newVal -> wrap ((unwrap oldRec) { stopCode = newVal }))
+
+_routeCode :: forall a b c. Newtype a { routeCode :: b | c } => Lens' a b
+_routeCode = lens (unwrap >>> _.routeCode) (\oldRec newVal -> wrap ((unwrap oldRec) { routeCode = newVal }))

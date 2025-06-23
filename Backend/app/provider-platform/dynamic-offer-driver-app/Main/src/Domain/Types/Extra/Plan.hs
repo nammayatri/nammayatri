@@ -11,11 +11,11 @@ import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.GenericPretty
-import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 
-data ServiceProvider = CAUTIO
+data ServiceProvider = CAUTIO | OWNED
   deriving stock (Eq, Ord, Generic, Show, Read)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
@@ -28,7 +28,7 @@ data ServiceNames
   = YATRI_SUBSCRIPTION
   | YATRI_RENTAL
   | DASHCAM_RENTAL ServiceProvider
-  deriving (Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Eq, Ord, Generic, ToSchema)
 
 $(mkBeamInstancesForEnumAndList ''ServiceNames)
 
@@ -38,12 +38,6 @@ instance ToParamSchema ServiceNames where
       & title L.?~ "ServiceNames"
       & type_ L.?~ OpenApiString
       & format L.?~ (show f)
-
-instance FromHttpApiData ServiceNames where
-  parseUrlPiece a = readEither a
-
-instance ToHttpApiData ServiceNames where
-  toQueryParam serviceName = show serviceName
 
 instance Read ServiceNames where
   readsPrec d' =
@@ -63,6 +57,24 @@ instance Read ServiceNames where
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+
+instance ToJSON ServiceNames where
+  toJSON YATRI_SUBSCRIPTION = String "YATRI_SUBSCRIPTION"
+  toJSON YATRI_RENTAL = String "YATRI_RENTAL"
+  toJSON (DASHCAM_RENTAL sp) = String $ "DASHCAM_RENTAL_" <> T.pack (show sp)
+
+instance FromJSON ServiceNames where
+  parseJSON = withText "ServiceNames" $ \t -> case t of
+    "YATRI_SUBSCRIPTION" -> pure YATRI_SUBSCRIPTION
+    "YATRI_RENTAL" -> pure YATRI_RENTAL
+    _
+      | "DASHCAM_RENTAL_" `T.isPrefixOf` t -> do
+        let suffix = T.drop (T.length "DASHCAM_RENTAL_") t
+        sp <- parseJSON (String suffix)
+        pure (DASHCAM_RENTAL sp)
+      | otherwise -> fail $ "Invalid ServiceNames: " <> T.unpack t
+
+$(mkHttpInstancesForEnum ''ServiceNames)
 
 instance Show PlanBaseAmount where
   show (PERRIDE_BASE amount) = "PERRIDE_" <> T.unpack (show amount)

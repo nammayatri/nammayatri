@@ -48,7 +48,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude
 import Presto.Core.Types.Language.Flow (doAff, Flow)
-import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor, lineHeight, maxLines, ellipsize, minHeight)
+import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor, lineHeight, maxLines, ellipsize, minHeight)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -66,7 +66,7 @@ import Types.App (defaultGlobalState, GlobalState(..))
 import Mobility.Prelude
 import Locale.Utils
 
-screen :: CustomerReferralTrackerScreenState -> Screen Action CustomerReferralTrackerScreenState ScreenOutput
+screen :: CustomerReferralTrackerScreenState -> LoggableScreen Action CustomerReferralTrackerScreenState ScreenOutput
 screen initialState =
   { initialState: initialState
   , view: view
@@ -101,6 +101,8 @@ screen initialState =
             _ = spy "CustomerReferralTrackerScreenState state" state
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.customerReferralTrackerScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> CustomerReferralTrackerScreenState -> PrestoDOM (Effect Unit) w

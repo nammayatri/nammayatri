@@ -11,12 +11,15 @@ imports:
   Device: Kernel.Types.Version
   Person: Domain.Types.Person
   DriverMode: Domain.Types.Common
+  Seconds: Kernel.Types.Common
   SearchRequestForDriverResponse: Domain.Types.Common
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
   Months: Kernel.Types.Time
   Value: Data.Aeson
   ParcelType: Domain.Types.DeliveryDetails
+  ConditionalChargesCategories: Domain.Types.ConditionalCharges
+  VehicleCategory: Domain.Types.VehicleCategory
 
 
 SearchRequestForDriver:
@@ -26,10 +29,9 @@ SearchRequestForDriver:
 
   types:
     DriverSearchRequestStatus:
-     enum: "Active, Inactive"
+      enum: "Active, Inactive"
     NotificationSource:
       enum: "FCM, GRPC"
-
 
   fields:
     id : Id SearchRequestForDriver
@@ -42,6 +44,7 @@ SearchRequestForDriver:
     startTime : UTCTime
     searchRequestValidTill : UTCTime
     vehicleAge : Maybe Months
+    vehicleCategory: Maybe VehicleCategory
     driverId : Id Person
     fromLocGeohash : Maybe Text
     actualDistanceToPickup : Meters
@@ -57,48 +60,53 @@ SearchRequestForDriver:
     lon : Maybe Double
     createdAt : UTCTime
     updatedAt: Maybe UTCTime
-    response : Maybe SearchRequestForDriverResponse
+    response: Maybe SearchRequestForDriverResponse
     notificationSource: Maybe NotificationSource
-    driverMinExtraFee : Maybe HighPrecMoney
-    driverMaxExtraFee : Maybe HighPrecMoney
+    driverMinExtraFee: Maybe HighPrecMoney
+    driverMaxExtraFee: Maybe HighPrecMoney
     driverStepFee: Maybe HighPrecMoney
     driverDefaultStepFee: Maybe HighPrecMoney
-    rideRequestPopupDelayDuration : Seconds
-    isPartOfIntelligentPool : Bool
-    pickupZone : Bool
-    cancellationRatio : Maybe Double
-    acceptanceRatio : Maybe Double
-    driverAvailableTime : Maybe Double
-    parallelSearchRequestCount : Maybe Int
-    driverSpeed : Maybe Double
-    keepHiddenForSeconds : Seconds
-    mode : Maybe DriverMode
-    goHomeRequestId : Maybe (Id DriverGoHomeRequest)
-    rideFrequencyScore : Maybe Double
-    customerCancellationDues : HighPrecMoney
-    clientSdkVersion : Maybe Version
-    clientBundleVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendConfigVersion : Maybe Version
-    backendAppVersion : Maybe Text
-    isForwardRequest : Bool
+    rideRequestPopupDelayDuration: Seconds
+    isPartOfIntelligentPool: Bool
+    pickupZone: Bool
+    cancellationRatio: Maybe Double
+    acceptanceRatio: Maybe Double
+    driverAvailableTime: Maybe Double
+    parallelSearchRequestCount: Maybe Int
+    driverSpeed: Maybe Double
+    keepHiddenForSeconds: Seconds
+    mode: Maybe DriverMode
+    goHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    rideFrequencyScore: Maybe Double
+    customerCancellationDues: HighPrecMoney
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    isForwardRequest: Bool
     middleStopCount: Maybe Int
     currency: Currency
     distanceUnit: DistanceUnit
+    tripEstimatedDistance : Maybe Meters
+    tripEstimatedDuration : Maybe Seconds
     totalRides: Int
     driverTags: Maybe Value
     customerTags: Maybe Value
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
-    previousDropGeoHash : Maybe Text
+    previousDropGeoHash: Maybe Text
     upgradeCabRequest: Maybe Bool
-    renderedAt : Maybe UTCTime
+    renderedAt: Maybe UTCTime
     respondedAt: Maybe UTCTime
-    isFavourite : Maybe Bool
+    isFavourite: Maybe Bool
+    isSafetyPlus: Maybe Bool
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int
     driverTagScore: Maybe Value
+    conditionalCharges: "[ConditionalChargesCategories]"
+    coinsRewardedOnGoldTierRide: Maybe Int
 
   beamType:
     clientBundleVersion: Maybe Text
@@ -117,6 +125,7 @@ SearchRequestForDriver:
     totalRides: Maybe Int
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    conditionalCharges: Maybe Text
 
   beamFields:
     clientDevice:
@@ -151,7 +160,7 @@ SearchRequestForDriver:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     vehicleServiceTier: Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
@@ -165,6 +174,8 @@ SearchRequestForDriver:
     isForwardRequest: Kernel.Prelude.fromMaybe False isForwardRequest|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     totalRides: Kernel.Prelude.fromMaybe 0 totalRides|E
+    conditionalCharges: |-
+      Kernel.Prelude.fromMaybe [] $ Kernel.Prelude.readMaybe . Data.Text.unpack =<< conditionalCharges|E
 
   toTType:
     merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
@@ -172,8 +183,8 @@ SearchRequestForDriver:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleServiceTier: Kernel.Prelude.Just|I
@@ -196,6 +207,7 @@ SearchRequestForDriver:
     isForwardRequest: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
     totalRides: Kernel.Prelude.Just|I
+    conditionalCharges: Kernel.Prelude.Just $ Kernel.Prelude.show conditionalCharges|E
 
   constraints:
     id: PrimaryKey
@@ -206,16 +218,16 @@ SearchRequestForDriver:
     findAllActiveBySTId:
       kvFunction: findAllWithKV
       where:
-        and: [searchTryId,status]
+        and: [ searchTryId, status ]
 
     findAllActiveBySRId:
       kvFunction: findAllWithKV
       where:
-       and: [requestId, status]
+        and: [ requestId, status ]
 
     updateDriverResponse:
       kvFunction: updateOneWithKV
-      params: [response, status, notificationSource, renderedAt, respondedAt]
+      params: [ response, status, notificationSource, renderedAt, respondedAt ]
       where: id
 
   sqlType:
@@ -236,19 +248,17 @@ SearchRequestForDriver:
     driverTags: json
     customerTags: json
     driverTagScore: json
+    conditionalCharges: text
 
   default:
     rideRequestPopupDelayDuration: 0
     customerCancellationDues: 0
 
-
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
 
   excludedDefaultQueries:
-    - create
-    - createMany
-
-
+  - create
+  - createMany

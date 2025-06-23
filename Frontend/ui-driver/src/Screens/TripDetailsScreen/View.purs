@@ -33,7 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, horizontalScrollView, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarX, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, horizontalScrollView, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarX, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -51,14 +51,19 @@ import Resource.Constants as RC
 import Data.Array(elem)
 import Data.Int
 
-screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
+screen :: ST.TripDetailsScreenState -> LoggableScreen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
   { initialState
   , view
   , name : "TripDetailsScreen"
   , globalEvents : []
   , eval
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.tripDetailsScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
 
 view
   :: forall w 

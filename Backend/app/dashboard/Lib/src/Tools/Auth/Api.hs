@@ -54,7 +54,8 @@ data ApiTokenInfo = ApiTokenInfo
   { personId :: Id DP.Person,
     merchant :: DM.Merchant,
     city :: City.City,
-    userActionType :: DMatrix.UserActionType
+    userActionType :: DMatrix.UserActionType,
+    person :: DP.Person
   }
 
 instance VerificationMethod VerifyApi where
@@ -78,15 +79,16 @@ verifyApi ::
   m ApiTokenInfo
 verifyApi requiredAccessLevel token = do
   (personId, merchantId, city) <- Common.verifyPerson token
-  verifiedPersonId <- verifyAccessLevel requiredAccessLevel personId
+  verifiedPerson <- verifyAccessLevel requiredAccessLevel personId
   verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
   _ <- verifyCity verifiedMerchant city
   pure
     ApiTokenInfo
-      { personId = verifiedPersonId,
+      { personId = verifiedPerson.id,
         merchant = verifiedMerchant,
         city = city,
-        userActionType = requiredAccessLevel.userActionType
+        userActionType = requiredAccessLevel.userActionType,
+        person = verifiedPerson
       }
 
 instance
@@ -101,14 +103,14 @@ instance
         userActionType = fromSing (sing @uat)
       }
 
-verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m DP.Person
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType) $
     throwError AccessDenied
-  pure person.id
+  pure person
 
 checkUserAccess :: DMatrix.UserAccessType -> Bool
 checkUserAccess DMatrix.USER_FULL_ACCESS = True

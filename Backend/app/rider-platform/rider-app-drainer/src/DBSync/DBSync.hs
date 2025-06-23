@@ -336,7 +336,12 @@ flushKafkaProducerAndPublishMetrics :: Flow ()
 flushKafkaProducerAndPublishMetrics = do
   Env {..} <- ask
   _beforeFlush <- EL.getCurrentDateInMillis
-  EL.runIO $ KafkaProd.flushProducer _kafkaConnection
-  _afterFlush <- EL.getCurrentDateInMillis
-  EL.logDebug ("KafkaFlushTime : " :: Text) ("Time taken to flush kafka producer in rider-drainer : " <> show (int2Double (_afterFlush - _beforeFlush)) <> "ms")
-  void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))
+  flushResult <- try @_ @SomeException $ EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  case flushResult of
+    Left err -> do
+      EL.logError ("KAFKA_FLUSH_ERROR" :: Text) (T.pack $ show err)
+      stopDrainer
+    Right _ -> do
+      _afterFlush <- EL.getCurrentDateInMillis
+      EL.logDebug ("KafkaFlushTime : " :: Text) ("Time taken to flush kafka producer in rider-drainer : " <> show (int2Double (_afterFlush - _beforeFlush)) <> "ms")
+      void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))

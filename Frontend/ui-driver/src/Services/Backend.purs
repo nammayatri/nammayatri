@@ -34,6 +34,7 @@ import Data.Foldable as DF
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Data.Function.Uncurried (runFn2, runFn3)
+import Data.Foldable (or)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader, checkConditionToShowInternetScreen)
 import Foreign.Generic (encode, decode)
@@ -41,7 +42,7 @@ import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig, decodeErrorPayload)
 import Engineering.Helpers.Events as Events
-import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
+import JBridge (getLocationNameV2, setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -49,7 +50,7 @@ import Log (printLog)
 import Prelude
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS, fork)
-import Screens.Types (DriverStatus)
+import Screens.Types (DriverStatus, Address)
 import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
@@ -92,6 +93,21 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Just token -> [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
+getCustomerHeader :: String -> Boolean -> Flow GlobalState Headers
+getCustomerHeader dummy isGzipCompressionEnabled = do
+    _ <- pure $ printLog "dummy" dummy
+    let regToken = Just $ SC.getCustomerToken ""
+    pure $ Headers $ [  Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "x-package" (getValueToLocalStore PACKAGE_NAME),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" getDeviceDetails
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
+                    <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 getHeaders' :: String -> Boolean -> FlowBT String Headers
 getHeaders' dummy isGzipCompressionEnabled = do
@@ -110,7 +126,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
-    if (isInvalidUrl url) then pure $ Left customError
+    if (isInvalidUrl url) then pure $ Left (customError unit)
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -139,7 +155,7 @@ withAPIResult url f flow = do
 
 
 withAPIResultBT url f errorHandler flow = do
-    if (isInvalidUrl url) then errorHandler customErrorBT
+    if (isInvalidUrl url) then errorHandler (customErrorBT unit)
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -167,7 +183,7 @@ withAPIResultBT url f errorHandler flow = do
                         else pure unit
                 errorHandler (ErrorPayload err)
 
-customErrorBT = ErrorPayload { code : 400
+customErrorBT _ = ErrorPayload { code : 400
   , status : "success"
   , response : {
        error : true
@@ -177,8 +193,8 @@ customErrorBT = ErrorPayload { code : 400
   , responseHeaders : empty
   }
 
-customError :: ErrorResponse
-customError =  { code : 400
+customError :: Unit -> ErrorResponse
+customError _ =  { code : 400
   , status : "success"
   , response : {
        error : true
@@ -622,6 +638,7 @@ mkUpdateDriverInfoReq dummy
     , canDowngradeToSedan: Nothing
     , canDowngradeToHatchback: Nothing
     , canDowngradeToTaxi: Nothing
+    , isPetModeEnabled: Nothing
     , language:
         Just case getLanguageLocale languageKey of
           "EN_US" -> "ENGLISH"
@@ -1888,3 +1905,71 @@ makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackRe
       "txnId" : txnId
     }
     
+------------------------------- Search Ride ------------------------------------
+
+searchReq :: SearchReq -> Flow GlobalState (Either ErrorResponse SearchRes)
+searchReq payload = do
+        headers <- getCustomerHeader "" false
+        withAPIResult (EP.searchReq "dummy") unwrapResponse $ callAPI headers payload
+    where
+      unwrapResponse (x) = x
+
+
+makeSearchReq :: Number -> Number -> Address -> String -> String -> String -> SearchReq
+makeSearchReq srcLat srcLong srcAddr sessionToken startTime referralCode = 
+    SearchReq {
+        contents : OneWaySearchRequest $ OneWaySearchReq {
+            
+            origin : SearchReqLocation {
+                gps : LatLong {
+                    lat : srcLat
+                  , lon : srcLong
+                }
+              , address : (LocationAddressV2 srcAddr)
+            }
+          , isReallocationEnabled : Nothing
+          , isSourceManuallyMoved : Nothing
+          , isDestinationManuallyMoved : Nothing
+          , sessionToken : Just sessionToken
+          , isSpecialLocation : Nothing
+          , startTime : Just startTime
+          , quotesUnifiedFlow : Nothing
+          , rideRequestAndRideOtpUnifiedFlow : Nothing
+          , isMeterRideSearch : true
+          , driverIdentifier : {
+                type : "REFERRAL_CODE"
+              , value : referralCode
+            }
+        }
+        , fareProductType : "ONE_WAY"
+    }
+
+------------------------------- Add Destination ------------------------------------
+
+addDestination :: AddDestReq -> Flow GlobalState (Either ErrorResponse AddDestRes)
+addDestination (AddDestReq rideId payload) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.addDestination rideId) unwrapResponse $ callAPI headers (AddDestReq rideId payload)
+    where
+      unwrapResponse (x) = x
+
+makeAddDestination :: Number -> Number -> Number -> Number -> Address -> String -> AddDestReq
+makeAddDestination srcLat srcLong dstLat dstLong dstAddr rideId = 
+    AddDestReq rideId (AddDestReqBody {
+        currentLatLong : LatLong {
+            lat : srcLat,
+            lon : srcLong
+        }
+        ,destinationLatLong : LatLong {
+            lat : dstLat,
+            lon : dstLong
+        }
+        ,destinationLocation : LocationAddressV2 dstAddr
+    })
+
+getMeterPrice :: String -> Flow GlobalState (Either ErrorResponse GetMeterPriceResp)
+getMeterPrice rideId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.getMeterPrice rideId) unwrapResponse $ callAPI headers (GetMeterPriceReq rideId)
+    where
+      unwrapResponse (x) = x

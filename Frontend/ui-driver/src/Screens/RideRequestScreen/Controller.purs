@@ -42,7 +42,25 @@ import Data.Number (fromString) as Number
 
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (SelectDay _) = "SelectDay"
+  show (NoAction ) = "NoAction"
+  show (RideRequestCardActionController var1) = "RideRequestCardActionController_" <> show var1
+  show (PastRideApiAC _ _) = "PastRideApiAC"
+  show (GetRideList _ _) = "GetRideList"
+  show (Refresh ) = "Refresh"
+  show (ShowMap _ _ _) = "ShowMap"
+  show (AfterRender ) = "AfterRender"
+  show (RideTypeSelected _ _) = "RideTypeSelected"
+  show (FilterSelected ) = "FilterSelected"
+  show (OnClickToime _) = "OnClickToime"
+  show (Scroll _) = "Scroll"
+  show (ScrollStateChanged _) = "ScrollStateChanged"
+  show (Loader ) = "Loader"
+  show (OnFadeComplete _) = "OnFadeComplete"
+  show (Notification _ _) = "Notification"
+  show (UpdateCurrentLocation _ _) = "UpdateCurrentLocation"
+  show (UpdateNoLocationFlag ) = "UpdateNoLocationFlag"
 
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog

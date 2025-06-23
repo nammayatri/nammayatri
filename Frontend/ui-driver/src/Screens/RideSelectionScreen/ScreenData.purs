@@ -17,10 +17,12 @@ module Screens.RideSelectionScreen.ScreenData where
 
 import Screens.Types (AnimationState(..), RideSelectionScreenState)
 import Data.Maybe (Maybe(..))
+import ConfigProvider
 
 initData :: RideSelectionScreenState
 initData =
   { rideList      : []
+  , config : getAppConfig appConfig
   , offsetValue   : 0
   , selectedItem  : Nothing
   , shimmerLoader : AnimatingIn

@@ -65,6 +65,7 @@ DriverQuote:
     vehicleServiceTierName : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
+    coinsRewardedOnGoldTierRide: Maybe Int
 
   beamType:
     tripCategory: Maybe TripCategory

@@ -44,7 +44,7 @@ import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..), toLower)
 import Data.String as DS
-import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Data.String.CodeUnits (fromCharArray, toCharArray, singleton)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
@@ -64,7 +64,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
-import JBridge (emitJOSEvent, Location, defaultCircleConfig, CircleConfig(..))
+import JBridge (emitJOSEvent, Location, defaultCircleConfig, CircleConfig(..), getKeyInSharedPrefKeys)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -118,8 +118,11 @@ import RemoteConfig as RC
 import Services.API as API
 import Data.Bounded (top)
 import Screens.Types as ST
+import LocalStorage.Cache
 
 foreign import shuffle :: forall a. Array a -> Array a
+
+foreign import launchAppSettings :: Unit -> Effect Unit
 
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 
@@ -142,6 +145,8 @@ foreign import parseSourceHashArray :: String -> Array SourceGeoHash
 foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
+
+foreign import isItSameDay :: String -> Boolean
 
 foreign import drawPolygon :: String -> String -> Effect Unit
 
@@ -453,6 +458,7 @@ differenceOfLocationLists arr1 arr2 = filter ( \item1 -> length (filter( \ (item
 filterRecentSearches :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 filterRecentSearches arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId /= item1.placeId)) arr2) /= (length arr2)) arr1
 
+-- Haversine Distance Calculation
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
   let latPoint1 = toRad (lat1)
@@ -802,13 +808,13 @@ getTitleConfig :: forall w. String -> {text :: String , color :: String}
 getTitleConfig vehicleVariant =
   case vehicleVariant of
         "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString LT.TAXI)) CommonColor.orange900
-        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString LT.TAXI)) Color.blue800 
+        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString LT.TAXI)) Color.blue800
         _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> mkReturnObj ((getString LT.AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
         "HERITAGE_CAB" -> mkReturnObj ("Heritage Cab") Color.blue800
-        _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800 
-  where mkReturnObj text' color' = 
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800
+  where mkReturnObj text' color' =
           {
             text : text',
             color : color'
@@ -876,7 +882,7 @@ quoteModalVariantImage variant =
         Hyderabad -> "ny_ic_no_quotes_auto_che_hyd"
         _ | EHU.isTamilNaduCity city -> "ny_ic_no_quotes_auto_che_hyd"
         _ -> "ny_ic_no_quotes_auto"
-      else if EHU.isAmbulance variant 
+      else if EHU.isAmbulance variant
           then "ny_ic_no_quotes_ambulance"
       else "ny_ic_no_quotes_color"
 
@@ -923,7 +929,7 @@ getAutoRickshawStartedImage  =
        Hyderabad -> "ny_ic_driver_started_auto_black"
        _ | EHU.isTamilNaduCity city -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
- 
+
 
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =
@@ -1042,7 +1048,7 @@ getMetroConfigFromAppConfig config city = do
     Just cfg -> cfg
 
 getMetroConfigFromCity :: City -> Maybe FRFSConfigAPIRes -> String -> CityMetroConfig
-getMetroConfigFromCity city fcResponse vehicleType = 
+getMetroConfigFromCity city fcResponse vehicleType =
     let
         bookingStartTime = maybe "04:30:00" (\(FRFSConfigAPIRes r) -> r.bookingStartTime) fcResponse
         bookingEndTime = maybe "22:30:00" (\(FRFSConfigAPIRes r) -> r.bookingEndTime) fcResponse
@@ -1071,12 +1077,12 @@ getMetroConfigFromCity city fcResponse vehicleType =
         Chennai ->
             mkCityBasedConfig
                 (if vehicleType == "BUS" then getString TICKETS_FOR_CHENNAI_BUS else getString TICKETS_FOR_CHENNAI_METRO)
-                ( if vehicleType == "BUS" 
-                  then 
-                    [ "Cancellation of tickets is not applicable" 
-                    , "The ticket is valid for only 30 minutes from the time of booking"
-                    , "Fare is commission-free and determined by the WBTC" 
-                    ] 
+                ( if vehicleType == "BUS"
+                  then
+                    [ "Cancellation of tickets is not applicable"
+                    , "The ticket is valid for only 12 hours from the time of booking"
+                    , "Fare is commission-free and determined by the WBTC"
+                    ]
                   else
                     [ getString CHENNAI_METRO_TERM_2
                     , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
@@ -1094,11 +1100,11 @@ getMetroConfigFromCity city fcResponse vehicleType =
                 ])
                 (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 config
-        Kolkata -> 
-          mkCityBasedConfig 
+        Kolkata ->
+          mkCityBasedConfig
             (getString TICKETS_FOR_KOLKATA_BUS)
-            [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC] 
-            "" 
+            ["This ticket is non-transferrable and non-refundable" , "The ticket is valid for 24 hours from the time of booking"] 
+            ""
             config{ logoImage = "ny_ic_kolkata_bus" }
         _ ->
             mkCityBasedConfig "" [] "" config
@@ -1201,6 +1207,13 @@ invalidBookingTime rideStartTime maybeEstimatedDuration =
     bookingTimeList :: Array BookingTime
     bookingTimeList = decodeBookingTimeList FunctionCall
 
+itsBeenOneDay :: String -> Boolean
+itsBeenOneDay key =
+  let lastShownValue = getValueFromCache key (getKeyInSharedPrefKeys)
+  in not $ isItSameDay lastShownValue
+
+
+
 rideStartingInBetweenPrevRide :: Int -> BookingTime -> Int -> Boolean
 rideStartingInBetweenPrevRide diffInMins bookingDetails estimatedDuration =
   let estimatedTripDuration = bookingDetails.estimatedDuration + diffInMins
@@ -1233,13 +1246,13 @@ mkSrcMarker city variant currentStage =
   in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "" -- Added local resource check for avoiding native crash
 
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = 
-  case variant of 
+fetchVehicleVariant variant =
+  case variant of
     "SUV"           -> Just ST.SUV
     "SEDAN"         -> Just ST.SEDAN
     "HATCHBACK"     -> Just ST.HATCHBACK
     "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-    "TAXI"          -> Just ST.TAXI 
+    "TAXI"          -> Just ST.TAXI
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
     "BIKE"          -> Just ST.BIKE
     "AMBULANCE_TAXI" -> Just ST.AMBULANCE_TAXI
@@ -1249,10 +1262,10 @@ fetchVehicleVariant variant =
     "AMBULANCE_VENTILATOR" -> Just ST.AMBULANCE_VENTILATOR
     _               -> Nothing
 
-getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = 
+getVehicleCapacity :: String -> String
+getVehicleCapacity variant =
   case fetchVehicleVariant variant of
-    Just ST.SUV -> "6" 
+    Just ST.SUV -> "6"
     Just ST.AUTO_RICKSHAW -> "3"
     Just ST.BIKE -> "1"
     _ -> "4"
@@ -1561,3 +1574,21 @@ isDeliveryInitiator maybeTags =
 foreign import isHybridApp :: Effect Boolean
 
 foreign import decodeErrorMessage :: String -> String
+
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE"]
+
+getLogEventPrefix :: String
+getLogEventPrefix =
+  let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in if DS.null appName then "app_" else abbreviate appName
+  where
+    abbreviate :: String -> String
+    abbreviate appName =
+      let initials = map (fromMaybe "" <<< DA.head <<< map singleton <<< toCharArray) $ DS.split (DS.Pattern " ") appName
+      in DS.toLower (DS.joinWith "" initials) <> "_"

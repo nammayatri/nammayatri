@@ -20,7 +20,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Domain.Types.BecknConfig
-import qualified Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.Station as DStation
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
@@ -28,60 +27,60 @@ import Kernel.Utils.Common
 
 buildSearchReq ::
   (MonadFlow m) =>
-  DSearch.FRFSSearch ->
+  Text ->
+  Spec.VehicleCategory ->
   BecknConfig ->
-  DStation.Station ->
-  DStation.Station ->
+  Maybe DStation.Station ->
+  Maybe DStation.Station ->
   Context.City ->
   m (Spec.SearchReq)
-buildSearchReq search bapConfig fromStation toStation city = do
+buildSearchReq transactionId vehicleType bapConfig mbFromStation mbToStation city = do
   now <- getCurrentTime
   messageId <- generateGUID
-  let transactionId = search.id.getId
-      validTill = addUTCTime (intToNominalDiffTime 30) now
+  let validTill = addUTCTime (intToNominalDiffTime (fromMaybe 30 bapConfig.searchTTLSec)) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing city
+  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing city vehicleType
 
   pure $
     Spec.SearchReq
       { searchReqContext = context,
-        searchReqMessage = tfSearchMessage search fromStation toStation
+        searchReqMessage = tfSearchMessage vehicleType mbFromStation mbToStation
       }
 
-tfSearchMessage :: DSearch.FRFSSearch -> DStation.Station -> DStation.Station -> Spec.SearchReqMessage
-tfSearchMessage search fromStation toStation =
+tfSearchMessage :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe DStation.Station -> Spec.SearchReqMessage
+tfSearchMessage vehicleType mbFromStation mbToStation =
   Spec.SearchReqMessage
-    { searchReqMessageIntent = tfIntent search fromStation toStation
+    { searchReqMessageIntent = tfIntent vehicleType mbFromStation mbToStation
     }
 
-tfIntent :: DSearch.FRFSSearch -> DStation.Station -> DStation.Station -> Maybe Spec.Intent
-tfIntent search fromStation toStation =
+tfIntent :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe DStation.Station -> Maybe Spec.Intent
+tfIntent vehicleType mbFromStation mbToStation =
   Just $
     Spec.Intent
-      { intentFulfillment = tfIntentFulfillment search fromStation toStation,
-        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing Nothing Nothing Nothing Nothing
+      { intentFulfillment = tfIntentFulfillment vehicleType mbFromStation mbToStation,
+        intentPayment = Just $ Utils.mkPaymentForSearchReq Nothing Nothing Nothing Nothing Nothing Nothing (Just "0")
       }
 
-tfIntentFulfillment :: DSearch.FRFSSearch -> DStation.Station -> DStation.Station -> Maybe Spec.Fulfillment
-tfIntentFulfillment search fromStation toStation =
+tfIntentFulfillment :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe DStation.Station -> Maybe Spec.Fulfillment
+tfIntentFulfillment vehicleType mbFromStation mbToStation =
   Just $
     Spec.Fulfillment
       { fulfillmentId = Nothing,
-        fulfillmentStops = tfStops fromStation toStation,
+        fulfillmentStops = tfStops mbFromStation mbToStation,
         fulfillmentTags = Nothing,
         fulfillmentType = Nothing,
-        fulfillmentVehicle = tfVehicle search
+        fulfillmentVehicle = tfVehicle vehicleType
       }
 
-tfStops :: DStation.Station -> DStation.Station -> Maybe [Spec.Stop]
-tfStops fromStation toStation =
+tfStops :: Maybe DStation.Station -> Maybe DStation.Station -> Maybe [Spec.Stop]
+tfStops mbFromStation mbToStation =
   Just $
     [ Spec.Stop
         { stopAuthorization = Nothing,
           stopId = Nothing,
           stopInstructions = Nothing,
-          stopLocation = tfLocation $ fromStation,
+          stopLocation = tfLocation $ mbFromStation,
           stopType = Utils.encodeToText' Spec.START,
           stopParentStopId = Nothing
         },
@@ -89,14 +88,15 @@ tfStops fromStation toStation =
         { stopAuthorization = Nothing,
           stopId = Nothing,
           stopInstructions = Nothing,
-          stopLocation = tfLocation $ toStation,
+          stopLocation = tfLocation $ mbToStation,
           stopType = Utils.encodeToText' Spec.END,
           stopParentStopId = Nothing
         }
     ]
 
-tfLocation :: DStation.Station -> Maybe Spec.Location
-tfLocation station =
+tfLocation :: Maybe DStation.Station -> Maybe Spec.Location
+tfLocation Nothing = Nothing
+tfLocation (Just station) =
   Just $
     Spec.Location
       { locationDescriptor = Utils.tfDescriptor (Just $ station.code) (Just $ station.name),
@@ -105,9 +105,9 @@ tfLocation station =
         locationCountry = Nothing
       }
 
-tfVehicle :: DSearch.FRFSSearch -> Maybe Spec.Vehicle
-tfVehicle search =
+tfVehicle :: Spec.VehicleCategory -> Maybe Spec.Vehicle
+tfVehicle vehicleType =
   Just $
     Spec.Vehicle
-      { vehicleCategory = Utils.encodeToText' search.vehicleType
+      { vehicleCategory = Utils.encodeToText' vehicleType
       }

@@ -56,3 +56,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN client_manufacturer t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN client_id TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN coins_rewarded_on_gold_tier_ride integer ;

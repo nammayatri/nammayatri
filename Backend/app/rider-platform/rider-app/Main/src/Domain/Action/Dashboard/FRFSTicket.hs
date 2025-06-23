@@ -42,13 +42,14 @@ import Kernel.Utils.Logging (logInfo)
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteExtra as RE
-import Storage.Queries.RouteStopFare as QRSF
 import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
+import Storage.Queries.StopFare as QRSF
 import Tools.Error
 
 getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
@@ -60,7 +61,7 @@ getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleTyp
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   routes <- case searchStr of
-    Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType
+    Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
     Nothing -> QRoute.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
 
   frfsRoutes <- forM routes $ \rte -> do
@@ -104,6 +105,8 @@ postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
                 vehicleType = vehicleType,
                 timeBounds = req.timeBounds,
                 merchantId = merchant.id,
+                dailyTripCount = Nothing,
+                stopCount = Nothing,
                 merchantOperatingCityId = merchantOperatingCity.id,
                 polyline = req.polyline,
                 integratedBppConfigId = integratedBPPConfig.id,
@@ -125,7 +128,10 @@ postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code _vehicleType = do
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   _ <- QRoute.findByRouteCode code integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "This route code can't be deleted")
-  routeMappings <- QRSM.findByRouteCode code integratedBPPConfig.id
+  routeMappings <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode code integratedBPPConfig) >>= \case
+      Left _ -> QRSM.findByRouteCode code integratedBPPConfig.id
+      Right stops -> pure stops
   unless (null routeMappings) $ throwError InvalidAction
   QRoute.deleteByRouteCode code integratedBPPConfig.id
   pure Success
@@ -147,9 +153,9 @@ getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode vehicleType = do
   fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfig.id
   fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
   farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
-  routeFares <- QRSF.findByRouteCode farePolicy.id routeCode
+  routeFares <- QRSF.findByRouteCode farePolicy.id
 
-  let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares
+  let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares -- TODO: Sort the fares by startStopCode
   let sortedGroupedFares = sortBy (comparing (negate . length)) groupedFares
   stopFares <- forM sortedGroupedFares $ \fares -> do
     let maybeFirstFare = listToMaybe fares
@@ -235,14 +241,14 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode vehicleType r
         fareProducts <- QFRFSRouteFareProduct.findByRouteCode row.routeCode integratedBPPConfig.id
         fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
         farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
-        existingFares <- QRSF.findByRouteStartAndStopCode farePolicy.id row.routeCode row.startStopCode row.endStopCode
+        existingFares <- QRSF.findByRouteStartAndStopCode farePolicy.id row.startStopCode row.endStopCode
 
         case existingFares of
           Nothing -> do
             logInfo $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
             pure [(row.routeCode, row.startStopCode, row.endStopCode)]
           _ -> do
-            QRSF.updateFareByRouteCodeAndStopCodes value farePolicy.id row.routeCode row.startStopCode row.endStopCode
+            QRSF.updateFareByStopCodes value farePolicy.id row.startStopCode row.endStopCode
             logInfo $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
             pure []
 
@@ -286,7 +292,7 @@ getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset veh
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   stations <- case searchStr of
-    Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType
+    Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
     Nothing -> QStation.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
 
   frfsStations <- forM stations $ \station -> do
@@ -296,7 +302,9 @@ getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset veh
           code = station.code,
           lat = station.lat,
           lon = station.lon,
-          address = station.address
+          address = station.address,
+          regionalName = station.regionalName,
+          hindiName = station.hindiName
         }
 
   pure frfsStations
@@ -324,10 +332,13 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
                 lat = Just req.lat,
                 lon = Just req.lon,
                 address = req.address,
+                regionalName = Nothing,
+                hindiName = Nothing,
                 merchantId = merchant.id,
                 timeBounds = Kernel.Types.TimeBound.Unbounded,
                 merchantOperatingCityId = merchantOpCity.id,
                 integratedBppConfigId = integratedBPPConfig.id,
+                suggestedDestinations = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -342,7 +353,10 @@ postFRFSTicketFrfsStationDelete merchantShortId opCity code _vehicleType = do
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   _ <- QStation.findByStationCode code integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
-  stopMappings <- QRSM.findByStopCode code integratedBPPConfig.id
+  stopMappings <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode code integratedBPPConfig) >>= \case
+      Left _ -> QRSM.findByStopCode code integratedBPPConfig.id
+      Right stops -> pure stops
   unless (null stopMappings) $ throwError InvalidAction
   QStation.deleteByStationCode code integratedBPPConfig.id
   pure Success

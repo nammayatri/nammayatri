@@ -13,10 +13,18 @@ import Data.List
 import Data.List.NonEmpty (toList)
 import Foreign (unsafeToForeign)
 import Data.Maybe
+import Effect (Effect)
+import Effect.Aff (Fiber)
 
 foreign import getFromWindow :: Fn3 String (Maybe Foreign) (Foreign -> (Maybe Foreign)) (Maybe Foreign)
 
 foreign import getAnyFromWindow :: forall a. Fn3 String (Maybe a) (a -> (Maybe a)) (Maybe a)
+
+foreign import storeFiber :: forall a. Fiber a -> Effect Unit
+
+foreign import resetFibers :: Unit -> Effect Unit
+
+foreign import getFibers :: forall a. String -> Effect (Array (Fiber a))
 
 foreign import getFromWindowString :: Fn3 String (Maybe String) (String -> (Maybe String)) (Maybe String)
 

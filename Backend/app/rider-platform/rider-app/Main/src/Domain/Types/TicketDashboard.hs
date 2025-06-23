@@ -1,0 +1,110 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+
+module Domain.Types.TicketDashboard where
+
+import Data.Aeson
+import qualified Data.Time as Time
+import qualified Domain.Types.BusinessHour as DBusinessHour
+import qualified Domain.Types.ServiceCategory as DServiceCategory
+import qualified Domain.Types.ServicePeopleCategory as DServicePeopleCategory
+import qualified Domain.Types.SpecialOccasion as DSpecialOccasion
+import qualified Domain.Types.TicketPlace as DTicketPlace
+import qualified Domain.Types.TicketService as DTicketService
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Types.TimeBound (TimeBound (..))
+import qualified Tools.Payment as Payment
+
+data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
+  { id :: Id DTicketPlace.TicketPlace,
+    name :: Text,
+    description :: Maybe Text,
+    shortDesc :: Text,
+    address :: Maybe Text,
+    latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    status :: DTicketPlace.PlaceStatus,
+    priority :: Int,
+    placeType :: DTicketPlace.PlaceType,
+    allowSameDayBooking :: Bool,
+    gallery :: [Text],
+    iconUrl :: Maybe Text,
+    mapImageUrl :: Maybe Text,
+    termsAndConditions :: [Text],
+    termsAndConditionsUrl :: Maybe Text,
+    openTimings :: Maybe TimeOfDay,
+    closeTimings :: Maybe TimeOfDay,
+    services :: [TicketServiceDetails],
+    businessHours :: [BusinessHourDetails],
+    serviceCategories :: [ServiceCategoryDetails],
+    servicePeopleCategories :: [ServicePeopleCategoryDetails],
+    specialOccasions :: [SpecialOccasionDetails]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data TicketServiceDetails = TicketServiceDetails
+  { id :: Id DTicketService.TicketService,
+    service :: Text,
+    shortDesc :: Maybe Text,
+    operationalDays :: [Text],
+    operationalDate :: Maybe DTicketService.OperationalDate,
+    maxVerification :: Int,
+    allowFutureBooking :: Bool,
+    allowCancellation :: Bool,
+    expiry :: DTicketService.ExpiryType,
+    businessHours :: [Id DBusinessHour.BusinessHour]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data BusinessHourDetails = BusinessHourDetails
+  { id :: Id DBusinessHour.BusinessHour,
+    name :: Text,
+    btype :: DBusinessHour.BusinessHourType,
+    categoryId :: [Id DServiceCategory.ServiceCategory],
+    bookingClosingTime :: Maybe TimeOfDay
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data ServiceCategoryDetails = ServiceCategoryDetails
+  { id :: Id DServiceCategory.ServiceCategory,
+    name :: Text,
+    description :: Text,
+    allowedSeats :: Maybe Int,
+    availableSeats :: Maybe Int,
+    peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data ServicePeopleCategoryDetails = ServicePeopleCategoryDetails
+  { id :: Id DServicePeopleCategory.ServicePeopleCategory,
+    name :: Text,
+    description :: Text,
+    pricingType :: DServicePeopleCategory.PricingType,
+    priceAmount :: HighPrecMoney,
+    priceCurrency :: Currency,
+    timeBounds :: TimeBound,
+    vendorSplitDetails :: Maybe [Payment.VendorSplitDetails]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SpecialOccasionDetails = SpecialOccasionDetails
+  { id :: Id DSpecialOccasion.SpecialOccasion,
+    entityId :: Text,
+    date :: Maybe Time.Day,
+    dayOfWeek :: Maybe Text,
+    specialDayType :: DSpecialOccasion.SpecialDayType,
+    description :: Maybe Text,
+    businessHours :: [Id DBusinessHour.BusinessHour],
+    placeId :: Maybe Text,
+    name :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data TicketPlaceDashboardDetailsUpdateResp = TicketPlaceDashboardDetailsUpdateResp
+  { success :: Bool,
+    message :: Maybe Text,
+    placeId :: Id DTicketPlace.TicketPlace
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

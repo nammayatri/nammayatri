@@ -15,10 +15,13 @@ import Data.Array (elem)
 
 data ScreenOutput = GoBack
 
-data Action = BackPressed | NoAction | AfterRender
-
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+
+
+data Action = BackPressed | NoAction | AfterRender
 
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog

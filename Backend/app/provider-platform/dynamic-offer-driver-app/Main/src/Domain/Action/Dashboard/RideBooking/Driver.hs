@@ -68,12 +68,14 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.RCValidationRules
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
@@ -327,8 +329,9 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
   blockHistory <- B.runInReplica $ QDBT.findByDriverId driverId
+  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
 
-  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory
+  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory (fromMaybe 0 driverInfo.drunkAndDriveViolationCount)
 
 buildDriverInfoRes ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
@@ -336,8 +339,9 @@ buildDriverInfoRes ::
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
   [DTDBT.DriverBlockTransactions] ->
+  Int ->
   m Common.DriverInfoRes
-buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory blockHistory = do
+buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory blockHistory drunkAndDriveViolationCount = do
   mobileNumber <- traverse decrypt person.mobileNumber
   let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
@@ -355,7 +359,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just [])
   driverStats <- runInReplica $ QDriverStats.findById person.id >>= fromMaybeM DriverInfoNotFound
   selectedServiceTiers <-
     maybe
@@ -422,7 +426,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         email,
         softBlockStiers = info.softBlockStiers >>= (pure . map show),
         softBlockExpiryTime = info.softBlockExpiryTime,
-        softBlockReasonFlag = info.softBlockReasonFlag
+        softBlockReasonFlag = info.softBlockReasonFlag,
+        lastActivityDate = Just info.updatedAt,
+        createdAt = Just info.createdAt,
+        drunkAndDriveViolationCount
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
@@ -558,37 +565,45 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
   unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
-  let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
-  QPerson.updatePersonRec personId updDriver
+  whenJust req.driverName $ \driverName -> do
+    let updDriver = driver {DP.firstName = driverName} :: DP.Person
+    QPerson.updatePersonRec personId updDriver
 
+  -- Validate request --
+  rcValidationRules <- findByCityId driver.merchantOperatingCityId
+  failures <- case rcValidationRules of
+    Nothing -> pure []
+    Just rules -> do
+      let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make, model = Just req.model}
+      DomainRC.validateRCResponse rcValidationReq rules
   -- Create RC for vehicle before verifying it
   now <- getCurrentTime
   mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust mbRC $ \rc -> do
     mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
     when (isNothing mbAssoc) $ do
-      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId rc.id (convertTextToUTC (Just "2099-12-12"))
-      QRCAssociation.create driverRCAssoc
+      createDriverRCAssociationIfPossible transporterConfig personId rc
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do
-        driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
-        QRCAssociation.create driverRCAssoc
+        createDriverRCAssociationIfPossible transporterConfig personId newRC
 
       fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-      driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
-      QVehicle.create vehicle
-      when (vehicle.variant == DV.SUV) $
-        QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
+      -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
+      unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
+        driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
+        QVehicle.create vehicle
+        when (vehicle.variant == DV.SUV) $
+          QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
@@ -617,7 +632,9 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} =
       mYManufacturing = mYManufacturing,
       color = Just colour,
       dateOfRegistration = req.dateOfRegistration,
-      vehicleModelYear = req.vehicleModelYear
+      vehicleModelYear = req.vehicleModelYear,
+      grossVehicleWeight = Nothing,
+      unladdenWeight = Nothing
     }
 
 ---------------------------------------------------------------------

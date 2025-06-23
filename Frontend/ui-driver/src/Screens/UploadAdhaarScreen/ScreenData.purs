@@ -16,13 +16,15 @@
 module Screens.UploadAdhaarScreen.ScreenData where
 
 import Screens.Types (UploadAdhaarScreenState)
+import ConfigProvider
 
 initData :: UploadAdhaarScreenState
 initData = {
       data: {
         imageFront : "",
         imageBack : "",
-        imageName : "image.jpg"
+        imageName : "image.jpg",
+        config : getAppConfig appConfig
       },
       props : {
         openRegistrationModal : false,

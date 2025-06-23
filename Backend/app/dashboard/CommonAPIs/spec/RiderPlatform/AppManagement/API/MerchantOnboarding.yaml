@@ -1,0 +1,200 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  MerchantOnboarding: Domain.Types.MerchantOnboarding
+  MerchantOnboardingAPI: Domain.Types.MerchantOnboarding
+  OnboardingType: Domain.Types.MerchantOnboarding
+  OnboardingStatus: Domain.Types.MerchantOnboarding
+  MerchantOnboardingStep: Domain.Types.MerchantOnboardingStep
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
+  Value: Data.Aeson
+  File: Dashboard.Common
+  FileType: AWS.S3
+  FilePath: Kernel.Prelude
+  DashboardSideHandler: Domain.Types.MerchantOnboarding.Handler
+
+importPackageOverrides:
+  Domain.Types.MerchantOnboarding: "rider-app"
+  Domain.Types.MerchantOnboardingStep: "rider-app"
+  Domain.Types.MerchantOnboarding.Handler: "rider-app"
+
+
+
+module: MerchantOnboarding
+apiPrefix: ""
+
+apis:
+  - GET: # OnboardingInfoAPI
+      endpoint:  /onboarding/{onboardingType}/info
+      name: MerchantOnboardingInfo
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingType: Text
+      response:
+        type: "MerchantOnboardingAPI"
+  - GET: # MerchantOnboardingStart
+      endpoint: /onboarding/{onboardingType}/start
+      name: MerchantOnboardingStart
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingType: Text
+      response:
+        type: "MerchantOnboardingAPI"
+  - GET: # MerchantOnboardingList
+      endpoint: /onboarding/list
+      name: MerchantOnboardingList
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: "[MerchantOnboarding]"
+  - POST: # MerchantOnboardingStepSubmit
+      endpoint: /onboarding/step/{stepId}/submit
+      name: MerchantOnboardingStepSubmit
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: "MerchantOnboardingAPI"
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        stepId: Text
+  - POST: # MerchantOnboardingStepUpdatePayload
+      endpoint: /onboarding/step/{stepId}/updatePayload
+      name: MerchantOnboardingStepUpdatePayload
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: "APISuccess"
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        stepId: Text
+  - POST: # MerchantOnboardingStepReject
+      endpoint: /onboarding/step/{stepId}/reject
+      name: MerchantOnboardingStepReject
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: "APISuccess"
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        stepId: Text
+  - POST: # MerchantOnboardingStepApprove
+      endpoint: /onboarding/step/{stepId}/approve
+      name: MerchantOnboardingStepApprove
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: ApproveResponse
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        stepId: Text
+  - POST: #MerchantOnboardingStepUploadFile
+      endpoint: /onboarding/step/{stepId}/{payloadKey}/uploadFile
+      name: MerchantOnboardingStepUploadFile
+      multipart:
+        type: UploadFileRequest
+      auth: ApiAuthV2
+      response:
+        type: UploadFileResponse
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        stepId: Text
+        payloadKey: Text
+  - POST: #MerchantOnboardingReject
+      endpoint: /onboarding/{onboardingId}/reject
+      name: MerchantOnboardingReject
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: "APISuccess"
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingId: Text
+  - GET: #MerchantOnboadingListAll
+      endpoint: /onboarding/list/all
+      name: MerchantOnboadingListAll
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+        - status: OnboardingStatus
+        - onboardingType: OnboardingType
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[MerchantOnboardingAPI]"
+  - GET: #MerchantOnboardingStepList
+      endpoint: /onboarding/{onboardingId}/step/list
+      name: MerchantOnboardingStepList
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingId: Text
+      response:
+        type: "[MerchantOnboardingStep]"
+  - GET: #MerchantOnboardingGetFile
+      endpoint: /onboarding/{onboardingId}/file/{fileId}
+      name: MerchantOnboardingGetFile
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingId: Text
+        fileId: Text
+      response:
+        type: GetFileResponse
+  - GET:
+      endpoint: /onboarding/{onboardingId}/cancel
+      name: MerchantOnboardingCancel
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingId: Text
+      response:
+        type: "APISuccess"
+
+types:
+  ApproveResponse:
+    - success: Bool
+    - handler: Maybe DashboardSideHandler
+  UploadFileRequest:
+    - file: FilePath
+    - reqContentType: Text
+    - fileType: FileType
+    - derive: "'HideSecrets"
+  UploadFileResponse:
+    - recordType: NewType
+    - fileId: Id File
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+

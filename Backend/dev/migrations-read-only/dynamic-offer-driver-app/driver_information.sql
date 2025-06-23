@@ -197,3 +197,19 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN services_enable
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_intra_city boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN referred_by_operator_id text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN referred_by_fleet_owner_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN drunk_and_drive_violation_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_pet_mode_enabled boolean  default false;

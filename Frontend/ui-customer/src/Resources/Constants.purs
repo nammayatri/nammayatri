@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -191,19 +191,19 @@ getWard ward area street building =
     if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)
 
 getKeyByLanguage :: String -> String
-getKeyByLanguage language = case language of 
+getKeyByLanguage language = case language of
   "ENGLISH" -> "EN_US"
-  "KANNADA" -> "KN_IN" 
-  "HINDI"   -> "HI_IN" 
-  "MALAYALAM" -> "ML_IN" 
+  "KANNADA" -> "KN_IN"
+  "HINDI"   -> "HI_IN"
+  "MALAYALAM" -> "ML_IN"
   "TAMIL"   ->"TA_IN"
   "BENGALI" -> "BN_IN"
-  _ -> "EN_US" 
+  _ -> "EN_US"
 
-getGender :: Maybe ST.Gender -> String -> String 
-getGender gender placeHolderText = 
-  case gender of 
-    Just value -> case value of 
+getGender :: Maybe ST.Gender -> String -> String
+getGender gender placeHolderText =
+  case gender of
+    Just value -> case value of
       ST.MALE -> (getString MALE)
       ST.FEMALE -> (getString FEMALE)
       ST.OTHER ->  (getString OTHER)
@@ -219,8 +219,8 @@ getFaresList fares chargeableRideDistance isSpecialZone =
           price = item.amountWithCurrency
           in
           { fareType : item.description
-          , price :(currency <> " " <> 
-            (case item.description of 
+          , price :(currency <> " " <>
+            (case item.description of
               "BASE_FARE" -> parseFloat (price.amount + getMerchSpecBaseFare fares) 1
               "SGST" -> parseFloat ((price.amount * 2.0) + getFareFromArray fares "FIXED_GOVERNMENT_RATE") 1
               "WAITING_OR_PICKUP_CHARGES" -> parseFloat (price.amount + getPlatformFeeIfIncluded fares) 1
@@ -235,7 +235,7 @@ getFaresList fares chargeableRideDistance isSpecialZone =
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
@@ -261,9 +261,9 @@ getMerchSpecBaseFare fares =
 getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Number
 getAllFareFromArray fares titles =
   let
-    matchingFarePrices = mapMaybe 
-                    (\(FareBreakupAPIEntity fare) -> 
-                        if fare.description `elem` titles 
+    matchingFarePrices = mapMaybe
+                    (\(FareBreakupAPIEntity fare) ->
+                        if fare.description `elem` titles
                           then Just fare.amountWithCurrency
                         else Nothing) fares
   in
@@ -283,16 +283,16 @@ dummyPrice :: Price
 dummyPrice = {amount: 0.0, currency: ""}
 
 getMerchantSpecificFilteredFares :: Merchant -> Array String
-getMerchantSpecificFilteredFares merchant = 
+getMerchantSpecificFilteredFares merchant =
   case merchant of
     YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE", "SGST"]
     _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
 
 getPlatformFeeIfIncluded :: Array FareBreakupAPIEntity -> Number
-getPlatformFeeIfIncluded fares = 
+getPlatformFeeIfIncluded fares =
   case getMerchant FunctionCall of
     YATRISATHI -> 0.0
-    _ -> getFareFromArray fares "PLATFORM_FEE" 
+    _ -> getFareFromArray fares "PLATFORM_FEE"
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
 getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
@@ -303,13 +303,13 @@ getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" el
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = 
-  case variant of 
+fetchVehicleVariant variant =
+  case variant of
     "SUV"           -> Just ST.SUV
     "SEDAN"         -> Just ST.SEDAN
     "HATCHBACK"     -> Just ST.HATCHBACK
     "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-    "TAXI"          -> Just ST.TAXI 
+    "TAXI"          -> Just ST.TAXI
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
     "BIKE"          -> Just ST.BIKE
     "AMBULANCE_TAXI"-> Just ST.AMBULANCE_TAXI
@@ -323,10 +323,10 @@ fetchVehicleVariant variant =
     "HERITAGE_CAB"  -> Just ST.HERITAGE_CAB
     _               -> Nothing
 
-getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = 
+getVehicleCapacity :: String -> String
+getVehicleCapacity variant =
   case fetchVehicleVariant variant of
-    Just ST.SUV -> "6" 
+    Just ST.SUV -> "6"
     Just ST.SUV_PLUS -> "6"
     Just ST.AUTO_RICKSHAW -> "3"
     Just ST.BIKE -> "1"
@@ -340,7 +340,7 @@ intMax = 2147483647
 intMin :: Int
 intMin = (-2147483647)
 
-getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
+getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT
 getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))
 
 dummyDisabilityList :: ST.DisabilityT
@@ -350,7 +350,7 @@ dummyDisabilityList ={
   description : "Other"
 }
 
-areaCodeRegex :: String 
+areaCodeRegex :: String
 areaCodeRegex = "\\b\\d{6}\\b"
 
 ticketPlaceId :: String
@@ -365,8 +365,8 @@ ticketAquariumId = "a7eba6ed-99f7-442f-a9d8-00c8b380657b"
 ticketCamId :: String
 ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
 
-maxImageUploadInIssueReporting :: Int  
-maxImageUploadInIssueReporting = 3 
+maxImageUploadInIssueReporting :: Int
+maxImageUploadInIssueReporting = 3
 
 -- Id for emergency contact initial chat suggestion on remote config
 emergencyContactInitialChatSuggestionId :: String
@@ -380,14 +380,14 @@ cancelReasons showAcReason =
     , textBoxRequired : false
     }
   ]) <>
-  (if showAcReason 
+  (if showAcReason
       then [ { reasonCode: "AC_NOT_TURNED_ON"
               , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
               , subtext: Just $ getString AC_NOT_WORKING_DESC
               , textBoxRequired : false
             }]
       else []
-  )  
+  )
 
 dummyCancelReason :: OptionButtonList
 dummyCancelReason =
@@ -396,7 +396,7 @@ dummyCancelReason =
   , textBoxRequired: false
   , subtext: Nothing
   }
-  
+
 markerArrowSize :: Int
 markerArrowSize = if (os == "IOS") then 12 else 18
 
@@ -407,7 +407,8 @@ locateOnMapLabelMaxWidth :: Int
 locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 
 mailToLink :: String
-mailToLink = "mailto:" 
+mailToLink = "mailto:"
 
-whiteListedInputString :: Array String 
+whiteListedInputString :: Array String
 whiteListedInputString = ["Hospital"]
+

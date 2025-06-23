@@ -7,6 +7,8 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.Insurance.Interface.Types as Insurance
+import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.MultiModal.Interface.Types as MultiModal
@@ -43,6 +45,8 @@ data ServiceName
   | PayoutService Payout.PayoutService
   | MultiModalService MultiModal.MultiModalService
   | WalletService GW.WalletService
+  | MultiModalStaticDataService MultiModal.MultiModalService
+  | InsuranceService Insurance.InsuranceService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -66,6 +70,8 @@ instance Show ServiceName where
   show (PayoutService s) = "Payout_" <> show s
   show (MultiModalService s) = "MultiModal_" <> show s
   show (WalletService s) = "Wallet_" <> show s
+  show (MultiModalStaticDataService s) = "MultiModalStaticData_" <> show s
+  show (InsuranceService s) = "Insurance_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -140,6 +146,14 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Wallet_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (MultiModalStaticDataService v1, r2)
+                 | r1 <- stripPrefix "MultiModalStaticData_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (InsuranceService v1, r2)
+                 | r1 <- stripPrefix "Insurance_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -163,6 +177,8 @@ data ServiceConfigD (s :: UsageSafety)
   | PayoutServiceConfig !PayoutServiceConfig
   | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
   | WalletServiceConfig !GW.WalletServiceConfig
+  | MultiModalStaticDataServiceConfig !MultiModal.MultiModalServiceConfig
+  | InsuranceServiceConfig !Insurance.InsuranceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -174,3 +190,45 @@ instance ToJSON (ServiceConfigD 'Unsafe)
 instance FromJSON (ServiceConfigD 'Safe)
 
 instance ToJSON (ServiceConfigD 'Safe)
+
+instance Show (ServiceConfigD 'Safe) where
+  show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
+  show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
+  show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
+  show (AadhaarVerificationServiceConfig cfg) = "AadhaarVerificationServiceConfig " <> show cfg
+  show (CallServiceConfig cfg) = "CallServiceConfig " <> show cfg
+  show (NotificationServiceConfig cfg) = "NotificationServiceConfig " <> show cfg
+  show (PaymentServiceConfig cfg) = "PaymentServiceConfig " <> show cfg
+  show (MetroPaymentServiceConfig cfg) = "MetroPaymentServiceConfig " <> show cfg
+  show (BusPaymentServiceConfig cfg) = "BusPaymentServiceConfig " <> show cfg
+  show (BbpsPaymentServiceConfig cfg) = "BbpsPaymentServiceConfig " <> show cfg
+  show (MultiModalPaymentServiceConfig cfg) = "MultiModalPaymentServiceConfig " <> show cfg
+  show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
+  show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
+  show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg
+  show (PayoutServiceConfig cfg) = "PayoutServiceConfig " <> show cfg
+  show (MultiModalServiceConfig cfg) = "MultiModalServiceConfig " <> show cfg
+  show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
+  show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
+  show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
+
+instance Show (ServiceConfigD 'Unsafe) where
+  show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
+  show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
+  show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
+  show (AadhaarVerificationServiceConfig cfg) = "AadhaarVerificationServiceConfig " <> show cfg
+  show (CallServiceConfig cfg) = "CallServiceConfig " <> show cfg
+  show (NotificationServiceConfig cfg) = "NotificationServiceConfig " <> show cfg
+  show (PaymentServiceConfig cfg) = "PaymentServiceConfig " <> show cfg
+  show (MetroPaymentServiceConfig cfg) = "MetroPaymentServiceConfig " <> show cfg
+  show (BusPaymentServiceConfig cfg) = "BusPaymentServiceConfig " <> show cfg
+  show (BbpsPaymentServiceConfig cfg) = "BbpsPaymentServiceConfig " <> show cfg
+  show (MultiModalPaymentServiceConfig cfg) = "MultiModalPaymentServiceConfig " <> show cfg
+  show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
+  show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
+  show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg
+  show (PayoutServiceConfig cfg) = "PayoutServiceConfig " <> show cfg
+  show (MultiModalServiceConfig cfg) = "MultiModalServiceConfig " <> show cfg
+  show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
+  show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
+  show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg

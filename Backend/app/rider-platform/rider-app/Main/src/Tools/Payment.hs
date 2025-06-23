@@ -16,10 +16,12 @@
 module Tools.Payment
   ( module Reexport,
     createOrder,
+    updateOrder,
     orderStatus,
     refundOrder,
     PaymentServiceType (..),
     createCustomer,
+    getCustomer,
     createEphemeralKeys,
     getCardList,
     createPaymentIntent,
@@ -34,6 +36,7 @@ module Tools.Payment
     VendorSplitDetails (..),
     SplitType (..),
     mkSplitSettlementDetails,
+    mkUnaggregatedSplitSettlementDetails,
     groupSumVendorSplits,
     roundVendorFee,
     getIsSplitEnabled,
@@ -44,11 +47,13 @@ where
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.List (groupBy, sortBy, sortOn)
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import Domain.Types.TicketPlace
+import qualified EulerHS.Language as L
 import Kernel.External.Payment.Interface as Reexport hiding
   ( autoRefunds,
     cancelPaymentIntent,
@@ -60,10 +65,12 @@ import Kernel.External.Payment.Interface as Reexport hiding
     createSetupIntent,
     deleteCard,
     getCardList,
+    getCustomer,
     getPaymentIntent,
     isSplitEnabled,
     orderStatus,
     updateAmountInPaymentIntent,
+    updateOrder,
     updatePaymentMethodInIntent,
   )
 import qualified Kernel.External.Payment.Interface as Payment
@@ -71,27 +78,36 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Kernel.Utils.Version
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
+import System.Environment as SE
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
+updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
+
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
-refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
+refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
 refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds
 
-verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
+verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
 
 ---- Ride Payment Related Functions (mostly stripe) ---
 createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateCustomerReq -> m CreateCustomerResp
 createCustomer = runWithServiceConfig1 Payment.createCustomer (.createPaymentCustomer)
+
+getCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CreateCustomerResp
+getCustomer = runWithServiceConfig1 Payment.getCustomer (.createPaymentCustomer)
 
 createEphemeralKeys :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m Text
 createEphemeralKeys = runWithServiceConfig1 Payment.createEphemeralKeys (.createEphemeralKeys)
@@ -125,34 +141,47 @@ deleteCard = runWithServiceConfig1 Payment.deleteCard (.deleteCard)
 
 runWithServiceConfigAndServiceName ::
   ServiceFlow m r =>
-  (Payment.PaymentServiceConfig -> req -> m resp) ->
+  (Payment.PaymentServiceConfig -> Maybe Text -> req -> m resp) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id TicketPlace) ->
   PaymentServiceType ->
+  Maybe Text ->
+  Maybe Version ->
   req ->
   m resp
-runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType req = do
+runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion req = do
   placeBasedConfig <- case mbPlaceId of
-    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Just id -> do
+      paymentServiceName <- decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
+      CQPBSC.findByPlaceIdAndServiceName id paymentServiceName
     Nothing -> return Nothing
+  paymentServiceName <- getPaymentServiceByType paymentServiceType
   merchantServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId paymentServiceName
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
-    Just (DMSC.PaymentServiceConfig vsc) -> func vsc req
-    Just (DMSC.MetroPaymentServiceConfig vsc) -> func vsc req
-    Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc req
-    Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc req
-    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc req
+    Just (DMSC.PaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
-      Normal -> DMSC.PaymentService Payment.Juspay
-      BBPS -> DMSC.BbpsPaymentService Payment.Juspay
-      FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
-      FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
-      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      Normal -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
+      BBPS -> pure $ DMSC.BbpsPaymentService Payment.Juspay
+      FRFSBooking -> pure $ DMSC.MetroPaymentService Payment.Juspay
+      FRFSBusBooking -> pure $ DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> pure $ DMSC.MultiModalPaymentService Payment.Juspay
+
+decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
+decidePaymentService paymentServiceName clientSdkVersion = do
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
+  return $ case clientSdkVersion of
+    Just v
+      | v >= textToVersionDefault aaClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
+    _ -> paymentServiceName
 
 runWithServiceConfig1 ::
   ServiceFlow m r =>
@@ -213,7 +242,7 @@ data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMul
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)
 
-data SplitType = FIXED deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
+data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
 
 instance ToJSON SplitType where
   toJSON = String . show
@@ -223,7 +252,7 @@ instance FromJSON SplitType where
 
 $(mkHttpInstancesForEnum ''SplitType)
 
-data VendorSplitDetails = VendorSplitDetails {splitAmount :: HighPrecMoney, splitType :: SplitType, vendorId :: Text}
+data VendorSplitDetails = VendorSplitDetails {splitAmount :: HighPrecMoney, splitType :: SplitType, vendorId :: Text, ticketId :: Maybe Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
@@ -236,8 +265,8 @@ mkSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> May
 mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
   False -> Nothing
   True -> do
-    let sortedVendorFees = sortBy (compare `on` vendorId) (roundVendorFee <$> vendorFees)
-        groupedVendorFees = groupBy ((==) `on` vendorId) sortedVendorFees
+    let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
+        groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
         mbVendorSplits = map computeSplit groupedVendorFees
         vendorSplits = catMaybes mbVendorSplits
         totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
@@ -257,8 +286,36 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEna
             Split
               { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> splitAmount fee) feesForVendor,
                 merchantCommission = 0,
-                subMid = firstFee.vendorId
+                subMid = firstFee.vendorId,
+                uniqueSplitId = firstFee.ticketId
               }
+
+mkUnaggregatedSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
+mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+  False -> Nothing
+  True -> do
+    let vendorSplits =
+          map
+            ( \fee ->
+                let roundedFee = roundVendorFee fee
+                 in Split
+                      { amount = splitAmount roundedFee,
+                        merchantCommission = 0,
+                        subMid = vendorId roundedFee,
+                        uniqueSplitId = fee.ticketId
+                      }
+            )
+            vendorFees
+
+        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
+        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+
+    Just $
+      SplitSettlementDetails
+        { marketplace = Marketplace marketplaceAmount,
+          mdrBorneBy = ALL,
+          vendor = Vendor vendorSplits
+        }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
 groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))

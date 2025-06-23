@@ -1,7 +1,9 @@
-module Domain.Action.UI.PriceBreakup (getPriceBreakup, getMeterRidePrice) where
+module Domain.Action.UI.PriceBreakup (getPriceBreakup, postMeterRidePrice) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.PriceBreakup
+import qualified Data.List.NonEmpty as NE
+import qualified Domain.Action.Internal.BulkLocUpdate as BLoc
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.FareCalculator as FC
 import Domain.Types
@@ -18,6 +20,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.LocationUpdates.Internal as LU
 import SharedLogic.FarePolicy
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
@@ -51,21 +54,29 @@ getPriceBreakup (_, _, _) rideId = do
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
 
-getMeterRidePrice ::
+postMeterRidePrice ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.PriceBreakup.MeterRidePriceReq ->
     Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes
   )
-getMeterRidePrice (_, merchantId, merchantOpCityId) rideId = do
+postMeterRidePrice (Nothing, _, _) rideId _ = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
+postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters ride.traveledDistance) Nothing Nothing (OneWay MeterRide)
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  let tripStartTime = ride.tripStartTime
+  let rideStatus = ride.status
+  whenJust (NE.nonEmpty (fromMaybe [] req.locationUpdates)) $ \locUpdates -> do
+    void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
+  traveledDistance <- LU.getTravelledDistance driverId
+  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstiamte -> do
-        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare}
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = traveledDistance, tripStartTime = tripStartTime, status = Just rideStatus}
     )
     mbMeterRideEstimate

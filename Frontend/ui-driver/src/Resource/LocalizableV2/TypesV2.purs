@@ -19,9 +19,14 @@ newtype Languages
   , odiya :: Keymap
   }
 
-newtype Keymap
-  = Keymap
-  { lets_get_started :: String
+newtype Keymap = Keymap {
+    namma_meter  :: String ,
+    bus_number  :: String ,
+    bus_type  :: String ,
+    confirm_destination  :: String ,
+    search_results  :: String ,
+    start_typing_to_search_places  :: String ,
+    lets_get_started :: String
   , language_updated :: String
   , your_application_has_been_submitted_successfully_and_is_under_verification :: String
   , view_status :: String
@@ -1183,6 +1188,8 @@ newtype Keymap
   , customer_should_complete_a_valid_ride :: String
   , driver_referral :: String
   , purple_ride_completed :: String
+  , gold_tier_ride_completed :: String
+  , you_will_lose_a_chance_to_earn :: String -> String
   , training_complted :: String
   , rides_in_a_day :: String
   , top :: String
@@ -1630,7 +1637,7 @@ newtype Keymap
   , pet_friendly :: String
   , hometown :: String
   , why_ny :: String -> String
-  , cab :: String 
+  , cab :: String
   , new_home :: String
   , kid_education :: String
   , new_vehicle :: String
@@ -1798,15 +1805,70 @@ newtype Keymap
   , choose_preferred_metro :: String
   , metro_warriors :: String
   , search :: String
-  , bus__ :: String 
+  , bus__ :: String
   , driver_unsubscribed :: String
   , canceling_this_booking_may_affect_the_emergency_medical :: String
   , drivers_are_permitted_to_cancel_ambulance_bookings :: String
   , payment_under_maintenance :: String
   , payments_temporarily_unavailable :: String
+  , extra_charge_penalty :: String
+  , out_of_rides :: String -> String -> String
+  , extra_charged :: String
+  , get_clarified :: String
+  , dont_ask_extra_suspend :: String
+  , dont_ask_extra_blocking :: String
+  , your_extra_charge_penalty :: String
+  , what_does_this_mean :: String
+  , read_more :: String
+  , take_the_course :: String
+  , extra_charge_q1 :: String
+  , extra_charge_a1 :: String
+  , extra_charge_q2 :: String
+  , extra_charge_a2 :: String
+  , extra_charge_q3 :: String
+  , extra_charge_a3 :: String
+  , extra_charge_q4 :: String
+  , extra_charge_a4 :: String
+  , zero :: String
+  , low :: String
+  , suspended :: String
+  , blocked :: String
+  , overcharging_blocked_desc :: String
+  , overcharging_suspended_desc :: String
+  , suspended_till :: String -> String -> String
+  , fair_price_driver :: String
   , resume_ride :: String
   , end_ride_with_stops :: String
-  , stop :: String -> String 
+  , stop :: String -> String
+  , rate_changes_as_the_distance_changes :: String
+    , nammanmeter :: String
+    , press_to_cancel :: String
+    , dist :: String
+    , km :: String
+    , updated_at_ :: String
+    , time :: String
+    , enter_destination :: String
+    , stop_meter :: String
+    , upton2km :: String
+    , meter_running :: String
+    , confirm_meter_stop :: String
+    , package :: String
+    , cancellation_score :: String
+    , safety_score :: String
+    , overcharging_score :: String
+    , you_have_been_unsafe :: String
+    , you_have_been_watchlisted :: String
+    , you_are_safe :: String
+    , safe :: String
+    , watchlisted :: String
+    , unsafe :: String
+    , good_cancellation_score :: String
+    , poor_cancellation_score :: String
+    , good :: String
+    , poor :: String
+    , open_meter :: String
+    , this_ride_includes_a_pet :: String
+    , pet_rides :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -5311,6 +5373,15 @@ driver_referral = a
 purple_ride_completed :: Proxy "purple_ride_completed"
 purple_ride_completed = a
 
+gold_tier_ride_completed :: Proxy "gold_tier_ride_completed"
+gold_tier_ride_completed = a
+
+you_will_lose_a_chance_to_earn :: Proxy "you_will_lose_a_chance_to_earn"
+you_will_lose_a_chance_to_earn = a
+
+points :: Proxy "points"
+points = a
+
 training_complted :: Proxy "training_complted"
 training_complted = a
 
@@ -6488,7 +6559,7 @@ this_area_is_experiencing_high_searches :: Proxy "this_area_is_experiencing_high
 this_area_is_experiencing_high_searches = a
 
 navigate :: Proxy "navigate"
-navigate = a 
+navigate = a
 
 hotspots_not_available_currently :: Proxy "hotspots_not_available_currently"
 hotspots_not_available_currently = a
@@ -6953,7 +7024,7 @@ tomorrow :: Proxy "tomorrow"
 tomorrow = a
 
 we_are_not_able_to_fetch_your_current_location :: Proxy "we_are_not_able_to_fetch_your_current_location"
-we_are_not_able_to_fetch_your_current_location = a 
+we_are_not_able_to_fetch_your_current_location = a
 
 you_have_an_upcoming :: Proxy "you_have_an_upcoming"
 you_have_an_upcoming = a
@@ -7118,61 +7189,232 @@ seamless_earning_experience_click_below :: Proxy "seamless_earning_experience_cl
 seamless_earning_experience_click_below = a
 
 metro_warrior_mode :: Proxy "metro_warrior_mode"
-metro_warrior_mode = Proxy
+metro_warrior_mode = a
 
 choose_metro_station :: Proxy "choose_metro_station"
-choose_metro_station = Proxy
+choose_metro_station = a
 
 primary_metro_station :: Proxy "primary_metro_station"
-primary_metro_station = Proxy
+primary_metro_station = a
 
 primary_station_info :: Proxy "primary_station_info"
-primary_station_info = Proxy
+primary_station_info = a
 
 nearby_stations :: Proxy "nearby_stations"
-nearby_stations = Proxy
+nearby_stations = a
 
 nearby_station_info :: Proxy "nearby_station_info"
-nearby_station_info = Proxy
+nearby_station_info = a
 
 change :: Proxy "change"
-change = Proxy
+change = a
 
 disable_metro_warriors_info :: Proxy "disable_metro_warriors_info"
-disable_metro_warriors_info = Proxy
+disable_metro_warriors_info = a
 
 choose_preferred_metro :: Proxy "choose_preferred_metro"
-choose_preferred_metro = Proxy
+choose_preferred_metro = a
 
 metro_warriors :: Proxy "metro_warriors"
-metro_warriors = Proxy
+metro_warriors = a
 
 search :: Proxy "search"
-search = Proxy
+search = a
 
 bus__ :: Proxy "bus__"
-bus__ = Proxy
+bus__ = a
 
 driver_unsubscribed :: Proxy "driver_unsubscribed"
-driver_unsubscribed = Proxy
+driver_unsubscribed = a
 
 drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
-drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
+drivers_are_permitted_to_cancel_ambulance_bookings = a
 
 canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
-canceling_this_booking_may_affect_the_emergency_medical = Proxy
+canceling_this_booking_may_affect_the_emergency_medical = a
 
 payment_under_maintenance :: Proxy "payment_under_maintenance"
-payment_under_maintenance = Proxy
+payment_under_maintenance = a
 
 payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
-payments_temporarily_unavailable = Proxy
+payments_temporarily_unavailable = a
+
+
+extra_charge_penalty :: Proxy "extra_charge_penalty"
+extra_charge_penalty = Proxy
+
+out_of_rides :: Proxy "out_of_rides"
+out_of_rides = Proxy
+
+extra_charged :: Proxy "extra_charged"
+extra_charged = Proxy
+
+get_clarified :: Proxy "get_clarified"
+get_clarified = Proxy
+
+dont_ask_extra_suspend :: Proxy "dont_ask_extra_suspend"
+dont_ask_extra_suspend = Proxy
+
+dont_ask_extra_blocking :: Proxy "dont_ask_extra_blocking"
+dont_ask_extra_blocking = Proxy
+
+your_extra_charge_penalty :: Proxy "your_extra_charge_penalty"
+your_extra_charge_penalty = Proxy
+
+what_does_this_mean :: Proxy "what_does_this_mean"
+what_does_this_mean = Proxy
+
+read_more :: Proxy "read_more"
+read_more = Proxy
+
+take_the_course :: Proxy "take_the_course"
+take_the_course = Proxy
+
+extra_charge_q1 :: Proxy "extra_charge_q1"
+extra_charge_q1 = Proxy
+
+extra_charge_a1 :: Proxy "extra_charge_a1"
+extra_charge_a1 = Proxy
+
+extra_charge_q2 :: Proxy "extra_charge_q2"
+extra_charge_q2 = Proxy
+
+extra_charge_a2 :: Proxy "extra_charge_a2"
+extra_charge_a2 = Proxy
+
+extra_charge_q3 :: Proxy "extra_charge_q3"
+extra_charge_q3 = Proxy
+
+extra_charge_a3 :: Proxy "extra_charge_a3"
+extra_charge_a3 = Proxy
+
+extra_charge_q4 :: Proxy "extra_charge_q4"
+extra_charge_q4 = Proxy
+
+extra_charge_a4 :: Proxy "extra_charge_a4"
+extra_charge_a4 = Proxy
+
+zero :: Proxy "zero"
+zero = Proxy
+
+low :: Proxy "low"
+low = Proxy
+
+suspended :: Proxy "suspended"
+suspended = Proxy
+
+blocked :: Proxy "blocked"
+blocked = Proxy
+
+overcharging_blocked_desc :: Proxy "overcharging_blocked_desc"
+overcharging_blocked_desc = Proxy
+
+overcharging_suspended_desc :: Proxy "overcharging_suspended_desc"
+overcharging_suspended_desc = Proxy
+
+suspended_till :: Proxy "suspended_till"
+suspended_till = Proxy
+
+fair_price_driver :: Proxy "fair_price_driver"
+fair_price_driver = Proxy
+stop :: Proxy "stop"
+stop = a
+
+rate_changes_as_the_distance_changes :: Proxy "rate_changes_as_the_distance_changes"
+rate_changes_as_the_distance_changes = a
+nammanmeter :: Proxy "nammanmeter"
+nammanmeter = a
+press_to_cancel :: Proxy "press_to_cancel"
+press_to_cancel = a
+dist :: Proxy "dist"
+dist = a
+km :: Proxy "km"
+km = a
+updated_at_ :: Proxy "updated_at_"
+updated_at_ = a
+time :: Proxy "time"
+time = a
+enter_destination :: Proxy "enter_destination"
+enter_destination = a
+stop_meter :: Proxy "stop_meter"
+stop_meter = a
+upton2km :: Proxy "upton2km"
+upton2km = a
+meter_running :: Proxy "meter_running"
+meter_running = a
+
+confirm_meter_stop :: Proxy "confirm_meter_stop"
+confirm_meter_stop = a
+
+confirm_destination :: Proxy "confirm_destination"
+confirm_destination = a
+search_results :: Proxy "search_results"
+search_results = a
+start_typing_to_search_places :: Proxy "start_typing_to_search_places"
+start_typing_to_search_places = a
+bus_number :: Proxy "bus_number"
+bus_number = a
+
+bus_type :: Proxy "bus_type"
+bus_type = a
+
+namma_meter :: Proxy "namma_meter"
+namma_meter = a
+
+package :: Proxy "package"
+package = a
+
+
+end_ride_with_stops ::Proxy "package"
+end_ride_with_stops = a
 
 resume_ride :: Proxy "resume_ride"
 resume_ride = a
 
-end_ride_with_stops :: Proxy "end_ride_with_stops"
-end_ride_with_stops = a
+cancellation_score :: Proxy "cancellation_score"
+cancellation_score = a
 
-stop :: Proxy "stop"
-stop = a 
+safety_score :: Proxy "safety_score"
+safety_score = a
+
+overcharging_score :: Proxy "overcharging_score"
+overcharging_score = a
+
+you_have_been_unsafe :: Proxy "you_have_been_unsafe"
+you_have_been_unsafe = a
+
+you_have_been_watchlisted :: Proxy "you_have_been_watchlisted"
+you_have_been_watchlisted = a
+
+you_are_safe :: Proxy "you_are_safe"
+you_are_safe = a
+
+safe :: Proxy "safe"
+safe = a
+
+watchlisted :: Proxy "watchlisted"
+watchlisted = a
+
+unsafe :: Proxy "unsafe"
+unsafe = a
+
+good_cancellation_score :: Proxy "good_cancellation_score"
+good_cancellation_score = a
+
+poor_cancellation_score :: Proxy "poor_cancellation_score"
+poor_cancellation_score = a
+
+good :: Proxy "good"
+good = a
+
+poor :: Proxy "poor"
+poor = a
+
+open_meter :: Proxy "open_meter"
+open_meter = a
+
+this_ride_includes_a_pet :: Proxy "this_ride_includes_a_pet"
+this_ride_includes_a_pet = a
+
+pet_rides :: Proxy "pet_rides"
+pet_rides = a

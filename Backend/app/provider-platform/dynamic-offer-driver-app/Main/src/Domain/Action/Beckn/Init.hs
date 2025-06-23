@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DeliveryPersonDetails as DTDPD
 import qualified Domain.Types.DriverQuote as DDQ
@@ -75,7 +76,9 @@ data InitReq = InitReq
     mbRiderName :: Maybe Text,
     estimateId :: Text,
     initReqDetails :: Maybe InitReqDetails,
-    isAdvanceBookingEnabled :: Maybe Bool
+    isAdvanceBookingEnabled :: Maybe Bool,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -125,13 +128,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions
+        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions
+        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing
         QRB.createBooking booking
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
@@ -168,15 +171,16 @@ handler merchantId req validatedReq = do
       Maybe Meters ->
       Maybe InitReqDetails ->
       [LYT.ConfigVersionMap] ->
+      Maybe Int ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails configInExperimentVersions = do
+    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
           stops = searchRequest.stops
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       let bapUri = showBaseUrl req.bapUri
       (initiatedAs, senderDetails, receiverDetails) <- do
         case tripCategory of
@@ -206,6 +210,7 @@ handler merchantId req validatedReq = do
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,
             updatedAt = now,
+            isPetRide = isJust driverQuote.fareParams.petCharges,
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,
@@ -234,6 +239,9 @@ handler merchantId req validatedReq = do
             dynamicPricingLogicVersion = searchRequest.dynamicPricingLogicVersion,
             parcelType = searchRequest.parcelType,
             parcelQuantity = searchRequest.parcelQuantity,
+            isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
+            isInsured = fromMaybe False req.isInsured,
+            insuredAmount = req.insuredAmount,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

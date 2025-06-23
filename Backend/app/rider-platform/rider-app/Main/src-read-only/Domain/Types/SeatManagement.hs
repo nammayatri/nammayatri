@@ -17,6 +17,7 @@ data SeatManagement = SeatManagement
     booked :: Kernel.Prelude.Int,
     date :: Data.Time.Day,
     id :: Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement,
+    maxCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     ticketServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

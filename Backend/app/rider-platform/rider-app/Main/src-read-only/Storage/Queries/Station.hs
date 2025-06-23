@@ -14,6 +14,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Sequelize as Se
 import qualified Storage.Beam.Station as Beam
 import Storage.Queries.StationExtra as ReExport
@@ -26,6 +27,9 @@ createMany = traverse_ create
 
 deleteByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
 deleteByStationCode code integratedBppConfigId = do deleteWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
+
+findAllByBppConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.Station.Station])
+findAllByBppConfigId integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
 findAllByVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -58,6 +62,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   updateWithKV
     [ Se.Set Beam.address address,
       Se.Set Beam.code code,
+      Se.Set Beam.hindiName hindiName,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
@@ -65,6 +70,8 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.possibleTypes possibleTypes,
+      Se.Set Beam.regionalName regionalName,
+      Se.Set Beam.suggestedDestinations (Kernel.Utils.Text.encodeToText <$> suggestedDestinations),
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

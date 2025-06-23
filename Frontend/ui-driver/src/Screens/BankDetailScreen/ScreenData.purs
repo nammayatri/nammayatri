@@ -16,11 +16,14 @@
 module Screens.BankDetailScreen.ScreenData where
 
 import Screens.Types
+import ConfigProvider
+
 initData :: BankDetailScreenState
 initData = {
     data: {
         beneficiaryNumber: "",
-        ifsc: ""
+        ifsc: "",
+        config: getAppConfig appConfig
     },
     props: {
         openRegistrationModal: false,

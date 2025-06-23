@@ -3,6 +3,7 @@
 
 module Storage.Beam.TicketPlace where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.TicketPlace
@@ -14,6 +15,7 @@ import Tools.Beam.UtilsTH
 data TicketPlaceT f = TicketPlaceT
   { allowSameDayBooking :: B.C f Kernel.Prelude.Bool,
     closeTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
+    customTabs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gallery :: B.C f [Kernel.Prelude.Text],
     iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -25,10 +27,14 @@ data TicketPlaceT f = TicketPlaceT
     name :: B.C f Kernel.Prelude.Text,
     openTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     placeType :: B.C f Domain.Types.TicketPlace.PlaceType,
+    priority :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    recommend :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    rules :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     shortDesc :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: B.C f [Kernel.Prelude.Text],
     termsAndConditionsUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketMerchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

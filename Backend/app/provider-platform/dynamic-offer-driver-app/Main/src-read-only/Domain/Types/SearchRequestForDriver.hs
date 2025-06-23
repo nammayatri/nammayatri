@@ -5,6 +5,7 @@ module Domain.Types.SearchRequestForDriver where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.ConditionalCharges
 import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.Merchant
@@ -12,6 +13,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchTry
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -33,6 +35,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    conditionalCharges :: [Domain.Types.ConditionalCharges.ConditionalChargesCategories],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Types.Common.HighPrecMoney,
@@ -55,6 +59,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     isFavourite :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isForwardRequest :: Kernel.Prelude.Bool,
     isPartOfIntelligentPool :: Kernel.Prelude.Bool,
+    isSafetyPlus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     keepHiddenForSeconds :: Kernel.Types.Common.Seconds,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -82,9 +87,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     status :: Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
+    tripEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    tripEstimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     upgradeCabRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant

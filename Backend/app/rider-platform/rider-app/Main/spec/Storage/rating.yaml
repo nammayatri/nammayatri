@@ -8,6 +8,9 @@ imports:
 Rating:
   tableName: rating
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
   fields:
     id : Id Rating
     rideId : Id Ride

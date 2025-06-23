@@ -89,3 +89,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN vehicle_icon_url character varying(255) ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN meter_ride_bpp_quote_id character(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN is_safety_plus boolean ;

@@ -1,0 +1,253 @@
+imports:
+  Value: Data.Aeson
+  OnboardingType: Domain.Types.MerchantOnboarding
+  MerchantOnboardingStep: Domain.Types.MerchantOnboardingStep
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+
+
+MerchantOnboardingStep:
+  tableName: merchant_onboarding_step
+
+  types:
+    StepStatus:
+      enum: "UNAVAILABLE,AVAILABLE,INPROGRESS,SUBMITTED,COMPLETED,REOPENED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id MerchantOnboardingStep
+    merchantOnboardingId: Text
+    stepNameIdentifier: Text
+    stepDescription: Maybe Text
+    payload: Maybe Value
+    status: StepStatus
+    isApprovalRequired: Bool
+    isAdminOnly: Maybe Bool
+    dependency: "[Id MerchantOnboardingStep]"
+    remarks: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  sqlType:
+    payload: json
+
+  constraints:
+    id: PrimaryKey
+    merchantOnboardingId: "!SecondaryKey"
+
+  queries:
+    findByStepId:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantOnboardingId:
+      kvFunction: findAllWithKV
+      where: merchantOnboardingId
+    updateDependency:
+      kvFunction: updateOneWithKV
+      params: [dependency]
+      where: id
+    updateStepPayload:
+      kvFunction: updateOneWithKV
+      params: [payload]
+      where: id
+    updateStepStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateStepRemarks:
+      kvFunction: updateOneWithKV
+      params: [remarks]
+      where: id
+    deleteByOnboardingId:
+      kvFunction: deleteWithKV
+      where: merchantOnboardingId
+
+
+MerchantOnboarding:
+  tableName: merchant_onboarding
+
+  types:
+    GetFileResponse:
+      fileBase64: Text
+      fileType: Text
+    RequestorRole:
+      enum: "TICKET_DASHBOARD_USER,TICKET_DASHBOARD_MERCHANT,TICKET_DASHBOARD_ADMIN,TICKET_DASHBOARD_APPROVER"
+      derive: "HttpInstance"
+    OnboardingStatus:
+      enum: "INPROGRESS,COMPLETED,REJECTED"
+      derive: "HttpInstance"
+    OnboardingType:
+      enum: "TICKET_MERCHANT_ONBOARDING,OTHER_ONBOARDING"
+      derive: "HttpInstance"
+    MerchantOnboardingAPI:
+      id: Id MerchantOnboarding
+      requestorId: Text
+      onboardingType: OnboardingType
+      description: Maybe Text
+      status: OnboardingStatus
+      remarks: Maybe Text
+      steps: "[MerchantOnboardingStep]"
+      createdAt: UTCTime
+      updatedAt: UTCTime
+
+  fields:
+    id : Id MerchantOnboarding
+    requestorId : Text
+    onboardingType: OnboardingType
+    description: Maybe Text
+    status: OnboardingStatus
+    remarks: Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+  - columns: [requestorId, onboardingType]
+    unique: true
+
+  extraOperations:
+   - GENERATE_INDEXES
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  queries:
+    findAllByRequestorId:
+      kvFunction: findAllWithKV
+      where: requestorId
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+    findAllByOnboardingType:
+      kvFunction: findAllWithOptionsKV
+      where: onboardingType
+    findByRequestorIdAndOnboardingType:
+      kvFunction: findOneWithKV
+      where:
+        and: [requestorId, onboardingType]
+    updateOnboardingStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateOnboardingRemarks:
+      kvFunction: updateOneWithKV
+      params: [remarks]
+      where: id
+    updateOnboardingStatusAndRemarks:
+      kvFunction: updateOneWithKV
+      params: [status, remarks]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+
+
+MerchantOnboardingStepConfig:
+  tableName: merchant_onboarding_step_config
+
+  fields:
+    onboardingType: OnboardingType
+    stepNameIdentifier: Text
+    stepDescription: Maybe Text
+    isApprovalRequired: Bool
+    isAdminOnly: Maybe Bool
+    dependency: "[Text]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    onboardingType: PrimaryKey
+    stepNameIdentifier: PrimaryKey
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  queries:
+    findByStepNameIdentifier:
+      kvFunction: findOneWithKV
+      where: stepNameIdentifier
+    findByOnboardingType:
+      kvFunction: findAllWithKV
+      where: onboardingType
+    findByOnboardingTypeAndStepNameIdentifier:
+      kvFunction: findOneWithKV
+      where:
+        and: [onboardingType, stepNameIdentifier]
+
+TicketMerchantDetails:
+  tableName: ticket_merchant_details
+
+  types:
+    BankAccountType:
+      enum: "CURRENT,SAVINGS"
+      derive: "HttpInstance"
+    ContactDetails:
+      name: Text
+      number: Text
+      email: Text
+
+  fields:
+    id: Id TicketMerchantDetails
+    orgName: Text
+    orgAddress: Maybe Text
+    pan: EncryptedHashedField e Text
+    gstin: Maybe (EncryptedHashedField e Text)
+    state: Text
+    contactDetails: ContactDetails
+    bankBeneficiaryName: Text
+    bankAccountNumber: EncryptedHashedField e Text
+    bankAccountType: BankAccountType
+    bankIfsc: EncryptedHashedField e Text
+    docPan: EncryptedHashedField e Text
+    docCancelledCheque: Maybe (EncryptedHashedField e Text)
+    agreementLetter: Maybe (EncryptedHashedField e Text)
+    isBankOnboarded: Maybe Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    docCancelledCheque:
+      docCancelledChequeEncrypted: Maybe Text
+      docCancelledChequeHash: Maybe DbHash
+    agreementLetter:
+      agreementLetterEncrypted: Maybe Text
+      agreementLetterHash: Maybe DbHash
+    gstin:
+      gstinEncrypted: Maybe Text
+      gstinHash: Maybe DbHash
+  fromTType:
+    contactDetails: makeContactDetails
+    docCancelledCheque: EncryptedHashed <$> (Encrypted <$> docCancelledChequeEncrypted) <*> docCancelledChequeHash|E
+    agreementLetter: EncryptedHashed <$> (Encrypted <$> agreementLetterEncrypted) <*> agreementLetterHash|E
+    gstin: EncryptedHashed <$> (Encrypted <$> gstinEncrypted) <*> gstinHash|E
+  toTType:
+    name: (.contactDetails.name)|I
+    number: (.contactDetails.number)|I
+    email: (.contactDetails.email)|I
+    docCancelledChequeEncrypted: (docCancelledCheque <&> unEncrypted . (.encrypted))|E
+    docCancelledChequeHash: (docCancelledCheque <&> (.hash))|E
+    agreementLetterEncrypted: (agreementLetter <&> unEncrypted . (.encrypted))|E
+    agreementLetterHash: (agreementLetter <&> (.hash))|E
+    gstinEncrypted: (gstin <&> unEncrypted . (.encrypted))|E
+    gstinHash: (gstin <&> (.hash))|E
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateIsBankOnboarded:
+      kvFunction: updateOneWithKV
+      params: [isBankOnboarded]
+      where: id

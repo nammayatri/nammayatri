@@ -19,7 +19,7 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
-import qualified Domain.Types.ApprovalRequest as DTR
+import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Merchant as DM
@@ -48,6 +48,7 @@ data AllocatorJobType
   | UnblockSoftBlockedDriver
   | SoftBlockNotifyDriver
   | SupplyDemand
+  | CongestionCharge
   | SendPDNNotificationToDriver
   | MandateExecution
   | CalculateDriverFees
@@ -72,6 +73,7 @@ data AllocatorJobType
   | FleetAlert
   | SendWebhookToExternal
   | ScheduledFCMS
+  | CheckDashCamInstallationStatus
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -86,6 +88,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
   restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
   restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
+  restoreAnyJobInfo SCongestionCharge jobData = AnyJobInfo <$> restoreJobInfo SCongestionCharge jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
@@ -110,6 +113,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
   restoreAnyJobInfo SSendWebhookToExternal jobData = AnyJobInfo <$> restoreJobInfo SSendWebhookToExternal jobData
   restoreAnyJobInfo SScheduledFCMS jobData = AnyJobInfo <$> restoreJobInfo SScheduledFCMS jobData
+  restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -164,7 +168,7 @@ type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
 
 data FleetAlertJobData = FleetAlertJobData
   { fleetOwnerId :: Id DP.Driver,
-    entityId :: Id DTR.ApprovalRequest,
+    entityId :: Id DAR.AlertRequest,
     appletId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
@@ -213,6 +217,17 @@ data SupplyDemandRequestJobData = SupplyDemandRequestJobData
 instance JobInfoProcessor 'SupplyDemand
 
 type instance JobContent 'SupplyDemand = SupplyDemandRequestJobData
+
+data CongestionChargeCalculationRequestJobData = CongestionChargeCalculationRequestJobData
+  { scheduleTimeIntervalInMin :: Int,
+    congestionChargeCalculationTTLInSec :: Int,
+    calculationDataIntervalInMin :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CongestionCharge
+
+type instance JobContent 'CongestionCharge = CongestionChargeCalculationRequestJobData
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
 
@@ -400,3 +415,13 @@ data SendWebhookToExternalJobData = SendWebhookToExternalJobData
 instance JobInfoProcessor 'SendWebhookToExternal
 
 type instance JobContent 'SendWebhookToExternal = SendWebhookToExternalJobData
+
+data CheckDashCamInstallationStatusJobData = CheckDashCamInstallationStatusJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckDashCamInstallationStatus
+
+type instance JobContent 'CheckDashCamInstallationStatus = CheckDashCamInstallationStatusJobData

@@ -18,6 +18,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
       Just
         Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate
           { airConditioned = airConditioned,
+            approved = approved,
             certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
             dateOfRegistration = dateOfRegistration,
             documentImageId = Kernel.Types.Id.Id documentImageId,
@@ -35,6 +36,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             rejectReason = rejectReason,
             reviewRequired = reviewRequired,
             reviewedAt = reviewedAt,
+            unencryptedCertificateNumber = unencryptedCertificateNumber,
             userPassedVehicleCategory = userPassedVehicleCategory,
             vehicleCapacity = vehicleCapacity,
             vehicleClass = vehicleClass,
@@ -59,6 +61,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
   toTType' (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate {..}) = do
     Beam.VehicleRegistrationCertificateT
       { Beam.airConditioned = airConditioned,
+        Beam.approved = approved,
         Beam.certificateNumberEncrypted = certificateNumber & unEncrypted . encrypted,
         Beam.certificateNumberHash = certificateNumber & hash,
         Beam.dateOfRegistration = dateOfRegistration,
@@ -77,6 +80,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.rejectReason = rejectReason,
         Beam.reviewRequired = reviewRequired,
         Beam.reviewedAt = reviewedAt,
+        Beam.unencryptedCertificateNumber = unencryptedCertificateNumber,
         Beam.userPassedVehicleCategory = userPassedVehicleCategory,
         Beam.vehicleCapacity = vehicleCapacity,
         Beam.vehicleClass = vehicleClass,

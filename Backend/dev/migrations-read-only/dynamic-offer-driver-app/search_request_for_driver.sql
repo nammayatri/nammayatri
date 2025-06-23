@@ -151,8 +151,50 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_t
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_quantity integer ;
 
 
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN trip_estimated_duration integer ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN trip_estimated_distance integer ;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_tag_score json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN conditional_charges json ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN conditional_charges TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_safety_plus boolean ;
+
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_category text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN coins_rewarded_on_gold_tier_ride integer ;
+
+
+------- SQL updates -------
+
