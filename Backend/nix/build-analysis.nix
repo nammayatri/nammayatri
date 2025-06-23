@@ -32,9 +32,10 @@ in
 
                 # Set trap for cleanup
                 trap cleanup EXIT INT TERM
-
+                mkdir -p $nammayatriMetadata/${name}
                 echo "Running fdep server..."
-                python3 @server@ &
+                cp ${scriptsDir}/server.py .
+                python3 ./server.py &
                 echo $! > server.pid
 
                 # Wait for port file with timeout
@@ -70,11 +71,13 @@ in
               ''
                 if [ -f server.pid ]; then
                   echo "Creating fdep zip..."
-                  python3 @tmpzip@ --output-path $juspayMetadata/@packageName@/fdep.zip || {
+                  cp ${scriptsDir}/tmpzip.py .
+                  python3 tmpzip.py --output-path $nammayatriMetadata/${name}/fdep.zip || {
                     echo "Failed to create fdep.zip"
                     exit 1
                   }
-                  echo "fdep output zipping complete - output saved to $juspayMetadata/@packageName@"
+                  echo "fdep output zipping complete - output saved to $nammayatriMetadata/${name}"
+
 
                   # Server cleanup is handled by the trap
                   kill $(cat server.pid) 2>/dev/null || true
