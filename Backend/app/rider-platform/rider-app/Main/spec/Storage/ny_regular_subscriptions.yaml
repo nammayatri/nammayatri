@@ -1,0 +1,177 @@
+imports:
+  Location: Domain.Types.Location
+  Price: Kernel.Types.Common
+  ServiceTierType: Domain.Types.ServiceTierType
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  DayOfWeek: Data.Time.Calendar
+  Day: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+  Value: Data.Aeson
+  Currency: Kernel.Types.Common # Added for Price beamFields
+  HighPrecMoney: Kernel.Types.Common # Added for Price beamFields
+  # UTCTime, Text, Maybe, Id are typically auto-imported or handled by generator
+
+NyRegularSubscription:
+  tableName: ny_regular_subscriptions
+  derives: "Generic, Eq, Show, ToJSON, FromJSON" # Derives for the main NyRegularSubscription record
+  types:
+    NyRegularSubscriptionStatus:
+      enum: "NEW,ACTIVE,PAUSED,CANCELLED,EXPIRED"
+
+  fields:
+    id: Id NyRegularSubscription
+    userId: Id Person
+    pickupLocation: Location # Non-nullable as per feedback
+    dropoffLocation: Location # Non-nullable as per feedback
+    vehicleServiceTier: Maybe ServiceTierType
+    startDatetime: UTCTime
+    recurrenceRuleDays: "[DayOfWeek]" # Haskell domain type is [DayOfWeek]
+    scheduledTimeOfDay: TimeOfDay
+    recurrenceEndDate: Maybe Day
+    fixedPrice: Maybe Price # Domain type remains Maybe Price
+    fixedPriceBreakupDetails: Maybe Value
+    fixedPriceExpiryDate: Maybe UTCTime
+    initialBppQuoteId: Maybe Text
+    bppId: Text
+    status: NyRegularSubscriptionStatus
+    pauseStartDate: Maybe UTCTime
+    pauseEndDate: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    metadata: Maybe Value
+
+  beamFields:
+    pickupLocation:
+      pickupLocationId: Text
+    dropoffLocation:
+      dropoffLocationId: Text
+    fixedPrice: # Decomposed for Beam storage
+      fixedPrice: Maybe HighPrecMoney
+      fixedPriceCurrency: Maybe Currency
+
+  sqlType:
+    id: character(36)
+    userId: character(36)
+    pickupLocationId: character(36)
+    dropoffLocationId: character(36)
+    startDatetime: timestamp with time zone
+    recurrenceRuleDays: text[] # SQL type for the [Text] Beam field
+    scheduledTimeOfDay: time
+    recurrenceEndDate: date
+    fixedPriceExpiryDate: timestamp with time zone
+    pauseStartDate: timestamp with time zone
+    pauseEndDate: timestamp with time zone
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+    fixedPriceBreakupDetails: json
+    metadata: json
+    # vehicleServiceTier (enum) will map to text
+    # status (enum) will map to text
+
+  default:
+    status: "'NEW'"
+
+  beamType:
+    recurrenceRuleDays: "[Text]"
+
+  toTType: # Haskell Domain Type -> Beam Entity Type
+    pickupLocationId: Kernel.Types.Id.getId $ (.id) pickupLocation|E
+    dropoffLocationId: Kernel.Types.Id.getId $ (.id) dropoffLocation|E
+    fixedPrice: ((.amount) <$> fixedPrice)|E
+    fixedPriceCurrency: ((.currency) <$> fixedPrice)|E
+    recurrenceRuleDays: map show recurrenceRuleDays|E # Converts [DayOfWeek] to [Text]
+  fromTType: # Beam Entity Type -> Haskell Domain Type
+    pickupLocation: 'Storage.Queries.Location.findById (Kernel.Types.Id.Id pickupLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get pickupLocation " <> pickupLocationId))|EM'
+    dropoffLocation: 'Storage.Queries.Location.findById (Kernel.Types.Id.Id dropoffLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get dropoffLocation " <> dropoffLocationId))|EM'
+    fixedPrice: (Kernel.Types.Common.mkPrice fixedPriceCurrency) <$> fixedPrice|E
+    recurrenceRuleDays: (read . Data.Text.unpack) <$> recurrenceRuleDays|E # Converts [Text] to [DayOfWeek]
+  constraints:
+    id: PrimaryKey
+    userId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByUserId:
+      kvFunction: findAllWithKV # Assuming a user can have multiple subscriptions
+      where: userId
+      orderBy: createdAt DESC # Optional: order by creation time
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+    # For updating details that are populated after the initial 'NEW' state
+    # e.g., when user confirms the quote and vehicle.
+    confirmSubscriptionDetailsById:
+      kvFunction: updateWithKV
+      params:
+        - vehicleServiceTier
+        - fixedPrice
+        - fixedPriceBreakupDetails
+        - fixedPriceExpiryDate
+        - initialBppQuoteId
+        - status # Typically updated to ACTIVE here
+      where: id
+    updatePauseDetailsById:
+      kvFunction: updateWithKV
+      params:
+        - pauseStartDate
+        - pauseEndDate
+        - status # Typically updated to PAUSED or ACTIVE here
+      where: id
+    updateRecurrenceById:
+      kvFunction: updateWithKV
+      params:
+        - recurrenceRuleDays
+        - scheduledTimeOfDay
+        - recurrenceEndDate
+      where: id
+    # A general update query might be too broad, specific updates are safer.
+    # If a general update is needed, list all updatable fields:
+    # updateAllDetailsById:
+    #   kvFunction: updateWithKV
+    #   params:
+    #     - pickupLocation
+    #     - dropoffLocation
+    #     - vehicleServiceTier
+    #     - startDatetime
+    #     - recurrenceRuleDays
+    #     - scheduledTimeOfDay
+    #     - recurrenceEndDate
+    #     - fixedPrice
+    #     - fixedPriceBreakupDetails
+    #     - fixedPriceExpiryDate
+    #     - initialBppQuoteId
+    #     - bppId # Usually bppId won't change for an existing subscription
+    #     - status
+    #     - pauseStartDate
+    #     - pauseEndDate
+    #     - metadata
+    #   where: id
+    # findActiveSubscriptionsByTimeAndDay: # For the master scheduler
+    #   kvFunction: findAllWithKV
+    #   where:
+    #     and:
+    #       - status: Domain.Types.NyRegularSubscription.ACTIVE|CIM # Use the enum type
+    #       - recurrenceEndDate: # Needs a more complex condition: (recurrenceEndDate IS NULL OR recurrenceEndDate >= today)
+    #           # This complex condition might need an EXTRA_QUERY_FILE or custom SQL
+    #           # For simplicity in DSL, we might filter in Haskell or use a simpler DB query
+    #           # and refine. A placeholder:
+    #           gte: today|C # 'today' would be a parameter
+    #       # Further filtering by recurrenceRuleDays and startDatetime < now will be done in Haskell
+    #       # or via a more complex query if the DSL supports day-of-week checks on arrays.
+    #   orderBy: startDatetime ASC
+    # findPausedSubscriptionsToResume: # For checking if pauseEndDate has passed
+    #   kvFunction: findAllWithKV
+    #   where:
+    #     and:
+    #       - status: Domain.Types.NyRegularSubscription.PAUSED|CIM
+    #       - pauseEndDate:
+    #           lte: now|C # 'now' would be a parameter
+    #   orderBy: pauseEndDate ASC
