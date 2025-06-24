@@ -66,26 +66,42 @@ type NotifyEventResp = APISuccess
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   activeJourneys <- DMultimodal.getActiveJourneyIds personId
+  now <- getCurrentTime
   if not (null activeJourneys)
     then do
-      let paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) activeJourneys
+      let (updatedActiveJourneys, paymentSuccessJourneys) = processJourneys now activeJourneys
       if null paymentSuccessJourneys
-        then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys, currentJourney = Nothing}) Nothing
+        then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys, currentJourney = Nothing}) Nothing
         else do
           let earliestActiveJourney = maximumBy (comparing (.startTime)) paymentSuccessJourneys
           legs <- getAllLegsInfo earliestActiveJourney.id False
           journeyInfoResp <- generateJourneyInfoResponse earliestActiveJourney legs
-          return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys, currentJourney = Just journeyInfoResp}) Nothing
+          return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys, currentJourney = Just journeyInfoResp}) Nothing
     else do
       personStatus' <- QPFS.getStatus personId
       case personStatus' of
         Just personStatus -> do
           case personStatus of
-            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
-            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
+            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId now
+            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing now
             _ -> checkForActiveBooking
         Nothing -> checkForActiveBooking
   where
+    -- filter payment success journeys and update journey status if expired
+    processJourneys :: UTCTime -> [DJ.Journey] -> ([DJ.Journey], [DJ.Journey])
+    processJourneys now journeys =
+      let updatedActiveJourneys = map updateJourneyStatus journeys
+          paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) updatedActiveJourneys
+       in updatedActiveJourneys `seq` paymentSuccessJourneys `seq` (updatedActiveJourneys, paymentSuccessJourneys)
+      where
+        updateJourneyStatus j =
+          case j.journeyExpiryTime of
+            Just expiryTime ->
+              if now > expiryTime && j.status == DJ.INPROGRESS
+                then j {DJ.status = DJ.EXPIRED}
+                else j
+            Nothing -> j
+
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
       if isJust pollActiveBooking
@@ -105,12 +121,11 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                 _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
         else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
 
-    findValueAddNP personStatus providerId = do
+    findValueAddNP personStatus providerId now = do
       isValueAddNP_ <- maybe (pure True) QNP.isValueAddNP providerId
-      expirePersonStatusIfNeeded personStatus (Just isValueAddNP_)
+      expirePersonStatusIfNeeded personStatus (Just isValueAddNP_) now
 
-    expirePersonStatusIfNeeded personStatus isValueAddNp = do
-      now <- getCurrentTime
+    expirePersonStatusIfNeeded personStatus isValueAddNp now = do
       if now < personStatus.validTill
         then return $ GetPersonFlowStatusRes Nothing personStatus isValueAddNp
         else do
