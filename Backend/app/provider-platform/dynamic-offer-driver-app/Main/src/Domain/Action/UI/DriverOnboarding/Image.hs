@@ -56,6 +56,8 @@ import Utils.Common.Cac.KeyNameConstants
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
+    fileType :: Maybe FileType,
+    reqContentType :: Maybe Text,
     imageType :: DVC.DocumentType,
     rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
     validationStatus :: Maybe Domain.ValidationStatus,
@@ -70,7 +72,9 @@ data ImageValidateFileRequest = ImageValidateFileRequest
     imageType :: DVC.DocumentType,
     rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
     validationStatus :: Maybe Domain.ValidationStatus,
-    workflowTransactionId :: Maybe Text
+    workflowTransactionId :: Maybe Text,
+    fileType :: Maybe S3.FileType,
+    reqContentType :: Maybe Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -82,6 +86,8 @@ instance FromMultipart Tmp ImageValidateFileRequest where
       <*> parseMaybeInput "rcNumber" form
       <*> parseMaybeInput "validationStatus" form
       <*> parseMaybeInput "workflowTransactionId" form
+      <*> parseMaybeInput "fileType" form
+      <*> parseMaybeInput "reqContentType" form
 
 parseMaybeInput :: Read b => Text -> MultipartData tag -> Either String (Maybe b)
 parseMaybeInput fieldName form = case lookupInput fieldName form of
@@ -103,8 +109,9 @@ createPath ::
   Text ->
   Text ->
   DVC.DocumentType ->
+  Text ->
   m Text
-createPath driverId merchantId documentType = do
+createPath driverId merchantId documentType imageExtension = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
@@ -115,7 +122,8 @@ createPath driverId merchantId documentType = do
         <> show documentType
         <> "/"
         <> fileName
-        <> ".png"
+        <> "."
+        <> imageExtension
     )
 
 validateImage ::
@@ -126,8 +134,9 @@ validateImage ::
 validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
-  when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  imageExtension <- validateContentType org
+  when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   imageSizeInBytes <- fromMaybeM (InvalidRequest "Failed to decode base64 image") $ base64Decode image
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
@@ -164,7 +173,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
   when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
 
-  imagePath <- createPath personId.getId merchantId.getId imageType
+  imagePath <- createPath personId.getId merchantId.getId imageType imageExtension
   fork "S3 Put Image" do
     Redis.withLockRedis (imageS3Lock imagePath) 5 $
       S3.put (T.unpack imagePath) image
@@ -212,6 +221,19 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
         VI.HVSelfieFlow (VI.SelfieFlow _) -> return ()
         _ -> void $ throwValidationError Nothing Nothing Nothing
 
+    validateContentType merchant = do
+      case merchant.fileExtensionCheck of
+        Just True -> do
+          fileType' <- fileType & fromMaybeM (InvalidRequest "fileType is required")
+          reqContentType' <- reqContentType & fromMaybeM (InvalidRequest "reqContentType is required")
+          case fileType' of
+            S3.Image -> case reqContentType' of
+              "image/png" -> pure "png"
+              "image/jpeg" -> pure "jpg"
+              _ -> throwError $ FileFormatNotSupported reqContentType'
+            _ -> throwError $ FileFormatNotSupported reqContentType'
+        _ -> pure "png"
+
 convertHVStatusToValidationStatus :: Text -> Domain.ValidationStatus
 convertHVStatusToValidationStatus status =
   case status of
@@ -253,7 +275,18 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $
+    ImageValidateRequest
+      { image = image',
+        fileType,
+        reqContentType,
+        imageType,
+        rcNumber,
+        validationStatus,
+        workflowTransactionId,
+        vehicleCategory = Nothing,
+        sdkFailureReason = Nothing
+      }
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
