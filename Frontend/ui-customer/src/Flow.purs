@@ -6775,7 +6775,6 @@ firstRideCompletedEvent str = do
         let
           arraySize = Arr.length listResp.list
         if (arraySize == 1) then do
-          void $ liftFlowBT $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
           liftFlowBT $ logEventWithMultipleParams logField_ (eventPrefix <> "user_first_ride_completed_with_props") $  rideCompletedEventParams globalState.homeScreen
           setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
         else if arraySize > 1 then do

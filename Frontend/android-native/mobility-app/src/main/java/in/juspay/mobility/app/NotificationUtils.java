@@ -564,13 +564,10 @@ public class NotificationUtils {
 
         if (MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
-                Utils.logEvent ("ny_user_ride_started", context);
                 if (disabilityName.equals("BLIND_LOW_VISION")) {
                     startMediaPlayer(context, R.raw.ride_started_talkback, false);
                 }
             }
-            else
-                Utils.logEvent("ride_started", context);
         }
         if (MyFirebaseMessagingService.NotificationTypes.TRIP_FINISHED.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -578,26 +575,12 @@ public class NotificationUtils {
                 if(disabilityName.equals("BLIND_LOW_VISION")) {
                     startMediaPlayer(context, R.raw.ride_completed_talkback, false);
                 }
-                Utils.logEvent("ny_user_ride_completed", context);
                 String rideTaken = sharedPref.getString("HAS_TAKEN_FIRST_RIDE", "false");
-                if(rideTaken.equals("false")){
-                    Utils.logEvent("ny_user_first_ride_completed", context);
-                }
             }
-            else
-                Utils.logEvent("ride_completed",context);
         }
         if (MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT.equals(notificationType) ||
                 MyFirebaseMessagingService.NotificationTypes.REALLOCATE_PRODUCT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-            if (key.equals("USER"))
-            {if (MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT.equals(notificationType)) {
-                Utils.logEvent ("ny_user_ride_cancelled", context);
-            }
-            else
-                Utils.logEvent("ny_user_ride_reallocation", context);}
-            else
-                Utils.logEvent("ride_cancelled", context);
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
                 startMediaPlayer(context, R.raw.ride_cancelled_media, incVol);
             } else {
@@ -621,12 +604,6 @@ public class NotificationUtils {
         if (MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             int audio = R.raw.ride_assigned;
-            if (key.equals("USER")) {
-                Utils.logEvent ("ny_user_ride_assigned", context);
-            }
-            if (key.equals("DRIVER")) {
-                Utils.logEvent("driver_assigned", context);
-            }
             if(key.equals("USER") && disabilityName.equals("BLIND_LOW_VISION")) {
                 audio = R.raw.ride_assigned_talkback;
             }
