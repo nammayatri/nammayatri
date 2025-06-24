@@ -83,6 +83,9 @@ import Utils.Common.Cac.KeyNameConstants
 driverDocumentTypes :: [DVC.DocumentType]
 driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense]
 
+fleetDocumentTypes :: [DVC.DocumentType]
+fleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
+
 vehicleDocumentTypes :: [DVC.DocumentType]
 vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
 
