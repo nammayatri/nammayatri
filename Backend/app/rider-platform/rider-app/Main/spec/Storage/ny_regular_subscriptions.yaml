@@ -93,6 +93,7 @@ NyRegularSubscription:
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE # Added this line
 
   queries:
     findById:

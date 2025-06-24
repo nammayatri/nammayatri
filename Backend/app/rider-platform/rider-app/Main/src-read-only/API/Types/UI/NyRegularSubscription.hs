@@ -63,18 +63,15 @@ data OneWaySearchReqDetails = OneWaySearchReqDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpdateSubscriptionReq = UpdateSubscriptionReq
-  { dropoffLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
-    id :: Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription,
+  { id :: Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription,
     metadata :: Kernel.Prelude.Maybe Data.Aeson.Value,
     pauseEndDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
     pauseStartDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
-    pickupLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     recurrenceEndDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     recurrenceRuleDays :: Kernel.Prelude.Maybe [Data.Time.Calendar.DayOfWeek],
     scheduledTimeOfDay :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
     startDatetime :: Kernel.Prelude.Maybe Data.Time.UTCTime,
-    status :: Kernel.Prelude.Maybe Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus,
-    vehicleServiceTier :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType
+    status :: Kernel.Prelude.Maybe Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -2,10 +2,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.NyRegularSubscription where
+module Storage.Queries.NyRegularSubscription (module Storage.Queries.NyRegularSubscription, module ReExport) where
 
 import qualified Data.Aeson
-import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Data.Time.LocalTime
 import qualified Domain.Types.NyRegularSubscription
@@ -17,12 +16,11 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
-import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.NyRegularSubscription as Beam
-import qualified Storage.Queries.Location
+import Storage.Queries.NyRegularSubscriptionExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
 create = createWithKV
@@ -37,8 +35,8 @@ confirmSubscriptionDetailsById vehicleServiceTier fixedPrice fixedPriceBreakupDe
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.vehicleServiceTier vehicleServiceTier,
-      Se.Set Beam.fixedPrice (((.amount) <$> fixedPrice)),
-      Se.Set Beam.fixedPriceCurrency (((.currency) <$> fixedPrice)),
+      Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
+      Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),
       Se.Set Beam.fixedPriceBreakupDetails fixedPriceBreakupDetails,
       Se.Set Beam.fixedPriceExpiryDate fixedPriceExpiryDate,
       Se.Set Beam.initialBppQuoteId initialBppQuoteId,
@@ -52,7 +50,7 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m (Maybe Domain.Types.NyRegularSubscription.NyRegularSubscription))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.NyRegularSubscription.NyRegularSubscription]))
+findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.NyRegularSubscription.NyRegularSubscription])
 findByUserId userId = do findAllWithKV [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId)]
 
 updatePauseDetailsById ::
@@ -98,8 +96,8 @@ updateByPrimaryKey (Domain.Types.NyRegularSubscription.NyRegularSubscription {..
     [ Se.Set Beam.bppId bppId,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dropoffLocationId (Kernel.Types.Id.getId $ (.id) dropoffLocation),
-      Se.Set Beam.fixedPrice (((.amount) <$> fixedPrice)),
-      Se.Set Beam.fixedPriceCurrency (((.currency) <$> fixedPrice)),
+      Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
+      Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),
       Se.Set Beam.fixedPriceBreakupDetails fixedPriceBreakupDetails,
       Se.Set Beam.fixedPriceExpiryDate fixedPriceExpiryDate,
       Se.Set Beam.initialBppQuoteId initialBppQuoteId,
@@ -119,62 +117,3 @@ updateByPrimaryKey (Domain.Types.NyRegularSubscription.NyRegularSubscription {..
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.NyRegularSubscription Domain.Types.NyRegularSubscription.NyRegularSubscription where
-  fromTType' (Beam.NyRegularSubscriptionT {..}) = do
-    dropoffLocation' <- Storage.Queries.Location.findById (Kernel.Types.Id.Id dropoffLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get dropoffLocation " <> dropoffLocationId))
-    pickupLocation' <- Storage.Queries.Location.findById (Kernel.Types.Id.Id pickupLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get pickupLocation " <> pickupLocationId))
-    pure $
-      Just
-        Domain.Types.NyRegularSubscription.NyRegularSubscription
-          { bppId = bppId,
-            createdAt = createdAt,
-            dropoffLocation = dropoffLocation',
-            fixedPrice = (Kernel.Types.Common.mkPrice fixedPriceCurrency) <$> fixedPrice,
-            fixedPriceBreakupDetails = fixedPriceBreakupDetails,
-            fixedPriceExpiryDate = fixedPriceExpiryDate,
-            id = Kernel.Types.Id.Id id,
-            initialBppQuoteId = initialBppQuoteId,
-            metadata = metadata,
-            pauseEndDate = pauseEndDate,
-            pauseStartDate = pauseStartDate,
-            pickupLocation = pickupLocation',
-            recurrenceEndDate = recurrenceEndDate,
-            recurrenceRuleDays = ((read . Data.Text.unpack) <$> recurrenceRuleDays),
-            scheduledTimeOfDay = scheduledTimeOfDay,
-            startDatetime = startDatetime,
-            status = status,
-            updatedAt = updatedAt,
-            userId = Kernel.Types.Id.Id userId,
-            vehicleServiceTier = vehicleServiceTier,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
-          }
-
-instance ToTType' Beam.NyRegularSubscription Domain.Types.NyRegularSubscription.NyRegularSubscription where
-  toTType' (Domain.Types.NyRegularSubscription.NyRegularSubscription {..}) = do
-    Beam.NyRegularSubscriptionT
-      { Beam.bppId = bppId,
-        Beam.createdAt = createdAt,
-        Beam.dropoffLocationId = Kernel.Types.Id.getId $ (.id) dropoffLocation,
-        Beam.fixedPrice = ((.amount) <$> fixedPrice),
-        Beam.fixedPriceCurrency = ((.currency) <$> fixedPrice),
-        Beam.fixedPriceBreakupDetails = fixedPriceBreakupDetails,
-        Beam.fixedPriceExpiryDate = fixedPriceExpiryDate,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.initialBppQuoteId = initialBppQuoteId,
-        Beam.metadata = metadata,
-        Beam.pauseEndDate = pauseEndDate,
-        Beam.pauseStartDate = pauseStartDate,
-        Beam.pickupLocationId = Kernel.Types.Id.getId $ (.id) pickupLocation,
-        Beam.recurrenceEndDate = recurrenceEndDate,
-        Beam.recurrenceRuleDays = map show recurrenceRuleDays,
-        Beam.scheduledTimeOfDay = scheduledTimeOfDay,
-        Beam.startDatetime = startDatetime,
-        Beam.status = status,
-        Beam.updatedAt = updatedAt,
-        Beam.userId = Kernel.Types.Id.getId userId,
-        Beam.vehicleServiceTier = vehicleServiceTier,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
-      }

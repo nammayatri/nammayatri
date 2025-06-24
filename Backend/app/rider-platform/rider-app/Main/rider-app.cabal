@@ -318,7 +318,6 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
-      ExternalInstances
       Lib.JourneyLeg.Bus
       Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Interface
@@ -477,6 +476,7 @@ library
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.NyRegularSubscriptionExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
@@ -1036,6 +1036,7 @@ library
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Person

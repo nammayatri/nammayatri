@@ -17,6 +17,7 @@ imports:
   Version: Kernel.Types.Version
   Client: Domain.Types.Client
   SearchRequest: Domain.Types.SearchRequest
+  GetQuotesRes: Domain.Action.UI.Quote
 
 module: NyRegularSubscription
 types:
@@ -57,9 +58,6 @@ types:
 
   UpdateSubscriptionReq:
     id: Id NyRegularSubscription
-    pickupLocation: Maybe Location
-    dropoffLocation: Maybe Location
-    vehicleServiceTier: Maybe ServiceTierType
     startDatetime: Maybe UTCTime
     recurrenceRuleDays: Maybe [DayOfWeek]
     scheduledTimeOfDay: Maybe TimeOfDay
@@ -95,7 +93,7 @@ apis:
         searchRequestId: Text
         subscriptionId: Id NyRegularSubscription
       response:
-        type: "[Estimate]" # Assuming it returns a list of Estimate entities
+        type: GetQuotesRes
 
   # POST /nyRegular/subscriptions/confirm
   - POST:
@@ -119,10 +117,10 @@ apis:
   - GET:
       endpoint: /nyRegular/subscriptions
       auth: TokenAuth
-      params:
-        status: Maybe NyRegularSubscriptionStatus
-        limit: Maybe Int
-        offset: Maybe Int
+      query:
+        - status: Maybe NyRegularSubscriptionStatus
+        - limit: Maybe Int
+        - offset: Maybe Int
       response:
         type: "[NyRegularSubscription]"
 

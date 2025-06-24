@@ -39,3 +39,18 @@ ALTER TABLE atlas_app.ny_regular_subscriptions ADD COLUMN fixed_price double pre
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
