@@ -165,10 +165,16 @@ getNyRegularSubscriptionsEstimate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Data.Text.Text ->
+    Data.Text.Text -> -- searchRequestId from path
+    -- The API.Action layer will also receive a Maybe (Id NyRegularSubscription) for the query param,
+    -- but we are ignoring it here as per instruction.
     Environment.Flow Domain.Action.UI.Quote.GetQuotesRes
   )
-getNyRegularSubscriptionsEstimate = do error "Logic yet to be decided"
+getNyRegularSubscriptionsEstimate _auth searchRequestIdText = do
+  let searchId = Id.Id searchRequestIdText
+  -- The third parameter to getQuotes was for an optional BPPId, not subscriptionId.
+  -- Passing Nothing as we don't have a specific BPPId to filter by here.
+  Domain.Action.UI.Quote.getQuotes searchId Nothing
 
 postNyRegularSubscriptionsConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -271,7 +277,23 @@ postNyRegularSubscriptionsCancel ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription ->
+    Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> -- subscriptionId from path
     Environment.Flow Domain.Types.NyRegularSubscription.NyRegularSubscription
   )
-postNyRegularSubscriptionsCancel = do error "Logic yet to be decided"
+postNyRegularSubscriptionsCancel (mPersonId, _) subscriptionIdToCancel = do
+  personId <- mPersonId & fromMaybeM (PersonNotFound "Person not found in token")
+
+  -- Fetch to verify ownership and existence
+  subscription <-
+    QNyRegularSubscription.findById subscriptionIdToCancel
+      >>= fromMaybeM (InvalidRequest "Subscription not found to cancel")
+
+  unless (Domain.Types.NyRegularSubscription.userId subscription == personId) $
+    throwM (InvalidRequest "User does not own this subscription to cancel")
+
+  -- Update status to CANCELLED
+  QNyRegularSubscription.updateStatusById Domain.Types.NyRegularSubscription.CANCELLED subscriptionIdToCancel
+
+  -- Fetch and return updated subscription
+  QNyRegularSubscription.findById subscriptionIdToCancel
+    >>= fromMaybeM (InvalidRequest "Failed to fetch subscription after cancellation")
