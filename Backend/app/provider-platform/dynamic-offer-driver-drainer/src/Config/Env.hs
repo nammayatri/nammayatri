@@ -44,3 +44,10 @@ getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerP
 
 isPushToKafka :: IO Bool
 isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
+
+-- DB Connection Recovery Configuration
+getDbConnectionRetryMaxAttempts :: IO Int
+getDbConnectionRetryMaxAttempts = fromMaybe defaultDbConnectionRetryMaxAttempts . (>>= readMaybe) <$> SE.lookupEnv dbConnectionRetryMaxAttempts
+
+getDbConnectionRetryDelay :: IO Int
+getDbConnectionRetryDelay = fromMaybe defaultDbConnectionRetryDelay . (>>= readMaybe) <$> SE.lookupEnv dbConnectionRetryDelayEnvKey
