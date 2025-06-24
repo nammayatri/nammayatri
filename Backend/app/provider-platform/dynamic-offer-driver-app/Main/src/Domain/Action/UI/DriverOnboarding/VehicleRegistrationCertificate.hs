@@ -89,6 +89,7 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
@@ -310,6 +311,9 @@ verifyPan ::
   DriverPanReq ->
   Flow DriverPanRes
 verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
+
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   blocked <- case person.role of
     Person.FLEET_OWNER -> do
@@ -447,6 +451,9 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       Just "Individual" -> Just DPan.INDIVIDUAL
       Just _ -> Just DPan.BUSINESS
       Nothing -> Nothing
+
+    makeVerifyPanHitsCountKey :: Text -> Text
+    makeVerifyPanHitsCountKey panNumber = "VerifyPan:panNumberHits:" <> panNumber <> ":hitsCount"
 
 verifyGstin ::
   Bool ->
