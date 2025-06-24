@@ -2302,7 +2302,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
 validateMobileNumber :: Text -> Text -> Flow ()
 validateMobileNumber mobileNumber mobileCountryCode = do
-  result <- try (void $ runRequestValidation Common.validateUpdatePhoneNumberReq (Common.UpdatePhoneNumberReq {newPhoneNumber = mobileNumber, newCountryCode = mobileCountryCode}))
+  result <- try (void $ runRequestValidation Common.validateIndianMobileNumber (Common.UpdatePhoneNumberReq {newPhoneNumber = mobileNumber, newCountryCode = mobileCountryCode}))
   case result of
     Left (_ :: SomeException) -> throwError $ InvalidRequest "Invalid mobile number"
     Right _ -> pure ()
@@ -2311,7 +2311,7 @@ validateDriverName :: Text -> Flow ()
 validateDriverName driverName = do
   result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
   case result of
-    Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter"
+    Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
     Right _ -> pure ()
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
