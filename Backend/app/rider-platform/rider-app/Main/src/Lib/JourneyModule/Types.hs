@@ -1115,6 +1115,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,
         fromLocationAddress = Just fromLocationAddress,
         paymentOrderShortId = Nothing,
+        journeyExpiryTime = Nothing,
         ..
       }
   where
