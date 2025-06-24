@@ -34,7 +34,9 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetOwnerInformation as FOI
+import qualified Domain.Types.FleetRouteAssociation as FleetRouteAssociation
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -59,8 +61,10 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
@@ -92,7 +96,15 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     gstCertificateImage :: Maybe Text,
     businessLicenseImage :: Maybe Text,
     operatorReferralCode :: Maybe Text,
-    adminApprovalRequired :: Maybe Bool
+    adminApprovalRequired :: Maybe Bool,
+    operatingRouteCodes :: [Text],
+    allowAutomaticRoundTripAssignment :: Maybe Bool,
+    allowEndingMidRoute :: Maybe Bool,
+    allowStartRideFromQR :: Maybe Bool,
+    directlyStartFirstTripAssignment :: Maybe Bool,
+    endRideDistanceThreshold :: Maybe Int,
+    rideEndApproval :: Maybe Bool,
+    unlinkDriverAndVehicleOnTripTermination :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -122,6 +134,41 @@ fleetOwnerRegister req mbEnabled = do
     Nothing -> do
       maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
       person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType mbEnabled req.gstNumber maybeOperatorId
+      -- V2 style: create fleet_config and fleet_route_association together, no forks or side effects in between
+      now <- getCurrentTime
+      let fleetConfig =
+            DFC.FleetConfig
+              { allowAutomaticRoundTripAssignment = fromMaybe True req.allowAutomaticRoundTripAssignment,
+                allowEndingMidRoute = fromMaybe False req.allowEndingMidRoute,
+                allowStartRideFromQR = fromMaybe True req.allowStartRideFromQR,
+                directlyStartFirstTripAssignment = fromMaybe True req.directlyStartFirstTripAssignment,
+                endRideDistanceThreshold = 100,
+                fleetOwnerId = person.id,
+                rideEndApproval = fromMaybe False req.rideEndApproval,
+                unlinkDriverAndVehicleOnTripTermination = fromMaybe True req.unlinkDriverAndVehicleOnTripTermination,
+                merchantId = Just merchant.id,
+                merchantOperatingCityId = Just merchantOpCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      mbExisting <- QFC.findByPrimaryKey person.id
+      case mbExisting of
+        Just _ -> QFC.updateByPrimaryKey fleetConfig
+        Nothing -> QFC.create fleetConfig
+      forM_ req.operatingRouteCodes $ \routeCode -> do
+        assocId <- generateGUID
+        let assoc =
+              FleetRouteAssociation.FleetRouteAssociation
+                { createdAt = now,
+                  fleetOwnerId = person.id,
+                  id = Id assocId,
+                  merchantId = merchant.id,
+                  merchantOperatingCityId = merchantOpCityId,
+                  routeCode = routeCode,
+                  updatedAt = now
+                }
+        QFRA.create assoc
+      -- Side effects (forks, image uploads, etc.) can follow after
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
       fork "Uploading GST Image" $ do
