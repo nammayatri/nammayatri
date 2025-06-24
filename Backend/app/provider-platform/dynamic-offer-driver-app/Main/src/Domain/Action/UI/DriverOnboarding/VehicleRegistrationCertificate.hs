@@ -217,6 +217,9 @@ verifyRC ::
   DriverRCReq ->
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeVerifyRCHitsCountKey req.vehicleRegistrationCertNumber) externalServiceRateLimitOptions
+
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe DVC.CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
   let checkPrefixOfRCNumber = null documentVerificationConfig.rcNumberPrefixList || prefixMatchedResult req.vehicleRegistrationCertNumber documentVerificationConfig.rcNumberPrefixList
@@ -303,6 +306,9 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           grossVehicleWeight = Nothing,
           unladdenWeight = Nothing
         }
+
+    makeVerifyRCHitsCountKey :: Text -> Text
+    makeVerifyRCHitsCountKey rcNumber = "VerifyRC:rcNumberHits:" <> rcNumber <> ":hitsCount"
 
 verifyPan ::
   Bool ->
@@ -462,6 +468,9 @@ verifyGstin ::
   DriverGstinReq ->
   Flow DriverPanRes
 verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeVerifyGstinHitsCountKey req.gstin) externalServiceRateLimitOptions
+
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   blocked <- case person.role of
     Person.FLEET_OWNER -> do
@@ -570,6 +579,9 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           DGQuery.create $ gstCardDetails
       pure Success
 
+    makeVerifyGstinHitsCountKey :: Text -> Text
+    makeVerifyGstinHitsCountKey gstin = "VerifyGstin:gstinHits:" <> gstin <> ":hitsCount"
+
 verifyAadhaar ::
   Bool ->
   Maybe DM.Merchant ->
@@ -577,6 +589,9 @@ verifyAadhaar ::
   DriverAadhaarReq ->
   Flow DriverAadhaarRes
 verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey req.aadhaarNumber) externalServiceRateLimitOptions
+
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   blocked <- case person.role of
     Person.FLEET_OWNER -> do
@@ -659,6 +674,9 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
         throwError (ImageInvalidType (show ODC.AadhaarCard) (show imageMetadata.imageType))
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
+
+    makeVerifyAadhaarHitsCountKey :: Text -> Text
+    makeVerifyAadhaarHitsCountKey aadhaarNumber = "VerifyAadhaar:aadhaarNumberHits:" <> aadhaarNumber <> ":hitsCount"
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do
