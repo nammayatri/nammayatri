@@ -82,12 +82,8 @@ executeQueryWithRetry pool query' maxAttempts retryDelay firstError = go (maxAtt
         then do
           let currentAttempt = maxAttempts - attemptsLeft
           let backoffDelay = retryDelay * currentAttempt
-          putStrLn @String "[Retry] Database connection error"
-          putStrLn @String $ "  Error          : " ++ show lastError
-          putStrLn @String $ "  Attempts left  : " ++ show attemptsLeft
-          putStrLn @String $ "  Retry delay    : " ++ show (backoffDelay `div` 1000000) ++ " seconds"
+          putStrLn @String $ "[Retry] Database connection error - Error: " ++ show lastError ++ " - Attempts left: " ++ show attemptsLeft ++ " - Retry delay: " ++ show (backoffDelay `div` 1000000) ++ " seconds"
           threadDelay backoffDelay
-
           res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
           case res of
             Left (e :: SomeException) ->
