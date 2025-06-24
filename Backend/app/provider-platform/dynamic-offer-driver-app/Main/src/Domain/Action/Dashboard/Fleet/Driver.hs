@@ -194,7 +194,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   entityDetails <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id role >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   let merchantId = entityDetails.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
-  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails
+  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
@@ -231,14 +231,16 @@ checkRCAssociationForDriver driverId vehicleRC checkFleet = do
       unless (null driverAssociations) $ throwError DriverAlreadyLinkedToAnotherVehicle
       return False
 
-checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Flow (DP.Person, Maybe Text)
-checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails = do
+checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Maybe Bool -> Flow (DP.Person, Maybe Text)
+checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails fleetOwnerEnabledCheck = do
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
 
   case requestedPerson.role of
     -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
     DP.FLEET_OWNER -> do
-      fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure val else throwError AccessDenied) mbFleetOwnerId -- Have to discuss
+      fleetOwnerId <- case mbFleetOwnerId of -- Have to discuss
+        Nothing -> DCommon.checkFleetOwnerVerification requestorId fleetOwnerEnabledCheck >> pure requestorId
+        Just val -> if requestorId == val then pure val else throwError AccessDenied
       handleFleetOwnerFlow fleetOwnerId
 
     -- Operator should add vehcile under DCO (Driver who independent from fleet), Fleet, FleetDriver (Driver who has active association with fleet)
