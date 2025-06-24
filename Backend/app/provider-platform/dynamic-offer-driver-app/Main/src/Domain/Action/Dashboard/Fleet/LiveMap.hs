@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers) where
 
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import qualified Data.List as L
-import Data.OpenApi (ToSchema)
-import Data.Ord (comparing)
 import Data.Time (UTCTime (UTCTime, utctDay), addUTCTime, diffUTCTime, getCurrentTime)
 import Domain.Action.Dashboard.Common (mobileIndianCode)
 import Domain.Action.Dashboard.Fleet.Driver (validateOperatorToFleetAssoc) -- , validateRequestorRoleAndGetEntityId)
@@ -21,32 +17,29 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
-import Kernel.Types.Common (Meters (..), Money (..), Seconds (..))
+import Kernel.Types.Common
+  ( HighPrecMoney (..),
+    Meters (..),
+    Seconds (..),
+  )
 import Kernel.Types.Error
   ( GenericError (InternalError),
     PersonError (PersonDoesNotExist, PersonNotFound),
-    RideError (RideDoesNotExist),
-    VehicleError (VehicleNotFound),
   )
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
 import Kernel.Utils.Time (getLocalCurrentTime, secondsToNominalDiffTime)
-import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Ride as CHR
-import qualified Storage.Clickhouse.RideDetails as CHRD
 import qualified Storage.Queries.DailyStats as SQDS
-import Storage.Queries.DriverInformationExtra (findAllWithLimitOffsetByMerchantId, findByIdAndVerified)
+import Storage.Queries.DriverInformationExtra (findByIdAndVerified)
 import Storage.Queries.DriverOperatorAssociationExtra (findAllActiveByOperatorId)
 import Storage.Queries.FleetDriverAssociationExtra (findAllActiveDriverByFleetOwnerIdWithDriverInfo)
 import qualified Storage.Queries.Person as QP
-import Tools.Auth
 import Tools.Error
   ( AuthError (AccessDenied),
-    DriverInformationError (..),
     GenericError (InvalidRequest),
     TransporterError (TransporterConfigNotFound),
   )
@@ -109,7 +102,7 @@ buildTodaySummary ::
   Common.Status ->
   Environment.Flow Common.TodaySummary
 buildTodaySummary (driver, driverInformation) rideLs driverStatus = do
-  let trips = countTrips rideLs $ Trips 0 0 0 0 0 0
+  let trips = countTrips rideLs $ Trips 0 0
   transporterConfig <-
     CTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
@@ -129,13 +122,13 @@ buildTodaySummary (driver, driverInformation) rideLs driverStatus = do
   pure $
     Common.TodaySummary
       { tripStatus = castStatus driverInformation.mode,
-        tripsCompletedCount = trips.tripsCompletedCount,
-        earnings = Money trips.fare,
-        totalDistance = Meters trips.chargeableDistance,
+        tripsCompletedCount = maybe 0 (.numRides) mbDailyStats,
+        earnings = maybe (HighPrecMoney 0) (.totalEarnings) mbDailyStats,
+        totalDistance = maybe (Meters 0) (.totalDistance) mbDailyStats,
         tripBalanceLeft = 0, -- FXME
         tripsCancelled = trips.tripsCancelled,
         tripsPassed = trips.tripsPassed,
-        tripsScheduled = trips.tripsScheduled,
+        tripsScheduled = maybe 0 (.activatedValidRides) mbDailyStats,
         onlineDuration = onlineDuration + additionalTimeInOnline
       }
 
@@ -147,12 +140,8 @@ castStatus = \case
   _ -> Common.OFFLINE
 
 data Trips = Trips
-  { tripsCompletedCount :: Int,
-    tripsCancelled :: Int,
-    tripsPassed :: Int,
-    tripsScheduled :: Int,
-    chargeableDistance :: Int,
-    fare :: Int
+  { tripsCancelled :: Int,
+    tripsPassed :: Int
   }
 
 -- RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED
@@ -164,21 +153,14 @@ countTrips (rd : rds) trips =
         case rd.status of
           Nothing -> trips
           Just DR.COMPLETED ->
-            trips
-              { tripsCompletedCount = trips.tripsCompletedCount + 1,
-                tripsPassed = trips.tripsPassed + 1
-              }
+            trips {tripsPassed = trips.tripsPassed + 1}
           Just DR.CANCELLED ->
             trips
               { tripsCancelled = trips.tripsCancelled + 1,
                 tripsPassed = trips.tripsPassed + 1
               }
-          _ -> countTrips rds $ trips {tripsScheduled = trips.tripsScheduled + 1}
-   in countTrips rds $
-        trips'
-          { chargeableDistance = trips.chargeableDistance + fromMaybe 0 rd.chargeableDistance,
-            fare = trips.fare + fromMaybe 0 rd.fare
-          }
+          _ -> countTrips rds trips
+   in countTrips rds trips'
 
 buildOperatorMapDriverInfo ::
   DDI.DriverInformation ->

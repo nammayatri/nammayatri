@@ -20,7 +20,7 @@ apis:
             query:
               - fleetOwnerId: Text
             response:
-              type: "[MapDriverInfoRes]"        
+              type: "[MapDriverInfoRes]"
 
 types:
   MapDriverInfoRes:
@@ -47,7 +47,7 @@ types:
   TodaySummary:
     - tripStatus: Status
     - tripsCompletedCount: Int
-    - earnings: Money
+    - earnings: HighPrecMoney
     - totalDistance: Meters
     - tripBalanceLeft: Int
     - tripsCancelled: Int

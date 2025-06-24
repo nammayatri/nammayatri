@@ -799,8 +799,7 @@ processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc 
   now <- getCurrentTime
   mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
   when (previousMode == Just DriverInfo.ONLINE) $ do
-    --  let localTimeOfThatDay = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) ride.updatedAt
-    let lastOnlineTo = Just localTime -- now
+    let lastOnlineTo = Just localTime
         startDayTime = Just $ UTCTime (utctDay localTime) 0
         mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
         lastOnlineFrom = max mbLastOnlineFrom startDayTime

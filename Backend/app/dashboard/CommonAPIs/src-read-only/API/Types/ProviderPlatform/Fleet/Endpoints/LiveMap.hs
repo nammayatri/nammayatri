@@ -58,7 +58,7 @@ data Status
 data TodaySummary = TodaySummary
   { tripStatus :: Status,
     tripsCompletedCount :: Kernel.Prelude.Int,
-    earnings :: Kernel.Types.Common.Money,
+    earnings :: Kernel.Types.Common.HighPrecMoney,
     totalDistance :: Kernel.Types.Common.Meters,
     tripBalanceLeft :: Kernel.Prelude.Int,
     tripsCancelled :: Kernel.Prelude.Int,
