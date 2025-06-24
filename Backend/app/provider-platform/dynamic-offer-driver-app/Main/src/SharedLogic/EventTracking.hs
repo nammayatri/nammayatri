@@ -5,6 +5,7 @@ import qualified Domain.Types.DriverPlan as DDPlan
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
 import Lib.SessionizerMetrics.Types.Event
 import Tools.Event as TE
@@ -94,5 +95,27 @@ trackRefundSegregation payoutOrder segregation serviceName = do
             merchantOperatingCityId = Nothing,
             updatedAt = now,
             subscriptionServiceName = Just serviceName
+          }
+  TE.triggerEventTrackerEvent eventData
+
+trackDriverDuesAndPlanLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => (Id DOrder.PaymentOrder) -> Text -> Text -> m ()
+trackDriverDuesAndPlanLimit paymentOrder duesAndPlanLimits serviceName = do
+  id <- generateGUIDText
+  now <- getCurrentTime
+  let eventData =
+        TE.EventTrackerData
+          { eventName = DRIVER_DUES_AND_PLAN_LIMIT,
+            id = id,
+            createdAt = now,
+            entity = "PaymentOrder",
+            entityFieldName = "DuesAndPlanLimits",
+            entityPrimaryId = paymentOrder.getId,
+            fromState = Nothing,
+            reason = Nothing,
+            toState = Just duesAndPlanLimits,
+            merchantId = Nothing,
+            updatedAt = now,
+            subscriptionServiceName = Just serviceName,
+            merchantOperatingCityId = Nothing
           }
   TE.triggerEventTrackerEvent eventData
