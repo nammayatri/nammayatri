@@ -9,7 +9,8 @@ SET
     generate_referral_code_for_fleet = true,
     enable_existing_vehicle_in_bulk_upload = true,
     require_route_mapping_in_vehicle = false,
-    deactivate_rc_on_unlink = false
+    deactivate_rc_on_unlink = false,
+    disable_driver_when_unlinking_vehicle = false
 WHERE merchant_operating_city_id IN (
     SELECT id
     FROM atlas_driver_offer_bpp.merchant_operating_city
