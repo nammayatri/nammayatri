@@ -82,6 +82,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
+import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
@@ -261,6 +262,25 @@ defaultBusTrackingConfig =
       movementThresholdInMeters = 25.0
     }
 
+checkAndMarkJourneyAsFeedbackPending ::
+  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  DJourney.Journey ->
+  [[JL.JourneyLegStatus]] ->
+  m ()
+checkAndMarkJourneyAsFeedbackPending journey allLegsStatus = do
+  when
+    ( all
+        ( \st ->
+            all
+              ( \legStatus -> legStatus `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
+              )
+              st
+        )
+        allLegsStatus
+        && journey.status /= DJourney.CANCELLED
+    )
+    $ updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
@@ -273,17 +293,14 @@ getAllLegsStatus journey = do
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
   (_, _, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (True, Nothing, []) allLegsRawData
   let allLegsState = map snd legPairs
-  when
-    ( all
-        ( \st -> case st of
-            JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
-            JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
-        )
-        allLegsState
-        && journey.status /= DJourney.CANCELLED
-    )
-    $ do
-      updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+  checkAndMarkJourneyAsFeedbackPending journey $
+    map
+      ( \st ->
+          case st of
+            JL.Single legState -> [legState.status]
+            JL.Transit legStates -> map (.status) legStates
+      )
+      allLegsState
   return allLegsState
   where
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
@@ -1502,3 +1519,12 @@ generateJourneyInfoResponse journey legs = do
         crisSdkToken = Nothing,
         paymentOrderShortId = journey.paymentOrderShortId
       }
+
+markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegExtraInfo -> m ()
+markLegStatus status journeyLegExtraInfo = do
+  case journeyLegExtraInfo of
+    JL.Taxi legExtraInfo -> whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
+    JL.Metro legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
+    JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
+    JL.Subway legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
+    JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id

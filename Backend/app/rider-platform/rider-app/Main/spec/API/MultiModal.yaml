@@ -386,7 +386,14 @@ apis:
         legOrder: Int
         status: JourneyLegStatus
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: JourneyInfoResp
+
+  - POST:
+      endpoint: multimodal/{journeyId}/complete
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyInfoResp
 
   - POST:
       endpoint: /multimodal/ticket/verify

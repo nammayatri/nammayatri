@@ -24,6 +24,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSetStatus,
     postMultimodalTicketVerify,
+    postMultimodalComplete,
   )
 where
 
@@ -77,14 +78,12 @@ import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.BecknConfig as QBC
-import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuote as QQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
@@ -95,7 +94,6 @@ import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
-import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -860,25 +858,18 @@ postMultimodalOrderSetStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
   JL.JourneyLegStatus ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
+  Environment.Flow ApiTypes.JourneyInfoResp
 postMultimodalOrderSetStatus (_mbPersonId, _merchantId) journeyId legOrder newStatus = do
+  journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
-  case journeyLegInfo.legExtraInfo of
-    JMTypes.Taxi legExtraInfo -> do
-      let mbBookingId = legExtraInfo.bookingId
-      bookingId <- mbBookingId & fromMaybeM (InvalidRequest $ "BookingId for given journeyId: " <> journeyId.getId <> ", legOrder: " <> show legOrder <> " not found")
-      QBooking.updateJourneyLegStatus (Just newStatus) bookingId
-    JMTypes.Metro legExtraInfo -> updateJourneyLegInTicketBooking legExtraInfo.bookingId
-    JMTypes.Bus legExtraInfo -> updateJourneyLegInTicketBooking legExtraInfo.bookingId
-    JMTypes.Subway legExtraInfo -> updateJourneyLegInTicketBooking legExtraInfo.bookingId
-    JMTypes.Walk legExtraInfo -> do
-      QWalkLeg.updateStatus (JMTypes.castWalkLegStatusFromLegStatus newStatus) legExtraInfo.id
-  pure Kernel.Types.APISuccess.Success
-  where
-    updateJourneyLegInTicketBooking mbTicketBookingId = do
-      ticketBookingId <- mbTicketBookingId & fromMaybeM (InvalidRequest $ "BookingId for given journeyId: " <> journeyId.getId <> ", legOrder: " <> show legOrder <> " not found")
-      QTBooking.updateJourneyLegStatus (Just newStatus) ticketBookingId
+  markLegStatus newStatus journeyLegInfo.legExtraInfo
+
+  -- refetch updated legs and journey
+  updatedLegs <- JM.getAllLegsInfo journeyId False
+  checkAndMarkJourneyAsFeedbackPending journey $ map (\st -> [st.status]) updatedLegs
+  updatedJourney <- JM.getJourney journeyId
+  generateJourneyInfoResponse updatedJourney updatedLegs
 
 postMultimodalTicketVerify ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -897,3 +888,19 @@ postMultimodalTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicl
   booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
   legInfo <- JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
   return $ API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp {legInfo = legInfo}
+
+postMultimodalComplete ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow ApiTypes.JourneyInfoResp
+postMultimodalComplete (_mbPersonId, _merchantId) journeyId = do
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId False
+  mapM_ (markLegStatus JL.Completed . (.legExtraInfo)) legs
+
+  updatedLegs <- JM.getAllLegsInfo journeyId False
+  checkAndMarkJourneyAsFeedbackPending journey $ map (\st -> [st.status]) updatedLegs
+  updatedJourney <- JM.getJourney journeyId
+  generateJourneyInfoResponse updatedJourney updatedLegs
