@@ -8,7 +8,7 @@ import Data.Time.Format
 import qualified Data.UUID as UU
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig as DIBC
-import EulerHS.Types as ET
+import EulerHS.Types as ET hiding (Log)
 import ExternalBPP.ExternalAPI.Bus.EBIX.Auth
 import ExternalBPP.ExternalAPI.Types
 import Kernel.Beam.Functions as B
@@ -84,15 +84,21 @@ type SaveMobTicketAPI =
 saveMobTicketAPI :: Proxy SaveMobTicketAPI
 saveMobTicketAPI = Proxy
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, MonadReader r m) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
 createOrder config integratedBPPConfig qrTtl booking = do
-  when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
-  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
-  let orderId = show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) :: Integer) -- This should be max 20 characters UUID (Using Transaction UUID)
-      mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+  orderId <- case booking.bppOrderId of
+    Just oid -> return oid
+    Nothing -> getBppOrderId booking
+  let mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
   routeStations <- mbRouteStations & fromMaybeM (InternalError "Route Stations Not Found.")
   tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking) routeStations
   return ProviderOrder {..}
+
+getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
+getBppOrderId booking = do
+  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  let orderId = show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) :: Integer) -- This should be max 20 characters UUID (Using Transaction UUID)
+  return orderId
 
 -- CUMTA Encrypted QR code generation
 -- 1. From Route Stop Srl No : 1258001

@@ -66,5 +66,6 @@ buildOnInitReq onInitReq = do
         messageId,
         validTill = ttl,
         bankAccNum,
-        bankCode
+        bankCode,
+        bppOrderId = Nothing
       }

@@ -243,7 +243,9 @@ createOrder config booking = do
       (Just trainTypeCode, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, distance, crisRouteId, appSession)
       _ -> throwError $ InternalError ("Invalid quote data: " <> show quote.fareDetails)
 
-  frfsTicketBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InternalError "FRFS ticket booking payment not found")
+  orderId <- case booking.bppOrderId of
+    Just oid -> return oid
+    Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (InternalError "Start time not found") booking.startTime
 
@@ -285,7 +287,7 @@ createOrder config booking = do
             tktTypeId = 1,
             agentAccountId = show config.tpAccountId,
             bookAuthCode = bookAuthCode,
-            agentAppTxnId = show frfsTicketBookingPayment.paymentOrderId,
+            agentAppTxnId = orderId,
             bankDeductedAmount = round booking.price.amount.getHighPrecMoney,
             tpBookType = 0
           }
@@ -311,6 +313,12 @@ createOrder config booking = do
               }
           ]
       }
+
+getBppOrderId :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Text
+getBppOrderId booking = do
+  frfsTicketBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InternalError "FRFS ticket booking payment not found")
+  let orderId = show frfsTicketBookingPayment.paymentOrderId
+  return orderId
 
 -- Helper function to construct JSON string
 constructBookingJson :: CRISBookingRequest -> Text

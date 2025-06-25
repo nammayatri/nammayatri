@@ -38,6 +38,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Station as QStation
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -174,11 +175,17 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
-        frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
-            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
-        onConfirmHandler onConfirmReq
+        result <- try @_ @SomeException $ do
+          frfsConfig <-
+            CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+              >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
+          onConfirmHandler onConfirmReq
+        case result of
+          Left err -> do
+            void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
+            throwM err
+          Right _ -> return ()
 
 status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
 status merchantId merchantOperatingCity bapConfig booking platformType = do
