@@ -275,8 +275,8 @@ checkAndMarkJourneyAsFeedbackPending journey allLegsState = do
   when
     ( all
         ( \st -> case st of
-            JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
-            JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
+            JL.Single legState -> legState.status `elem` JL.allCompletedStatus
+            JL.Transit legStates -> all (\legState -> legState.status `elem` JL.allCompletedStatus) legStates
         )
         allLegsState
         && journey.status /= DJourney.CANCELLED
@@ -313,9 +313,9 @@ getAllLegsStatus journey = do
 
         isIncomplete :: JL.JourneyLegState -> Bool
         isIncomplete (JL.Single legData) =
-          legData.status `notElem` [JL.Completed, JL.Skipped, JL.Cancelled]
+          legData.status `notElem` JL.allCompletedStatus
         isIncomplete (JL.Transit legDataList) =
-          any (\legData -> legData.status `notElem` [JL.Completed, JL.Skipped, JL.Cancelled]) legDataList
+          any (\legData -> legData.status `notElem` JL.allCompletedStatus) legDataList
 
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
     getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((gtfsId :: KEMIT.MultiModalRouteDetails -> Maybe Text) >=> (pure . gtfsIdtoDomainCode))
