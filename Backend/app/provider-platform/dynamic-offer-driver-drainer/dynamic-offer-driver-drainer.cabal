@@ -83,7 +83,7 @@ library
       ViewPatterns
       UndecidableInstances
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , aeson-pretty
@@ -102,6 +102,8 @@ library
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
     , extra
+    , fdep
+    , fieldInspector
     , filepath
     , formatting
     , hedis
@@ -176,7 +178,7 @@ executable dynamic-offer-driver-drainer-exe
       ViewPatterns
       UndecidableInstances
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , aeson-pretty
@@ -196,6 +198,8 @@ executable dynamic-offer-driver-drainer-exe
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
     , extra
+    , fdep
+    , fieldInspector
     , filepath
     , formatting
     , hedis
