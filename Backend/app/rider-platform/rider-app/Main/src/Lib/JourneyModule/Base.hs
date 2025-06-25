@@ -16,6 +16,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.Extra.Ride as DRide
 import Domain.Types.FRFSRouteDetails
+import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -75,6 +76,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
@@ -1528,3 +1530,20 @@ markLegStatus status journeyLegExtraInfo = do
     JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
     JL.Subway legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
     JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
+
+markAllBookingsFailed ::
+  (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  [DFRFSBooking.FRFSTicketBooking] ->
+  m ()
+markAllBookingsFailed allJourneyFrfsBookings = do
+  let mbJourneyId = listToMaybe allJourneyFrfsBookings >>= (.journeyId)
+  journeyId <- mbJourneyId & fromMaybeM (InvalidRequest "journeyId not found in markAllBookingsFailed")
+  let lockKey = "markAllBookingsFailed:" <> journeyId.getId
+  Redis.withLockRedis lockKey 5 $ do
+    forM_ allJourneyFrfsBookings $ \frfsBooking -> do
+      void $ QTBooking.updateStatusById DFRFSBooking.FAILED frfsBooking.id
+      QTicket.updateAllStatusByBookingId DFRFSTicket.FAILED frfsBooking.id
+    QJourney.updateStatus DJourney.FAILED journeyId
+    return ()
+
+-- trigger refund flow and update FRFSTicketBookingPayment status to REFUND_PENDING
