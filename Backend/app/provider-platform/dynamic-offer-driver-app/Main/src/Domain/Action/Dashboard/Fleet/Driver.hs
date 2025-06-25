@@ -1381,6 +1381,7 @@ postDriverUpdateFleetOwnerInfo ::
   Common.UpdateFleetOwnerInfoReq ->
   Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
+  runRequestValidation Common.validateUpdateFleetOwnerInfoReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
