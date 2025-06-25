@@ -1094,7 +1094,8 @@ intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personM
         Payment.AutoRefundReq
           { orderId = ticketBookingShortId.getShortId,
             amount = amountToRefund,
-            requestId = refundId
+            requestId = refundId,
+            splitSettlementDetails = Nothing
           }
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
       createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion

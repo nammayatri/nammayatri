@@ -59,6 +59,7 @@ data RiderJobType
   | QuarterlyUpdateTag
   | PostRideSafetyNotification
   | UpdateCrisUtsData
+  | CheckMultimodalConfirmFail
   | MetroBusinessHour
   | NyRegularMaster
   | NyRegularInstance
@@ -93,6 +94,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
+  restoreAnyJobInfo SCheckMultimodalConfirmFail jobData = AnyJobInfo <$> restoreJobInfo SCheckMultimodalConfirmFail jobData
   restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
   restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
   restoreAnyJobInfo SNyRegularInstance jobData = AnyJobInfo <$> restoreJobInfo SNyRegularInstance jobData
@@ -194,6 +196,15 @@ data UpdateCrisUtsDataJobData = UpdateCrisUtsDataJobData
 instance JobInfoProcessor 'UpdateCrisUtsData
 
 type instance JobContent 'UpdateCrisUtsData = UpdateCrisUtsDataJobData
+
+data CheckMultimodalConfirmFailJobData = CheckMultimodalConfirmFailJobData
+  { bookingId :: Id DFTB.FRFSTicketBooking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckMultimodalConfirmFail
+
+type instance JobContent 'CheckMultimodalConfirmFail = CheckMultimodalConfirmFailJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

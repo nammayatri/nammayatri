@@ -140,10 +140,18 @@ getMultimodalBookingInfo ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
+getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
+  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  let allMarked = all ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
+  unless allMarked $
+    case find ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings of
+      Just _frfsBooking -> do
+        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+        FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId journeyId
+      Nothing -> pure ()
   generateJourneyInfoResponse journey legs
 
 getMultimodalBookingPaymentStatus ::
