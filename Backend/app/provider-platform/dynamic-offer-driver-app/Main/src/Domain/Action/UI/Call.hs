@@ -198,7 +198,8 @@ initiateCallToCustomer rideId merchantOpCityId = do
             callService = Just Exotel,
             callAttempt = dCallStatus,
             callError = Nothing,
-            createdAt = now
+            createdAt = now,
+            aiCallAnalyzed = Nothing
           }
 
 getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv, CallBAPConstraints m r c) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> m CallRes
@@ -239,7 +240,8 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
             callError = Nothing,
             callService = Just Exotel,
             callAttempt = callAttemptStatus,
-            createdAt = now
+            createdAt = now,
+            aiCallAnalyzed = Nothing
           }
 
 getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m Text
@@ -355,7 +357,8 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
                     callService = Nothing,
                     callError = Nothing,
                     callAttempt = Just DCallStatus.Pending,
-                    createdAt = now
+                    createdAt = now,
+                    aiCallAnalyzed = Nothing
                   }
           void $ QCallStatus.create callStatusObj
 
@@ -592,7 +595,9 @@ handleCallFeedback :: (CacheFlow m r, EsqDBFlow m r, CallBAPConstraints m r c, H
 handleCallFeedback callStatus callStatusObj mbRecordingUrl callSid = do
   case (callStatusObj.merchantOperatingCityId, mbRecordingUrl, callStatus) of
     (Just merchantOpCityId, Just recordingUrl, CallTypes.COMPLETED) -> do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      when (transporterConfig.liveEKD == Just True) $ do
-        void $ LiveEKD.liveEKDProdLoop recordingUrl callSid "driver"
+      when (callStatusObj.aiCallAnalyzed /= Just True && recordingUrl /= "") $ do
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        when (transporterConfig.liveEKD == Just True) $ do
+          void $ LiveEKD.liveEKDProdLoop recordingUrl callSid "driver"
+          QCallStatus.updateAiCallAnalyzed (Just True) callStatusObj.callId
     (_, _, _) -> return ()
