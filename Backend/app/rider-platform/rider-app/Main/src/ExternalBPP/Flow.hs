@@ -177,12 +177,13 @@ select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote = 
         messageId = quote.id.getId
       }
 
-init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
+init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
   bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
   bankCode <- paymentDetails.bankCode & fromMaybeM (InternalError "Bank Code Not Found")
+  bppOrderId <- CallAPI.getBppOrderId integratedBPPConfig booking
   return $
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
@@ -193,7 +194,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         transactionId = booking.searchId.getId,
         messageId = booking.id.getId,
         bankAccNum = bankAccountNumber,
-        bankCode = bankCode
+        bankCode = bankCode,
+        bppOrderId = bppOrderId
       }
   where
     mkPaymentDetails = \case
