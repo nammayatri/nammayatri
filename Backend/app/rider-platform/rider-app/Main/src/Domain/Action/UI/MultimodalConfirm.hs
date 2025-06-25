@@ -522,40 +522,10 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  journeyChangeLogCounter <- JM.getJourneyChangeLogCounter journeyId
-  paymentStatus <-
-    if journey.isPaymentSuccess /= Just True
-      then do
-        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-        allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
-        let anyFirstBooking = listToMaybe frfsBookingStatusArr
-            paymentOrder =
-              anyFirstBooking >>= (.payment)
-                <&> ( \p ->
-                        ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
-                    )
-        return $ paymentOrder <&> (.status)
-      else return (Just FRFSTicketService.SUCCESS)
-  return $ ApiTypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
-  where
-    transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
-    transformLeg legState =
-      case legState of
-        JMTypes.Single legData -> [convert legData]
-        JMTypes.Transit legDataList -> map convert legDataList
-      where
-        convert legData =
-          ApiTypes.LegStatus
-            { legOrder = legData.legOrder,
-              subLegOrder = legData.subLegOrder,
-              status = legData.status,
-              userPosition = legData.userPosition,
-              vehiclePositions = legData.vehiclePositions,
-              mode = legData.mode
-            }
+  generateJourneyStatusResponse personId merchantId journey legs
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedbackForm = do
@@ -858,18 +828,19 @@ postMultimodalOrderSetStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
   JL.JourneyLegStatus ->
-  Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalOrderSetStatus (_mbPersonId, _merchantId) journeyId legOrder newStatus = do
+  Environment.Flow ApiTypes.JourneyStatusResp
+postMultimodalOrderSetStatus (mbPersonId, merchantId) journeyId legOrder newStatus = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
   markLegStatus newStatus journeyLegInfo.legExtraInfo
 
   -- refetch updated legs and journey
-  updatedLegs <- JM.getAllLegsInfo journeyId False
-  checkAndMarkJourneyAsFeedbackPending journey $ map (\st -> [st.status]) updatedLegs
+  updatedLegStatus <- JM.getAllLegsStatus journey
+  checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
-  generateJourneyInfoResponse updatedJourney updatedLegs
+  generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
 
 postMultimodalTicketVerify ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -894,13 +865,14 @@ postMultimodalComplete ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-  Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalComplete (_mbPersonId, _merchantId) journeyId = do
+  Environment.Flow ApiTypes.JourneyStatusResp
+postMultimodalComplete (mbPersonId, merchantId) journeyId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   mapM_ (markLegStatus JL.Completed . (.legExtraInfo)) legs
 
-  updatedLegs <- JM.getAllLegsInfo journeyId False
-  checkAndMarkJourneyAsFeedbackPending journey $ map (\st -> [st.status]) updatedLegs
+  updatedLegStatus <- JM.getAllLegsStatus journey
+  checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
-  generateJourneyInfoResponse updatedJourney updatedLegs
+  generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus

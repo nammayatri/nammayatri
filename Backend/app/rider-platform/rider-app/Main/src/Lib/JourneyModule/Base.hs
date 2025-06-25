@@ -1,5 +1,6 @@
 module Lib.JourneyModule.Base where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.FRFS.Enums as Spec
@@ -9,6 +10,7 @@ import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
 import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -22,9 +24,11 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
@@ -265,18 +269,16 @@ defaultBusTrackingConfig =
 checkAndMarkJourneyAsFeedbackPending ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
-  [[JL.JourneyLegStatus]] ->
+  [JL.JourneyLegState] ->
   m ()
-checkAndMarkJourneyAsFeedbackPending journey allLegsStatus = do
+checkAndMarkJourneyAsFeedbackPending journey allLegsState = do
   when
     ( all
-        ( \st ->
-            all
-              ( \legStatus -> legStatus `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
-              )
-              st
+        ( \st -> case st of
+            JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
+            JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
         )
-        allLegsStatus
+        allLegsState
         && journey.status /= DJourney.CANCELLED
     )
     $ updateJourneyStatus journey DJourney.FEEDBACK_PENDING
@@ -293,14 +295,7 @@ getAllLegsStatus journey = do
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
   (_, _, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (True, Nothing, []) allLegsRawData
   let allLegsState = map snd legPairs
-  checkAndMarkJourneyAsFeedbackPending journey $
-    map
-      ( \st ->
-          case st of
-            JL.Single legState -> [legState.status]
-            JL.Transit legStates -> map (.status) legStates
-      )
-      allLegsState
+  checkAndMarkJourneyAsFeedbackPending journey allLegsState
   return allLegsState
   where
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
@@ -1519,6 +1514,45 @@ generateJourneyInfoResponse journey legs = do
         crisSdkToken = Nothing,
         paymentOrderShortId = journey.paymentOrderShortId
       }
+
+generateJourneyStatusResponse ::
+  Id DPerson.Person ->
+  Id DMerchant.Merchant ->
+  DJourney.Journey ->
+  [JL.JourneyLegState] ->
+  Flow APITypes.JourneyStatusResp
+generateJourneyStatusResponse personId merchantId journey legs = do
+  journeyChangeLogCounter <- getJourneyChangeLogCounter journey.id
+  paymentStatus <-
+    if journey.isPaymentSuccess /= Just True
+      then do
+        allJourneyFrfsBookings <- QTBooking.findAllByJourneyIdCond (Just journey.id)
+        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
+        let anyFirstBooking = listToMaybe frfsBookingStatusArr
+            paymentOrder =
+              anyFirstBooking >>= (.payment)
+                <&> ( \p ->
+                        APITypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
+                    )
+        return $ paymentOrder <&> (.status)
+      else return (Just FRFSTicketService.SUCCESS)
+  return $ APITypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
+  where
+    transformLeg :: JL.JourneyLegState -> [APITypes.LegStatus]
+    transformLeg legState =
+      case legState of
+        JL.Single legData -> [convert legData]
+        JL.Transit legDataList -> map convert legDataList
+      where
+        convert legData =
+          APITypes.LegStatus
+            { legOrder = legData.legOrder,
+              subLegOrder = legData.subLegOrder,
+              status = legData.status,
+              userPosition = legData.userPosition,
+              vehiclePositions = legData.vehiclePositions,
+              mode = legData.mode
+            }
 
 markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegExtraInfo -> m ()
 markLegStatus status journeyLegExtraInfo = do

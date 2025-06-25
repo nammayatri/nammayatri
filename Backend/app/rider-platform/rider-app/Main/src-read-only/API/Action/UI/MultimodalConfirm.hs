@@ -300,7 +300,7 @@ type API =
            Lib.JourneyLeg.Types.JourneyLegStatus
       :> Post
            '[JSON]
-           API.Types.UI.MultimodalConfirm.JourneyInfoResp
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -309,7 +309,7 @@ type API =
       :> "complete"
       :> Post
            '[JSON]
-           API.Types.UI.MultimodalConfirm.JourneyInfoResp
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
       :> "ticket"
@@ -554,7 +554,7 @@ postMultimodalOrderSetStatus ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
     Lib.JourneyLeg.Types.JourneyLegStatus ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
 postMultimodalOrderSetStatus a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
@@ -563,7 +563,7 @@ postMultimodalComplete ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
 postMultimodalComplete a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalComplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 

@@ -386,14 +386,14 @@ apis:
         legOrder: Int
         status: JourneyLegStatus
       response:
-        type: JourneyInfoResp
+        type: JourneyStatusResp
 
   - POST:
       endpoint: multimodal/{journeyId}/complete
       params:
         journeyId: Id Journey
       response:
-        type: JourneyInfoResp
+        type: JourneyStatusResp
 
   - POST:
       endpoint: /multimodal/ticket/verify
