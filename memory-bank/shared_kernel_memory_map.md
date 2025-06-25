@@ -1,0 +1,4355 @@
+# Codebase Memory Map
+
+This document provides a structured overview of the Haskell codebase, including modules, data types, and function signatures with usage explanations.
+
+**Note:** This map is auto-generated. Some function definitions, particularly complex ones or those generated via Template Haskell, might not be fully captured. Usage explanations are derived from code context and may be concise.
+
+## Modules and Definitions
+
+### Kernel.Beam.Connection.EnvVars
+- **Functions:**
+  - `postgresConnectionName :: IO Text`
+    - **Usage:** Retrieves the PostgreSQL connection name from the `POSTGRES_CONNECTION_NAME` environment variable. Defaults to "postgres" if the variable is not set.
+  - `postgresR1ConnectionName :: IO Text`
+    - **Usage:** Retrieves the PostgreSQL R1 (replica) connection name from the `POSTGRES_R1_CONNECTION_NAME` environment variable. Defaults to "postgresR1" if not set.
+  - `getPostgresPoolStripes :: IO Int`
+    - **Usage:** Retrieves the number of stripes for the PostgreSQL connection pool from the `POSTGRES_POOL_STRIPES` environment variable. Defaults to 1 if not set or invalid.
+  - `getPostgresPoolIdleTime :: IO Integer`
+    - **Usage:** Retrieves the idle time (in milliseconds) for the PostgreSQL connection pool from the `POSTGRES_POOL_IDLE_TIME` environment variable. Defaults to 20000 (20 seconds) if not set or invalid.
+  - `getPostgresPoolMax :: IO Int`
+    - **Usage:** Retrieves the maximum number of connections in the PostgreSQL pool from the `POSTGRES_POOL_MAX` environment variable. Defaults to 5 if not set or invalid.
+  - `postgresLocationDBConnectionName :: IO Text`
+    - **Usage:** Retrieves the PostgreSQL location database connection name from the `POSTGRES_LOCATION_DB_CONNECTION_NAME` environment variable. Defaults to "postgresLocationDB" if not set.
+  - `postgresLocationDBReplicaConnectionName :: IO Text`
+    - **Usage:** Retrieves the PostgreSQL location database replica connection name from the `POSTGRES_LOCATION_DB_REPLICA_CONNECTION_NAME` environment variable. Defaults to "postgresLocationDBReplica" if not set.
+  - `toTitle :: String -> String`
+    - **Usage:** Converts a string to title case (first letter uppercase, rest lowercase). Used internally for parsing boolean environment variables.
+  - `getPreparePosgreSqlConnection :: IO Bool`
+    - **Usage:** Checks if the main PostgreSQL connection should be prepared based on the `PREPARE_POSGRESQL_CONNECTION` environment variable. Defaults to `True` unless explicitly set to "False".
+  - `getPreparePosgreSqlR1Connection :: IO Bool`
+    - **Usage:** Checks if the PostgreSQL R1 (replica) connection should be prepared based on the `PREPARE_POSGRESQL_R1_CONNECTION` environment variable. Defaults to `True` unless explicitly set to "False".
+  - `getPrepareRedisClusterConnection :: IO Bool`
+    - **Usage:** Checks if the Redis cluster connection should be prepared based on the `PREPARE_REDIS_CLUSTER_CONNECTION` environment variable. Defaults to `True` unless explicitly set to "False".
+  - `getPrepareLocationDBConnection :: IO Bool`
+    - **Usage:** Checks if the location database connection should be prepared based on the `PREPARE_LOCATION_DB_CONNECTION` environment variable. Defaults to `True` unless explicitly set to "False".
+  - `getPrepareLocationDBReplicaConnection :: IO Bool`
+    - **Usage:** Checks if the location database replica connection should be prepared based on the `PREPARE_LOCATION_DB_REPLICA_CONNECTION` environment variable. Defaults to `True` unless explicitly set to "False`.
+
+### Kernel.Beam.Connection.Flow
+- **Functions:**
+  - `prepareConnectionDriver :: L.MonadFlow m => ECT.ConnectionConfigDriver -> Int -> m ()`
+    - **Usage:** Prepares database and Redis connections for the 'Driver' configuration. It also sets the KV config update frequency and disables the replica option locally.
+  - `prepareConnectionRider :: L.MonadFlow m => ECT.ConnectionConfigRider -> Int -> m ()`
+    - **Usage:** Prepares database and Redis connections for the 'Rider' configuration. It also sets the KV config update frequency and disables the replica option locally.
+  - `prepareConnectionDashboard :: L.MonadFlow m => ECT.ConnectionConfigDashboard -> Int -> m ()`
+    - **Usage:** Prepares database and Redis connections for the 'Dashboard' configuration. It also sets the KV config update frequency and disables the replica option locally.
+
+### Kernel.Beam.Connection.Postgres
+- **Functions:**
+  - `prepareDBConnectionsDriver :: L.MonadFlow m => ECT.ConnectionConfigDriver -> m ()`
+    - **Usage:** Prepares PostgreSQL master and replica database connections for the 'Driver' configuration based on environment variables.
+  - `prepareDBConnectionsRider :: L.MonadFlow m => ECT.ConnectionConfigRider -> m ()`
+    - **Usage:** Prepares PostgreSQL master and replica database connections for the 'Rider' configuration based on environment variables.
+  - `prepareDBConnectionsDashboard :: L.MonadFlow m => ECT.ConnectionConfigDashboard -> m ()`
+    - **Usage:** Prepares PostgreSQL master and replica database connections for the 'Dashboard' configuration based on environment variables.
+  - `prepareTables :: L.MonadFlow m => KTC.Tables -> m ()`
+    - **Usage:** Sets the `Tables` option in the flow and locally disables the replica option.
+  - `setKvConfigUpdateFrequency :: L.MonadFlow m => Int -> m ()`
+    - **Usage:** Sets the `KvConfigUpdateFrequency` option in the flow.
+  - `preparePsqlMasterConnection :: L.MonadFlow m => KSEC.EsqDBConfig -> m ()`
+    - **Usage:** Prepares the main PostgreSQL database connection using the provided Esqueleto DB configuration.
+  - `preparePsqlR1Connection :: L.MonadFlow m => KSEC.EsqDBConfig -> m ()`
+    - **Usage:** Prepares the PostgreSQL R1 (replica) database connection using the provided Esqueleto DB configuration.
+  - `prepareLocDbConn :: L.MonadFlow m => KSEC.EsqDBConfig -> m ()`
+    - **Usage:** Prepares the PostgreSQL location database connection using the provided Esqueleto DB configuration.
+  - `prepareLocDbReplicaConn :: L.MonadFlow m => KSEC.EsqDBConfig -> m ()`
+    - **Usage:** Prepares the PostgreSQL location database replica connection using the provided Esqueleto DB configuration.
+  - `preparePSqlConnection :: L.MonadFlow m => (ET.OptionEntity a (ET.DBConfig BP.Pg)) => Text -> a -> KSEC.EsqDBConfig -> m ()`
+    - **Usage:** Initializes a PostgreSQL database connection pool and sets it as an option in the flow. Throws an exception if the connection fails.
+  - `postgresPoolConfig :: IO ET.PoolConfig`
+    - **Usage:** Retrieves PostgreSQL connection pool configuration (stripes, idle time, max resources) from environment variables.
+
+### Kernel.Beam.Connection.Redis
+- **Functions:**
+  - `prepareRedisConnectionsDriver :: L.MonadFlow m => ECT.ConnectionConfigDriver -> m ()`
+    - **Usage:** Prepares Redis cluster connections for the 'Driver' configuration if the PostgreSQL connection preparation is enabled.
+  - `prepareRedisConnectionsRider :: L.MonadFlow m => ECT.ConnectionConfigRider -> m ()`
+    - **Usage:** Prepares Redis cluster connections for the 'Rider' configuration if the PostgreSQL connection preparation is enabled.
+  - `prepareRedisConnectionsDashboard :: L.MonadFlow m => ECT.ConnectionConfigDashboard -> m ()`
+    - **Usage:** Prepares Redis cluster connections for the 'Dashboard' configuration if the PostgreSQL connection preparation is enabled.
+  - `kvRedis :: Text`
+    - **Usage:** A constant `Text` value "KVRedis" used as an identifier for the KV Redis connection.
+  - `prepareRedisClusterConnection :: (HasCallStack, L.MonadFlow m) => KSHC.HedisCfg -> m ()`
+    - **Usage:** Initializes a Redis cluster connection using the provided Hedis configuration and sets it up in the flow. Throws an exception if the connection fails.
+
+### Kernel.Beam.Connection.Types
+- **Data Types:**
+  - `data ConnectionConfigDriver`
+    - **Description:** Represents the configuration for database and Redis connections specific to the 'Driver' application.
+    - **Fields:**
+      - `esqDBCfg :: EsqDBConfig`: Esqueleto DB configuration.
+      - `esqDBReplicaCfg :: EsqDBConfig`: Esqueleto DB replica configuration.
+      - `hedisClusterCfg :: Hedis cluster configuration.
+  - `data ConnectionConfigRider`
+    - **Description:** Represents the configuration for database and Redis connections specific to the 'Rider' application.
+    - **Fields:**
+      - `esqDBCfg :: EsqDBConfig`: Esqueleto DB configuration.
+      - `esqDBReplicaCfg :: EsqDBConfig`: Esqueleto DB replica configuration.
+      - `hedisClusterCfg :: Hedis cluster configuration.
+  - `data ConnectionConfigDashboard`
+    - **Description:** Represents the configuration for database and Redis connections specific to the 'Dashboard' application.
+    - **Fields:**
+      - `esqDBCfg :: EsqDBConfig`: Esqueleto DB configuration.
+      - `esqDBReplicaCfg :: EsqDBConfig`: Esqueleto DB replica configuration.
+      - `hedisClusterCfg :: Hedis cluster configuration.
+
+### Kernel.Beam.Lib.SqlObjectInstances
+- **Instances:**
+  - `instance {-# OVERLAPPING #-} ToSQLObject DbHash`
+    - **Description:** Defines how a `DbHash` value is converted into an `SQLObjectValue` for database interaction. It converts the `DbHash` to a hexadecimal string prefixed with `\x`.
+  - `instance {-# OVERLAPPING #-} ToSQLObject A.Value`
+    - **Description:** Defines how an `A.Value` (Aeson Value, typically JSON) is converted into an `SQLObjectValue` for database interaction. It converts the Aeson `Value` to its JSON string representation.
+
+### Kernel.Beam.Lib.UtilsTH
+- **Classes:**
+  - `class HasSchemaName tn where schemaName :: Proxy tn -> Text`
+    - **Description:** A type class for types that have an associated schema name.
+- **Functions:**
+  - `emptyTextHashMap :: HMI.HashMap Text Text`
+    - **Usage:** An empty `HashMap` of `Text` to `Text`.
+  - `emptyValueHashMap :: M.Map Text (A.Value -> A.Value)`
+    - **Usage:** An empty `Map` of `Text` to `(A.Value -> A.Value)` functions.
+  - `enableKVPG :: Name -> [Name] -> [[Name]] -> Q [Dec]`
+    - **Usage:** Generates Beam-related instances for a given table, including `TableModifier`, `KVConnector`, `MeshMeta`, and `ToJSON` for `SQLObject`.
+  - `tableTModMeshD :: Name -> Q [Dec]`
+    - **Usage:** Generates a `FieldModification` for a Beam table, mapping record fields to their snake_case names.
+  - `kvConnectorInstancesD :: Name -> [Name] -> [[Name]] -> Q [Dec]`
+    - **Usage:** Generates `KVConnector` instances for a Beam table, defining table name, key map (primary/secondary keys), and methods to extract primary and secondary keys.
+  - `genMkSQLObjectD :: Name -> Q Dec`
+    - **Usage:** Generates a `mkSQLObject` function for a Beam table, converting the table record into a JSON `SQLObject`.
+  - `sortAndGetKey :: [Name] -> String`
+    - **Usage:** Sorts a list of field names and concatenates them with underscores to form a composite key string.
+  - `splitColon :: String -> String`
+    - **Usage:** Extracts the second part of a string split by a colon, typically used to get a field name from a Template Haskell name.
+  - `meshMetaInstancesDPG :: Name -> Q [Dec]`
+    - **Usage:** Generates `MeshMeta` instances for a Beam table with PostgreSQL backend, providing field modification and value mapping.
+  - `getParseFieldAndGetClauseD :: Name -> [Name] -> Dec`
+    - **Usage:** Generates a `parseFieldAndGetClause` function for `MeshMeta`, used to parse query conditions from field names and values.
+  - `parseFieldAndGetClauseE :: Name -> Name -> Exp`
+    - **Usage:** Helper for `getParseFieldAndGetClauseD`, constructs the expression for parsing a single field.
+  - `getParseSetClauseD :: Name -> [Name] -> Dec`
+    - **Usage:** Generates a `parseSetClause` function for `MeshMeta`, used to parse update set clauses from field names and values.
+  - `parseSetClauseE :: Name -> Name -> Exp`
+    - **Usage:** Helper for `getParseSetClauseD`, constructs the expression for parsing a single set field.
+  - `parseField :: (FromJSON a, MonadFail f) => Text -> A.Value -> f a`
+    - **Usage:** Parses an Aeson `Value` into a specific type `a`, failing with an error message if parsing is unsuccessful.
+  - `modifyFieldToHS :: Name -> Exp`
+    - **Usage:** Returns an expression that applies a field modification function (currently `P.id`, but designed for future extensibility with `txnDetailToHSModifiers`).
+  - `extractConstructors :: Info -> [Con]`
+    - **Usage:** Extracts data constructors from a `TyConI` (type constructor info).
+  - `extractRecFields :: Con -> [Name]`
+    - **Usage:** Extracts record field names from a data constructor.
+  - `utilTransform :: (ToJSON a) => Map Text (A.Value -> A.Value) -> Text -> a -> Text`
+    - **Usage:** Transforms a value using a map of functions, then converts it to `Text`. Used for custom JSON transformations.
+  - `mkEmod :: Name -> String -> Maybe String -> Q (Dec, Dec)`
+    - **Usage:** Generates an `EntityModification` for a Beam table, setting schema name, table name, and applying field modifications.
+  - `mkSchemaNameExp :: Name -> Maybe String -> Exp`
+    - **Usage:** Creates an expression for the schema name, either from `HasSchemaName` instance or a literal string.
+  - `mkSchemaNameContext :: Name -> Maybe String -> Cxt`
+    - **Usage:** Creates the context (constraints) for schema name generation.
+  - `mkModelMetaInstances :: Name -> String -> Maybe String -> Q Dec`
+    - **Usage:** Generates `ModelMeta` instances for a table, defining its field modification, table name, and schema name.
+  - `mkTModFunction :: [(String, String)] -> Name -> Q (Dec, Dec)`
+    - **Usage:** Generates a `TableModifier` function for a Beam table, applying custom field name transformations.
+  - `checkFieldModifier :: [(String, String)] -> [String] -> Q ()`
+    - **Usage:** Validates a list of field modifiers, checking for duplicated fields and existence of fields.
+  - `mkSerialInstances :: Name -> Q Dec`
+    - **Usage:** Generates placeholder `Serialize` instances for a Beam table, which currently throw errors (indicating serialization is not supported or implemented).
+  - `mkFromJSONInstance :: Name -> Q Dec`
+    - **Usage:** Generates a `FromJSON` instance for a Beam table using `A.genericParseJSON`.
+  - `mkToJSONInstance :: Name -> Q Dec`
+    - **Usage:** Generates a `ToJSON` instance for a Beam table using `A.genericToJSON`.
+  - `mkSQLObjectToJSONInstance :: Name -> Q Dec`
+    - **Usage:** Generates a `ToJSON` instance for `SQLObject` wrapped Beam table using `A.genericToJSON`.
+  - `mkShowInstance :: Name -> Q Dec`
+    - **Usage:** Generates a `Show` instance for a Beam table using `StandaloneDerivD`.
+  - `mkTableInstances :: Name -> String -> String -> Q [Dec]`
+    - **Usage:** Generates a comprehensive set of Beam-related instances for a table with a specified schema and no custom field modifiers.
+  - `mkTableInstancesWithTModifier :: Name -> String -> String -> [(String, String)] -> Q [Dec]`
+    - **Usage:** Generates Beam-related instances for a table with a specified schema and custom field modifiers.
+  - `mkTableInstancesGenericSchema :: Name -> String -> Q [Dec]`
+    - **Usage:** Generates Beam-related instances for a table with a generic schema (derived from `HasSchemaName`) and no custom field modifiers.
+  - `mkTableInstancesGenericSchemaWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]`
+    - **Usage:** Generates Beam-related instances for a table with a generic schema and custom field modifiers.
+  - `mkTableInstances' :: Name -> String -> Maybe String -> [(String, String)] -> Q [Dec]`
+    - **Usage:** The core function for generating various Beam-related instances, including `ModelMeta`, `EntityModification`, `Serialize`, `FromJSON`, `ToJSON`, `Show`, and custom mappings.
+  - `mkCustomMappings :: Name -> String -> [(String, String)] -> Q [Dec]`
+    - **Usage:** Generates `TableMappings` instances for a Beam table, defining its table name and custom field mappings.
+  - `mkBeamInstancesForEnum :: Name -> Q [Dec]`
+    - **Usage:** Generates `FromField`, `HasSqlValueSyntax`, `HasSqlEqualityCheck`, and `FromBackendRow` instances for a Beam table row when it represents an enum type.
+  - `mkBeamInstancesForList :: Name -> Q [Dec]`
+    - **Usage:** Generates `FromField`, `HasSqlValueSyntax`, `HasSqlEqualityCheck`, and `FromBackendRow` instances for a Beam table row when it represents a list type.
+  - `mkBeamInstancesForEnumAndList :: Name -> Q [Dec]`
+    - **Usage:** Generates Beam instances for types that can be treated as both enums and lists in the database.
+  - `mkBeamInstancesForJSON :: Name -> Q [Dec]`
+    - **Usage:** Generates `FromField`, `HasSqlValueSyntax`, `HasSqlEqualityCheck`, and `FromBackendRow` instances for a Beam table row when it represents a JSON type.
+
+### Kernel.Beam.Lib.Utils
+- **Functions:**
+  - `textToSnakeCaseText :: Text -> Text`
+    - **Usage:** Converts a given `Text` string from camelCase to quiet_snake_case.
+  - `replaceMappings :: A.Value -> HM.HashMap Text Text -> A.Value`
+    - **Usage:** Recursively replaces keys in an Aeson `Object` based on a provided `HashMap` of mappings. It also converts string values that look like ISO 8601 timestamps into Unix timestamps (numbers).
+  - `convertIntoValidValForCkh :: A.Value -> A.Value`
+    - **Usage:** Converts an Aeson `Value` into a format suitable for ClickHouse. Specifically, it converts ISO 8601 timestamp strings to Unix timestamps (numbers) and boolean values to "True" or "False" strings.
+  - `getMappings :: forall table. KV.TableMappings (table Identity) => [table Identity] -> HashMap Text Text`
+    - **Usage:** Retrieves table mappings (field name transformations) for a given Beam table type.
+  - `pushToKafka :: (MonadFlow m, ToJSON a) => a -> Text -> Text -> m ()`
+    - **Usage:** Pushes a JSON-serializable message to a specified Kafka topic with a given key. Requires `KafkaConn` to be available in the flow. Throws `InternalError` if Kafka producer tools are not found or `KafkaUnableToProduceMessage` if production fails.
+  - `kafkaMessage :: ToJSON a => Text -> a -> Text -> KafkaProd.ProducerRecord`
+    - **Usage:** Constructs a `KafkaProd.ProducerRecord` from a topic name, a JSON-serializable event, and a key. The partition is unassigned.
+  - `getKafkaTopic :: (MonadFlow m) => Maybe Text -> Text -> m Text`
+    - **Usage:** Determines the Kafka topic name based on an optional schema and a model name. It appends "-sessionizer-" and converts the model name to snake_case. Handles specific prefixes like "atlas_driver_offer_bpp", "atlas_app", "atlas_bpp_dashboard", "atlas_bap_dashboard".
+  - `getKeyForKafka :: (Int, Int) -> Text -> Text`
+    - **Usage:** Generates a Kafka key by appending a sharded hash tag (derived from `tableShardModRange` and `pKeyText`) to the primary key text.
+
+### Kernel.Beam.Types
+- **Data Types:**
+  - `data LogLevelLastUpdatedTime`
+    - **Description:** A phantom type used as an `OptionEntity` key to store the last updated time of dynamic log levels.
+  - `data DynamicLogLevelConfig`
+    - **Description:** A phantom type used as an `OptionEntity` key to store dynamic log level configurations (a map from Text to LogLevel).
+  - `data PsqlDbCfg`
+    - **Description:** A phantom type used as an `OptionEntity` key to store PostgreSQL database configurations.
+  - `data Tables`
+    - **Description:** A phantom type used as an `OptionEntity` key to store table configurations.
+  - `data KvConfigLastUpdatedTime`
+    - **Description:** A phantom type used as an `OptionEntity` key to store the last updated time of KV configurations.
+  - `data KvConfigUpdateFrequency`
+    - **Description:** A phantom type used as an `OptionEntity` key to store the update frequency for KV configurations.
+  - `data PsqlDbCfgR1`
+    - **Description:** A phantom type used as an `OptionEntity` key to store PostgreSQL R1 (replica) database configurations.
+  - `newtype DatabaseError`
+    - **Description:** Represents a database-related error with an error message.
+    - **Fields:**
+      - `errorMessage :: Text`: The error message.
+  - `data BeamState`
+    - **Description:** Represents the state for Beam-related operations, holding the database configuration.
+    - **Fields:**
+      - `dbConf :: DBConfig BP.Pg`: PostgreSQL database configuration.
+  - `data PsqlLocDbCfg`
+    - **Description:** A phantom type used as an `OptionEntity` key to store PostgreSQL location database configurations.
+  - `data PsqlLocReplicaDbCfg`
+    - **Description:** A phantom type used as an `OptionEntity` key to store PostgreSQL location database replica configurations.
+  - `data ReplicaEnabled`
+    - **Description:** A phantom type used as an `OptionEntity` key to indicate if database replica is enabled.
+  - `data MasterReadEnabled`
+    - **Description:** A phantom type used as an `OptionEntity` key to indicate if master database read is enabled.
+  - `data KafkaConn`
+    - **Description:** A phantom type used as an `OptionEntity` key to store Kafka producer tools.
+
+### Kernel.Exit
+- **Functions:**
+  - `exitSuccess :: ExitCode`
+    - **Usage:** Represents a successful program termination (exit code 0).
+
+## Shared Kernel Modules and Definitions
+
+### Kernel.Utils (Backend/lib/utils)
+- **Description:** This module contains utility functions that are used across multiple services in the backend.
+- **Functions:**
+  - `textToSnakeCaseText :: Text -> Text`
+    - **Usage:** Converts a given `Text` string from camelCase to quiet_snake_case.
+  - `replaceMappings :: A.Value -> HM.HashMap Text Text -> A.Value`
+    - **Usage:** Recursively replaces keys in an Aeson `Object` based on a provided `HashMap` of mappings. It also converts string values that look like ISO 8601 timestamps into Unix timestamps (numbers).
+  - `convertIntoValidValForCkh :: A.Value -> A.Value`
+    - **Usage:** Converts an Aeson `Value` into a format suitable for ClickHouse. Specifically, it converts ISO 8601 timestamp strings to Unix timestamps (numbers) and boolean values to "True" or "False" strings.
+  - `getMappings :: forall table. KV.TableMappings (table Identity) => [table Identity] -> HashMap Text Text`
+    - **Usage:** Retrieves table mappings (field name transformations) for a given Beam table type.
+
+### Kernel.SharedServices (Backend/lib/shared-services)
+- **Description:** This module contains shared services and data types that are used across multiple services in the backend.
+- **Functions:**
+  - `pushToKafka :: (MonadFlow m, ToJSON a) => a -> Text -> Text -> m ()`
+    - **Usage:** Pushes a JSON-serializable message to a specified Kafka topic with a given key. Requires `KafkaConn` to be available in the flow. Throws `InternalError` if Kafka producer tools are not found or `KafkaUnableToProduceMessage` if production fails.
+  - `kafkaMessage :: ToJSON a => Text -> a -> Text -> KafkaProd.ProducerRecord`
+    - **Usage:** Constructs a `KafkaProd.ProducerRecord` from a topic name, a JSON-serializable event, and a key. The partition is unassigned.
+  - `getKafkaTopic :: (MonadFlow m) => Maybe Text -> Text -> m Text`
+    - **Usage:** Determines the Kafka topic name based on an optional schema and a model name. It appends "-sessionizer-" and converts the model name to snake_case. Handles specific prefixes like "atlas_driver_offer_bpp", "atlas_app", "atlas_bpp_dashboard", "atlas_bap_dashboard".
+  - `getKeyForKafka :: (Int, Int) -> Text -> Text`
+    - **Usage:** Generates a Kafka key by appending a sharded hash tag (derived from `tableShardModRange` and `pKeyText`) to the primary key text.
+
+  - `exitAuthManagerPrepFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to failure in authentication manager preparation (exit code 1).
+  - `exitDBConnPrepFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to failure in database connection preparation (exit code 2).
+  - `exitDBMigrationFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to database migration failure (exit code 3).
+  - `exitLoadAllProvidersFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to failure in loading all necessary providers (exit code 4).
+  - `exitRedisConnPrepFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to failure in Redis connection preparation (exit code 5).
+  - `exitConnCheckFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to connection check failure (exit code 8).
+  - `exitBuildingAppEnvFailure :: ExitCode`
+    - **Usage:** Represents a program termination due to failure in building the application environment (exit code 9).
+
+### Kernel.Prelude
+- **Functions:**
+  - `foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc`
+    - **Usage:** Folds a list with an accumulating function that also receives the current index.
+  - `identity :: p -> p`
+    - **Usage:** The identity function, returns its argument unchanged.
+  - `everyPossibleVariant :: (Enum a, Bounded a) => [a]`
+    - **Usage:** Generates a list containing every possible value of an `Enum` type that is also `Bounded`.
+  - `whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()`
+    - **Usage:** Performs an action `f` if the `Maybe` value is `Just a`, otherwise does nothing.
+  - `whenM :: Monad m => m Bool -> m () -> m ()`
+    - **Usage:** Performs an action `thing` if the monadic boolean `mb` evaluates to `True`.
+  - `unlessM :: Monad m => m Bool -> m () -> m ()`
+    - **Usage:** Performs an action `thing` if the monadic boolean `mb` evaluates to `False`.
+  - `showBaseUrl :: BaseUrl -> Text`
+    - **Usage:** Converts a `BaseUrl` to its `Text` representation.
+  - `parseBaseUrl :: MonadThrow m => Text -> m BaseUrl`
+    - **Usage:** Parses a `Text` string into a `BaseUrl`, throwing an exception on failure.
+  - `whileM :: Monad m => m Bool -> m () -> m ()`
+    - **Usage:** Continuously performs an action `f` as long as the monadic boolean `b` evaluates to `True`.
+  - `threadDelay :: MonadIO m => Int -> m ()`
+    - **Usage:** Delays the execution of the current thread by a specified number of microseconds.
+  - `rightToMaybe :: Either e a -> Maybe a`
+    - **Usage:** Converts an `Either` value to a `Maybe` value, returning `Just` the right value or `Nothing` if it's a `Left`.
+  - `intToNominalDiffTime :: Int -> NominalDiffTime`
+    - **Usage:** Converts an `Int` (representing seconds) to `NominalDiffTime`.
+  - `roundToPowerOfTen :: RealFrac a => Int -> a -> a`
+    - **Usage:** Rounds a floating-point number to a specified power of ten. Handles rounding halves away from zero.
+  - `roundToUnits :: (RealFrac a) => a -> a`
+    - **Usage:** Rounds a floating-point number to the nearest integer (equivalent to `roundToPowerOfTen 0`).
+  - `roundToIntegral :: (RealFrac a, Integral b) => a -> b`
+    - **Usage:** Rounds a floating-point number to the nearest integral type.
+  - `showRounded :: RealFrac a => a -> Text`
+    - **Usage:** Shows a rounded floating-point number as `Text`.
+  - `(>>=/) :: Monad m => m a -> (a -> m b) -> m a`
+    - **Usage:** A monadic operator that sequences two monadic actions, passing the result of the first to the second, but returning the result of the *first* action.
+  - `(/=<<) :: Monad m => (a -> m b) -> m a -> m a`
+    - **Usage:** Flipped version of `>>>=`.
+  - `(>>>=) :: (Traversable n, Monad m, Monad n) => m (n a) -> (a -> m (n b)) -> m (n b)`
+    - **Usage:** A monadic operator for sequencing actions over nested monadic structures, flattening the result.
+  - `(=<<<) :: (Traversable n, Monad m, Monad n) => (a -> m (n b)) -> m (n a) -> m (n b)`
+    - **Usage:** Flipped version of `>>>=`.
+  - `hoistMaybe :: Applicative m => Maybe b -> MaybeT m b`
+    - **Usage:** Lifts a `Maybe` value into the `MaybeT` monad transformer.
+  - `(|<|>|) :: Monad m => m (Maybe a) -> m (Maybe a) -> m (Maybe a)`
+    - **Usage:** A monadic choice operator for `Maybe` values; returns the first `Just` result, or the second result if the first is `Nothing`.
+  - `safeInit :: [a] -> [a]`
+    - **Usage:** Returns all but the last element of a list, or an empty list if the input is empty.
+
+### Kernel.Randomizer
+- **Functions:**
+  - `getRandomInRange :: (MonadIO m, Random a) => (a, a) -> m a`
+    - **Usage:** Generates a random value within a specified inclusive range in a monadic context.
+  - `randomizeList :: (Element (arr1 a) ~ a, MonadIO m, Applicative arr2, Monoid (arr2 a), Container (arr1 a)) => arr1 a -> m (arr2 a)`
+    - **Usage:** Randomizes the order of elements in a list-like structure.
+  - `getRandomElement :: (Element (arr a) ~ a, MonadIO m, Container (arr a)) => arr a -> m a`
+    - **Usage:** Selects a random element from a list-like structure.
+
+### Kernel.ServantMultipart
+- **Instances:**
+  - `instance (S.HasOpenApi api) => S.HasOpenApi (MultipartForm tag a :> api)`
+    - **Description:** Defines how `MultipartForm` contributes to the OpenAPI specification.
+  - `instance SanitizedUrl (sub :: Type) => SanitizedUrl (MultipartForm tag a :> sub)`
+    - **Description:** Defines how `MultipartForm` affects URL sanitization. It defers to the sanitization of the underlying sub-API.
+
+## External Interfaces
+
+### Payment (Juspay)
+- `lib/mobility-core/src/Kernel/External/Payment/Interface/Juspay.hs`: Defines the interface for Juspay payment integration.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Types/Offer.hs`: Defines data types related to Juspay offers.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Config.hs`: Configuration for Juspay integration.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Types/Common.hs`: Common data types for Juspay integration.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Types/CreateOrder.hs`: Data types for creating Juspay orders.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Types/Mandate.hs`: Data types for Juspay mandates.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Flow.hs`: Defines the flow for Juspay payment processing.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Types/Payout.hs`: Data types for Juspay payouts.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Webhook.hs`: Handles webhooks from Juspay.
+- `lib/mobility-core/src/Kernel/External/Payment/Juspay/Types/Webhook.hs`: Data types for Juspay webhooks.
+- `lib/mobility-core/src/Kernel/External/Payment/Interface/Types.hs`: Defines common types for payment interfaces.
+- `lib/mobility-core/src/Kernel/External/Payment/Interface.hs`: Defines the payment interface.
+
+### SMS (GupShup, MyValueFirst, ExotelSms)
+- `lib/mobility-core/src/Kernel/External/SMS/Interface/GupShup.hs`: Defines the interface for GupShup SMS integration.
+- `lib/mobility-core/src/Kernel/External/SMS/Interface/MyValueFirst.hs`: Defines the interface for MyValueFirst SMS integration.
+- `lib/mobility-core/src/Kernel/External/SMS/MyValueFirst/API.hs`: Defines the API for MyValueFirst SMS integration.
+- `lib/mobility-core/src/Kernel/External/SMS/MyValueFirst/Types.hs`: Defines data types for MyValueFirst SMS integration.
+- `lib/mobility-core/src/Kernel/External/SMS/MyValueFirst/Flow.hs`: Defines the flow for MyValueFirst SMS processing.
+- `lib/mobility-core/src/Kernel/External/SMS/MyValueFirst/Config.hs`: Configuration for MyValueFirst SMS integration.
+- `lib/mobility-core/src/Kernel/Sms/Config.hs`: Configuration for SMS.
+- `lib/mobility-core/src/Kernel/External/SMS/Interface/Types.hs`: Defines common types for SMS interfaces.
+- `lib/mobility-core/src/Kernel/External/SMS/Interface/ExotelSms.hs`: Defines the interface for Exotel SMS integration.
+- `lib/mobility-core/src/Kernel/External/SMS/Interface.hs`: Defines the SMS interface.
+
+### Whatsapp (GupShup)
+- `lib/mobility-core/src/Kernel/External/Whatsapp/Interface.hs`: Defines the interface for Whatsapp integration.
+- `lib/mobility-core/src/Kernel/External/Whatsapp/Interface/GupShup.hs`: Defines the interface for GupShup Whatsapp integration.
+- `lib/mobility-core/src/Kernel/External/Whatsapp/Interface/Types.hs`: Defines data types for Whatsapp interfaces.
+- `lib/mobility-core/src/Kernel/External/Whatsapp/GupShup/Flow.hs`: Defines the flow for GupShup Whatsapp processing.
+- `lib/mobility-core/src/Kernel/External/Whatsapp/Types.hs`: Defines data types for Whatsapp.
+
+### Maps (OSRM)
+- `lib/mobility-core/src/Kernel/External/Maps/OSRM/RoadsClient.hs`: Defines the OSRM Roads client.
+- `lib/mobility-core/src/Kernel/External/Maps/Types.hs`: Defines data types for Maps.
+- `lib/mobility-core/src/Kernel/External/Maps/Interface/Types.hs`: Defines data types for Maps interfaces.
+- `lib/mobility-core/src/Kernel/External/Maps/Interface/OSRM.hs`: Defines the interface for OSRM Maps integration.
+- `lib/mobility-core/src/Kernel/External/Maps/Interface.hs`: Defines the Maps interface.
+
+### Notification (FCM)
+- `lib/mobility-core/src/Kernel/External/Notification/FCM/Types.hs`: Defines data types for FCM notifications.
+- `lib/mobility-core/src/Kernel/External/Notification/Interface/Types.hs`: Defines data types for notification interfaces.
+- `lib/mobility-core/src/Kernel/External/Notification/Interface/FCM.hs`: Defines the interface for
+      - `port :: Word16`: Port number for the ClickHouse server.
+      - `password :: Text`: Password for ClickHouse authentication.
+      - `database :: Text`: Name of the database to connect to.
+      - `tls :: Bool`: Indicates whether to use TLS for the connection.
+      - `retryInterval :: V.Vector Int`: A vector of integers representing retry intervals in seconds.
+  - `data ClickhouseDb`
+    - **Description:** An algebraic data type representing different ClickHouse database instances used in the application.
+    - **Constructors:**
+      - `APP_SERVICE_CLICKHOUSE`: Represents the ClickHouse instance for application services.
+      - `ATLAS_KAFKA`: Represents the Clickhouse instance for Kafka-related data.
+  - `data ClickhouseData`
+    - **Description:** Stores the mutable state of a Clickhouse connection, including connection details and retry information.
+    - **Fields:**
+      - `connection :: CH.HttpConnection`: The active HTTP connection to ClickHouse.
+      - `retryInterval :: V.Vector Int`: The configured retry intervals.
+      - `lastTryIndex :: Int`: The index of the last attempted retry interval.
+      - `lastTryTime :: UTCTime`: The timestamp of the last connection attempt.
+      - `status :: Bool`: Indicates the current status of the connection (e.g., `True` if locked for update).
+  - `newtype ClickhouseEnv`
+    - **Description:** A newtype wrapper around an `MVar` holding `ClickhouseData`, providing a thread-safe way to manage ClickHouse connection state.
+    - **Fields:**
+      - `connectionData :: M.MVar ClickhouseData`: Mutable variable holding the connection data.
+- **Functions:**
+  - `createConn :: ClickhouseCfg -> IO ClickhouseEnv`
+    - **Usage:** Creates a new ClickHouse HTTP connection and initializes a `ClickhouseEnv` with its state.
+  - `getLock :: ClickhouseEnv -> IO Bool`
+    - **Usage:** Attempts to acquire a lock on the Clickhouse connection data. Returns `True` if the lock was successfully acquired (meaning the status was `False` and is now set to `True`), otherwise `False`.
+  - `releaseLock :: ClickhouseEnv -> IO ()`
+    - **Usage:** Releases the lock on the ClickHouse connection data by setting its status to `False`.
+  - `connectionHelper :: ClickhouseCfg -> ClickhouseEnv -> IO ()`
+    - **Usage:** A helper function that manages ClickHouse connection retries. If the connection is not locked and enough time has passed since the last attempt, it tries to re-establish the connection.
+  - `retryClickhouseConnection :: (MonadFlow m, ClickhouseFlow m env) => ClickhouseDb -> m ()`
+    - **Usage:** Retries the ClickHouse connection for a specific database instance (APP_SERVICE_CLICKHOUSE or ATLAS_KAFKA) by calling `connectionHelper`.
+  - `createCkhConn :: ClickhouseCfg -> IO CH.HttpConnection`
+    - **Usage:** Creates a raw `CH.HttpConnection` to a ClickHouse database based on the provided `ClickhouseCfg`.
+
+### Kernel.Storage.Clickhouse.Operators
+- **Type Aliases:**
+  - `type ValueToExprStr = String -> String -> ClickhouseExpr`
+    - **Description:** Type alias for functions that convert a column name and a value string into a `ClickhouseExpr`.
+  - `type ExprsToExprStr = ClickhouseExpr -> ClickhouseExpr -> ClickhouseExpr`
+    - **Description:** Type alias for functions that combine two `ClickhouseExpr` values into a new `ClickhouseExpr`.
+- **Functions:**
+  - `(=.=) :: ValueToExprStr`
+    - **Usage:** ClickHouse "equal to" operator. Creates an expression `columnName = 'value'`.
+  - `(=!=) :: ValueToExprStr`
+    - **Usage:** ClickHouse "not equal to" operator. Creates an expression `columnName != value`.
+  - `(<<.) :: ValueToExprStr`
+    - **Usage:** ClickHouse "less than" operator. Creates an expression `columnName < value`.
+  - `(>>.) :: ValueToExprStr`
+    - **Usage:** ClickHouse "greater than" operator. Creates an expression `columnName > value`.
+  - `(>>==.) :: ValueToExprStr`
+    - **Usage:** ClickHouse "greater than or equal to" operator. Creates an expression `columnName >= 'value'`.
+  - `(<<==.) :: ValueToExprStr`
+    - **Usage:** ClickHouse "less than or equal to" operator. Creates an expression `columnName <= 'value'`.
+  - `__like :: ValueToExprStr`
+    - **Usage:** ClickHouse `LIKE` operator. Creates an expression `columnName LIKE value`.
+  - `__in :: String -> [String] -> ClickhouseExpr`
+    - **Usage:** ClickHouse `IN` operator. Creates an expression `columnName IN (value1, value2, ...)`.
+  - `(|.|) :: ExprsToExprStr`
+    - **Usage:** ClickHouse `OR` logical operator. Combines two `ClickhouseExpr` with `OR`.
+  - `(&.&) :: ExprsToExprStr`
+    - **Usage:** ClickHouse `AND` logical operator. Combines two `ClickhouseExpr` with `AND`.
+- **Instances:**
+  - `instance ToClickhouseQuery [String]`
+    - **Description:** Defines how a list of strings is converted into a ClickHouse query string, typically for `IN` clauses.
+
+### Kernel.Storage.Clickhouse.Types
+- **Type Aliases:**
+  - `type ChCol a b = a -> b`
+    - **Description:** A type alias for a function that maps type `a` to type `b`, likely representing a column in ClickHouse.
+- **Data Types:**
+  - `data CHExpr a`
+    - **Description:** Represents a ClickHouse expression with a value and a function to format it.
+  - `data ClickhouseExpr`
+    - **Description:** Represents a ClickHouse expression, either `Nil` (empty) or a string literal.
+    - **Constructors:**
+      - `Nil`: Represents an empty expression.
+      - `ExprStr String`: Represents a ClickHouse expression as a string.
+  - `data Order`
+    - **Description:** Represents an ordering for ClickHouse queries (ascending or descending).
+    - **Constructors:**
+      - `Asc String`: Ascending order by column name.
+      - `Desc String`: Descending order by column name.
+  - `newtype Offset`
+    - **Description:** Represents an offset for ClickHouse queries.
+  - `newtype Limit`
+    - **Description:** Represents a limit for ClickHouse queries.
+- **Classes:**
+  - `class ToClickhouseQuery a where toClickhouseQuery :: a -> String`
+    - **Description:** A type class for types that can be converted into a ClickHouse query string.
+- **Functions:**
+  - `dropBeforeDot :: String -> String`
+    - **Usage:** Removes the part of a string before the first dot ('.') character, including the dot itself. If no dot is found, the original string is returned.
+
+### Kernel.Storage.ClickhouseV2.ClickhouseTable
+- **Classes:**
+  - `class (Typeable t, FromJSON (t Identity)) => ClickhouseTable (t :: (Type -> Type) -> Type) where`
+    - **Description:** A type class representing a ClickHouse table. It provides methods for table modification, mapping between functors, and getting the select modifier.
+    - **Methods:**
+      - `tableModification :: FieldModifications t`: Applies field modifications to the table.
+      - `mapTable :: forall f g. (forall a. C f a -> C g a) -> t f -> t g`: Maps columns between different functors.
+      - `getSelectModifier :: Proxy t -> SelectModifier`: Retrieves the select modifier for the table.
+- **Data Types:**
+  - `data SelectModifier`
+    - **Description:** Represents a modifier for ClickHouse SELECT queries.
+    - **Constructors:**
+      - `SELECT_FINAL_MODIFIER`: Applies the `FINAL` modifier to the SELECT query.
+      - `NO_SELECT_MODIFIER`: No special SELECT modifier.
+  - `type family Columnar (f :: Type -> Type) x`
+    - **Description:** A type family used to tag columns in table datatypes, allowing for different representations (e.g., `Identity` for concrete values, `f` for monadic contexts).
+  - `type C f a = Columnar f a`
+    - **Description:** A short type-alias for `Columnar`.
+  - `newtype FieldModification table value`
+    - **Description:** Represents a field modification for a ClickHouse table, wrapping a string.
+  - `type FieldModifications table = table (FieldModification table)`
+    - **Description:** A type alias representing a table with all its fields wrapped in `FieldModification`.
+- **Functions:**
+  - `getFieldModification :: FieldModification table value -> String`
+    - **Usage:** Extracts the underlying string from a `FieldModification` newtype.
+
+### Kernel.Storage.ClickhouseV2.Internal.ClickhouseColumns
+- **Classes:**
+  - `class ClickhouseColumns a cols where`
+    - **Description:** A type class for defining how to show and parse columns for ClickHouse queries, supporting both aggregated and non-aggregated columns.
+    - **Methods:**
+      - `type ColumnsType a cols`: Associated type family for the concrete type of the columns.
+      - `showClickhouseColumns :: cols -> SubQueryLevel -> String`: Generates the string representation of columns for a ClickHouse query.
+      - `parseColumns :: cols -> A.Value -> SubQueryLevel -> Either String (ColumnsType a cols)`: Parses a JSON `A.Value` into the specified column types.
+- **Data Types:**
+  - `data NotSpecified`
+    - **Description:** A phantom type used internally when the specific value type is not yet known during parsing.
+- **Functions:**
+  - `parseColumns1 :: ClickhouseValue v1 => Column a t v1 -> A.Value -> SubQueryLevel -> Either String v1`
+    - **Usage:** Parses a single ClickHouse column from an Aeson `Value`.
+  - `parseColumns2 :: (C2 ClickhouseValue v1 v2) => T2 (Column a t) v1 v2 -> A.Value -> SubQueryLevel -> Either String (v1, v2)`
+    - **Usage:** Parses two ClickHouse columns from an Aeson `Value`.
+  - `parseColumns3 :: (C3 ClickhouseValue v1 v2 v3) => T3 (Column a t) v1 v2 v3 -> A.Value -> SubQueryLevel -> Either String (v1, v2, v3)`
+    - **Usage:** Parses three ClickHouse columns from an Aeson `Value`.
+  - `parseColumns4 :: (C4 ClickhouseValue v1 v2 v3 v4) => T4 (Column a t) v1 v2 v3 v4 -> A.Value -> SubQueryLevel -> Either String (v1, v2, v3, v4)`
+    - **Usage:** Parses four ClickHouse columns from an Aeson `Value`.
+  - `parseColumns5 :: (C5 ClickhouseValue v1 v2 v3 v4 v5) => T5 (Column a t) v1 v2 v3 v4 v5 -> A.Value -> SubQueryLevel -> Either String (v1, v2, v3, v4, v5)`
+    - **Usage:** Parses five ClickHouse columns from an Aeson `Value`.
+  - `parseColumns6 :: (C6 ClickhouseValue v1 v2 v3 v4 v5 v6) => T6 (Column a t) v1 v2 v3 v4 v5 v6 -> A.Value -> SubQueryLevel -> Either String (v1, v2, v3, v4, v5, v6)`
+    - **Usage:** Parses six ClickHouse columns from an Aeson `Value`.
+  - `parseColumns7 :: (C7 ClickhouseValue v1 v2 v3 v4 v5 v6 v7) => T7 (Column a t) v1 v2 v3 v4 v5 v6 v7 -> A.Value -> SubQueryLevel -> Either String (v1, v2, v3, v4, v5, v6, v7)`
+    - **Usage:** Parses seven Clickhouse columns from an Aeson `Value`.
+  - `parseValueFromMap :: (ClickhouseValue v) => ColumnNumber -> Column a t v -> A.KeyMap (Value NotSpecified) -> SubQueryLevel -> Either String v`
+    - **Usage:** Parses a single value from an Aeson `KeyMap` based on column number, column definition, and sub-query level.
+  - `zipColumnsWithSynonyms1 :: Column a t v1 -> SubQueryLevel -> String`
+    - **Usage:** Generates a ClickHouse column string for a single column, including its synonym.
+  - `zipColumnsWithSynonyms2 :: T2 (Column a t) v1 v2 -> SubQueryLevel -> String`
+    - **Usage:** Generates a ClickHouse column string for two columns, including their synonyms.
+  - `zipColumnsWithSynonyms3 :: T3 (Column a t) v1 v2 v3 -> SubQueryLevel -> String`
+    - **Usage:** Generates a ClickHouse column string for three columns, including their synonyms.
+  - `zipColumnsWithSynonyms4 :: T4 (Column a t) v1 v2 v3 v4 -> SubQueryLevel -> String`
+    - **Usage:** Generates a ClickHouse column string for four columns, including their synonyms.
+  - `zipColumnsWithSynonyms5 :: T5 (Column a t) v1 v2 v3 v4 v5 -> SubQueryLevel -> String`
+    - **Usage:** Generates a ClickHouse column string for five columns, including their synonyms.
+  - `zipColumnsWithSynonyms6 :: T6 (Column a t) v1 v2 v3 v4 v5 v6 -> SubQueryLevel -> String`
+    - **Usage:** Generates a ClickHouse column string for six columns, including their synonyms.
+  - `zipColumnsWithSynonyms7 :: T7 (Column a t) v1 v2 v3 v4 v5 v6 v7 -> SubQueryLevel -> String`
+    - **Usage:** Generates a Clickhouse column string for seven columns, including their synonyms.
+  - `zipColumns :: [String] -> SubQueryLevel -> String`
+    - **Usage:** Generates a comma-separated string of ClickHouse columns with their aliases (synonyms) for a given sub-query level.
+- **Instances:**
+  - `instance (FromJSON (ColumnsType 'NOT_AGG (Columns 'NOT_AGG t)), ClickhouseTable t) => ClickhouseColumns 'NOT_AGG (Columns 'NOT_AGG t)`
+    - **Description:** Defines `ClickhouseColumns` instance for non-aggregated columns, allowing parsing of a full table row.
+  - `instance (ClickhouseValue v) => ClickhouseColumns a (Column a t v)`
+    - **Description:** Defines `ClickhouseColumns` instance for a single column.
+  - `instance (C2 ClickhouseValue v1 v2) => ClickhouseColumns a (T2 (Column a t) v1 v2)`
+    - **Description:** Defines `ClickhouseColumns` instance for a tuple of two columns.
+  - `instance (C3 ClickhouseValue v1 v2 v3) => ClickhouseColumns a (T3 (Column a t) v1 v2 v3)`
+    - **Description:** Defines `ClickhouseColumns` instance for a tuple of three columns.
+  - `instance (C4 ClickhouseValue v1 v2 v3 v4) => ClickhouseColumns a (T4 (Column a t) v1 v2 v3 v4)`
+    - **Description:** Defines `ClickhouseColumns` instance for a tuple of four columns.
+  - `instance (C5 ClickhouseValue v1 v2 v3 v4 v5) => ClickhouseColumns a (T5 (Column a t) v1 v2 v3 v4 v5)`
+    - **Description:** Defines `ClickhouseColumns` instance for a tuple of five columns.
+  - `instance (C6 ClickhouseValue v1 v2 v3 v4 v5 v6) => ClickhouseColumns a (T6 (Column a t) v1 v2 v3 v4 v5 v6)`
+    - **Description:** Defines `ClickhouseColumns` instance for a tuple of six columns.
+  - `instance (C7 ClickhouseValue v1 v2 v3 v4 v5 v6 v7) => ClickhouseColumns a (T7 (Column a t) v1 v2 v3 v4 v5 v6 v7)`
+    - **Description:** Defines `ClickhouseColumns` instance for a tuple of seven columns.
+
+### Kernel.Storage.ClickhouseV2.Internal.ClickhouseQuery
+- **Classes:**
+  - `class ClickhouseQuery expr where toClickhouseQuery :: expr -> RawQuery`
+    - **Description:** A type class for types that can be converted into a raw ClickHouse query string.
+- **Data Types:**
+  - `newtype RawQuery`
+    - **Description:** A newtype wrapper for a `String` representing a raw ClickHouse query fragment.
+- **Functions:**
+  - `mkMaybeClause :: forall expr. ClickhouseQuery expr => Maybe expr -> RawQuery`
+    - **Usage:** Converts a `Maybe` Clickhouse query expression into a `RawQuery`, returning `mempty` if `Nothing`.
+  - `dropBeforeDot :: String -> String`
+    - **Usage:** Removes the part of a string before the first dot ('.') character, including the dot itself. If no dot is found, the original string is returned.
+  - `valToClickhouseQuery :: forall value. ClickhouseValue value => value -> RawQuery`
+    - **Usage:** Converts a `ClickhouseValue` into a `RawQuery` suitable for ClickHouse.
+  - `intercalate :: RawQuery -> [RawQuery] -> RawQuery`
+    - **Usage:** Intercalates a list of `RawQuery` with a separator `RawQuery`.
+  - `addBrackets :: RawQuery -> RawQuery`
+    - **Usage:** Wraps a `RawQuery` in parentheses.
+- **Instances:**
+  - `instance (ClickhouseDb db, ClickhouseTable t, ClickhouseColumns a cols, ClickhouseQuery gr, ClickhouseQuery ord, ClickhouseQuery (AvailableColumns db t acols)) => ClickhouseQuery (Select a db t cols gr ord acols)`
+    - **Description:** Defines how a `Select` query structure is converted into a ClickHouse `SELECT` statement, including columns, table, where clause, group by, order by, limit, and offset.
+  - `instance ClickhouseTable t => ClickhouseQuery (Where t)`
+    - **Description:** Defines how a `Where` clause is converted into a ClickHouse `WHERE` statement.
+  - `instance (ClickhouseTable t) => ClickhouseQuery (Clause t)`
+    - **Description:** Defines how a `Clause` (AND, OR, NOT, IS, Val) is converted into ClickHouse logical expressions.
+  - `instance ClickhouseValue value => ClickhouseQuery (Term value)`
+    - **Description:** Defines how a `Term` (In, Eq, NullTerm, NotNullTerm, NotEq, GreaterThan, GreaterOrEqualThan, LessThan, LessOrEqualThan, Like) is converted into ClickHouse comparison expressions.
+  - `instance ClickhouseValue value => ClickhouseQuery (Value value)`
+    - **Description:** Defines how a `Value` is converted into a `RawQuery` string.
+  - `instance ClickhouseQuery Limit`
+    - **Description:** Defines how a `Limit` is converted into a ClickHouse `LIMIT` clause.
+  - `instance ClickhouseQuery Offset`
+    - **Description:** Defines how an `Offset` is converted into a ClickHouse `OFFSET` clause.
+  - `instance ClickhouseQuery NotOrdered`
+    - **Description:** Defines an empty `RawQuery` for `NotOrdered`.
+  - `instance ClickhouseQuery ord => ClickhouseQuery (OrderBy ord)`
+    - **Description:** Defines how an `OrderBy` clause (Asc, Desc) is converted into a ClickHouse `ORDER BY` clause.
+  - `instance ClickhouseQuery NotGrouped`
+    - **Description:** Defines an empty `RawQuery` for `NotGrouped`.
+  - `instance ClickhouseQuery NoColumns`
+    - **Description:** Defines an empty `RawQuery` for `NoColumns`.
+  - `instance ClickhouseQuery gr => ClickhouseQuery (GroupBy a gr)`
+    - **Description:** Defines how a `GroupBy` clause is converted into a ClickHouse `GROUP BY` clause.
+  - `instance ClickhouseTable t => ClickhouseQuery (Column a t value)`
+    - **Description:** Defines how a `Column` is converted into its string representation for a ClickHouse query.
+  - `instance ClickhouseTable t => ClickhouseQuery (T2 (Column a t) v1 v2)`
+    - **Description:** Defines how a tuple of two `Column`s is converted into a comma-separated string for a ClickHouse query.
+  - `instance ClickhouseTable t => ClickhouseQuery (T3 (Column a t) v1 v2 v3)`
+    - **Description:** Defines how a tuple of three `Column`s is converted into a comma-separated string for a ClickHouse query.
+  - `instance ClickhouseTable t => ClickhouseQuery (T4 (Column a t) v1 v2 v3 v4)`
+    - **Description:** Defines how a tuple of four `Column`s is converted into a comma-separated string for a ClickHouse query.
+  - `instance ClickhouseTable t => ClickhouseQuery (T5 (Column a t) v1 v2 v3 v4 v5)`
+    - **Description:** Defines how a tuple of five `Column`s is converted into a comma-separated string for a ClickHouse query.
+  - `instance ClickhouseTable t => ClickhouseQuery (T6 (Column a t) v1 v2 v3 v4 v5 v6)`
+    - **Description:** Defines how a tuple of six `Column`s is converted into a comma-separated string for a ClickHouse query.
+  - `instance ClickhouseTable t => ClickhouseQuery (AvailableAllColumns db t)`
+    - **Description:** Defines how `AvailableAllColumns` is converted into a table name string for a ClickHouse query.
+  - `instance ClickhouseQuery (AvailableSubSelectColumns db t subcols)`
+    - **Description:** Defines how `AvailableSubSelectColumns` is converted into a sub-select query string.
+
+### Kernel.Storage.ClickhouseV2.Internal.Types
+- **Classes:**
+  - `class ClickhouseColumns (a :: IsAggregated) cols where`
+    - **Description:** A type class for defining how to show and parse columns for ClickHouse queries, supporting both aggregated and non-aggregated columns.
+    - **Methods:**
+      - `type ColumnsType a cols`: Associated type family for the concrete type of the columns.
+      - `showClickhouseColumns :: Proxy a -> cols -> SubQueryLevel -> String`: Generates the string representation of columns for a ClickHouse query.
+      - `parseColumns :: cols -> A.Value -> SubQueryLevel -> Either String (ColumnsType a cols)`: Parses a JSON `A.Value` into the specified column types.
+  - `class ClickhouseQuery expr where toClickhouseQuery :: expr -> RawQuery`
+    - **Description:** A type class for types that can be converted into a raw ClickHouse query string.
+  - `class ClickhouseValue v => ClickhouseNum v`
+    - **Description:** A type class for ClickHouse numeric values, extending `ClickhouseValue`.
+  - `class IsGroupColumns cols where`
+    - **Description:** A type class for columns that can be used in a `GROUP BY` clause.
+    - **Methods:**
+      - `type GroupColumnsType cols`: Associated type family for the grouped columns type.
+      - `groupColumns :: cols -> GroupColumnsType cols`: Converts non-aggregated columns to aggregated columns for grouping.
+  - `class MkSubColumns cols where`
+    - **Description:** A type class for creating sub-columns, typically for sub-queries.
+    - **Methods:**
+      - `type SubColumnsType cols`: Associated type family for the sub-columns type.
+      - `subColumnsValue :: cols -> SubQueryLevel -> SubColumnsType cols`: Creates sub-columns with a given sub-query level.
+  - `class IsOrderColumns cols`
+    - **Description:** A type class for columns that can be used in an `ORDER BY` clause.
+  - `class HasAvailableColumns (cols :: Type) where`
+    - **Description:** A type class for types that represent available columns in a ClickHouse query.
+    - **Methods:**
+      - `type AvailableColumnsType cols`: Associated type family for the concrete type of available columns.
+      - `availableColumnsValue :: cols -> AvailableColumnsType cols`: Extracts the concrete column values.
+- **Data Types:**
+  - `data Select a db table cols gr ord acols`
+    - **Description:** Represents a ClickHouse `SELECT` query, parameterized by aggregation type, database, table, columns, group by, order by, and available columns.
+  - `data IsAggregated`
+    - **Description:** An algebraic data type indicating whether columns are aggregated (`AGG`) or not (`NOT_AGG`).
+    - **Constructors:**
+      - `AGG`: Aggregated columns.
+      - `NOT_AGG`: Non-aggregated columns.
+  - `data Column (a :: IsAggregated) t v`
+    - **Description:** Represents a ClickHouse column, supporting various types of columns (initial, grouped, sub-columns, aggregate functions, arithmetic operations, type coercions, date/time functions, conditional logic, and comparisons).
+  - `type Columns a table = table (Column a table)`
+    - **Description:** A type alias representing a table with all its fields wrapped in `Column` with a specific aggregation type.
+  - `data Clause table`
+    - **Description:** Represents a logical clause for ClickHouse `WHERE` conditions (AND, OR, NOT, IS, Val).
+  - `data Term value`
+    - **Description:** Represents a comparison term for ClickHouse queries (In, Eq, NullTerm, NotNullTerm, NotEq, GreaterThan, GreaterOrEqualThan, LessThan, LessOrEqualThan, Like).
+  - `newtype Where table`
+    - **Description:** A newtype wrapper for a `Clause` representing a `WHERE` condition.
+  - `data NotGrouped`
+    - **Description:** A phantom type indicating no grouping.
+  - `data NoColumns`
+    - **Description:** A phantom type indicating no columns.
+  - `data GroupBy (a :: IsAggregated) gr`
+    - **Description:** Represents a `GROUP BY` clause, supporting grouping by specific columns or aggregating without explicit grouping.
+  - `data OrderBy ord`
+    - **Description:** Represents an `ORDER BY` clause.
+  - `data NotOrdered`
+    - **Description:** A phantom type indicating no ordering.
+  - `data Q db table cols ord acols`
+    - **Description:** Represents the core query parameters for a ClickHouse query, including table, sub-query level, where clause, limit, offset, order by, and select modifier override.
+  - `newtype Offset`
+    - **Description:** A newtype wrapper for an `Int` representing a query offset.
+  - `newtype Limit`
+    - **Description:** A newtype wrapper for an `Int` representing a query limit.
+  - `data Order`
+    - **Description:** An algebraic data type representing ascending or descending order.
+    - **Constructors:**
+      - `Asc`: Ascending order.
+      - `Desc`: Descending order.
+  - `data AvailableColumns db table acols`
+    - **Description:** Represents the available columns for a ClickHouse query, either all columns or a sub-select.
+  - `data AllColumns db table`
+    - **Description:** Represents all columns of a ClickHouse table.
+  - `data SubSelectColumns db table subcols`
+    - **Description:** Represents columns derived from a sub-select query.
+  - `type AvailableAllColumns db table = AvailableColumns db table (AllColumns db table)`
+    - **Description:** Type alias for `AvailableColumns` representing all columns of a table.
+  - `type AvailableSubSelectColumns db table subcols = AvailableColumns db table (SubSelectColumns db table subcols)`
+    - **Description:** Type alias for `AvailableColumns` representing columns from a sub-select.
+  - `type T2 (c :: Type -> Type) x1 x2`
+    - **Description:** Type alias for a tuple of two `c`-wrapped types.
+  - `type T3 (c :: Type -> Type) x1 x2 x3`
+    - **Description:** Type alias for a tuple of three `c`-wrapped types.
+  - `type T4 (c :: Type -> Type) x1 x2 x3 x4`
+    - **Description:** Type alias for a constraint tuple of four types.
+  - `type T5 (c :: Type -> Type) x1 x2 x3 x4 x5`
+    - **Description:** Type alias for a tuple of five `c`-wrapped types.
+  - `type T6 (c :: Type -> Type) x1 x2 x3 x4 x5 x6`
+    - **Description:** Type alias for a tuple of six `c`-wrapped types.
+  - `type T7 (c :: Type -> Type) x1 x2 x3 x4 x5 x6 x7`
+    - **Description:** Type alias for a tuple of seven `c`-wrapped types.
+  - `type C2 (c :: Type -> Constraint) x1 x2`
+    - **Description:** Type alias for a constraint tuple of two types.
+  - `type C3 (c :: Type -> Constraint) x1 x2 x3`
+    - **Description:** Type alias for a constraint tuple of three types.
+  - `type C4 (c :: Type -> Constraint) x1 x2 x3 x4`
+    - **Description:** Type alias for a constraint tuple of four types.
+  - `type C5 (c :: Type -> Constraint) x1 x2 x3 x4 x5`
+    - **Description:** Type alias for a constraint tuple of five types.
+  - `type C6 (c :: Type -> Constraint) x1 x2 x3 x4 x5 x6`
+    - **Description:** Type alias for a constraint tuple of six types.
+  - `type C7 (c :: Type -> Constraint) x1 x2 x3 x4 x5 x6 x7`
+    - **Description:** Type alias for a constraint tuple of seven types.
+  - `newtype SubQueryLevel`
+    - **Description:** A newtype wrapper for an `Int` representing the nesting level of a sub-query.
+  - `newtype ColumnNumber`
+    - **Description:** A newtype wrapper for an `Int` representing the numerical index of a column.
+- **Functions:**
+  - `mkTableColumns :: ClickhouseTable t => FieldModifications t -> Columns 'NOT_AGG t`
+    - **Usage:** Creates a `Columns 'NOT_AGG` structure for a given `ClickhouseTable` by mapping its field modifications to `Column 'NOT_AGG`.
+  - `getAvailableColumnsValue :: AvailableColumns db table acols -> AvailableColumnsType acols`
+    - **Usage:** Extracts the concrete available columns value from an `AvailableColumns` wrapper.
+  - `showColumn :: Column a t v -> String`
+    - **Usage:** Converts a `Column` definition into its string representation for a ClickHouse query, handling various column types and functions.
+  - `addBrackets' :: String -> String`
+    - **Usage:** Wraps a string in parentheses.
+  - `getColumnSynonym :: ColumnNumber -> SubQueryLevel -> String`
+    - **Usage:** Generates a column synonym (alias) string based on its number and sub-query level (e.g., "res1", "res2_sub1").
+- **Instances:**
+  - `instance (ClickhouseValue v, Num v) => ClickhouseNum v`
+    - **Description:** Defines `ClickhouseNum` instance for any `ClickhouseValue` that is also a `Num`.
+  - `instance {-# OVERLAPPING #-} (ClickhouseValue v, Num v) => ClickhouseNum (Maybe v)`
+    - **Description:** Defines `ClickhouseNum` instance for `Maybe` numeric `ClickhouseValue`s.
+  - `instance IsOrderColumns NotOrdered`
+    - **Description:** Defines `IsOrderColumns` instance for `NotOrdered`.
+  - `instance (ClickhouseTable t, ClickhouseValue v) => IsOrderColumns (Column a t v)`
+    - **Description:** Defines `IsOrderColumns` instance for a single `Column`.
+  - `instance (ClickhouseTable t, C2 ClickhouseValue v1 v2) => IsOrderColumns (T2 (Column a t) v1 v2)`
+    - **Description:** Defines `IsOrderColumns` instance for a tuple of two columns.
+  - `instance (ClickhouseTable t, C3 ClickhouseValue v1 v2 v3) => IsOrderColumns (T3 (Column a t) v1 v2 v3)`
+    - **Description:** Defines `IsOrderColumns` instance for a tuple of three columns.
+  - `instance (ClickhouseTable t, C4 ClickhouseValue v1 v2 v3 v4) => IsOrderColumns (T4 (Column a t) v1 v2 v3 v4)`
+    - **Description:** Defines `IsOrderColumns` instance for a tuple of four columns.
+  - `instance (ClickhouseTable t, C5 ClickhouseValue v1 v2 v3 v4 v5) => IsOrderColumns (T5 (Column a t) v1 v2 v3 v4 v5)`
+    - **Description:** Defines `IsOrderColumns` instance for a tuple of five columns.
+  - `instance (ClickhouseTable t, C6 ClickhouseValue v1 v2 v3 v4 v5 v6) => IsOrderColumns (T6 (Column a t) v1 v2 v3 v4 v5 v6)`
+    - **Description:** Defines `IsOrderColumns` instance for a tuple of six columns.
+### Kernel.Serviceability
+- **Functions:**
+  - `rideServiceable :: L.MonadFlow m => GeofencingConfig -> (LatLong -> [Text] -> m Bool) -> LatLong -> Maybe LatLong -> m Bool`
+    - **Usage:** Checks if a ride is serviceable based on geofencing configurations for both origin and destination. It takes a `GeofencingConfig`, a function to check if a `LatLong` is within a list of regions, the origin `LatLong`, and an optional destination `LatLong`. Returns `True` if both origin and destination (if provided) are within their respective serviceable regions, or if regions are unrestricted.
+
+### Kernel.Storage.Esqueleto.Config
+- **Data Types:**
+  - `data EsqDBConfig`
+    - **Description:** Represents the configuration for an Esqueleto PostgreSQL database connection.
+    - **Fields:**
+      - `connectHost :: Text`: Hostname of the PostgreSQL server.
+      - `connectPort :: Word16`: Port number of the PostgreSQL server.
+      - `connectUser :: Text`: Username for PostgreSQL authentication.
+      - `connectPassword :: Text`: Password for PostgreSQL authentication.
+      - `connectDatabase :: Text`: Name of the database to connect to.
+      - `connectSchemaName :: Text`: The schema name to set in the search path.
+      - `connectionPoolCount :: Int`: Number of connections in the pool.
+  - `newtype EsqDBEnv`
+    - **Description:** A newtype wrapper around a `Pool SqlBackend`, representing the Esqueleto database environment.
+    - **Fields:**
+      - `connPool :: Pool SqlBackend`: The PostgreSQL connection pool.
+- **Functions:**
+  - `prepareEsqDBEnv :: EsqDBConfig -> LoggerEnv -> IO EsqDBEnv`
+    - **Usage:** Prepares the Esqueleto database environment by creating a PostgreSQL connection pool based on the provided configuration and logger environment.
+- **Type Aliases:**
+  - `type HasEsq m r = (MonadReader r m, HasLog r, MonadTime m, MonadIO m)`
+    - **Description:** A type alias for constraints required for a monadic flow to interact with Esqueleto, including `MonadReader`, `HasLog`, `MonadTime`, and `MonadIO`.
+  - `type HasEsqEnv m r = (HasEsq m r, HasField "esqDBEnv" r EsqDBEnv, HasField "requestId" r (Maybe Text), HasField "shouldLogRequestId" r Bool)`
+    - **Description:** A type alias for constraints extending `HasEsq`, adding requirements for accessing `esqDBEnv`, `requestId`, and `shouldLogRequestId` fields in the environment.
+  - `type HasEsqReplica m r = (HasEsq m r, HasField "esqDBReplicaEnv" r EsqDBEnv)`
+    - **Description:** A type alias for constraints extending `HasEsq`, adding requirements for accessing `esqDBReplicaEnv` field in the environment.
+  - `type EsqDBFlow m r = (HasEsqEnv m r, MonadFlow m)`
+    - **Description:** A type alias for constraints defining a monadic flow with full Esqueleto database access, extending `HasEsqEnv` and `MonadFlow`.
+  - `type EsqDBReplicaFlow m r = (HasEsqReplica m r, MonadFlow m)`
+    - **Description:** A type alias for constraints defining a monadic flow with Esqueleto replica database access, extending `HasEsqReplica` and `MonadFlow`.
+
+### Kernel.Storage.Esqueleto.Logger
+- **Newtypes:**
+  - `newtype LoggerIO a`
+    - **Description:** A newtype wrapper around `ReaderT LoggerEnv IO a`, providing a monadic context for logging operations.
+- **Functions:**
+  - `runLoggerIO :: LoggerEnv -> LoggerIO a -> IO a`
+    - **Usage:** Runs a `LoggerIO` computation with a given `LoggerEnv`.
+  - `logFunc :: ToLogStr msg => LoggerEnv -> BLogging.LogLevel -> msg -> IO ()`
+    - **Usage:** Internal helper function to log messages to the configured output based on `LoggerEnv` and `LogLevel`.
+  - `logLevelCMtoB :: CMLogger.LogLevel -> BLogging.LogLevel`
+    - **Usage:** Converts a `Control.Monad.Logger.LogLevel` to a `Kernel.Types.Logging.LogLevel`.
+- **Instances:**
+  - `instance MonadTime LoggerIO`
+    - **Description:** Defines `MonadTime` instance for `LoggerIO`.
+  - `instance MonadLogger LoggerIO`
+    - **Description:** Defines `MonadLogger` instance for `LoggerIO`, integrating with `Control.Monad.Logger`.
+  - `instance MonadLoggerIO LoggerIO`
+    - **Description:** Defines `MonadLoggerIO` instance for `LoggerIO`.
+  - `instance Log LoggerIO`
+    - **Description:** Defines `Log` instance for `LoggerIO`, allowing structured logging.
+  - `instance MonadGuid LoggerIO`
+    - **Description:** Defines `MonadGuid` instance for `LoggerIO`, enabling GUID generation within the logging context.
+
+### Kernel.Storage.Esqueleto.Functions
+- **Functions:**
+  - `(<->.) :: SqlExpr (Value Point) -> SqlExpr (Value Point) -> SqlExpr (Value Double)`
+    - **Usage:** PostgreSQL "distance" operator for `Point` types. Calculates the distance between two points.
+  - `getPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value Point)`
+    - **Usage:** Creates a `Point` geometry from latitude and longitude, setting its SRID to 4326.
+  - `buildSTPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value b)`
+    - **Usage:** Constructs an `ST_Point` from longitude and latitude.
+  - `getGeomGeoJSON :: SqlExpr (Value Text)`
+    - **Usage:** Converts a geometry column named "geom" to its GeoJSON representation.
+  - `mbGetGeomGeoJSON :: SqlExpr (Value (Maybe Text))`
+    - **Usage:** Converts a geometry column named "geom" to its GeoJSON representation, returning `Maybe Text`.
+  - `getTextFromGeoJSON :: SqlExpr (Value Text) -> SqlExpr (Value Text)`
+    - **Usage:** Converts a GeoJSON text representation into a geometry, setting its SRID to 4326.
+  - `geojsonToBin :: SqlExpr (Value Text) -> SqlExpr (Value Geom)`
+    - **Usage:** Converts a GeoJSON text representation into a binary geometry (`Geom`).
+  - `buildRadiusWithin :: SqlExpr (Value Point) -> (Double, Double) -> SqlExpr (Value Int) -> SqlExpr (Value b)`
+    - **Usage:** Checks if a point is within a specified radius of another point.
+  - `pointCloseByOrWithin :: (Double, Double) -> SqlExpr (Value Int) -> SqlExpr (Value b)`
+    - **Usage:** Checks if a point is within a specified radius of a given longitude/latitude, performing SRID transformations.
+  - `containsPoint :: (Double, Double) -> SqlExpr (Value b)`
+    - **Usage:** Checks if a geometry column named "geom" contains a specified point (longitude, latitude).
+  - `containsPointGeom :: (Double, Double) -> SqlExpr (Value b)`
+    - **Usage:** Checks if a geometry column named "geom" contains a specified point (longitude, latitude) with SRID 4326.
+  - `containsRegion :: (Double, Double) -> (Double, Double) -> SqlExpr (Value b)`
+    - **Usage:** Checks if a geometry column named "geom" intersects with a specified rectangular region defined by min/max longitude/latitude.
+  - `buildRegionWithin :: (Double, Double) -> (Double, Double) -> SqlExpr (Value b)`
+    - **Usage:** Creates a rectangular region (envelope) from min/max latitude/longitude.
+  - `interval :: [IntervalVal] -> SqlExpr (Value UTCTime)`
+    - **Usage:** Constructs a PostgreSQL `INTERVAL` expression from a list of `IntervalVal` (YEAR, MONTH, DAY, HOUR, MINUTE, SECOND).
+  - `rand :: SqlExpr OrderBy`
+    - **Usage:** Generates a random ordering for Esqueleto queries.
+  - `unnest :: PostgresListField a => SqlExpr (Value a) -> SqlExpr (Value b)`
+    - **Usage:** Unnests a PostgreSQL list field into individual rows.
+- **Data Types:**
+  - `data IntervalVal`
+    - **Description:** Represents a time interval component for PostgreSQL `INTERVAL` expressions.
+    - **Constructors:**
+      - `YEAR Int`: Years.
+      - `MONTH Int`: Months.
+      - `DAY Int`: Days.
+      - `HOUR Int`: Hours.
+      - `MINUTE Int`: Minutes.
+      - `SECOND Int`: Seconds.
+### Kernel.Serviceability
+- **Functions:**
+  - `rideServiceable :: L.MonadFlow m => GeofencingConfig -> (LatLong -> [Text] -> m Bool) -> LatLong -> Maybe LatLong -> m Bool`
+    - **Usage:** Checks if a ride is serviceable based on geofencing configurations for both origin and destination. It takes a `GeofencingConfig`, a function to check if a `LatLong` is within a list of regions, the origin `LatLong`, and an optional destination `LatLong`. Returns `True` if both origin and destination (if provided) are within their respective serviceable regions, or if regions are unrestricted.
+
+### Kernel.Storage.Esqueleto.Migration
+- **Functions:**
+  - `fromEsqDBConfig :: EsqDBConfig -> PS.ConnectInfo`
+    - **Usage:** Converts an `EsqDBConfig` to a `PostgreSQL.Simple.ConnectInfo` for database connection.
+  - `migrateIfNeeded :: (MonadMask m, MonadIO m, Log m) => [FilePath] -> Bool -> EsqDBConfig -> m (Either String ())`
+    - **Usage:** Performs database migrations if `autoMigrate` is `True`, using the provided `EsqDBConfig`. Returns `Right ()` on success or `Left String` on failure.
+  - `migrateIfNeeded' :: (MonadMask m, MonadIO m, Log m) => [FilePath] -> Bool -> ByteString -> PS.ConnectInfo -> m (Either String ())`
+    - **Usage:** Internal function to perform database migrations using `PostgreSQL.Simple.Migration`, given file paths, auto-migrate flag, schema name, and connection info.
+
+### Kernel.Storage.Esqueleto.Queries
+- **Functions:**
+  - `findOne :: (Typeable t, Transactionable m, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m (Maybe a)`
+    - **Usage:** Finds a single record based on an Esqueleto query, returning `Maybe a`.
+  - `findOne' :: (Typeable t, Transactionable m, TEntity t a, Esq.SqlSelect b t) => Esq.SqlQuery b -> DTypeBuilder m (Maybe a)`
+    - **Usage:** Finds a single record based on an Esqueleto query within a `DTypeBuilder` context, returning `Maybe a`.
+  - `findOneM :: (Typeable t, Transactionable m, TEntity t a, Esq.SqlSelect b t) => Esq.SqlQuery b -> MaybeT (DTypeBuilder m) a`
+    - **Usage:** Finds a single record based on an Esqueleto query within a `MaybeT` transformer.
+  - `findOneInternal :: forall m t b. (Typeable t, Transactionable m, Esq.SqlSelect b t) => Esq.SqlQuery b -> DTypeBuilder m (Maybe t)`
+    - **Usage:** Internal function to execute an Esqueleto query and return a single result or `Nothing`. Throws `PersistError` if multiple results are found.
+  - `findById :: forall a t m. (Typeable t, Transactionable m, QEntity (Entity t) a, TEntityKey t) => DomainKey t -> m (Maybe a)`
+    - **Usage:** Finds a record by its `DomainKey`, returning `Maybe a`.
+  - `findById' :: forall t m. (Typeable t, Transactionable m, TEntityKey t, TEntity (Entity t) t) => Key t -> DTypeBuilder m (Maybe t)`
+    - **Usage:** Finds a record by its `Key` within a `DTypeBuilder` context, returning `Maybe t`.
+  - `findByIdM :: forall t m. (Typeable t, Transactionable m, TEntityKey t, TEntity (Entity t) t) => Key t -> MaybeT (DTypeBuilder m) t`
+    - **Usage:** Finds a record by its `Key` within a `MaybeT` transformer.
+  - `findByIdInternal :: forall t m. (Typeable t, Transactionable m, TEntityKey t, Log m) => Key t -> DTypeBuilder m (Maybe (Entity t))`
+    - **Usage:** Internal function to find an `Entity` by its `Key`.
+  - `findAll :: (Transactionable m, Esq.SqlSelect b t, QEntity [t] [a]) => Esq.SqlQuery b -> m [a]`
+    - **Usage:** Finds all records matching an Esqueleto query, returning `[a]`.
+  - `findAll' :: (Transactionable m, Esq.SqlSelect b t, TEntity [t] [a]) => Esq.SqlQuery b -> DTypeBuilder m [a]`
+    - **Usage:** Finds all records matching an Esqueleto query within a `DTypeBuilder` context, returning `[a]`.
+  - `findAllInternal :: (Transactionable m, Esq.SqlSelect b t) => Esq.SqlQuery b -> DTypeBuilder m [t]`
+    - **Usage:** Internal function to execute an Esqueleto query and return all matching results.
+  - `create :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t, ToTType t a) => a -> SqlDB ()`
+    - **Usage:** Inserts a new record into the database.
+  - `create' :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t) => t -> FullEntitySqlDB ()`
+    - **Usage:** Inserts a new record (full entity) into the database.
+  - `createMany :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t, ToTType t a) => [a] -> SqlDB ()`
+    - **Usage:** Inserts multiple new records into the database.
+  - `createMany' :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t) => [t] -> FullEntitySqlDB ()`
+    - **Usage:** Inserts multiple new records (full entities) into the database.
+  - `createUnique :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t, ToTType t a) => a -> SqlDB (Maybe (Key t))`
+    - **Usage:** Inserts a new record if its unique key does not already exist, returning its `Key` if successful.
+  - `createUnique' :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t) => t -> FullEntitySqlDB (Maybe (Key t))`
+    - **Usage:** Inserts a new record (full entity) if its unique key does not already exist, returning its `Key` if successful.
+  - `update :: (PersistEntity a, BackendCompatible SqlBackend (PersistEntityBackend a)) => (Esq.SqlExpr (Entity a) -> Esq.SqlQuery ()) -> SqlDB ()`
+    - **Usage:** Updates records matching a query.
+  - `update' :: (PersistEntity a, BackendCompatible SqlBackend (PersistEntityBackend a)) => (Esq.SqlExpr (Entity a) -> Esq.SqlQuery ()) -> FullEntitySqlDB ()`
+    - **Usage:** Updates records matching a query within a `FullEntitySqlDB` context.
+  - `updateReturningCount :: (PersistEntity a, BackendCompatible SqlBackend (PersistEntityBackend a)) => (Esq.SqlExpr (Entity a) -> Esq.SqlQuery ()) -> SqlDB Int64`
+    - **Usage:** Updates records matching a query and returns the number of affected rows.
+  - `updateReturningCount' :: (PersistEntity a, BackendCompatible SqlBackend (PersistEntityBackend a)) => (Esq.SqlExpr (Entity a) -> Esq.SqlQuery ()) -> FullEntitySqlDB Int64`
+    - **Usage:** Updates records matching a query and returns the number of affected rows within a `FullEntitySqlDB` context.
+  - `deleteByKey :: forall t. (TEntityKey t) => DomainKey t -> SqlDB ()`
+    - **Usage:** Deletes a record by its `DomainKey`.
+  - `deleteByKey' :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend) => Key t -> FullEntitySqlDB ()`
+    - **Usage:** Deletes a record by its `Key` within a `FullEntitySqlDB` context.
+  - `delete :: Esq.SqlQuery () -> SqlDB ()`
+    - **Usage:** Deletes records matching an Esqueleto query.
+  - `delete' :: Esq.SqlQuery () -> FullEntitySqlDB ()`
+    - **Usage:** Deletes records matching an Esqueleto query within a `FullEntitySqlDB` context.
+  - `deleteReturningCount :: Esq.SqlQuery () -> SqlDB Int64`
+    - **Usage:** Deletes records matching an Esqueleto query and returns the number of affected rows.
+  - `deleteReturningCount' :: Esq.SqlQuery () -> FullEntitySqlDB Int64`
+    - **Usage:** Deletes records matching an Esqueleto query and returns the number of affected rows within a `FullEntitySqlDB` context.
+  - `repsert :: (PersistEntityBackend t ~ SqlBackend, ToTType t a, TEntityKey t) => DomainKey t -> a -> SqlDB ()`
+    - **Usage:** Replaces or inserts a record based on its `DomainKey`.
+  - `repsert' :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend) => Key t -> t -> FullEntitySqlDB ()`
+    - **Usage:** Replaces or inserts a record (full entity) based on its `Key`.
+  - `upsert :: (OnlyOneUniqueKey t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t, ToTType t a) => a -> [SqlExpr (Entity t) -> SqlExpr Esq.Update] -> SqlDB ()`
+    - **Usage:** Inserts a record or updates it if a unique key conflict occurs.
+  - `upsert' :: (OnlyOneUniqueKey t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t) => t -> [SqlExpr (Entity t) -> SqlExpr Esq.Update] -> FullEntitySqlDB ()`
+    - **Usage:** Inserts a record (full entity) or updates it if a unique key conflict occurs within a `FullEntitySqlDB` context.
+  - `upsertBy :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t, ToTType t a) => Unique t -> a -> [SqlExpr (Entity t) -> SqlExpr Esq.Update] -> SqlDB ()`
+    - **Usage:** Inserts a record or updates it based on a specified unique key.
+  - `upsertBy' :: (PersistEntity t, PersistEntityBackend t ~ SqlBackend, SafeToInsert t) => Unique t -> t -> [SqlExpr (Entity t) -> SqlExpr Esq.Update] -> FullEntitySqlDB ()`
+    - **Usage:** Inserts a record (full entity) or updates it based on a specified unique key within a `FullEntitySqlDB` context.
+  - `insertSelect :: (PersistEntity t) => SqlQuery (SqlExpr (Esq.Insertion t)) -> SqlDB ()`
+    - **Usage:** Inserts records selected from another query.
+  - `insertSelect' :: (PersistEntity t) => SqlQuery (SqlExpr (Esq.Insertion t)) -> FullEntitySqlDB ()`
+    - **Usage:** Inserts records selected from another query within a `FullEntitySqlDB` context.
+  - `insertSelectCount :: (PersistEntity t) => SqlQuery (SqlExpr (Esq.Insertion t)) -> SqlDB Int64`
+    - **Usage:** Inserts records selected from another query and returns the number of inserted rows.
+  - `insertSelectCount' :: (PersistEntity t) => SqlQuery (SqlExpr (Esq.Insertion t)) -> FullEntitySqlDB Int64`
+    - **Usage:** Inserts records selected from another query and returns the number of inserted rows within a `FullEntitySqlDB` context.
+  - `(<#>) :: SqlExpr (Esq.Insertion (a -> b)) -> SqlExpr (Value a) -> SqlExpr (Esq.Insertion b)`
+    - **Usage:** Infix operator for applying a value to an `Insertion` expression.
+  - `whenJust_ :: Maybe a -> (a -> SqlExpr (Value Bool)) -> SqlExpr (Value Bool)`
+    - **Usage:** Applies a function to a `Maybe` value if it's `Just`, otherwise returns `True` (for use in `where_` clauses).
+  - `whenTrue_ :: Bool -> SqlExpr (Value Bool) -> SqlExpr (Value Bool)`
+    - **Usage:** Returns the second argument if the first argument is `True`, otherwise returns `True` (for use in `where_` clauses).
+  - `updateWhenJust_ :: (a -> SqlExpr (Entity e) -> SqlExpr Esq.Update) -> Maybe a -> [SqlExpr (Entity e) -> SqlExpr Esq.Update]`
+    - **Usage:** Creates a list of `Update` expressions from a `Maybe` value, applying a function if the value is `Just`.
+  - `maybe_ :: forall a b. (PersistField a, PersistField b) => SqlExpr (Value b) -> (SqlExpr (Value a) -> SqlExpr (Value b)) -> SqlExpr (Value (Maybe a)) -> SqlExpr (Value b)`
+    - **Usage:** SQL equivalent of `maybe` function; applies a function to a `Maybe` value if `Just`, otherwise returns a default value.
+
+### Kernel.Storage.Esqueleto.SqlDB
+- **Data Types:**
+  - `data SqlDBEnv`
+    - **Description:** Environment for `SqlDB` computations, currently holding the current time.
+    - **Fields:**
+      - `currentTime :: UTCTime`: The current UTC time.
+  - `newtype SqlDB a`
+    - **Description:** A newtype wrapper around `ReaderT SqlDBEnv (ReaderT SqlBackend LoggerIO) a`, representing a monadic context for SQL database operations.
+  - `newtype SelectSqlDB a`
+    - **Description:** A newtype wrapper around `SqlDB a`, specifically for select operations.
+  - `newtype FullEntitySqlDB t`
+    - **Description:** A newtype wrapper around `SqlDB t`, used for operations involving full entities.
+- **Functions:**
+  - `liftToFullEntitySqlDB :: SqlDB t -> FullEntitySqlDB t`
+    - **Usage:** Lifts an `SqlDB` computation into a `FullEntitySqlDB` context.
+  - `withFullEntity' :: ToTType t a => a -> (t -> b) -> b`
+    - **Usage:** Applies a function to a converted `TType` of a single entity.
+  - `withFullEntity :: ToTType t a => a -> (t -> FullEntitySqlDB b) -> SqlDB b`
+    - **Usage:** Converts a data type to its `TType` and then runs a `FullEntitySqlDB` computation with it.
+  - `withFullEntities' :: ToTType t a => [a] -> ([t] -> b) -> b`
+    - **Usage:** Applies a function to a list of converted `TType`s of entities.
+  - `withFullEntities :: ToTType t a => [a] -> ([t] -> FullEntitySqlDB b) -> SqlDB b`
+    - **Usage:** Converts a list of data types to their `TType`s and then runs a `FullEntitySqlDB` computation with them.
+- **Instances:**
+  - `instance Monad m => MonadTime (ReaderT SqlDBEnv m)`
+    - **Description:** Defines `MonadTime` instance for `ReaderT SqlDBEnv m`.
+  - `instance MonadGuid (ReaderT SqlDBEnv (ReaderT SqlBackend LoggerIO))`
+    - **Description:** Defines `MonadGuid` instance for `SqlDB` (wrapped `ReaderT`).
+  - `instance Log (ReaderT SqlDBEnv (ReaderT SqlBackend LoggerIO))`
+    - **Description:** Defines `Log` instance for `SqlDB` (wrapped `ReaderT`).
+
+### Kernel.Storage.Hedis.Config
+- **Type Aliases:**
+  - `type HedisFlow m env`
+    - **Description:** A type alias defining the constraints for a monadic flow that interacts with Hedis (Redis), requiring various capabilities like time, clock, metrics, error handling, reader environment, and logging.
+  - `type HedisFlowEnv env`
+    - **Description:** A type alias for environment constraints required for `HedisFlow`, including fields for Redis migration stage, cluster environments (critical and non-critical), single instance environments (critical and non-critical), and flags for Prometheus and Redis latency logging.
+  - `type KeyModifierFunc = (Text -> Text)`
+    - **Description:** A type alias for a function that modifies a Redis key (Text to Text).
+- **Data Types:**
+  - `data HedisCfg`
+    - **Description:** Represents the configuration for a Hedis (Redis) connection.
+    - **Fields:**
+      - `connectHost :: HostName`: Hostname of the Redis server.
+      - `connectPort :: Word16`: Port number of the Redis server.
+      - `connectAuth :: Maybe Text`: Optional authentication password.
+      - `connectDatabase :: Integer`: Database number to connect to.
+      - `connectMaxConnections :: Int`: Maximum number of connections in the pool.
+      - `connectMaxIdleTime :: NominalDiffTime`: Maximum idle time for connections.
+      - `connectTimeout :: Maybe NominalDiffTime`: Optional connection timeout.
+      - `connectReadOnly :: Bool`: Indicates if the connection is read-only.
+  - `data HedisEnv`
+    - **Description:** Represents the Hedis (Redis) environment, holding the connection and a key modifier function.
+    - **Fields:**
+      - `hedisConnection :: Connection`: The active Redis connection.
+      - `keyModifier :: KeyModifierFunc`: Function to modify Redis keys.
+- **Functions:**
+  - `defaultHedisCfg :: HedisCfg`
+    - **Usage:** Provides a default `HedisCfg` with common localhost settings.
+  - `withHedisEnv :: HedisCfg -> KeyModifierFunc -> (HedisEnv -> IO a) -> IO a`
+    - **Usage:** Manages a Hedis connection, ensuring it's properly connected and disconnected using `bracket`.
+  - `connectHedisCluster :: HedisCfg -> KeyModifierFunc -> IO HedisEnv`
+    - **Usage:** Establishes a connection to a Redis cluster based on the provided configuration and returns a `HedisEnv`.
+  - `connectHedis :: HedisCfg -> KeyModifierFunc -> IO HedisEnv`
+    - **Usage:** Establishes a connection to a single Redis instance based on the provided configuration and returns a `HedisEnv`.
+  - `disconnectHedis :: HedisEnv -> IO ()`
+    - **Usage:** Disconnects from the Redis server.
+
+### Kernel.Storage.Hedis.Queries
+- **Data Types:**
+  - `data XReadResponse`
+    - **Description:** Represents a response from a Redis `XREAD` command, containing the stream key and a list of records.
+    - **Fields:**
+      - `stream :: BS.ByteString`: The stream key.
+      - `records :: [StreamsRecord]`: List of records from the stream.
+  - `data StreamsRecord`
+    - **Description:** Represents a single record within a Redis stream, including its ID and key-value pairs.
+    - **Fields:**
+      - `recordId :: BS.ByteString`: The ID of the record.
+      - `keyValues :: [(BS.ByteString, BS.ByteString)]`: List of key-value pairs in the record.
+- **Functions:**
+  - `convertFromHedisResponse :: Hedis.XReadResponse -> XReadResponse`
+    - **Usage:** Converts a `Hedis.XReadResponse` (from the `hedis` library) to the internal `XReadResponse` type.
+  - `convertFromHedisRecord :: Hedis.StreamsRecord -> StreamsRecord`
+    - **Usage:** Converts a `Hedis.StreamsRecord` to the internal `StreamsRecord` type.
+  - `runHedis :: HedisFlow m env => Redis (Either Reply a) -> m a`
+    - **Usage:** Runs a Redis action on the cluster connection, throwing a `HedisReplyError` if the action returns a `Left Reply`.
+  - `runHedisEither :: HedisFlow m env => Redis (Either Reply a) -> m (Either Reply a)`
+    - **Usage:** Runs a Redis action on the cluster connection, returning the `Either Reply a` result.
+  - `runHedisTransaction :: HedisFlow m env => RedisTx (Queued a) -> m a`
+    - **Usage:** Runs a Redis transaction on the cluster connection, throwing an error if the transaction fails or is aborted.
+  - `modifyMasterOnlyConnection :: Hedis.Connection -> Hedis.Connection`
+    - **Usage:** Modifies a Redis connection to ensure it uses only the master node in a cluster setup.
+  - `withMasterRedis :: (HedisFlow m env) => m f -> m f`
+    - **Usage:** Runs a monadic computation with Redis connections configured to use only master nodes.
+  - `withCrossAppRedis :: (HedisFlow m env) => m f -> m f`
+    - **Usage:** Runs a monadic computation with Redis connections configured to ignore application-specific key prefixes.
+  - `withNonCriticalCrossAppRedis :: (HedisFlow m env) => m f -> m f`
+    - **Usage:** Runs a monadic computation with non-critical Redis connections, ignoring application-specific key prefixes.
+  - `withNonCriticalRedis :: (HedisFlow m env) => m f -> m f`
+    - **Usage:** Runs a monadic computation with non-critical Redis connections.
+  - `buildKey :: HedisFlow m env => Text -> m BS.ByteString`
+    - **Usage:** Builds a Redis key by applying the configured key modifier function.
+  - `runWithPrefixEither :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m (Either Reply a)`
+    - **Usage:** Runs a Redis action with a key that has the application prefix applied, returning `Either Reply a`.
+  - `runWithPrefix :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m a`
+    - **Usage:** Runs a Redis action with a key that has the application prefix applied, throwing an error on `Left Reply`.
+  - `runWithPrefix_ :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m ()`
+    - **Usage:** Runs a Redis action with a prefixed key, discarding the result.
+  - `runWithPrefix'_ :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m ()`
+    - **Usage:** Runs a Redis action on the standalone connection with a prefixed key, discarding the result.
+  - `runWithPrefix' :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m a`
+    - **Usage:** Runs a Redis action on the standalone connection with a prefixed key, throwing an error on `Left Reply`.
+  - `runHedisTransaction' :: HedisFlow m env => RedisTx (Queued a) -> m a`
+    - **Usage:** Runs a Redis transaction on the standalone connection, throwing an error if the transaction fails or is aborted.
+  - `runHedis' :: HedisFlow m env => Redis (Either Reply a) -> m a`
+    - **Usage:** Runs a Redis action on the standalone connection, throwing a `HedisReplyError` if the action returns a `Left Reply`.
+  - `runHedisEither' :: HedisFlow m env => Redis (Either Reply a) -> m (Either Reply a)`
+    - **Usage:** Runs a Redis action on the standalone connection, returning the `Either Reply a` result.
+  - `tryGetFromStandalone :: HedisFlow m env => Text -> m (Maybe BS.ByteString)`
+    - **Usage:** Attempts to retrieve a value from the standalone Redis, logging errors and returning `Nothing` on failure.
+  - `tryGetFromCluster :: HedisFlow m env => Text -> m (Maybe BS.ByteString)`
+    - **Usage:** Attempts to retrieve a value from the Redis cluster, logging errors and returning `Nothing` on failure.
+  - `getImpl :: (FromJSON a, HedisFlow m env) => (BS.ByteString -> m (Maybe a)) -> Text -> m (Maybe a)`
+    - **Usage:** Internal implementation for `get` and `get'`, handling migration logic and decoding.
+  - `get :: (FromJSON a, HedisFlow m env) => Text -> m (Maybe a)`
+    - **Usage:** Retrieves and decodes a JSON value from Redis, handling migration from standalone to cluster.
+  - `get' :: (FromJSON a, HedisFlow m env) => Text -> m () -> m (Maybe a)`
+    - **Usage:** Retrieves and decodes a JSON value from Redis, allowing a custom error handler for decode failures.
+  - `safeGet :: (FromJSON a, HedisFlow m env) => Text -> m (Maybe a)`
+    - **Usage:** Retrieves and decodes a JSON value from Redis, deleting the key if decoding fails.
+  - `set :: (ToJSON a, HedisFlow m env) => Text -> a -> m ()`
+    - **Usage:** Sets a JSON value in Redis, handling migration by writing to both standalone and cluster if `hedisMigrationStage` is `True`.
+  - `setExp :: (ToJSON a, HedisFlow m env) => Text -> a -> ExpirationTime -> m ()`
+    - **Usage:** Sets a JSON value in Redis with an expiration time, handling migration.
+  - `setNx :: (ToJSON a, HedisFlow m env) => Text -> a -> m Bool`
+    - **Usage:** Sets a JSON value in Redis only if the key does not already exist, returning `True` if set, `False` otherwise. Handles migration.
+  - `del :: (HedisFlow m env) => Text -> m ()`
+    - **Usage:** Deletes a key from Redis, handling migration by deleting from both standalone and cluster.
+  - `rPushExp :: (HedisFlow m env, ToJSON a) => Text -> [a] -> ExpirationTime -> m ()`
+    - **Usage:** Pushes values to the right of a list in Redis with an expiration time, handling migration.
+  - `lPush :: (HedisFlow m env, ToJSON a) => Text -> NonEmpty a -> m ()`
+    - **Usage:** Pushes values to the left of a list in Redis.
+  - `rPush :: (HedisFlow m env, ToJSON a) => Text -> NonEmpty a -> m ()`
+    - **Usage:** Pushes values to the right of a list in Redis.
+  - `rPop :: (HedisFlow m env, FromJSON a) => Text -> m (Maybe a)`
+    - **Usage:** Removes and returns the last element of a list in Redis, decoding it.
+  - `lTrim :: (HedisFlow m env) => Text -> Integer -> Integer -> m ()`
+    - **Usage:** Trims a list in Redis to the specified range.
+  - `clearList :: (HedisFlow m env) => Text -> m ()`
+    - **Usage:** Clears a list in Redis by trimming it to an empty range.
+  - `lLen :: (HedisFlow m env) => Text -> m Integer`
+    - **Usage:** Returns the length of a list in Redis.
+  - `lRange :: (HedisFlow m env, FromJSON a) => Text -> Integer -> Integer -> m [a]`
+    - **Usage:** Returns a range of elements from a list in Redis, decoding them.
+  - `getList :: (HedisFlow m env, FromJSON a) => Text -> m [a]`
+    - **Usage:** Returns all elements of a list in Redis, decoding them.
+  - `incr :: (HedisFlow m env) => Text -> m Integer`
+    - **Usage:** Increments the integer value of a key by one.
+  - `incrby :: (HedisFlow m env) => Text -> Integer -> m Integer`
+    - **Usage:** Increments the integer value of a key by the specified amount.
+  - `decr :: (HedisFlow m env) => Text -> m Integer`
+    - **Usage:** Decrements the integer value of a key by one.
+  - `decrby :: (HedisFlow m env) => Text -> Integer -> m Integer`
+    - **Usage:** Decrements the integer value of a key by the specified amount.
+  - `incrByFloat :: (HedisFlow m env) => Text -> Double -> m Double`
+    - **Usage:** Increments the float value of a key by the specified amount.
+  - `expire :: (HedisFlow m env) => Text -> ExpirationTime -> m ()`
+    - **Usage:** Sets an expiration time for a key, handling migration.
+  - `setNxExpire :: (ToJSON a, HedisFlow m env) => Text -> ExpirationTime -> a -> m Bool`
+    - **Usage:** Sets a value with an expiration time only if the key does not already exist, returning `True` if set.
+  - `decrIfExist :: HedisFlow m env => Text -> m Integer`
+    - **Usage:** Decrements the value of a key by one if it exists and is greater than zero, returning the new value or -1.
+  - `zAddIfPossible :: HedisFlow m env => Text -> (Text, Double) -> Int -> Double -> m Integer`
+    - **Usage:** Adds a member to a sorted set if the count of members within a score range is less than `maxSize`.
+  - `tryLockRedis :: HedisFlow m env => Text -> ExpirationTime -> m Bool`
+    - **Usage:** Attempts to acquire a Redis lock using `setNxExpire`.
+  - `unlockRedis :: HedisFlow m env => Text -> m ()`
+    - **Usage:** Releases a Redis lock by deleting the lock key.
+  - `whenWithLockRedis :: (HedisFlow m env, MonadMask m) => Text -> ExpirationTime -> m () -> m ()`
+    - **Usage:** Executes a monadic action only if a Redis lock can be acquired, ensuring the lock is released afterwards.
+  - `whenWithLockRedisAndReturnValue :: (HedisFlow m env, MonadMask m) => Text -> ExpirationTime -> m a -> m (Either () a)`
+    - **Usage:** Attempts to acquire a Redis lock and execute an action, returning `Right` the result if successful, or `Left ()` if the lock could not be acquired.
+  - `withWaitAndLockRedis :: (HedisFlow m env, MonadMask m) => Text -> ExpirationTime -> Int -> m a -> m a`
+    - **Usage:** Acquires a Redis lock, waiting and retrying if necessary, then executes an action and releases the lock.
+  - `withLockRedis :: (HedisFlow m env, MonadMask m) => Text -> ExpirationTime -> m () -> m ()`
+    - **Usage:** Acquires a Redis lock, retrying until successful, then executes an action and releases the lock.
+  - `withLockRedisAndReturnValue :: (HedisFlow m env, MonadMask m) => Text -> ExpirationTime -> m a -> m a`
+    - **Usage:** Acquires a Redis lock, retrying until successful, then executes an action and releases the lock, returning the action's result.
+  - `withWaitOnLockRedisWithExpiry :: (HedisFlow m env, MonadMask m) => Text -> ExpirationTime -> ExpirationTime -> m () -> m ()`
+    - **Usage:** Acquires a Redis lock with a timeout, and also sets a recursion timeout key to prevent infinite waiting.
+  - `withWaitOnLockRedisWithExpiry' :: (HedisFlow m env, MonadMask m) => Text -> Text -> ExpirationTime -> m () -> m ()`
+    - **Usage:** Internal helper for `withWaitOnLockRedisWithExpiry`, handling the recursive locking logic.
+  - `buildLockResourceName :: (IsString a) => Text -> a`
+    - **Usage:** Constructs a standardized Redis lock key name.
+  - `hSetExp :: (ToJSON a, HedisFlow m env) => Text -> Text -> a -> ExpirationTime -> m ()`
+    - **Usage:** Sets a field in a Redis hash with an expiration time for the hash key, handling migration.
+  - `safeHGet :: (FromJSON a, HedisFlow m env) => Text -> Text -> m (Maybe a)`
+    - **Usage:** Retrieves and decodes a field from a Redis hash, deleting the field if decoding fails.
+  - `hGet :: (FromJSON a, HedisFlow m env) => Text -> Text -> m (Maybe a)`
+    - **Usage:** Retrieves and decodes a field from a Redis hash.
+  - `hmGet :: (FromJSON a, HedisFlow m env) => Text -> [Text] -> m [Maybe a]`
+    - **Usage:** Retrieves and decodes multiple fields from a Redis hash.
+  - `hDel :: HedisFlow m env => Text -> [Text] -> m ()`
+    - **Usage:** Deletes fields from a Redis hash.
+  - `hGetAll :: (FromJSON a, HedisFlow m env) => Text -> m [(Text, a)]`
+    - **Usage:** Retrieves all fields and values from a Redis hash, decoding the values.
+  - `zAddExp :: (ToJSON Integer, HedisFlow m env) => Text -> Text -> Integer -> ExpirationTime -> m ()`
+    - **Usage:** Adds a member with a score to a sorted set and sets an expiration time for the set key, handling migration.
+  - `zrevrangeWithscores :: (HedisFlow m env) => Text -> Integer -> Integer -> m [(Text, Double)]`
+    - **Usage:** Returns members of a sorted set within a score range, in descending order, with their scores.
+  - `zScore :: (FromJSON Double, HedisFlow m env) => Text -> Text -> m (Maybe Double)`
+    - **Usage:** Returns the score of a member in a sorted set.
+  - `zRevRank :: (FromJSON Integer, HedisFlow m env) => Text -> Text -> m (Maybe Integer)`
+    - **Usage:** Returns the reverse rank of a member in a sorted set (0-indexed, highest score first).
+  - `zCard :: (HedisFlow m env) => Text -> m Integer`
+    - **Usage:** Returns the number of members in a sorted set.
+  - `zAdd :: (ToJSON member, HedisFlow m env) => Text -> [(Double, member)] -> m ()`
+    - **Usage:** Adds members with scores to a sorted set, handling migration.
+  - `zCount :: (HedisFlow m env) => Text -> Double -> Double -> m Integer`
+    - **Usage:** Returns the number of members in a sorted set with scores within a specified range.
+  - `zIncrBy :: (ToJSON member, HedisFlow m env) => Text -> Integer -> member -> m ()`
+    - **Usage:** Increments the score of a member in a sorted set by a specified amount, handling migration.
+  - `xInfoGroups :: (HedisFlow m env) => Text -> m Bool`
+    - **Usage:** Checks if a Redis stream has any consumer groups, handling migration.
+  - `xGroupCreate :: (HedisFlow m env) => Text -> Text -> Text -> m ()`
+    - **Usage:** Creates a new consumer group for a Redis stream, handling migration.
+  - `extractKeyValuePairs :: [StreamsRecord] -> [(Text, Text)]`
+    - **Usage:** Extracts key-value pairs from a list of `StreamsRecord`s.
+  - `extractRecordIds :: [StreamsRecord] -> [BS.ByteString]`
+    - **Usage:** Extracts record IDs from a list of `StreamsRecord`s.
+  - `xReadGroup :: (HedisFlow m env) => Text -> Text -> [(Text, Text)] -> m (Maybe [XReadResponse])`
+    - **Usage:** Reads messages from a Redis stream using a consumer group, handling migration.
+  - `xReadGroupOpts :: (HedisFlow m env) => Text -> Text -> [(Text, Text)] -> Maybe Integer -> Maybe Integer -> m (Maybe [XReadResponse])`
+    - **Usage:** Reads messages from a Redis stream using a consumer group with additional options (block, record count), handling migration.
+  - `xAdd :: (HedisFlow m env) => Text -> Text -> [(BS.ByteString, BS.ByteString)] -> m BS.ByteString`
+    - **Usage:** Adds a new entry to a Redis stream, handling migration.
+  - `xAddExp :: (HedisFlow m env) => Text -> Text -> [(BS.ByteString, BS.ByteString)] -> ExpirationTime -> m ()`
+    - **Usage:** Adds a new entry to a Redis stream with an expiration time for the stream key, handling migration.
+  - `zRangeByScoreByCount :: (HedisFlow m env) => Text -> Double -> Double -> Integer -> Integer -> m [BS.ByteString]`
+    - **Usage:** Returns a limited range of members from a sorted set with scores within a specified range, handling migration.
+  - `zRangeByScore :: (HedisFlow m env) => Text -> Double -> Double -> m [BS.ByteString]`
+    - **Usage:** Returns members from a sorted set with scores within a specified range, handling migration.
+  - `zRange :: (HedisFlow m env) => Text -> Integer -> Integer -> m [BS.ByteString]`
+    - **Usage:** Returns a range of members from a sorted set by index, handling migration.
+  - `zRangeWithScores :: (HedisFlow m env) => Text -> Integer -> Integer -> m [(BS.ByteString, Double)]`
+    - **Usage:** Returns a range of members from a sorted set by index with their scores, handling migration.
+  - `zRemRangeByScore :: (HedisFlow m env) => Text -> Double -> Double -> m Integer`
+    - **Usage:** Removes members from a sorted set with scores within a specified range, handling migration.
+  - `zRem :: (HedisFlow m env) => Text -> [Text] -> m Integer`
+    - **Usage:** Removes specified members from a sorted set, handling migration.
+  - `zRem' :: (ToJSON member, HedisFlow m env) => Text -> [member] -> m ()`
+    - **Usage:** Removes specified members (encoded as JSON) from a sorted set, handling migration.
+  - `xDel :: (HedisFlow m env) => Text -> [BS.ByteString] -> m Integer`
+    - **Usage:** Deletes entries from a Redis stream by their IDs, handling migration.
+  - `xAck :: (HedisFlow m env) => Text -> Text -> [BS.ByteString] -> m Integer`
+    - **Usage:** Acknowledges processing of messages in a Redis stream consumer group, handling migration.
+  - `lrem :: (HedisFlow m env) => Text -> Integer -> Text -> m Integer`
+    - **Usage:** Removes the first `count` occurrences of `value` from the list stored at `key`.
+  - `sAddExp :: (ToJSON a, HedisFlow m env) => Text -> [a] -> ExpirationTime -> m ()`
+    - **Usage:** Adds members to a set and sets an expiration time for the set key, handling migration.
+  - `srem :: (ToJSON a, HedisFlow m env) => Text -> [a] -> m Integer`
+    - **Usage:** Removes specified members from a set, handling migration.
+  - `sMembers :: (FromJSON a, HedisFlow m env) => Text -> m [a]`
+    - **Usage:** Returns all members of a set, decoding them.
+  - `ttl :: (HedisFlow m env) => Text -> m Integer`
+    - **Usage:** Returns the time to live (TTL) of a key in seconds, handling migration.
+  - `publish :: (HedisFlow m env, ToJSON a) => Text -> a -> m ()`
+    - **Usage:** Publishes a message to a Redis channel, handling migration.
+  - `geoAdd :: (HedisFlow m env) => Text -> [(Double, Double, BS.ByteString)] -> m Integer`
+    - **Usage:** Adds geospatial items to a GeoHash-backed sorted set, handling migration.
+  - `geoSearch :: (HedisFlow m env) => Text -> Hedis.GeoFrom -> Hedis.GeoBy -> m [BS.ByteString]`
+    - **Usage:** Searches for geospatial items within a given radius or bounding box, returning raw byte strings, handling migration.
+  - `geoSearchDecoded :: (FromJSON a, HedisFlow m env) => Text -> Hedis.GeoFrom -> Hedis.GeoBy -> m [a]`
+    - **Usage:** Searches for geospatial items and decodes them to a specified type, handling migration.
+  - `setTtlIfNone :: (HedisFlow m env) => Text -> ExpirationTime -> m ()`
+    - **Usage:** Sets an expiration time for a key only if it does not already have one or its current TTL is negative.
+
+### Kernel.Storage.Queries.BecknRequest
+- **Functions:**
+  - `logBecknRequest :: (HasSchemaName BeamBR.BecknRequestT, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m ()`
+    - **Usage:** Logs a Beckn request by creating a new `BecknRequest` record with a generated GUID, current timestamp, request JSON, and signature header, then persists it using `createWithKV`.
+- **Instances:**
+  - `instance FromTType' BeamBR.BecknRequest Domain.BecknRequest`
+    - **Description:** Defines how to convert a `BeamBR.BecknRequest` (Beam type) to a `Domain.BecknRequest` (domain type).
+  - `instance ToTType' BeamBR.BecknRequest Domain.BecknRequest`
+    - **Description:** Defines how to convert a `Domain.BecknRequest` (domain type) to a `BeamBR.BecknRequest` (Beam type).
+
+### Kernel.Storage.Queries.SystemConfigs
+- **Functions:**
+  - `findById :: (CacheFlow m r, EsqDBFlow m r, HasSchemaName BeamSC.SystemConfigsT) => Text -> m (Maybe Text)`
+    - **Usage:** Finds a system configuration by its ID, returning `Just` its value as `Text` or `Nothing` if not found. Increments a metric counter on failure.
+- **Instances:**
+  - `instance FromTType' BeamSC.SystemConfigs Domain.SystemConfigs`
+    - **Description:** Defines how to convert a `BeamSC.SystemConfigs` (Beam type) to a `Domain.SystemConfigs` (domain type).
+  - `instance ToTType' BeamSC.SystemConfigs Domain.SystemConfigs`
+    - **Description:** Defines how to convert a `Domain.SystemConfigs` (domain type) to a `BeamSC.SystemConfigs` (Beam type).
+
+### Kernel.Streaming.Kafka.Commons
+- **Type Aliases:**
+  - `type KafkaBrokerAddress = Text`
+    - **Description:** Type alias for a Kafka broker address.
+  - `type KafkaBrokersList = [KafkaBrokerAddress]`
+    - **Description:** Type alias for a list of Kafka broker addresses.
+  - `type KafkaTopic = Text`
+    - **Description:** Type alias for a Kafka topic name.
+  - `type KafkaKey = ByteString`
+    - **Description:** Type alias for a Kafka message key (ByteString).
+  - `type KafkaHostName = Maybe Text`
+    - **Description:** Type alias for an optional Kafka hostname.
+  - `type KafkaServiceName = Text`
+    - **Description:** Type alias for a Kafka service name.
+- **Data Types:**
+  - `data KafkaCompression`
+    - **Description:** Represents the compression codec used for Kafka messages.
+    - **Constructors:**
+      - `NO_COMPRESSION`: No compression.
+      - `GZIP`: Gzip compression.
+      - `SNAPPY`: Snappy compression.
+      - `LZ4`: LZ4 compression.
+
+### Kernel.Streaming.Kafka.Consumer
+- **Functions:**
+  - `receiveMessage :: (MonadIO m, Log m, MonadThrow m, FromJSON a) => KafkaConsumerTools a -> m (Maybe a)`
+    - **Usage:** Receives a single message from Kafka, commits the offset, and decodes the message. Handles timeouts and other Kafka errors.
+  - `listenForMessages :: (MonadCons.MonadConsumer a m, MonadIO m, MonadCatch m, Log m, MonadThrow m) => m Bool -> (a -> m ()) -> m ()`
+    - **Usage:** Continuously listens for messages from Kafka as long as `isRunning` returns `True`, processing each message with `handleMessage`. Handles exceptions during message reception.
+
+### Kernel.Streaming.Kafka.Consumer.Types
+- **Type Aliases:**
+  - `type HasKafkaConsumer env r = HasField "kafkaConsumerEnv" r env`
+    - **Description:** Type alias for a constraint indicating that an environment `r` has a `kafkaConsumerEnv` field of type `env`.
+  - `type ConsumerGroupId = Text`
+    - **Description:** Type alias for a Kafka consumer group ID.
+- **Data Types:**
+  - `data KafkaConsumerCfg`
+    - **Description:** Represents the configuration for a Kafka consumer.
+    - **Fields:**
+      - `brokers :: KafkaBrokersList`: List of Kafka broker addresses.
+      - `groupId :: ConsumerGroupId`: Consumer group ID.
+      - `kafkaCompression :: KafkaCompression`: Compression codec for Kafka messages.
+      - `timeoutMilliseconds :: Int`: Timeout for polling messages in milliseconds.
+  - `data KafkaConsumerTools a`
+    - **Description:** Holds the Kafka consumer configuration and the consumer client itself.
+    - **Fields:**
+      - `kafkaConsumerCfg :: KafkaConsumerCfg`: Kafka consumer configuration.
+      - `consumer :: Consumer.KafkaConsumer`: The Kafka consumer client.
+- **Functions:**
+  - `consumerProps :: KafkaConsumerCfg -> ConsumerProperties`
+    - **Usage:** Creates Kafka consumer properties from a `KafkaConsumerCfg`.
+  - `consumerSub :: [KafkaTopic] -> Subscription`
+    - **Usage:** Creates a Kafka subscription for a list of topics, setting the offset reset to `Earliest`.
+  - `buildKafkaConsumerTools :: forall a. HasKafkaTopics a => KafkaConsumerCfg -> IO (KafkaConsumerTools a)`
+    - **Usage:** Builds `KafkaConsumerTools` for a given `KafkaConsumerCfg` and a type `a` that has Kafka topics defined. Throws `KafkaUnableToBuildTools` on failure.
+  - `releaseKafkaConsumerTools :: KafkaConsumerTools a -> IO ()`
+    - **Usage:** Releases the Kafka consumer tools by closing the consumer. Throws `KafkaUnableToReleaseTools` on failure.
+
+### Kernel.Streaming.Kafka.HasKafkaTopics
+- **Classes:**
+  - `class HasKafkaTopics a where getTopics :: [KafkaTopic]`
+    - **Description:** A type class for types that have associated Kafka topics.
+    - **Methods:**
+      - `getTopics :: [KafkaTopic]`: Returns a list of Kafka topics associated with the type.
+
+### Kernel.Streaming.Kafka.Producer
+- **Type Aliases:**
+  - `type KPartitionId = Int`
+    - **Description:** Type alias for a Kafka partition ID.
+- **Functions:**
+  - `produceMessage :: (Log m, MonadThrow m, MonadIO m, MonadReader r m, HasKafkaProducer r, ToJSON a) => (KafkaTopic, Maybe KafkaKey) -> a -> m ()`
+    - **Usage:** Produces a message to a Kafka topic with an optional key. Throws `KafkaTopicIsEmptyString` if the topic is empty or `KafkaUnableToProduceMessage` on other production failures.
+  - `produceMessageInPartition :: (Log m, MonadThrow m, MonadIO m, MonadReader r m, HasKafkaProducer r, ToJSON a) => (KafkaTopic, Maybe KafkaKey) -> a -> KPartitionId -> m ()`
+    - **Usage:** Produces a message to a specific Kafka partition with an optional key.
+  - `produceMessageImpl :: (Log m, MonadThrow m, MonadIO m, MonadReader r m, HasKafkaProducer r, ToJSON a) => (KafkaTopic, Maybe KafkaKey) -> a -> Maybe KPartitionId -> m ()`
+    - **Usage:** Internal implementation for producing Kafka messages, handling topic validation and error reporting.
+  - `(..=) :: ToJSON a => AesonKey.Key -> a -> AKM.KeyMap A.Value`
+    - **Usage:** Infix operator for creating a single-element `KeyMap` from an Aeson key and a JSON-serializable value.
+
+### Kernel.Streaming.Kafka.Producer.Types
+- **Type Aliases:**
+  - `type HasKafkaProducer r = HasField "kafkaProducerTools" r KafkaProducerTools`
+    - **Description:** Type alias for a constraint indicating that an environment `r` has a `kafkaProducerTools` field of type `KafkaProducerTools`.
+- **Data Types:**
+  - `data KafkaProducerCfg`
+    - **Description:** Represents the configuration for a Kafka producer.
+    - **Fields:**
+      - `brokers :: KafkaBrokersList`: List of Kafka broker addresses.
+      - `kafkaCompression :: KafkaCompression`: Compression codec for Kafka messages.
+  - `newtype KafkaProducerTools`
+    - **Description:** Holds the Kafka producer client.
+    - **Fields:**
+      - `producer :: Producer.KafkaProducer`: The Kafka producer client.
+- **Functions:**
+  - `producerProps :: KafkaProducerCfg -> ProducerProperties`
+    - **Usage:** Creates Kafka producer properties from a `KafkaConsumerCfg`.
+  - `addProperties :: ProducerProperties -> [KTC.KafkaProperties] -> ProducerProperties`
+    - **Usage:** Adds custom Kafka properties to existing `ProducerProperties`.
+  - `castCompression :: KafkaCompression -> KafkaCompressionCodec`
+    - **Usage:** Converts a `KafkaCompression` type to a `KafkaCompressionCodec` used by the `kafka-client` library.
+  - `buildKafkaProducerTools' :: KafkaProducerCfg -> [KTC.KafkaProperties] -> IO KafkaProducerTools`
+    - **Usage:** Builds `KafkaProducerTools` with custom Kafka properties. Throws `KafkaUnableToBuildTools` on failure.
+  - `buildKafkaProducerTools :: KafkaProducerCfg -> IO KafkaProducerTools`
+    - **Usage:** Builds `KafkaProducerTools` with default properties. Throws `KafkaUnableToBuildTools` on failure.
+  - `releaseKafkaProducerTools :: KafkaProducerTools -> IO ()`
+    - **Usage:** Releases the Kafka producer tools by closing the producer.
+
+### Kernel.Streaming.MonadConsumer
+- **Classes:**
+  - `class MonadConsumer a m where receiveMessage :: m (Maybe a)`
+    - **Description:** A type class for monads that can consume messages of type `a`.
+    - **Methods:**
+      - `receiveMessage :: m (Maybe a)`: Receives a message, returning `Just` the message or `Nothing` if no message is available.
+
+### Kernel.Streaming.MonadProducer
+- **Classes:**
+  - `class MonadProducer a m where type Args a; produceMessage :: Args a -> a -> m ()`
+    - **Description:** A type class for monads that can produce messages of type `a`.
+    - **Associated Types:**
+      - `type Args a`: The type of arguments required to produce a message of type `a`.
+    - **Methods:**
+      - `produceMessage :: Args a -> a -> m ()`: Produces a message of type `a` with the given arguments.
+
+### Kernel.Tools.ARTUtils
+- **Type Aliases:**
+  - `type HasARTFlow r = (HasField "loggerEnv" r LoggerEnv, HasField "shouldLogRequestId" r Bool, HasField "requestId" r (Maybe Text), HasField "kafkaProducerForART" r (Maybe KafkaProducerTools))`
+    - **Description:** Type alias for a constraint indicating that an environment `r` has fields necessary for ART (API Request Tracking) flow, including logger, request ID logging flag, request ID, and optional Kafka producer tools for ART.
+- **Data Types:**
+  - `data RequestInfo'`
+    - **Description:** Represents information about an incoming HTTP request for ART.
+    - **Fields:**
+      - `requestMethod :: Text`: HTTP request method (e.g., "GET", "POST").
+      - `rawPathInfo :: Text`: The raw path of the request.
+      - `rawQueryString :: Text`: The raw query string of the request.
+      - `requestHeaders :: Text`: HTTP request headers.
+      - `body :: Text`: The request body.
+  - `data ArtData`
+    - **Description:** Represents the full ART data record, combining request, response, and query information.
+    - **Fields:**
+      - `requestId :: Text`: Unique identifier for the request.
+      - `request :: Maybe RequestInfo'`: Optional request details.
+      - `response :: Maybe Text`: Optional response body.
+      - `queryData :: Maybe QueryData`: Optional database query details.
+      - `forkedTag :: Maybe Text`: Optional tag for forked requests.
+      - `timestamp :: Maybe UTCTime`: Timestamp of the ART data creation.
+  - `data QueryData`
+    - **Description:** Represents details about a database query for ART.
+    - **Fields:**
+      - `queryType :: Text`: Type of database query (e.g., "SELECT", "INSERT").
+      - `setClause :: Text`: The SET clause of an update query.
+      - `whereClause :: Text`: The WHERE clause of a query.
+      - `table :: Text`: The name of the table involved in the query.
+      - `tableObject :: Text`: The object being queried/modified in the table.
+      - `kvEnabled :: Bool`: Indicates if KV (key-value) store is enabled for this query.
+- **Instances:**
+  - `instance ToJSON ArtData`
+    - **Description:** Defines how `ArtData` is converted to JSON, omitting fields with `Nothing` values.
+  - `instance Default ArtData`
+    - **Description:** Provides a default `ArtData` instance with empty or `Nothing` values.
+- **Functions:**
+  - `pushToKafka :: Maybe KafkaProducerTools -> BL.ByteString -> Text -> Text -> IO ()`
+    - **Usage:** Pushes a message to Kafka for ART logging if Kafka producer tools are available.
+  - `kafkaMessage :: Text -> BL.ByteString -> Text -> KafkaProd.ProducerRecord`
+    - **Usage:** Constructs a Kafka `ProducerRecord` for ART, including topic, message, and key.
+
+### Kernel.Tools.Logging
+- **Functions:**
+  - `withDynamicLogLevel :: (HasLog f, HasCoreMetrics f, HasEsqEnv m f, HedisFlow m f, HasCacheConfig f, HasSchemaName BeamSC.SystemConfigsT, MonadReader f m, MonadFlow m, HasCacConfig f) => Text -> m a -> m a`
+    - **Usage:** Executes a monadic action within a context where logging levels can be dynamically adjusted based on a key name.
+  - `getDynamicLogLevelConfig :: (HasLog f, HasCoreMetrics f, HasEsqEnv m f, HedisFlow m f, HasCacheConfig f, HasSchemaName BeamSC.SystemConfigsT, MonadReader f m, MonadFlow m, HasCacConfig f) => m (Maybe (HM.HashMap Text LogLevel))`
+    - **Usage:** Retrieves dynamic log level configurations from system configs, caching them and refreshing from the database if needed.
+
+### Kernel.Tools.LoopGracefully
+- **Functions:**
+  - `loopGracefully :: forall m a. (MonadFlow m) => [m a] -> m ()`
+    - **Usage:** Loops through a list of monadic actions, running them concurrently (except the first one which runs in the main thread), and gracefully handles `SIGINT` and `SIGTERM` signals to stop the loops.
+  - `loop :: forall m a. (MonadFlow m) => m a -> TVar Int -> m ()`
+    - **Usage:** Continuously executes a monadic action `fa` until a stop signal is received (indicated by `TVar Int` value greater than 1).
+  - `onSigInt :: TVar Int -> IO ()`
+    - **Usage:** Signal handler for `SIGINT` (Ctrl+C), sets the stop variable to 2.
+  - `onSigTerm :: TVar Int -> IO ()`
+    - **Usage:** Signal handler for `SIGTERM`, sets the stop variable to 2.
+
+### Kernel.Tools.Metrics.CoreMetrics
+- **Functions:**
+  - `incrementErrorCounterImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> SomeException -> m ()`
+    - **Usage:** Increments an error counter metric, categorizing errors by context and exception type (HTTP, BaseException, or generic).
+  - `addUrlCallRetriesImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => BaseUrl -> Int -> m ()`
+    - **Usage:** Increments a metric for the number of retries for external URL calls.
+  - `addUrlCallFailuresImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => BaseUrl -> m ()`
+    - **Usage:** Increments a metric for failures in external URL calls after retries are exhausted.
+  - `addRequestLatencyImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> Text -> Milliseconds -> Either ClientError a -> m ()`
+    - **Usage:** Records the latency of an external API request, labeled by host, service name, duration, and status (success/failure).
+  - `addDatastoreLatencyImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> Text -> Milliseconds -> m ()`
+    - **Usage:** Records the latency of a datastore operation, labeled by store type and operation.
+  - `incrementSortedSetCounterImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> m ()`
+    - **Usage:** Increments a counter for sorted set operations.
+  - `incrementStreamCounterImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> m ()`
+    - **Usage:** Increments a counter for stream operations.
+  - `incrementSchedulerFailureCounterImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> m ()`
+    - **Usage:** Increments a counter for scheduler failures.
+  - `addRequestLatencyImplementation' :: L.MonadFlow m => CoreMetricsContainer -> Text -> Text -> Milliseconds -> Either ClientError a -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `addRequestLatencyImplementation`, handling metric observation and status parsing.
+  - `incrementErrorCounterImplementation' :: L.MonadFlow m => CoreMetricsContainer -> Text -> SomeException -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `incrementErrorCounterImplementation`, handling exception type dispatch and metric incrementation.
+  - `addUrlCallRetriesImplementation' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> Int -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `addUrlCallRetriesImplementation`, handling metric incrementation.
+  - `addUrlCallFailuresImplementation' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `addUrlCallFailuresImplementation`, handling metric incrementation.
+  - `incrementSortedSetCounterImplementation' :: L.MonadFlow m => CoreMetricsContainer -> Text -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `incrementSortedSetCounterImplementation`, handling metric incrementation.
+  - `incrementStreamCounterImplementation' :: L.MonadFlow m => CoreMetricsContainer -> Text -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `incrementStreamCounterImplementation`, handling metric incrementation.
+  - `addGenericLatencyImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> Milliseconds -> m ()`
+    - **Usage:** Records generic latency metrics.
+  - `incrementSchedulerFailureCounterImplementation' :: L.MonadFlow m => CoreMetricsContainer -> Text -> DeploymentVersion -> m ()`
+    - **Usage:** Internal implementation for `incrementSchedulerFailureCounterImplementation`, handling metric incrementation.
+  - `incrementGenericMetrics' :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> m ()`
+    - **Usage:** Increments a generic counter metric.
+  - `incrementSystemConfigsFailedCounter' :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> m ()`
+    - **Usage:** Increments a counter for system configuration fetch/decode failures.
+  - `addGenericLatencyMetricsImplementation :: (HasCoreMetrics r, L.MonadFlow m, MonadReader r m) => Text -> Seconds -> m ()`
+    - **Usage:** Records generic latency metrics in seconds.
+
+### Kernel.Tools.Metrics.CoreMetrics.Types
+- **Type Aliases:**
+  - `type RequestLatencyMetric = P.Vector P.Label4 P.Histogram`
+    - **Description:** Prometheus metric type for request latency, labeled by host, service, status, and version.
+  - `type DatastoresLatencyMetric = P.Vector P.Label3 P.Histogram`
+    - **Description:** Prometheus metric type for datastore latency, labeled by datastore, operation, and version.
+  - `type ErrorCounterMetric = P.Vector P.Label4 P.Counter`
+    - **Description:** Prometheus metric type for error counters, labeled by HTTP code, error context, error code, and version.
+  - `type URLCallRetriesMetric = P.Vector P.Label3 P.Counter`
+    - **Description:** Prometheus metric type for URL call retries, labeled by URL, retry count, and version.
+  - `type URLCallRetryFailuresMetric = P.Vector P.Label2 P.Counter`
+    - **Description:** Prometheus metric type for URL call retry failures, labeled by URL and version.
+  - `type SortedSetMetric = P.Vector P.Label2 P.Counter`
+    - **Description:** Prometheus metric type for sorted set operations, labeled by job type and version.
+  - `type StreamMetric = P.Vector P.Label2 P.Counter`
+    - **Description:** Prometheus metric type for stream operations, labeled by job type and version.
+  - `type GenericLatencyMetric = P.Vector P.Label2 P.Histogram`
+    - **Description:** Prometheus metric type for generic latency, labeled by operation and version.
+  - `type SchedulerFailureMetric = P.Vector P.Label2 P.Counter`
+    - **Description:** Prometheus metric type for scheduler failures, labeled by scheduler type and version.
+  - `type GenericCounter = P.Vector P.Label1 P.Counter`
+    - **Description:** Prometheus metric type for generic counters, labeled by event.
+  - `type SystemConfigsFailedCounter = P.Vector P.Label1 P.Counter`
+    - **Description:** Prometheus metric type for system configurations failed counter, labeled by event.
+- **Data Types:**
+  - `newtype DeploymentVersion`
+    - **Description:** Represents the deployment version of the application.
+    - **Fields:**
+      - `getDeploymentVersion :: Text`: The actual version string.
+  - `data CoreMetricsContainer`
+    - **Description:** A container holding all core Prometheus metrics for the application.
+    - **Fields:**
+      - `requestLatency :: RequestLatencyMetric`: Metric for external request latency.
+      - `datastoresLatency :: DatastoresLatencyMetric`: Metric for datastore operation latency.
+      - `genericLatency :: GenericLatencyMetric`: Metric for generic operation latency.
+      - `errorCounter :: ErrorCounterMetric`: Metric for various error counts.
+      - `urlCallRetries :: URLCallRetriesMetric`: Metric for URL call retries.
+      - `urlCallRetryFailures :: URLCallRetryFailuresMetric`: Metric for URL call retry failures.
+      - `sortedSetCounter :: SortedSetMetric`: Metric for sorted set operations.
+      - `streamCounter :: StreamMetric`: Metric for stream operations.
+      - `schedulerFailureCounter :: SchedulerFailureMetric`: Metric for scheduler failures.
+      - `genericCounter :: GenericCounter`: Metric for generic events.
+      - `systemConfigsFailedCounter :: SystemConfigsFailedCounter`: Metric for system config fetch failures.
+      - `kvRedisMetricsContainer :: KVMetrics.KVMetricHandler`: Container for KV Redis specific metrics.
+      - `genericLatencyMetrics :: GenericLatencyMetric`: Metric for generic application latency.
+- **Classes:**
+  - `class CoreMetrics m where ...`
+    - **Description:** A type class for monads that can record core application metrics.
+    - **Methods:**
+      - `addRequestLatency :: Text -> Text -> Milliseconds -> Either ClientError a -> m ()`: Records external request latency.
+      - `addDatastoreLatency :: Text -> Text -> Milliseconds -> m ()`: Records datastore operation latency.
+      - `incrementErrorCounter :: Text -> SomeException -> m ()`: Increments error counters.
+      - `addUrlCallRetries :: BaseUrl -> Int -> m ()`: Increments URL call retries.
+      - `addUrlCallRetryFailures :: BaseUrl -> m ()`: Increments URL call retry failures.
+      - `incrementSortedSetCounter :: Text -> m ()`: Increments sorted set counters.
+      - `incrementStreamCounter :: Text -> m ()`: Increments stream counters.
+      - `addGenericLatency :: Text -> Milliseconds -> m ()`: Records generic latency.
+      - `incrementSchedulerFailureCounter :: Text -> m ()`: Increments scheduler failure counters.
+      - `incrementGenericMetrics :: Text -> m ()`: Increments generic counters.
+      - `incrementSystemConfigsFailedCounter :: Text -> m ()`: Increments system config failure counters.
+      - `addGenericLatencyMetrics :: Text -> Seconds -> m ()`: Records generic latency in seconds.
+- **Functions:**
+  - `registerCoreMetricsContainer :: IO CoreMetricsContainer`
+    - **Usage:** Registers and initializes all core Prometheus metrics, returning a `CoreMetricsContainer`.
+  - `registerDatastoresLatencyMetrics :: IO DatastoresLatencyMetric`
+    - **Usage:** Registers the `datastore_operation_duration` histogram.
+  - `registerRequestLatencyMetric :: IO RequestLatencyMetric`
+    - **Usage:** Registers the `external_request_duration` histogram.
+  - `registerErrorCounterMetric :: IO ErrorCounterMetric`
+    - **Usage:** Registers the `error_counter` counter.
+  - `registerURLCallRetriesMetric :: IO URLCallRetriesMetric`
+    - **Usage:** Registers the `url_call_retries_counter` counter.
+  - `registerURLCallRetryFailuresMetric :: IO URLCallRetryFailuresMetric`
+    - **Usage:** Registers the `url_call_retry_failures_counter` counter.
+  - `registerSortedSetMetric :: IO SortedSetMetric`
+    - **Usage:** Registers the `sortedset_scheduled_jobs_counter` counter.
+  - `registerStreamCounter :: IO StreamMetric`
+    - **Usage:** Registers the `stream_jobs_counter` counter.
+  - `registerGenericLatencyMetrics :: IO GenericLatencyMetric`
+    - **Usage:** Registers the `producer_operation_duration` histogram.
+  - `registerSchedulerFailureCounter :: IO SchedulerFailureMetric`
+    - **Usage:** Registers the `scheduler_jobs_fail_counter` counter.
+  - `registerGenericCounter :: IO GenericCounter`
+    - **Usage:** Registers the `generic_counter` counter.
+  - `registerSystemConfigsFailedCounter :: IO SystemConfigsFailedCounter`
+    - **Usage:** Registers the `system_configs_failed_counter` counter.
+  - `registerLatencyMetrics :: IO GenericLatencyMetric`
+    - **Usage:** Registers the `generic_app_latency_metrics` histogram.
+
+### Kernel.Tools.Slack
+- **Functions:**
+  - `notifyOnSlackIO :: SI.SlackEnv -> Text -> Text -> Maybe Text -> Maybe Text -> IO (Slack.Response Chat.PostMsgRsp)`
+    - **Usage:** Sends a Slack message with a title, body, optional thread ID, and optional attachments.
+  - `notifyOnSlack :: (HasField "slackEnv" r SI.SlackEnv, Log m, L.MonadFlow m, MonadReader r m) => Text -> Text -> Maybe Text -> m (Slack.Response Chat.PostMsgRsp)`
+    - **Usage:** Sends a Slack message within a monadic flow, retrieving Slack environment from the reader.
+
+### Kernel.Tools.Slack.Internal
+- **Type Aliases:**
+  - `type HasSlackEnv f = HasField "slackEnv" f SlackEnv`
+    - **Description:** Type alias for a constraint indicating that an environment `f` has a `slackEnv` field of type `SlackEnv`.
+- **Data Types:**
+  - `data SlackEnv`
+    - **Description:** Represents the Slack environment configuration.
+    - **Fields:**
+      - `channel :: Text`: The Slack channel to post messages to.
+      - `slackConfig :: Slack.SlackConfig`: The Slack API configuration.
+  - `data FileUploadResp`
+    - **Description:** Represents the response from a Slack file upload API call.
+    - **Fields:**
+      - `ok :: Bool`: Indicates if the upload was successful.
+      - `uploadError :: Maybe Text`: Optional error message if the upload failed.
+      - `file :: Maybe A.Value`: Optional JSON value representing the uploaded file.
+- **Instances:**
+  - `instance FromJSON FileUploadResp`
+    - **Description:** Defines how `FileUploadResp` is parsed from JSON.
+- **Functions:**
+  - `createSlackConfig :: Text -> Text -> IO SlackEnv`
+    - **Usage:** Creates a `SlackEnv` from a Slack API token and channel name.
+  - `sendSlackMessage :: Slack.SlackConfig -> Text -> Text -> Maybe Text -> Maybe Text -> IO (Slack.Response Chat.PostMsgRsp)`
+    - **Usage:** Sends a message to a Slack channel using the provided Slack configuration, message text, optional thread timestamp, and optional attachments.
+
+### Kernel.Tools.SystemEnv
+- **Data Types:**
+  - `data SystemEnv`
+    - **Description:** Represents system environment variables as a list of key-value pairs.
+    - **Fields:**
+      - `systemEnv :: [(String, String)]`: List of environment variable name-value pairs.
+- **Instances:**
+  - `instance ToJSON SystemEnv`
+    - **Description:** Defines how `SystemEnv` is converted to JSON.
+  - `instance FromJSON SystemEnv`
+    - **Description:** Defines how `SystemEnv` is parsed from JSON.
+  - `instance FromDhall SystemEnv`
+    - **Description:** Defines how `SystemEnv` is parsed from Dhall.
+- **Functions:**
+  - `updateSystemEnv :: (CacheFlow m r, EsqDBFlow m r, HasSchemaName BeamSC.SystemConfigsT) => m ()`
+    - **Usage:** Fetches system environment variables from system configs, decodes them, and sets them in the environment. Throws `InternalError` on failure.
+  - `updateSystemEnvInLoopFork :: (CacheFlow m r, EsqDBFlow m r, HasSchemaName BeamSC.SystemConfigsT) => Integer -> m ()`
+    - **Usage:** Continuously updates system environment variables in a forked thread with a specified interval.
+
+### Kernel.Types.APISuccess
+- **Data Types:**
+  - `data APISuccess`
+    - **Description:** Represents a successful API response.
+    - **Constructors:**
+      - `Success`: Indicates a successful operation.
+- **Instances:**
+  - `instance ToSchema APISuccess`
+    - **Description:** Defines how `APISuccess` is represented in an OpenAPI schema, mapping it to a JSON object with a "result" field set to "Success".
+  - `instance A.ToJSON APISuccess`
+    - **Description:** Defines how `APISuccess` is converted to JSON, specifically as an object `{"result": "Success"}`.
+  - `instance A.FromJSON APISuccess`
+    - **Description:** Defines how `APISuccess` is parsed from JSON, expecting an object with a "result" field set to "Success".
+
+### Kernel.Types.App
+- **Type Aliases:**
+  - `type MonadFlow m`
+    - **Description:** A type alias for a monadic flow, requiring capabilities such as `Monad`, `MonadIO`, `L.MonadFlow`, `Forkable`, `Log`, `MonadGuid`, `MonadTime`, `MonadClock`, and `MonadThrow`.
+  - `type HasFlowEnv m r fields`
+    - **Description:** A type alias for constraints indicating that a monadic flow `m` has a reader environment `r` with specified `fields`, and also satisfies `MonadFlow`.
+  - `type FlowHandlerR r = ReaderT (EnvR r) IO`
+    - **Description:** A type alias for a `ReaderT` transformer stack representing a flow handler with a custom environment `r`.
+  - `type FlowServerR r api = ServerT api (FlowHandlerR r)`
+    - **Description:** A type alias for a Servant server that operates within a `FlowHandlerR` context.
+  - `type MandatoryQueryParam name a = QueryParam' '[Required, Strict] name a`
+    - **Description:** A type alias for a mandatory and strict query parameter in Servant APIs.
+  - `type Limit = Int`
+    - **Description:** Type alias for a limit value (integer).
+  - `type Offset = Int`
+    - **Description:** Type alias for an offset value (integer).
+  - `type RegToken = Text`
+    - **Description:** Type alias for a registration token (Text).
+  - `type AuthHeader = Header' '[Required, Strict] "token" RegToken`
+    - **Description:** Type alias for a mandatory "token" header used for authentication.
+  - `type MandatoryHeader name a = Header' '[Required, Strict] name a`
+    - **Description:** Type alias for a mandatory and strict header in Servant APIs.
+- **Data Types:**
+  - `data EnvR r`
+    - **Description:** Represents the environment for a flow, combining a `FlowRuntime` and a custom application environment `r`.
+    - **Fields:**
+      - `flowRuntime :: R.FlowRuntime`: The EulerHS flow runtime.
+      - `appEnv :: r`: The custom application environment.
+- **Instances:**
+  - `instance ToSchema Servant.BaseUrl`
+    - **Description:** Defines how `Servant.BaseUrl` is represented in an OpenAPI schema, mapping it to a `Text` schema.
+  - `instance ToSchema Value`
+    - **Description:** Defines how `Aeson.Value` is represented in an OpenAPI schema, mapping it to a `Text` schema with a description.
+
+### Kernel.Types.Base64
+- **Data Types:**
+  - `newtype Base64`
+    - **Description:** A newtype wrapper around `ByteString` for Base64 encoded data.
+- **Instances:**
+  - `deriving newtype instance PersistFieldSql Base64`
+    - **Description:** Derives `PersistFieldSql` instance for `Base64`.
+  - `deriving newtype instance FromField Base64`
+    - **Description:** Derives `FromField` instance for `Base64`.
+  - `instance HasSqlValueSyntax be String => HasSqlValueSyntax be Base64`
+    - **Description:** Defines how `Base64` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Base64`
+    - **Description:** Defines SQL equality check for `Base64` values in Beam.
+  - `instance FromBackendRow Postgres Base64`
+    - **Description:** Defines how `Base64` values are read from PostgreSQL backend rows.
+  - `instance PersistField Base64`
+    - **Description:** Defines how `Base64` values are converted to and from `PersistValue` for persistent storage.
+  - `instance FromDhall Base64`
+    - **Description:** Defines how `Base64` values are parsed from Dhall, decoding from Base64 text.
+  - `instance ToJSON Base64`
+    - **Description:** Defines how `Base64` values are converted to JSON (as a Base64 encoded string).
+  - `instance FromJSON Base64`
+    - **Description:** Defines how `Base64` values are parsed from JSON (from a Base64 encoded string).
+  - `instance IsString Base64`
+    - **Description:** Allows `Base64` values to be created from string literals (for test code).
+
+### Kernel.Types.BecknRequest
+- **Data Types:**
+  - `data BecknRequest`
+    - **Description:** Represents a Beckn request with its ID, payload, signature, and timestamp.
+    - **Fields:**
+  - `id :: Id BecknRequest`: Unique identifier for the Beckn request.
+  - `becknRequest :: Text`: The full Beckn request payload as text.
+  - `signatureHeader :: Text`: The signature header of the request.
+  - `timeStamp :: UTCTime`: Timestamp of the request.
+
+### Kernel.Types.Cac
+- **Data Types:**
+  - `newtype CacKeyValue`
+    - **Description:** A newtype wrapper for a `Text` value representing a key-value pair in CAC (Centralized A/B Testing and Configuration).
+    - **Fields:**
+      - `getCacKeyValue :: Text`: The actual text value of the key-value pair.
+  - `data CACData`
+    - **Description:** Represents a data structure for CAC, including ID, type, context, config name, and variant IDs.
+    - **Fields:**
+      - `id :: Text`: Identifier for the CAC data.
+      - `idType :: Text`: Type of the ID.
+      - `context :: Text`: Context of the CAC data.
+      - `configName :: Text`: Name of the configuration.
+      - `variantIds :: Text`: Variant IDs associated with the configuration.
+- **Instances:**
+  - `instance ToJSON CacKeyValue`
+    - **Description:** Defines how `CacKeyValue` is converted to JSON.
+  - `instance FromJSON CacKeyValue`
+    - **Description:** Defines how `CacKeyValue` is parsed from JSON.
+  - `instance ToJSON CACData`
+    - **Description:** Defines how `CACData` is converted to JSON.
+  - `instance FromJSON CACData`
+    - **Description:** Defines how `CACData` is parsed from JSON.
+- **Functions:**
+  - `fromJSONHelper :: (MonadFlow m, FromJSON a) => Value -> Text -> m (Maybe a)`
+    - **Usage:** Helper function to safely parse a JSON `Value` into a type `a`, logging errors if parsing fails.
+  - `dropPrefixFromConfig :: Text.Text -> Key -> Key`
+    - **Usage:** Removes a specified prefix from an Aeson `Key`.
+  - `initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => (String -> Int -> String -> String -> IO Int) -> Text -> String -> String -> Int -> m ()`
+    - **Usage:** Initializes CAC client through configuration, logging status and throwing an error on failure.
+  - `getToss :: (CacheFlow m r) => Maybe Text -> m Int`
+    - **Usage:** Generates a random integer (1-100) for A/B testing, caching it in Redis if a session ID is provided.
+  - `makeCACConfigKey :: Text -> Text`
+    - **Usage:** Constructs a Redis key for CAC configuration based on an ID.
+  - `getConfigFromMemoryCommon :: (CacheFlow m r, EsqDBFlow m r, T.OptionEntity b a) => b -> Bool -> (String -> IO Bool) -> m (Maybe a)`
+    - **Usage:** Retrieves configuration from memory (EulerHS options), checking for expiration or experiment status.
+
+### Kernel.Types.Cache
+- **Classes:**
+  - `class Cache a m where ...`
+    - **Description:** A type class for monads that can cache values of type `a`.
+    - **Associated Types:**
+      - `type CacheKey a`: The type of key used for caching values of type `a`.
+    - **Methods:**
+      - `getKey :: CacheKey a -> m (Maybe a)`: Retrieves a cached value by its key.
+      - `setKey :: CacheKey a -> a -> m ()`: Caches a value with its key.
+      - `delKey :: CacheKey a -> m ()`: Deletes a cached value by its key.
+  - `class Cache a m => CacheEx a m where ...`
+    - **Description:** An extension of the `Cache` type class for monads that support caching with expiration times.
+    - **Methods:**
+      - `setKeyEx :: Seconds -> CacheKey a -> a -> m ()`: Caches a value with a specified expiration time.
+- **Functions:**
+  - `caching :: (CacheEx a m, Monad m) => (a -> Seconds) -> (CacheKey a -> m (Maybe a)) -> CacheKey a -> m (Maybe a)`
+    - **Usage:** A generic caching function that attempts to retrieve a value from the cache; if not found, it fetches the data, caches it with a calculated TTL, and then returns it.
+
+### Kernel.Types.CacheFlow
+- **Data Types:**
+  - `newtype CacheConfig`
+    - **Description:** Represents the configuration for caching.
+    - **Fields:**
+      - `configsExpTime :: Seconds`: Expiration time for cached configurations in seconds.
+  - `data CacConfig`
+    - **Description:** Represents the configuration for CAC (Centralized A/B Testing and Configuration).
+    - **Fields:**
+      - `host :: String`: Hostname for CAC.
+      - `interval :: Natural`: Polling interval for CAC.
+      - `tenant :: String`: Tenant ID for CAC.
+      - `retryConnection :: Bool`: Flag to enable/disable connection retries.
+      - `cacExpTime :: Seconds`: Expiration time for CAC data in seconds.
+      - `enablePolling :: Bool`: Flag to enable/disable polling.
+      - `enableCac :: Bool`: Flag to enable/disable CAC.
+  - `data SuperPositionConfig`
+    - **Description:** Represents the configuration for SuperPosition.
+    - **Fields:**
+      - `host :: String`: Hostname for SuperPosition.
+      - `interval :: Natural`: Polling interval for SuperPosition.
+      - `tenants :: [String]`: List of tenant IDs for SuperPosition.
+      - `retryConnection :: Bool`: Flag to enable/disable connection retries.
+      - `enablePolling :: Bool`: Flag to enable/disable polling.
+      - `enableSuperPosition :: Bool`: Flag to enable/disable SuperPosition.
+- **Type Aliases:**
+  - `type HasCacheConfig r = HasField "cacheConfig" r CacheConfig`
+    - **Description:** Type alias for a constraint indicating that an environment `r` has a `cacheConfig` field of type `CacheConfig`.
+  - `type HasCacConfig r = HasField "cacConfig" r CacConfig`
+    - **Description:** Type alias for a constraint indicating that an environment `r` has a `cacConfig` field of type `CacConfig`.
+  - `type CacheFlow m r = (HasCacheConfig r, HedisFlow m r, HasCacConfig r)`
+    - **Description:** A type alias for constraints defining a monadic flow with caching capabilities, requiring `HasCacheConfig`, `HedisFlow`, and `HasCacConfig`.
+
+### Kernel.Types.Centesimal
+- **Data Types:**
+  - `newtype Centesimal`
+    - **Description:** Represents a monetary amount with centesimal precision (two decimal places).
+    - **Fields:**
+      - `getCenti :: Centi`: The underlying `Centi` value.
+- **Instances:**
+  - `deriving newtype (Num, Real, RealFrac, ToJSON, Read, Show, PersistField, PersistFieldSql) Centesimal`
+    - **Description:** Derives various instances for `Centesimal` including numeric, JSON, and persistence.
+  - `deriving anyclass (PrettyShow) Centesimal`
+    - **Description:** Derives `PrettyShow` instance for `Centesimal`.
+  - `instance FromJSON Centesimal`
+    - **Description:** Defines how `Centesimal` is parsed from JSON (from a scientific number).
+  - `instance Fractional Centesimal`
+    - **Description:** Defines `Fractional` instance for `Centesimal`, handling division and rational conversion with rounding to two decimal places.
+  - `instance ToSchema Centesimal`
+    - **Description:** Defines how `Centesimal` is represented in an OpenAPI schema, as a string to prevent precision loss.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal`
+    - **Description:** Defines SQL equality check for `Centesimal` values in Beam.
+  - `instance FromBackendRow Postgres Centesimal`
+    - **Description:** Defines how `Centesimal` values are read from PostgreSQL backend rows.
+  - `instance FromField Centesimal`
+    - **Description:** Defines how `Centesimal` values are read from database fields.
+  - `instance HasSqlValueSyntax be Centi => HasSqlValueSyntax be Centesimal`
+    - **Description:** Defines how `Centesimal` values are converted to SQL value syntax.
+- **Functions:**
+  - `toCentesimal :: Int -> Centesimal`
+    - **Usage:** Converts an `Int` to a `Centesimal` value.
+
+### Kernel.Types.Common
+- **Type Aliases:**
+  - `type HasField = GHC.Records.Extra.HasField`
+    - **Description:** Re-exports `HasField` from `GHC.Records.Extra`.
+- **Data Types:**
+  - `newtype IdObject`
+    - **Description:** Represents an object with a simple text ID.
+    - **Fields:**
+      - `id :: Text`: The ID of the object.
+  - `data Tables`
+    - **Description:** Represents configuration for database tables, including KV store settings, TTLs, CAC usage, master/replica read preferences, and sharding.
+    - **Fields:**
+      - `disableForKV :: [Text]`: List of tables for which KV is disabled.
+      - `kvTablesTtl :: HM.HashMap Text Integer`: Map of table names to their KV TTLs.
+      - `useCAC :: [Text]`: List of tables that use CAC.
+      - `useCACForFrontend :: Bool`: Flag indicating if CAC is used for frontend.
+      - `readFromMasterDb :: [Text]`: List of tables that should be read from the master database.
+      - `defaultShardMod :: Int`: Default shard modulus.
+      - `tableShardModRange :: HM.HashMap Text (Int, Int)`: Map of table names to their shard modulus ranges.
+      - `tableRedisKeyPrefix :: HM.HashMap Text Text`: Map of table names to their Redis key prefixes.
+      - `allTablesDisabled :: Maybe Bool`: Optional flag to disable all tables.
+  - `data KafkaProperties`
+    - **Description:** Represents a generic Kafka property as a name-value pair.
+    - **Fields:**
+      - `propName :: Text`: The name of the Kafka property.
+      - `propValue :: Text`: The value of the Kafka property.
+  - `data KvConfigLastUpdatedTime`
+    - **Description:** Represents the last updated time for KV configurations.
+  - `data KvConfigUpdateFrequency`
+    - **Description:** Represents the update frequency for KV configurations.
+  - `newtype CentiDouble`
+    - **Description:** A newtype wrapper for `Double` used for converting `Centi` to `Double`.
+- **Functions:**
+  - `defaultTableData :: Tables`
+    - **Usage:** Provides a default `Tables` configuration with empty lists and maps, and `allTablesDisabled` set to `True`.
+  - `centiToDouble :: Centi -> CentiDouble`
+    - **Usage:** Converts a `Centi` value to a `CentiDouble` value.
+  - `doubleToCenti :: CentiDouble -> Centi`
+    - **Usage:** Converts a `CentiDouble` value to a `Centi` value.
+  - `getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point`
+    - **Usage:** Creates a PostgreSQL `Point` expression from latitude and longitude with SRID 4326.
+  - `containsPoint'' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool`
+    - **Usage:** Checks if a geometry contains a point (longitude, latitude) using `st_contains`.
+  - `containsPoint' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool`
+    - **Usage:** Checks if a geometry contains a point (longitude, latitude) using `st_contains` and `ST_GeomFromText`.
+  - `buildRadiusWithin' :: Point -> (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool`
+    - **Usage:** Checks if a point is within a specified radius of another point using `ST_DWithin`.
+  - `buildRadiusWithin'' :: (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool`
+    - **Usage:** Checks if a point is within a specified radius of another point using `ST_DWithin` and a named "point" column.
+  - `(<->.) :: Point -> Point -> BQ.QGenExpr context Postgres s Double`
+    - **Usage:** Calculates the distance between two PostgreSQL `Point` values.
+- **Instances:**
+  - `instance ToJSON IdObject`
+    - **Description:** Defines how `IdObject` is converted to JSON.
+  - `instance FromJSON IdObject`
+    - **Description:** Defines how `IdObject` is parsed from JSON.
+  - `instance ToSchema IdObject`
+    - **Description:** Defines how `IdObject` is represented in an OpenAPI schema.
+  - `instance ToJSON Tables`
+    - **Description:** Defines how `Tables` is converted to JSON.
+  - `instance FromJSON Tables`
+    - **Description:** Defines how `Tables` is parsed from JSON.
+  - `instance FromDhall Tables`
+    - **Description:** Defines how `Tables` is parsed from Dhall.
+  - `instance HasSqlValueSyntax be String => HasSqlValueSyntax be Tables`
+    - **Description:** Defines how `Tables` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Tables`
+    - **Description:** Defines SQL equality check for `Tables` values in Beam.
+  - `instance FromBackendRow Postgres Tables`
+    - **Description:** Defines how `Tables` values are read from PostgreSQL backend rows.
+  - `instance FromField Tables`
+    - **Description:** Defines how `Tables` values are read from database fields (as JSON).
+  - `instance ToJSON KafkaProperties`
+    - **Description:** Defines how `KafkaProperties` is converted to JSON.
+  - `instance FromJSON KafkaProperties`
+    - **Description:** Defines how `KafkaProperties` is parsed from JSON.
+  - `instance FromDhall KafkaProperties`
+    - **Description:** Defines how `KafkaProperties` is parsed from Dhall.
+  - `instance ToJSON KvConfigLastUpdatedTime`
+    - **Description:** Defines how `KvConfigLastUpdatedTime` is converted to JSON.
+  - `instance FromJSON KvConfigLastUpdatedTime`
+    - **Description:** Defines how `KvConfigLastUpdatedTime` is parsed from JSON.
+  - `instance FromDhall KvConfigLastUpdatedTime`
+    - **Description:** Defines how `KvConfigLastUpdatedTime` is parsed from Dhall.
+  - `instance ToJSON KvConfigUpdateFrequency`
+    - **Description:** Defines how `KvConfigUpdateFrequency` is converted to JSON.
+  - `instance FromJSON KvConfigUpdateFrequency`
+    - **Description:** Defines how `KvConfigUpdateFrequency` is parsed from JSON.
+  - `instance FromDhall KvConfigUpdateFrequency`
+    - **Description:** Defines how `KvConfigUpdateFrequency` is parsed from Dhall.
+  - `instance FromField Centi`
+    - **Description:** Defines how `Centi` values are read from database fields.
+  - `instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes`
+    - **Description:** Defines how `Minutes` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes`
+    - **Description:** Defines SQL equality check for `Minutes` values in Beam.
+  - `instance FromBackendRow Postgres Minutes`
+    - **Description:** Defines how `Minutes` values are read from PostgreSQL backend rows.
+  - `instance FromField Minutes`
+    - **Description:** Defines how `Minutes` values are read from database fields.
+  - `instance HasSqlValueSyntax be Double => HasSqlValueSyntax be CentiDouble`
+    - **Description:** Defines how `CentiDouble` values are converted to SQL value syntax.
+  - `instance HasSqlValueSyntax be Double => HasSqlValueSyntax be Centi`
+    - **Description:** Defines how `Centi` values are converted to SQL value syntax.
+  - `instance HasSqlValueSyntax B.Value (V.Vector Text)`
+    - **Description:** Defines how `V.Vector Text` values are converted to SQL value syntax.
+  - `instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Text]`
+    - **Description:** Defines how `[Text]` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]`
+    - **Description:** Defines SQL equality check for `[Text]` values in Beam.
+  - `instance FromBackendRow Postgres [Text]`
+    - **Description:** Defines how `[Text]` values are read from PostgreSQL backend rows.
+  - `instance FromField [Text]`
+    - **Description:** Defines how `[Text]` values are read from database fields.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centi`
+    - **Description:** Defines SQL equality check for `Centi` values in Beam.
+  - `instance FromBackendRow Postgres Centi`
+    - **Description:** Defines how `Centi` values are read from PostgreSQL backend rows.
+  - `instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Seconds`
+    - **Description:** Defines how `Seconds` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds`
+    - **Description:** Defines SQL equality check for `Seconds` values in Beam.
+  - `instance FromBackendRow Postgres Seconds`
+    - **Description:** Defines how `Seconds` values are read from PostgreSQL backend rows.
+  - `instance FromField Seconds`
+    - **Description:** Defines how `Seconds` values are read from database fields.
+  - `instance FromField ByteString => FromField DbHash`
+    - **Description:** Defines how `DbHash` values are read from database fields.
+  - `instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be DbHash`
+    - **Description:** Defines how `DbHash` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash`
+    - **Description:** Defines SQL equality check for `DbHash` values in Beam.
+  - `instance FromBackendRow Postgres DbHash`
+    - **Description:** Defines how `DbHash` values are read from PostgreSQL backend rows.
+  - `instance (HasSqlValueSyntax be (V.Vector Int)) => HasSqlValueSyntax be [Int]`
+    - **Description:** Defines how `[Int]` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Int]`
+    - **Description:** Defines SQL equality check for `[Int]` values in Beam.
+  - `instance FromBackendRow Postgres [Int]`
+    - **Description:** Defines how `[Int]` values are read from PostgreSQL backend rows.
+  - `instance FromField [Int]`
+    - **Description:** Defines how `[Int]` values are read from database fields.
+### Kernel.Types.Confidence
+- **Data Types:**
+  - `data Confidence`
+    - **Description:** Represents a level of confidence.
+    - **Constructors:**
+      - `Sure`: High confidence.
+      - `Unsure`: Low confidence.
+      - `Neutral`: Neither sure nor unsure.
+- **Instances:**
+  - `instance Eq Confidence`
+    - **Description:** Defines equality for `Confidence`.
+  - `instance Ord Confidence`
+    - **Description:** Defines ordering for `Confidence`.
+  - `instance Show Confidence`
+    - **Description:** Defines string representation for `Confidence`.
+  - `instance Read Confidence`
+    - **Description:** Defines parsing from string for `Confidence`.
+  - `instance Generic Confidence`
+    - **Description:** Derives `Generic` instance for `Confidence`.
+  - `instance ToJSON Confidence`
+    - **Description:** Defines how `Confidence` is converted to JSON.
+  - `instance FromJSON Confidence`
+    - **Description:** Defines how `Confidence` is parsed from JSON.
+  - `instance ToSchema Confidence`
+    - **Description:** Defines how `Confidence` is represented in an OpenAPI schema.
+  - `instance ToParamSchema Confidence`
+    - **Description:** Defines how `Confidence` is represented in OpenAPI parameter schemas.
+
+### Kernel.Types.Credentials
+- **Type Aliases:**
+  - `type PrivateKey = Base64`
+    - **Description:** Type alias for a private key, represented as Base64.
+  - `type PublicKey = Base64`
+    - **Description:** Type alias for a public key, represented as Base64.
+- **Data Types:**
+  - `data Credential`
+    - **Description:** Represents a set of credentials for a subscriber.
+    - **Fields:**
+      - `shortOrgId :: Text`: Short organization ID.
+      - `uniqueKeyId :: Text`: Unique key ID.
+      - `signPubKey :: PublicKey`: Public key for signing.
+      - `url :: BaseUrl`: URL associated with the credential.
+      - `domain :: Domain`: Domain of the subscriber.
+      - `_type :: SubscriberType`: Type of the subscriber.
+- **Instances:**
+  - `instance FromDhall Credential`
+    - **Description:** Defines how `Credential` is parsed from Dhall.
+
+### Kernel.Types.Distance
+- **Data Types:**
+  - `newtype HighPrecDistance`
+    - **Description:** Represents a distance with high precision using `Rational`.
+    - **Fields:**
+      - `getHighPrecDistance :: Rational`: The underlying `Rational` value.
+  - `data DistanceUnit`
+    - **Description:** Represents units of distance.
+    - **Constructors:**
+      - `Meter`: Meters.
+      - `Mile`: Miles.
+      - `Yard`: Yards.
+      - `Kilometer`: Kilometers.
+  - `data Distance`
+    - **Description:** Represents a distance value with its unit.
+    - **Fields:**
+      - `value :: HighPrecDistance`: The numerical value of the distance.
+      - `unit :: DistanceUnit`: The unit of the distance.
+  - `newtype Meters`
+    - **Description:** Represents a distance in meters (integer).
+    - **Fields:**
+      - `getMeters :: Int`: The underlying `Int` value.
+  - `newtype HighPrecMeters`
+    - **Description:** Represents a distance in meters with high precision using `Centesimal`.
+    - **Fields:**
+      - `getHighPrecMeters :: Centesimal`: The underlying `Centesimal` value.
+  - `newtype Kilometers`
+    - **Description:** Represents a distance in kilometers (integer).
+    - **Fields:**
+      - `getKilometers :: Int`: The underlying `Int` value.
+- **Instances:**
+  - `deriving newtype (Num, FromDhall, Real, Fractional, RealFrac, Ord, Eq, Enum, PrettyShow, PersistField, PersistFieldSql) HighPrecDistance`
+    - **Description:** Derives various instances for `HighPrecDistance`.
+  - `instance Show HighPrecDistance`
+    - **Description:** Defines string representation for `HighPrecDistance` (as `Double`).
+  - `instance Read HighPrecDistance`
+    - **Description:** Defines parsing from string for `HighPrecDistance` (from `Double`).
+  - `instance ToJSON HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` is converted to JSON (as `Double`).
+  - `instance FromJSON HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` is parsed from JSON (from `Double`).
+  - `instance ToParamSchema HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` is represented in OpenAPI parameter schemas (as `Double`).
+  - `instance FromField HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` values are read from database fields.
+  - `instance HasSqlValueSyntax be Rational => HasSqlValueSyntax be HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecDistance`
+    - **Description:** Defines SQL equality check for `HighPrecDistance` values in Beam.
+  - `instance FromBackendRow Postgres HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` values are read from PostgreSQL backend rows.
+  - `instance ToSchema HighPrecDistance`
+    - **Description:** Defines how `HighPrecDistance` is represented in an OpenAPI schema (as `Double`).
+  - `instance ToJSON DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` is converted to JSON.
+  - `instance FromJSON DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` is parsed from JSON.
+  - `instance ToSchema DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` is represented in an OpenAPI schema.
+  - `instance ToParamSchema DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` is represented in OpenAPI parameter schemas.
+  - `instance PrettyShow DistanceUnit`
+    - **Description:** Derives `PrettyShow` instance for `DistanceUnit`.
+  - `instance FromField DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` values are read from database fields.
+  - `instance HasSqlValueSyntax be String => HasSqlValueSyntax be DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be DistanceUnit`
+    - **Description:** Defines SQL equality check for `DistanceUnit` values in Beam.
+  - `instance FromBackendRow Postgres DistanceUnit`
+    - **Description:** Defines how `DistanceUnit` values are read from PostgreSQL backend rows.
+  - `instance ToJSON Distance`
+    - **Description:** Defines how `Distance` is converted to JSON.
+  - `instance FromJSON Distance`
+    - **Description:** Defines how `Distance` is parsed from JSON.
+  - `instance ToSchema Distance`
+    - **Description:** Defines how `Distance` is represented in an OpenAPI schema.
+  - `instance PrettyShow Distance`
+    - **Description:** Derives `PrettyShow` instance for `Distance`.
+  - `instance Eq Distance`
+    - **Description:** Defines equality for `Distance`, handling unit conversion.
+  - `instance Ord Distance`
+    - **Description:** Defines ordering for `Distance`, handling unit conversion.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, ToParamSchema, FromHttpApiData, ToHttpApiData, PrettyShow, PersistField, PersistFieldSql) Meters`
+    - **Description:** Derives various instances for `Meters`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Fractional, Real, RealFrac, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) HighPrecMeters`
+    - **Description:** Derives various instances for `HighPrecMeters`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Kilometers`
+    - **Description:** Derives various instances for `Kilometers`.
+  - `deriving newtype instance FromField Kilometers`
+    - **Description:** Derives `FromField` instance for `Kilometers`.
+  - `instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Kilometers`
+    - **Description:** Defines how `Kilometers` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Kilometers`
+    - **Description:** Defines SQL equality check for `Kilometers` values in Beam.
+  - `instance FromBackendRow Postgres Kilometers`
+    - **Description:** Defines how `Kilometers` values are read from PostgreSQL backend rows.
+  - `instance HasSqlValueSyntax be Centesimal => HasSqlValueSyntax be HighPrecMeters`
+    - **Description:** Defines how `HighPrecMeters` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters`
+    - **Description:** Defines SQL equality check for `HighPrecMeters` values in Beam.
+  - `instance FromBackendRow Postgres HighPrecMeters`
+    - **Description:** Defines how `HighPrecMeters` values are read from PostgreSQL backend rows.
+  - `instance FromField HighPrecMeters`
+    - **Description:** Defines how `HighPrecMeters` values are read from database fields.
+  - `instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Meters`
+    - **Description:** Defines how `Meters` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters`
+    - **Description:** Defines SQL equality check for `Meters` values in Beam.
+  - `instance FromBackendRow Postgres Meters`
+    - **Description:** Defines how `Meters` values are read from PostgreSQL backend rows.
+  - `instance FromField Meters`
+    - **Description:** Defines how `Meters` values are read from database fields.
+  - `instance {-# OVERLAPPING #-} ToSQLObject Meters`
+    - **Description:** Defines how `Meters` values are converted to `SQLObjectValue`.
+- **Functions:**
+  - `toHighPrecDistance :: Real a => a -> HighPrecDistance`
+    - **Usage:** Converts any `Real` number to `HighPrecDistance`.
+  - `convertMetersToDistance :: DistanceUnit -> Meters -> Distance`
+    - **Usage:** Converts a `Meters` value to a `Distance` in a specified unit.
+  - `convertHighPrecMetersToDistance :: DistanceUnit -> HighPrecMeters -> Distance`
+    - **Usage:** Converts a `HighPrecMeters` value to a `Distance` in a specified unit.
+  - `convertToMeters :: Distance -> Distance`
+    - **Usage:** Converts a `Distance` to `Meters` unit.
+  - `convertDistance :: DistanceUnit -> Distance -> Distance`
+    - **Usage:** Converts a `Distance` from one unit to another.
+  - `distanceConversionRate :: DistanceUnit -> HighPrecDistance`
+    - **Usage:** Returns the conversion rate to meters for a given `DistanceUnit`.
+  - `distanceToHighPrecDistance :: DistanceUnit -> Distance -> HighPrecDistance`
+    - **Usage:** Converts a `Distance` to `HighPrecDistance` in a specified unit, performing conversion if units differ.
+  - `(.+) :: Distance -> Distance -> Distance`
+    - **Usage:** Adds two `Distance` values, handling unit conversion.
+  - `(.-) :: Distance -> Distance -> Distance`
+    - **Usage:** Subtracts two `Distance` values, handling unit conversion.
+  - `negateDistance :: Distance -> Distance`
+    - **Usage:** Negates the value of a `Distance`.
+  - `absDistance :: Distance -> Distance`
+    - **Usage:** Returns the absolute value of a `Distance`.
+  - `modifyDistanceValue :: (HighPrecDistance -> HighPrecDistance) -> Distance -> Distance`
+    - **Usage:** Applies a function to the `value` field of a `Distance`.
+  - `withUnitChecking :: Distance -> Distance -> (DistanceUnit -> HighPrecDistance -> HighPrecDistance -> a) -> a`
+    - **Usage:** Helper function for binary operations on `Distance` values, ensuring consistent units.
+  - `withUnitCheckingList :: NonEmpty Distance -> (DistanceUnit -> NonEmpty HighPrecDistance -> a) -> a`
+    - **Usage:** Helper function for operations on a list of `Distance` values, ensuring consistent units.
+  - `sumDistance :: NonEmpty Distance -> Distance`
+    - **Usage:** Sums a non-empty list of `Distance` values, handling unit conversion.
+  - `kilometersToMeters :: Kilometers -> Meters`
+    - **Usage:** Converts `Kilometers` to `Meters`.
+  - `metersToKilometers :: Meters -> Kilometers`
+    - **Usage:** Converts `Meters` to `Kilometers`.
+  - `metersToHighPrecMeters :: Meters -> HighPrecMeters`
+    - **Usage:** Converts `Meters` to `HighPrecMeters`.
+  - `highPrecMetersToMeters :: HighPrecMeters -> Meters`
+    - **Usage:** Converts `HighPrecMeters` to `Meters`.
+  - `mkDistanceWithDefaultMeters :: Maybe DistanceUnit -> Maybe HighPrecDistance -> Meters -> Distance`
+    - **Usage:** Creates a `Distance` value, using a default `Meters` value if `HighPrecDistance` is not provided.
+  - `mkDistanceWithDefault :: Maybe DistanceUnit -> Maybe HighPrecDistance -> HighPrecMeters -> Distance`
+    - **Usage:** Creates a `Distance` value, using a default `HighPrecMeters` value if `HighPrecDistance` is not provided.
+  - `distanceToMeters :: Distance -> Meters`
+    - **Usage:** Converts a `Distance` to `Meters`.
+  - `distanceToHighPrecMeters :: Distance -> HighPrecMeters`
+    - **Usage:** Converts a `Distance` to `HighPrecMeters`.
+  - `highPrecDistanceToText :: HighPrecDistance -> Text`
+    - **Usage:** Converts `HighPrecDistance` to `Text` representation.
+  - `unitsToText :: DistanceUnit -> Text`
+    - **Usage:** Converts `DistanceUnit` to its plural lowercase `Text` representation.
+  - `distanceToText :: Distance -> Text`
+    - **Usage:** Converts `Distance` to a human-readable `Text` representation (e.g., "10.0 meters").
+  - `showDistanceAsMeters :: Distance -> Text`
+    - **Usage:** Shows a `Distance` value converted to meters as `Text`.
+
+### Kernel.Types.Documents
+- **Data Types:**
+  - `data VerificationStatus`
+    - **Description:** Represents the status of a verification process.
+    - **Constructors:**
+      - `PENDING`: Verification is pending.
+      - `VALID`: Verification is valid.
+      - `INVALID`: Verification is invalid.
+      - `MANUAL_VERIFICATION_REQUIRED`: Manual verification is required.
+      - `UNAUTHORIZED`: Unauthorized verification status.
+- **Instances:**
+  - `instance Eq VerificationStatus`
+    - **Description:** Defines equality for `VerificationStatus`.
+  - `instance Ord VerificationStatus`
+    - **Description:** Defines ordering for `VerificationStatus`.
+  - `instance Show VerificationStatus`
+    - **Description:** Defines string representation for `VerificationStatus`.
+  - `instance Read VerificationStatus`
+    - **Description:** Defines parsing from string for `VerificationStatus`.
+  - `instance Generic VerificationStatus`
+    - **Description:** Derives `Generic` instance for `VerificationStatus`.
+  - `instance ToJSON VerificationStatus`
+    - **Description:** Defines how `VerificationStatus` is converted to JSON.
+  - `instance FromJSON VerificationStatus`
+    - **Description:** Defines how `VerificationStatus` is parsed from JSON.
+  - `instance ToSchema VerificationStatus`
+    - **Description:** Defines how `VerificationStatus` is represented in an OpenAPI schema.
+
+### Kernel.Types.Error
+- **Data Types:**
+  - `data AuthError`
+    - **Description:** Represents various authentication and authorization errors.
+    - **Constructors:**
+      - `Unauthorized`: User is not authenticated.
+      - `InvalidAuthData`: Provided authentication data is invalid.
+      - `TokenExpired`: Authentication token has expired.
+      - `TokenIsNotVerified`: Authentication token is not verified.
+      - `TokenNotFound Text`: Token with specified ID not found.
+      - `InvalidToken Text`: Invalid token string.
+      - `AuthBlocked Text`: Authentication blocked for a reason.
+      - `IncorrectOTP`: Incorrect OTP provided.
+      - `AccessDenied`: User does not have access to the operation.
+      - `HitsLimitError Int`: API hits limit exceeded.
+  - `data HeaderError`
+    - **Description:** Represents errors related to HTTP headers.
+    - **Constructors:**
+      - `MissingHeader HeaderName`: A required header is missing.
+      - `InvalidHeader HeaderName Text`: A header is invalid.
+  - `data SignatureError`
+    - **Description:** Represents errors during signature verification.
+    - **Constructors:**
+      - `SignatureVerificationFailure [Header]`: Signature verification failed.
+      - `CannotDecodeSignature String`: Signature cannot be decoded.
+  - `data AuthPIError`
+    - **Description:** Represents authentication errors specific to PI (Payment Instrument) operations.
+    - **Constructors:**
+      - `NotAnExecutor`: User is not an executor of the operation.
+  - `data VehicleError`
+    - **Description:** Represents errors related to vehicles.
+    - **Constructors:**
+      - `VehicleNotFound Text`: Vehicle with specified ID not found.
+      - `VehicleDoesNotExist Text`: Vehicle with specified ID does not exist.
+      - `VehicleAlreadyLinked`: Vehicle is already linked.
+  - `data PersonError`
+    - **Description:** Represents errors related to persons/users.
+    - **Constructors:**
+      - `PersonNotFound Text`: Person with specified ID not found.
+      - `PersonDoesNotExist Text`: Person with specified data does not exist.
+      - `PersonFieldNotPresent Text`: A required field for the person is missing.
+      - `PersonWithPhoneNotFound Text`: Person with specified phone number not found.
+      - `PersonEmailExists`: Email is already registered.
+      - `PersonCityInformationDoesNotExist Text`: Person city information does not exist.
+      - `PersonCityInformationNotFound Text`: Person city information not found.
+      - `PersonMobileNumberIsNULL Text`: Mobile number is NULL for the person.
+  - `data TransporterError`
+    - **Description:** Represents errors related to transporters.
+    - **Constructors:**
+      - `TransporterConfigNotFound Text`: Transporter config with specified ID not found.
+      - `TransporterConfigDoesNotExist Text`: Transporter config with specified ID does not exist.
+  - `data MerchantError`
+    - **Description:** Represents errors related to merchants.
+    - **Constructors:**
+      - `MerchantNotFound Text`: Merchant with specified ID not found.
+      - `MerchantDoesNotExist Text`: Merchant with specified data does not exist.
+      - `MerchantServiceUsageConfigNotFound Text`: Merchant service usage config not found.
+      - `MerchantServiceConfigNotFound Text Text Text`: Merchant service config not found.
+      - `MerchantOperatingCityNotFound Text`: Merchant operating city not found.
+      - `MerchantOperatingCityDoesNotExist Text`: Merchant operating city does not exist.
+  - `data ExophoneError`
+    - **Description:** Represents errors related to exophones.
+    - **Constructors:**
+      - `ExophoneNotFound Text`: Exophone for specified ID not found.
+      - `ExophoneDoesNotExist Text`: Exophone with specified phone number does not exist.
+  - `data LocationError`
+    - **Description:** Represents errors related to locations.
+    - **Constructors:**
+      - `LocationNotFound`: Location not found.
+  - `data GenericError`
+    - **Description:** Represents generic application errors.
+    - **Constructors:**
+      - `InternalError Text`: Internal server error.
+      - `InvalidRequest Text`: Invalid request.
+  - `data SearchRequestError`
+    - **Description:** Represents errors related to search requests.
+    - **Constructors:**
+      - `SearchRequestNotFound Text`: Search request not found.
+      - `SearchRequestDoesNotExist Text`: Search request does not exist.
+      - `SearchRequestExpired`: Search request has expired.
+  - `data QuoteError`
+    - **Description:** Represents errors related to quotes.
+    - **Constructors:**
+      - `QuoteNotFound Text`: Quote not found.
+      - `QuoteDoesNotExist Text`: Quote does not exist.
+      - `QuoteExpired Text`: Quote has expired.
+      - `QuoteFieldNotPresent Text`: A required field for the quote is missing.
+  - `data ShouldNotHappenError`
+    - **Description:** Represents unexpected errors that should not occur.
+    - **Constructors:**
+      - `ShouldNotHappen Text`: An unexpected error occurred.
+  - `data BookingError`
+    - **Description:** Represents errors related to bookings.
+    - **Constructors:**
+      - `BookingNotFound Text`: Booking not found.
+      - `BookingDoesNotExist Text`: Booking does not exist.
+      - `BookingFieldNotPresent Text`: A required field for the booking is missing.
+      - `BookingForRiderNotFound Text`: Booking for rider not found.
+      - `BookingInvalidStatus Text`: Attempted action in invalid booking status.
+      - `BookingBppOrderIdNotFound`: BPP order ID not found for booking.
+  - `data RideError`
+    - **Description:** Represents errors related to rides.
+    - **Constructors:**
+      - `RideNotFound Text`: Ride not found.
+      - `RideDoesNotExist Text`: Ride does not exist.
+      - `RideFieldNotPresent Text`: A required field for the ride is missing.
+      - `RideWithBookingIdNotFound Text`: Ride with booking ID not found.
+      - `RideForDriverNotFound Text`: Ride for driver not found.
+      - `RideInvalidStatus Text`: Attempted action in invalid ride status.
+      - `DriverNotAtPickupLocation Text`: Driver not at pickup location.
+  - `data DatabaseError`
+    - **Description:** Represents database-related errors.
+    - **Constructors:**
+      - `SQLRequestError Text Text`: SQL request error.
+      - `SQLResultError Text`: SQL result error.
+      - `DBUnknownError Text`: Unknown database error.
+  - `data ContextError`
+    - **Description:** Represents errors related to Beckn context.
+    - **Constructors:**
+      - `UnsupportedCoreVer`: Unsupported core version.
+      - `InvalidDomain`: Invalid domain.
+      - `InvalidCountry`: Invalid country.
+      - `InvalidAction`: Invalid action.
+  - `data ExternalAPICallError`
+    - **Description:** Represents errors during external API calls.
+    - **Fields:**
+      - `errCode :: Maybe Text`: Optional error code.
+      - `baseUrl :: BaseUrl`: Base URL of the external API.
+      - `clientError :: ClientError`: Client error details.
+  - `data HealthCheckError`
+    - **Description:** Represents health check errors.
+    - **Constructors:**
+      - `ServiceUnavailable`: Service is unavailable.
+  - `data ServerError`
+    - **Description:** Represents server errors.
+    - **Constructors:**
+      - `ServerUnavailable`: Server is unavailable.
+  - `newtype RedisError`
+    - **Description:** Represents Redis-related errors.
+    - **Constructors:**
+      - `RedisError KVDBReply`: Redis reply error.
+  - `data SMSError`
+    - **Description:** Represents SMS-related errors.
+    - **Constructors:**
+      - `SMSError SubmitSmsRes`: SMS submission error.
+      - `SMSInvalidNumber`: Invalid SMS number.
+  - `data SpecialZoneError`
+    - **Description:** Represents errors related to special zones.
+    - **Constructors:**
+      - `OtpNotFoundForSpecialZoneBooking Text`: OTP not found for special zone booking.
+      - `BookingNotFoundForSpecialZoneOtp Text`: Booking not found for special zone OTP.
+      - `SpecialZoneNotFound`: Special zone not found.
+      - `PointNotFound`: Point not found.
+  - `data GoogleMapsCallError`
+    - **Description:** Represents errors during Google Maps API calls.
+    - **Constructors:**
+      - `GoogleMapsInvalidRequest`: Invalid request to Google Maps.
+      - `GoogleMapsCallError Text`: Google Maps API call error with error code.
+  - `data GoogleTranslateCallError`
+    - **Description:** Represents errors during Google Translate API calls.
+    - **Constructors:**
+      - `GoogleTranslateInvalidRequest`: Invalid request to Google Translate.
+  - `data GupShupError`
+    - **Description:** Represents errors during GupShup API calls.
+    - **Constructors:**
+      - `GupShupInvalidRequest`: Invalid request to GupShup.
+      - `GupShupNotConfigured`: GupShup not configured.
+      - `GupShupUserIdNotFound`: GupShup user ID not found.
+      - `GupShupInvalidPhoneNumber`: Invalid phone number for GupShup.
+      - `GupShupUnauthorized`: Unauthorized GupShup request.
+      - `GupShupWrongMethodService`: Wrong method/service for GupShup.
+      - `GupShupInterNationalPhoneNumber`: International phone number service disabled.
+      - `GupShupTooManyRequests`: Too many requests to GupShup.
+      - `GupShupUnknownServerError`: Unknown GupShup server error.
+  - `data TwillioError`
+    - **Description:** Represents errors during Twillio API calls.
+    - **Constructors:**
+      - `TwillioBadRequest`: Bad request to Twillio.
+      - `TwillioForbidden`: Forbidden request to Twillio.
+      - `TwillioAPIDoesNotExist`: Twillio API does not exist.
+      - `TwillioAccountNotActive`: Twillio account not active.
+      - `TwillioTrialAccountFound`: Trial account found in Twillio.
+      - `TwillioConcurrencyLimitExceeded`: Twillio concurrency limit exceeded.
+      - `TwillioInvalidURLFormat`: Invalid URL format for Twillio.
+      - `TwillioInternalServerError`: Internal server error in Twillio.
+      - `TwillioUnknownError`: Unknown error in Twillio.
+  - `newtype AgencyDisabled`
+    - **Description:** Represents an error when an agency is disabled.
+    - **Constructors:**
+      - `AgencyDisabled Text`: Agency with specified ID is disabled.
+  - `data ExotelError`
+    - **Description:** Represents errors during Exotel API calls.
+    - **Constructors:**
+      - `ExotelNotConfigured`: Exotel not configured.
+      - `ExotelBadRequest`: Bad request to Exotel.
+      - `ExotelUnauthorized`: Unauthorized Exotel request.
+      - `ExitelPaymentRequired`: Exotel payment required.
+      - `ExotelAccessDenied`: Exotel access denied.
+      - `ExotelNotFound`: Exotel resource not found.
+      - `ExotelConflict`: Exotel conflict.
+      - `ExotelTooManyRequests`: Too many requests to Exotel.
+      - `ExotelServerError`: Exotel server error.
+  - `data KafkaError`
+    - **Description:** Represents Kafka-related errors.
+    - **Constructors:**
+      - `KafkaUnableToBuildTools Kafka.KafkaError`: Unable to build Kafka tools.
+      - `KafkaUnableToReleaseTools Kafka.KafkaError`: Unable to release Kafka tools.
+      - `KafkaUnableToProduceMessage Kafka.KafkaError`: Unable to produce Kafka message.
+      - `KafkaUnableToConsumeMessage Kafka.KafkaError`: Unable to consume Kafka message.
+      - `KafkaUnableToParseValue`: Unable to parse Kafka message value.
+      - `KafkaTopicIsEmptyString`: Kafka topic is an empty string.
+  - `data CallStatusError`
+    - **Description:** Represents errors related to call status.
+    - **Constructors:**
+      - `CallStatusDoesNotExist`: Call status does not exist.
+      - `CallStatusFieldNotPresent Text`: A required field for call status is missing.
+      - `CallIDDoesNotExist Text`: Call with specified ID does not exist.
+  - `data ServiceabilityError`
+    - **Description:** Represents errors related to ride serviceability.
+    - **Constructors:**
+      - `RideNotServiceable`: Ride is not serviceable due to georestrictions.
+      - `RideNotServiceableInState Text`: Ride is not serviceable in the specified state.
+  - `data IdfyCallError`
+    - **Description:** Represents errors during Idfy API calls.
+    - **Constructors:**
+      - `IdfyBadRequest`: Bad request to Idfy.
+      - `IdfyUnauthorized`: Unauthorized Idfy request.
+      - `IdfyAccessDenied`: Idfy access denied.
+      - `IdfyNotFound`: Idfy resource not found.
+      - `IdfySizeLimit`: Idfy size limit exceeded.
+      - `IdfyUnprocessableEntity`: Unprocessable entity in Idfy.
+      - `IdfyTooManyRequests`: Too many requests to Idfy.
+      - `IdfyServerError`: Idfy server error.
+      - `IdfyCallError Text`: Idfy API call error with message.
+  - `data VersionError`
+    - **Description:** Represents errors related to versioning.
+    - **Constructors:**
+      - `VersionUnexpectedVersion Text`: Unexpected version.
+  - `data MMIError`
+    - **Description:** Represents errors during MMI (MapmyIndia) API calls.
+    - **Constructors:**
+      - `MMINotConfigured`: MMI not configured.
+      - `MMIBadRequest`: Bad request to MMI.
+      - `MMIUnauthorized`: Unauthorized MMI request.
+      - `MMIForbidden`: Forbidden MMI request.
+      - `MMIServerError`: MMI server error.
+      - `MMIUnderMaintenance`: MMI under maintenance.
+      - `MMIDBConnectionError`: MMI DB connection error.
+  - `data MerchantMessageError`
+    - **Description:** Represents errors related to merchant messages.
+    - **Constructors:**
+      - `MerchantMessageNotFound Text Text`: Merchant message not found.
+  - `newtype SosError`
+    - **Description:** Represents errors related to SOS (Save Our Souls) functionality.
+    - **Constructors:**
+      - `SosIdDoesNotExist Text`: SOS ID does not exist.
+  - `instance IsBaseError SosError`
+    - **Description:** Defines `IsBaseError` instance for `SosError`.
+  - `instance IsHTTPError SosError`
+    - **Description:** Defines `IsHTTPError` instance for `SosError`.
+  - `instance IsAPIError SosError`
+    - **Description:** Defines `IsAPIError` instance for `SosError`.
+  - `instance IsBaseError PaymentOrderError`
+    - **Description:** Defines `IsBaseError` instance for `PaymentOrderError`.
+  - `instance IsHTTPError PaymentOrderError`
+    - **Description:** Defines `IsHTTPError` instance for `PaymentOrderError`.
+  - `instance IsAPIError PaymentOrderError`
+    - **Description:** Defines `IsAPIError` instance for `PaymentOrderError`.
+  - `instance IsBaseError DriverFeeError`
+    - **Description:** Defines `IsBaseError` instance for `DriverFeeError`.
+  - `instance IsHTTPError DriverFeeError`
+    - **Description:** Defines `IsHTTPError` instance for `DriverFeeError`.
+  - `instance IsAPIError DriverFeeError`
+    - **Description:** Defines `IsAPIError` instance for `DriverFeeError`.
+  - `instance IsBaseError TicketError`
+    - **Description:** Defines `IsBaseError` instance for `TicketError`.
+  - `instance IsHTTPError TicketError`
+    - **Description:** Defines `IsHTTPError` instance for `TicketError`.
+  - `instance IsAPIError TicketError`
+    - **Description:** Defines `IsAPIError` instance for `TicketError`.
+  - `instance IsBaseError OsrmError`
+    - **Description:** Defines `IsBaseError` instance for `OsrmError`.
+  - `instance IsHTTPError OsrmError`
+    - **Description:** Defines `IsHTTPError` instance for `OsrmError`.
+  - `instance IsAPIError OsrmError`
+    - **Description:** Defines `IsAPIError` instance for `OsrmError`.
+  - `instance IsBaseError EditLocationError`
+    - **Description:** Defines `IsBaseError` instance for `EditLocationError`.
+  - `instance IsHTTPError EditLocationError`
+    - **Description:** Defines `IsHTTPError` instance for `EditLocationError`.
+  - `instance IsAPIError EditLocationError`
+    - **Description:** Defines `IsAPIError` instance for `EditLocationError`.
+  - `instance IsBaseError NextBillionError`
+    - **Description:** Defines `IsBaseError` instance for `NextBillionError`.
+  - `instance IsHTTPError NextBillionError`
+    - **Description:** Defines `IsHTTPError` instance for `NextBillionError`.
+  - `instance IsAPIError NextBillionError`
+    - **Description:** Defines `IsAPIError` instance for `NextBillionError`.
+  - `instance IsBaseError RideRelatedNotificationError`
+    - **Description:** Defines `IsBaseError` instance for `RideRelatedNotificationError`.
+  - `instance IsHTTPError RideRelatedNotificationError`
+    - **Description:** Defines `IsHTTPError` instance for `RideRelatedNotificationError`.
+  - `instance IsAPIError RideRelatedNotificationError`
+    - **Description:** Defines `IsAPIError` instance for `RideRelatedNotificationError`.
+  - `instance IsBaseError MerchantPNError`
+    - **Description:** Defines `IsBaseError` instance for `MerchantPNError`.
+  - `instance IsHTTPError MerchantPNError`
+    - **Description:** Defines `IsHTTPError` instance for `MerchantPNError`.
+  - `instance IsAPIError MerchantPNError`
+    - **Description:** Defines `IsAPIError` instance for `MerchantPNError`.
+  - `instance IsBaseError PayoutConfigError`
+    - **Description:** Defines `IsBaseError` instance for `PayoutConfigError`.
+  - `instance IsHTTPError PayoutConfigError`
+    - **Description:** Defines `IsHTTPError` instance for `PayoutConfigError`.
+  - `instance IsAPIError PayoutConfigError`
+    - **Description:** Defines `IsAPIError` instance for `PayoutConfigError`.
+  - `instance IsBaseError CallFeedbackError`
+    - **Description:** Defines `IsBaseError` instance for `CallFeedbackError`.
+  - `instance IsHTTPError CallFeedbackError`
+    - **Description:** Defines `IsHTTPError` instance for `CallFeedbackError`.
+  - `instance IsAPIError CallFeedbackError`
+    - **Description:** Defines `IsAPIError` instance for `CallFeedbackError`.
+  - `instance FromResponse ClickToCallError`
+    - **Description:** Defines how `ClickToCallError` is created from an HTTP response.
+  - `instance IsBaseError ClickToCallError`
+    - **Description:** Defines `IsBaseError` instance for `ClickToCallError`.
+  - `instance IsHTTPError ClickToCallError`
+    - **Description:** Defines `IsHTTPError` instance for `ClickToCallError`.
+  - `instance IsAPIError ClickToCallError`
+    - **Description:** Defines `IsAPIError` instance for `ClickToCallError`.
+  - `instance IsBaseError DigoEngageError`
+    - **Description:** Defines `IsBaseError` instance for `DigoEngageError`.
+  - `instance IsHTTPError DigoEngageError`
+    - **Description:** Defines `IsHTTPError` instance for `DigoEngageError`.
+  - `instance FromResponse DigoEngageError`
+    - **Description:** Defines how `DigoEngageError` is created from an HTTP response.
+  - `instance IsAPIError DigoEngageError`
+    - **Description:** Defines `IsAPIError` instance for `DigoEngageError`.
+  - `instance IsBaseError TataCommunicationsWhatsappError`
+    - **Description:** Defines `IsBaseError` instance for `TataCommunicationsWhatsappError`.
+  - `instance IsHTTPError TataCommunicationsWhatsappError`
+    - **Description:** Defines `IsHTTPError` instance for `TataCommunicationsWhatsappError`.
+  - `instance FromResponse TataCommunicationsWhatsappError`
+    - **Description:** Defines how `TataCommunicationsWhatsappError` is created from an HTTP response.
+  - `instance IsAPIError TataCommunicationsWhatsappError`
+    - **Description:** Defines `IsAPIError` instance for `TataCommunicationsWhatsappError`.
+  - `instance ToJSON ClientError`
+    - **Description:** Defines how `ClientError` is converted to JSON (as a string).
+
+### Kernel.Types.Error.BaseError
+- **Type Aliases:**
+  - `type IsBaseException e = (IsBaseError e, Exception e)`
+    - **Description:** Type alias for a constraint indicating that a type `e` is both a base error and an exception.
+- **Classes:**
+  - `class IsBaseError e where toMessage :: e -> Maybe Text`
+    - **Description:** A type class for errors that can provide an optional human-readable message.
+    - **Methods:**
+      - `toMessage :: e -> Maybe Text`: Returns an optional error message for the given error.
+- **Data Types:**
+  - `data BaseException`
+    - **Description:** A wrapper for any type that is an `IsBaseException`, allowing it to be caught as a general base exception.
+- **Instances:**
+  - `instance Show BaseException`
+    - **Description:** Defines how `BaseException` is converted to a string representation.
+  - `instance Exception BaseException`
+    - **Description:** Defines `Exception` instance for `BaseException`.
+
+### Kernel.Types.Error.BaseError.HTTPError
+- **Type Aliases:**
+  - `type IsHTTPException e = (IsHTTPError e, IsAPIError e, IsBecknAPIError e, Exception e)`
+    - **Description:** Type alias for a constraint indicating that a type `e` is an HTTP error, an API error, a Beckn API error, and an exception.
+- **Classes:**
+  - `class IsBaseError e => IsHTTPError e where ...`
+    - **Description:** A type class for errors that can be mapped to HTTP error codes and provide an error code and custom headers.
+    - **Methods:**
+      - `toErrorCode :: e -> Text`: Returns a text error code for the given error.
+      - `toHttpCode :: e -> HttpCode`: Returns the HTTP status code for the error (defaults to E500).
+      - `toCustomHeaders :: e -> [Header]`: Returns a list of custom HTTP headers for the error (defaults to empty).
+- **Data Types:**
+  - `data HTTPException`
+    - **Description:** A wrapper for any type that is an `IsHTTPException`, allowing it to be caught as a general HTTP exception.
+- **Functions:**
+  - `toMessageIfNotInternal :: IsHTTPError e => e -> Maybe Text`
+    - **Usage:** Returns the error message if the HTTP error is not an internal server error, otherwise returns `Nothing`.
+- **Instances:**
+  - `instance IsBaseError HTTPException`
+    - **Description:** Defines `IsBaseError` instance for `HTTPException`.
+  - `instance IsHTTPError HTTPException`
+    - **Description:** Defines `IsHTTPError` instance for `HTTPException`.
+  - `instance Show HTTPException`
+    - **Description:** Defines how `HTTPException` is converted to a string representation.
+  - `instance Exception HTTPException`
+    - **Description:** Defines `Exception` instance for `HTTPException`.
+
+### Kernel.Types.Error.BaseError.HTTPError.APIError
+- **Type Aliases:**
+  - `type IsAPIException e = (IsAPIError e, Exception e)`
+    - **Description:** Type alias for a constraint indicating that a type `e` is an API error and an exception.
+- **Classes:**
+  - `class IsAPIError e where toPayload :: e -> Value`
+    - **Description:** A type class for errors that can provide an optional JSON payload.
+    - **Methods:**
+      - `toPayload :: e -> Value`: Returns a JSON payload for the given error (defaults to `Null`).
+- **Data Types:**
+  - `data APIError`
+    - **Description:** Represents a generic API error with an error code, message, and optional payload.
+    - **Fields:**
+      - `errorCode :: Text`: The error code.
+      - `errorMessage :: Maybe Text`: The error message.
+      - `errorPayload :: Value`: The error payload.
+- **Instances:**
+  - `instance Show APIError`
+    - **Description:** Defines how `APIError` is converted to a string representation.
+  - `instance FromJSON APIError`
+    - **Description:** Defines how `APIError` is parsed from JSON.
+  - `instance ToJSON APIError`
+    - **Description:** Defines how `APIError` is converted to JSON.
+  - `instance FromResponse APIError`
+    - **Description:** Defines how `APIError` is created from an HTTP response.
+
+### Kernel.Types.Error.BaseError.HTTPError.BecknAPIError
+- **Classes:**
+  - `class IsBecknAPIError e where ...`
+    - **Description:** A type class for errors that are specific to the Beckn API, providing methods to get the error type and an optional path.
+    - **Methods:**
+      - `toType :: e -> Error.ErrorType`: Returns the Beckn error type (defaults to `INTERNAL_ERROR`).
+      - `toPath :: e -> Maybe Text`: Returns an optional path related to the error.
+- **Data Types:**
+  - `newtype BecknAPIError`
+    - **Description:** A newtype wrapper around `Error.Error` for Beckn API errors.
+- **Instances:**
+  - `instance FromJSON BecknAPIError`
+    - **Description:** Defines how `BecknAPIError` is parsed from JSON, expecting an "error" field.
+  - `instance ToJSON BecknAPIError`
+    - **Description:** Defines how `BecknAPIError` is converted to JSON, including an "ack" status of "NACK".
+  - `instance FromResponse BecknAPIError`
+    - **Description:** Defines how `BecknAPIError` is created from an HTTP response.
+
+### Kernel.Types.Error.BaseError.HTTPError.FromResponse
+- **Classes:**
+  - `class FromResponse e where fromResponse :: Response -> Maybe e`
+    - **Description:** A type class for types that can be constructed from an HTTP `Response`.
+    - **Methods:**
+      - `fromResponse :: Response -> Maybe e`: Attempts to create a value of type `e` from an HTTP `Response`.
+- **Functions:**
+  - `fromJsonResponse :: FromJSON a => Response -> Maybe a`
+    - **Usage:** Attempts to decode the body of an HTTP `Response` into a JSON-decodable type `a`.
+
+### Kernel.Types.Error.BaseError.HTTPError.HttpCode
+- **Data Types:**
+  - `data HttpCode`
+    - **Description:** Represents standard HTTP status codes relevant to the application.
+    - **Constructors:**
+      - `E400`: Bad Request
+      - `E401`: Unauthorized
+      - `E402`: Payment Required
+      - `E403`: Forbidden
+      - `E404`: Not Found
+      - `E409`: Conflict
+      - `E412`: Precondition Failed
+      - `E413`: Payload Too Large
+      - `E415`: Unsupported Media Type
+      - `E422`: Unprocessable Entity
+      - `E429`: Too Many Requests
+      - `E500`: Internal Server Error
+      - `E501`: Not Implemented
+      - `E503`: Service Unavailable
+- **Functions:**
+  - `codeToHttpCode :: Int -> Maybe HttpCode`
+    - **Usage:** Converts an integer HTTP status code to an `HttpCode` data type, returning `Nothing` if the code is not recognized.
+  - `codeToHttpCodeWith500Default :: Int -> HttpCode`
+    - **Usage:** Converts an integer HTTP status code to an `HttpCode`, defaulting to `E500` if the code is not recognized.
+  - `toServerError :: HttpCode -> ServerError`
+    - **Usage:** Converts an `HttpCode` to a Servant `ServerError`.
+  - `isInternalError :: HttpCode -> Bool`
+    - **Usage:** Checks if an `HttpCode` represents an internal server error (5xx series).
+
+### Kernel.Types.Field
+- **Type Aliases:**
+  - `type (name :: Symbol) ::: (ty :: Type) = '(name, ty)`
+    - **Description:** An alias for a type-level pair of name and type, used for field definitions.
+  - `type HasFieldSuper name r ty = (HasField name r ty, GL.Field name r r ty ty)`
+    - **Description:** A super-constraint for `HasField` that works with both record-dot-preprocessor and `generics-lens` field access.
+  - `type family HasFields (r :: Type) (fields :: [(Symbol, Type)]) :: Constraint where ...`
+    - **Description:** A type family for a bulk version of `HasField`, allowing multiple fields to be constrained at once.
+
+### Kernel.Types.Flow
+- **Type Aliases:**
+  - `type FlowR r a = FlowR {unFlowR :: ReaderT r L.Flow a}`
+    - **Description:** A newtype wrapper around `ReaderT r L.Flow a`, representing a monadic flow with a reader environment `r`.
+  - `type HasFlowHandlerR m r = ...`
+    - **Description:** A type alias for constraints required for a monadic flow handler, including caching, core metrics, Hedis, Esqueleto, logging, and system configs.
+- **Functions:**
+  - `runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a`
+    - **Usage:** Runs a `FlowR` computation with a given `FlowRuntime` and environment `r`.
+  - `logRequestIdForFork :: (Log (FlowR r), HasARTFlow r, Metrics.CoreMetrics (FlowR r)) => Text -> FlowR r ()`
+    - **Usage:** Logs the request ID for a forked thread if `shouldLogRequestId` is `True`.
+  - `handleForkExecutionMultiple :: (Log (FlowR r), Metrics.CoreMetrics (FlowR r), HasARTFlow r) => [(Text, FlowR r ())] -> FlowR r ()`
+    - **Usage:** Handles the execution of multiple forked threads, logging errors if any thread dies.
+  - `handleForkExecution :: (Log (FlowR r), Metrics.CoreMetrics (FlowR r)) => Text -> FlowR r () -> FlowR r ()`
+    - **Usage:** Handles the execution of a single forked thread, logging errors if the thread dies.
+  - `refreshLocalOptions :: MVar (M.Map Text Any) -> R.FlowRuntime -> R.FlowRuntime`
+    - **Usage:** Refreshes the local options in the `FlowRuntime` with a new `MVar` map.
+- **Instances:**
+  - `instance L.MonadFlow (FlowR r)`
+    - **Description:** Defines `MonadFlow` instance for `FlowR`, delegating various monadic operations to `L.Flow`.
+  - `instance MonadIO (FlowR r)`
+    - **Description:** Defines `MonadIO` instance for `FlowR`.
+  - `instance {-# OVERLAPPABLE #-} IOLogging.HasLog r => Log (FlowR r)`
+    - **Description:** Defines `Log` instance for `FlowR`, allowing structured logging.
+  - `instance MonadTime (FlowR r)`
+    - **Description:** Defines `MonadTime` instance for `FlowR`.
+  - `instance MonadClock (FlowR r)`
+    - **Description:** Defines `MonadClock` instance for `FlowR`.
+  - `instance Metrics.HasCoreMetrics r => Metrics.CoreMetrics (FlowR r)`
+    - **Description:** Defines `CoreMetrics` instance for `FlowR`, allowing recording of core application metrics.
+  - `instance MonadMonitor (FlowR r)`
+    - **Description:** Defines `MonadMonitor` instance for `FlowR`.
+  - `instance MonadGuid (FlowR r)`
+    - **Description:** Defines `MonadGuid` instance for `FlowR`.
+  - `instance (Log (FlowR r), Metrics.CoreMetrics (FlowR r), HasARTFlow r) => Forkable (FlowR r)`
+    - **Description:** Defines `Forkable` instance for `FlowR`, allowing forking of monadic computations.
+
+### Kernel.Types.Forkable
+- **Classes:**
+  - `class Forkable m where ...`
+    - **Description:** A type class for monads that support forking computations into new threads.
+    - **Methods:**
+      - `fork :: Text -> m () -> m ()`: Forks a computation into a new thread with a given tag.
+      - `awaitableFork :: Text -> m a -> m (Awaitable (Either Text a))`: Forks a computation into a new thread and returns an `Awaitable` for its result.
+      - `forkMultiple :: [(Text, m ())] -> m ()`: Forks multiple computations into new threads.
+
+### Kernel.Types.FromField
+- **Functions:**
+  - `fromFieldJSON :: (Typeable a, FromJSON a) => DPSF.Field -> Maybe ByteString -> DPSF.Conversion a`
+    - **Usage:** Converts a `Maybe ByteString` from a database field into a JSON-decodable type `a`. Returns `UnexpectedNull` if `Nothing` or `ConversionFailed` if decoding fails.
+  - `fromFieldEnum :: (Typeable a, Read a) => DPSF.Field -> Maybe ByteString -> DPSF.Conversion a`
+    - **Usage:** Converts a `Maybe ByteString` from a database field into a `Read`-able enum type `a`. Returns `UnexpectedNull` if `Nothing` or `ConversionFailed` if reading fails.
+  - `fromFieldDefault :: (Typeable a, Read a, DPSF.FromField a) => DPSF.Field -> Maybe ByteString -> DPSF.Conversion a`
+    - **Usage:** Converts a `Maybe ByteString` from a database field into a `Read`-able type `a` using the default `FromField` instance. Returns `UnexpectedNull` if `Nothing`.
+
+### Kernel.Types.Geofencing
+- **Data Types:**
+  - `data GeoRestriction`
+    - **Description:** Represents geographical restrictions, either unrestricted or a list of regions.
+    - **Constructors:**
+      - `Unrestricted`: No geographical restrictions.
+      - `Regions [Text]`: Restricted to a list of specified regions.
+  - `data GeofencingConfig`
+    - **Description:** Represents the geofencing configuration for origin and destination.
+    - **Fields:**
+      - `origin :: GeoRestriction`: Geographical restriction for the origin.
+      - `destination :: GeoRestriction`: Geographical restriction for the destination.
+- **Functions:**
+  - `fromFieldEnum' :: DPSF.Field -> Maybe ByteString -> DPSF.Conversion GeoRestriction`
+    - **Usage:** Converts a `Maybe ByteString` from a database field into a `GeoRestriction`, defaulting to `Unrestricted` if `Nothing` or parsing regions from a list.
+  - `geoRestrictionToMaybeList :: GeoRestriction -> Maybe [Text]`
+    - **Usage:** Converts a `GeoRestriction` to a `Maybe [Text]`, returning `Nothing` for `Unrestricted`.
+  - `maybeListToGeoRestriction :: Maybe [Text] -> GeoRestriction`
+    - **Usage:** Converts a `Maybe [Text]` to a `GeoRestriction`, defaulting to `Unrestricted` if `Nothing`.
+- **Instances:**
+  - `instance FromField GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` is read from a database field.
+  - `instance HasSqlValueSyntax be Text => HasSqlValueSyntax be GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be GeoRestriction`
+    - **Description:** Defines SQL equality check for `GeoRestriction` values in Beam.
+  - `instance FromBackendRow Postgres GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` values are read from PostgreSQL backend rows.
+  - `instance PrettyShow GeoRestriction`
+    - **Description:** Defines pretty printing for `GeoRestriction`.
+  - `instance PersistField GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` values are converted to and from `PersistValue` for persistent storage.
+  - `instance PersistFieldSql GeoRestriction`
+    - **Description:** Defines the SQL type for `GeoRestriction`.
+  - `instance FromDhall GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` is parsed from Dhall.
+  - `instance FromJSON GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` is parsed from JSON.
+  - `instance ToJSON GeoRestriction`
+    - **Description:** Defines how `GeoRestriction` is converted to JSON.
+  - `instance FromDhall GeofencingConfig`
+    - **Description:** Defines how `GeofencingConfig` is parsed from Dhall.
+  - `instance PrettyShow GeofencingConfig`
+    - **Description:** Defines pretty printing for `GeofencingConfig`.
+  - `instance FromJSON GeofencingConfig`
+    - **Description:** Defines how `GeofencingConfig` is parsed from JSON.
+  - `instance ToJSON GeofencingConfig`
+    - **Description:** Defines how `GeofencingConfig` is converted to JSON.
+  - `instance Read GeofencingConfig`
+    - **Description:** Defines parsing from string for `GeofencingConfig`.
+
+### Kernel.Types.GuidLike
+- **Classes:**
+  - `class GuidLike m a where generateGUID :: m a`
+    - **Description:** A type class for monads that can generate GUID-like values.
+    - **Methods:**
+      - `generateGUID :: m a`: Generates a GUID-like value.
+- **Instances:**
+  - `instance MonadGuid m => GuidLike m Text`
+    - **Description:** Defines `GuidLike` instance for `Text` when `MonadGuid` is available.
+
+### Kernel.Types.HideSecrets
+- **Classes:**
+  - `class ToJSON (ReqWithoutSecrets req) => HideSecrets req where ...`
+    - **Description:** A type class for types that can have sensitive information hidden, providing a way to transform a request into a version without secrets for logging or display.
+    - **Associated Types:**
+      - `type ReqWithoutSecrets req`: The type of the request after secrets have been hidden (defaults to the original type `req`).
+    - **Methods:**
+      - `hideSecrets :: req -> ReqWithoutSecrets req`: Transforms a request to hide sensitive information.
+- **Instances:**
+  - `instance HideSecrets ()`
+    - **Description:** Defines `HideSecrets` instance for `()`, where no secrets are hidden.
+
+### Kernel.Types.Id
+- **Data Types:**
+  - `newtype Id domain`
+    - **Description:** A newtype wrapper for `Text` representing a unique identifier for a specific domain.
+    - **Fields:**
+      - `getId :: Text`: The underlying `Text` value of the ID.
+  - `newtype ShortId domain`
+    - **Description:** A newtype wrapper for `Text` representing a short unique identifier for a specific domain.
+    - **Fields:**
+      - `getShortId :: Text`: The underlying `Text` value of the short ID.
+- **Functions:**
+  - `cast :: Id a -> Id b`
+    - **Usage:** Casts an `Id` from one domain type to another.
+- **Instances:**
+  - `deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema, FromField, PrettyShow) (Id domain)`
+    - **Description:** Derives various instances for `Id` including JSON, HTTP API data, OpenAPI schema, database field, and pretty printing.
+  - `instance Example (Id a)`
+    - **Description:** Defines `Example` instance for `Id`.
+  - `instance IsString (Id d)`
+    - **Description:** Allows `Id` values to be created from string literals.
+  - `instance FromHttpApiData (Id a)`
+    - **Description:** Defines how `Id` is parsed from HTTP API data.
+  - `instance (MonadGuid m) => GuidLike m (Id a)`
+    - **Description:** Defines `GuidLike` instance for `Id` when `MonadGuid` is available.
+  - `deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema, PrettyShow) (ShortId domain)`
+    - **Description:** Derives various instances for `ShortId` including JSON, HTTP API data, OpenAPI schema, and pretty printing.
+  - `instance FromDhall (ShortId a)`
+    - **Description:** Defines how `ShortId` is parsed from Dhall.
+  - `instance IsString (ShortId d)`
+    - **Description:** Allows `ShortId` values to be created from string literals.
+  - `instance FromHttpApiData (ShortId a)`
+    - **Description:** Defines how `ShortId` is parsed from HTTP API data.
+  - `instance (MonadGuid m) => GuidLike m (ShortId a)`
+    - **Description:** Defines `GuidLike` instance for `ShortId` when `MonadGuid` is available.
+  - `instance Hashable (Id a)`
+    - **Description:** Defines `Hashable` instance for `Id`.
+  - `instance Hashable (ShortId a)`
+    - **Description:** Defines `Hashable` instance for `ShortId`.
+
+### Kernel.Types.Logging
+- **Data Types:**
+  - `data LogLevel`
+    - **Description:** Represents different levels of logging severity.
+    - **Constructors:**
+      - `DEBUG`: Detailed debugging information.
+      - `INFO`: Informational messages.
+      - `WARNING`: Potentially harmful situations.
+      - `ERROR`: Error events.
+  - `data LoggerConfig`
+    - **Description:** Represents the configuration for the application's logger.
+    - **Fields:**
+      - `level :: LogLevel`: The minimum log level to output.
+      - `logToFile :: Bool`: Whether to log messages to a file.
+      - `logFilePath :: FilePath`: The path to the log file.
+      - `logToConsole :: Bool`: Whether to log messages to the console.
+      - `logRawSql :: Bool`: Whether to log raw SQL queries.
+      - `prettyPrinting :: Bool`: Whether to use pretty printing for logs.
+- **Classes:**
+  - `class Log m where ...`
+    - **Description:** A type class for monads that support logging.
+    - **Methods:**
+      - `logOutput :: LogLevel -> Text -> m ()`: Logs a message at a specified level.
+      - `withLogTag :: Text -> m a -> m a`: Executes a monadic action within a new log tag context.
+- **Functions:**
+  - `defaultLoggerConfig :: LoggerConfig`
+    - **Usage:** Provides a default `LoggerConfig` with `DEBUG` level, no file/console logging, and no raw SQL logging or pretty printing.
+
+### Kernel.Types.MonadGuid
+- **Classes:**
+  - `class Monad m => MonadGuid m where generateGUIDText :: m Text`
+    - **Description:** A type class for monads that can generate unique GUID (Globally Unique Identifier) text.
+    - **Methods:**
+      - `generateGUIDText :: m Text`: Generates a unique GUID as `Text`.
+- **Functions:**
+  - `generateGUIDTextIO :: IO Text`
+    - **Usage:** Generates a unique GUID as `Text` in the `IO` monad.
+
+### Kernel.Types.Predicate
+- **Type Aliases:**
+  - `type PredShow p = p -> Text -> Text`
+    - **Description:** Type alias for a function that converts a predicate `p` and a variable name `Text` into a human-readable `Text` representation of the predicate.
+  - `type PredFun p a = p -> a -> Bool`
+    - **Description:** Type alias for a function that applies a predicate `p` to a value `a`, returning `Bool`.
+  - `type Regex = RE Char`
+    - **Description:** Type alias for a regular expression over `Char`.
+- **Data Types:**
+  - `data And p1 p2`
+    - **Description:** Represents a logical AND combination of two predicates.
+  - `data Or p1 p2`
+    - **Description:** Represents a logical OR combination of two predicates.
+  - `newtype Not p`
+    - **Description:** Represents a logical NOT of a predicate.
+  - `newtype InMaybe p`
+    - **Description:** Applies a predicate to the content of a `Maybe` value, returning `True` if `Nothing`.
+  - `newtype InValue p`
+    - **Description:** Applies a predicate to the content of a `MandatoryValue` or `OptionalValue`.
+  - `newtype InList p`
+    - **Description:** Applies a predicate to all elements of a list.
+  - `newtype ExactLength`
+    - **Description:** Predicate for checking if a foldable structure has an exact length.
+  - `data LengthInRange`
+    - **Description:** Predicate for checking if a foldable structure's length is within a specified range.
+  - `newtype MinLength`
+    - **Description:** Predicate for checking if a foldable structure has a minimum length.
+  - `newtype MaxLength`
+    - **Description:** Predicate for checking if a foldable structure has a maximum length.
+  - `data NotEmpty`
+    - **Description:** Predicate for checking if a foldable structure is not empty.
+  - `data InRange n`
+    - **Description:** Predicate for checking if a numeric value is within a specified range.
+  - `newtype Min n`
+    - **Description:** Predicate for checking if a numeric value is greater than or equal to a minimum.
+  - `newtype Max n`
+    - **Description:** Predicate for checking if a numeric value is less than or equal to a maximum.
+  - `data UniqueField f`
+    - **Description:** Predicate for checking if a specific field is unique across all elements in a list.
+  - `newtype Exact n`
+    - **Description:** Predicate for checking if a value is exactly equal to a specified value.
+  - `data PredicateFunc a`
+    - **Description:** A generic predicate function that combines a showable message and a boolean function.
+- **Classes:**
+  - `class Predicate a p where pFun :: PredFun p a`
+    - **Description:** A type class for defining how a predicate `p` applies to a value `a`.
+  - `class ShowablePredicate p where pShow :: PredShow p`
+    - **Description:** A type class for predicates that can be converted into a human-readable string.
+- **Functions:**
+  - `anyOf :: [Char] -> Regex`
+    - **Usage:** Creates a `Regex` that matches any single character from the given list.
+  - `liftPredShow :: ShowablePredicate p => Text -> p -> Text -> Text`
+    - **Usage:** Lifts a predicate's `pShow` function with a function name.
+  - `showFunction :: Text -> Text -> Text`
+    - **Usage:** Formats a function name and its argument into a `Text` string.
+  - `liftBinPredShow :: (ShowablePredicate p1, ShowablePredicate p2) => Text -> p1 -> p2 -> Text -> Text`
+    - **Usage:** Lifts a binary predicate's `pShow` function with a logical operator string.
+  - `liftBinPredFun :: (Predicate x p1, Predicate x p2) => (Bool -> Bool -> Bool) -> p1 -> p2 -> x -> Bool`
+    - **Usage:** Lifts a binary boolean operator to combine two predicates.
+  - `parenthesized :: Text -> Text`
+    - **Usage:** Wraps a `Text` string in parentheses.
+- **Instances:**
+  - `instance Predicate String Regex`
+    - **Description:** Defines `Predicate` instance for `String` and `Regex`.
+  - `instance Predicate Text Regex`
+    - **Description:** Defines `Predicate` instance for `Text` and `Regex`.
+  - `instance ShowablePredicate Regex`
+    - **Description:** Defines `ShowablePredicate` instance for `Regex`.
+  - `instance (Predicate x p1, Predicate x p2) => Predicate x (And p1 p2)`
+    - **Description:** Defines `Predicate` instance for `And` predicates.
+  - `instance (ShowablePredicate p1, ShowablePredicate p2) => ShowablePredicate (And p1 p2)`
+    - **Description:** Defines `ShowablePredicate` instance for `And` predicates.
+  - `instance (Predicate x p1, Predicate x p2) => Predicate x (Or p1 p2)`
+    - **Description:** Defines `Predicate` instance for `Or` predicates.
+  - `instance (ShowablePredicate p1, ShowablePredicate p2) => ShowablePredicate (Or p1 p2)`
+    - **Description:** Defines `ShowablePredicate` instance for `Or` predicates.
+  - `instance (Predicate x p) => Predicate x (Not p)`
+    - **Description:** Defines `Predicate` instance for `Not` predicate.
+  - `instance (ShowablePredicate p) => ShowablePredicate (Not p)`
+    - **Description:** Defines `ShowablePredicate` instance for `Not` predicate.
+  - `instance (Predicate x p) => Predicate (Maybe x) (InMaybe p)`
+    - **Description:** Defines `Predicate` instance for `Maybe` values with `InMaybe` predicate.
+  - `instance (ShowablePredicate p) => ShowablePredicate (InMaybe p)`
+    - **Description:** Defines `ShowablePredicate` instance for `InMaybe` predicate.
+  - `instance (Predicate x p) => Predicate (MandatoryValue x) (InValue p)`
+    - **Description:** Defines `Predicate` instance for `MandatoryValue` with `InValue` predicate.
+  - `instance (Predicate x p) => Predicate (OptionalValue x) (InValue p)`
+    - **Description:** Defines `Predicate` instance for `OptionalValue` with `InValue` predicate.
+  - `instance (ShowablePredicate p) => ShowablePredicate (InValue p)`
+    - **Description:** Defines `ShowablePredicate` instance for `InValue` predicate.
+  - `instance (Predicate x p) => Predicate [x] (InList p)`
+    - **Description:** Defines `Predicate` instance for lists with `InList` predicate.
+  - `instance (ShowablePredicate p) => ShowablePredicate (InList p)`
+    - **Description:** Defines `ShowablePredicate` instance for `InList` predicate.
+  - `instance ShowablePredicate ExactLength`
+    - **Description:** Defines `ShowablePredicate` instance for `ExactLength`.
+  - `instance F.Foldable l => Predicate (l a) ExactLength`
+    - **Description:** Defines `Predicate` instance for foldable structures with `ExactLength`.
+  - `instance Predicate Text ExactLength`
+    - **Description:** Defines `Predicate` instance for `Text` with `ExactLength`.
+  - `instance ShowablePredicate LengthInRange`
+    - **Description:** Defines `ShowablePredicate` instance for `LengthInRange`.
+  - `instance F.Foldable l => Predicate (l a) LengthInRange`
+    - **Description:** Defines `Predicate` instance for foldable structures with `LengthInRange`.
+  - `instance Predicate Text LengthInRange`
+    - **Description:** Defines `Predicate` instance for `Text` with `LengthInRange`.
+  - `instance ShowablePredicate MinLength`
+    - **Description:** Defines `ShowablePredicate` instance for `MinLength`.
+  - `instance F.Foldable l => Predicate (l a) MinLength`
+    - **Description:** Defines `Predicate` instance for foldable structures with `MinLength`.
+  - `instance Predicate Text MinLength`
+    - **Description:** Defines `Predicate` instance for `Text` with `MinLength`.
+  - `instance ShowablePredicate MaxLength`
+    - **Description:** Defines `ShowablePredicate` instance for `MaxLength`.
+  - `instance F.Foldable l => Predicate (l a) MaxLength`
+    - **Description:** Defines `Predicate` instance for foldable structures with `MaxLength`.
+  - `instance Predicate Text MaxLength`
+    - **Description:** Defines `Predicate` instance for `Text` with `MaxLength`.
+  - `instance ShowablePredicate NotEmpty`
+    - **Description:** Defines `ShowablePredicate` instance for `NotEmpty`.
+  - `instance F.Foldable l => Predicate (l a) NotEmpty`
+    - **Description:** Defines `Predicate` instance for foldable structures with `NotEmpty`.
+  - `instance Predicate Text NotEmpty`
+    - **Description:** Defines `Predicate` instance for `Text` with `NotEmpty`.
+  - `instance Show n => ShowablePredicate (InRange n)`
+    - **Description:** Defines `ShowablePredicate` instance for `InRange`.
+  - `instance Ord n => Predicate n (InRange n)`
+    - **Description:** Defines `Predicate` instance for numeric types with `InRange`.
+  - `instance Show n => ShowablePredicate (Min n)`
+    - **Description:** Defines `ShowablePredicate` instance for `Min`.
+  - `instance Ord n => Predicate n (Min n)`
+    - **Description:** Defines `Predicate` instance for numeric types with `Min`.
+  - `instance Show n => ShowablePredicate (Max n)`
+    - **Description:** Defines `ShowablePredicate` instance for `Max`.
+  - `instance Ord n => Predicate n (Max n)`
+    - **Description:** Defines `Predicate` instance for numeric types with `Max`.
+  - `instance KnownSymbol f => ShowablePredicate (UniqueField f)`
+    - **Description:** Defines `ShowablePredicate` instance for `UniqueField`.
+  - `instance (Container c, Ord a, HasField n (Element c) a) => Predicate c (UniqueField n)`
+    - **Description:** Defines `Predicate` instance for containers with `UniqueField`.
+  - `instance Show n => ShowablePredicate (Exact n)`
+    - **Description:** Defines `ShowablePredicate` instance for `Exact`.
+  - `instance Eq n => Predicate n (Exact n)`
+    - **Description:** Defines `Predicate` instance for types with `Exact` predicate.
+  - `instance Predicate a (PredicateFunc a)`
+    - **Description:** Defines `Predicate` instance for `PredicateFunc`.
+  - `instance ShowablePredicate (PredicateFunc a)`
+    - **Description:** Defines `ShowablePredicate` instance for `PredicateFunc`.
+
+### Kernel.Types.Price
+- **Data Types:**
+  - `newtype Money`
+    - **Description:** Represents a monetary amount as an integer (to be deprecated).
+    - **Fields:**
+      - `getMoney :: Int`: The underlying `Int` value.
+  - `newtype HighPrecMoney`
+    - **Description:** Represents a monetary amount with high precision using `Rational`.
+    - **Fields:**
+      - `getHighPrecMoney :: Rational`: The underlying `Rational` value.
+  - `data Currency`
+    - **Description:** Represents different currencies.
+    - **Constructors:**
+      - `INR`: Indian Rupee.
+      - `USD`: United States Dollar.
+      - `EUR`: Euro.
+  - `data Price`
+    - **Description:** Represents a price with an integer amount (deprecated), high-precision amount, and currency.
+    - **Fields:**
+      - `amountInt :: Money`: Integer amount (deprecated).
+      - `amount :: HighPrecMoney`: High-precision amount.
+      - `currency :: Currency`: Currency of the price.
+  - `data PriceAPIEntity`
+    - **Description:** Represents a price entity for API interactions, including high-precision amount and currency.
+    - **Fields:**
+      - `amount :: HighPrecMoney`: High-precision amount.
+      - `currency :: Currency`: Currency of the price.
+- **Functions:**
+  - `mkPrice :: Maybe Currency -> HighPrecMoney -> Price`
+    - **Usage:** Creates a `Price` from an optional currency and a high-precision amount, defaulting to INR.
+  - `mkPriceWithDefault :: Maybe HighPrecMoney -> Maybe Currency -> Money -> Price`
+    - **Usage:** Creates a `Price` with optional high-precision amount and currency, using a default integer amount if high-precision is not provided.
+  - `mkAmountWithDefault :: Maybe HighPrecMoney -> Money -> HighPrecMoney`
+    - **Usage:** Creates a `HighPrecMoney` from an optional high-precision amount, using a default integer amount if not provided.
+  - `mkPriceFromAPIEntity :: PriceAPIEntity -> Price`
+    - **Usage:** Converts a `PriceAPIEntity` to a `Price`.
+  - `mkPriceFromMoney :: Maybe Currency -> Money -> Price`
+    - **Usage:** Creates a `Price` from an optional currency and an integer `Money` amount (to be deprecated).
+  - `mkPriceAPIEntity :: Price -> PriceAPIEntity`
+    - **Usage:** Converts a `Price` to a `PriceAPIEntity`.
+  - `withCurrencyChecking :: (MonadThrow m, Log m) => Price -> Price -> (HighPrecMoney -> HighPrecMoney -> a) -> m a`
+    - **Usage:** Performs an action on two `Price` values after checking if their currencies match, throwing an `InternalError` if they differ.
+  - `withCurrencyChecking3 :: (MonadThrow m, Log m) => Price -> Price -> Price -> (HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> a) -> m a`
+    - **Usage:** Performs an action on three `Price` values after checking if their currencies match, throwing an `InternalError` if they differ.
+  - `withCurrencyCheckingList :: (MonadThrow m, Log m) => [Price] -> (Maybe Currency -> [HighPrecMoney] -> a) -> m a`
+    - **Usage:** Performs an action on a list of `Price` values after checking if all their currencies match, throwing an `InternalError` if they differ.
+  - `addPrice :: (MonadThrow m, Log m) => Price -> Price -> m Price`
+    - **Usage:** Adds two `Price` values after checking currency consistency.
+  - `subtractPrice :: (MonadThrow m, Log m) => Price -> Price -> m Price`
+    - **Usage:** Subtracts two `Price` values after checking currency consistency.
+  - `modifyPrice :: Price -> (HighPrecMoney -> HighPrecMoney) -> Price`
+    - **Usage:** Applies a function to the high-precision amount of a `Price`.
+  - `highPrecMoneyFromText :: Text -> Maybe HighPrecMoney`
+    - **Usage:** Converts a `Text` representation to `Maybe HighPrecMoney`.
+  - `highPrecMoneyToText :: HighPrecMoney -> Text`
+    - **Usage:** Converts a `HighPrecMoney` to its `Text` representation.
+  - `toHighPrecMoney :: Real a => a -> HighPrecMoney`
+    - **Usage:** Converts any `Real` number to `HighPrecMoney`.
+  - `showPriceWithRounding :: Price -> Text`
+    - **Usage:** Shows a `Price` with rounding based on its currency's accuracy, including the currency symbol.
+  - `getAccuracy :: Currency -> Int`
+    - **Usage:** Returns the number of decimal places (accuracy) for a given `Currency`.
+  - `showPriceWithRoundingWithoutCurrency :: Price -> Text`
+    - **Usage:** Shows a `Price` with rounding based on its currency's accuracy, without the currency symbol.
+- **Instances:**
+  - `deriving newtype (Show, Read, PrettyShow, Enum, Eq, Ord, Num, Real, Integral, PersistField, PersistFieldSql, ToJSON, FromJSON, ToSchema, ToParamSchema, FromHttpApiData, ToHttpApiData) Money`
+    - **Description:** Derives various instances for `Money`.
+  - `instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Money`
+    - **Description:** Defines how `Money` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money`
+    - **Description:** Defines SQL equality check for `Money` values in Beam.
+  - `instance FromBackendRow Postgres Money`
+    - **Description:** Defines how `Money` values are read from PostgreSQL backend rows.
+  - `instance FromField Money`
+    - **Description:** Defines how `Money` values are read from database fields.
+  - `deriving newtype (Num, FromDhall, Real, Fractional, RealFrac, Ord, Eq, Enum, PrettyShow, PersistField, PersistFieldSql) HighPrecMoney`
+    - **Description:** Derives various instances for `HighPrecMoney`.
+  - `instance Show HighPrecMoney`
+    - **Description:** Defines string representation for `HighPrecMoney`.
+  - `instance Read HighPrecMoney`
+    - **Description:** Defines parsing from string for `HighPrecMoney`.
+  - `instance ToJSON HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` is converted to JSON.
+  - `instance FromJSON HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` is parsed from JSON.
+  - `instance ToParamSchema HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` is represented in OpenAPI parameter schemas.
+  - `instance FromField HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` values are read from database fields.
+  - `instance HasSqlValueSyntax be Rational => HasSqlValueSyntax be HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` values are converted to SQL value syntax.
+  - `instance HasSqlValueSyntax be Double => HasSqlValueSyntax be Rational`
+    - **Description:** Defines how `Rational` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney`
+    - **Description:** Defines SQL equality check for `HighPrecMoney` values in Beam.
+  - `instance FromBackendRow Postgres HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` values are read from PostgreSQL backend rows.
+  - `instance ToSchema HighPrecMoney`
+    - **Description:** Defines how `HighPrecMoney` is represented in an OpenAPI schema.
+  - `instance ToJSON Currency`
+    - **Description:** Defines how `Currency` is converted to JSON.
+  - `instance FromJSON Currency`
+    - **Description:** Defines how `Currency` is parsed from JSON.
+  - `instance ToSchema Currency`
+    - **Description:** Defines how `Currency` is represented in an OpenAPI schema.
+  - `instance ToParamSchema Currency`
+    - **Description:** Defines how `Currency` is represented in OpenAPI parameter schemas.
+  - `instance PrettyShow Currency`
+    - **Description:** Defines pretty printing for `Currency`.
+  - `instance FromField Currency`
+    - **Description:** Defines how `Currency` is read from a database field.
+  - `instance HasSqlValueSyntax be String => HasSqlValueSyntax be Currency`
+    - **Description:** Defines how `Currency` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Currency`
+    - **Description:** Defines SQL equality check for `Currency` values in Beam.
+  - `instance FromBackendRow Postgres Currency`
+    - **Description:** Defines how `Currency` values are read from PostgreSQL backend rows.
+  - `instance ToJSON Price`
+    - **Description:** Defines how `Price` is converted to JSON.
+  - `instance FromJSON Price`
+    - **Description:** Defines how `Price` is parsed from JSON.
+  - `instance ToSchema Price`
+    - **Description:** Defines how `Price` is represented in an OpenAPI schema.
+  - `instance PrettyShow Price`
+    - **Description:** Defines pretty printing for `Price`.
+  - `instance ToJSON PriceAPIEntity`
+    - **Description:** Defines how `PriceAPIEntity` is converted to JSON.
+  - `instance FromJSON PriceAPIEntity`
+    - **Description:** Defines how `PriceAPIEntity` is parsed from JSON.
+  - `instance ToSchema PriceAPIEntity`
+    - **Description:** Defines how `PriceAPIEntity` is represented in an OpenAPI schema.
+
+### Kernel.Types.Registry
+- **Data Types:**
+  - `data SimpleLookupRequest`
+    - **Description:** Represents a simple lookup request for a subscriber in the registry.
+    - **Fields:**
+      - `unique_key_id :: Text`: Unique key ID of the subscriber.
+      - `subscriber_id :: Text`: Subscriber ID.
+      - `merchant_id :: Text`: Merchant ID.
+      - `subscriber_type :: E.SubscriberType`: Type of the subscriber.
+      - `domain :: Domain.Domain`: Domain of the subscriber.
+- **Classes:**
+  - `class Registry m where registryLookup :: SimpleLookupRequest -> m (Maybe Subscriber)`
+    - **Description:** A type class for monads that can perform lookups in the registry.
+    - **Methods:**
+      - `registryLookup :: SimpleLookupRequest -> m (Maybe Subscriber)`: Looks up a subscriber based on a `SimpleLookupRequest`.
+- **Functions:**
+  - `lookupRequestToRedisKey :: SimpleLookupRequest -> Text`
+    - **Usage:** Converts a `SimpleLookupRequest` into a Redis key string.
+
+### Kernel.Types.Registry.Subscriber
+- **Data Types:**
+  - `data Subscriber`
+    - **Description:** Represents a subscriber in the registry, including its ID, URL, type, domain, geographical information, public keys, validity period, status, and timestamps.
+    - **Fields:**
+      - `unique_key_id :: Text`: Unique key ID of the subscriber.
+      - `subscriber_id :: Text`: Subscriber ID.
+      - `subscriber_url :: BaseUrl`: URL of the subscriber.
+      - `_type :: SubscriberType`: Type of the subscriber.
+      - `domain :: Domain`: Domain of the subscriber.
+      - `city :: [City]`: List of cities the subscriber operates in.
+      - `country :: Maybe Country`: Optional country of the subscriber.
+      - `signing_public_key :: Base64`: Public key for signing.
+      - `encr_public_key :: Maybe Base64`: Optional encryption public key.
+      - `valid_from :: Maybe UTCTime`: Start time of validity.
+      - `valid_until :: Maybe UTCTime`: End time of validity.
+      - `status :: Maybe SubscriberStatus`: Current status of the subscriber.
+      - `created :: UTCTime`: Creation timestamp.
+      - `updated :: UTCTime`: Last updated timestamp.
+  - `data SubscriberType`
+    - **Description:** Represents different types of subscribers in the registry.
+    - **Constructors:**
+      - `BAP`: Buyer App.
+      - `BPP`: Seller App.
+      - `BG`: Beckn Gateway.
+      - `LREG`: Local Registry.
+      - `CREG`: Central Registry.
+      - `RREG`: Retail Registry.
+  - `data SubscriberStatus`
+    - **Description:** Represents the status of a subscriber.
+    - **Constructors:**
+      - `INITIATED`: Initialized.
+      - `UNDER_SUBSCRIPTION`: Under subscription.
+      - `SUBSCRIBED`: Subscribed.
+      - `EXPIRED`: Expired.
+      - `UNSUBSCRIBED`: Unsubscribed.
+      - `INVALID_SSL`: Invalid SSL.
+
+### Kernel.Types.SharedRedisKeys
+- **Data Types:**
+  - `data BatchConfig`
+    - **Description:** Represents configuration for batch processing, including total batches, batch time, and start/expiration times.
+    - **Fields:**
+      - `totalBatches :: Int`: Total number of batches.
+      - `batchTime :: Seconds`: Duration of each batch.
+      - `batchingStartedAt :: UTCTime`: Timestamp when batching started.
+      - `batchingExpireAt :: UTCTime`: Timestamp when batching expires.
+- **Instances:**
+  - `instance Eq BatchConfig`
+    - **Description:** Defines equality for `BatchConfig`.
+  - `instance Show BatchConfig`
+    - **Description:** Defines string representation for `BatchConfig`.
+  - `instance FromJSON BatchConfig`
+    - **Description:** Defines how `BatchConfig` is parsed from JSON.
+  - `instance ToJSON BatchConfig`
+    - **Description:** Defines how `BatchConfig` is converted to JSON.
+  - `instance ToSchema BatchConfig`
+    - **Description:** Defines how `BatchConfig` is represented in an OpenAPI schema.
+
+### Kernel.Types.SlidingWindowCounters
+- **Data Types:**
+  - `data SlidingWindowOptions`
+    - **Description:** Represents options for a sliding window counter, including period and period type.
+    - **Fields:**
+      - `period :: Integer`: The duration of the period.
+      - `periodType :: PeriodType`: The unit of the period (Minutes, Hours, Days, etc.).
+  - `data PeriodType`
+    - **Description:** Represents the unit of time for a period in sliding window counters.
+    - **Constructors:**
+      - `Minutes`: Period in minutes.
+      - `Hours`: Period in hours.
+      - `Days`: Period in days.
+      - `Months`: Period in months.
+      - `Years`: Period in years.
+  - `type TimePair = (UTCTime, UTCTime)`
+    - **Description:** Type alias for a pair of `UTCTime` values, representing a start and end time.
+- **Functions:**
+  - `fromFieldSWC :: DPSF.Field -> Maybe ByteString -> DPSF.Conversion SlidingWindowOptions`
+    - **Usage:** Converts a `Maybe ByteString` from a database field into `SlidingWindowOptions` by attempting to parse it as JSON.
+- **Instances:**
+  - `instance FromField SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` is read from a database field.
+  - `instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be SlidingWindowOptions`
+    - **Description:** Defines SQL equality check for `SlidingWindowOptions` values in Beam.
+  - `instance FromBackendRow Postgres SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` values are read from PostgreSQL backend rows.
+  - `instance Read SlidingWindowOptions`
+    - **Description:** Defines parsing from string for `SlidingWindowOptions`.
+  - `instance FromDhall SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` is parsed from Dhall.
+  - `instance Show SlidingWindowOptions`
+    - **Description:** Defines string representation for `SlidingWindowOptions`.
+  - `instance FromJSON SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` is parsed from JSON.
+  - `instance ToJSON SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` is converted to JSON.
+  - `instance ToSchema SlidingWindowOptions`
+    - **Description:** Defines how `SlidingWindowOptions` is represented in an OpenAPI schema.
+  - `instance Ord SlidingWindowOptions`
+    - **Description:** Defines ordering for `SlidingWindowOptions`.
+  - `instance Eq SlidingWindowOptions`
+    - **Description:** Defines equality for `SlidingWindowOptions`.
+  - `instance Read PeriodType`
+    - **Description:** Defines parsing from string for `PeriodType`.
+  - `instance FromDhall PeriodType`
+    - **Description:** Defines how `PeriodType` is parsed from Dhall.
+  - `instance Show PeriodType`
+    - **Description:** Defines string representation for `PeriodType`.
+  - `instance Eq PeriodType`
+    - **Description:** Defines equality for `PeriodType`.
+  - `instance FromJSON PeriodType`
+    - **Description:** Defines how `PeriodType` is parsed from JSON.
+  - `instance ToJSON PeriodType`
+    - **Description:** Defines how `PeriodType` is converted to JSON.
+  - `instance ToSchema PeriodType`
+    - **Description:** Defines how `PeriodType` is represented in an OpenAPI schema.
+  - `instance Ord PeriodType`
+    - **Description:** Defines ordering for `PeriodType`.
+
+### Kernel.Types.SlidingWindowLimiter
+- **Data Types:**
+  - `data APIRateLimitOptions`
+    - **Description:** Represents options for API rate limiting.
+    - **Fields:**
+      - `limit :: Int`: The maximum number of requests allowed within the reset time.
+      - `limitResetTimeInSec :: Int`: The time in seconds after which the limit resets.
+- **Instances:**
+  - `instance Generic APIRateLimitOptions`
+    - **Description:** Derives `Generic` instance for `APIRateLimitOptions`.
+  - `instance FromDhall APIRateLimitOptions`
+    - **Description:** Defines how `APIRateLimitOptions` is parsed from Dhall.
+  - `instance Show APIRateLimitOptions`
+    - **Description:** Defines string representation for `APIRateLimitOptions`.
+  - `instance FromJSON APIRateLimitOptions`
+    - **Description:** Defines how `APIRateLimitOptions` is parsed from JSON.
+  - `instance ToJSON APIRateLimitOptions`
+    - **Description:** Defines how `APIRateLimitOptions` is converted to JSON.
+  - `instance ToSchema APIRateLimitOptions`
+    - **Description:** Defines how `APIRateLimitOptions` is represented in an OpenAPI schema.
+
+### Kernel.Types.SystemConfigs
+- **Data Types:**
+  - `data SystemConfigs`
+    - **Description:** Represents system configurations with an ID and a configuration value.
+    - **Fields:**
+      - `id :: Text`: Unique identifier for the configuration.
+      - `configValue :: Text`: The value of the configuration.
+- **Instances:**
+  - `instance Generic SystemConfigs`
+    - **Description:** Derives `Generic` instance for `SystemConfigs`.
+  - `instance Show SystemConfigs`
+    - **Description:** Defines string representation for `SystemConfigs`.
+
+### Kernel.Types.Time
+- **Data Types:**
+  - `newtype Microseconds`
+    - **Description:** Represents a duration in microseconds.
+    - **Fields:**
+      - `getMicroseconds :: Int`: The underlying `Int` value.
+  - `newtype Milliseconds`
+    - **Description:** Represents a duration in milliseconds.
+    - **Fields:**
+      - `getMilliseconds :: Int`: The underlying `Int` value.
+  - `newtype Seconds`
+    - **Description:** Represents a duration in seconds.
+    - **Fields:**
+      - `getSeconds :: Int`: The underlying `Int` value.
+  - `newtype Minutes`
+    - **Description:** Represents a duration in minutes.
+    - **Fields:**
+      - `getMinutes :: Int`: The underlying `Int` value.
+  - `newtype Hours`
+    - **Description:** Represents a duration in hours.
+    - **Fields:**
+      - `getHours :: Int`: The underlying `Int` value.
+  - `newtype Days`
+    - **Description:** Represents a duration in days.
+    - **Fields:**
+      - `getDays :: Int`: The underlying `Int` value.
+  - `newtype Months`
+    - **Description:** Represents a duration in months.
+    - **Fields:**
+      - `getMonths :: Int`: The underlying `Int` value.
+- **Type Aliases:**
+  - `type MeasuringDuration m a = MonadClock m => m a -> m a`
+    - **Description:** Type alias for a function that measures the duration of a monadic action.
+- **Classes:**
+  - `class Monad m => MonadTime m where getCurrentTime :: m UTCTime`
+    - **Description:** A type class for monads that can provide the current UTC time.
+    - **Methods:**
+      - `getCurrentTime :: m UTCTime`: Returns the current UTC time.
+  - `class Monad m => MonadClock m where getClockTime :: m Clock.TimeSpec`
+    - **Description:** A type class for monads that can provide monotonic clock time.
+    - **Methods:**
+      - `getClockTime :: m Clock.TimeSpec`: Returns the current monotonic clock time.
+- **Functions:**
+  - `daysToSeconds :: Days -> Seconds`
+    - **Usage:** Converts `Days` to `Seconds`.
+  - `minutesToSeconds :: Minutes -> Seconds`
+    - **Usage:** Converts `Minutes` to `Seconds`.
+- **Instances:**
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Microseconds`
+    - **Description:** Derives various instances for `Microseconds`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Milliseconds`
+    - **Description:** Derives various instances for `Milliseconds`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Seconds`
+    - **Description:** Derives various instances for `Seconds`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, ToParamSchema, FromHttpApiData, ToHttpApiData, PrettyShow, PersistField, PersistFieldSql) Minutes`
+    - **Description:** Derives various instances for `Minutes`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Hours`
+    - **Description:** Derives various instances for `Hours`.
+  - `deriving newtype instance FromField Hours`
+    - **Description:** Derives `FromField` instance for `Hours`.
+  - `instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Hours`
+    - **Description:** Defines how `Hours` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Hours`
+    - **Description:** Defines SQL equality check for `Hours` values in Beam.
+  - `instance FromBackendRow Postgres Hours`
+    - **Description:** Defines how `Hours` values are read from PostgreSQL backend rows.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Days`
+    - **Description:** Derives various instances for `Days`.
+  - `deriving newtype (Show, Read, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum, ToSchema, PrettyShow, PersistField, PersistFieldSql) Months`
+    - **Description:** Derives various instances for `Months`.
+  - `deriving newtype instance FromField Months`
+    - **Description:** Derives `FromField` instance for `Months`.
+  - `instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Months`
+    - **Description:** Defines how `Months` values are converted to SQL value syntax.
+  - `instance BeamSqlBackend be => B.HasSqlEqualityCheck be Months`
+    - **Description:** Defines SQL equality check for `Months` values in Beam.
+  - `instance FromBackendRow Postgres Months`
+    - **Description:** Defines how `Months` values are read from PostgreSQL backend rows.
+  - `instance MonadTime IO`
+    - **Description:** Defines `MonadTime` instance for `IO`.
+  - `instance MonadClock IO`
+    - **Description:** Defines `MonadClock` instance for `IO`.
+
+### Kernel.Types.TimeBound
+- **Data Types:**
+  - `data BoundedPeaks`
+    - **Description:** Represents time intervals (start and end times of day) for each day of the week, typically used to define peak hours or availability.
+    - **Fields:**
+      - `monday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Monday.
+      - `tuesday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Tuesday.
+      - `wednesday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Wednesday.
+      - `thursday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Thursday.
+      - `friday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Friday.
+      - `saturday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Saturday.
+      - `sunday :: [(TimeOfDay, TimeOfDay)]`: Time intervals for Sunday.
+  - `data TimeBound`
+    - **Description:** Represents different ways to bound time, either by weekday peaks, specific days, or unbounded.
+    - **Constructors:**
+      - `BoundedByWeekday BoundedPeaks`: Time bound defined by weekly peaks.
+      - `BoundedByDay [(Day, [(TimeOfDay, TimeOfDay)])]`: Time bound defined by specific days and their intervals.
+      - `Unbounded`: No time restrictions.
+- **Functions:**
+  - `findBoundedDomain :: (HasField "timeBounds" domain TimeBound) => [domain] -> UTCTime -> [domain]`
+    - **Usage:** Filters a list of domains based on whether their `timeBounds` are active at a given `UTCTime`. It handles `BoundedByWeekday` and `BoundedByDay` cases, including 24-hour clock cycle rollovers.
+  - `overlaps :: (TimeOfDay, TimeOfDay) -> (TimeOfDay, TimeOfDay) -> Bool`
+    - **Usage:** Checks if two time intervals (start and end `TimeOfDay`) overlap.
+  - `anyOverlap :: [(TimeOfDay, TimeOfDay)] -> [(TimeOfDay, TimeOfDay)] -> Bool`
+    - **Usage:** Checks if any time interval in the first list overlaps with any interval in the second list.
+  - `timeBoundsOverlap :: TimeBound -> TimeBound -> Bool`
+    - **Usage:** Checks if two `TimeBound` values overlap. Handles `Unbounded` cases and specific logic for `BoundedByWeekday` and `BoundedByDay`.
+- **Instances:**
+  - `instance Eq BoundedPeaks`
+    - **Description:** Defines equality for `BoundedPeaks`.
+  - `instance Ord BoundedPeaks`
+    - **Description:** Defines ordering for `BoundedPeaks`.
+  - `instance Show BoundedPeaks`
+    - **Description:** Defines string representation for `BoundedPeaks`.
+  - `instance Read BoundedPeaks`
+    - **Description:** Defines parsing from string for `BoundedPeaks`.
+  - `instance FromJSON BoundedPeaks`
+    - **Description:** Defines how `BoundedPeaks` is parsed from JSON.
+  - `instance ToJSON BoundedPeaks`
+    - **Description:** Defines how `BoundedPeaks` is converted to JSON.
+  - `instance ToSchema BoundedPeaks`
+    - **Description:** Defines how `BoundedPeaks` is represented in an OpenAPI schema.
+  - `instance PrettyShow BoundedPeaks`
+    - **Description:** Defines pretty printing for `BoundedPeaks`.
+  - `instance Eq TimeBound`
+    - **Description:** Defines equality for `TimeBound`.
+  - `instance Ord TimeBound`
+    - **Description:** Defines ordering for `TimeBound`.
+  - `instance ToJSON TimeBound`
+    - **Description:** Defines how `TimeBound` is converted to JSON.
+  - `instance ToSchema TimeBound`
+    - **Description:** Defines how `TimeBound` is represented in an OpenAPI schema.
+  - `instance PrettyShow TimeBound`
+    - **Description:** Defines pretty printing for `TimeBound`.
+  - `instance Show TimeBound`
+    - **Description:** Defines string representation for `TimeBound`.
+  - `instance Read TimeBound`
+    - **Description:** Defines parsing from string for `TimeBound`.
+  - `instance FromJSON TimeBound`
+    - **Description:** Defines how `TimeBound` is parsed from JSON, including custom parsing for string values.
+
+### Kernel.Types.TimeRFC339
+- **Data Types:**
+  - `newtype UTCTimeRFC3339`
+    - **Description:** A newtype wrapper around `UTCTime` for representing UTC time in RFC3339 format (milliseconds precision).
+- **Functions:**
+  - `convertTimeToRFC :: UTCTime -> String`
+    - **Usage:** Converts a `UTCTime` to an RFC3339 formatted `String` with milliseconds precision.
+  - `convertRFCStringToUTC :: String -> UTCTime`
+    - **Usage:** Parses an RFC3339 formatted `String` into a `UTCTime`.
+  - `convertRFC3339ToUTC :: UTCTimeRFC3339 -> UTCTime`
+    - **Usage:** Extracts the underlying `UTCTime` from a `UTCTimeRFC3339` newtype.
+- **Instances:**
+  - `instance Show UTCTimeRFC3339`
+    - **Description:** Defines string representation for `UTCTimeRFC3339`.
+  - `instance Eq UTCTimeRFC3339`
+    - **Description:** Defines equality for `UTCTimeRFC3339`.
+  - `instance Ord UTCTimeRFC3339`
+    - **Description:** Defines ordering for `UTCTimeRFC3339`.
+  - `instance Read UTCTimeRFC3339`
+    - **Description:** Defines parsing from string for `UTCTimeRFC3339`.
+  - `instance FromJSON UTCTimeRFC3339`
+    - **Description:** Defines how `UTCTimeRFC3339` is parsed from JSON.
+  - `instance Data UTCTimeRFC3339`
+    - **Description:** Derives `Data` instance for `UTCTimeRFC3339`.
+  - `instance PrettyShow UTCTimeRFC3339`
+    - **Description:** Defines pretty printing for `UTCTimeRFC3339`.
+  - `instance ToSchema UTCTimeRFC3339`
+    - **Description:** Defines how `UTCTimeRFC3339` is represented in an OpenAPI schema, mapping it to a `Text` schema with a description.
+  - `instance ToJSON UTCTimeRFC3339`
+    - **Description:** Defines how `UTCTimeRFC3339` is converted to JSON (as an RFC3339 formatted string).
+
+### Kernel.Types.Validation
+- **Type Aliases:**
+  - `type Validation = V.Validation [ValidationDescription] ()`
+    - **Description:** Type alias for a validation result, which is either a success (`()`) or a list of `ValidationDescription` errors.
+  - `type Validate a = a -> Validation`
+    - **Description:** Type alias for a validation function that takes a value of type `a` and returns a `Validation` result.
+- **Data Types:**
+  - `data ValidationDescription`
+    - **Description:** Describes a single validation error, including the field name and the expected condition.
+    - **Fields:**
+      - `fieldName :: [Text]`: The path to the field that failed validation (e.g., `["field", "subfield"]`).
+      - `expectation :: Text`: A human-readable description of what was expected for the field.
+- **Instances:**
+  - `instance Generic ValidationDescription`
+    - **Description:** Derives `Generic` instance for `ValidationDescription`.
+  - `instance ToJSON ValidationDescription`
+    - **Description:** Defines how `ValidationDescription` is converted to JSON.
+  - `instance Show ValidationDescription`
+    - **Description:** Defines string representation for `ValidationDescription`.
+
+### Kernel.Types.Value
+- **Data Types:**
+  - `newtype MandatoryValue a`
+    - **Description:** A newtype wrapper for a mandatory value of type `a`.
+    - **Fields:**
+      - `value :: a`: The underlying mandatory value.
+  - `newtype OptionalValue a`
+    - **Description:** A newtype wrapper for an optional value of type `a`.
+    - **Fields:**
+      - `value :: Maybe a`: The underlying optional value.
+- **Instances:**
+  - `instance Show a => Show (MandatoryValue a)`
+    - **Description:** Defines string representation for `MandatoryValue`.
+  - `instance ToJSON a => ToJSON (MandatoryValue a)`
+    - **Description:** Defines how `MandatoryValue` is converted to JSON.
+  - `instance FromJSON a => FromJSON (MandatoryValue a)`
+    - **Description:** Defines how `MandatoryValue` is parsed from JSON.
+  - `instance ToSchema a => ToSchema (MandatoryValue a)`
+    - **Description:** Defines how `MandatoryValue` is represented in an OpenAPI schema.
+  - `instance Show a => Show (OptionalValue a)`
+    - **Description:** Defines string representation for `OptionalValue`.
+  - `instance ToJSON a => ToJSON (OptionalValue a)`
+    - **Description:** Defines how `OptionalValue` is converted to JSON.
+  - `instance FromJSON a => FromJSON (OptionalValue a)`
+    - **Description:** Defines how `OptionalValue` is parsed from JSON.
+  - `instance ToSchema a => ToSchema (OptionalValue a)`
+    - **Description:** Defines how `OptionalValue` is represented in an OpenAPI schema.
+
+### Kernel.Types.Version
+- **Data Types:**
+  - `data Version`
+    - **Description:** Represents a software version number, including major, minor, maintenance, pre-release, and build components.
+    - **Fields:**
+      - `major :: Int`: Major version number.
+      - `minor :: Int`: Minor version number.
+      - `maintenance :: Int`: Maintenance (patch) version number.
+      - `preRelease :: Maybe Text`: Optional pre-release identifier (e.g., "alpha", "beta").
+      - `build :: Maybe Text`: Optional build metadata.
+  - `data DeviceType`
+    - **Description:** Represents the type of a device.
+    - **Constructors:**
+      - `IOS`: iOS device.
+      - `ANDROID`: Android device.
+  - `data Device`
+    - **Description:** Represents device information.
+    - **Fields:**
+      - `deviceType :: DeviceType`: Type of the device.
+      - `deviceVersion :: Text`: Version of the device's operating system.
+      - `deviceModel :: Text`: Model of the device.
+      - `deviceManufacturer :: Maybe Text`: Optional manufacturer of the device.
+- **Functions:**
+  - `versionToText :: Version -> Text`
+    - **Usage:** Converts a `Version` record into its `Text` representation (e.g., "1.2.3-alpha+build45").
+  - `comparePre :: Maybe Text -> Maybe Text -> Ordering`
+    - **Usage:** Compares two optional pre-release identifiers for version ordering.
+  - `textToVersion :: Text -> Either Text Version`
+    - **Usage:** Parses a `Text` string into a `Version` record, handling standard version formats (major.minor.maintenance-preRelease+build). Returns `Right Version` on success or `Right default Version` on parsing failure.
+- **Instances:**
+  - `instance Show Version`
+    - **Description:** Defines string representation for `Version`.
+  - `instance Eq Version`
+    - **Description:** Defines equality for `Version`.
+  - `instance ToJSON Version`
+    - **Description:** Defines how `Version` is converted to JSON.
+  - `instance FromJSON Version`
+    - **Description:** Defines how `Version` is parsed from JSON.
+  - `instance ToSchema Version`
+    - **Description:** Defines how `Version` is represented in an OpenAPI schema.
+  - `instance Ord Version`
+    - **Description:** Defines ordering for `Version`.
+  - `instance ToParamSchema Version`
+    - **Description:** Defines how `Version` is represented in OpenAPI parameter schemas, specifying it as a string with a pattern.
+  - `instance ToHttpApiData Version`
+    - **Description:** Defines how `Version` is converted to HTTP API data (URL piece).
+  - `instance FromHttpApiData Version`
+    - **Description:** Defines how `Version` is parsed from HTTP API data (URL piece).
+  - `instance Show DeviceType`
+    - **Description:** Defines string representation for `DeviceType`.
+  - `instance Eq DeviceType`
+    - **Description:** Defines equality for `DeviceType`.
+  - `instance Ord DeviceType`
+    - **Description:** Defines ordering for `DeviceType`.
+  - `instance Read DeviceType`
+    - **Description:** Defines parsing from string for `DeviceType`.
+  - `instance ToJSON DeviceType`
+    - **Description:** Defines how `DeviceType` is converted to JSON.
+  - `instance FromJSON DeviceType`
+    - **Description:** Defines how `DeviceType` is parsed from JSON.
+  - `instance ToSchema DeviceType`
+    - **Description:** Defines how `DeviceType` is represented in an OpenAPI schema.
+  - `instance ToParamSchema DeviceType`
+    - **Description:** Defines how `DeviceType` is represented in OpenAPI parameter schemas.
+  - `instance FromHttpApiData DeviceType`
+    - **Description:** Defines how `DeviceType` is parsed from HTTP API data (URL piece), handling case-insensitive "ios" and "android".
+  - `instance Show Device`
+    - **Description:** Defines string representation for `Device`.
+  - `instance Eq Device`
+    - **Description:** Defines equality for `Device`.
+  - `instance Ord Device`
+    - **Description:** Defines ordering for `Device`.
+  - `instance Read Device`
+    - **Description:** Defines parsing from string for `Device`.
+  - `instance ToJSON Device`
+    - **Description:** Defines how `Device` is converted to JSON.
+  - `instance FromJSON Device`
+    - **Description:** Defines how `Device` is parsed from JSON.
+  - `instance ToSchema Device`
+    - **Description:** Defines how `Device` is represented in an OpenAPI schema.
+
+### Kernel.Utils.App
+- **Data Types:**
+  - `data RequestInfo`
+    - **Description:** Represents information about an incoming HTTP request.
+    - **Fields:**
+      - `requestMethod :: Method`: HTTP request method.
+      - `rawPathInfo :: ByteString`: Raw path of the request.
+      - `rawQueryString :: ByteString`: Raw query string of the request.
+      - `requestHeaders :: RequestHeaders`: HTTP request headers.
+  - `data ResponseInfo`
+    - **Description:** Represents information about an HTTP response.
+    - **Fields:**
+      - `statusCode :: Int`: HTTP status code.
+      - `statusMessage :: Text`: HTTP status message.
+      - `headers :: [(Text, Text)]`: Response headers.
+- **Functions:**
+  - `handleLeftIO :: Show a => ExitCode -> Text -> Either a b -> IO b`
+    - **Usage:** Handles a `Left` value in an `Either` by printing an error message and exiting the program with a specified `ExitCode`.
+  - `handleLeft :: (Show a, Log m, MonadIO m) => ExitCode -> Text -> Either a b -> m b`
+    - **Usage:** Handles a `Left` value in an `Either` by logging an error message and exiting the program with a specified `ExitCode`.
+  - `hashBodyForSignature :: Application -> Application`
+    - **Usage:** A WAI middleware that hashes the request body and adds it as an `HttpSig.bodyHashHeader` if any authentication headers are present.
+  - `supportProxyAuthorization :: Application -> Application`
+    - **Usage:** A WAI middleware that checks for `Proxy-Authorization` header and, if present and `X-Gateway-Authorization` is missing, copies its value to `X-Gateway-Authorization`.
+  - `modifyRequestHeaders :: (RequestHeaders -> RequestHeaders) -> Request -> Request`
+    - **Usage:** Modifies the request headers of a WAI `Request` using a provided function.
+  - `logRequestAndResponse :: HasLog f => EnvR f -> Application -> Application`
+    - **Usage:** A WAI middleware that logs incoming requests and outgoing responses using `logInfoIO`.
+  - `logRequestAndResponse' :: HasARTFlow f => EnvR f -> Application -> Application`
+    - **Usage:** A WAI middleware that logs requests and responses, including detailed ART (API Request Tracking) data if `shouldLogRequestId` is enabled.
+  - `logRequestAndResponseGeneric' :: HasARTFlow f => f -> (Text -> Text -> IO ()) -> Application -> Application`
+    - **Usage:** Generic internal function for logging requests and responses with ART data.
+  - `logRequestAndResponseGeneric :: (Text -> Text -> IO ()) -> Application -> Application`
+    - **Usage:** Generic internal function for logging requests and responses without ART data.
+  - `withModifiedEnv :: HasLog f => (EnvR f -> Application) -> EnvR f -> Application`
+    - **Usage:** A WAI middleware that modifies the environment (`EnvR`) for each request, appending the request ID to log tags and refreshing local options.
+  - `withModifiedEnv' :: (HasARTFlow f, HasCoreMetrics f, HasField "esqDBEnv" f EsqDBEnv, HedisFlowEnv f, HasCacheConfig f, HasSchemaName BeamSC.SystemConfigsT, HasCacConfig f) => (EnvR f -> Application) -> EnvR f -> Application`
+    - **Usage:** A WAI middleware that modifies the environment for each request, dynamically adjusting log levels based on the request path and handling request ID logging for ART.
+  - `withModifiedEnvFn :: HasLog f => (Wai.Request -> EnvR f -> Text -> IO (EnvR f)) -> (EnvR f -> Application) -> EnvR f -> Application`
+    - **Usage:** A higher-order WAI middleware that allows custom modification of the environment for each request based on a provided modifier function.
+  - `getPodName :: IO (Maybe Text)`
+    - **Usage:** Retrieves the Kubernetes pod name from the `POD_NAME` environment variable.
+  - `lookupDeploymentVersion :: IO DeploymentVersion`
+    - **Usage:** Retrieves the deployment version from the `DEPLOYMENT_NAME` environment variable, defaulting to "DEV".
+
+### Kernel.Utils.CalculateDistance
+- **Functions:**
+  - `distanceBetweenInMeters :: LatLong -> LatLong -> HighPrecMeters`
+    - **Usage:** Calculates the distance in meters between two geographical points (latitude and longitude) using the Haversine formula.
+  - `getEverySnippetWhichIsNot :: (HighPrecMeters -> Bool) -> [LatLong] -> [(LatLong, LatLong, HighPrecMeters)]`
+    - **Usage:** Filters a list of `LatLong` points, returning snippets (pairs of adjacent points) where the distance between them does not satisfy a given predicate.
+  - `splitWith :: [LatLong] -> [LatLong] -> [[LatLong]]`
+    - **Usage:** Splits a list of `LatLong` points into sub-lists based on a list of marker points.
+  - `everySnippetIs :: (HighPrecMeters -> Bool) -> [LatLong] -> Bool`
+    - **Usage:** Checks if the distance between every adjacent pair of `LatLong` points in a list satisfies a given predicate.
+  - `deg2Rad :: Double -> Double`
+    - **Usage:** Converts degrees to radians.
+  - `getRouteLinearLength :: [LatLong] -> Maybe LatLong -> HighPrecMeters`
+    - **Usage:** Calculates the linear length of a route defined by a list of `LatLong` points. If a reference point is provided, it calculates the length from the nearest point to the end of the route.
+
+### Kernel.Utils.Callback
+- **Type Aliases:**
+  - `type WithBecknCallbackMig api callback_success m = ...`
+    - **Description:** Type alias for a function signature that defines a Beckn callback migration, requiring various constraints for monadic flow, Servant API, core metrics, and client capabilities.
+- **Functions:**
+  - `someExceptionToCallbackReqMig :: M.Context.Context -> SomeException -> BecknCallbackReq a`
+    - **Usage:** Converts a `SomeException` into a `BecknCallbackReq` with an `AckResponse` error, using the provided Beckn context.
+  - `withBecknCallbackMig :: (m () -> m ()) -> Maybe ET.ManagerSelector -> WithBecknCallbackMig api callback_success m`
+    - **Usage:** Executes a monadic action and then performs a Beckn callback based on the result (success or error). It handles context updates, metric logging, and error conversion.
+  - `forkBecknCallback :: (Forkable m, MonadCatch m, Log m) => (SomeException -> result) -> (success -> result) -> (result -> m ()) -> Text -> m success -> m ()`
+    - **Usage:** Forks a monadic computation into a new thread, handling its success or failure and applying appropriate conversion functions before performing a final action.
+- **Instances:**
+  - `instance HasLog env => HasLog (EnvR env)`
+    - **Description:** Defines `HasLog` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasCoreMetrics env => HasCoreMetrics (EnvR env)`
+    - **Description:** Defines `HasCoreMetrics` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasField "esqDBEnv" env EsqDBEnv => HasField "esqDBEnv" (EnvR env) EsqDBEnv`
+    - **Description:** Defines `HasField "esqDBEnv"` instance for `EnvR`, delegating to the inner environment.
+  - `instance HedisFlowEnv env => HedisFlowEnv (EnvR env)`
+    - **Description:** Defines `HedisFlowEnv` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasCacheConfig env => HasCacheConfig (EnvR env)`
+    - **Description:** Defines `HasCacheConfig` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasSchemaName BeamSC.SystemConfigsT => HasSchemaName (EnvR env)`
+    - **Description:** Defines `HasSchemaName` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasCacConfig env => HasCacConfig (EnvR env)`
+    - **Description:** Defines `HasCacConfig` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasField "requestId" env (Maybe Text) => HasField "requestId" (EnvR env) (Maybe Text)`
+    - **Description:** Defines `HasField "requestId"` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasField "shouldLogRequestId" env Bool => HasField "shouldLogRequestId" (EnvR env) Bool`
+    - **Description:** Defines `HasField "shouldLogRequestId"` instance for `EnvR`, delegating to the inner environment.
+  - `instance HasField "kafkaProducerForART" env (Maybe KafkaProducerTools) => HasField "kafkaProducerForART" (EnvR env) (Maybe KafkaProducerTools)`
+    - **Description:** Defines `HasField "kafkaProducerForART"` instance for `EnvR`, delegating to the inner environment.
+
+### Kernel.Utils.Common
+- **Functions:**
+  - `generateShortId :: MonadFlow m => m (ShortId a)`
+    - **Usage:** Generates a random alphanumeric short ID of length 10.
+  - `generateOTPCode :: MonadFlow m => m Text`
+    - **Usage:** Generates a 4-digit OTP code as `Text`.
+  - `generateAplhaNumbericCode :: MonadFlow m => Int -> m Text`
+    - **Usage:** Generates a random alphanumeric code of a specified length.
+
+### Kernel.Utils.ComputeIntersection
+- **Type Aliases:**
+  - `type RoutePoints = [LatLong]`
+    - **Description:** Type alias for a list of `LatLong` points representing a route.
+- **Data Types:**
+  - `data BoundingBox`
+    - **Description:** Represents a rectangular bounding box defined by its four corner `LatLong` points.
+    - **Fields:**
+      - `topLeft :: LatLong`: Top-left corner.
+      - `topRight :: LatLong`: Top-right corner.
+      - `bottomLeft :: LatLong`: Bottom-left corner.
+      - `bottomRight :: LatLong`: Bottom-right corner.
+  - `data LineSegment`
+    - **Description:** Represents a line segment defined by its start and end `LatLong` points.
+    - **Fields:**
+      - `start :: LatLong`: Start point of the segment.
+      - `end :: LatLong`: End point of the segment.
+  - `data Orientation`
+    - **Description:** Represents the orientation of three points relative to each other.
+    - **Constructors:**
+      - `Collinear`: Points are collinear.
+      - `Clockwise`: Points are in clockwise order.
+      - `AntiClockwise`: Points are in anti-clockwise order.
+- **Functions:**
+  - `crossProduct :: LatLong -> LatLong -> LatLong -> Double`
+    - **Usage:** Calculates the 2D cross product of vectors formed by three `LatLong` points.
+  - `orientation :: LatLong -> LatLong -> LatLong -> Orientation`
+    - **Usage:** Determines the orientation of three `LatLong` points (collinear, clockwise, or anti-clockwise).
+  - `onSegment :: LatLong -> LatLong -> LatLong -> Bool`
+    - **Usage:** Checks if a `LatLong` point `q` lies on the line segment formed by `p` and `r`.
+  - `doIntersect :: LineSegment -> LineSegment -> Bool`
+    - **Usage:** Checks if two `LineSegment`s intersect using the orientation and on-segment properties.
+  - `pointWithinBoundingBox :: LatLong -> BoundingBox -> Bool`
+    - **Usage:** Checks if a `LatLong` point lies within a given `BoundingBox`.
+  - `lineSegmentWithinBoundingBox :: LineSegment -> BoundingBox -> Bool`
+    - **Usage:** Checks if a `LineSegment` is entirely contained within or intersects a `BoundingBox`.
+  - `doRouteIntersectWithLine :: RoutePoints -> LineSegment -> Bool`
+    - **Usage:** Checks if any segment of a `RoutePoints` list intersects with a given `LineSegment`.
+  - `getBoundingBox :: RoutePoints -> BoundingBox`
+    - **Usage:** Calculates the `BoundingBox` that encloses all `LatLong` points in a `RoutePoints` list.
+  - `checkIntersection :: RoutePoints -> LineSegment -> Bool`
+    - **Usage:** Checks if a given `LineSegment` intersects with any segment of a `RoutePoints` list and if the intersection lies within the bounding box of the route.
+- **Instances:**
+  - `instance Eq LineSegment`
+    - **Description:** Defines equality for `LineSegment`.
+  - `instance Show LineSegment`
+    - **Description:** Defines string representation for `LineSegment`.
+  - `instance FromJSON LineSegment`
+    - **Description:** Defines how `LineSegment` is parsed from JSON.
+  - `instance ToJSON LineSegment`
+    - **Description:** Defines how `LineSegment` is converted to JSON.
+  - `instance ToSchema LineSegment`
+    - **Description:** Defines how `LineSegment` is represented in an OpenAPI schema.
+  - `instance PrettyShow LineSegment`
+    - **Description:** Defines pretty printing for `LineSegment`.
+  - `instance Ord LineSegment`
+    - **Description:** Defines ordering for `LineSegment`.
+  - `instance Read LineSegment`
+    - **Description:** Defines parsing from string for `LineSegment`.
+  - `instance Eq BoundingBox`
+    - **Description:** Defines equality for `BoundingBox`.
+  - `instance Show BoundingBox`
+    - **Description:** Defines string representation for `BoundingBox`.
+  - `instance Read BoundingBox`
+    - **Description:** Defines parsing from string for `BoundingBox`.
+  - `instance Eq Orientation`
+    - **Description:** Defines equality for `Orientation`.
+  - `instance Show Orientation`
+    - **Description:** Defines string representation for `Orientation`.
+  - `instance Read Orientation`
+    - **Description:** Defines parsing from string for `Orientation`.
+
+### Kernel.Utils.Context
+- **Functions:**
+  - `buildTaxiContext :: (MonadTime m, MonadGuid m) => Cab.Action -> Text -> Maybe Text -> Text -> BaseUrl -> Maybe Text -> Maybe BaseUrl -> Cab.City -> Cab.Country -> Bool -> m Cab.Context`
+    - **Usage:** Builds a Beckn `Context` object for taxi-related actions, populating fields like domain, action, core version, BAP/BPP IDs and URIs, transaction/message IDs, timestamp, country, city, and `max_callbacks` based on `autoAssignEnabled` and action type.
+
+### Kernel.Utils.DatastoreLatencyCalculator
+- **Functions:**
+  - `withTimeRedis :: (MonadReader r m, HedisFlow m r, Log m, Monad m, MonadClock m, MonadTime m, CoreMetrics m) => Text -> Text -> m a -> m a`
+    - **Usage:** Measures the execution time of a Redis operation and logs/metrics it if enabled.
+  - `withTime :: (MonadReader r m, Log m, Monad m, MonadClock m, MonadTime m, CoreMetrics m) => Text -> Text -> Bool -> Bool -> m a -> m a`
+    - **Usage:** Measures the execution time of a monadic operation and logs/metrics it based on provided flags.
+  - `withTimeGeneric :: (MonadReader r m, Log m, Monad m, MonadClock m, MonadTime m, CoreMetrics m) => Text -> m a -> m (a, Milliseconds)`
+    - **Usage:** Measures the execution time of a generic monadic operation and records its latency as a metric.
+  - `withTimeAPI :: (MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, Log m, Monad m, MonadClock m, MonadTime m, CoreMetrics m) => Text -> Text -> m a -> m a`
+    - **Usage:** Measures the execution time of an API call and logs/metrics it if enabled.
+
+### Kernel.Utils.Dhall
+- **Functions:**
+  - `readDhallConfig :: FromDhall b => FilePath -> IO b`
+    - **Usage:** Reads a Dhall configuration from the specified file path.
+  - `readDhallConfigDefault :: FromDhall b => String -> IO b`
+    - **Usage:** Reads a Dhall configuration, first checking an environment variable (e.g., `APP_NAME_CONFIG_PATH`) and then defaulting to a local file path (`./dhall-configs/dev/app-name.dhall`).
+  - `customDecoder :: (a1 -> Text) -> (t -> Either a1 a2) -> Decoder t -> Decoder a2`
+    - **Usage:** Creates a custom Dhall decoder that applies a parsing function and handles errors using a provided error message formatter.
+- **Instances:**
+  - `instance {-# OVERLAPS #-} Num a => FromDhall a`
+    - **Description:** Defines `FromDhall` instance for numeric types, allowing them to be decoded from `Integer`.
+  - `deriving instance FromDhall Scheme`
+    - **Description:** Derives `FromDhall` instance for `Scheme`.
+  - `deriving instance FromDhall T.PoolConfig`
+    - **Description:** Derives `FromDhall` instance for `T.PoolConfig`.
+  - `deriving instance FromDhall T.PostgresConfig`
+    - **Description:** Derives `FromDhall` instance for `T.PostgresConfig`.
+  - `deriving instance FromDhall T.RedisConfig`
+    - **Description:** Derives `FromDhall` instance for `T.RedisConfig`.
+  - `instance FromDhall BaseUrl`
+    - **Description:** Defines `FromDhall` instance for `BaseUrl`, parsing from `Text` and handling `InvalidBaseUrlException`.
+
+### Kernel.Utils.Error
+- **Modules:**
+  - `Kernel.Utils.Error.FlowHandling`
+    - **Description:** Re-exports functions and types related to error handling within monadic flows.
+  - `Kernel.Utils.Error.Hierarchy`
+    - **Description:** Re-exports functions and types related to error hierarchy.
+  - `Kernel.Utils.Error.Throwing`
+    - **Description:** Re-exports functions and types related to throwing errors.
+
+### Kernel.Utils.Example
+- **Classes:**
+  - `class Example a where example :: a`
+    - **Description:** A type class for types that can provide a sample value, useful for mocking and OpenAPI documentation.
+    - **Methods:**
+      - `example :: a`: Returns a sample value of type `a`.
+- **Functions:**
+  - `idExample :: Text`
+    - **Usage:** A sample `Text` value representing a generic ID ("123e4567-e89b-12d3-a456-426655440000").
+- **Instances:**
+  - `instance Example a => Example (Maybe a)`
+    - **Description:** Defines `Example` instance for `Maybe` types, returning `Just example`.
+  - `instance Example a => Example [a]`
+    - **Description:** Defines `Example` instance for list types, returning a list containing `one example`.
+  - `instance Example UTCTime`
+    - **Description:** Defines `Example` instance for `UTCTime`, returning a fixed sample UTC time.
+
+### Kernel.Utils.ExternalAPICallLogging
+- **Data Types:**
+  - `data ExternalAPICallLog`
+    - **Description:** Represents a log entry for an external API call.
+    - **Fields:**
+      - `id :: Id ExternalAPICallLog`: Unique identifier for the log entry.
+      - `apiName :: Text`: Name of the API called.
+      - `svcProvider :: Text`: Service provider of the API.
+      - `entityId :: Maybe Text`: Optional ID of the entity related to the API call.
+      - `requestPayload :: Maybe Text`: Optional request payload as text.
+      - `responsePayload :: Text`: Response payload as text.
+      - `createdAt :: UTCTime`: Timestamp of creation.
+      - `updatedAt :: UTCTime`: Timestamp of last update.
+- **Functions:**
+  - `pushExternalApiCallDataToKafka :: (MonadFlow m, MonadReader r m, ToJSON req', ToJSON err, ToJSON res', HasKafkaProducer r) => Text -> Text -> Maybe Text -> Maybe req' -> Either err res' -> m ()`
+    - **Usage:** Pushes external API call data (request and response, which can be success or error) to a Kafka topic if enabled by environment variable.
+  - `pushExternalApiCallDataToKafkaWithTextEncodedResp :: (MonadFlow m, MonadReader r m, ToJSON req', HasKafkaProducer r) => Text -> Text -> Maybe Text -> Maybe req' -> Text -> m ()`
+    - **Usage:** Internal function to push external API call data to Kafka, where the response is already text-encoded.
+
+### Kernel.Utils.FlowLogging
+- **Data Types:**
+  - `data EmtpyTag`
+    - **Description:** A phantom type used as an empty tag for logging.
+- **Functions:**
+  - `logOutputImplementation :: L.MonadFlow m => LogLevel -> T.Message -> m ()`
+    - **Usage:** Implements logging output for different log levels within a monadic flow.
+  - `withLogTagImplementation :: L.MonadFlow m => Text -> ReaderT r m a -> ReaderT r m a`
+    - **Usage:** Implements adding a log tag to the current logging context for a monadic action.
+  - `formatTag :: Text -> Text`
+    - **Usage:** Formats a given text into a log tag (e.g., `[tag]`).
+  - `appendLogContext' :: L.MonadFlow m => Text -> m ()`
+    - **Usage:** Appends a new context tag to the existing logger context.
+  - `appendLogContext :: Text -> IORef LogContext -> IO (IORef LogContext)`
+    - **Usage:** Appends a new context tag to the existing logger context, returning a new `IORef`.
+  - `getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig`
+    - **Usage:** Converts an internal `LoggerConfig` to EulerHS's `T.LoggerConfig`.
+  - `getEulerLoggerRuntime :: Maybe Text -> LoggerConfig -> IO LoggerRuntime`
+    - **Usage:** Creates an EulerHS `LoggerRuntime` with a custom formatter based on hostname and logger configuration.
+  - `createOwnLoggerRuntime :: T.FlowFormatter -> T.LoggerConfig -> IO LoggerRuntime`
+    - **Usage:** Creates a custom EulerHS `LoggerRuntime` with specified formatter, config, and buffer size.
+  - `logFlowFormatter :: Maybe Text -> T.FlowFormatter`
+    - **Usage:** Creates a flow formatter function that includes timestamp and hostname in log messages.
+  - `logFormatterText :: Time.UTCTime -> Maybe Text -> T.MessageFormatter`
+    - **Usage:** Formats log messages into a JSON object with timestamp, level, message number, hostname, log context, tag, and message.
+- **Constants:**
+  - `logContextKey :: Text`
+    - **Description:** The key used to store log context in the `LogContext` `HashMap`.
+
+### Kernel.Utils.GenericPretty
+- **Classes:**
+  - `class PrettyShow a where prettyShow :: a -> LayoutValue`
+    - **Description:** A type class for types that can be converted into a `LayoutValue` for pretty printing.
+    - **Methods:**
+      - `prettyShow :: a -> LayoutValue`: Converts a value to its `LayoutValue` representation.
+  - `class GPrettyShow f where gprettyShow :: OptionsL -> f a -> LayoutValue`
+    - **Description:** A generic type class for pretty printing.
+  - `class GPrettyShowAux f where gprettyShowAux :: OptionsL -> f a -> Layout`
+    - **Description:** Auxiliary generic type class for pretty printing.
+  - `class GPrettyShowIgnoreConstr f where gprettyShowIgnoreConstr :: OptionsL -> f a -> LayoutValue`
+    - **Description:** Generic type class for pretty printing that ignores constructors.
+- **Data Types:**
+  - `data OptionsL`
+    - **Description:** Options for generic pretty printing, including label and constructor modifiers.
+    - **Fields:**
+      - `labelModifier :: String -> String`: Function to modify field labels.
+      - `consModifier :: String -> String`: Function to modify constructor names.
+  - `data LayoutUnit`
+    - **Description:** Represents a unit in a pretty-printed layout, consisting of a string label and a `LayoutValue`.
+  - `data LayoutValue`
+    - **Description:** Represents different types of values in a pretty-printed layout.
+    - **Constructors:**
+      - `LStr String`: A simple string value.
+      - `LLay String Layout`: A layout with a type label.
+      - `LEmpty`: An empty value.
+      - `LJSON String`: A JSON string value.
+  - `data Layout`
+    - **Description:** Represents a collection of `LayoutUnit`s, forming a structured layout.
+  - `newtype Showable a`
+    - **Description:** A newtype wrapper for any type `a` that has a `Show` instance, allowing it to be pretty-printed.
+  - `newtype StrWrap`
+    - **Description:** A newtype wrapper for `String`, used for simple string pretty printing.
+- **Functions:**
+  - `enclose :: String -> String`
+    - **Usage:** Encloses a string in curly braces `{}`.
+  - `encloseSq :: String -> String`
+    - **Usage:** Encloses a string in square brackets `[]`.
+  - `defaultOptionsL :: OptionsL`
+    - **Usage:** Provides default `OptionsL` for generic pretty printing.
+  - `defaultModif :: String -> String`
+    - **Usage:** Default label modifier that removes leading underscores and prefixes.
+  - `defaultConsModif :: String -> String`
+    - **Usage:** Default constructor modifier (identity function).
+  - `layoutStr :: String -> LayoutValue`
+    - **Usage:** Creates an `LStr` `LayoutValue` from a string.
+  - `lconcat :: Layout -> Layout -> Layout`
+    - **Usage:** Concatenates two `Layout`s.
+  - `defaultIndent :: Int`
+    - **Usage:** Default indentation level (4 spaces).
+  - `defaultWidth :: Int`
+    - **Usage:** Default line width (80 characters).
+  - `numToIndent :: Int -> String`
+    - **Usage:** Generates a string of spaces for a given indentation level.
+  - `splitToFixedWidthWithIndent :: Int -> String -> [String]`
+    - **Usage:** Splits a string into lines of fixed width, considering indentation.
+  - `splitToFixedWidth :: Int -> String -> [String]`
+    - **Usage:** Splits a string into lines of fixed width.
+  - `withIndent :: Int -> String -> String`
+    - **Usage:** Indents a string with a specified number of spaces.
+  - `defaultPretty :: PrettyShow a => a -> String`
+    - **Usage:** Pretty prints a value to a string using default options.
+  - `textPretty :: PrettyShow a => a -> Text.Text`
+    - **Usage:** Pretty prints a value to `Text`.
+  - `prettyUnit :: Int -> LayoutUnit -> String`
+    - **Usage:** Pretty prints a `LayoutUnit` with a given indentation.
+  - `prettyValue :: Int -> LayoutValue -> String`
+    - **Usage:** Pretty prints a `LayoutValue` with a given indentation.
+  - `prettyLayout :: Int -> Layout -> String`
+    - **Usage:** Pretty prints a `Layout` with a given indentation.
+  - `genericPrettyShow :: (Generic a, GPrettyShow (Rep a)) => OptionsL -> a -> LayoutValue`
+    - **Usage:** Generic implementation of `prettyShow` using `GHC.Generics`.
+  - `prettyShowListLike :: PrettyShow a => String -> [a] -> LayoutValue`
+    - **Usage:** Helper for pretty printing list-like structures.
+  - `prettyShowViaJSON :: ToJSON a => a -> String`
+    - **Usage:** Pretty prints a value by converting it to JSON first.
+- **Instances:**
+  - `instance Show a => PrettyShow (Showable a)`
+    - **Description:** Defines `PrettyShow` instance for `Showable` types.
+  - `instance PrettyShow StrWrap`
+    - **Description:** Defines `PrettyShow` instance for `StrWrap`.
+  - `instance PrettyShow Int`
+    - **Description:** Defines `PrettyShow` instance for `Int`.
+  - `instance PrettyShow Integer`
+    - **Description:** Defines `PrettyShow` instance for `Integer`.
+  - `instance PrettyShow Double`
+    - **Description:** Defines `PrettyShow` instance for `Double`.
+  - `instance PrettyShow Rational`
+    - **Description:** Defines `PrettyShow` instance for `Rational`.
+  - `instance PrettyShow Centi`
+    - **Description:** Defines `PrettyShow` instance for `Centi`.
+  - `instance PrettyShow Text.Text`
+    - **Description:** Defines `PrettyShow` instance for `Text`.
+  - `instance PrettyShow Bool`
+    - **Description:** Defines `PrettyShow` instance for `Bool`.
+  - `instance PrettyShow Time.Day`
+    - **Description:** Defines `PrettyShow` instance for `Time.Day`.
+  - `instance PrettyShow Void`
+    - **Description:** Defines `PrettyShow` instance for `Void`.
+  - `instance PrettyShow ()`
+    - **Description:** Defines `PrettyShow` instance for `()`.
+  - `instance PrettyShow BS.ByteString`
+    - **Description:** Defines `PrettyShow` instance for `ByteString`.
+  - `instance PrettyShow BSL.ByteString`
+    - **Description:** Defines `PrettyShow` instance for `Lazy.ByteString`.
+  - `instance PrettyShow a => PrettyShow (Maybe a)`
+    - **Description:** Defines `PrettyShow` instance for `Maybe` types.
+  - `instance PrettyShow BaseUrl`
+    - **Description:** Defines `PrettyShow` instance for `BaseUrl`.
+  - `instance (PrettyShow a, PrettyShow b) => PrettyShow (a, b)`
+    - **Description:** Defines `PrettyShow` instance for tuples.
+  - `instance (PrettyShow a, PrettyShow b) => PrettyShow (Either a b)`
+    - **Description:** Defines `PrettyShow` instance for `Either` types.
+  - `instance PrettyShow a => PrettyShow [a]`
+    - **Description:** Defines `PrettyShow` instance for lists.
+  - `instance PrettyShow a => PrettyShow (NE.NonEmpty a)`
+    - **Description:** Defines `PrettyShow` instance for `NonEmpty` lists.
+  - `instance PrettyShow (IO a)`
+    - **Description:** Defines `PrettyShow` instance for `IO` actions.
+  - `instance PrettyShow Value`
+    - **Description:** Defines `PrettyShow` instance for `Aeson.Value`.
+  - `instance PrettyShow Object`
+    - **Description:** Defines `PrettyShow` instance for `Aeson.Object`.
+  - `instance PrettyShow a => PrettyShow (V.Vector a)`
+    - **Description:** Defines `PrettyShow` instance for `Vector` types.
+  - `instance PrettyShow Scientific`
+    - **Description:** Defines `PrettyShow` instance for `Scientific`.
+  - `instance PrettyShow UTCTime`
+    - **Description:** Defines `PrettyShow` instance for `UTCTime`.
+  - `instance PrettyShow NominalDiffTime`
+    - **Description:** Defines `PrettyShow` instance for `NominalDiffTime`.
+  - `instance GPrettyShow f => GPrettyShow (D1 d f)`
+    - **Description:** Defines `GPrettyShow` instance for `D1` (datatype metadata).
+  - `instance (GPrettyShowIgnoreConstr f, GPrettyShowIgnoreConstr g) => GPrettyShow ((:+:) f g)`
+    - **Description:** Defines `GPrettyShow` instance for sum types (`:+:`).
+  - `instance (GPrettyShowIgnoreConstr f, GPrettyShowIgnoreConstr g) => GPrettyShowIgnoreConstr ((:+:) f g)`
+    - **Description:** Defines `GPrettyShowIgnoreConstr` instance for sum types.
+  - `instance (GPrettyShowIgnoreConstr f, Constructor c) => GPrettyShowIgnoreConstr (C1 c f)`
+    - **Description:** Defines `GPrettyShowIgnoreConstr` instance for constructor metadata (`C1`).
+  - `instance GPrettyShow f => GPrettyShowIgnoreConstr (S1 c f)`
+    - **Description:** Defines `GPrettyShowIgnoreConstr` instance for selector metadata (`S1`).
+  - `instance (Constructor c, GPrettyShowAux f) => GPrettyShow (C1 c f)`
+    - **Description:** Defines `GPrettyShow` instance for constructor metadata.
+  - `instance PrettyShow c => GPrettyShow (Rec0 c)`
+    - **Description:** Defines `GPrettyShow` instance for record fields (`Rec0`).
+  - `instance (GPrettyShowAux f, GPrettyShowAux g) => GPrettyShowAux ((:*:) f g)`
+    - **Description:** Defines `GPrettyShowAux` instance for product types (`:*:`).
+  - `instance (Selector s, GPrettyShow f) => GPrettyShowAux (S1 s f)`
+    - **Description:** Defines `GPrettyShowAux` instance for selector metadata.
+
+### Kernel.Utils.IOLogging
+- **Type Aliases:**
+  - `type HasLog r = HasField "loggerEnv" r LoggerEnv`
+    - **Description:** Type alias for a constraint indicating that an environment `r` has a `loggerEnv` field of type `LoggerEnv`.
+- **Data Types:**
+  - `data Logger`
+    - **Description:** Represents a logger with a function to print logs and a cleanup function.
+    - **Fields:**
+      - `printLogFunc :: FastLogger`: Function to print log messages.
+      - `cleanUpFunc :: IO ()`: Function to clean up logger resources.
+  - `data LoggerEnv`
+    - **Description:** Represents the logging environment, including log level, hostname, tags, file/console loggers, and raw SQL logging flag.
+    - **Fields:**
+      - `level :: LogLevel`: The minimum log level.
+      - `hostName :: Maybe Text`: Optional hostname for logs.
+      - `tags :: [Text]`: List of log tags.
+      - `fileLogger :: Maybe Logger`: Optional file logger.
+      - `consoleLogger :: Maybe Logger`: Optional console logger.
+      - `logRawSql :: Bool`: Flag to enable/disable raw SQL logging.
+- **Functions:**
+  - `withLoggerEnv :: LoggerConfig -> Maybe Text -> (LoggerEnv -> IO a) -> IO a`
+    - **Usage:** Manages a `LoggerEnv` resource, ensuring it's properly prepared and released.
+  - `prepareLoggerEnv :: LoggerConfig -> Maybe Text -> IO LoggerEnv`
+    - **Usage:** Prepares the `LoggerEnv` based on `LoggerConfig` and an optional hostname, initializing file and console loggers.
+  - `releaseLoggerEnv :: LoggerEnv -> IO ()`
+    - **Usage:** Releases resources held by the `LoggerEnv`, specifically cleaning up file and console loggers.
+  - `logOutputImplementation :: (HasLog r, MonadReader r m, MonadIO m, MonadTime m) => LogLevel -> Text -> m ()`
+    - **Usage:** Implements logging output for a given log level and message within a monadic context.
+  - `logOutputIO :: (MonadIO m, MonadTime m) => LoggerEnv -> LogLevel -> Text -> m ()`
+    - **Usage:** Logs a message to configured outputs (file/console) if its level is sufficient, formatting it with timestamp, hostname, and tags.
+  - `withLogTagImplementation :: (HasLog r, MonadReader r m) => Text -> m a -> m a`
+    - **Usage:** Implements adding a log tag to the current logging context for a monadic action.
+  - `appendLogTag :: Text -> LoggerEnv -> LoggerEnv`
+    - **Usage:** Appends a new tag to the list of tags in `LoggerEnv`.
+  - `updateLogLevelAndRawSql :: Maybe LogLevel -> LoggerEnv -> LoggerEnv`
+    - **Usage:** Updates the log level and raw SQL logging flag in `LoggerEnv` based on an optional new log level.
+  - `formatTags :: [Text] -> Text`
+    - **Usage:** Formats a list of tags into a single text string (e.g., `[tag1, tag2]`).
+  - `logFormatterText :: Time.UTCTime -> Maybe Text -> LogLevel -> [Text] -> Text -> A.Value`
+    - **Usage:** Formats log messages into an Aeson `Value` (JSON object) with timestamp, level, hostname, tags, and message.
+### Kernel.Utils.Geometry
+- **Data Types:**
+  - `data Geometry`
+    - **Description:** Represents a GeoJSON Geometry object, including its type and coordinates.
+    - **Fields:**
+      - `_type :: String`: The type of the geometry (e.g., "Polygon", "LineString").
+      - `coordinates :: [[[Double]]]`: The coordinates of the geometry.
+  - `data Feature`
+    - **Description:** Represents a GeoJSON Feature object, including its type and geometry.
+    - **Fields:**
+      - `_type :: String`: The type of the feature ("Feature").
+      - `geometry :: Geometry`: The geometry of the feature.
+  - `data GeoJSON`
+    - **Description:** Represents a GeoJSON FeatureCollection object, including its type and a list of features.
+    - **Fields:**
+      - `_type :: String`: The type of the GeoJSON ("FeatureCollection").
+      - `features :: [Feature]`: A list of features.
+- **Functions:**
+  - `convertTo2D :: GeoJSON -> GeoJSON`
+    - **Usage:** Converts 3D GeoJSON coordinates to 2D by dropping the third dimension.
+  - `extractGeometry :: String -> Maybe String`
+    - **Usage:** Extracts the geometry string from a PostgreSQL `shp2pgsql` output string.
+  - `getGeomFromKML :: MonadFlow m => FilePath -> m (Maybe String)`
+    - **Usage:** Converts a KML file to a PostgreSQL geometry string by using `ogr2ogr` and `shp2pgsql` command-line tools. It creates temporary files and directories during the process.
+- **Instances:**
+  - `instance FromJSON Geometry`
+    - **Description:** Defines how `Geometry` is parsed from JSON, stripping a leading underscore from field names.
+  - `instance ToJSON Geometry`
+    - **Description:** Defines how `Geometry` is converted to JSON, stripping a leading underscore from field names.
+  - `instance FromJSON Feature`
+    - **Description:** Defines how `Feature` is parsed from JSON, stripping a leading underscore from field names.
+  - `instance ToJSON Feature`
+    - **Description:** Defines how `Feature` is converted to JSON, stripping a leading underscore from field names.
+  - `instance FromJSON GeoJSON`
+    - **Description:** Defines how `GeoJSON` is parsed from JSON, stripping a leading underscore from field names.
+  - `instance ToJSON GeoJSON`
+    - **Description:** Defines how `GeoJSON` is converted to JSON, stripping a leading underscore from field names.
+### Kernel.Utils.GenericPretty
+- **Classes:**
+  - `class PrettyShow a where prettyShow :: a -> LayoutValue`
+    - **Description:** A type class for types that can be converted into a `LayoutValue` for pretty printing.
+    - **Methods:**
+      - `prettyShow :: a -> LayoutValue`: Converts a value to its `LayoutValue` representation.
+  - `class GPrettyShow f where gprettyShow :: OptionsL -> f a -> LayoutValue`
+    - **Description:** A generic type class for pretty printing.
+  - `class GPrettyShowAux f where gprettyShowAux :: OptionsL -> f a -> Layout`
+    - **Description:** Auxiliary generic type class for pretty printing.
+  - `class GPrettyShowIgnoreConstr f where gprettyShowIgnoreConstr :: OptionsL -> f a -> LayoutValue`
+    - **Description:** Generic type class for pretty printing that ignores constructors.
+- **Data Types:**
+  - `data OptionsL`
+    - **Description:** Options for generic pretty printing, including label and constructor modifiers.
+    - **Fields:**
+      - `labelModifier :: String -> String`: Function to modify field labels.
+      - `consModifier :: String -> String`: Function to modify constructor names.
+  - `data LayoutUnit`
+    - **Description:** Represents a unit in a pretty-printed layout, consisting of a string label and a `LayoutValue`.
+  - `data LayoutValue`
+    - **Description:** Represents different types of values in a pretty-printed layout.
+    - **Constructors:**
+      - `LStr String`: A simple string value.
+      - `LLay String Layout`: A layout with a type label.
+      - `LEmpty`: An empty value.
+      - `LJSON String`: A JSON string value.
+  - `data Layout`
+    - **Description:** Represents a collection of `LayoutUnit`s, forming a structured layout.
+  - `newtype Showable a`
+    - **Description:** A newtype wrapper for any type `a` that has a `Show` instance, allowing it to be pretty-printed.
+  - `newtype StrWrap`
+    - **Description:** A newtype wrapper for `String`, used for simple string pretty printing.
+- **Functions:**
+  - `enclose :: String -> String`
+    - **Usage:** Encloses a string in curly braces `{}`.
+  - `encloseSq :: String -> String`
+    - **Usage:** Encloses a string in square brackets `[]`.
+  - `defaultOptionsL :: OptionsL`
+    - **Usage:** Provides default `OptionsL` for generic pretty printing.
+  - `defaultModif :: String -> String`
+    - **Usage:** Default label modifier that removes leading underscores and prefixes.
+  - `defaultConsModif :: String -> String`
+    - **Usage:** Default constructor modifier (identity function).
+  - `layoutStr :: String -> LayoutValue`
+    - **Usage:** Creates an `LStr` `LayoutValue` from a string.
+  - `lconcat :: Layout -> Layout -> Layout`
+    - **Usage:** Concatenates two `Layout`s.
+  - `defaultIndent :: Int`
+    - **Usage:** Default indentation level (4 spaces).
+  - `defaultWidth :: Int`
+    - **Usage:** Default line width (80 characters).
+  - `numToIndent :: Int -> String`
+    - **Usage:** Generates a string of spaces for a given indentation level.
+  - `splitToFixedWidthWithIndent :: Int -> String -> [String]`
+    - **Usage:** Splits a string into lines of fixed width, considering indentation.
+  - `splitToFixedWidth :: Int -> String -> [String]`
+    - **Usage:** Splits a string into lines of fixed width.
+  - `withIndent :: Int -> String -> String`
+    - **Usage:** Indents a string with a specified number of spaces.
+  - `defaultPretty :: PrettyShow a => a -> String`
+    - **Usage:** Pretty prints a value to a string using default options.
+  - `textPretty :: PrettyShow a => a -> Text.Text`
+    - **Usage:** Pretty prints a value to `Text`.
+  - `prettyUnit :: Int -> LayoutUnit -> String`
+    - **Usage:** Pretty prints a `LayoutUnit` with a given indentation.
+  - `prettyValue :: Int -> LayoutValue -> String`
+    - **Usage:** Pretty prints a `LayoutValue` with a given indentation.
+  - `prettyLayout :: Int -> Layout -> String`
+    - **Usage:** Pretty prints a `Layout` with a given indentation.
+  - `genericPrettyShow :: (Generic a, GPrettyShow (Rep a)) => OptionsL -> a -> LayoutValue`
+    - **Usage:** Generic implementation of `prettyShow` using `GHC.Generics`.
+  - `prettyShowListLike :: PrettyShow a => String -> [a] -> LayoutValue`
+    - **Usage:** Helper for pretty printing list-like structures.
+  - `prettyShowViaJSON :: ToJSON a => a -> String`
+    - **Usage:** Pretty prints a value by converting it to JSON first.
+- **Instances:**
+  - `instance Show a => PrettyShow (Showable a)`
+    - **Description:** Defines `PrettyShow` instance for `Showable` types.
+  - `instance PrettyShow StrWrap`
+    - **Description:** Defines `PrettyShow` instance for `StrWrap`.
+  - `instance PrettyShow Int`
+    - **Description:** Defines `PrettyShow` instance for `Int`.
+  - `instance PrettyShow Integer`
+    - **Description:** Defines `PrettyShow` instance for `Integer`.
+  - `instance PrettyShow Double`
+    - **Description:** Defines `PrettyShow` instance for `Double`.
+  - `instance PrettyShow Rational`
+    - **Description:** Defines `PrettyShow` instance for `Rational`.
+  - `instance PrettyShow Centi`
+    - **Description:** Defines `PrettyShow` instance for `Centi`.
+  - `instance PrettyShow Text.Text`
+    - **Description:** Defines `PrettyShow` instance for `Text`.
+  - `instance PrettyShow Bool`
+    - **Description:** Defines `PrettyShow` instance for `Bool`.
+  - `instance PrettyShow Time.Day`
+    - **Description:** Defines `PrettyShow` instance for `Time.Day`.
+  - `instance PrettyShow Void`
+    - **Description:** Defines `PrettyShow` instance for `Void`.
+  - `instance PrettyShow ()`
+    - **Description:** Defines `PrettyShow` instance for `()`.
+  - `instance PrettyShow BS.ByteString`
+    - **Description:** Defines `PrettyShow` instance for `ByteString`.
+  - `instance PrettyShow BSL.ByteString`
+    - **Description:** Defines `PrettyShow` instance for `Lazy.ByteString`.
+  - `instance PrettyShow a => PrettyShow (Maybe a)`
+    - **Description:** Defines `PrettyShow` instance for `Maybe` types.
+  - `instance PrettyShow BaseUrl`
+    - **Description:** Defines `PrettyShow` instance for `BaseUrl`.
+  - `instance (PrettyShow a, PrettyShow b) => PrettyShow (a, b)`
+    - **Description:** Defines `PrettyShow` instance for tuples.
+  - `instance (PrettyShow a, PrettyShow b) => PrettyShow (Either a b)`
+    - **Description:** Defines `PrettyShow` instance for `Either` types.
+  - `instance PrettyShow a => PrettyShow [a]`
+    - **Description:** Defines `PrettyShow` instance for lists.
+  - `instance PrettyShow a => PrettyShow (NE.NonEmpty a)`
+    - **Description:** Defines `PrettyShow` instance for `NonEmpty` lists.
+  - `instance PrettyShow (IO a)`
+    - **Description:** Defines `PrettyShow` instance for `IO` actions.
+  - `instance PrettyShow Value`
+    - **Description:** Defines `PrettyShow` instance for `Aeson.Value`.
+  - `instance PrettyShow Object`
+    - **Description:** Defines `PrettyShow` instance for `Aeson.Object`.
+  - `instance PrettyShow a => PrettyShow (V.Vector a)`
+    - **Description:** Defines `PrettyShow` instance for `Vector` types.
+  - `instance PrettyShow Scientific`
+    - **Description:** Defines `PrettyShow` instance for `Scientific`.
+  - `instance PrettyShow UTCTime`
+    - **Description:** Defines `PrettyShow` instance for `UTCTime`.
+  - `instance PrettyShow NominalDiffTime`
+    - **Description:** Defines `PrettyShow` instance for `NominalDiffTime`.
+  - `instance GPrettyShow f => GPrettyShow (D1 d f)`
+    - **Description:** Defines `GPrettyShow` instance for `D1` (datatype metadata).
+  - `instance (GPrettyShowIgnoreConstr f, GPrettyShowIgnoreConstr g) => GPrettyShow ((:+:) f g)`
+    - **Description:** Defines `GPrettyShow` instance for sum types (`:+:`).
+  - `instance (GPrettyShowIgnoreConstr f, GPrettyShowIgnoreConstr g) => GPrettyShowIgnoreConstr ((:+:) f g)`
+    - **Description:** Defines `GPrettyShowIgnoreConstr` instance for sum types.
+  - `instance (GPrettyShowIgnoreConstr f, Constructor c) => GPrettyShowIgnoreConstr (C1 c f)`
+    - **Description:** Defines `GPrettyShowIgnoreConstr` instance for constructor metadata (`C1`).
+  - `instance GPrettyShow f => GPrettyShowIgnoreConstr (S1 c f)`
+    - **Description:** Defines `GPrettyShowIgnoreConstr` instance for selector metadata (`S1`).
+  - `instance (Constructor c, GPrettyShowAux f) => GPrettyShow (C1 c f)`
+    - **Description:** Defines `GPrettyShow` instance for constructor metadata.
+  - `instance PrettyShow c => GPrettyShow (Rec0 c)`
+    - **Description:** Defines `GPrettyShow` instance for record fields (`Rec0`).
+  - `instance (GPrettyShowAux f, GPrettyShowAux g) => GPrettyShowAux ((:*:) f g)`
+    - **Description:** Defines `GPrettyShowAux` instance for product types (`:*:`).
+  - `instance (Selector s, GPrettyShow f) => GPrettyShowAux (S1 s f)`
+    - **Description:** Defines `GPrettyShowAux` instance for selector metadata.

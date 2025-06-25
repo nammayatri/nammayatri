@@ -9,7 +9,7 @@ imports:
   Seconds: Kernel.Types.Common
   CxAgentDetails: IssueManagement.Common
   GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
-  ServiceTierType : Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.ServiceTierType
   RentalsConfig: Domain.Types.RentalsIntercityCache
   IntercitySearchLocation: Domain.Types.RentalsIntercityCache
   VehicleVariant: Domain.Types.VehicleVariant
@@ -90,7 +90,7 @@ RiderConfig:
     isFirstReferredRideEnabled: Bool
     excludedVehicleVariants: "Maybe [ServiceTierType]"
     rentalsConfig: "Maybe [RentalsConfig]"
-    intercitySearchLocations : "Maybe [IntercitySearchLocation]"
+    intercitySearchLocations: "Maybe [IntercitySearchLocation]"
     payoutReferralThresholdPerDay: Int
     payoutReferralThresholdPerMonth: Int
     variantListForNearByReq: "Maybe [VehicleVariant]"
@@ -99,12 +99,15 @@ RiderConfig:
     isDeviceIdCheckDisabled: Maybe Bool
     enableBusFiltering: Maybe Bool
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
-    fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
-    blockedUntilInMins : Maybe Minutes
+    fareCacheInterCitySearchLocations: "Maybe [IntercitySearchLocation]"
+    blockedUntilInMins: Maybe Minutes
     ticketAssetDomain: Maybe Text
     qrTicketRestrictionStartTime: Maybe TimeOfDay
     qrTicketRestrictionEndTime: Maybe TimeOfDay
     ticketingPermissionConfig: Maybe Value
+    showDropLocationSuggestion: Maybe Bool
+    updateUpiMaxAmountForPoc: Maybe Bool
+    nyRegularSubscriptionBatchSize: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -134,16 +137,16 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Maybe Int
     variantListForNearByReq: Maybe [Text]
     nearByDriverRingBucketCfg: Maybe Value
-    fareCacheRentalsConfig : Maybe Value
-    fareCacheInterCitySearchLocations : Maybe Value
+    fareCacheRentalsConfig: Maybe Value
+    fareCacheInterCitySearchLocations: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
 
   intermediateTransformers:
     fromTType:
-      - now: Kernel.Types.Common.getCurrentTime|EM
-      - payoutReferralStartDate_: fromMaybe now payoutReferralStartDate|E
+    - now: Kernel.Types.Common.getCurrentTime|EM
+    - payoutReferralStartDate_: fromMaybe now payoutReferralStartDate|E
   fromTType:
     ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
     executePaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay)|E
@@ -172,8 +175,8 @@ RiderConfig:
     payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
     variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
-    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
-    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheRentalsConfig: fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheInterCitySearchLocations: fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -203,8 +206,8 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
     variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
-    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
-    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
+    fareCacheRentalsConfig: fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
+    fareCacheInterCitySearchLocations: fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -230,7 +233,7 @@ RiderConfig:
     straightLineThreshold: "300"
     permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
     maxAllowedPublicTransportLegs: "2"
-    postRideSafetyNotificationDelay : "60"
+    postRideSafetyNotificationDelay: "60"
     useUserSettingsForSafetyIVR: "false"
     payoutReferralProgram: "false"
     payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
@@ -247,8 +250,8 @@ RiderConfig:
       where: merchantOperatingCityId
 
   beamInstance:
-    - MakeTableInstances
-    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+  - MakeTableInstances
+  - Custom Domain.Types.UtilsTH.mkCacParseInstance
 
   sqlType:
     emailOtpConfig: "json"
@@ -260,13 +263,13 @@ RiderConfig:
     permissibleModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []
-    intercitySearchLocations : text []
+    intercitySearchLocations: text []
     variantListForNearByReq: text []
     nearByDriverRingBucketCfg: "json"
-    fareCacheRentalsConfig : "json"
-    fareCacheInterCitySearchLocations : "json"
+    fareCacheRentalsConfig: "json"
+    fareCacheInterCitySearchLocations: "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
 
   extraOperations:
-    - EXTRA_DOMAIN_TYPE_FILE
+  - EXTRA_DOMAIN_TYPE_FILE

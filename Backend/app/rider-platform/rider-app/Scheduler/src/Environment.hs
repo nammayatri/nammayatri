@@ -25,8 +25,11 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
+import Domain.Types (GatewayAndRegistryService (..))
 import "rider-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
+import Kernel.External.Maps (createMapsClient)
+import qualified Kernel.External.Maps.Interface as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -36,6 +39,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
+import Kernel.Types.RateLimiter (APIRateLimitOptions)
 import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
@@ -97,7 +101,19 @@ data HandlerEnv = HandlerEnv
     passettoContext :: PassettoContext,
     serviceClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
-    selfBaseUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl,
+    bapMetrics :: BAPMetricsContainer,
+    ondcGatewayUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    nwAddress :: BaseUrl,
+    selfUIUrl :: BaseUrl,
+    apiRateLimitOptions :: APIRateLimitOptions,
+    searchRateLimitOptions :: APIRateLimitOptions,
+    disableSignatureAuth :: Bool,
+    authTokenCacheExpiry :: Seconds,
+    mapsClient :: Maps.Interface,
+    kafkaProducerTools :: KafkaProducerTools,
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig
   }
   deriving (Generic)
 
@@ -129,6 +145,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer
   serviceClickhouseEnv <- createConn riderClickhouseCfg
+  bapMetrics <- registerBAPMetricsContainer
+  mapsClient <- createMapsClient httpClientOptions
   let serviceClickhouseCfg = riderClickhouseCfg
   return HandlerEnv {..}
 
