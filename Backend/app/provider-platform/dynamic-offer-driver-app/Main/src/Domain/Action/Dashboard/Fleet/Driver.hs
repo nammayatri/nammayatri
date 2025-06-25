@@ -588,7 +588,7 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
+  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
@@ -2343,7 +2343,8 @@ fetchOrCreatePerson moc req_ = do
         person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
         let isNew = True in pure (person, isNew)
       Just person -> do
-        let isNew = False in pure (person, isNew)
+        QPerson.updateName req_.driverName person.id
+        let isNew = False in pure (person {DP.firstName = req_.driverName}, isNew)
 
 ---------------------------------------------------------------------
 postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
