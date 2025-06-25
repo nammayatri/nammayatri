@@ -3,8 +3,8 @@
     # Workaround https://github.com/nammayatri/nammayatri/pull/9493#issuecomment-2506672419
     max-call-depth = "1000000";
     # Nix cache
-    extra-substituters = "https://ny-ci-nixos.betta-gray.ts.net/";
-    extra-trusted-public-keys = "ny-ci-nixos.betta-gray.ts.net:tjYdPZNppaGd6L9m7cMGzib4kkch1zAuR660dYp1DiY=";
+    # extra-substituters = "https://ny-ci-nixos.betta-gray.ts.net/";
+    # extra-trusted-public-keys = "ny-ci-nixos.betta-gray.ts.net:tjYdPZNppaGd6L9m7cMGzib4kkch1zAuR660dYp1DiY=";
   };
 
   inputs = {
@@ -20,6 +20,17 @@
 
     namma-dsl = {
       url = "github:nammayatri/namma-dsl";
+    };
+    classyplate.url = "github:eswar2001/classyplate/a360f56820df6ca5284091f318bcddcd3e065243";
+    references.url = "github:eswar2001/references/120ae7826a7af01a527817952ad0c3f5ef08efd0";
+    spider = {
+      url = "github:juspay/spider/nammayatri";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        haskell-flake.follows = "haskell-flake";
+        references.follows = "references";
+        classyplate.follows = "classyplate";
+      };
     };
 
     haskell-cac = {

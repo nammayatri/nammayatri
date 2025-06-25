@@ -1,10 +1,11 @@
 module ExternalBPP.Flow where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (groupBy)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
-import Domain.Types
+import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSConfig
 import Domain.Types.FRFSQuote as DFRFSQuote
@@ -30,20 +31,21 @@ import qualified Storage.Queries.RouteStopMapping as QRSM
 import Tools.Error
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
-getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory
+getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStopCode endStopCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStopCode endStopCode vehicleCategory
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m [DOnSearch]
 search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails = do
-  quotes <- buildQuotes routeDetails
+  quotes <- buildQuotes providerConfigs integratedBPPConfig routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
+
   return $
     DOnSearch
       { bppSubscriberId = bapConfig.subscriberId,
         bppSubscriberUrl = showBaseUrl bapConfig.subscriberUrl,
         providerDescription = Nothing,
         providerId = bapConfig.uniqueKeyId,
-        providerName = CallAPI.getProviderName integratedBPPConfig,
+        providerName = CallAPI.getProviderName representativeConfig,
         quotes = quotes,
         validTill = validTill,
         transactionId = searchReq.id.getId,
@@ -60,18 +62,14 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     buildSingleTransitRouteQuote FRFSRouteDetails {..} = do
       case routeCode of
         Just routeCode' -> do
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
-          let routeInfo =
-                RouteStopInfo
-                  { route,
-                    totalStops = Nothing,
-                    stops = Nothing,
-                    startStopCode = startStationCode,
-                    endStopCode = endStationCode,
-                    travelTime = Nothing
-                  }
-          stations <- buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode START END
-          mkSingleRouteQuote searchReq.vehicleType routeInfo stations
+          routes <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeCode'
+          case routes of
+            ((_, route') : _) -> do
+              -- Changed route to route' to avoid conflict with RouteStopInfo.route
+              let routeInfo = RouteStopInfo {route = route', totalStops = Nothing, stops = Nothing, startStopCode = startStationCode, endStopCode = endStationCode, travelTime = Nothing}
+              stations <- buildStations providerConfigs integratedBPPConfig (SharedLogic.FRFSUtils.route routeInfo).code (SharedLogic.FRFSUtils.startStopCode routeInfo) (SharedLogic.FRFSUtils.endStopCode routeInfo) START END
+              mkSingleRouteQuote integratedBPPConfig searchReq.vehicleType routeInfo stations
+            _ -> pure []
         Nothing -> do
           routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
           quotes <-
@@ -101,7 +99,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
       let routeDetail = mergeFFRFSRouteDetails routesDetails
       case (routeDetail, routeDetail >>= (.routeCode)) of
         (Just routeDetail', Just routeCode') -> do
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
+          route <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeCode'
           let routeInfo =
                 RouteStopInfo
                   { route,

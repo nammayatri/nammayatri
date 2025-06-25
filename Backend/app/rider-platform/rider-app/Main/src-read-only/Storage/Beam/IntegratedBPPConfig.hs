@@ -27,13 +27,11 @@ data IntegratedBPPConfigT f = IntegratedBPPConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table IntegratedBPPConfigT where
-  data PrimaryKey IntegratedBPPConfigT f
-    = IntegratedBPPConfigId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f BecknV2.OnDemand.Enums.VehicleCategory)
-    deriving (Generic, B.Beamable)
-  primaryKey = IntegratedBPPConfigId <$> domain <*> id <*> merchantId <*> merchantOperatingCityId <*> vehicleCategory
+  data PrimaryKey IntegratedBPPConfigT f = IntegratedBPPConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = IntegratedBPPConfigId . id
 
 type IntegratedBPPConfig = IntegratedBPPConfigT Identity
 
-$(enableKVPG ''IntegratedBPPConfigT ['domain, 'id, 'merchantId, 'merchantOperatingCityId, 'vehicleCategory] [])
+$(enableKVPG ''IntegratedBPPConfigT ['id] [])
 
 $(mkTableInstances ''IntegratedBPPConfigT "integrated_bpp_config")

@@ -102,7 +102,8 @@ dependencies:
   - driver-offer-allocator
   - dashboard-helper-api
   - sequelize
-
+  - fdep
+  - fieldInspector
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
@@ -112,8 +113,11 @@ ghc-options:
   - -fhide-source-paths
   - -Werror
   - -Wno-unrecognised-pragmas
-  - -fplugin=RecordDotPreprocessor
+  # - -fplugin=RecordDotPreprocessor
   - -threaded
+  - -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false}
+  - -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false}
+  - -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false}
 
 library:
   source-dirs:

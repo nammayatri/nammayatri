@@ -23,7 +23,6 @@ where
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Text as Text
-import Domain.Types.GTFSFeedInfo (GTFSFeedInfo)
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -35,12 +34,8 @@ import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.GTFSFeedInfo as GTFSFeedInfo
 import qualified Storage.GraphqlQueries.RouteStopTimeTable as Queries
 import Tools.Error
-
-modifyCodesToGTFS :: GTFSFeedInfo -> Text -> Text
-modifyCodesToGTFS gtfsFeedInfo codes = gtfsFeedInfo.feedId.getId <> ":" <> codes
 
 castVehicleType :: MonadFlow m => VehicleCategory.VehicleCategory -> m BecknV2.FRFS.Enums.VehicleCategory
 castVehicleType vehicleType = do
@@ -62,9 +57,9 @@ findByRouteCodeAndStopCode ::
   m [RouteStopTimeTable]
 findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' = do
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
-  gtfsFeedInfo <- GTFSFeedInfo.findByVehicleTypeAndCity vehicleType integratedBPPConfig.merchantOperatingCityId integratedBPPConfig.merchantId
-  let routeCodes = P.map (modifyCodesToGTFS gtfsFeedInfo) routeCodes'
-      stopCode = modifyCodesToGTFS gtfsFeedInfo stopCode'
+  -- The feedId is now directly the integratedBppConfigId
+  let routeCodes = routeCodes'
+      stopCode = stopCode'
   allTrips <-
     Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
       Just a -> pure a

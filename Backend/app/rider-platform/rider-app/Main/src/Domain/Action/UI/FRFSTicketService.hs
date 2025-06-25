@@ -81,7 +81,6 @@ import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopMapping as QRSM
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
@@ -92,60 +91,68 @@ getFrfsRoutes ::
   Maybe Text ->
   Context.City ->
   Spec.VehicleCategory ->
+  Maybe (Id DIBC.IntegratedBPPConfig) ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
-getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehicleType = do
+getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehicleType mbIntegratedBppConfigId = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _city)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  let platformType = DIBC.APPLICATION
+  integratedBPPConfigList <- case mbIntegratedBppConfigId of
+    Just iId -> (:[]) <$> Utils.getIntegratedBPPConfig iId
+    Nothing -> Utils.getIntegratedBPPConfigs (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
+
   case (mbStartStationCode, mbEndStationCode) of
     (Just startStationCode, Just endStationCode) -> do
-      routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
-      return $
-        map
-          ( \routeInfo ->
-              let stops =
-                    ( mapWithIndex
-                        ( \idx stop ->
-                            FRFSStationAPI
-                              { name = Just stop.stopName,
-                                code = stop.stopCode,
-                                routeCodes = Nothing,
-                                lat = Just stop.stopPoint.lat,
-                                lon = Just stop.stopPoint.lon,
-                                stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
-                                sequenceNum = Just stop.sequenceNum,
-                                address = Nothing,
-                                distance = Nothing,
-                                color = Nothing,
-                                towards = Nothing
-                              }
-                        )
-                    )
-                      <$> routeInfo.stops
-               in FRFSTicketService.FRFSRouteAPI
-                    { code = routeInfo.route.code,
-                      shortName = routeInfo.route.shortName,
-                      longName = routeInfo.route.longName,
-                      startPoint = routeInfo.route.startPoint,
-                      endPoint = routeInfo.route.endPoint,
-                      totalStops = routeInfo.totalStops,
-                      stops = stops,
-                      timeBounds = Just routeInfo.route.timeBounds,
-                      waypoints = Nothing
-                    }
-          )
-          routesInfo
+      catMaybes <$>
+        mapM (
+          \integratedBPPConfig -> do
+            routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
+            return $
+              map
+                ( \routeInfo ->
+                    let stops =
+                          ( mapWithIndex
+                              ( \idx stop ->
+                                  FRFSStationAPI
+                                    { name = Just stop.stopName,
+                                      code = stop.stopCode,
+                                      routeCodes = Nothing,
+                                      lat = Just stop.stopPoint.lat,
+                                      lon = Just stop.stopPoint.lon,
+                                      stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
+                                      sequenceNum = Just stop.sequenceNum,
+                                      address = Nothing,
+                                      distance = Nothing,
+                                      color = Nothing,
+                                      towards = Nothing,
+                                      integratedBppConfigId = Just integratedBPPConfig.id
+                                    }
+                              )
+                          ) <$> routeInfo.stops
+                    in FRFSTicketService.FRFSRouteAPI
+                          { code = routeInfo.route.code,
+                            shortName = routeInfo.route.shortName,
+                            longName = routeInfo.route.longName,
+                            startPoint = routeInfo.route.startPoint,
+                            endPoint = routeInfo.route.endPoint,
+                            totalStops = routeInfo.totalStops,
+                            stops = stops,
+                            timeBounds = Just routeInfo.route.timeBounds,
+                            waypoints = Nothing,
+                            integratedBppConfigId = Just integratedBPPConfig.id
+                          }
+                )
+                routesInfo
+        ) integratedBPPConfigList
     _ -> do
-      routes <-
-        try @_ @SomeException (OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType) >>= \case
-          Left _ -> B.runInReplica $ QRoute.findAllByVehicleType Nothing Nothing _vehicleType integratedBPPConfig.id
-          Right routes -> pure routes
-      return $
-        map
-          ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, ..}
-          )
-          routes
+      mapM (
+        \integratedBPPConfig -> do
+          routes <- OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType
+          return $
+            map
+              ( \(_, Route.Route {..}) -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = Just integratedBppConfigId, ..}
+              )
+              routes
+      ) integratedBPPConfigList      
   where
     mapWithIndex f xs = zipWith f [0 ..] xs
 
@@ -171,18 +178,21 @@ getFrfsRoute ::
   Maybe DIBC.PlatformType ->
   Context.City ->
   BecknV2.FRFS.Enums.VehicleCategory ->
+  Maybe (Id DIBC.IntegratedBPPConfig) ->
   Environment.Flow API.Types.UI.FRFSTicketService.FRFSRouteAPI
-getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
+getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType mbIntegratedBppConfigId = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _mbCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _mbCity)
   let platformType = fromMaybe DIBC.APPLICATION _platformType
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
-  route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode
-  routeStops <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-      Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-      Right stops -> pure stops
+  integratedBPPConfigList <- case mbIntegratedBppConfigId of
+    Just iId -> (:[]) <$> Utils.getIntegratedBPPConfig iId
+    Nothing -> Utils.getIntegratedBPPConfigs (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
+  (integratedBPPConfig, route) <- 
+    mapM 
+      (\integratedBPPConfig -> Utils.tryToMaybe $ OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode) 
+      integratedBPPConfigList  
+    >>= (pure . listToMaybe .catMaybes)
+    >>= fromMaybeM (RouteNotFound routeCode)
+  routeStops <- OTPRest.getRouteStopMappingByRouteCode integratedBPPConfig routeCode  
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
@@ -209,12 +219,14 @@ getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
-                      towards = Nothing
+                      towards = Nothing,
+                      integratedBppConfigId = Just route.integratedBppConfigId
                     }
               )
               stopsSortedBySequenceNumber,
         timeBounds = Just route.timeBounds,
-        waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
+        waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude}),
+        integratedBppConfigId = Just route.integratedBppConfigId
       }
 
 getFrfsStations ::
@@ -229,8 +241,9 @@ getFrfsStations ::
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Text ->
   Spec.VehicleCategory ->
+  Maybe (Id DIBC.IntegratedBPPConfig) ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _platformType mbRouteCode mbStartStationCode vehicleType_ = do
+getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _platformType mbRouteCode mbStartStationCode vehicleType_ mbIntegratedBppConfigId = do
   merchantOpCity <-
     case mbCity of
       Nothing ->
@@ -240,189 +253,174 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
         CQMOC.findByMerchantIdAndCity mId city
           >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> "-city-" <> show city)
   let platformType = fromMaybe (DIBC.APPLICATION) _platformType
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType_ ||+ "Platform Type:" +|| platformType ||+ "")
-  case (mbRouteCode, mbStartStationCode, mbEndStationCode) of
-    -- Return possible Start stops, when End Stop is Known
-    (Nothing, Nothing, Just endStationCode) -> do
-      currentTime <- getCurrentTime
-      routesWithStop <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode endStationCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByStopCode endStationCode integratedBPPConfig.id
-          Right stops -> pure stops
-      let routeCodes = nub $ map (.routeCode) routesWithStop
-      routeStops <-
-        EulerHS.Prelude.concatMapM
-          ( \routeCode ->
-              try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-                Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-                Right stops -> pure stops
-          )
-          routeCodes
-      let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
-          possibleStartStops =
-            nubBy (\a b -> a.stopCode == b.stopCode) $
-              concatMap
-                ( \stops ->
-                    let mbEndStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == endStationCode) stops
-                     in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\endStopSequence -> stop.stopCode /= endStationCode && stop.sequenceNum < endStopSequence) mbEndStopSequence) stops
-                )
-                groupedStopsByRouteCode
-      let startStops =
-            map
-              ( \routeStop ->
-                  FRFSStationAPI
-                    { name = Just routeStop.stopName,
-                      code = routeStop.stopCode,
-                      routeCodes = Nothing,
-                      lat = Just routeStop.stopPoint.lat,
-                      lon = Just routeStop.stopPoint.lon,
-                      stationType = Nothing,
-                      sequenceNum = Nothing,
-                      address = Nothing,
-                      distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
-                    }
-              )
-              possibleStartStops
-      mkStationsAPIWithDistance merchantOpCity startStops mbOrigin
-    -- Return possible End stops, when Route & Start Stop is Known
-    (Just routeCode, Just startStationCode, Nothing) -> do
-      routeStops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-          Right stops -> pure stops
-      currentTime <- getCurrentTime
-      let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-          startSeqNum = fromMaybe 0 ((.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) serviceableStops)
-          filteredRouteStops = filter (\stop -> stop.stopCode /= startStationCode && stop.sequenceNum > startSeqNum) serviceableStops
-      let endStops =
-            map
-              ( \routeStop ->
-                  FRFSStationAPI
-                    { name = Just routeStop.stopName,
-                      code = routeStop.stopCode,
-                      routeCodes = Nothing,
-                      lat = Just routeStop.stopPoint.lat,
-                      lon = Just routeStop.stopPoint.lon,
-                      stationType = Just (if routeStop.sequenceNum == 1 then START else if routeStop.sequenceNum < length filteredRouteStops then INTERMEDIATE else END),
-                      sequenceNum = Just routeStop.sequenceNum,
-                      address = Nothing,
-                      distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
-                    }
-              )
-              filteredRouteStops
-      mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
-    -- Return all Stops, when only the Route is Known
-    (Just routeCode, Nothing, Nothing) -> do
-      currentTime <- getCurrentTime
-      routeStops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-          Right stops -> pure stops
-      let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-          stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
-      let stops =
-            map
-              ( \routeStop ->
-                  FRFSStationAPI
-                    { name = Just routeStop.stopName,
-                      code = routeStop.stopCode,
-                      routeCodes = Nothing,
-                      lat = Just routeStop.stopPoint.lat,
-                      lon = Just routeStop.stopPoint.lon,
-                      stationType = Just (if routeStop.sequenceNum == 1 then START else if routeStop.sequenceNum < length stopsSortedBySequenceNumber then INTERMEDIATE else END),
-                      sequenceNum = Just routeStop.sequenceNum,
-                      address = Nothing,
-                      distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
-                    }
-              )
-              stopsSortedBySequenceNumber
-      mkStationsAPIWithDistance merchantOpCity stops mbOrigin
-    -- Return all possible End Stops across all the Routes, when only the Start Stop is Known
-    (Nothing, Just startStationCode, Nothing) -> do
-      currentTime <- getCurrentTime
-      routesWithStop <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByStopCode startStationCode integratedBPPConfig.id
-          Right stops -> pure stops
-      let routeCodes = nub $ map (.routeCode) routesWithStop
-      routeStops <-
-        EulerHS.Prelude.concatMapM
-          ( \routeCode ->
-              try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-                Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-                Right stops -> pure stops
-          )
-          routeCodes
-      let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
-          possibleEndStops =
-            groupBy (\a b -> a.stopCode == b.stopCode) $
-              sortBy (compare `on` (.stopCode)) $
-                concatMap
-                  ( \stops ->
-                      let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
-                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+  integratedBPPConfigList <- case mbIntegratedBppConfigId of
+    Just iId -> (:[]) <$> Utils.getIntegratedBPPConfig iId
+    Nothing -> Utils.getIntegratedBPPConfigs (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+  let getStationsForConfig integratedBPPConfig = case (mbRouteCode, mbStartStationCode, mbEndStationCode) of
+        (Nothing, Nothing, Just endStationCode) -> do
+          currentTime <- getCurrentTime
+          taggedRoutesWithStopMaybe <- Utils.tryToMaybe (OTPRest.getRouteStopMappingByStopCode integratedBPPConfig endStationCode)
+          let taggedRoutesWithStop = fromMaybe [] taggedRoutesWithStopMaybe
+          let routeCodes = nub $ map (.routeCode) taggedRoutesWithStop
+          taggedRouteStopsMaybe <- Utils.tryToMaybe (OTPRest.getRouteStopMappingByRouteCode integratedBPPConfig routeCodes)
+          let taggedRouteStops = fromMaybe [] taggedRouteStopsMaybe
+          let routeStops = map snd taggedRouteStops
+          let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+              groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
+              possibleStartStops =
+                nubBy (\a b -> a.stopCode == b.stopCode) $
+                  concatMap
+                    ( \stops ->
+                        let mbEndStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == endStationCode) stops
+                         in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\endStopSequence -> stop.stopCode /= endStationCode && stop.sequenceNum < endStopSequence) mbEndStopSequence) stops
+                    )
+                    groupedStopsByRouteCode
+          let startStops =
+                map
+                  ( \routeStop ->
+                      FRFSStationAPI
+                        { name = Just routeStop.stopName,
+                          code = routeStop.stopCode,
+                          routeCodes = Nothing,
+                          lat = Just routeStop.stopPoint.lat,
+                          lon = Just routeStop.stopPoint.lon,
+                          stationType = Nothing,
+                          sequenceNum = Nothing,
+                          address = Nothing,
+                          distance = Nothing,
+                          color = Nothing,
+                          towards = Nothing,
+                          integratedBppConfigId = Just integratedBPPConfig.id
+                        }
                   )
-                  groupedStopsByRouteCode
-      let endStops =
-            concatMap
-              ( \routeStops' ->
-                  case routeStops' of
-                    routeStop : xs ->
-                      let routeCodes' = nub $ routeStop.routeCode : map (.routeCode) xs
-                       in [ FRFSStationAPI
-                              { name = if fromMaybe False minimalData then Nothing else Just routeStop.stopName,
-                                code = routeStop.stopCode,
-                                routeCodes = Just routeCodes',
-                                lat = if fromMaybe False minimalData then Nothing else Just routeStop.stopPoint.lat,
-                                lon = if fromMaybe False minimalData then Nothing else Just routeStop.stopPoint.lon,
-                                stationType = Nothing,
-                                sequenceNum = Nothing,
-                                address = Nothing,
-                                distance = Nothing,
-                                color = Nothing,
-                                towards = Nothing
-                              }
-                          ]
-                    _ -> []
-              )
-              possibleEndStops
-      mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
-    -- Return all the Stops
-    _ -> do
-      stations <- B.runInReplica $ OTPRest.findAllByVehicleType Nothing Nothing vehicleType_ integratedBPPConfig
-      let stops =
-            map
-              ( \Station {..} ->
-                  FRFSStationAPI
-                    { color = Nothing,
-                      distance = Nothing,
-                      sequenceNum = Nothing,
-                      stationType = Nothing,
-                      towards = Nothing,
-                      name = Just name,
-                      routeCodes = Nothing,
-                      ..
-                    }
-              )
-              stations
-      mkStationsAPIWithDistance merchantOpCity stops mbOrigin
+                  possibleStartStops
+          mkStationsAPIWithDistance merchantOpCity startStops mbOrigin
+        (Just routeCode, Just startStationCode, Nothing) -> do
+          taggedRouteStopsMaybe <- Utils.tryToMaybe (OTPRest.getRouteStopMappingByRouteCode [integratedBPPConfig] routeCode)
+          let taggedRouteStops = fromMaybe [] taggedRouteStopsMaybe
+          currentTime <- getCurrentTime
+          let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+              startSeqNum = fromMaybe 0 ((.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) serviceableStops)
+              filteredRouteStops = filter (\stop -> stop.stopCode /= startStationCode && stop.sequenceNum > startSeqNum) serviceableStops
+          let endStops =
+                map
+                  ( \routeStop ->
+                      FRFSStationAPI
+                        { name = Just routeStop.stopName,
+                          code = routeStop.stopCode,
+                          routeCodes = Nothing,
+                          lat = Just routeStop.stopPoint.lat,
+                          lon = Just routeStop.stopPoint.lon,
+                          stationType = Just (if routeStop.sequenceNum == 1 then START else if routeStop.sequenceNum < length filteredRouteStops then INTERMEDIATE else END),
+                          sequenceNum = Just routeStop.sequenceNum,
+                          address = Nothing,
+                          distance = Nothing,
+                          color = Nothing,
+                          towards = Nothing,
+                          integratedBppConfigId = Just integratedBPPConfig.id
+                        }
+                  )
+                  filteredRouteStops
+          mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
+        (Just routeCode, Nothing, Nothing) -> do
+          currentTime <- getCurrentTime
+          taggedRouteStopsMaybe <- Utils.tryToMaybe (OTPRest.getRouteStopMappingByRouteCode [integratedBPPConfig] routeCode)
+          let taggedRouteStops = fromMaybe [] taggedRouteStopsMaybe
+          let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+              stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
+          let stops =
+                map
+                  ( \routeStop ->
+                      FRFSStationAPI
+                        { name = Just routeStop.stopName,
+                          code = routeStop.stopCode,
+                          routeCodes = Nothing,
+                          lat = Just routeStop.stopPoint.lat,
+                          lon = Just routeStop.stopPoint.lon,
+                          stationType = Just (if routeStop.sequenceNum == 1 then START else if routeStop.sequenceNum < length stopsSortedBySequenceNumber then INTERMEDIATE else END),
+                          sequenceNum = Just routeStop.sequenceNum,
+                          address = Nothing,
+                          distance = Nothing,
+                          color = Nothing,
+                          towards = Nothing,
+                          integratedBppConfigId = Just integratedBPPConfig.id
+                        }
+                  )
+                  stopsSortedBySequenceNumber
+          mkStationsAPIWithDistance merchantOpCity stops mbOrigin
+        (Nothing, Just startStationCode, Nothing) -> do
+          currentTime <- getCurrentTime
+          taggedRoutesWithStopMaybe <- Utils.tryToMaybe (OTPRest.getRouteStopMappingByStopCode [integratedBPPConfig] startStationCode)
+          let taggedRoutesWithStop = fromMaybe [] taggedRoutesWithStopMaybe
+          let routeCodes = nub $ map (.routeCode) taggedRoutesWithStop
+          taggedRouteStopsMaybe <- Utils.tryToMaybe (OTPRest.getRouteStopMappingByRouteCode [integratedBPPConfig] routeCodes)
+          let taggedRouteStops = fromMaybe [] taggedRouteStopsMaybe
+          let routeStops = map snd taggedRouteStops
+          let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+              groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
+              possibleEndStops =
+                groupBy (\a b -> a.stopCode == b.stopCode) $
+                  sortBy (compare `on` (.stopCode)) $
+                    concatMap
+                      ( \stops ->
+                          let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
+                           in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+                      )
+                      groupedStopsByRouteCode
+          let endStops =
+                concatMap
+                  ( \routeStops' ->
+                      case routeStops' of
+                        routeStop : xs ->
+                          let routeCodes' = nub $ routeStop.routeCode : map (.routeCode) xs
+                           in [ FRFSStationAPI
+                                  { name = if fromMaybe False minimalData then Nothing else Just routeStop.stopName,
+                                    code = routeStop.stopCode,
+                                    routeCodes = Just routeCodes',
+                                    lat = if fromMaybe False minimalData then Nothing else Just routeStop.stopPoint.lat,
+                                    lon = if fromMaybe False minimalData then Nothing else Just routeStop.stopPoint.lon,
+                                    stationType = Nothing,
+                                    sequenceNum = Nothing,
+                                    address = Nothing,
+                                    distance = Nothing,
+                                    color = Nothing,
+                                    towards = Nothing,
+                                    integratedBppConfigId = Just integratedBPPConfig.id
+                                  }
+                              ]
+                        _ -> []
+                  )
+                  possibleEndStops
+          mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
+        _ -> do
+          stationsTuplesMaybe <- Utils.tryToMaybe (B.runInReplica $ OTPRest.findAllByVehicleType [integratedBPPConfig] Nothing Nothing vehicleType_)
+          let stationsTuples = fromMaybe [] stationsTuplesMaybe
+          let stops =
+                map
+                  ( \Station {..} ->
+                      FRFSStationAPI
+                        { color = Nothing,
+                          distance = Nothing,
+                          sequenceNum = Nothing,
+                          stationType = Nothing,
+                          towards = Nothing,
+                          name = Just name,
+                          routeCodes = Nothing,
+                          integratedBppConfigId = Just integratedBppConfigId,
+                          ..
+                        }
+                  )
+                  stations
+          mkStationsAPIWithDistance merchantOpCity stops mbOrigin
+  stationsLists <- mapM getStationsForConfig integratedBPPConfigList
+  return $ concat stationsLists
   where
     mkStationsAPIWithDistance merchantOpCity stations = \case
       Just origin -> tryStationsAPIWithOSRMDistances mId merchantOpCity origin stations
       Nothing -> return stations
 
-postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req = do
+postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Maybe (Id DIBC.IntegratedBPPConfig) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req mbIntegratedBppConfigId = do
   let frfsRouteDetails =
         [ FRFSRouteDetails
             { routeCode = req.routeCode,
@@ -430,7 +428,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req = do
               endStationCode = req.toStationCode
             }
         ]
-  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req frfsRouteDetails Nothing Nothing [] DIBC.APPLICATION
+  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req frfsRouteDetails Nothing Nothing [] DIBC.APPLICATION mbIntegratedBppConfigId
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) req = do
@@ -450,8 +448,9 @@ postFrfsSearchHandler ::
   Maybe (Id DPO.PartnerOrganization) ->
   [JLT.MultiModalJourneyRouteDetails] ->
   DIBC.PlatformType ->
+  Maybe (Id DIBC.IntegratedBPPConfig) ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbJourneyRouteDetails platformType = do
+postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbJourneyRouteDetails platformType mbIntegratedBppConfigId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -467,7 +466,11 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
           >>= return . (.merchantOperatingCityId)
 
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType_ ||+ "Platform Type:" +|| platformType ||+ "")
+
+  integratedBPPConfig <- case mbIntegratedBppConfigId of
+    Just iId -> Utils.getIntegratedBPPConfig iId
+    Nothing -> Utils.getSingleIntegratedBPPConfig (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
+  
   (fromStation, toStation) <- do
     fromStationInfo <- OTPRest.findByStationCodeAndIntegratedBPPConfigId fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
     toStationInfo <- OTPRest.findByStationCodeAndIntegratedBPPConfigId toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
@@ -502,7 +505,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             journeyLegInfo = journeySearchData,
             journeyLegStatus = Just JLT.InPlan,
             journeyRouteDetails = updatedJourneyRouteDetails,
-            integratedBppConfigId = Just integratedBPPConfig.id,
+            integratedBppConfigId = Just integratedBPPConfigId,
             isOnSearchReceived = Nothing,
             ..
           }
@@ -546,8 +549,6 @@ postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Pre
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req platformType crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
-  -- handle (errHandler dConfirmRes.booking) $
-  --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
@@ -557,17 +558,12 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req platformType cr
     bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
-    -- Add default TTL of 30 seconds or the value provided in the config
     let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
     void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
     CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' platformType
   return $ makeBookingStatusAPI dConfirmRes discounts routeStations stations merchantOperatingCity.city
   where
-    -- errHandler booking exc
-    --   | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelFRFSTicketBooking booking
-    --   | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelFRFSTicketBooking booking
-    --   | otherwise = throwM exc
     confirm :: CallExternalBPP.FRFSConfirmFlow m r => m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     confirm = do
       personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
@@ -716,7 +712,6 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   frfsBookingStatus (personId, merchantId_) False booking
 
--- pass isMultiModalBooking = True in case of multimodal flow
 frfsBookingStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Bool -> DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
   let bookingId = booking'.id
@@ -731,8 +726,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
   platformType' <- case (booking.integratedBppConfigId) of
     Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId
-        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+      Utils.getIntegratedBPPConfig integratedBppConfigId
         <&> (.platformType)
     Nothing -> do
       pure DIBC.APPLICATION
@@ -822,7 +816,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
             else
               if paymentBookingStatus == FRFSTicketService.SUCCESS
                 then do
-                  -- Add default TTL of 1 min or the value provided in the config
                   let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
                   transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
                   txnId <- getSuccessTransactionId transactions
@@ -949,8 +942,7 @@ buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Ma
 buildFRFSTicketBookingStatusAPIRes booking payment = do
   platformType' <- case (booking.integratedBppConfigId) of
     Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId
-        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+      Utils.getIntegratedBPPConfig integratedBppConfigId
         <&> (.platformType)
     Nothing -> do
       pure DIBC.APPLICATION
@@ -1013,8 +1005,7 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   platformType' <- case (ticketBooking.integratedBppConfigId) of
     Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId
-        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+      Utils.getIntegratedBPPConfig integratedBppConfigId
         <&> (.platformType)
     Nothing -> do
       pure DIBC.APPLICATION
@@ -1023,8 +1014,6 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
   unless (ticketBooking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest "Cancellation during incorrect status")
-  -- tickets <- QFRFSTicket.findAllByTicketBookingId ticketBooking.id
-  -- unless (all (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets) $ throwError (InvalidRequest "Cancellation during incorrect status")
   void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL ticketBooking platformType'
   return APISuccess.Success
 
@@ -1046,8 +1035,7 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
   platformType' <- case (ticketBooking.integratedBppConfigId) of
     Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId
-        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+      Utils.getIntegratedBPPConfig integratedBppConfigId
         <&> (.platformType)
     Nothing -> do
       pure DIBC.APPLICATION
@@ -1083,7 +1071,6 @@ getFrfsConfig (pId, mId) opCity = do
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
   return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}
 
--- TODO :: Filter the Stops which are always the END stop for all the routes as it can never be a possible START or INTERMEDIATE stop.
 getFrfsAutocomplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -1095,21 +1082,23 @@ getFrfsAutocomplete ::
   Context.City ->
   Kernel.External.Maps.Types.LatLong ->
   BecknV2.FRFS.Enums.VehicleCategory ->
+  Maybe (Id DIBC.IntegratedBPPConfig) ->
   Environment.Flow API.Types.UI.FRFSTicketService.AutocompleteRes
-getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origin vehicle = do
+getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origin vehicle mbIntegratedBppConfigId = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOpCity.id []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicle) platformType
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicle ||+ "Platform Type:" +|| platformType ||+ "")
+  integratedBPPConfigList <- case mbIntegratedBppConfigId of
+    Just iId -> (: []) <$> Utils.getIntegratedBPPConfig iId
+    Nothing -> Utils.getIntegratedBPPConfigs (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicle) platformType
   case mbInput of
     Nothing -> do
-      allStops <- OTPRest.findAllByVehicleType Nothing Nothing vehicle integratedBPPConfig
+      allStopsListsMaybes <- mapM (\integratedBPPConfig -> Utils.tryToMaybe (OTPRest.findAllByVehicleType [integratedBPPConfig] Nothing Nothing vehicle)) integratedBPPConfigList
+      let allStops = concat $ catMaybes allStopsListsMaybes
       currentTime <- getCurrentTime
-      let serviceableStops = DTB.findBoundedDomain allStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) allStops
+      let serviceableStops = DTB.findBoundedDomain (map snd allStops) currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) (map snd allStops)
           stopsWithinRadius =
             filter
               ( \stop ->
@@ -1117,10 +1106,8 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
                    in straightLineDist <= frfsConfig.straightLineDistance
               )
               serviceableStops
-
       stopsWithDistance <- tryStationsAPIWithOSRMDistances mId merchantOpCity origin (mkStationsAPI stopsWithinRadius)
       let stopsWithinActualRadius = filter (\stop -> maybe True (\distance -> distance <= frfsConfig.radius) stop.distance) stopsWithDistance
-
       return
         API.Types.UI.FRFSTicketService.AutocompleteRes
           { routes = [],
@@ -1129,16 +1116,15 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
     Just userInput -> do
       let mbLimitInteger = fmap toInteger mbLimit
           mbOffsetInteger = fmap toInteger mbOffset
-      matchingStops <- OTPRest.findAllMatchingStations (Just userInput) mbLimit mbOffset merchantOpCity.id vehicle integratedBPPConfig
-      matchingRoutes <-
-        try @_ @SomeException (OTPRest.getRouteByFuzzySearch integratedBPPConfig userInput) >>= \case
-          Left _ -> QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
-          Right routes -> bool (pure $ take (integerToInt $ fromMaybe 0 mbOffsetInteger) $ drop (integerToInt $ fromMaybe 0 mbOffsetInteger) routes) (QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id) (null routes)
+      matchingStopsTuplesListsMaybes <- mapM (\integratedBPPConfig -> Utils.tryToMaybe (OTPRest.findAllMatchingStations [integratedBPPConfig] (Just userInput) mbLimit mbOffset merchantOpCity.id vehicle)) integratedBPPConfigList
+      let matchingStopsTuples = concat $ catMaybes matchingStopsTuplesListsMaybes
+          matchingStops = map snd matchingStopsTuples
+      matchingRoutesListsMaybes <- mapM (\integratedBPPConfig -> Utils.tryToMaybe (OTPRest.getRoutesByFuzzySearch [integratedBPPConfig] userInput)) integratedBPPConfigList
+      let matchingRoutes = concat $ catMaybes matchingRoutesListsMaybes
       currentTime <- getCurrentTime
       let serviceableStops = DTB.findBoundedDomain matchingStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) matchingStops
           serviceableRoutes = DTB.findBoundedDomain matchingRoutes currentTime ++ filter (\route -> route.timeBounds == DTB.Unbounded) matchingRoutes
-      stopsWithDistance <- tryStationsAPIWithOSRMDistances mId merchantOpCity origin $ mkStationsAPI (filter (\stop -> maybe True (any (`elem` [END, INTERMEDIATE])) stop.possibleTypes) serviceableStops)
-
+      stopsWithDistance <- tryStationsAPIWithOSRMDistances mId merchantOpCity origin $ mkStationsAPI (map snd $ filter (\(_, stop) -> maybe True (any (`elem` [END, INTERMEDIATE])) stop.possibleTypes) (zip (repeat (head integratedBPPConfigList)) serviceableStops))
       let routes =
             map
               ( \route ->
@@ -1151,20 +1137,20 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
                       timeBounds = Just route.timeBounds,
                       totalStops = Nothing,
                       stops = Nothing,
-                      waypoints = Nothing
+                      waypoints = Nothing,
+                      integratedBppConfigId = Just route.integratedBppConfigId
                     }
               )
               serviceableRoutes
-
       return
         API.Types.UI.FRFSTicketService.AutocompleteRes
           { routes = routes,
             stops = stopsWithDistance
           }
   where
-    mkStationsAPI =
+    mkStationsAPI = \stationsWithConfig ->
       map
-        ( \Station {..} ->
+        (\(integratedBPPConfig, Station {..}) ->
             FRFSStationAPI
               { color = Nothing,
                 routeCodes = Nothing,
@@ -1173,9 +1159,11 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
                 stationType = Nothing,
                 towards = Nothing,
                 name = Just name,
+                integratedBppConfigId = Just integratedBPPConfig.id,
                 ..
               }
         )
+        stationsWithConfig
 
 tryStationsAPIWithOSRMDistances :: Id Merchant.Merchant -> MerchantOperatingCity -> LatLong -> [FRFSStationAPI] -> Environment.Flow [FRFSStationAPI]
 tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
@@ -1213,7 +1201,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
                     travelMode = Just Maps.CAR
                   }
           case res of
-            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, ..}) batch
+            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, integratedBppConfigId = Nothing, ..}) batch
             Right stopsDistanceResp ->
               return $ map (\stop -> mkStopToAPI stop.origin stop.distance) (NonEmpty.toList stopsDistanceResp)
 
@@ -1231,7 +1219,8 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
           sequenceNum = stop.sequenceNum,
           address = Nothing,
           color = Nothing,
-          towards = Nothing
+          towards = Nothing,
+          integratedBppConfigId = Nothing
         }
 
 postFrfsTicketVerify ::
@@ -1241,11 +1230,15 @@ postFrfsTicketVerify ::
   Kernel.Prelude.Maybe DIBC.PlatformType ->
   Context.City ->
   BecknV2.FRFS.Enums.VehicleCategory ->
+  Maybe (Id DIBC.IntegratedBPPConfig) ->
   API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq ->
   Environment.Flow APISuccess.APISuccess
-postFrfsTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicleCategory req = do
+postFrfsTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicleCategory mbIntegratedBppConfigId req = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
   let platformType = fromMaybe (DIBC.APPLICATION) _platformType
-  CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData platformType
+  integratedBPPConfig <- case mbIntegratedBppConfigId of
+    Just iId -> Utils.getIntegratedBPPConfig iId
+    Nothing -> Utils.getSingleIntegratedBPPConfig (show Spec.FRFS) merchantOperatingCity.id vehicleCategory platformType
+  CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig integratedBPPConfig vehicleCategory req.qrData platformType
   return APISuccess.Success

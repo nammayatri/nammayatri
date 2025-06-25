@@ -91,6 +91,7 @@ IntegratedBPPConfig:
 
   fields:
     id: Id IntegratedBPPConfig
+    feedName: Text
     domain: Text
     providerConfig: ProviderConfig
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -125,10 +126,7 @@ IntegratedBPPConfig:
     platformType: text
 
   constraints:
-    merchantId: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-    vehicleCategory: PrimaryKey
-    domain: PrimaryKey
+    id: PrimaryKey
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
@@ -144,7 +142,7 @@ IntegratedBPPConfig:
       kvFunction: findOneWithKV
       where: id
     findByDomainAndCityAndVehicleCategory:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where:
         and: [domain, merchantOperatingCityId, vehicleCategory, platformType]
 

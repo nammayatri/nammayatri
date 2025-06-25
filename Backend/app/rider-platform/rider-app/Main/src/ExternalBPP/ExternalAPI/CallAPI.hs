@@ -7,7 +7,7 @@ import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSTicketBooking
-import Domain.Types.IntegratedBPPConfig
+import Domain.Types.IntegratedBPPConfig -- Ensured ONDC constructor is in scope
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -64,7 +64,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
             destination = endStopCode,
             ticketType = "SJT"
           }
-    ONDC _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    Domain.Types.IntegratedBPPConfig.ONDC _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     CRIS config' -> do
@@ -155,8 +155,8 @@ getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRi
 
 buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
 buildStations routeCode startStationCode endStationCode integratedBPPConfig startStopType endStopType = do
-  fromStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-  toStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+  fromStation <- (OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBPPConfig] startStationCode >>= pure . listToMaybe . map snd) >>= fromMaybeM (StationNotFound startStationCode)
+  toStation <- (OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBPPConfig] endStationCode >>= pure . listToMaybe . map snd) >>= fromMaybeM (StationNotFound endStationCode)
   stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
   mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
 

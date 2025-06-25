@@ -747,7 +747,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in mkLegExtraInfo: " <> show fromStationId')
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in mkLegExtraInfo: " <> show toStationId')
           integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
+          routeTuples <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeId'
+          let route = case routeTuples of (r : _) -> snd r; _ -> error ("Route not found via OTPRest.getRouteByRouteCodeWithFallback for BUS leg in mkLegExtraInfo: " <> routeId')
           mbQuote <- QFRFSQuote.findById booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
@@ -800,7 +801,8 @@ getMetroLegRouteInfo journeyRouteDetails = do
       fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in getMetroLegRouteInfo: " <> show fromStationId')
       toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in getMetroLegRouteInfo: " <> show toStationId')
       integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
-      route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
+      routeTuples <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeId'
+      let route = case routeTuples of (r : _) -> snd r; _ -> error ("Route not found via OTPRest.getRouteByRouteCodeWithFallback for METRO leg in transformJourneyRouteDetails: " <> routeId')
 
       return
         MetroLegRouteInfo
@@ -828,7 +830,8 @@ getSubwayLegRouteInfo journeyRouteDetails = do
       fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in getSubwayLegRouteInfo: " <> show fromStationId')
       toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in getSubwayLegRouteInfo: " <> show toStationId')
       integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
-      route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
+      routeTuples <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeId'
+      let route = case routeTuples of (r : _) -> snd r; _ -> error ("Route not found via OTPRest.getRouteByRouteCodeWithFallback for SUBWAY leg in transformJourneyRouteDetails: " <> routeId')
 
       return
         SubwayLegRouteInfo
@@ -922,7 +925,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in mkLegExtraInfo: " <> show fromStationId')
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in mkLegExtraInfo: " <> show toStationId')
           integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
+          routeTuples <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeId'
+          let route = case routeTuples of (r : _) -> snd r; _ -> error ("Route not found via OTPRest.getRouteByRouteCodeWithFallback for FRFS Search BUS leg in mkLegExtraInfo: " <> routeId')
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Bus $

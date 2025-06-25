@@ -27,6 +27,7 @@ import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
+-- import qualified Domain.Types.Station as StationDomainType -- Removed unused import
 import qualified Domain.Types.StationType as Station
 import EulerHS.Prelude (comparing, toStrict, (+||), (||+))
 import Kernel.Beam.Functions
@@ -157,7 +158,8 @@ onSearch onSearchReq validatedReq = do
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
       else do
-        routeCodes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) (catMaybes ((map (.routeId) validatedReq.search.journeyRouteDetails) <> [validatedReq.search.routeId]))
+        routeCodeTuplesList <- mapM (OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig]) (catMaybes ((map (.routeId) validatedReq.search.journeyRouteDetails) <> [validatedReq.search.routeId]))
+        let routeCodes = concatMap (map snd) routeCodeTuplesList
         pure $ case routeCodes of
           [] -> onSearchReq.quotes
           routesCodes' -> filter (\quote -> quote.routeCode `elem` map (.code) routesCodes') onSearchReq.quotes
@@ -220,8 +222,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
     Nothing -> do
       QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
         >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
-  startStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId dStartStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  endStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  startStation <- (OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBPPConfig] dStartStation.stationCode >>= pure . listToMaybe . map snd) >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  endStation <- (OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBPPConfig] dEndStation.stationCode >>= pure . listToMaybe . map snd) >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
@@ -284,7 +286,8 @@ castStationToAPI DStation {..} =
       API.stationType = Just stationType,
       API.sequenceNum = stopSequence,
       API.distance = Nothing,
-      API.towards = Nothing
+      API.towards = Nothing,
+      API.integratedBppConfigId = Nothing -- Added missing field
     }
 
 castRouteStationToAPI :: DRouteStation -> API.FRFSRouteStationsAPI

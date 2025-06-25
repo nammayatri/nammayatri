@@ -937,19 +937,3 @@ instance IsHTTPError CustomAuthError where
     TooManyHitsLimitError -> E429
 
 instance IsAPIError CustomAuthError
-
-data GTFSError = GTFSFeedInfoNotFound Text Text deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''GTFSError
-
-instance IsBaseError GTFSError where
-  toMessage = \case
-    GTFSFeedInfoNotFound vehicleType merchantOperatingCityId -> Just $ "GTFS feed info not found for vehicleType: " <> vehicleType <> " and merchantOperatingCityId: " <> merchantOperatingCityId
-
-instance IsHTTPError GTFSError where
-  toErrorCode = \case
-    GTFSFeedInfoNotFound _ _ -> "GTFS_FEED_INFO_NOT_FOUND"
-  toHttpCode = \case
-    GTFSFeedInfoNotFound _ _ -> E404
-
-instance IsAPIError GTFSError

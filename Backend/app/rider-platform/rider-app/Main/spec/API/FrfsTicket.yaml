@@ -25,6 +25,7 @@ imports:
   JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
   PlatformType: Domain.Types.IntegratedBPPConfig
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
 
 module: FRFSTicketService
@@ -38,7 +39,7 @@ types:
     routeCode: Maybe Text
     quantity: Int
     journeySearchData: Maybe JourneySearchData
-    recentLocationId: Maybe (Id RecentLocation)
+    recentLocationId: Maybe (Id RecentLocation)    
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -150,6 +151,7 @@ types:
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text
+    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
     derive: "Show"
 
   FRFSCanCancelStatus:
@@ -187,6 +189,7 @@ types:
     stops: Maybe [FRFSStationAPI]
     waypoints: Maybe [LatLong]
     timeBounds: Maybe TimeBound
+    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
     derive: "Show"
 
   AutocompleteRes:
@@ -207,6 +210,7 @@ apis:
       query:
         startStationCode: Text
         endStationCode: Text
+        integratedBppConfigId: Id IntegratedBPPConfig
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
 
@@ -227,6 +231,7 @@ apis:
         location: LatLong
         platformType: PlatformType
         minimalData: Bool
+        integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -239,6 +244,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         platformType: PlatformType
+        integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
       params:
         routeCode: Text
       response:
@@ -251,7 +257,8 @@ apis:
       mandatoryQuery:
         vehicleType: VehicleCategory
       query:
-        city: City
+        city: City        
+        integratedBppConfigId: Id IntegratedBPPConfig
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
@@ -368,6 +375,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         platformType: PlatformType
+        integratedBppConfigId: Id IntegratedBPPConfig
       auth: TokenAuth
       request:
         type: API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq

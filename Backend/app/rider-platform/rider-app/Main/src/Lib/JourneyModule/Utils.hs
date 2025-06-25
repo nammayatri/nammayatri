@@ -331,16 +331,18 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) >>= \case
-      Left _ -> QRSM.findByStopCode fromStopCode integratedBppConfig.id
+  fromStopMappingsTupled <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode [integratedBppConfig] fromStopCode) >>= \case
+      Left _ -> map (integratedBppConfig,) <$> QRSM.findByStopCode fromStopCode integratedBppConfig.id
       Right stops -> pure stops
+  let fromRouteStopMappings = map snd fromStopMappingsTupled
 
   -- Get route mappings that contain the destination stop
-  toRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) >>= \case
-      Left _ -> QRSM.findByStopCode toStopCode integratedBppConfig.id
+  toStopMappingsTupled <-
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode [integratedBppConfig] toStopCode) >>= \case
+      Left _ -> map (integratedBppConfig,) <$> QRSM.findByStopCode toStopCode integratedBppConfig.id
       Right stops -> pure stops
+  let toRouteStopMappings = map snd toStopMappingsTupled
 
   -- Find common routes that have both the origin and destination stops
   -- and ensure that from-stop comes before to-stop in the route sequence
@@ -382,7 +384,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     routeDetails <-
       mapM
         ( \routeCode ->
-            fmap Just $ OTPRest.getRouteByRouteCodeWithFallback integratedBppConfig routeCode
+            fmap (listToMaybe . map snd) $ OTPRest.getRouteByRouteCodeWithFallback [integratedBppConfig] routeCode
         )
         routeCodesForTier
     let validRouteDetails = catMaybes routeDetails
@@ -603,8 +605,10 @@ getSingleModeRouteDetails ::
   Enums.VehicleCategory ->
   m (Maybe SingleModeRouteDetails)
 getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfig mid mocid vc = do
-  mbFromStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId originStopCode integratedBppConfig
-  mbToStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId destinationStopCode integratedBppConfig
+  mbFromStopTuple <- OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBppConfig] originStopCode
+  let mbFromStop = listToMaybe $ map snd mbFromStopTuple
+  mbToStopTuple <- OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBppConfig] destinationStopCode
+  let mbToStop = listToMaybe $ map snd mbToStopTuple
   currentTime <- getCurrentTime
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
@@ -619,9 +623,9 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
             maybe
               (return Nothing)
               ( \rc ->
-                  try @_ @SomeException (OTPRest.getRouteByRouteId integratedBppConfig rc) >>= \case
+                  try @_ @SomeException (OTPRest.getRouteByRouteId [integratedBppConfig] rc) >>= \case
                     Left _ -> QRoute.findByRouteCode rc integratedBppConfig.id
-                    Right route -> maybeM (QRoute.findByRouteCode rc integratedBppConfig.id) (pure . Just) (pure route)
+                    Right routeTuples -> maybeM (QRoute.findByRouteCode rc integratedBppConfig.id) (pure . Just) (pure $ listToMaybe $ map snd routeTuples)
               )
               routeCode
           case mbRoute of

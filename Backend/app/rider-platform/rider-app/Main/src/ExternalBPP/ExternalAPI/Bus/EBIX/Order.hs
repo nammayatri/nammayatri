@@ -118,18 +118,19 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
       endStation = last routeStation.stations
-  fromStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId startStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  toStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId endStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeStation.code
+  fromStation <- B.runInReplica $ (OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBPPConfig] startStation.code >>= pure . listToMaybe . map snd) >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- B.runInReplica $ (OTPRest.findByStationCodeAndIntegratedBPPConfigId [integratedBPPConfig] endStation.code >>= pure . listToMaybe . map snd) >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  routeTuples <- OTPRest.getRouteByRouteCodeWithFallback [integratedBPPConfig] routeStation.code
+  let route = case routeTuples of (r : _) -> snd r; _ -> error ("Route not found via OTPRest.getRouteByRouteCodeWithFallback for EBIX " <> routeStation.code)
   fromRoute <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig) >>= \case
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode [integratedBPPConfig] fromStation.code route.code) >>= \case
       Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfig.id
-      Right stops -> pure $ listToMaybe stops
+      Right stops -> pure $ listToMaybe (map snd stops)
       >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfig.id.getId)
   toRoute <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfig) >>= \case
+    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCodeAndRouteCode [integratedBPPConfig] toStation.code route.code) >>= \case
       Left _ -> listToMaybe <$> QRSM.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfig.id
-      Right stops -> pure $ listToMaybe stops
+      Right stops -> pure $ listToMaybe (map snd stops)
       >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfig.id.getId)
   now <- addUTCTime (secondsToNominalDiffTime 19800) <$> getCurrentTime
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
