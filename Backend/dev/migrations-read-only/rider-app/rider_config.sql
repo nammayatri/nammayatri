@@ -272,3 +272,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN qr_ticket_restriction_end_time tim
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN update_upi_max_amount_for_poc boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN show_drop_location_suggestion boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_subscription_batch_size integer ;

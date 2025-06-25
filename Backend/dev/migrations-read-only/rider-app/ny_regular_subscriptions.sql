@@ -49,7 +49,22 @@ ALTER TABLE atlas_app.ny_regular_subscriptions ADD COLUMN fixed_price double pre
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.ny_regular_subscriptions ADD COLUMN last_processed_at timestamp with time zone ;
 
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ny_regular_subscriptions ADD COLUMN scheduling_hash text ;
 
 
 ------- SQL updates -------

@@ -1,30 +1,42 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Storage.Queries.NyRegularSubscriptionExtra where
 
 -- import qualified Data.Text as T
 -- import Database.Beam (desc_) -- For orderBy_
-import Domain.Types.NyRegularSubscription
-  ( NyRegularSubscription, -- Domain type
-    NyRegularSubscriptionStatus,
-  )
+
+-- Domain type
+
 -- import qualified Domain.Types.NyRegularSubscription as NyRegularSubscriptionDomain -- For toDomain if needed, though KV functions often handle it
-import Domain.Types.Person (Person)
-import Environment (Flow)
+
 -- import qualified Environment
 
+import qualified Data.Time as Time
+import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
+import Domain.Types.NyRegularSubscription
+  ( NyRegularSubscription,
+    NyRegularSubscriptionStatus,
+  )
+import qualified Domain.Types.NyRegularSubscription as NySub
+import Domain.Types.Person (Person)
+import Environment (Flow)
 import EulerHS.Prelude ((<|>))
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id as Id
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
+import Storage.Beam.NyRegularSubscription as Beam
 import qualified Storage.Beam.NyRegularSubscription as BeamNyReg
 import Storage.Queries.OrphanInstances.NyRegularSubscription ()
 
 listSubscriptionsByFilters ::
   Id.Id Person ->
-  Maybe NyRegularSubscriptionStatus ->
+  Maybe NySub.NyRegularSubscriptionStatus ->
   Maybe Int -> -- Limit
   Maybe Integer -> -- Offset
-  Flow [NyRegularSubscription]
+  Flow [NySub.NyRegularSubscription]
 listSubscriptionsByFilters personId mStatus mLimit mOffset = do
   let limit' = mLimit <|> Just 100
       offset' = fmap fromIntegral $ mOffset <|> Just 0
@@ -42,3 +54,27 @@ listSubscriptionsByFilters personId mStatus mLimit mOffset = do
 
   -- findAllWithOptionsKV handles Maybe for limit/offset and uses FromTType' for conversion
   findAllWithOptionsKV conditions orderByClause limit' offset'
+
+findAllActiveAt ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id.Id MerchantOperatingCity.MerchantOperatingCity ->
+  Time.Day ->
+  Maybe Int ->
+  m [NySub.NyRegularSubscription]
+findAllActiveAt cityId today limit =
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just cityId.getId),
+          Se.Is Beam.status $ Se.Eq NySub.ACTIVE,
+          Se.Or -- lastProcessedAt is null OR lastProcessedAt is before the start of today
+            [ Se.Is Beam.lastProcessedAt $ Se.Eq Nothing,
+              Se.Is Beam.lastProcessedAt $ Se.LessThan (Just $ Time.UTCTime today 0)
+            ],
+          Se.Or -- recurrenceEndDate is null OR recurrenceEndDate is after or on today
+            [ Se.Is Beam.recurrenceEndDate $ Se.Eq Nothing,
+              Se.Is Beam.recurrenceEndDate $ Se.GreaterThanOrEq (Just today)
+            ]
+        ]
+    ]
+    limit
+    Nothing

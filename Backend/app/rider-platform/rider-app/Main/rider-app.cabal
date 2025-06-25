@@ -360,6 +360,8 @@ library
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.NyRegularSubscriptionHasher
+      SharedLogic.NySubscription
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
@@ -372,6 +374,8 @@ library
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
+      SharedLogic.Scheduler.Jobs.NyRegularInstance
+      SharedLogic.Scheduler.Jobs.NyRegularMaster
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
