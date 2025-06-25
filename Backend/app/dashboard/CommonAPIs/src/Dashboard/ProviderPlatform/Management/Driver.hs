@@ -40,9 +40,16 @@ validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
 validateUpdateDriverNameReq :: Validate UpdateDriverNameReq
 validateUpdateDriverNameReq UpdateDriverNameReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ MinLength 1 `And` P.name,
-      validateField "middleName" middleName $ InMaybe P.name,
-      validateField "lastName" lastName $ InMaybe P.name
+    [ validateField "firstName" firstName $ MinLength 1 `And` MaxLength 50 `And` P.name,
+      validateField "middleName" middleName $ InMaybe (MaxLength 50 `And` P.name),
+      validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name)
+    ]
+
+validateIndianMobileNumber :: Validate UpdatePhoneNumberReq
+validateIndianMobileNumber UpdatePhoneNumberReq {..} =
+  sequenceA_
+    [ validateField "newPhoneNumber" newPhoneNumber P.indianMobileNumber,
+      validateField "newCountryCode" newCountryCode P.mobileIndianCode
     ]
 
 instance HideSecrets ClearDriverFeeReq where

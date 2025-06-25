@@ -42,6 +42,7 @@ import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -141,7 +142,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
         person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let language = fromMaybe merchantOpCity.language person.language
-        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments personId merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
+        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments person merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
         vehicleDoc <-
           find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
             & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
@@ -300,6 +301,10 @@ postDriverOperatorSendJoiningOtp ::
   Common.AuthReq ->
   Flow Common.AuthRes
 postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
+  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeOperatorDriverHitsCountKey phoneNumber) sendOtpRateLimitOptions
+
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $
     throwError AccessDenied
@@ -315,7 +320,6 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
       withLogTag ("personId_" <> getId person.id) $ do
         SA.checkForDriverAssociationOverwrite merchant person.id
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-            phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
@@ -398,3 +402,6 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
 makeOperatorDriverOtpKey :: Text -> Text
 makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
+
+makeOperatorDriverHitsCountKey :: Text -> Text
+makeOperatorDriverHitsCountKey phoneNo = "Operator:Driver:PhoneNoHits" <> phoneNo <> ":hitsCount"
