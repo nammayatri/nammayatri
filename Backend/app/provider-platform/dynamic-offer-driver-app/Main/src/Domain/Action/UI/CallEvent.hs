@@ -98,5 +98,6 @@ callOnClickTracker rideId = do
             callService = Nothing,
             callError = Nothing,
             callAttempt = Just DCallStatus.Attempted,
-            createdAt = now
+            createdAt = now,
+            aiCallAnalyzed = Nothing
           }

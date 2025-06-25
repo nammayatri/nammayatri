@@ -12,7 +12,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data CallStatus = CallStatus
-  { callAttempt :: Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus,
+  { aiCallAnalyzed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    callAttempt :: Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus,
     callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     callId :: Kernel.Prelude.Text,
     callService :: Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService,

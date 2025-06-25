@@ -26,6 +26,7 @@ CallStatus:
     callError : Maybe Text
     callAttempt : Maybe CallAttemptStatus
     createdAt: UTCTime
+    aiCallAnalyzed: Maybe Bool
 
   constraints:
     id: PrimaryKey
@@ -60,6 +61,11 @@ CallStatus:
       kvFunction: findOneWithKV
       where: callId
 
+    updateAiCallAnalyzed:
+      kvFunction: updateWithKV
+      params: [aiCallAnalyzed]
+      where: callId
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -72,6 +78,7 @@ CallStatus:
     entityId: character varying (36)
     merchantId: character varying (36)
     merchantOperatingCityId: character varying(36)
+    aiCallAnalyzed: boolean
 
   default:
     entityId: "'UNKNOWN'"
