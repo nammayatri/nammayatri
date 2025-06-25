@@ -69,7 +69,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   now <- getCurrentTime
   if not (null activeJourneys)
     then do
-      let (updatedActiveJourneys, paymentSuccessJourneys) = processJourneys now activeJourneys
+      (updatedActiveJourneys, paymentSuccessJourneys) <- processJourneys now activeJourneys
       if null paymentSuccessJourneys
         then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys, currentJourney = Nothing}) Nothing
         else do
@@ -88,19 +88,21 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
         Nothing -> checkForActiveBooking
   where
     -- filter payment success journeys and update journey status if expired
-    processJourneys :: UTCTime -> [DJ.Journey] -> ([DJ.Journey], [DJ.Journey])
-    processJourneys now journeys =
-      let updatedActiveJourneys = map updateJourneyStatus journeys
-          paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) updatedActiveJourneys
-       in updatedActiveJourneys `seq` paymentSuccessJourneys `seq` (updatedActiveJourneys, paymentSuccessJourneys)
+    processJourneys :: UTCTime -> [DJ.Journey] -> Flow ([DJ.Journey], [DJ.Journey])
+    processJourneys now journeys = do
+      updatedActiveJourneys <- mapM updateJourneyStatus journeys
+      let paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) updatedActiveJourneys
+      return (updatedActiveJourneys, paymentSuccessJourneys)
       where
-        updateJourneyStatus j =
+        updateJourneyStatus j = do
           case j.journeyExpiryTime of
             Just expiryTime ->
               if now > expiryTime && j.status == DJ.INPROGRESS
-                then j {DJ.status = DJ.EXPIRED}
-                else j
-            Nothing -> j
+                then do
+                  _ <- QJourney.updateStatus DJ.EXPIRED j.id
+                  return j {DJ.status = DJ.EXPIRED}
+                else return j
+            Nothing -> return j
 
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do

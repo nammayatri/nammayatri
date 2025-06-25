@@ -1173,6 +1173,9 @@ sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney
 completedStatus :: [JourneyLegStatus]
 completedStatus = [Completed, Cancelled]
 
+allCompletedStatus :: [JourneyLegStatus]
+allCompletedStatus = [Completed, Cancelled, Skipped]
+
 cannotCancelStatus :: [JourneyLegStatus]
 cannotCancelStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled]
 
