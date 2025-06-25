@@ -36,7 +36,7 @@ instance JT.JourneyLeg BusLegRequest m where
   getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.isLastCompleted
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit
+  getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit req.ignoreOldSearchRequest
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.BUS routeDetails fromArrivalTime
