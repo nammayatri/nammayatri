@@ -258,13 +258,13 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
           { sdkPayload = Nothing
           }
     Just paymentOrderId -> do
+      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
       let updateReq =
             KT.OrderUpdateReq
               { amount = amountUpdated,
-                orderShortId = show paymentOrderId,
+                orderShortId = order.shortId.getShortId,
                 splitSettlementDetails = splitDetails
               }
-      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
       _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
       QOrder.updateAmount order.id amountUpdated
       let updatedOrder :: DOrder.PaymentOrder
