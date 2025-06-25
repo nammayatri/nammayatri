@@ -30,7 +30,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   getState (MetroLegRequestGetState req) = CFRFS.getState DTrip.Metro req.searchId req.riderLastPoints req.isLastCompleted False Nothing
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit
+  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit req.ignoreOldSearchRequest
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO routeDetails fromArrivalTime
