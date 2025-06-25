@@ -38,6 +38,7 @@ import SharedLogic.JobScheduler
 import "rider-app" SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.Chakras
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
+import "rider-app" SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
@@ -87,6 +88,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCrisUtsDataJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkMultimodalConfirmFailJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateMetroBusinessHour)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularMasterJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularInstanceJob)

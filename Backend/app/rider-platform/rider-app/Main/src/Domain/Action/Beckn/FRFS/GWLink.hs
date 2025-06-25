@@ -161,6 +161,7 @@ mapToGoogleTicketStatus status = newStatus
       FRFS.COUNTER_CANCELLED -> INACTIVE
       FRFS.CANCEL_INITIATED -> INACTIVE
       FRFS.TECHNICAL_CANCEL_REJECTED -> INACTIVE
+      FRFS.REFUND_INITIATED -> INACTIVE
 
 showTimeIst :: UTCTime -> Text
 showTimeIst time =

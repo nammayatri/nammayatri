@@ -391,6 +391,7 @@ library
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
+      SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.MetroBusinessHour

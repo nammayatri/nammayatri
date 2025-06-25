@@ -62,8 +62,7 @@ createVendorSplitFromBookings ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    ServiceFlow m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id Merchant.Merchant ->
@@ -98,8 +97,7 @@ convertVendorDetails ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    ServiceFlow m r
   ) =>
   [VendorSplitDetails.VendorSplitDetails] ->
   [FTBooking.FRFSTicketBooking] ->

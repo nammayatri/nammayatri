@@ -759,6 +759,7 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.COUNTER_CANCELLED -> InPlan
   DFRFSBooking.CANCEL_INITIATED -> InPlan
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
+  DFRFSBooking.REFUND_INITIATED -> Cancelled
 
 mkLegInfoFromFrfsBooking ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
