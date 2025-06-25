@@ -54,7 +54,8 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    ignoreOldSearchRequest :: Bool
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData

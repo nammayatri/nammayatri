@@ -23,7 +23,8 @@ data WalkLegRequestGetStateData = WalkLegRequestGetStateData
 
 data WalkLegRequestGetInfoData = WalkLegRequestGetInfoData
   { walkLegId :: Id DWalkLeg.WalkLegMultimodal,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    ignoreOldSearchRequest :: Bool
   }
 
 data WalkLegRequestConfirmData = WalkLegRequestConfirmData

@@ -94,8 +94,11 @@ instance JT.JourneyLeg WalkLegRequest m where
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (WalkLegRequestGetInfo req) = do
-    legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
-    Just <$> JT.mkWalkLegInfoFromWalkLegData legData req.journeyLeg.entrance req.journeyLeg.exit
+    if req.ignoreOldSearchRequest
+      then return Nothing
+      else do
+        legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
+        Just <$> JT.mkWalkLegInfoFromWalkLegData legData req.journeyLeg.entrance req.journeyLeg.exit
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (WalkLegRequestGetFare _) = do

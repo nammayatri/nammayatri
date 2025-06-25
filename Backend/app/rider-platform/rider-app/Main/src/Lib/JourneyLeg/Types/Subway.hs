@@ -59,7 +59,8 @@ data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    ignoreOldSearchRequest :: Bool
   }
 
 data SubwayLegRequest
