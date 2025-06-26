@@ -1033,6 +1033,7 @@ TransporterConfig:
     deactivateRCOnUnlink: Maybe Bool
     aaEnabledClientSdkVersion : Text
     isAAEnabledForRecurring : Maybe Bool
+    disableDriverWhenUnlinkingVehicle : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1440,6 +1441,7 @@ TransporterConfig:
     deactivateRCOnUnlink: "true"
     aaEnabledClientSdkVersion : "'999.999.999'"
     isAAEnabledForRecurring : "false"
+    disableDriverWhenUnlinkingVehicle : "true"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

@@ -11,3 +11,10 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD COLUMN "order" i
 ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD COLUMN parent_group_code text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD PRIMARY KEY ( fleet_member_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_member_association DROP CONSTRAINT fleet_member_association_pkey;
+ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD PRIMARY KEY ( fleet_member_id, fleet_owner_id);

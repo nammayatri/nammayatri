@@ -19,13 +19,12 @@ findById (Id issueChatId) = findOneWithKV [Is BeamIC.id $ Eq issueChatId]
 findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueChat)
 findByTicketId ticketId = findOneWithKV [Is BeamIC.ticketId $ Eq ticketId]
 
-updateChats :: BeamFlow m r => Text -> [Text] -> [Text] -> Maybe (Id IssueReport) -> m ()
-updateChats tId chats mediaFiles issueReportId = do
+updateChats :: BeamFlow m r => Text -> [Text] -> [Text] -> m ()
+updateChats tId chats mediaFiles = do
   now <- getCurrentTime
   updateWithKV
     [ Set BeamIC.chats chats,
       Set BeamIC.mediaFiles mediaFiles,
-      Set BeamIC.issueReportId (getId <$> issueReportId),
       Set BeamIC.updatedAt $ T.utcToLocalTime T.utc now
     ]
     [Is BeamIC.ticketId $ Eq tId]

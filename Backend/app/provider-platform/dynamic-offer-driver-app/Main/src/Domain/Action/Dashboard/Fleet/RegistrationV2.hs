@@ -34,6 +34,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
@@ -100,11 +101,12 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     Just imageId -> do
       panCard <- QPanCard.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("PAN not uploaded " <> imageId))
       unless (panCard.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "PAN not validated"
-  case fleetOwnerInfo.gstImageId of
-    Nothing -> throwError $ InvalidRequest "GST not uploaded"
-    Just imageId -> do
-      gstIn <- QGST.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("GST not uploaded " <> imageId))
-      unless (gstIn.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "GST not validated"
+  when (req.fleetType == Just Common.BUSINESS_FLEET) $ do
+    case fleetOwnerInfo.gstImageId of
+      Nothing -> throwError $ InvalidRequest "GST not uploaded"
+      Just imageId -> do
+        gstIn <- QGST.findByImageId (Id imageId) >>= fromMaybeM (InvalidRequest ("GST not uploaded " <> imageId))
+        unless (gstIn.verificationStatus == Documents.VALID) $ throwError $ InvalidRequest "GST not validated"
   case fleetOwnerInfo.aadhaarFrontImageId of
     Nothing -> throwError $ InvalidRequest "Aadhaar front image not uploaded"
     Just imageId -> do
@@ -248,9 +250,12 @@ fleetOwnerLogin ::
   Flow Common.FleetOwnerLoginResV2
 fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
   runRequestValidation Common.validateInitiateLoginReqV2 req
-  smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeMobileNumberHitsCountKey mobileNumber) sendOtpRateLimitOptions
+
+  smsCfg <- asks (.smsCfg)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mobileNumberHash <- getDbHash mobileNumber
@@ -279,7 +284,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
-        >>= Sms.checkSmsResult
+          >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   void $ Redis.setExp key otp expTime
@@ -339,3 +344,6 @@ fleetOwnerVerify merchantShortId opCity req = do
 
 makeMobileNumberOtpKey :: Text -> Text
 makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:V2:mobileNumber-" <> mobileNumber
+
+makeMobileNumberHitsCountKey :: Text -> Text
+makeMobileNumberHitsCountKey mobileNumber = "MobileNumberOtp:V2:mobileNumberHits-" <> mobileNumber <> ":hitsCount"

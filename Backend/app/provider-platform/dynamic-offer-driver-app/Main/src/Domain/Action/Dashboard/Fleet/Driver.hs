@@ -116,6 +116,7 @@ import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
@@ -193,7 +194,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   entityDetails <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id role >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   let merchantId = entityDetails.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
-  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails
+  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
@@ -230,14 +231,16 @@ checkRCAssociationForDriver driverId vehicleRC checkFleet = do
       unless (null driverAssociations) $ throwError DriverAlreadyLinkedToAnotherVehicle
       return False
 
-checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Flow (DP.Person, Maybe Text)
-checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails = do
+checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Maybe Bool -> Flow (DP.Person, Maybe Text)
+checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails fleetOwnerEnabledCheck = do
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
 
   case requestedPerson.role of
     -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
     DP.FLEET_OWNER -> do
-      fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure val else throwError AccessDenied) mbFleetOwnerId -- Have to discuss
+      fleetOwnerId <- case mbFleetOwnerId of -- Have to discuss
+        Nothing -> DCommon.checkFleetOwnerVerification requestorId fleetOwnerEnabledCheck >> pure requestorId
+        Just val -> if requestorId == val then pure val else throwError AccessDenied
       handleFleetOwnerFlow fleetOwnerId
 
     -- Operator should add vehcile under DCO (Driver who independent from fleet), Fleet, FleetDriver (Driver who has active association with fleet)
@@ -587,7 +590,7 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
+  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
@@ -1378,6 +1381,7 @@ postDriverUpdateFleetOwnerInfo ::
   Common.UpdateFleetOwnerInfoReq ->
   Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
+  runRequestValidation Common.validateUpdateFleetOwnerInfoReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1518,6 +1522,10 @@ postDriverFleetSendJoiningOtp ::
   Flow Common.AuthRes
 postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwnerId mbRequestorId req = do
   validateMobileNumber req.mobileNumber req.mobileCountryCode
+  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeFleetDriverHitsCountKey phoneNumber) sendOtpRateLimitOptions
+
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
@@ -1532,7 +1540,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
       withLogTag ("personId_" <> getId person.id) $ do
         SA.checkForDriverAssociationOverwrite merchant person.id
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-            phoneNumber = req.mobileCountryCode <> req.mobileNumber
+
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           (mbSender, message, templateId) <-
@@ -1602,6 +1610,9 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
 
 makeFleetDriverOtpKey :: Text -> Text
 makeFleetDriverOtpKey phoneNo = "Fleet:Driver:PhoneNo" <> phoneNo
+
+makeFleetDriverHitsCountKey :: Text -> Text
+makeFleetDriverHitsCountKey phoneNo = "Fleet:Driver:PhoneNoHits" <> phoneNo <> ":hitsCount"
 
 ---------------------------------------------------------------------
 postDriverFleetLinkRCWithDriver ::
@@ -2294,7 +2305,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
 validateMobileNumber :: Text -> Text -> Flow ()
 validateMobileNumber mobileNumber mobileCountryCode = do
-  result <- try (void $ runRequestValidation Common.validateUpdatePhoneNumberReq (Common.UpdatePhoneNumberReq {newPhoneNumber = mobileNumber, newCountryCode = mobileCountryCode}))
+  result <- try (void $ runRequestValidation Common.validateIndianMobileNumber (Common.UpdatePhoneNumberReq {newPhoneNumber = mobileNumber, newCountryCode = mobileCountryCode}))
   case result of
     Left (_ :: SomeException) -> throwError $ InvalidRequest "Invalid mobile number"
     Right _ -> pure ()
@@ -2303,7 +2314,7 @@ validateDriverName :: Text -> Flow ()
 validateDriverName driverName = do
   result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
   case result of
-    Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter"
+    Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
     Right _ -> pure ()
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
@@ -2335,7 +2346,8 @@ fetchOrCreatePerson moc req_ = do
         person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
         let isNew = True in pure (person, isNew)
       Just person -> do
-        let isNew = False in pure (person, isNew)
+        QPerson.updateName req_.driverName person.id
+        let isNew = False in pure (person {DP.firstName = req_.driverName}, isNew)
 
 ---------------------------------------------------------------------
 postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes

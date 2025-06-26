@@ -18,12 +18,12 @@ validateRegisterReqV2 FleetOwnerRegisterReqV2 {..} =
   sequenceA_
     [ validateField "firstName" firstName $ P.NotEmpty `P.And` P.name,
       validateField "lastName" lastName $ P.NotEmpty `P.And` P.name,
-      validateField "email" email $ P.InMaybe P.NotEmpty -- currently we don't have proper validation for email in lib
+      validateField "email" email $ P.InMaybe P.email
     ]
 
 validateInitiateLoginReqV2 :: Validate FleetOwnerLoginReqV2
 validateInitiateLoginReqV2 FleetOwnerLoginReqV2 {..} =
   sequenceA_
-    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
+    [ validateField "mobileNumber" mobileNumber P.indianMobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
