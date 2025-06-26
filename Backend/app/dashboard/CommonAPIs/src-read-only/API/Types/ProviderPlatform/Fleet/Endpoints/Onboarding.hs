@@ -103,6 +103,7 @@ data VehicleDocumentItem = VehicleDocumentItem
   { dateOfUpload :: Kernel.Prelude.UTCTime,
     documents :: [DocumentStatusItem],
     isActive :: Kernel.Prelude.Bool,
+    isApproved :: Kernel.Prelude.Bool,
     isVerified :: Kernel.Prelude.Bool,
     registrationNo :: Kernel.Prelude.Text,
     userSelectedVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,

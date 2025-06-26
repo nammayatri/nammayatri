@@ -98,6 +98,7 @@ data VehicleDocumentItem = VehicleDocumentItem
     verifiedVehicleCategory :: Maybe DVC.VehicleCategory,
     isVerified :: Bool,
     isActive :: Bool,
+    isApproved :: Bool,
     vehicleModel :: Maybe Text,
     documents :: [DocumentStatusItem],
     dateOfUpload :: UTCTime
@@ -238,10 +239,12 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         allVehicleDocsVerified <- checkAllVehicleDocsVerified merchantOpCityId vehicleDoc makeSelfieAadhaarPanMandatory
         allDriverDocsVerified <- checkAllDriverDocsVerified merchantOpCityId driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
-        when (allVehicleDocsVerified && allDriverDocsVerified && requiresOnboardingInspection /= Just True && role == DP.DRIVER) $ enableDriver merchantOpCityId personId mDL
+
+        let inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
+        when (allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $ enableDriver merchantOpCityId personId mDL
 
         mbVehicle <- QVehicle.findById personId -- check everytime
-        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && requiresOnboardingInspection /= Just True && role == DP.DRIVER) $
+        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && inspectionNotRequired && role == DP.DRIVER) $
           void $ try @_ @SomeException (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -380,6 +383,7 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo language mbReqRegistration
           verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant,
           isVerified = False,
           isActive,
+          isApproved = fromMaybe False processedVehicle.approved,
           vehicleModel = processedVehicle.vehicleModel,
           documents,
           dateOfUpload
@@ -411,6 +415,7 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo processedVehicleDocumen
                   verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant,
                   isVerified = True,
                   isActive = True,
+                  isApproved = False,
                   vehicleModel = Just vehicle.model,
                   documents,
                   dateOfUpload = vehicle.createdAt
@@ -467,6 +472,7 @@ fetchInprogressVehicleDocuments driverImagesInfo language processedVehicleDocume
                           verifiedVehicleCategory = Nothing,
                           isVerified = False,
                           isActive = False,
+                          isApproved = False,
                           vehicleModel = Nothing,
                           documents,
                           dateOfUpload = verificationReqRecord.createdAt
@@ -515,13 +521,13 @@ checkIfDocumentValid ::
   ResponseStatus ->
   Maybe Bool ->
   Flow Bool
+checkIfDocumentValid _merchantOpCityId _docType _category VALID _makeSelfieAadhaarPanMandatory = pure True
 checkIfDocumentValid merchantOpCityId docType category status makeSelfieAadhaarPanMandatory = do
   mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId docType category Nothing
   case mbVerificationConfig of
     Just verificationConfig -> do
       if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
         then case status of
-          VALID -> return True
           MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification
           _ -> return False
         else return True
