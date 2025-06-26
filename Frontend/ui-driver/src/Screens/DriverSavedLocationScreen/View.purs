@@ -55,18 +55,13 @@ screen initialState =
   , name: "DriverSavedLocationScreen"
   , globalEvents:
       [ ( \push -> do
+            void $ launchAff $ flowRunner defaultGlobalState $ do
+              resp <- Remote.getDriverHomeLocation ""
+              case resp of
+                Right response -> liftFlow $ push $ Respones response
+                Left error -> liftFlow $ push $ Error error
             if initialState.props.viewType == LOCATE_ON_MAP then do
               void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ UpdateLocation key lat lon) (JB.handleLocateOnMapCallback "DriverSavedLocationScreen")
-            else if initialState.props.viewType == GoToList then do
-              void $ launchAff $ flowRunner defaultGlobalState
-                $ do
-                    void $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-                    toggleLoader true
-                    resp <- Remote.getDriverHomeLocation ""
-                    case resp of
-                      Right response -> liftFlow $ push $ Respones response
-                      Left error -> liftFlow $ push $ Error error
-                    toggleLoader false
             else
               pure unit
             pure $ pure unit
