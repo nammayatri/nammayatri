@@ -99,6 +99,13 @@ onStatus _merchant booking (Booking dOrder) = do
         void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticket.qrData (Just qrRefreshAt) booking.id ticket.ticketNumber
 onStatus _merchant booking (TicketVerification ticketPayload) = do
   ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketPayload.ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
-  unless (ticket.status == Ticket.ACTIVE) $ throwError (InvalidRequest "Ticket is not in Active state")
-  void $ QTicket.updateStatusByTBookingIdAndTicketNumber Ticket.USED Nothing booking.id ticket.ticketNumber
-  return $ TicketVerificationSync ticket
+  now <- getCurrentTime
+  let ticketIsExpired = now > ticket.validTill
+  let newStatus = case (ticket.status, ticketIsExpired) of
+        (Ticket.ACTIVE, False) -> Ticket.USED
+        (Ticket.ACTIVE, True) -> Ticket.EXPIRED
+        (currentStatus, _) -> currentStatus
+  when (newStatus /= ticket.status) $
+    void $ QTicket.updateStatusByTBookingIdAndTicketNumber newStatus Nothing booking.id ticket.ticketNumber
+  let updatedTicket = ticket {Ticket.status = newStatus}
+  return $ TicketVerificationSync updatedTicket
