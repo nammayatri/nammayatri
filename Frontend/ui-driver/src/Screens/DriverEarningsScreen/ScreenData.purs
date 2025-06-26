@@ -83,7 +83,9 @@ initData =
             acRide : Nothing,
             vehicleServiceTier : "",
             parkingCharge : 0.0,
-            stops : []
+            stops : [],
+            rideId : "",
+            isInsured : false
         }
       , logField : empty
       , coinInfoRes : Nothing

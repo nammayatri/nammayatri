@@ -879,6 +879,7 @@ type IndividualRideCardState =
     driverSelectedFare :: Int,
     vehicleColor :: String,
     id :: String,
+    rideId :: String,
     updatedAt :: String,
     source :: String,
     destination :: String,
@@ -900,7 +901,8 @@ type IndividualRideCardState =
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
     parkingCharge :: Number,
-    stops :: Array API.Stop
+    stops :: Array API.Stop,
+    isInsured :: Boolean
   }
 
 
@@ -1129,10 +1131,18 @@ type HomeScreenData =  {
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
-
+, insuranceData :: InsuranceData
 , overchargingTag :: Maybe API.OverchargingTag
 , driverBlocked :: Boolean
 , blockedExpiryTime :: String
+}
+
+type InsuranceData = {
+  certificateUrl :: Maybe String,
+  message :: Maybe String,
+  plan :: Maybe String,
+  policyId :: Maybe String,
+  policyNumber :: Maybe String
 }
 
 type FavouritePopUp = {
@@ -1362,6 +1372,8 @@ type ActiveRide = {
   receiverPersonDetails :: Maybe API.PersonDetails,
   notifiedReachedDestination :: Boolean,
   stops :: Array API.Stop,
+  isInsured :: Maybe Boolean,
+  insuredAmount :: Maybe String,
   isPetRide :: Maybe Boolean
 }
 
@@ -1466,6 +1478,7 @@ type HomeScreenProps =  {
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean,
   showBlockerPopup :: Boolean,
+  showInsuranceBanner :: Boolean,
   coinWaitingThreshold :: Int
  }
 
@@ -1624,7 +1637,9 @@ type TripDetailsScreenData =
     vehicleServiceTier :: String,
     parkingCharge :: Number,
     tripType :: TripType,
-    stops :: Array String
+    stops :: Array String,
+    isInsured :: Boolean,
+    certificateUrl :: String
   }
 
 type TripDetailsScreenProps =

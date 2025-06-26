@@ -131,7 +131,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..), NotificationBody)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AddDestRes(..),LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
+import Services.API (AddDestRes(..), DriverInsuranceResp(..), LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -2066,7 +2066,7 @@ helpAndSupportFlow = do
       homeScreenFlow
     GO_BACK_TO_TRIP_DETAILS updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow Nothing
 
 writeToUsFlow :: FlowBT String Unit
 writeToUsFlow = do
@@ -2138,10 +2138,11 @@ myRidesScreenFlow = do
       specialZoneImage = selectedCard.specialZoneImage,
       specialZoneText = selectedCard.specialZoneText,
       specialZonePickup = selectedCard.specialZonePickup,
-      stops = fst <<< HU.getStopName <$> selectedCard.stops
+      stops = fst <<< HU.getStopName <$> selectedCard.stops,
+      isInsured = selectedCard.isInsured
       }})
 
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow $ Just selectedCard.rideId
     NOTIFICATION_FLOW -> notificationFlow Nothing
     SELECTED_TAB state -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
@@ -2286,10 +2287,16 @@ referralScreenFlow = do
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
 
-tripDetailsScreenFlow :: FlowBT String Unit
-tripDetailsScreenFlow = do
+tripDetailsScreenFlow :: Maybe String -> FlowBT String Unit
+tripDetailsScreenFlow mbRideId = do
   config <- getAppConfigFlowBT Constants.appConfig
-  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config}} )
+  case mbRideId of 
+    Just rideId -> do
+      resp <- lift $ lift $ Remote.getDriverInsurance rideId
+      case resp of
+        Right (DriverInsuranceResp res) -> modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config, certificateUrl = fromMaybe "" res.certificateUrl}} )
+        Left _ -> modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config}} )
+    Nothing -> modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config}} )
   flow <- UI.tripDetailsScreen
   case flow of
     ON_SUBMIT  -> pure unit
@@ -2679,6 +2686,12 @@ homeScreenFlow = do
       updateDriverDataToStates
       homeScreenFlow
     RELOAD state -> homeScreenFlow
+    UPDATE_DRIVER_INSURANCE state -> do
+      resp <- lift $ lift $ Remote.getDriverInsurance state.data.activeRide.id
+      case resp of
+        Right (DriverInsuranceResp res) -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { insuranceData = res } })
+        Left _ -> pure unit 
+      homeScreenFlow
     GO_TO_NEW_STOP state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { route = [] }, props{ mapRendered = true }})
       currentRideFlow Nothing Nothing
@@ -2853,9 +2866,9 @@ homeScreenFlow = do
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
-    GO_TO_RIDE_DETAILS_SCREEN -> do
+    GO_TO_RIDE_DETAILS_SCREEN rideId-> do
       modifyScreenState $ TripDetailsScreenStateType $ \tripDetailsScreen -> tripDetailsScreen { data {goBackTo = ST.Home}}
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow $ Just rideId
     POST_RIDE_FEEDBACK state-> do
       void $ lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
       when (state.data.endRideData.rating == 5) $ void $ pure $ JB.launchInAppRatingPopup unit
@@ -3235,7 +3248,7 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
             case (head rideHistoryResponse.list) of
               Nothing -> pure unit
               Just (RidesInfo response) -> do
-                let specialZoneConfig = HU.getRideLabelData response.specialLocationTag
+                let specialZoneConfig = HU.getRideLabelData response.specialLocationTag false
                     isSpecialPickUpZone = HU.checkSpecialPickupZone response.specialLocationTag
                 modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
                     tripId = response.shortRideId,
@@ -3251,7 +3264,7 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
                     customerExtraFee = response.customerExtraFee,
                     purpleTagVisibility = isJust response.disabilityTag,
                     gotoTagVisibility = isJust response.driverGoHomeRequestId,
-                    spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag),
+                    spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag false),
                     specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
                     specialZoneImage = specialZoneConfig.imageUrl,
                     specialZoneText = specialZoneConfig.text,
@@ -3266,6 +3279,7 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
                     tripType = RC.rideTypeConstructor response.tripCategory
                   , parkingCharge = fromMaybe 0.0 response.parkingCharge
                   , stops = (fst <<< HU.getStopName) <$> (fromMaybe [] response.stops)
+                  , isInsured = fromMaybe false response.isInsured
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen
@@ -4630,12 +4644,13 @@ driverEarningsFlow = do
           vehicleModel = selectedCard.vehicleModel,
           acRide = selectedCard.acRide,
           vehicleServiceTier = selectedCard.vehicleServiceTier,
-          tripType = selectedCard.tripType
-        , parkingCharge = selectedCard.parkingCharge
-        , stops = fst <<< HU.getStopName <$> selectedCard.stops
+          tripType = selectedCard.tripType,
+          parkingCharge = selectedCard.parkingCharge,
+          stops = fst <<< HU.getStopName <$> selectedCard.stops,
+          isInsured = selectedCard.isInsured
         }
       })
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow $ Just selectedCard.rideId
     LOAD_MORE_HISTORY state -> do
       modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
       driverEarningsFlow

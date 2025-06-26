@@ -170,6 +170,7 @@ rideActionModalConfig state =
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   , stops = rideData.stops
+  , isInsured = true
   , enableMapButton = isNothing stopToDepart
   , isPetRide = state.data.activeRide.isPetRide
   }
@@ -530,6 +531,7 @@ freeTrialRidesEndingPopupConfig state =
   , popUpHeaderConfig {
     gravity = CENTER
     , visibility = VISIBLE
+    , visibilityV2 = GONE
     , headingText {
       text = getString $ N_MORE_FREE_RIDES $ show freeTrialRidesLeft
       , visibility = VISIBLE
@@ -711,7 +713,7 @@ cancelConfirmationConfig state = let
           ambulanceText =  StringsV2.getStringV2 LT2.canceling_this_booking_may_affect_the_emergency_medical
           nonAmbulanceText = case state.data.activeRide.specialLocationTag of
             Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
-            Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
+            Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag) false).cancelText
         in
           if isAmbulance then ambulanceText else nonAmbulanceText
     , margin = Margin 16 24 16 0 },
@@ -745,9 +747,9 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing)
+      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing)
                     then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory then "ny_ic_cancel_prevention_ambulance" else "ny_ic_frequent_cancellation_blocking"
-                  else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
+                  else (HU.getRideLabelData state.data.activeRide.specialLocationTag false).cancelConfirmImage
     , visibility = VISIBLE
     , margin = Margin 16 10 16 0
     , height = V 250
@@ -3339,3 +3341,73 @@ rideEndStopsWarningPopup state = PopUpModal.config {
     , height = V 190
     }
   }
+
+gettingPolicyText :: ST.HomeScreenState -> String
+gettingPolicyText state = 
+  case state.data.insuranceData.policyNumber of
+    Just policyNum -> getString POLICY_NUMBER <> " - " <> policyNum <>  "\n" <> getString SUM_INSURED <> " - " <> (fromMaybe "" state.data.activeRide.insuredAmount)
+    Nothing -> getString GENERATING_YOUR_POLICY <> "\n" <> getString PLEASE_TRY_AGAIN_IN_SOME_TIME
+
+rideInsuranceBannerConfig :: ST.HomeScreenState -> PopUpModal.Config
+rideInsuranceBannerConfig state = let
+  config' = PopUpModal.config
+  startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) )
+  subText = case startRideActive of
+    true -> getString POLICY_GENERATE_ONCE_RIDE_START
+    false -> gettingPolicyText state
+  popUpConfig' = config'{
+    showDownloadPolicy = if state.data.insuranceData.certificateUrl /= Nothing then true else false,
+    certificateUrl = fromMaybe "" state.data.insuranceData.certificateUrl,
+    background = Color.blue900,
+    backgroundClickable = true,
+    gravity = BOTTOM,
+    buttonLayoutMargin =(Margin 0 0 0 0),
+    cornerRadius = (PTD.Corners 16.0 true true true true),
+    padding = Padding 16 24 16 16,
+    optionButtonOrientation = "VERTICAL",
+    popUpHeaderConfig {
+      backgroundColor = Color.blue900,
+      visibility = VISIBLE,
+      visibilityV2 = GONE,
+      orientation = "HORIZONTAL",
+      imageConfig {
+        width = V 200,
+        height = V 200,
+        imageUrl = "ny_ic_shield",
+        visibility = VISIBLE,
+        margin = MarginTop 10
+      },
+      headingText {
+        visibility = GONE
+      }
+    },
+    option2 {
+      visibility = false
+    },
+    primaryText {
+      text = if startRideActive == false && state.data.insuranceData.policyNumber /= Nothing then getString THIS_RIDE_IS_ENSURED_FOR_FREE else getString THIS_RIDE_COME_WITH_COMPLIMENTARY_INSURANCE,
+      margin = MarginTop 16,
+      color = Color.white900,
+      textStyle = Heading1,
+      lineheight = Just "25"
+    },
+    secondaryText {
+      text = subText,
+      margin = (Margin 0 15 0 0),
+      color = Color.white900,
+      textStyle = SubHeading1,
+      useTextFromHtml = false,
+      lineheight = Just "20"
+    },
+    option1 {
+        text = getString GOT_IT
+      , color = Color.blue900
+      , background = Color.white900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      , margin = MarginVertical 36 10
+      , useWeight = false
+      }
+  }
+  in popUpConfig'
