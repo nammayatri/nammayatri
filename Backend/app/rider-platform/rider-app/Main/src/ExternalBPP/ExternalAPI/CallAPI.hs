@@ -111,8 +111,7 @@ getBppOrderId integratedBPPConfig booking = do
     CMRL _ -> Just <$> CMRLOrder.getBppOrderId booking
     EBIX _ -> Just <$> EBIXOrder.getBppOrderId booking
     DIRECT _ -> Just <$> DIRECTOrder.getBppOrderId booking
-    CRIS _ -> Just <$> CRISBookJourney.getBppOrderId booking
-    ONDC _ -> return Nothing
+    _ -> return Nothing
 
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus integrationBPPConfig booking = do
