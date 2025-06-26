@@ -19,7 +19,9 @@ module ProviderPlatformClient.DynamicOfferDriver.Fleet
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.BulkAssociation as BulkAssoc
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
+import Domain.Types.FleetMemberAssociation
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -28,6 +30,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Utils.Common
 import Servant
+import Servant.Multipart
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
@@ -35,24 +38,30 @@ import "lib-dashboard" Tools.Metrics
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
     fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
+    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes,
+    addFleetMemberAssociation :: Domain.Types.FleetMemberAssociation.FleetMemberAssociation -> Euler.EulerClient APISuccess
   }
 
-newtype FleetAPIs = FleetAPIs
-  { registration :: FleetRegistrationAPIs
+data FleetBulkAPIs = FleetBulkAPIs
+  { bulkAssociate :: MultipartData Mem -> Euler.EulerClient [BulkAssoc.BulkFleetAssociationResult]
+  }
+
+data FleetAPIs = FleetAPIs
+  { registration :: FleetRegistrationAPIs,
+    bulk :: FleetBulkAPIs
   }
 
 mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
-  let registration = FleetRegistrationAPIs {..}
+  let client = clientWithMerchantAndCity (Proxy :: Proxy BPP.API)
+      (regClient :<|> bulkClient) = client merchantId city token
+
+      (fleetOwnerLogin :<|> fleetOwnerVerify :<|> fleetOwnerRegister :<|> addFleetMemberAssociation) = regClient
+
+      registration = FleetRegistrationAPIs {..}
+      bulk = FleetBulkAPIs {bulkAssociate = \multipartData -> bulkClient ("", multipartData)}
 
   FleetAPIs {..}
-  where
-    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
-
-    fleetOwnerLogin
-      :<|> fleetOwnerVerify
-      :<|> fleetOwnerRegister = fleetRegisterationClient
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.

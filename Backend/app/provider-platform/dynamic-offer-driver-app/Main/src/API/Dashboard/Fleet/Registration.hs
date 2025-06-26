@@ -14,30 +14,46 @@
 
 module API.Dashboard.Fleet.Registration
   ( FleetOwnerLoginAPI,
+    FleetOwnerVerifyAPI,
+    FleetOwnerRegisterAPI,
+    FleetOwnerRegisterHelperAPI,
+    AddFleetMemberAssociationAPI,
     fleetOwnerLogin,
     fleetOwnerVerify,
-    FleetOwnerRegisterAPI,
+    fleetOwnerRegister,
+    addFleetMemberAssociation,
     handler,
     API,
+    FleetRegistrationReq,
   )
 where
 
+import Data.Aeson ()
+import Data.OpenApi ()
 import qualified Domain.Action.Dashboard.Fleet.Registration as DFleet
+import qualified Domain.Types.FleetMemberAssociation as FMA
 import qualified Domain.Types.Merchant as DM
 import Environment
-import Kernel.Prelude
+import GHC.Generics (Generic)
+import Kernel.Prelude hiding (Generic)
+import qualified Kernel.Prelude as KP
 import Kernel.Types.APISuccess
-import Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Logging as Logger
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.FleetMemberAssociation as QFMA
+import qualified Storage.Queries.FleetMemberAssociationExtra as QFMAExtra
 
 type API =
   "fleet"
     :> ( FleetOwnerLoginAPI
            :<|> FleetOwnerVerifyAPI
            :<|> FleetOwnerRegisterHelperAPI
+           :<|> AddFleetMemberAssociationAPI
        )
 
 type FleetOwnerVerifyAPI =
@@ -64,11 +80,17 @@ type FleetOwnerRegisterHelperAPI =
       :> Post '[JSON] DFleet.FleetOwnerRegisterRes
   )
 
+type AddFleetMemberAssociationAPI =
+  "member-association"
+    :> ReqBody '[JSON] FMA.FleetMemberAssociation
+    :> Post '[JSON] APISuccess
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler _ _ =
   fleetOwnerLogin
     :<|> fleetOwnerVerify
     :<|> fleetOwnerRegister
+    :<|> addFleetMemberAssociation
 
 fleetOwnerLogin :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerLogin = withDashboardFlowHandlerAPI . DFleet.fleetOwnerLogin
@@ -78,3 +100,48 @@ fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
 fleetOwnerRegister :: Maybe Bool -> DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerRegisterRes
 fleetOwnerRegister enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerRegister req enabled
+
+addFleetMemberAssociation :: FMA.FleetMemberAssociation -> FlowHandler APISuccess
+addFleetMemberAssociation assoc = withDashboardFlowHandlerAPI $ do
+  Logger.logInfo $ "[FleetMemberAssociation] Attempting to add: " <> KP.show assoc
+  -- Check if association already exists
+  existing <- QFMAExtra.findByFleetMemberAndOwner assoc.fleetMemberId assoc.fleetOwnerId
+  case existing of
+    Just _ -> do
+      Logger.logInfo $ "[FleetMemberAssociation] Already exists: " <> KP.show assoc
+      throwError $ InvalidRequest "Fleet member association already exists."
+    Nothing -> do
+      result <- KP.tryAny $ QFMA.create assoc
+      case result of
+        Right _ -> do
+          Logger.logInfo $ "[FleetMemberAssociation] Successfully added: " <> KP.show assoc
+          pure Success
+        Left err -> do
+          Logger.logError $ "[FleetMemberAssociation] Failed to add: " <> KP.show assoc <> ", error: " <> KP.show err
+          throwError $ InternalError (show err)
+
+data FleetRegistrationReq = FleetRegistrationReq
+  { firstName :: Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Maybe Text,
+    email :: Maybe Text,
+    operatingCity :: Text,
+    fleetType :: Text,
+    gstNumber :: Maybe Text,
+    gstImageId :: Maybe Text,
+    panNumber :: Maybe Text,
+    aadhaarNumber :: Maybe Text,
+    businessLicenseNumber :: Maybe Text,
+    operatingRouteCodes :: [Text],
+    allowAutomaticRoundTripAssignment :: Maybe Bool,
+    allowEndingMidRoute :: Maybe Bool,
+    allowStartRideFromQR :: Maybe Bool,
+    directlyStartFirstTripAssignment :: Maybe Bool,
+    endRideDistanceThreshold :: Maybe Int,
+    rideEndApproval :: Maybe Bool,
+    unlinkDriverAndVehicleOnTripTermination :: Maybe Bool,
+    fleetVehicleVerificationSkippable :: Maybe Bool,
+    driverVehicleVerificationSkippable :: Maybe Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

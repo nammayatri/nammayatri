@@ -179,23 +179,33 @@ FleetConfig:
     allowAutomaticRoundTripAssignment: Bool
     directlyStartFirstTripAssignment: Bool
     unlinkDriverAndVehicleOnTripTermination: Bool
+    fleetVehicleVerificationSkippable: Bool
+    driverVehicleVerificationSkippable: Bool
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
     directlyStartFirstTripAssignment: Maybe Bool
     unlinkDriverAndVehicleOnTripTermination: Maybe Bool
+    fleetVehicleVerificationSkippable: Maybe Bool
+    driverVehicleVerificationSkippable: Maybe Bool
   toTType:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
+    fleetVehicleVerificationSkippable: Just fleetVehicleVerificationSkippable|E
+    driverVehicleVerificationSkippable: Just driverVehicleVerificationSkippable|E
   fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
+    fleetVehicleVerificationSkippable: fromMaybe True fleetVehicleVerificationSkippable|E
+    driverVehicleVerificationSkippable: fromMaybe True driverVehicleVerificationSkippable|E
   sqlType:
     endRideDistanceThreshold: double precision
   default:
     endRideDistanceThreshold: "100"
     directlyStartFirstTripAssignment: "true"
     unlinkDriverAndVehicleOnTripTermination: "true"
+    fleetVehicleVerificationSkippable: "false"
+    driverVehicleVerificationSkippable: "false"
   constraints:
     fleetOwnerId: PrimaryKey

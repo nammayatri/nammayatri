@@ -42,7 +42,7 @@ type MainAPI =
   Dashboard.API
     :<|> BPP.API
     :<|> Exotel.API
-    :<|> FReg.API
+    :<|> ("dashboard" :> FReg.API)
     :<|> SpecialZone.API
 
 handler :: FlowServer API

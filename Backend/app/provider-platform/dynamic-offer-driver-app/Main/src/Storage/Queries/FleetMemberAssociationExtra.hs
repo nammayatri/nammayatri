@@ -17,3 +17,11 @@ import Storage.Queries.OrphanInstances.FleetMemberAssociation
 
 findOneByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetMemberAssociation.FleetMemberAssociation))
 findOneByFleetOwnerId fleetOwnerId isFleetOwner = do findAllWithKV [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is Beam.isFleetOwner $ Se.Eq isFleetOwner]] <&> listToMaybe
+
+findByFleetMemberAndOwner ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Text ->
+  m (Maybe Domain.Types.FleetMemberAssociation.FleetMemberAssociation)
+findByFleetMemberAndOwner fleetMemberId fleetOwnerId =
+  findOneWithKV [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]]
