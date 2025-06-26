@@ -20,6 +20,7 @@ where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
+import Domain.Types.FleetMemberAssociation
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -35,7 +36,8 @@ import "lib-dashboard" Tools.Metrics
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
     fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
+    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes,
+    addFleetMemberAssociation :: Domain.Types.FleetMemberAssociation.FleetMemberAssociation -> Euler.EulerClient APISuccess
   }
 
 newtype FleetAPIs = FleetAPIs
@@ -48,11 +50,12 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
 
   FleetAPIs {..}
   where
-    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API)
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify
-      :<|> fleetOwnerRegister = fleetRegisterationClient
+      :<|> fleetOwnerRegister
+      :<|> addFleetMemberAssociation = fleetRegisterationClient merchantId city token
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.
