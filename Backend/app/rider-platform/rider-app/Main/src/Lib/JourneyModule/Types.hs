@@ -15,6 +15,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Location
 import qualified Domain.Types.Location as DLocation
 import Domain.Types.LocationAddress
@@ -33,6 +34,7 @@ import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
+import qualified Kernel.External.MultiModal.OpenTripPlanner.Types as EOTPTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -265,7 +267,8 @@ data LegInfo = LegInfo
     actualDistance :: Maybe Distance,
     totalFare :: Maybe PriceAPIEntity,
     entrance :: Maybe MultiModalLegGate,
-    exit :: Maybe MultiModalLegGate
+    exit :: Maybe MultiModalLegGate,
+    steps :: Maybe [Maybe EOTPTypes.OTPPlanPlanItinerariesLegsSteps]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -487,8 +490,8 @@ getDistance = \case
   DBooking.MeterRideDetails _ -> 0
   DBooking.RentalDetails _ -> 0
 
-mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromBookingAndRide booking mRide entrance exit = do
+mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> DJourneyLeg.JourneyLeg -> m LegInfo
+mkLegInfoFromBookingAndRide booking mRide leg = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
   let skipBooking = fromMaybe False booking.isSkipped
   (status, _) <- getTaxiLegStatusFromBooking booking mRide
@@ -541,8 +544,9 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit = do
               },
         actualDistance = mRide >>= (.traveledDistance),
         totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare)),
-        entrance = entrance,
-        exit = exit
+        entrance = leg.entrance,
+        exit = leg.exit,
+        steps = leg.steps
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -555,8 +559,8 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit = do
     getBookingDetailsConstructor (DBooking.DeliveryDetails _) = "DeliveryDetails"
     getBookingDetailsConstructor (DBooking.MeterRideDetails _) = "MeterRideDetails"
 
-mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit = do
+mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> DJourneyLeg.JourneyLeg -> m LegInfo
+mkLegInfoFromSearchRequest DSR.SearchRequest {..} leg = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   (mbFareRange, mbEstimateStatus, mbEstimate) <-
     case journeyLegInfo'.pricingId of
@@ -612,8 +616,9 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit = do
               },
         actualDistance = Nothing,
         totalFare = Nothing,
-        entrance = entrance,
-        exit = exit
+        entrance = leg.entrance,
+        exit = leg.exit,
+        steps = leg.steps
       }
 
 getWalkLegStatusFromWalkLeg :: DWalkLeg.WalkLegMultimodal -> JourneySearchData -> JourneyLegStatus
@@ -635,8 +640,8 @@ castWalkLegStatusFromLegStatus Finishing = DWalkLeg.Finishing
 castWalkLegStatusFromLegStatus Completed = DWalkLeg.Completed
 castWalkLegStatusFromLegStatus _ = DWalkLeg.InPlan
 
-mkWalkLegInfoFromWalkLegData :: MonadFlow m => DWalkLeg.WalkLegMultimodal -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} entrance exit = do
+mkWalkLegInfoFromWalkLegData :: MonadFlow m => DWalkLeg.WalkLegMultimodal -> DJourneyLeg.JourneyLeg -> m LegInfo
+mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} leg = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal walk search as no journeyLegInfo found")
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   return $
@@ -661,8 +666,9 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} entrance ex
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation', id = id},
         actualDistance = estimatedDistance,
         totalFare = Nothing,
-        entrance = entrance,
-        exit = exit
+        entrance = leg.entrance,
+        exit = leg.exit,
+        steps = leg.steps
       }
 
 getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
@@ -679,8 +685,8 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> DJourneyLeg.JourneyLeg -> m LegInfo
+mkLegInfoFromFrfsBooking booking distance duration leg = do
   let journeyRouteDetails' = booking.journeyRouteDetails
   ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
   let ticketsCreatedAt = ticketsData <&> (.createdAt)
@@ -721,8 +727,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         legExtraInfo = legExtraInfo,
         actualDistance = distance,
         totalFare = mkPriceAPIEntity <$> booking.finalPrice,
-        entrance = entrance,
-        exit = exit
+        entrance = leg.entrance,
+        exit = leg.exit,
+        steps = leg.steps
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
@@ -849,8 +856,8 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration entrance exit = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> DJourneyLeg.JourneyLeg -> m LegInfo
+mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration leg = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   let isSearchFailed = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
@@ -897,8 +904,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
         legExtraInfo = legExtraInfo,
         actualDistance = Nothing,
         totalFare = Nothing,
-        entrance = entrance,
-        exit = exit
+        entrance = leg.entrance,
+        exit = leg.exit,
+        steps = leg.steps
       }
   where
     mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo' = do
@@ -1063,7 +1071,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = Nothing,
         entrance = leg.entrance,
-        exit = leg.exit
+        exit = leg.exit,
+        steps = leg.steps
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

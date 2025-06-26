@@ -42,6 +42,7 @@ data JourneyLegT f = JourneyLegT
     serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
+    steps :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     toArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     toDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     toStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

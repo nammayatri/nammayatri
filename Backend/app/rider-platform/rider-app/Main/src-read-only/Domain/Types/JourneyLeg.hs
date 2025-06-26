@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface.Types
+import qualified Kernel.External.MultiModal.OpenTripPlanner.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -40,6 +41,7 @@ data JourneyLeg = JourneyLeg
     sequenceNumber :: Kernel.Prelude.Int,
     serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
+    steps :: Kernel.Prelude.Maybe [Kernel.Prelude.Maybe Kernel.External.MultiModal.OpenTripPlanner.Types.OTPPlanPlanItinerariesLegsSteps],
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,

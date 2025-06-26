@@ -291,7 +291,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
                 toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
                 toDepartureTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
                 entrance = Nothing,
-                exit = Nothing
+                exit = Nothing,
+                steps = Nothing
               }
       return $
         ( Nothing,
@@ -505,7 +506,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
                 toArrivalTime = Just endTime,
                 toDepartureTime = Just endTime,
                 entrance = Nothing,
-                exit = Nothing
+                exit = Nothing,
+                steps = Nothing
               }
       return $
         MInterface.MultiModalResponse

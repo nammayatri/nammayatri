@@ -121,3 +121,8 @@ ALTER TABLE atlas_app.journey ADD COLUMN payment_order_short_id character varyin
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

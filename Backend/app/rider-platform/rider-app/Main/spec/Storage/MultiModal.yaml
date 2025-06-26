@@ -19,6 +19,7 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
+  OTPPlanPlanItinerariesLegsSteps: Kernel.External.MultiModal.OpenTripPlanner.Types
   Value: Data.Aeson
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
@@ -298,15 +299,18 @@ JourneyLeg:
     isSkipped: Maybe Bool
     entrance: Maybe MultiModalLegGate
     exit: Maybe MultiModalLegGate
+    steps: Maybe [Maybe OTPPlanPlanItinerariesLegsSteps]
 
   sqlType:
     serviceTypes: text[]
     entrance: "json"
     exit: "json"
+    steps: "json"
 
   beamType:
     entrance: Maybe Value
     exit: Maybe Value
+    steps: Maybe Value
 
   beamFields:
     distance:
@@ -385,6 +389,7 @@ JourneyLeg:
     legSearchId: legId|E
     entrance: entrance >>= Kernel.Utils.JSON.valueToMaybe|E
     exit: exit >>= Kernel.Utils.JSON.valueToMaybe|E
+    steps: steps >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     distance: (.value) <$> |I
@@ -404,6 +409,7 @@ JourneyLeg:
     legId: legSearchId|E
     entrance: entrance >>= Just . Data.Aeson.toJSON|E
     exit: exit >>= Just . Data.Aeson.toJSON|E
+    steps: steps >>= Just . Data.Aeson.toJSON|E
 
   excludedDefaultQueries:
     - create

@@ -1288,7 +1288,8 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         changedBusesInSequence = journeyLeg.changedBusesInSequence,
         finalBoardedBusNumber = journeyLeg.finalBoardedBusNumber,
         entrance = journeyLeg.entrance,
-        exit = journeyLeg.exit
+        exit = journeyLeg.exit,
+        steps = journeyLeg.steps
       }
 
 extendLeg ::
@@ -1419,7 +1420,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             toArrivalTime = Nothing,
             toDepartureTime = Nothing,
             entrance = Nothing,
-            exit = Nothing
+            exit = Nothing,
+            steps = Nothing
           }
 
     mkExtendLegKey = "Extend:Leg:For:JourneyId-" <> journeyId.getId
@@ -1618,7 +1620,8 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           toArrivalTime = Nothing,
           toDepartureTime = Nothing,
           entrance = Nothing,
-          exit = Nothing
+          exit = Nothing,
+          steps = Nothing
         }
 
     getAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}

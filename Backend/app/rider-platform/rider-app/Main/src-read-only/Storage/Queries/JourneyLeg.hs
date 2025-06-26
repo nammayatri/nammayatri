@@ -110,6 +110,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.serviceTypes serviceTypes,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),
+      Se.Set Beam.steps (steps >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.toArrivalTime toArrivalTime,
       Se.Set Beam.toDepartureTime toDepartureTime,
       Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),
