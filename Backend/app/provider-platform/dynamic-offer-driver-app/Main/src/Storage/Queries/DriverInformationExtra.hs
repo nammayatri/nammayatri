@@ -401,11 +401,11 @@ findByIdAndVerified (Id driverInformationId) mbVerified =
           <> [Se.Is BeamDI.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
     ]
 
-updateOnlineDurationRefreshedAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe UTCTime -> m ()
+updateOnlineDurationRefreshedAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> UTCTime -> m ()
 updateOnlineDurationRefreshedAt (Id driverId) onlineDurationRefreshedAt = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamDI.onlineDurationRefreshedAt onlineDurationRefreshedAt,
+    [ Se.Set BeamDI.onlineDurationRefreshedAt $ Just onlineDurationRefreshedAt,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
