@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin) where
+module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin, postKaptureCloseTicket) where
 
 import qualified API.Types.UI.TicketKapture as TicketKapture
 import Data.OpenApi (ToSchema)
@@ -12,6 +12,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import qualified Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,9 +39,9 @@ postKaptureCustomerLogin (mbPersonId, _) ticketType = do
 
   kaptureEncryptionResponse <-
     case addAndUpdateKaptureCustomerResponse of
-      Right resp ->
+      Right _resp ->
         try @_ @SomeException
-          (kaptureEncryption person.merchantId person.merchantOperatingCityId (TIT.KaptureEncryptionReq resp.kaptureCustomerId ticketType))
+          (kaptureEncryption person.merchantId person.merchantOperatingCityId (TIT.KaptureEncryptionReq personId.getId ticketType))
       Left err -> throwError $ InternalError ("Add And Update Kapture Customer Ticket API failed - " <> show err)
 
   case kaptureEncryptionResponse of
@@ -51,3 +52,22 @@ postKaptureCustomerLogin (mbPersonId, _) ticketType = do
           { encryptedCc = resp.encrytedCc,
             encryptedIv = resp.encryptedIv
           }
+
+postKaptureCloseTicket ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.Flow APISuccess
+  )
+postKaptureCloseTicket (mbPersonId, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  resp <- kapturePullTicket person.merchantId person.merchantOperatingCityId (TIT.KapturePullTicketReq personId.getId "P" "0" "100")
+  let pendingTicketIds =
+        [ ticketSummary.ticketId
+          | ticketSummary <- resp.message,
+            ticketSummary.status == "Pending"
+        ]
+  forM_ pendingTicketIds $ \ticketId -> do
+    updateTicket person.merchantId person.merchantOperatingCityId (TIT.UpdateTicketReq "" ticketId TIT.RS)
+  pure Success
