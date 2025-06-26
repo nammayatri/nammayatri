@@ -31,6 +31,7 @@ imports:
   ConfigFailoverReq: Dashboard.Common.Merchant
   ConfigNames: Dashboard.Common.Merchant
   DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  Value: Data.Aeson
 
 module: Merchant
 
@@ -440,6 +441,15 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CLEAR_CACHE_SUBSCRIPTION
+  - POST:
+      endpoint: /config/upsertPlanAndConfig/subscription
+      auth: ApiAuthV2
+      request:
+        type: UpsertPlanAndConfigReq
+      response:
+        type: UpsertPlanAndConfigResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_PLAN_AND_SUBSCRIPTION_CONFIG
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -798,7 +808,7 @@ types:
     - jobData: Text
     - derive: "'HideSecrets"
   JobName:
-    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation"
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation,CongestionChargeCalculation"
   UpdateOnboardingVehicleVariantMappingReq:
     - recordType: NewType
     - file: FilePath
@@ -806,6 +816,7 @@ types:
   ClearCacheSubscriptionReq:
     - serviceName: Maybe ServiceNames
     - planId: Maybe Text
+    - tableName: Maybe TableName
     - derive: "'HideSecrets"
   PayoutConfigReq:
     - toEnable: Maybe Bool
@@ -817,6 +828,25 @@ types:
     - thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
     - remark: Maybe Text
     - derive: "'HideSecrets"
+  UpsertPlanAndConfigReq:
+    - action: Action
+    - command: Command
+    - config: Value
+    - tableName: TableName
+    - derive: "'HideSecrets"
+  Action:
+    - enum: "UPDATE_CONFIG,CREATE_CONFIG"
+  Command:
+    - enum: "COMMIT,VIEW_DIFF"
+  TableName:
+    - enum: "SUBSCRIPTION_CONFIG,PLAN"
+  UpsertPlanAndConfigResp:
+    - respCode: APISuccess
+    - executedAction: Action
+    - executedCommand: Command
+    - error_resp : Maybe Text
+    - diff : Maybe Value
+
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
