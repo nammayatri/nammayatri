@@ -679,6 +679,15 @@ listCancelReasonBT payload = do
                 else pure $ toast "Some error occured in listCancelReasonBT"
             BackT $ pure GoBack
 
+-----------------------------------------------------------------------getDriverInsurance------------------------------------------------------------------------------
+
+getDriverInsurance :: String -> Flow GlobalState (Either ErrorResponse DriverInsuranceResp)
+getDriverInsurance rideId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getDriverInsurance rideId) unwrapResponse $  callAPI headers (DriverInsuranceReq rideId)
+   where
+    unwrapResponse (x) = x
+
 --------------------------------- getRouteBT ---------------------------------------------------------------------------------------------------------------------------------
 
 getRouteBT :: GetRouteReq -> String -> FlowBT String GetRouteResp

@@ -515,7 +515,7 @@ getAllWeeksData cachedEarnings earningList dates = do
 
 rideHistoryItemTransformer :: RidesInfo -> IndividualRideCardState
 rideHistoryItemTransformer (RidesInfo ride) =
-  let specialLocationConfig = getRideLabelData ride.specialLocationTag
+  let specialLocationConfig = getRideLabelData ride.specialLocationTag false
   in
   { date : (convertUTCtoISC (ride.createdAt) "D MMM"),
     time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
@@ -535,6 +535,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     driverSelectedFare : ride.driverSelectedFare  ,
     vehicleColor : ride.vehicleColor  ,
     id : ride.shortRideId,
+    rideId : ride.id,
     updatedAt : ride.updatedAt,
     source : (Const.decodeShortAddress ride.fromLocation),
     destination : maybe "" (\toLocation -> Const.decodeShortAddress toLocation) ride.toLocation,
@@ -544,7 +545,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     customerExtraFee : ride.customerExtraFee,
     purpleTagVisibility : isJust ride.disabilityTag,
     gotoTagVisibility : isJust ride.driverGoHomeRequestId,
-    spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
+    spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag false) /= Nothing,
     specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
     specialZoneImage : specialLocationConfig.imageUrl,
     specialZoneText : specialLocationConfig.text,
@@ -556,7 +557,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     acRide : ride.isVehicleAirConditioned,
     vehicleServiceTier : ride.vehicleServiceTier,
     parkingCharge : fromMaybe 0.0 ride.parkingCharge, 
-    stops : fromMaybe [] ride.stops
+    stops : fromMaybe [] ride.stops,
+    isInsured : fromMaybe false ride.isInsured
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -593,7 +595,7 @@ earningHistoryItemsListTransformer list =
 getTagImages :: RidesInfo -> Array String
 getTagImages (RidesInfo ride) =
   let
-    tag = getRequiredTag ride.specialLocationTag
+    tag = getRequiredTag ride.specialLocationTag false
     conditionsAndTags = 
       [ {condition: isJust ride.customerExtraFee, tag: fetchImage FF_ASSET "ny_ic_tip_ride_tag"}
       , {condition: isJust ride.disabilityTag, tag: fetchImage FF_ASSET "ny_ic_disability_tag"}
@@ -808,5 +810,7 @@ dummyRideHistoryItem = RidesInfo {
       receiverDetails : Nothing,
       coinsEarned : Nothing,
       stops : Nothing,
+      isInsured : Nothing,
+      insuredAmount : Nothing,
       isPetRide : Nothing
 }

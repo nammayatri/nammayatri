@@ -67,6 +67,8 @@ initData = {
     vehicleServiceTier : ""
   , parkingCharge : 0.0
   , stops : []
+  , rideId : ""
+  , isInsured : false
   },
   offsetValue: 0,
   loaderButtonVisibility: false,
