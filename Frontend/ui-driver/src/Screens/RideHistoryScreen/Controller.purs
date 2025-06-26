@@ -226,7 +226,7 @@ eval _ state = update state
 rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
 rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
   let accessibilityTag = (getDisabilityType ride.disabilityTag)
-      specialLocationConfig = getRideLabelData ride.specialLocationTag
+      specialLocationConfig = getRideLabelData ride.specialLocationTag false
     in 
       {
       date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
@@ -253,7 +253,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
                     "CANCELLED" -> Color.red
                     _ -> Color.black800),
       riderName : toPropValue $ fromMaybe "" ride.riderName,
-      spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (getRequiredTag ride.specialLocationTag) /= Nothing) then "visible" else "gone",
+      spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (getRequiredTag ride.specialLocationTag false) /= Nothing) then "visible" else "gone",
       specialZoneText : toPropValue $ specialLocationConfig.text,
       specialZoneImage : toPropValue $ specialLocationConfig.imageUrl,
       specialZoneLayoutBackground : toPropValue $ specialLocationConfig.backgroundColor,
@@ -274,7 +274,7 @@ getDisabilityType disabilityString = case disabilityString of
 rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
 rideListResponseTransformer = 
     map (\(RidesInfo ride) -> 
-      let specialLocationConfig = getRideLabelData ride.specialLocationTag
+      let specialLocationConfig = getRideLabelData ride.specialLocationTag false
       in
       { date : (convertUTCtoISC (ride.createdAt) "D MMM"),
         time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
@@ -294,6 +294,7 @@ rideListResponseTransformer =
         driverSelectedFare : ride.driverSelectedFare  ,
         vehicleColor : ride.vehicleColor  ,
         id : ride.shortRideId,
+        rideId : ride.id,
         updatedAt : ride.updatedAt,
         source : (decodeAddress (ride.fromLocation) false),
         destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
@@ -302,7 +303,7 @@ rideListResponseTransformer =
         customerExtraFee : ride.customerExtraFee,
         purpleTagVisibility : isJust ride.disabilityTag,
         gotoTagVisibility : isJust ride.driverGoHomeRequestId,
-        spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
+        spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag false) /= Nothing,
         specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
         specialZoneImage : specialLocationConfig.imageUrl,
         specialZoneText : specialLocationConfig.text,
@@ -315,7 +316,8 @@ rideListResponseTransformer =
         acRide : ride.isVehicleAirConditioned,
         vehicleServiceTier : ride.vehicleServiceTier,
         parkingCharge : fromMaybe 0.0 ride.parkingCharge,
-        stops : fromMaybe [] ride.stops
+        stops : fromMaybe [] ride.stops,
+        isInsured : fromMaybe false ride.isInsured
       }) 
 
 
@@ -341,6 +343,7 @@ dummyCard =  {
     driverSelectedFare : 0,
     vehicleColor : "",
     id : "",
+    rideId : "",
     updatedAt : "",
     source : "",
     destination : "",
@@ -362,5 +365,6 @@ dummyCard =  {
     acRide : Nothing,
     vehicleServiceTier : "",
     parkingCharge : 0.0,
-    stops : []
+    stops : [],
+    isInsured : false
   }

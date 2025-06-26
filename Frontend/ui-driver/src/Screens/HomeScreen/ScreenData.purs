@@ -207,6 +207,13 @@ initData =
       , overchargingTag : Nothing
       , driverBlocked : false
       , blockedExpiryTime : ""
+      , insuranceData : {
+        certificateUrl : Nothing,
+        message : Nothing,
+        plan : Nothing,
+        policyId : Nothing,
+        policyNumber : Nothing
+      }
     }
   , props:
       { isFreeRide: false
@@ -313,6 +320,7 @@ initData =
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
       , showBlockerPopup : false
+      , showInsuranceBanner : false
       }
   }
 
@@ -432,6 +440,8 @@ dummyRideData = {
       , receiverPersonDetails : Nothing
       , notifiedReachedDestination : false
       , stops : []
+      , isInsured : Nothing
+      , insuredAmount : Nothing
       , isPetRide : Nothing
       }
 
