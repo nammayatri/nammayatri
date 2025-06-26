@@ -17,6 +17,7 @@ AppDynamicLogicElement:
     order: Int
     logic: Data.Aeson.Value
     merchantId: Maybe (Id Merchant)
+    patchedElement: Maybe Data.Aeson.Value
 
   constraints:
     domain: PrimaryKey
@@ -43,12 +44,15 @@ AppDynamicLogicElement:
 
   beamType:
     logic: Text
+    patchedElement: Maybe Text
 
   toTType:
     logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
+    patchedElement: fmap (Data.String.Conversions.cs . Data.Aeson.encode)|I
 
   fromTType:
     logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
+    patchedElement: (\val -> (Data.Aeson.decode . Data.String.Conversions.cs) =<< val)|I
 
   extraOperations:
     - EXTRA_QUERY_FILE

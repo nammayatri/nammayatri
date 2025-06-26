@@ -14,7 +14,7 @@ import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagVerify :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagQueryAll :<|> PostNammaTagConfigPilotGetVersion :<|> PostNammaTagConfigPilotGetConfig :<|> PostNammaTagConfigPilotCreateUiConfig :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData :<|> GetNammaTagConfigPilotAllUiConfigs :<|> GetNammaTagConfigPilotUiConfigDetails :<|> GetNammaTagConfigPilotGetUiTableData :<|> PostNammaTagConfigPilotActionChange))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagVerify :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagQueryAll :<|> PostNammaTagConfigPilotGetVersion :<|> PostNammaTagConfigPilotGetConfig :<|> PostNammaTagConfigPilotCreateUiConfig :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData :<|> GetNammaTagConfigPilotAllUiConfigs :<|> GetNammaTagConfigPilotUiConfigDetails :<|> GetNammaTagConfigPilotGetUiTableData :<|> PostNammaTagConfigPilotActionChange :<|> PostNammaTagConfigPilotGetPatchedElement))
 
 type PostNammaTagTagCreate = ("tag" :> "create" :> ReqBody '[JSON] Lib.Yudhishthira.Types.CreateNammaTagRequest :> Post '[JSON] Lib.Yudhishthira.Types.CreateNammaTagResponse)
 
@@ -79,7 +79,7 @@ type GetNammaTagAppDynamicLogicDomains = ("appDynamicLogic" :> "domains" :> Get 
 
 type GetNammaTagQueryAll = ("query" :> "all" :> MandatoryQueryParam "chakra" Lib.Yudhishthira.Types.Chakra :> Get '[JSON] Lib.Yudhishthira.Types.ChakraQueryResp)
 
-type PostNammaTagConfigPilotGetVersion = ("configPilot" :> "getVersion" :> ReqBody '[JSON] Lib.Yudhishthira.Types.UiConfigRequest :> Post '[JSON] Kernel.Prelude.Text)
+type PostNammaTagConfigPilotGetVersion = ("configPilot" :> "getVersion" :> ReqBody '[JSON] Lib.Yudhishthira.Types.UiConfigRequest :> Post '[JSON] Lib.Yudhishthira.Types.UiConfigGetVersionResponse)
 
 type PostNammaTagConfigPilotGetConfig = ("configPilot" :> "getConfig" :> ReqBody '[JSON] Lib.Yudhishthira.Types.UiConfigRequest :> Post '[JSON] Lib.Yudhishthira.Types.UiConfigResponse)
 
@@ -109,6 +109,13 @@ type GetNammaTagConfigPilotGetUiTableData = ("configPilot" :> "getUiTableData" :
 
 type PostNammaTagConfigPilotActionChange = ("configPilot" :> "actionChange" :> ReqBody '[JSON] Lib.Yudhishthira.Types.ActionChangeRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostNammaTagConfigPilotGetPatchedElement =
+  ( "configPilot" :> "getPatchedElement" :> ReqBody '[JSON] Lib.Yudhishthira.Types.GetPatchedElementReq
+      :> Post
+           '[JSON]
+           Lib.Yudhishthira.Types.GetPatchedElementResp
+  )
+
 data NammaTagAPIs = NammaTagAPIs
   { postNammaTagTagCreate :: Lib.Yudhishthira.Types.CreateNammaTagRequest -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.CreateNammaTagResponse,
     postNammaTagTagVerify :: Lib.Yudhishthira.Types.VerifyNammaTagRequest -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.VerifyNammaTagResponse,
@@ -128,7 +135,7 @@ data NammaTagAPIs = NammaTagAPIs
     getNammaTagAppDynamicLogicVersions :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicVersionResp,
     getNammaTagAppDynamicLogicDomains :: EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicDomainResp,
     getNammaTagQueryAll :: Lib.Yudhishthira.Types.Chakra -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.ChakraQueryResp,
-    postNammaTagConfigPilotGetVersion :: Lib.Yudhishthira.Types.UiConfigRequest -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
+    postNammaTagConfigPilotGetVersion :: Lib.Yudhishthira.Types.UiConfigRequest -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.UiConfigGetVersionResponse,
     postNammaTagConfigPilotGetConfig :: Lib.Yudhishthira.Types.UiConfigRequest -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.UiConfigResponse,
     postNammaTagConfigPilotCreateUiConfig :: Lib.Yudhishthira.Types.CreateConfigRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getNammaTagConfigPilotAllConfigs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.ConfigType],
@@ -137,13 +144,14 @@ data NammaTagAPIs = NammaTagAPIs
     getNammaTagConfigPilotAllUiConfigs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.LogicDomain],
     getNammaTagConfigPilotUiConfigDetails :: Lib.Yudhishthira.Types.UiDevicePlatformReq -> EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.ConfigDetailsResp],
     getNammaTagConfigPilotGetUiTableData :: Lib.Yudhishthira.Types.UiDevicePlatformReq -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.TableDataResp,
-    postNammaTagConfigPilotActionChange :: Lib.Yudhishthira.Types.ActionChangeRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postNammaTagConfigPilotActionChange :: Lib.Yudhishthira.Types.ActionChangeRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postNammaTagConfigPilotGetPatchedElement :: Lib.Yudhishthira.Types.GetPatchedElementReq -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.GetPatchedElementResp
   }
 
 mkNammaTagAPIs :: (Client EulerHS.Types.EulerClient API -> NammaTagAPIs)
 mkNammaTagAPIs nammaTagClient = (NammaTagAPIs {..})
   where
-    postNammaTagTagCreate :<|> postNammaTagTagVerify :<|> postNammaTagTagUpdate :<|> deleteNammaTagTagDelete :<|> postNammaTagQueryCreate :<|> postNammaTagQueryUpdate :<|> deleteNammaTagQueryDelete :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagQueryAll :<|> postNammaTagConfigPilotGetVersion :<|> postNammaTagConfigPilotGetConfig :<|> postNammaTagConfigPilotCreateUiConfig :<|> getNammaTagConfigPilotAllConfigs :<|> getNammaTagConfigPilotConfigDetails :<|> getNammaTagConfigPilotGetTableData :<|> getNammaTagConfigPilotAllUiConfigs :<|> getNammaTagConfigPilotUiConfigDetails :<|> getNammaTagConfigPilotGetUiTableData :<|> postNammaTagConfigPilotActionChange = nammaTagClient
+    postNammaTagTagCreate :<|> postNammaTagTagVerify :<|> postNammaTagTagUpdate :<|> deleteNammaTagTagDelete :<|> postNammaTagQueryCreate :<|> postNammaTagQueryUpdate :<|> deleteNammaTagQueryDelete :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagQueryAll :<|> postNammaTagConfigPilotGetVersion :<|> postNammaTagConfigPilotGetConfig :<|> postNammaTagConfigPilotCreateUiConfig :<|> getNammaTagConfigPilotAllConfigs :<|> getNammaTagConfigPilotConfigDetails :<|> getNammaTagConfigPilotGetTableData :<|> getNammaTagConfigPilotAllUiConfigs :<|> getNammaTagConfigPilotUiConfigDetails :<|> getNammaTagConfigPilotGetUiTableData :<|> postNammaTagConfigPilotActionChange :<|> postNammaTagConfigPilotGetPatchedElement = nammaTagClient
 
 data NammaTagUserActionType
   = POST_NAMMA_TAG_TAG_CREATE
@@ -174,6 +182,7 @@ data NammaTagUserActionType
   | GET_NAMMA_TAG_CONFIG_PILOT_UI_CONFIG_DETAILS
   | GET_NAMMA_TAG_CONFIG_PILOT_GET_UI_TABLE_DATA
   | POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE
+  | POST_NAMMA_TAG_CONFIG_PILOT_GET_PATCHED_ELEMENT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

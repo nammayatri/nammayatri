@@ -2,8 +2,6 @@
 
 module Tools.ConfigPilot where
 
--- import qualified Storage.Queries.UiDriverConfig as QUiC
-
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
 import Data.List (sortOn)
@@ -16,8 +14,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYTBF
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as LTSCADLE
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as LTSQADLE
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as LYTADLE
+import qualified Lib.Yudhishthira.Types.ConfigPilot as LYTC
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as SCMDPC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as SCMM
@@ -58,8 +61,8 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       return LYT.TableDataResp {configs = map A.toJSON merchantPushNotification}
     LYT.UI_DRIVER dt pt -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      (mbUiConfig, _) <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
-      return LYT.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
+      mbConfigInfo <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList (fst <$> mbConfigInfo))}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()
@@ -79,7 +82,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdate SQMPN.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)) SQMPN.updateByPrimaryKey (cast merchantOpCityId)
     LYT.UI_DRIVER dt pt -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      handleConfigUpdateWithExtraDimensionsUi SQU.findUIConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq
+      handleConfigUpdateWithExtraDimensionsUi SQU.findUIConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq concludeReq.version concludeReq.domain
     _ -> throwError $ InvalidRequest $ "Logic Domain not supported" <> show concludeReq.domain
   where
     convertToConfigWrapper :: [a] -> [LYT.Config a]
@@ -145,19 +148,26 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       clearCacheFunc
 
     handleConfigUpdateWithExtraDimensionsUi ::
-      (MonadFlow m) =>
+      (MonadFlow m, LYTBF.BeamFlow m r) =>
       (LYT.UiConfigRequest -> Id MerchantOperatingCity -> m (Maybe DTU.UiDriverConfig)) -> -- Fetch function
       m () -> -- Cache clearing function
       (DTU.UiDriverConfig -> m ()) -> -- Update function
       Id MerchantOperatingCity ->
       LYT.UiConfigRequest ->
+      Kernel.Prelude.Int ->
+      LYT.LogicDomain ->
       m ()
-    handleConfigUpdateWithExtraDimensionsUi fetchFunc clearCacheFunc updateFunc merchantOpCityId' uiConfigReq' = do
+    handleConfigUpdateWithExtraDimensionsUi fetchFunc clearCacheFunc updateFunc merchantOpCityId' uiConfigReq' version domain = do
       uiConfig :: DTU.UiDriverConfig <- fetchFunc uiConfigReq' merchantOpCityId' >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
       let configWrapper = convertToConfigWrapper [uiConfig.config]
       patchedConfigs <- applyPatchToConfig configWrapper
+      let extractedPatchedConfigElement :: [Value] = fmap LYTC.config patchedConfigs
+      appDynamicLogicElement <- LTSQADLE.findByPrimaryKey domain 0 version >>= fromMaybeM (InvalidRequest $ "No AppDynamicLogicElement found for domain " <> show domain <> " and version " <> show version)
+      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = listToMaybe extractedPatchedConfigElement}
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
       let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
+      LTSQADLE.updateByPrimaryKey updatedAppDynamicLogicElement
+      LTSCADLE.clearCache domain
       mapM_ updateFunc configsToUpdate'
       clearCacheFunc
 

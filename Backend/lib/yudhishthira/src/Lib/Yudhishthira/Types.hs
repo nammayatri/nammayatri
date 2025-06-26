@@ -69,6 +69,8 @@ module Lib.Yudhishthira.Types
     PlatformType (..),
     ConfigHistory (..),
     UiConfigGetVersionResponse (..),
+    GetPatchedElementReq (..),
+    GetPatchedElementResp (..),
   )
 where
 
@@ -361,6 +363,20 @@ data ConfigDetailsResp = ConfigDetailsResp
 
 data ConfigTypeChoice = DriverCfg | RiderCfg deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
 
+data GetPatchedElementReq = GetPatchedElementReq
+  { domain :: LogicDomain,
+    version :: Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets GetPatchedElementReq where
+  hideSecrets = identity
+
+data GetPatchedElementResp = GetPatchedElementResp
+  { patchedElement :: Maybe Value
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
     inputData :: [Value],
@@ -632,15 +648,15 @@ data UiConfigRequest = UiConfigRequest
 
 data UiConfigResponse = UiConfigResponse
   { config :: Value,
-    version :: Maybe Text,
-    baseVersion :: Maybe Text,
+    version :: Text,
+    baseVersion :: Text,
     isExperimentRunning :: Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data UiConfigGetVersionResponse = UiConfigGetVersionResponse
-  { version :: Maybe Text,
-    baseVersion :: Maybe Text
+  { version :: Text,
+    baseVersion :: Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

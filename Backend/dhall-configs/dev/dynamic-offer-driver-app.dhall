@@ -325,6 +325,8 @@ let modelNamesMap =
         }
       ]
 
+let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -407,6 +409,7 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , _version = "2.0.0"
     , cacConfig
+    , tsServiceConfig
     , cacTenants
     , superPositionConfig
     , maxStraightLineRectificationThreshold = +800
