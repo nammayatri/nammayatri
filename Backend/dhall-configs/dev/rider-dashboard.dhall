@@ -105,6 +105,7 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
+    , registrationTokenInactivityTimeout = +1800
     , encTools
     , exotelToken = ""
     , dataServers = [ appBackend, appBackendManagement ]
