@@ -32,6 +32,7 @@ imports:
   BusData: Storage.CachedQueries.Merchant.MultiModalBus
   PlatformType: Domain.Types.IntegratedBPPConfig
   VehicleCategory: BecknV2.FRFS.Enums
+  Provider: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -91,10 +92,19 @@ types:
     destLatLong: LatLong
 
   MultimodalTicketVerifyReq:
-    qrData: Text
+    enum: "IntegratedQR IntegratedQRReq, SingleQR SingleQRReq"
+
+  IntegratedQRReq:
+    provider: Provider
+    integratedQR: UnifiedTicketQRV2
+
+  SingleQRReq:
+    provider: Provider
+    tickets: "[Text]"
 
   MultimodalTicketVerifyResp:
-    legInfo: LegInfo
+    provider: Provider
+    legInfo: "[LegInfo]"
 
   MultimodalTransitOptionData:
     travelModes: [MultimodalTravelMode]
@@ -401,7 +411,6 @@ apis:
       endpoint: /multimodal/ticket/verify
       mandatoryQuery:
         city: City
-        vehicleType: VehicleCategory
       query:
         platformType: PlatformType
       auth: TokenAuth

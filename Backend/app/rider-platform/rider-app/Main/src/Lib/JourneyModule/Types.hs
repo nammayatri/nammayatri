@@ -4,7 +4,7 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2)
-import Data.Aeson (object, (.=))
+import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -423,10 +423,18 @@ instance ToJSON UnifiedTicketQR where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON UnifiedTicketQR where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = withObject "UnifiedTicketQR" $ \o -> do
+    version <- o .: "version"
+    _type <- o .: "type"
+    txnId <- o .: "txnId"
+    createdAt <- o .: "createdAt"
+    cmrl <- o .: "CMRL"
+    mtc <- o .: "MTC"
+    cris <- o .: "CRIS"
+    return $ UnifiedTicketQR version _type txnId createdAt cmrl mtc cris
 
 data Provider = CMRL | MTC | DIRECT | CRIS
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data BookingDataV2 = BookingDataV2
   { bookingId :: Text,
@@ -434,7 +442,14 @@ data BookingDataV2 = BookingDataV2
     ticketData :: [Text]
   }
   deriving stock (Show, Generic)
-  deriving anyclass (FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON BookingDataV2 where
+  parseJSON = withObject "BookingDataV2" $ \o -> do
+    bookingId <- o .: "BookingId"
+    isRoundTrip <- o .: "isRoundTrip"
+    ticketData <- o .: "data"
+    return $ BookingDataV2 bookingId isRoundTrip ticketData
 
 instance ToJSON BookingDataV2 where
   toJSON (BookingDataV2 bookingId isRoundTrip ticketData) =
@@ -456,7 +471,14 @@ data UnifiedTicketQRV2 = UnifiedTicketQRV2
   deriving anyclass (ToSchema)
 
 instance FromJSON UnifiedTicketQRV2 where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = withObject "UnifiedTicketQRV2" $ \o -> do
+    version <- o .: "version"
+    _type <- o .: "type"
+    txnId <- o .: "txnId"
+    createdAt <- o .: "createdAt"
+    cmrl <- o .: "CMRL"
+    mtc <- o .: "MTC"
+    return $ UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc
 
 instance ToJSON UnifiedTicketQRV2 where
   toJSON (UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc) =

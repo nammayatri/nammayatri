@@ -8,7 +8,6 @@ module API.Action.UI.MultimodalConfirm
 where
 
 import qualified API.Types.UI.MultimodalConfirm
-import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Domain.Action.UI.MultimodalConfirm as Domain.Action.UI.MultimodalConfirm
 import qualified Domain.Types.IntegratedBPPConfig
@@ -320,9 +319,6 @@ type API =
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
-      :> MandatoryQueryParam
-           "vehicleType"
-           BecknV2.FRFS.Enums.VehicleCategory
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq
@@ -573,8 +569,7 @@ postMultimodalTicketVerify ::
     ) ->
     Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Types.Beckn.Context.City ->
-    BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
   )
-postMultimodalTicketVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalTicketVerify a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
