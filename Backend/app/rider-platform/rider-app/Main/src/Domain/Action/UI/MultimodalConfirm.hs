@@ -145,6 +145,12 @@ getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
+  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  let allFailed = all ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings
+  unless allFailed $
+    case find ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings of
+      Just _frfsBooking -> JM.markAllBookingsFailed allJourneyFrfsBookings
+      Nothing -> pure ()
   generateJourneyInfoResponse journey legs
 
 getMultimodalBookingPaymentStatus ::
