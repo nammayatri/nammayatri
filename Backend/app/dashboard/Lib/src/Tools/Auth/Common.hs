@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -33,7 +33,7 @@ import Tools.Error
 
 type AuthFlow m r =
   ( BeamFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
+    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days, "registrationTokenInactivityTimeout" ::: Maybe Seconds],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   )
 
@@ -44,22 +44,45 @@ verifyPerson ::
 verifyPerson token = do
   key <- authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
+  currentTime <- getCurrentTime
+
+  -- First check if token exists in cache
   mbTuple <- getKeyRedis key
   (personId, merchantId, city) <- case mbTuple of
-    Just (personId, merchantId, city) -> return (personId, merchantId, city)
+    Just (personId, merchantId, city) -> do
+      -- For cached tokens, check activity in Redis
+      checkTokenActivityInRedis token currentTime
+      return (personId, merchantId, city)
     Nothing -> do
       mbTupleOld <- getKeyRedisOld key
       case mbTupleOld of
         Just (personId, merchantId) -> do
+          -- For old cache format, check activity in Redis
+          checkTokenActivityInRedis token currentTime
           city <- getCity merchantId
           return (personId, merchantId, city)
         Nothing -> do
-          sr <- verifyToken token
+          -- For tokens not in cache, verify from DB
+          -- Use catchAny to handle errors and clean up activity keys
+          sr <-
+            catchAny
+              (verifyToken token)
+              ( \e -> do
+                  -- Clean up any activity keys if verification fails
+                  mbInactivityTimeout <- asks (.registrationTokenInactivityTimeout)
+                  whenJust mbInactivityTimeout $ \_ -> do
+                    activityKey <- tokenActivityCacheKey token
+                    Redis.del activityKey
+                  throwM e
+              )
           let personId = sr.personId
           let merchantId = sr.merchantId
           let city = sr.operatingCity
+          checkTokenActivityInRedis token currentTime
+          -- Add token back to Redis with fresh expiry
           setExRedis key (personId, merchantId, city) authTokenCacheExpiry
           return (personId, merchantId, city)
+
   return (personId, merchantId, city)
   where
     getKeyRedisOld :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant))
@@ -81,6 +104,59 @@ authTokenCacheKey ::
 authTokenCacheKey regToken = do
   authTokenCacheKeyPrefix <- asks (.authTokenCacheKeyPrefix)
   pure $ authTokenCacheKeyPrefix <> regToken
+
+tokenActivityCacheKey ::
+  HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>
+  RegToken ->
+  m Text
+tokenActivityCacheKey regToken = do
+  authTokenCacheKeyPrefix <- asks (.authTokenCacheKeyPrefix)
+  pure $ authTokenCacheKeyPrefix <> "activity:" <> regToken
+
+-- Check if token has been inactive for too long
+checkTokenActivityInRedis ::
+  (AuthFlow m r, Redis.HedisFlow m r) =>
+  RegToken ->
+  UTCTime ->
+  m ()
+checkTokenActivityInRedis token currentTime = do
+  mbInactivityTimeout <- asks (.registrationTokenInactivityTimeout)
+  -- Skip activity tracking completely when timeout is not configured
+  whenJust mbInactivityTimeout $ \inactivityTimeout -> do
+    key <- tokenActivityCacheKey token
+    mbLastActivity <- Redis.get key
+
+    -- Check inactivity timeout with Redis data if we have previous activity
+    whenJust mbLastActivity $ \lastActivity -> do
+      let timeDiff = diffUTCTime currentTime lastActivity
+      when (timeDiff > fromIntegral (getSeconds inactivityTimeout)) $ do
+        -- When token is expired due to inactivity, delete it from database first
+        mbToken <- QR.findByToken token
+        whenJust mbToken $ \regToken ->
+          QR.deleteById regToken.id
+
+        -- Clean up Redis keys (common for both cases)
+        Redis.del key
+        authKey <- authTokenCacheKey token
+        Redis.del authKey
+        -- Throw token expired error
+        Utils.throwError TokenExpired
+
+    -- Update activity timestamp (happens for both new and existing activities)
+    updateTokenActivityInRedis token currentTime
+
+-- Update token activity timestamp in Redis
+updateTokenActivityInRedis ::
+  (AuthFlow m r, Redis.HedisFlow m r) =>
+  RegToken ->
+  UTCTime ->
+  m ()
+updateTokenActivityInRedis token currentTime = do
+  key <- tokenActivityCacheKey token
+  -- Set activity with a TTL slightly longer than token expiry to ensure cleanup
+  registrationTokenExpiry <- asks (.registrationTokenExpiry)
+  let ttl = daysToSeconds registrationTokenExpiry + 86400 -- Add 1 day buffer
+  Redis.setExp key currentTime (fromIntegral ttl)
 
 verifyToken ::
   ( BeamFlow m r,
@@ -125,6 +201,8 @@ cleanCachedTokens personId = do
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
+    activityKey <- tokenActivityCacheKey regToken.token
+    void $ Redis.del activityKey
 
 cleanCachedTokensByMerchantId ::
   ( BeamFlow m r,
@@ -139,6 +217,8 @@ cleanCachedTokensByMerchantId personId merchantId = do
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
+    activityKey <- tokenActivityCacheKey regToken.token
+    void $ Redis.del activityKey
 
 cleanCachedTokensOfMerchantAndCity ::
   ( BeamFlow m r,
@@ -153,6 +233,8 @@ cleanCachedTokensOfMerchantAndCity merchantId city = do
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
+    activityKey <- tokenActivityCacheKey regToken.token
+    void $ Redis.del activityKey
 
 cleanCachedTokensByMerchantIdAndCity ::
   ( BeamFlow m r,
@@ -168,3 +250,5 @@ cleanCachedTokensByMerchantIdAndCity personId merchantId city = do
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
+    activityKey <- tokenActivityCacheKey regToken.token
+    void $ Redis.del activityKey
