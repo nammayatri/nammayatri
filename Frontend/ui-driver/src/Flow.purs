@@ -725,7 +725,15 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } })
               hideSplashAndCallFlow helpAndSupportFlow
 
-            "clearDues" -> hideSplashAndCallFlow $ clearPendingDuesFlow true
+            "clearDues" -> hideSplashAndCallFlow $ clearPendingDuesFlow false
+
+            "addUpi" -> do
+              let (GlobalState defGlobalState) = defaultGlobalState
+              let customerReferralTrackerScreenState = defGlobalState.customerReferralTrackerScreen
+              modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> customerReferralTrackerScreenState{props {openPP = true, fromDeepLink = true}})
+              customerReferralTrackerFlow
+            
+            "metroWarrior" -> hideSplashAndCallFlow metroWarriorsScreenFlow
 
             "rideDetails" -> do
               (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "COMPLETED" "null"
