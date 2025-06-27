@@ -66,6 +66,8 @@ initData = {
     acRide : Nothing,
     vehicleServiceTier : ""
   , parkingCharge : 0.0
+  , rideId : ""
+  , isInsured : false
   },
   offsetValue: 0,
   loaderButtonVisibility: false,

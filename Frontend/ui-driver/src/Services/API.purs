@@ -722,6 +722,8 @@ newtype RidesInfo = RidesInfo
       senderDetails :: Maybe PersonDetails,
       receiverDetails :: Maybe PersonDetails,
       parcelType :: Maybe ParcelType,
+      isInsured :: Maybe Boolean,
+      insuredAmount :: Maybe String,
       parcelQuantity :: Maybe Int
 }
 
@@ -1071,6 +1073,34 @@ instance standardEncodeRideCancellationReason :: StandardEncode RideCancellation
 instance showRideCancellationReason :: Show RideCancellationReason where show = genericShow
 instance decodeRideCancellationReason :: Decode RideCancellationReason where decode = defaultDecode
 instance encodeRideCancellationReason :: Encode RideCancellationReason where encode = defaultEncode
+
+--------------------------------------------------------------Get Insurance----------------------------------------------------------------------------------------
+
+data DriverInsuranceReq = DriverInsuranceReq String
+
+newtype DriverInsuranceResp = DriverInsuranceResp {
+  certificateUrl :: Maybe String,
+  message :: Maybe String,
+  plan :: Maybe String,
+  policyId :: Maybe String,
+  policyNumber :: Maybe String
+}
+
+instance makeDriverInsuranceReq :: RestEndpoint DriverInsuranceReq where
+  makeRequest reqBody@(DriverInsuranceReq rType) headers = defaultMakeRequestWithoutLogs GET (EP.getDriverInsurance rType) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+derive instance genericDriverInsuranceReq :: Generic DriverInsuranceReq _
+instance standardEncodeDriverInsuranceReq :: StandardEncode DriverInsuranceReq where standardEncode (DriverInsuranceReq rType) = standardEncode rType
+instance showDriverInsuranceReq :: Show DriverInsuranceReq where show = genericShow
+instance decodeDriverInsuranceReq :: Decode DriverInsuranceReq where decode = defaultDecode
+instance encodeDriverInsuranceReq  :: Encode DriverInsuranceReq where encode = defaultEncode
+
+derive instance genericDriverInsuranceResp :: Generic DriverInsuranceResp _
+instance standardEncodeDriverInsuranceResp :: StandardEncode DriverInsuranceResp where standardEncode (DriverInsuranceResp body) = standardEncode body
+instance showDriverInsuranceResp :: Show DriverInsuranceResp where show = genericShow
+instance decodeDriverInsuranceResp :: Decode DriverInsuranceResp where decode = defaultDecode
+instance encodeDriverInsuranceResp  :: Encode DriverInsuranceResp where encode = defaultEncode
 
 ------------------------------------------------------------GetRoute----------------------------------------------------------------------------------------------------------------------------------------------
 
