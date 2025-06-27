@@ -46,12 +46,14 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigClearCacheSubscription,
     postMerchantConfigFailover,
     postMerchantPayoutConfigUpdate,
+    postMerchantConfigUpsertPlanAndConfigSubscription,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson.KeyMap as HM
 import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -174,6 +176,7 @@ import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
+import qualified Storage.Queries.PlanExtra as QPlanE
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import Tools.Error
 
@@ -2522,23 +2525,37 @@ postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> Context.City 
 postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  plans <- QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
-  let plansToClearCache = filter (filterCriteriaPlan req.serviceName (Id <$> req.planId)) plans
-  forM_ plansToClearCache $ \plan -> do
-    let keysToClear =
-          [ CQPlan.makeAllPlanKey,
-            CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
-            CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated),
-            CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing,
-            CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
-            CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
-            CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),
-            CQPlan.makeIdKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleCategory plan.isDeprecated,
-            SPayment.makeOfferListCacheVersionKey
-          ]
-    forM_ keysToClear $ \key -> Hedis.del key
-  return Success
+  case req.tableName of
+    Just Common.PLAN -> clearPlanCache merchantOpCity
+    Just Common.SUBSCRIPTION_CONFIG -> clearSubscriptionConfigCache merchantOpCity req.serviceName
+    Nothing -> clearPlanCache merchantOpCity
   where
+    clearPlanCache merchantOpCity = do
+      plans <- QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
+      let plansToClearCache = filter (filterCriteriaPlan req.serviceName (Id <$> req.planId)) plans
+      forM_ plansToClearCache $ \plan -> do
+        let keysToClear =
+              [ CQPlan.makeAllPlanKey,
+                CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated),
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing,
+                CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
+                CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
+                CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),
+                CQPlan.makeIdKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleCategory plan.isDeprecated,
+                SPayment.makeOfferListCacheVersionKey
+              ]
+        forM_ keysToClear $ \key -> Hedis.del key
+      return Success
+    clearSubscriptionConfigCache merchantOpCity mbServiceName = do
+      let serviceName = maybe Plan.YATRI_SUBSCRIPTION castServiceName mbServiceName
+      let keysToClear =
+            [ CQSC.makeMerchantOpCityIdAndServiceKey merchantOpCity.id serviceName,
+              CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id True,
+              CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id False
+            ]
+      forM_ keysToClear $ \key -> Hedis.del key
+      return Success
     filterCriteriaPlan mbServiceName mbPlanId =
       case (mbServiceName, mbPlanId) of
         (Just serviceName, Just planId) -> \plan -> plan.serviceName == castServiceName serviceName && plan.id == planId
@@ -2549,6 +2566,85 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
       Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
       Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION
       Common.DASHCAM_RENTAL_CAUTIO -> Plan.DASHCAM_RENTAL Plan.CAUTIO
+
+postMerchantConfigUpsertPlanAndConfigSubscription :: ShortId DM.Merchant -> Context.City -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp
+postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  let mocId = merchantOperatingCity.id
+  case req.action of
+    Common.UPDATE_CONFIG -> applyOperation Common.UPDATE_CONFIG mocId req
+    Common.CREATE_CONFIG -> applyOperation Common.CREATE_CONFIG mocId req
+  where
+    applyOperation :: Common.Action -> Id DMOC.MerchantOperatingCity -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp
+    applyOperation actionType _ Common.UpsertPlanAndConfigReq {command, tableName, config} =
+      case command of
+        Common.VIEW_DIFF -> do
+          existingConfig <- case tableName of
+            Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(val :: DSC.SubscriptionConfig) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName val.merchantOperatingCityId val.serviceName)
+            Common.PLAN -> runWithDecodeToType config tableName True (\(val :: Plan.Plan) -> QPlan.findByIdAndPaymentModeWithServiceName val.id val.paymentMode val.serviceName)
+          diffVal <- do
+            case existingConfig of
+              JsonVal val -> pure $ Just (jsonDiff val config)
+              _ -> pure Nothing
+          pure
+            Common.UpsertPlanAndConfigResp
+              { respCode = Success,
+                executedAction = actionType,
+                executedCommand = Common.VIEW_DIFF,
+                error_resp = Nothing,
+                diff = diffVal
+              }
+        Common.COMMIT -> do
+          _ <- case (actionType, tableName) of
+            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.create
+            (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlan.create
+            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.updateByPrimaryKey
+            (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlanE.updateByPrimaryKeyP
+          pure
+            Common.UpsertPlanAndConfigResp
+              { respCode = Success,
+                executedAction = actionType,
+                executedCommand = Common.COMMIT,
+                error_resp = Nothing,
+                diff = Nothing
+              }
+    runWithDecodeToType ::
+      (FromJSON a, ToJSON b) =>
+      Value ->
+      Common.TableName ->
+      Bool ->
+      (a -> Flow b) ->
+      Flow ReturnWithDecode
+    runWithDecodeToType val _tableName returnValue func = do
+      case DAT.fromJSON val of
+        DAT.Success parsed -> do
+          result <- func parsed
+          if returnValue
+            then pure $ JsonVal (toJSON result)
+            else pure $ Void ()
+        DAT.Error err ->
+          throwError $ InvalidRequest (show err)
+
+jsonDiff :: Value -> Value -> Value
+jsonDiff (DAT.Object a) (DAT.Object b) =
+  DAT.Object $ HM.fromList $ concatMap diffField (HM.keys b)
+  where
+    diffField k = case (HM.lookup k a, HM.lookup k b) of
+      (Just va, Just vb) ->
+        let d = jsonDiff va vb
+         in if d == DAT.Null then [] else [(k, d)]
+      (Nothing, Just vb) -> [(k, vb)]
+      _ -> []
+jsonDiff (DAT.Array a) (DAT.Array b)
+  | a == b = DAT.Null
+  | otherwise = DAT.Array b
+jsonDiff a b
+  | a == b = DAT.Null
+  | otherwise = b
+
+data ReturnWithDecode = JsonVal Value | Void ()
 
 postMerchantConfigFailover :: ShortId DM.Merchant -> Context.City -> Common.ConfigNames -> Common.ConfigFailoverReq -> Flow APISuccess
 postMerchantConfigFailover merchantShortId city configNames req = do

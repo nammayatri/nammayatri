@@ -45,3 +45,35 @@ fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCityId mbServiceName 
       ]
         <> maybe [] (\serviceName -> [Se.Is BeamP.serviceName $ Se.Eq serviceName]) mbServiceName
     )
+
+updateByPrimaryKeyP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
+updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
+  updateWithKV
+    [ Se.Set BeamP.allowStrikeOff (Just allowStrikeOff),
+      Se.Set BeamP.basedOnEntity basedOnEntity,
+      Se.Set BeamP.cgstPercentage cgstPercentage,
+      Se.Set BeamP.description description,
+      Se.Set BeamP.eligibleForCoinDiscount eligibleForCoinDiscount,
+      Se.Set BeamP.freeRideCount freeRideCount,
+      Se.Set BeamP.frequency frequency,
+      Se.Set BeamP.isDeprecated isDeprecated,
+      Se.Set BeamP.isOfferApplicable isOfferApplicable,
+      Se.Set BeamP.listingPriority listingPriority,
+      Se.Set BeamP.maxAmount maxAmount,
+      Se.Set BeamP.maxCreditLimit maxCreditLimit,
+      Se.Set BeamP.maxMandateAmount maxMandateAmount,
+      Se.Set BeamP.merchantId (getId merchantId),
+      Se.Set BeamP.merchantOpCityId (getId merchantOpCityId),
+      Se.Set BeamP.name name,
+      Se.Set BeamP.paymentMode paymentMode,
+      Se.Set BeamP.planBaseAmount planBaseAmount,
+      Se.Set BeamP.planType planType,
+      Se.Set BeamP.productOwnershipAmount (Just productOwnershipAmount),
+      Se.Set BeamP.registrationAmount registrationAmount,
+      Se.Set BeamP.serviceName serviceName,
+      Se.Set BeamP.sgstPercentage sgstPercentage,
+      Se.Set BeamP.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
+      Se.Set BeamP.vehicleCategory (Just vehicleCategory),
+      Se.Set BeamP.vehicleVariant vehicleVariant
+    ]
+    [Se.And [Se.Is BeamP.id $ Se.Eq (getId id), Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
