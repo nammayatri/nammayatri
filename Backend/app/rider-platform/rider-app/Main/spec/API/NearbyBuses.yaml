@@ -43,6 +43,14 @@ types:
       nearbyBuses: [NearbyBus]
       recentRides: [RecentRide]
 
+  TimetableEntry:
+    timeOfArrival: TimeOfDay
+    timeOfDeparture: TimeOfDay
+    serviceTierType: ServiceTierType
+
+  TimetableResponse:
+    timetable: [TimetableEntry]
+
 apis:
   - POST:
       endpoint: /nearbyBusBooking
@@ -62,3 +70,14 @@ apis:
         vehicleType: VehicleCategory
       response:
         type: UpcomingTripInfo
+
+  - GET:
+      endpoint: /timetable/{routeCode}/stop/{stopCode}
+      auth: TokenAuth
+      params:
+        routeCode: Text
+        stopCode: Text
+      query:
+        vehicleType: VehicleCategory
+      response:
+        type: TimetableResponse
