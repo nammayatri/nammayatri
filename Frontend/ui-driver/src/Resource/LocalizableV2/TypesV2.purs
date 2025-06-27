@@ -358,7 +358,7 @@ newtype Keymap
   , odometer_str :: String
   , front_interior :: String
   , rear_interior :: String
-  , enter_the_six_digit_code_shared_with_you :: String
+  , enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding :: String
   , register_your_profile :: String
   , registration_completed :: String
   , we_will_notify_you_when_we_go_live :: String
@@ -1153,6 +1153,7 @@ newtype Keymap
   , ensure_adequate_light :: String
   , fit_dl_correctly :: String
   , take_photo :: String
+  , take_slash_upload_photo :: String
   , fit_rc_correctly :: String
   , take_clear_picture_rc :: String
   , dl_uploaded :: String
@@ -1851,6 +1852,84 @@ newtype Keymap
   , drivers_are_permitted_to_cancel_ambulance_bookings :: String
   , payment_under_maintenance :: String
   , payments_temporarily_unavailable :: String
+  -- Onboarding FAQ Keys
+  , onboarding_faq_setting_up_account :: String
+  , onboarding_faq_managing_account :: String
+  , onboarding_faq_adding_managing_drivers :: String
+  , onboarding_faq_adding_managing_vehicles :: String
+  , onboarding_faq_mapping_drivers_vehicles :: String
+  , onboarding_faq_register_fleet_operator_q :: String
+  , onboarding_faq_register_fleet_operator_a :: String
+  , onboarding_faq_choose_language_q :: String
+  , onboarding_faq_choose_language_a :: String
+  , onboarding_faq_signup_email_q :: String
+  , onboarding_faq_signup_email_a :: String
+  , onboarding_faq_otp_issue_q :: String
+  , onboarding_faq_otp_issue_a :: String
+  , onboarding_faq_individual_business_fleet_q :: String
+  , onboarding_faq_individual_business_fleet_a :: String
+  , onboarding_faq_registration_details_q :: String
+  , onboarding_faq_registration_details_a :: String
+  , onboarding_faq_operating_cities_q :: String
+  , onboarding_faq_operating_cities_a :: String
+  , onboarding_faq_operator_referral_code_q :: String
+  , onboarding_faq_operator_referral_code_a :: String
+  , onboarding_faq_required_documents_q :: String
+  , onboarding_faq_required_documents_a :: String
+  , onboarding_faq_registration_assistance_q :: String
+  , onboarding_faq_registration_assistance_a :: String
+  , onboarding_faq_update_documents_q :: String
+  , onboarding_faq_update_documents_a :: String
+  , onboarding_faq_view_profile_q :: String
+  , onboarding_faq_view_profile_a :: String
+  , onboarding_faq_logout_q :: String
+  , onboarding_faq_logout_a :: String
+  , onboarding_faq_profile_picture_q :: String
+  , onboarding_faq_profile_picture_a :: String
+  , onboarding_faq_msil_provide_drivers_q :: String
+  , onboarding_faq_msil_provide_drivers_a :: String
+  , onboarding_faq_add_multiple_drivers_q :: String
+  , onboarding_faq_add_multiple_drivers_a :: String
+  , onboarding_faq_onboard_driver_q :: String
+  , onboarding_faq_onboard_driver_a :: String
+  , onboarding_faq_add_driver_manually_q :: String
+  , onboarding_faq_add_driver_manually_a :: String
+  , onboarding_faq_driver_bulk_upload_q :: String
+  , onboarding_faq_driver_bulk_upload_a :: String
+  , onboarding_faq_driver_documents_q :: String
+  , onboarding_faq_driver_documents_a :: String
+  , onboarding_faq_driver_tab_q :: String
+  , onboarding_faq_driver_tab_a :: String
+  , onboarding_faq_track_driver_docs_q :: String
+  , onboarding_faq_track_driver_docs_a :: String
+  , onboarding_faq_add_remove_drivers_q :: String
+  , onboarding_faq_add_remove_drivers_a :: String
+  , onboarding_faq_manage_driver_docs_q :: String
+  , onboarding_faq_manage_driver_docs_a :: String
+  , onboarding_faq_onboard_vehicle_q :: String
+  , onboarding_faq_onboard_vehicle_a :: String
+  , onboarding_faq_add_multiple_vehicles_q :: String
+  , onboarding_faq_add_multiple_vehicles_a :: String
+  , onboarding_faq_vehicle_documents_q :: String
+  , onboarding_faq_vehicle_documents_a :: String
+  , onboarding_faq_readd_vehicle_q :: String
+  , onboarding_faq_readd_vehicle_a :: String
+  , onboarding_faq_vehicle_inspection_q :: String
+  , onboarding_faq_vehicle_inspection_a :: String
+  , onboarding_faq_inspection_cost_q :: String
+  , onboarding_faq_inspection_cost_a :: String
+  , onboarding_faq_manage_vehicle_docs_q :: String
+  , onboarding_faq_manage_vehicle_docs_a :: String
+  , onboarding_faq_track_vehicle_docs_q :: String
+  , onboarding_faq_track_vehicle_docs_a :: String
+  , onboarding_faq_assign_driver_vehicle_q :: String
+  , onboarding_faq_assign_driver_vehicle_a :: String
+  , onboarding_faq_remove_vehicle_q :: String
+  , onboarding_faq_remove_vehicle_a :: String
+  , onboarding_faq_edit_vehicle_q :: String
+  , onboarding_faq_edit_vehicle_a :: String
+  , onboarding_faq_update_driver_status_q :: String
+  , onboarding_faq_update_driver_status_a :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -2880,8 +2959,8 @@ front_interior = a
 rear_interior :: Proxy "rear_interior"
 rear_interior = a
 
-enter_the_six_digit_code_shared_with_you :: Proxy "enter_the_six_digit_code_shared_with_you"
-enter_the_six_digit_code_shared_with_you = a
+enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding :: Proxy "enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding"
+enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding = a
 
 register_your_profile :: Proxy "register_your_profile"
 register_your_profile = a
@@ -5265,6 +5344,9 @@ fit_dl_correctly = a
 take_photo :: Proxy "take_photo"
 take_photo = a
 
+take_slash_upload_photo :: Proxy "take_slash_upload_photo"
+take_slash_upload_photo = a 
+
 fit_rc_correctly :: Proxy "fit_rc_correctly"
 fit_rc_correctly = a
 
@@ -7352,3 +7434,234 @@ payment_under_maintenance = Proxy
 
 payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
 payments_temporarily_unavailable = Proxy
+
+onboarding_faq_setting_up_account :: Proxy "onboarding_faq_setting_up_account"
+onboarding_faq_setting_up_account = a
+
+onboarding_faq_managing_account :: Proxy "onboarding_faq_managing_account"
+onboarding_faq_managing_account = a
+
+onboarding_faq_adding_managing_drivers :: Proxy "onboarding_faq_adding_managing_drivers"
+onboarding_faq_adding_managing_drivers = a
+
+onboarding_faq_adding_managing_vehicles :: Proxy "onboarding_faq_adding_managing_vehicles"
+onboarding_faq_adding_managing_vehicles = a
+
+onboarding_faq_mapping_drivers_vehicles :: Proxy "onboarding_faq_mapping_drivers_vehicles"
+onboarding_faq_mapping_drivers_vehicles = a
+
+onboarding_faq_register_fleet_operator_q :: Proxy "onboarding_faq_register_fleet_operator_q"
+onboarding_faq_register_fleet_operator_q = a
+
+onboarding_faq_register_fleet_operator_a :: Proxy "onboarding_faq_register_fleet_operator_a"
+onboarding_faq_register_fleet_operator_a = a
+
+onboarding_faq_choose_language_q :: Proxy "onboarding_faq_choose_language_q"
+onboarding_faq_choose_language_q = a
+
+onboarding_faq_choose_language_a :: Proxy "onboarding_faq_choose_language_a"
+onboarding_faq_choose_language_a = a
+
+onboarding_faq_signup_email_q :: Proxy "onboarding_faq_signup_email_q"
+onboarding_faq_signup_email_q = a
+
+onboarding_faq_signup_email_a :: Proxy "onboarding_faq_signup_email_a"
+onboarding_faq_signup_email_a = a
+
+onboarding_faq_otp_issue_q :: Proxy "onboarding_faq_otp_issue_q"
+onboarding_faq_otp_issue_q = a
+
+onboarding_faq_otp_issue_a :: Proxy "onboarding_faq_otp_issue_a"
+onboarding_faq_otp_issue_a = a
+
+onboarding_faq_individual_business_fleet_q :: Proxy "onboarding_faq_individual_business_fleet_q"
+onboarding_faq_individual_business_fleet_q = a
+
+onboarding_faq_individual_business_fleet_a :: Proxy "onboarding_faq_individual_business_fleet_a"
+onboarding_faq_individual_business_fleet_a = a
+
+onboarding_faq_registration_details_q :: Proxy "onboarding_faq_registration_details_q"
+onboarding_faq_registration_details_q = a
+
+onboarding_faq_registration_details_a :: Proxy "onboarding_faq_registration_details_a"
+onboarding_faq_registration_details_a = a
+
+onboarding_faq_operating_cities_q :: Proxy "onboarding_faq_operating_cities_q"
+onboarding_faq_operating_cities_q = a
+
+onboarding_faq_operating_cities_a :: Proxy "onboarding_faq_operating_cities_a"
+onboarding_faq_operating_cities_a = a
+
+onboarding_faq_operator_referral_code_q :: Proxy "onboarding_faq_operator_referral_code_q"
+onboarding_faq_operator_referral_code_q = a
+
+onboarding_faq_operator_referral_code_a :: Proxy "onboarding_faq_operator_referral_code_a"
+onboarding_faq_operator_referral_code_a = a
+
+onboarding_faq_required_documents_q :: Proxy "onboarding_faq_required_documents_q"
+onboarding_faq_required_documents_q = a
+
+onboarding_faq_required_documents_a :: Proxy "onboarding_faq_required_documents_a"
+onboarding_faq_required_documents_a = a
+
+onboarding_faq_registration_assistance_q :: Proxy "onboarding_faq_registration_assistance_q"
+onboarding_faq_registration_assistance_q = a
+
+onboarding_faq_registration_assistance_a :: Proxy "onboarding_faq_registration_assistance_a"
+onboarding_faq_registration_assistance_a = a
+
+onboarding_faq_update_documents_q :: Proxy "onboarding_faq_update_documents_q"
+onboarding_faq_update_documents_q = a
+
+onboarding_faq_update_documents_a :: Proxy "onboarding_faq_update_documents_a"
+onboarding_faq_update_documents_a = a
+
+onboarding_faq_view_profile_q :: Proxy "onboarding_faq_view_profile_q"
+onboarding_faq_view_profile_q = a
+
+onboarding_faq_view_profile_a :: Proxy "onboarding_faq_view_profile_a"
+onboarding_faq_view_profile_a = a
+
+onboarding_faq_logout_q :: Proxy "onboarding_faq_logout_q"
+onboarding_faq_logout_q = a
+
+onboarding_faq_logout_a :: Proxy "onboarding_faq_logout_a"
+onboarding_faq_logout_a = a
+
+onboarding_faq_profile_picture_q :: Proxy "onboarding_faq_profile_picture_q"
+onboarding_faq_profile_picture_q = a
+
+onboarding_faq_profile_picture_a :: Proxy "onboarding_faq_profile_picture_a"
+onboarding_faq_profile_picture_a = a
+
+onboarding_faq_msil_provide_drivers_q :: Proxy "onboarding_faq_msil_provide_drivers_q"
+onboarding_faq_msil_provide_drivers_q = a
+
+onboarding_faq_msil_provide_drivers_a :: Proxy "onboarding_faq_msil_provide_drivers_a"
+onboarding_faq_msil_provide_drivers_a = a
+
+onboarding_faq_add_multiple_drivers_q :: Proxy "onboarding_faq_add_multiple_drivers_q"
+onboarding_faq_add_multiple_drivers_q = a
+
+onboarding_faq_add_multiple_drivers_a :: Proxy "onboarding_faq_add_multiple_drivers_a"
+onboarding_faq_add_multiple_drivers_a = a
+
+onboarding_faq_onboard_driver_q :: Proxy "onboarding_faq_onboard_driver_q"
+onboarding_faq_onboard_driver_q = a
+
+onboarding_faq_onboard_driver_a :: Proxy "onboarding_faq_onboard_driver_a"
+onboarding_faq_onboard_driver_a = a
+
+onboarding_faq_add_driver_manually_q :: Proxy "onboarding_faq_add_driver_manually_q"
+onboarding_faq_add_driver_manually_q = a
+
+onboarding_faq_add_driver_manually_a :: Proxy "onboarding_faq_add_driver_manually_a"
+onboarding_faq_add_driver_manually_a = a
+
+onboarding_faq_driver_bulk_upload_q :: Proxy "onboarding_faq_driver_bulk_upload_q"
+onboarding_faq_driver_bulk_upload_q = a
+
+onboarding_faq_driver_bulk_upload_a :: Proxy "onboarding_faq_driver_bulk_upload_a"
+onboarding_faq_driver_bulk_upload_a = a
+
+onboarding_faq_driver_documents_q :: Proxy "onboarding_faq_driver_documents_q"
+onboarding_faq_driver_documents_q = a
+
+onboarding_faq_driver_documents_a :: Proxy "onboarding_faq_driver_documents_a"
+onboarding_faq_driver_documents_a = a
+
+onboarding_faq_driver_tab_q :: Proxy "onboarding_faq_driver_tab_q"
+onboarding_faq_driver_tab_q = a
+
+onboarding_faq_driver_tab_a :: Proxy "onboarding_faq_driver_tab_a"
+onboarding_faq_driver_tab_a = a
+
+onboarding_faq_track_driver_docs_q :: Proxy "onboarding_faq_track_driver_docs_q"
+onboarding_faq_track_driver_docs_q = a
+
+onboarding_faq_track_driver_docs_a :: Proxy "onboarding_faq_track_driver_docs_a"
+onboarding_faq_track_driver_docs_a = a
+
+onboarding_faq_add_remove_drivers_q :: Proxy "onboarding_faq_add_remove_drivers_q"
+onboarding_faq_add_remove_drivers_q = a
+
+onboarding_faq_add_remove_drivers_a :: Proxy "onboarding_faq_add_remove_drivers_a"
+onboarding_faq_add_remove_drivers_a = a
+
+onboarding_faq_manage_driver_docs_q :: Proxy "onboarding_faq_manage_driver_docs_q"
+onboarding_faq_manage_driver_docs_q = a
+
+onboarding_faq_manage_driver_docs_a :: Proxy "onboarding_faq_manage_driver_docs_a"
+onboarding_faq_manage_driver_docs_a = a
+
+onboarding_faq_onboard_vehicle_q :: Proxy "onboarding_faq_onboard_vehicle_q"
+onboarding_faq_onboard_vehicle_q = a
+
+onboarding_faq_onboard_vehicle_a :: Proxy "onboarding_faq_onboard_vehicle_a"
+onboarding_faq_onboard_vehicle_a = a
+
+onboarding_faq_add_multiple_vehicles_q :: Proxy "onboarding_faq_add_multiple_vehicles_q"
+onboarding_faq_add_multiple_vehicles_q = a
+
+onboarding_faq_add_multiple_vehicles_a :: Proxy "onboarding_faq_add_multiple_vehicles_a"
+onboarding_faq_add_multiple_vehicles_a = a
+
+onboarding_faq_vehicle_documents_q :: Proxy "onboarding_faq_vehicle_documents_q"
+onboarding_faq_vehicle_documents_q = a
+
+onboarding_faq_vehicle_documents_a :: Proxy "onboarding_faq_vehicle_documents_a"
+onboarding_faq_vehicle_documents_a = a
+
+onboarding_faq_readd_vehicle_q :: Proxy "onboarding_faq_readd_vehicle_q"
+onboarding_faq_readd_vehicle_q = a
+
+onboarding_faq_readd_vehicle_a :: Proxy "onboarding_faq_readd_vehicle_a"
+onboarding_faq_readd_vehicle_a = a
+
+onboarding_faq_vehicle_inspection_q :: Proxy "onboarding_faq_vehicle_inspection_q"
+onboarding_faq_vehicle_inspection_q = a
+
+onboarding_faq_vehicle_inspection_a :: Proxy "onboarding_faq_vehicle_inspection_a"
+onboarding_faq_vehicle_inspection_a = a
+
+onboarding_faq_inspection_cost_q :: Proxy "onboarding_faq_inspection_cost_q"
+onboarding_faq_inspection_cost_q = a
+
+onboarding_faq_inspection_cost_a :: Proxy "onboarding_faq_inspection_cost_a"
+onboarding_faq_inspection_cost_a = a
+
+onboarding_faq_manage_vehicle_docs_q :: Proxy "onboarding_faq_manage_vehicle_docs_q"
+onboarding_faq_manage_vehicle_docs_q = a
+
+onboarding_faq_manage_vehicle_docs_a :: Proxy "onboarding_faq_manage_vehicle_docs_a"
+onboarding_faq_manage_vehicle_docs_a = a
+
+onboarding_faq_track_vehicle_docs_q :: Proxy "onboarding_faq_track_vehicle_docs_q"
+onboarding_faq_track_vehicle_docs_q = a
+
+onboarding_faq_track_vehicle_docs_a :: Proxy "onboarding_faq_track_vehicle_docs_a"
+onboarding_faq_track_vehicle_docs_a = a
+
+onboarding_faq_assign_driver_vehicle_q :: Proxy "onboarding_faq_assign_driver_vehicle_q"
+onboarding_faq_assign_driver_vehicle_q = a
+
+onboarding_faq_assign_driver_vehicle_a :: Proxy "onboarding_faq_assign_driver_vehicle_a"
+onboarding_faq_assign_driver_vehicle_a = a
+
+onboarding_faq_remove_vehicle_q :: Proxy "onboarding_faq_remove_vehicle_q"
+onboarding_faq_remove_vehicle_q = a
+
+onboarding_faq_remove_vehicle_a :: Proxy "onboarding_faq_remove_vehicle_a"
+onboarding_faq_remove_vehicle_a = a
+
+onboarding_faq_edit_vehicle_q :: Proxy "onboarding_faq_edit_vehicle_q"
+onboarding_faq_edit_vehicle_q = a
+
+onboarding_faq_edit_vehicle_a :: Proxy "onboarding_faq_edit_vehicle_a"
+onboarding_faq_edit_vehicle_a = a
+
+onboarding_faq_update_driver_status_q :: Proxy "onboarding_faq_update_driver_status_q"
+onboarding_faq_update_driver_status_q = a
+
+onboarding_faq_update_driver_status_a :: Proxy "onboarding_faq_update_driver_status_a"
+onboarding_faq_update_driver_status_a = a

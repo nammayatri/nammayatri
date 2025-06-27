@@ -365,7 +365,7 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
   ]
-eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
+eval (TutorialModalAction (TutorialModalController.Logout)) state = continue state{props{logoutModalView = true}}
 eval ReferralMobileNumber state = do
   continue state{props{openReferralMobileNumber = true, btnActive = false, isEdit = true}}
 eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = continue state{props{openReferralMobileNumber = false}}
