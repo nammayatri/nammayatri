@@ -702,8 +702,8 @@ processBusLegState
   newStatus
   isLastCompleted
   movementDetected
-  updateStatusFn = do
-    if movementDetected || isLastCompleted || isOngoingJourneyLeg newStatus
+  updateStatusFn =
+    if (isLastCompleted || isOngoingJourneyLeg newStatus) && movementDetected
       then do
         case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, listToMaybe riderLastPoints) of
           (Just legDetails, Just rc, Just userPos) -> do
@@ -738,40 +738,19 @@ processBusLegState
                             upcomingStops = upcomingStops
                           }
                       ]
-                  Nothing -> do
-                    -- If best candidate not found in allBusDataForRoute, fall back to showing all buses for OnTheWay
-                    if newStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]
-                      then
-                        pure $
-                          map
-                            ( \bd ->
-                                JT.VehiclePosition
-                                  { position = LatLong bd.latitude bd.longitude,
-                                    vehicleId = fromMaybe "UNKNOWN" bd.vehicle_number,
-                                    upcomingStops = getUpcomingStopsForBus now mbUserBoardingStation bd False
-                                  }
-                            )
-                            allBusDataForRoute
-                      else pure []
-              Nothing -> do
-                -- If no top candidate found, fall back to showing all buses for OnTheWay
-                if newStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]
-                  then
-                    pure $
-                      map
-                        ( \bd ->
-                            JT.VehiclePosition
-                              { position = LatLong bd.latitude bd.longitude,
-                                vehicleId = fromMaybe "UNKNOWN" bd.vehicle_number,
-                                upcomingStops = getUpcomingStopsForBus now mbUserBoardingStation bd False
-                              }
-                        )
-                        allBusDataForRoute
-                  else pure []
-          _ -> do
-            -- If no leg details, route code, or rider position, fall back to showing all buses for OnTheWay
-            if newStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]
-              then
+                  Nothing -> pure []
+              Nothing -> pure []
+          _ -> pure []
+      else
+        if newStatus == JPT.Ongoing && not movementDetected
+          then case mbCurrentLegDetails of
+            Just legDetails -> do
+              let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
+              findVehiclePositionFromSequence (reverse changedBuses)
+            Nothing -> pure []
+          else
+            if newStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving]
+              then do
                 pure $
                   map
                     ( \bd ->
@@ -783,20 +762,21 @@ processBusLegState
                     )
                     allBusDataForRoute
               else pure []
-      else
-        if newStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]
-          then do
-            pure $
-              map
-                ( \bd ->
-                    JT.VehiclePosition
-                      { position = LatLong bd.latitude bd.longitude,
-                        vehicleId = fromMaybe "UNKNOWN" bd.vehicle_number,
-                        upcomingStops = getUpcomingStopsForBus now mbUserBoardingStation bd False
-                      }
-                )
-                allBusDataForRoute
-          else pure []
+    where
+      findVehiclePositionFromSequence :: (MonadFlow m) => [Text] -> m [JT.VehiclePosition]
+      findVehiclePositionFromSequence [] = pure []
+      findVehiclePositionFromSequence (busNum : rest) = do
+        case find (\bd -> bd.vehicle_number == Just busNum) allBusDataForRoute of
+          Just bestBusData -> do
+            let upcomingStops = getUpcomingStopsForBus now mbLegEndStation bestBusData True
+            pure
+              [ JT.VehiclePosition
+                  { position = LatLong bestBusData.latitude bestBusData.longitude,
+                    vehicleId = busNum,
+                    upcomingStops = upcomingStops
+                  }
+              ]
+          Nothing -> findVehiclePositionFromSequence rest
 
 getUpcomingStopsForBus ::
   UTCTime -> -- Current time (`now`)
