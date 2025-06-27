@@ -504,6 +504,7 @@ view push state =
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
       , if state.props.rentalInfoPopUp || state.props.intercityInfoPopUp then rentalInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
+      , if state.props.showInsuranceBanner then PopUpModal.view (push <<< RideInsuranceCardAction) (rideInsuranceBannerConfig state) else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.showAdvancedRidePopUp then advancedRidePopUpView push state else dummyTextView
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
