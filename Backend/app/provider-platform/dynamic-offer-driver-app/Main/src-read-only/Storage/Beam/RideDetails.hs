@@ -40,6 +40,6 @@ instance B.Table RideDetailsT where
 
 type RideDetails = RideDetailsT Identity
 
-$(enableKVPG ''RideDetailsT ['id] [])
+$(enableKVPG ''RideDetailsT ['id] [['driverNumberHash]])
 
 $(mkTableInstances ''RideDetailsT "ride_details")
