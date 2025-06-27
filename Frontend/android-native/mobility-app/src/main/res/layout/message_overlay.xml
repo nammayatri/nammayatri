@@ -178,7 +178,7 @@
                                         <TextView
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:text=" ₹ "
+                                            android:text=" € "
                                             android:textSize="16dp"
                                             android:fontFamily="@font/plus_jakarta_sans_bold"
                                             android:id="@+id/new_fare_val"/>
@@ -214,7 +214,7 @@
                                                     android:id="@+id/fare_diff_indicator_val"
                                                     android:textSize="16dp"
                                                     android:fontFamily="@font/dmsans_bold"
-                                                    android:text=" ₹ "/>
+                                                    android:text=" € "/>
 
                                             </LinearLayout>
                                         </com.google.android.material.card.MaterialCardView>
@@ -290,7 +290,7 @@
                             </LinearLayout>
                         </androidx.cardview.widget.CardView>
                     </FrameLayout>
-               
+
                     <LinearLayout
                         android:layout_marginTop="10dp"
                         android:layout_width="match_parent"

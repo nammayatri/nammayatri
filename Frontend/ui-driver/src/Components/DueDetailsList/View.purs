@@ -62,7 +62,7 @@ view push state =
           , margin $ MarginBottom 16
           , cornerRadius 10.0
           , background if item.expanded then Color.blue600 else Color.white900
-          ][ 
+          ][
             linearLayout[
               width MATCH_PARENT
               , height WRAP_CONTENT
@@ -96,7 +96,7 @@ view push state =
                 , gravity CENTER_VERTICAL
               ][
                 textView $ [
-                  text $ "₹" <> getFixedTwoDecimals item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
+                  text $ "€" <> getFixedTwoDecimals item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
@@ -122,7 +122,7 @@ view push state =
                 , keyValueView (getString PAYMENT_MODE) (mode item) true (not item.isDue) FontStyle.Body3 16 Color.black700
                 , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false FontStyle.Body3 16 Color.black700
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString YOUR_EARNINGS) ("€" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString FARE_BREAKUP) item.fareBreakup (not DS.null item.fareBreakup) false FontStyle.Body3 16 Color.black700
                 , maybe (linearLayout[visibility GONE][]) (\boothCharges -> keyValueView (getString BOOTH_CHARGES) boothCharges true false FontStyle.Captions 6 Color.black600) $ item.boothCharges
                 , linearLayout [
@@ -137,7 +137,7 @@ view push state =
                     , color Color.black700
                   ] <> FontStyle.body3 TypoGraphy
                   , case item.offerApplied of
-                      Just offerConfig -> case fromMaybe "" offerConfig.title of 
+                      Just offerConfig -> case fromMaybe "" offerConfig.title of
                                             "" -> textView $
                                                   [ text "N/A"
                                                   , color Color.black900
@@ -180,32 +180,32 @@ view push state =
          )
     ]
     where mode item = if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else if item.isDue then "Manual" else "UPI"
-          
+
 coinsPromoview :: forall w . (Action -> Effect Unit) -> Number -> PrestoDOM (Effect Unit) w
-coinsPromoview push amount = 
-  linearLayout 
+coinsPromoview push amount =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , margin $ MarginBottom 16
   , gravity CENTER_VERTICAL
-  ][ textView $ 
+  ][ textView $
     [ text $ getString DISCOUNT
     , margin $ MarginRight 8
     , color Color.black700
     ] <> FontStyle.body3 TypoGraphy
-  , promoCodeView push (coinsOfferConfig $ getFixedTwoDecimals amount) 
+  , promoCodeView push (coinsOfferConfig $ getFixedTwoDecimals amount)
   ]
 
 keyValueView :: forall w . String -> String -> Boolean -> Boolean -> FontStyle.Style -> Int -> String -> PrestoDOM (Effect Unit) w
-keyValueView key value visibility' prefixImage keyFont marginTop keyColor = 
-  linearLayout 
+keyValueView key value visibility' prefixImage keyFont marginTop keyColor =
+  linearLayout
   [
     height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginTop marginTop
     , visibility if visibility' then VISIBLE else GONE
     , gravity CENTER_VERTICAL
-  ][ 
+  ][
     textView $ [
       text key
       , margin $ MarginRight 8
@@ -224,7 +224,7 @@ keyValueView key value visibility' prefixImage keyFont marginTop keyColor =
     ] <> FontStyle.body6 TypoGraphy
   ]
 
-promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
+promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w
 promoCodeView push state =
   linearLayout
   ([ height WRAP_CONTENT
@@ -242,7 +242,7 @@ promoCodeView push state =
      , margin (MarginRight 4)
      , visibility if state.hasImage then VISIBLE else GONE
      , imageWithFallback state.imageURL
-     ] 
+     ]
    , textView $
      [ textSize FontSize.a_10
      , fontStyle $ FontStyle.medium LanguageStyle
@@ -251,7 +251,7 @@ promoCodeView push state =
      ] <> case state.title of
           Mb.Nothing -> [visibility GONE]
           Mb.Just txt -> [text txt]
-   , imageView 
+   , imageView
      [ width $ V 12
      , height $ V 12
      , margin $ MarginLeft 3

@@ -36,7 +36,7 @@ import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, (
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, fillViewport, alpha, horizontalScrollView, scrollBarX, disableKeyboardAvoidance)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..),VehicleVariant(..), TipViewStage(..), FareProductType(..))
-import Storage 
+import Storage
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Data.String (null) as DS
@@ -87,7 +87,7 @@ view push state =
     ]
 
 offersView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
-offersView push state = 
+offersView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -116,7 +116,7 @@ paymentView state visibility' id' =
   ][  lottieAnimationView
           [ id id'
           , afterRender (\action-> do
-                        if visibility' /= INVISIBLE then 
+                        if visibility' /= INVISIBLE then
                           void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json", lottieId = id', minProgress = state.progress, scaleType = "CENTER_CROP"}
                         else pure unit
                         )(const NoAction state.tipViewProps)
@@ -146,7 +146,7 @@ paymentView state visibility' id' =
           , width imageData.width
           , accessibility DISABLE
           , margin $ MarginRight 8
-          , accessibility DISABLE 
+          , accessibility DISABLE
           ]
         , textView $
           [ width WRAP_CONTENT
@@ -165,24 +165,24 @@ imageData :: { height :: Length
 , width :: Length
 , imageUrl :: String
 }
-imageData = 
+imageData =
   if os == "IOS" then {imageUrl : fetchImage FF_ASSET "ny_ic_wallet_rect", height : (V 15), width : (V 15)}
     else {imageUrl : fetchImage FF_ASSET "ny_ic_wallet", height : (V 24) , width : (V 24)}
 
 ---------------------------- Boost Search ---------------------------------
 boostSearchView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> Boolean -> PrestoDOM (Effect Unit) w
-boostSearchView push state showBoostSearch = 
+boostSearchView push state showBoostSearch =
   let filteredEstimates = filter (\estimate -> estimate.vehicleVariant /= "BOOK_ANY") state.quoteList
       estimates = filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) state.boostSearchEstimate.selectedServices) filteredEstimates
       bookAnyProps = getBookAnyProps estimates
       tipConfig = state.tipViewProps
       finalPrice = getPriceWithTip bookAnyProps state.boostSearchEstimate estimates ((fromMaybe 0 (tipConfig.customerTipArrayWithValues !! state.tipViewProps.activeIndex)))
       enableBoostSearch = state.selectedEstimatesObject.price /= finalPrice && length state.boostSearchEstimate.selectedServices > 0 && state.tipViewProps.activeIndex >= 0
-      smartTipReason = case state.selectedEstimatesObject.smartTipReason of 
-                        Just value -> value 
-                        Nothing -> do 
+      smartTipReason = case state.selectedEstimatesObject.smartTipReason of
+                        Just value -> value
+                        Nothing -> do
                                     let reasons = foldl(\acc item -> if isJust item.smartTipReason then acc <> [fromMaybe "" item.smartTipReason] else acc) [] state.quoteList
-                                    case head reasons of 
+                                    case head reasons of
                                       Just val -> val
                                       Nothing -> getStringV2 it_seems_to_be_taking_longer_than_usual
       boostSearchTipViewProps = state.tipViewProps{customerTipArray = tipConfig.customerTipArray, customerTipArrayWithValues = tipConfig.customerTipArrayWithValues}
@@ -201,22 +201,22 @@ boostSearchView push state showBoostSearch =
    , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , cornerRadii $ Corners 24.0 true true false false 
+      , cornerRadii $ Corners 24.0 true true false false
       , background Color.white900
       , alignParentBottom "true,-1"
       , padding $ PaddingTop 16
       , orientation VERTICAL
       , clickable true
       , visibility $ boolToVisibility $ showBoostSearch
-      ][ textView $ 
-         [ text smartTipReason 
+      ][ textView $
+         [ text smartTipReason
          , width MATCH_PARENT
          , gravity CENTER
          , padding $ PaddingHorizontal 16 16
          , color Color.black700
          , margin $ MarginBottom 4
          ] <> FontStyle.body3 TypoGraphy
-       , textView $ 
+       , textView $
          [ text $ getStringV2 boost_search_instantly
          , width MATCH_PARENT
          , gravity CENTER
@@ -244,22 +244,22 @@ boostSearchView push state showBoostSearch =
             ] <> FontStyle.body6 TypoGraphy
           , horizontalScrollView
             [ height WRAP_CONTENT
-            , width $ V ((screenWidth unit) - 64) 
+            , width $ V ((screenWidth unit) - 64)
             , scrollBarX false
             , disableKeyboardAvoidance true
             ][linearLayout
               [ height WRAP_CONTENT
-              , width MATCH_PARENT 
+              , width MATCH_PARENT
               ]
               ( mapWithIndex
                 ( \index item ->
                     let isSelected = state.tipViewProps.activeIndex == index
-                    in 
+                    in
                     linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     , gravity CENTER
-                    ][ linearLayout  
+                    ][ linearLayout
                         [ width $ WRAP_CONTENT
                         , height $ V 36
                         , background $ if isSelected then Color.blue600 else Color.white900
@@ -270,8 +270,8 @@ boostSearchView push state showBoostSearch =
                         , stroke $ "1," <> (if isSelected then Color.blue800 else Color.grey900)
                         , onClick push $ const $ TipBtnClick index (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) boostSearchTipViewProps
                         , accessibility ENABLE
-                        , accessibilityHint $ "₹" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
-                        ][textView $ 
+                        , accessibilityHint $ "€" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+                        ][textView $
                           [ text $ item
                           , color $ if isSelected then Color.blue800 else Color.black800
                           , width WRAP_CONTENT
@@ -297,7 +297,7 @@ boostSearchView push state showBoostSearch =
         ][ linearLayout
            [ height WRAP_CONTENT
            , width MATCH_PARENT
-           ][ textView $ 
+           ][ textView $
               [ text $ getString BOOK_ANY
               , color Color.black800
               , lineHeight "18"
@@ -317,7 +317,7 @@ boostSearchView push state showBoostSearch =
                  , onClick push $ const $ ShowBookAnyInfo
                  ][ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-                    , height $ V 10 
+                    , height $ V 10
                     , width $ V 10
                     ]
                  ]
@@ -333,17 +333,17 @@ boostSearchView push state showBoostSearch =
       ][]
     , linearLayout
       [ height WRAP_CONTENT
-      , width MATCH_PARENT 
+      , width MATCH_PARENT
       , padding $ PaddingHorizontal 16 16
       , margin $ MarginTop 16
       , visibility $ boolToVisibility $ enableBoostSearch
-      ][ textView $ 
+      ][ textView $
           [ text $ getStringV2 updated_fare_str
           , color Color.black800
           ] <> FontStyle.subHeading3 TypoGraphy
         , linearLayout [weight 1.0, height WRAP_CONTENT][]
-        , textView $ 
-          [ text finalPrice 
+        , textView $
+          [ text finalPrice
           , color Color.black800
           ] <> FontStyle.subHeading3 TypoGraphy
       ]
@@ -356,25 +356,25 @@ boostSearchView push state showBoostSearch =
 ---------------------------- BookAny View ---------------------------------
 
 bookAnyView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
-bookAnyView push state = 
+bookAnyView push state =
   horizontalScrollView
   [ height WRAP_CONTENT
-  , width $ V ((screenWidth unit) - 64) 
+  , width $ V ((screenWidth unit) - 64)
   , scrollBarX false
   , disableKeyboardAvoidance true
   ][linearLayout
     [ height WRAP_CONTENT
-    , width MATCH_PARENT 
+    , width MATCH_PARENT
     ]
     ( mapWithIndex
       ( \index item ->
           let isSelected = item `elem` state.boostSearchEstimate.selectedServices
-          in 
+          in
           linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity CENTER
-          ][ linearLayout  
+          ][ linearLayout
               [ width WRAP_CONTENT
               , height $ V 36
               , background $ if isSelected then Color.blue600 else Color.white900
@@ -386,7 +386,7 @@ bookAnyView push state =
               , onClick push $ const $ ServicesOnClick state.boostSearchEstimate item
               , accessibility ENABLE
               , accessibilityHint $ "Inside Book Any : " <> item <> if isSelected then " Checkbox : selected " else " Checkbox : Un Selected"
-              ][textView $ 
+              ][textView $
                 [ text $ item
                 , color $ if isSelected then Color.blue800 else Color.black800
                 , width WRAP_CONTENT
@@ -403,7 +403,7 @@ bookAnyView push state =
 ---------------------------- BookAny Details View ---------------------------------
 
 bookAnyDetails :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> Boolean ->PrestoDOM (Effect Unit) w
-bookAnyDetails push state showBoostSearch = 
+bookAnyDetails push state showBoostSearch =
   let estimates = filter (\item -> item.vehicleVariant /= "BOOK_ANY") state.quoteList
   in
   linearLayout
@@ -435,7 +435,7 @@ bookAnyDetails push state showBoostSearch =
            , width WRAP_CONTENT
            , padding $ Padding 16 24 16 0
            , onClick push $ const $ CloseBoostSearch
-           ][ imageView 
+           ][ imageView
               [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
               , height $ V 24
               , width $ V 24
@@ -453,7 +453,7 @@ bookAnyDetails push state showBoostSearch =
            , orientation VERTICAL
            , padding $ PaddingVertical 16 16
            ](mapWithIndex (\index item -> ChooseVehicle.view (push <<< ChooseVehicleAC) item) estimates)
-        ]  
+        ]
       , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
@@ -500,13 +500,13 @@ sourceDestinationView state push =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER_VERTICAL
-      ][ 
+      ][
       imageView
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-        ] 
+        ]
       , textView $
         [ height WRAP_CONTENT
         , margin $ MarginLeft 12
@@ -525,7 +525,7 @@ sourceDestinationView state push =
       , width WRAP_CONTENT
       , gravity CENTER_VERTICAL
       , visibility $ boolToVisibility $ not $ DS.null state.destination
-      ][ 
+      ][
         imageView
         [ height $ V 15
         , width $ V 15
@@ -544,8 +544,8 @@ sourceDestinationView state push =
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
       ]
-    ]   
-      
+    ]
+
 ---------------------------- quotesView ---------------------------------
 quotesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quotesView state push =
@@ -591,7 +591,7 @@ findingRidesView state push =
         , accessibility DISABLE
         , width $ V state.appConfig.quoteListModel.lottieWidth
         ]
-      , textView 
+      , textView
         [ text (getString PLEASE_WAIT)
         , color "#7C7C7C"
         , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
@@ -601,7 +601,7 @@ findingRidesView state push =
         , lineHeight "25"
         , fontStyle $ FontStyle.regular LanguageStyle
         ]
-      , textView 
+      , textView
         [ text $ if state.isRentalSearch then "" else getString $  FINDING_QUOTES_TEXT
         , color "#7C7C7C"
         , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch && (state.vehicleVariant /= "AUTO_RICKSHAW") then VISIBLE else GONE
@@ -625,7 +625,7 @@ findingRidesView state push =
     ]
 
 tipAddedView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tipAddedView state push = 
+tipAddedView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -653,7 +653,7 @@ tipAddedView state push =
 addTipView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addTipView state push =
   let enableBoostSearch = fetchRemoteConfigString "enable_boost_search" == "true"
-  in 
+  in
   linearLayout
   [ width MATCH_PARENT
   , orientation VERTICAL
@@ -690,7 +690,7 @@ addTipView state push =
             , gravity CENTER
             ]
               -- []-- <> if state.tipViewProps.onlyPrimaryText then [ clickable true, onClick push $ const $ ChangeTip ] else []
-          ) $ 
+          ) $
           [ textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
@@ -702,7 +702,7 @@ addTipView state push =
             , textSize $ FontSize.a_14
             , fontStyle $ FontStyle.bold LanguageStyle
             ]
-          ] <> (if state.tipViewProps.onlyPrimaryText then [textView $ 
+          ] <> (if state.tipViewProps.onlyPrimaryText then [textView $
                   [ text $ getString CHANGE
                   , margin $ MarginLeft 4
                   , height $ WRAP_CONTENT
@@ -723,7 +723,7 @@ addTipView state push =
   ]
 
 tipsView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tipsView state push = 
+tipsView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -764,8 +764,8 @@ selectRideAndConfirmView state push =
       [ height $ V 24
       , width $ V 24
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
-      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
-     
+      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE
+
       ]
     ]
   ]
@@ -777,7 +777,7 @@ paymentMethodView push state =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , visibility $ boolToVisibility (state.selectedQuote == Nothing && (null state.quoteListModel) && (not (isLocalStageOn FindingQuotes))) 
+  , visibility $ boolToVisibility (state.selectedQuote == Nothing && (null state.quoteListModel) && (not (isLocalStageOn FindingQuotes)))
   ][linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -869,7 +869,7 @@ quoteListTopSheetView state push =
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
 noQuotesErrorModel state =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-      variant = state.vehicleVariant 
+      variant = state.vehicleVariant
   in linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -889,7 +889,7 @@ noQuotesErrorModel state =
         , width $ V 161
         , accessibility DISABLE
         , imageWithFallback $ fetchImage FF_ASSET (quoteModalVariantImage variant)
-        ] 
+        ]
       , textView $
         [ height WRAP_CONTENT
         , width $ V ((screenWidth unit / 2) + (screenWidth unit /3))
@@ -906,7 +906,7 @@ noQuotesErrorModel state =
         , gravity CENTER
         ] <> FontStyle.paragraphText TypoGraphy
     ]
-    ]  
+    ]
 ---------------------------- quoteListView ---------------------------------
 quoteListView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quoteListView state push =
@@ -949,8 +949,8 @@ continueWithTipButtonConfig state = let
     continueWithTipButtonConfig' = config
       { textConfig
         { text = state.tipViewProps.primaryButtonText
-        ,  color = state.appConfig.primaryTextColor 
-        , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button" 
+        ,  color = state.appConfig.primaryTextColor
+        , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button"
         }
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 12
@@ -967,7 +967,7 @@ boostSearchButtonConfig state enableButton = let
     boostSearchButtonConfig' = config
       { textConfig
         { text = getStringV2 boost_search
-        , accessibilityHint = "Boost Search" <> " : Button" 
+        , accessibilityHint = "Boost Search" <> " : Button"
         }
       , id = "boostSearchButtonConfig"
       , margin = Margin 16 (if enableButton then 12 else 16) 16 16
@@ -985,7 +985,7 @@ gotItButtonConfig state = let
     gotItButtonConfig' = config
       { textConfig
         { text = getStringV2 got_it
-        , accessibilityHint = "Got It" <> " : Button" 
+        , accessibilityHint = "Got It" <> " : Button"
         }
       , id = "gotItButtonConfig"
       , margin = Margin 16 16 16 16
@@ -1019,7 +1019,7 @@ tryAgainButtonConfig state = let
     tryAgainButtonConfig' = config
       { textConfig
         { text = (getString TRY_AGAIN)
-        ,  color = state.appConfig.primaryTextColor 
+        ,  color = state.appConfig.primaryTextColor
         }
       , margin =( Margin 8 0 16 0)
       , width = MATCH_PARENT
@@ -1043,7 +1043,7 @@ getPrice state =
 dummyQuoteList :: QuoteListItemState
 dummyQuoteList = QuoteListItem.config{
    seconds = 15
-  , id = ""  
+  , id = ""
   , timer = ""
   , timeLeft = 15
   , driverRating = 0.0
@@ -1076,7 +1076,7 @@ getSelectedItemTimer state =
     in timer
 
 separatorConfig :: SeparatorView.Config
-separatorConfig = 
+separatorConfig =
   {
     orientation : VERTICAL
   , count : 3
@@ -1089,15 +1089,15 @@ separatorConfig =
 
 
 getAutoLottie :: City -> String
-getAutoLottie city = 
-  case city of 
+getAutoLottie city =
+  case city of
     Hyderabad -> "lottie/finding_rides_loader_auto_yellow_black.json"
     Kochi     -> "lottie/finding_rides_loader_auto_kochi.json"
     Chennai   -> "lottie/finding_rides_loader_auto_yellow_black.json"
     _         -> "lottie/finding_rides_loader_with_text_auto.json"
 
 tipsViewConfig :: QuoteListModelState -> TipsView.Config
-tipsViewConfig state = let  
+tipsViewConfig state = let
   config = TipsView.config
   tipsViewConfig' = config {
     activeIndex = state.tipViewProps.activeIndex
@@ -1133,7 +1133,7 @@ providerQuoteList push state =
     makeNYasFirst configArray = sortBy (compare `on` \item -> if item.providerType == ONUS then 0 else 1) configArray
 
 animationtimer :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
-animationtimer push state = 
+animationtimer push state =
   let timerRunning = state.selectProviderTimer /= "0"
   in relativeLayout
   [ height WRAP_CONTENT
@@ -1142,7 +1142,7 @@ animationtimer push state =
   ][ PrestoAnim.animationSet
         [ Anim.translateOutXBackwardAnimY AnimConfig.animConfig
             { duration = (state.animEndTime * 1000) - 1000
-            , toX = 0 
+            , toX = 0
             , fromX = - (screenWidth unit)
             , ifAnim = true
             }
@@ -1180,7 +1180,7 @@ animationtimer push state =
   ]
 
 providerModelConfig :: QuoteListModelState -> CVC.Config -> PM.Config
-providerModelConfig config quoteItem = 
+providerModelConfig config quoteItem =
   let onus = quoteItem.providerType == ONUS
   in PM.config {
     isActive = quoteItem.id == config.selectedEstimatesObject.id,

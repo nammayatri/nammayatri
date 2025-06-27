@@ -29,7 +29,7 @@
 <string name="tap_on">3. ట్యాప్ చేయండి</string>
 <string name="location">లొకేషన్</string>
 <string name="phone">ఫోన్</string>
-<string name="includes_pickup_charges_10">పికప్ ₹{#amount#}</string>
+<string name="includes_pickup_charges_10">పికప్ €{#amount#}</string>
 <string name="away">దూరంలో</string>
 <string name="we_made_you_online">మేము మిమ్మల్ని ఆన్‌లైన్‌లో ఉంచాము</string>
 <string name="location_is_turned_on">లొకేషన్ ఆన్ చేయబడింది</string>
@@ -82,7 +82,7 @@
 <string name="no_change">మార్పు లేదు</string>
 <string name="no_additional_fare_tips_and_waiting_charges">"అదనపు చార్జీలు లేవు. టిప్స్ లేవు. వెయిటింగ్ ఛార్జీలు లేవు."</string>
 <string name="third_party_booking">"థర్డ్ పార్టీ బుకింగ్"</string>
-<string name="parking_charges">%1$.0f₹ పార్కింగ్</string>
+<string name="parking_charges">%1$.0f€ పార్కింగ్</string>
 <string name="includes">కలిపి</string>
     <string name="stops_info">%1$d నిలిపి స్థానాలు (స్టాప్ ఛార్జ్ తో కలిపి)</string>
     <string name="stops">%1$d నిలిపి స్థానాలు</string>

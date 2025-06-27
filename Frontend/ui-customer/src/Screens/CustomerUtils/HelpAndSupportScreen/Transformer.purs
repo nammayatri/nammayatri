@@ -114,7 +114,7 @@ rideInfoTransformer (RideBookingRes resp) message =
       , { key: Pattern "{#ESTIMATED_FARE#}", value: Replacement (currency <> (show estimatedFare)) }
       , { key: Pattern "{#FINAL_FARE#}", value: Replacement (currency <> (show finalFare)) }
       , { key: Pattern "{#FARE_DIFFERENCE#}", value: Replacement (currency <> (show fareDifference)) }
-      , { key: Pattern "{#FARE_CORRELATION#}", value: Replacement (if finalFare == estimatedFare then "remained same" else if finalFare > estimatedFare then ("was increased by ₹" <> show fareDifference) else ("was decreased by ₹" <> show fareDifference)) }
+      , { key: Pattern "{#FARE_CORRELATION#}", value: Replacement (if finalFare == estimatedFare then "remained same" else if finalFare > estimatedFare then ("was increased by €" <> show fareDifference) else ("was decreased by €" <> show fareDifference)) }
       , { key: Pattern "{#DISTANCE_CORRELATION#}", value: Replacement (if finalDistance == estimatedDistance then "no change" else if finalDistance > estimatedDistance then ("a " <> show distanceDifference <> " km increase") else ("a " <> show distanceDifference <> " km decrease")) }
       , { key: Pattern "{#FARE_ARROW#}", value: Replacement (if finalFare == estimatedFare then "" else if finalFare > estimatedFare then " ↑" else " ↓") }
       , { key: Pattern "{#DISTANCE_ARROW#}", value: Replacement (if finalDistance == estimatedDistance then "" else if finalDistance > estimatedDistance then " ↑" else " ↓") }

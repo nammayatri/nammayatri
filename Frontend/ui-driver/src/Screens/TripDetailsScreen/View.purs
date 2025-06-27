@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -32,7 +32,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, ge
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude 
+import Prelude
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, horizontalScrollView, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarX, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -51,8 +51,8 @@ import Resource.Constants as RC
 import Data.Array(elem)
 import Data.Int
 
-screen :: ST.TripDetailsScreenState -> LoggableScreen Action ST.TripDetailsScreenState ScreenOutput 
-screen initialState = 
+screen :: ST.TripDetailsScreenState -> LoggableScreen Action ST.TripDetailsScreenState ScreenOutput
+screen initialState =
   { initialState
   , view
   , name : "TripDetailsScreen"
@@ -66,8 +66,8 @@ logWhitelist :: Array String
 logWhitelist = []
 
 view
-  :: forall w 
-  . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w 
+  :: forall w
+  . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $
   relativeLayout
@@ -86,12 +86,12 @@ view push state =
           [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
-          ][ 
+          ][
             linearLayout
               [ height MATCH_PARENT
               , width MATCH_PARENT
               , orientation VERTICAL
-              ][ 
+              ][
                 scrollView
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
@@ -103,10 +103,10 @@ view push state =
                       , background Color.blue600
                       , padding (Padding 16 16 16 16)
                       ][ tripDetailsView state
-                      , separatorView 
+                      , separatorView
                       , tagView state $ tagList state
                       , tripDataView push state
-                      , separatorView 
+                      , separatorView
                       , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
                       ]
                     ]
@@ -155,8 +155,8 @@ view push state =
               ]
             ]
         ]
-      
-   
+
+
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -168,9 +168,9 @@ view push state =
     ]
 
 
-tagView :: forall w. ST.TripDetailsScreenState -> (Array ST.Tag) -> PrestoDOM (Effect Unit) w 
+tagView :: forall w. ST.TripDetailsScreenState -> (Array ST.Tag) -> PrestoDOM (Effect Unit) w
 tagView state config =
-  horizontalScrollView 
+  horizontalScrollView
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , margin $ MarginVertical 15 15
@@ -202,13 +202,13 @@ tagView state config =
           ] <> FontStyle.tags TypoGraphy
       ]) config)
   ]
-  where 
+  where
   anyTag = isJust state.data.customerExtraFee || state.data.purpleTagVisibility || state.data.gotoTagVisibility || state.data.spLocTagVisibility || state.data.specialZonePickup
 
 
 tagList :: ST.TripDetailsScreenState -> Array ST.Tag
 tagList state = [
-  {background : Colors.yellow200, image : fetchImage FF_ASSET "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "₹" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
+  {background : Colors.yellow200, image : fetchImage FF_ASSET "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "€" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
   {background : Colors.black200, image : fetchImage FF_ASSET "ny_ic_loc_black", visibility : state.data.gotoTagVisibility, text : getString GO_TO, textColor : Color.black900},
   {background : Colors.purple100, image : fetchImage FF_ASSET "ny_ic_disability_purple", visibility : state.data.purpleTagVisibility, text : getString PURPLE_RIDE, textColor : Color.purple},
   {background : Colors.blue100, image : fetchImage FF_ASSET "ny_ic_star", visibility : state.data.spLocTagVisibility, text : state.data.specialZoneText, textColor : Color.blue800},
@@ -229,7 +229,7 @@ tripDetailsView state =
       , width $ V 36
       , height $ V 36
       ]
-    , linearLayout 
+    , linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
       , orientation VERTICAL
@@ -250,7 +250,7 @@ tripDetailsView state =
               , margin (Margin 5 0 5 0)
               , height (V 5)
               , width (V 5)
-              ] 
+              ]
             , textView $
               [ text state.data.time
               , color Color.black800
@@ -317,13 +317,13 @@ defaultTripDetailsRow = {
 }
 
 tripDataView ::  forall w . (Action -> Effect Unit) ->  ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
-tripDataView push state = 
+tripDataView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
-  ][  tripDetailsRow push defaultTripDetailsRow {  
+  ][  tripDetailsRow push defaultTripDetailsRow {
         keyLeft = getString RIDE_TYPE
       , valLeft = rideType
       , keyRight = getString TRIP_ID
@@ -334,7 +334,7 @@ tripDataView push state =
       , rightVisibility = true
       , leftItemLeftAsset = if state.data.acRide == Just true then Just "ny_ic_ac" else Nothing
       },
-      tripDetailsRow push defaultTripDetailsRow {  
+      tripDetailsRow push defaultTripDetailsRow {
         keyLeft = getString DISTANCE
       , valLeft = state.data.distance <> " km"
       , keyRight = getString RIDE_TIME
@@ -342,7 +342,7 @@ tripDataView push state =
       , leftVisibility = true
       , rightVisibility = true
       },
-      tripDetailsRow push defaultTripDetailsRow {  
+      tripDetailsRow push defaultTripDetailsRow {
         keyLeft = getString EARNINGS_PER_KM
       , valLeft = earningPerKm
       , keyRight = getString TOLL_INCLUDED
@@ -350,13 +350,13 @@ tripDataView push state =
       , leftVisibility = true
       , rightVisibility = state.data.tollCharge /= 0.0
       }
-    , tripDetailsRow push defaultTripDetailsRow {  
+    , tripDetailsRow push defaultTripDetailsRow {
         keyLeft = getString PARKING_CHARGE
       , valLeft = currency <> (show $ round $ state.data.parkingCharge) <>  " (" <> (getString INCLUDED) <> ")"
       , leftVisibility = state.data.parkingCharge > 0.0
       }
   ]
-  where 
+  where
     tripTime = case state.data.tripStartTime, state.data.tripEndTime of
                 Just startTime, Just endTime -> (show $ runFn2 JB.differenceBetweenTwoUTCInMinutes endTime startTime) <> " Min"
                 _, _ -> "NA"
@@ -444,7 +444,7 @@ tripDetailsRow push tripDetailsRowItem =
 
 ----------------- report Isssue ----------------
 reportIssueView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-reportIssueView state push = 
+reportIssueView state push =
   linearLayout
     [ orientation VERTICAL
     , width MATCH_PARENT
@@ -456,7 +456,7 @@ reportIssueView state push =
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin (MarginBottom 16)
-        , onClick push $ const ReportIssue 
+        , onClick push $ const ReportIssue
         ][  textView
             ([ text (getString REPORT_AN_ISSUE)
             , color Color.darkCharcoal
@@ -468,9 +468,9 @@ reportIssueView state push =
             ][  imageView
                 [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up" else "ny_ic_chevron_down"
                 , height $ V 5
-                , width $ V 10 
+                , width $ V 10
                 ]
-              ] 
+              ]
           ]
           , PrestoAnim.animationSet[
             Anim.fadeIn state.props.reportIssue
@@ -483,7 +483,7 @@ reportIssueView state push =
                 , height WRAP_CONTENT
                 , orientation VERTICAL
                 , visibility if state.props.reportIssue then VISIBLE else GONE
-                ][ linearLayout 
+                ][ linearLayout
                    [ width MATCH_PARENT
                    , height $ V 120
                    , orientation HORIZONTAL
@@ -506,15 +506,15 @@ reportIssueView state push =
                        , pattern "[A-Za-z0-9 ]*,255"
                        , onChange push $ MessageTextChanged
                        ]
-                     ]  
+                     ]
                 ]
         ]
-    ]   
+    ]
 
 -------------------------- issueReportedView -----------------------
 
 issueReportedView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-issueReportedView state _push = 
+issueReportedView state _push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -537,7 +537,7 @@ issueReportedView state _push =
       , color Color.black900
       , margin (MarginBottom 12)
       ] <> FontStyle.h1 TypoGraphy
-    , textView $ 
+    , textView $
       [ text (getString WE_HAVE_RECIEVED_YOUR_ISSUE)
       , margin (Margin 42 0 42 0)
       , gravity CENTER
@@ -546,15 +546,15 @@ issueReportedView state _push =
   ]
 
 getVehicleImage :: ST.TripDetailsScreenState -> String
-getVehicleImage state = 
+getVehicleImage state =
   case getMerchant FunctionCall of
     YATRI     -> getVehicleVariantImage state.data.vehicleServiceTier
     YATRISATHI -> getVehicleVariantImage state.data.vehicleServiceTier
     NAMMAYATRI -> getVehicleVariantImage state.data.vehicleServiceTier
     _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-  
+
   where
     mkAsset cityConfig =
-      if cityConfig.cityCode == "std:040" 
+      if cityConfig.cityCode == "std:040"
         then fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
         else fetchImage FF_ASSET "ic_vehicle_front"

@@ -224,7 +224,7 @@ screen initialState =
             else pure unit
           pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer")
       , ( \push -> do
-           let isHomeScreen = initialState.props.currentStage == HomeScreen 
+           let isHomeScreen = initialState.props.currentStage == HomeScreen
            idMapVal <-  runEffectFn1 getValueFromIdMap "FirstHomeScreenVisit"
            if (isHomeScreen && idMapVal.shouldPush) then do
               void $ getCurrentPosition push UpdateLocationOnSignInSignUp
@@ -467,7 +467,7 @@ screen initialState =
               pure unit
             when (Arr.elem initialState.props.currentStage [RideAccepted, RideCompleted]) $ void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push initialState
             pure (pure unit)),
-        (\push -> do 
+        (\push -> do
             case initialState.data.profile of
               Just (GetProfileRes profile) -> do
                 if (fromMaybe false profile.isPayoutEnabled) then do
@@ -476,7 +476,7 @@ screen initialState =
                     push $ AddVPA $ totalEarningPending
                   else do
                     let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
-                    if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
+                    if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE"
                       then push $ TakeFirstRide
                       else pure unit
                   else pure unit
@@ -692,7 +692,7 @@ view push state =
                       , gravity CENTER
                       , onClick push $ const NoAction
                       , background Color.black9000
-                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
+                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]]
                     else []
               <> if state.showTakeFirstRidePopup then [PopUpModal.view (push <<< GetReferralPopup) (referralDonePopUp state)] else []
               <> if state.props.bookAmbulanceModal then [PopUpModal.view (push <<< AgreePopUp) (PopUpConfigs.bookAmbulanceModalConfig state)] else [])
@@ -746,8 +746,8 @@ scheduledRideExistsPopUpView push state =
   ][PopUpModal.view (push <<< ScheduledRideExistsAction) (scheduledRideExistsPopUpConfig state)]
 
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-bottomNavBarView push state = let 
-  viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
+bottomNavBarView push state = let
+  viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen
   enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
   enableBusBooking = isJust $ Arr.find (_ == (show RemoteConfig.BUS)) enabledServices
   enableTicketBooking = isJust $ Arr.find (_ == (show RemoteConfig.TICKETING)) enabledServices
@@ -1791,7 +1791,7 @@ estimatedFareView push state =
   , cornerRadii $ Corners 24.0 true true false false
   , afterRender
         ( \action -> do
-            let fareEstimate = if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            let fareEstimate = if state.data.rateCard.additionalFare == 0 then "€" <> (show state.data.suggestedAmount) else  "€" <> (show state.data.suggestedAmount) <> "-" <> "€" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             _ <- pure $  setValueToLocalStore FARE_ESTIMATE_DATA fareEstimate
             pure unit
         )
@@ -3211,7 +3211,7 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
                 driverLocationTracking push action driverArrivedAction driverReachedDestinationAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) || hasCurrentLocAndPrevDropLoc /= state.data.previousRideDrop then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon (if routeState == "pickup" then Just rideId else Nothing) 
+                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon (if routeState == "pickup" then Just rideId else Nothing)
                 when (not $ isLocalStageOn EditPickUpLocation) $ do
                     routeResponseAdvanced <- do
                       case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon, routeResponse of
@@ -3222,7 +3222,7 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
                               lastPointInRoute = Arr.last normalRoutePoints.points
                               previousDropLat' = maybe previousDropLat (\resp -> resp.lat) lastPointInRoute
                               previousDropLon' = maybe previousDropLon (\resp -> resp.lng) lastPointInRoute
-                          let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (if routeState == "pickup" then Just rideId else Nothing) 
+                          let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (if routeState == "pickup" then Just rideId else Nothing)
                           Just <$> getRoute routeState routeReq
                         Just advRoute, Just previousDropLat, Just previousDropLon, _ -> pure $ Just (Right (GetRouteResp ([advRoute])))
                         _, _, _, _ -> pure $ Just (Right (GetRouteResp []))
@@ -3798,7 +3798,7 @@ horizontalServiceView push index service =
       , width MATCH_PARENT
       , gravity CENTER
       , orientation VERTICAL
-      ][ textView $ 
+      ][ textView $
         [ text $ getString $ service.name
         , color Color.black800
         , singleLine false
@@ -3823,11 +3823,11 @@ horizontalServiceView push index service =
   ]
 
 verticalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
-verticalServiceView push index service = 
+verticalServiceView push index service =
   relativeLayout
   [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
   , weight 1.0
-  , width $ V 0 
+  , width $ V 0
   , orientation VERTICAL
   , gravity CENTER
   , accessibility ENABLE
@@ -3835,7 +3835,7 @@ verticalServiceView push index service =
   , accessibilityHint $ getEN service.name
   , margin $ MarginLeft $ if index == 0 then 0 else 4
   , onClick push $ const $ ServicesOnClick service
-  ][linearLayout 
+  ][linearLayout
     [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
     , width MATCH_PARENT
     , gravity CENTER
@@ -3858,13 +3858,13 @@ verticalServiceView push index service =
     , cornerRadius 12.0
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
-    ] [ imageView 
+    ] [ imageView
       [ imageWithFallback $ service.image
       , height $ V 32
       , width $ V 32
       ]
     ]
-    , textView $ 
+    , textView $
       [ text $ getString $ service.name
       , color Color.black800
       , width MATCH_PARENT
@@ -3984,13 +3984,13 @@ pickupLocationView push state =
       youGet = fromMaybe 0.0 referralPayoutConfig.youGet
       theyGet = fromMaybe 0.0 referralPayoutConfig.theyGet
       hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
-      {isPayoutEnabled, totalEarningPending, takeFirstRide} = 
-          case state.data.profile of 
+      {isPayoutEnabled, totalEarningPending, takeFirstRide} =
+          case state.data.profile of
             Nothing -> {takeFirstRide:false,  isPayoutEnabled : false, totalEarningPending: 0.0 }
             Just (GetProfileRes profile) -> {takeFirstRide: (not hasTakenRide) && isJust profile.referralCode , isPayoutEnabled : fromMaybe false profile.isPayoutEnabled, totalEarningPending: (fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid)}
-      showEarnNow = if isPayoutEnabled then youGet > 0.0 && totalEarningPending == 0.0 else false 
+      showEarnNow = if isPayoutEnabled then youGet > 0.0 && totalEarningPending == 0.0 else false
       showCollect = if isPayoutEnabled then totalEarningPending > 0.0 else false
-  in 
+  in
     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -4094,7 +4094,7 @@ pickupLocationView push state =
                     , cornerRadius 24.0
                     , background if showCollect then Color.blue900 else Color.blue600
                     , onClick push $ const $ if showCollect then ReferralPayout else if takeFirstRide then WhereToClick else ReferralPayout
-                    , visibility $ boolToVisibility $ (isPayoutEnabled) && (not applyReferral) && (showEarnNow ||  showCollect) 
+                    , visibility $ boolToVisibility $ (isPayoutEnabled) && (not applyReferral) && (showEarnNow ||  showCollect)
                     , padding $ Padding 10 8 10 8
                     , gravity CENTER
                     ][ imageView
@@ -4148,7 +4148,7 @@ mapView' push state idTag =
                   then do
                     void $ startTimer 18 "MapLottieViewTimer" "1" push ToggleMapLottieView
                     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = mapViewLottieConfig.lottieUrl, lottieId = getNewIDWithTag "HomeScreenLottieViewOverMap"}
-                  else 
+                  else
                     pure unit
                 _ <- showMap (getNewIDWithTag idTag) (isHomeScreenView state) "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
@@ -4352,7 +4352,7 @@ highCancellationBanner :: forall w. (Action -> Effect Unit) -> HomeScreenState -
 highCancellationBanner push state =
   let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in
-  linearLayout 
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , background Color.brownishYellow
@@ -4360,7 +4360,7 @@ highCancellationBanner push state =
   , cornerRadius 12.0
   , visibility $ boolToVisibility $ showCancellationHighBanner state.data.cancellationRate
   ]
-  [ linearLayout 
+  [ linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -4398,7 +4398,7 @@ highCancellationBanner push state =
         ]
       ]
     ]
-    where 
+    where
       showCancellationHighBanner :: Maybe Number -> Boolean
       showCancellationHighBanner cancellationRate =
         let rate = fromMaybe 0.0 cancellationRate
@@ -4406,7 +4406,7 @@ highCancellationBanner push state =
         in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
       contentLayoutHeight = HU.getDefaultPixelSize(contentLayout.height + 20)
       contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "cancellationBannerText"
-        
+
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state =
@@ -5279,7 +5279,7 @@ createRouteHelper routeState startLat startLon endLat endLon mbRoute rideId = do
     case mbRoute of
       Just routeCalculated  -> pure $ Just routeCalculated
       Nothing -> do
-        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon (if routeState == "pickup" then Just rideId else Nothing) 
+        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon (if routeState == "pickup" then Just rideId else Nothing)
         case routeResp of
           Right (GetRouteResp resp) -> do
             case (head resp) of

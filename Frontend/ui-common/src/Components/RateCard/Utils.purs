@@ -38,7 +38,7 @@ fetchSpecificFare fareBreakup fareType =
 
 priceToBeDisplayed :: Price -> String
 priceToBeDisplayed price = case price.currency of
-  "INR" -> "₹" <> value
+  "INR" -> "€" <> value
   _ -> price.currency <> show value
   where
     value = EHU.getFixedTwoDecimals price.amount
@@ -52,28 +52,28 @@ getFareBreakupList fareBreakup maxTip =
     nightChargeStart : EHC.convertUTCtoISC nightShiftStart "hh a",
     nightChargeEnd : EHC.convertUTCtoISC nightShiftEnd "hh a",
     isNightShift : isNightShift,
-    waitingTimeInfo : { 
-      freeMinutes: EHU.formatNumber freeWaitingTime.amount Nothing, 
-      charge: priceToBeDisplayed waitingCharge <> "/min" 
+    waitingTimeInfo : {
+      freeMinutes: EHU.formatNumber freeWaitingTime.amount Nothing,
+      charge: priceToBeDisplayed waitingCharge <> "/min"
     }
   }
   where
-  fareBreakupConstructed = 
-     (if baseDistance.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance.amount / 1000) <> "km", val: baseFare } ] 
-     else if baseDistance0AndAbove.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance0AndAbove.amount / 1000) <> "km", val: baseFare0AndAbove }] 
+  fareBreakupConstructed =
+     (if baseDistance.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance.amount / 1000) <> "km", val: baseFare } ]
+     else if baseDistance0AndAbove.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance0AndAbove.amount / 1000) <> "km", val: baseFare0AndAbove }]
      else [])
     <> (map constructExtraFareBreakup extraFareBreakup)
     <> (map constructExtraFareBreakup ambulanceFareBreakup)
     <> (if congestionCharges.amount > 0.0 then [ { key: getString CONGESTION_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
-    <> (if pickupCharges /= "₹0" then [{ key: getString PICKUP_CHARGE, val: pickupCharges }] else [])
-    <> if waitingCharge.amount > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" }] 
-    else if waitingCharge0AndAbove.amount > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime0AndAbove.amount Nothing, val: priceToBeDisplayed waitingCharge0AndAbove <> "/min" }] 
+    <> (if pickupCharges /= "€0" then [{ key: getString PICKUP_CHARGE, val: pickupCharges }] else [])
+    <> if waitingCharge.amount > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" }]
+    else if waitingCharge0AndAbove.amount > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime0AndAbove.amount Nothing, val: priceToBeDisplayed waitingCharge0AndAbove <> "/min" }]
     else [{ key: getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE, val: "" } ]
     <> (if parkingCharge.amount > 0.0 then [{ key: getString PARKING_CHARGE <> "^", val: priceToBeDisplayed parkingCharge }] else [])
 
 
-  fareInfoDescription = 
+  fareInfoDescription =
     [ getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE
     ]
     <> (if nightShiftRate.amount > 1.0 then [getString $ DAYTIME_CHARGES_APPLIED_AT_NIGHT (toStringWith (fixed 2) (1.0 + nightShiftRate.amount/100.0)) (EHC.convertUTCtoISC nightShiftStart "hh a") (EHC.convertUTCtoISC nightShiftEnd "hh a")] else [])
@@ -92,7 +92,7 @@ getFareBreakupList fareBreakup maxTip =
     DA.sortBy compareByLimit
       $ DA.mapMaybe
           ( \item ->
-              if MP.startsWith "EXTRA_PER_KM_STEP_FARE_" (item ^. EHA._title) 
+              if MP.startsWith "EXTRA_PER_KM_STEP_FARE_" (item ^. EHA._title)
                 then Just $ parseStepFare item 0.0 "EXTRA_PER_KM_STEP_FARE_" fareMultiplier
               else Nothing
           )
@@ -103,7 +103,7 @@ getFareBreakupList fareBreakup maxTip =
   fareMultiplier =
     if isNightShift && congestionCharges.amount > 0.0
       then (1.0 + (if nightShiftRate.amount > 0.0 then nightShiftRate.amount else ambulanceShiftRate.amount ) / 100.0) * (1.0 + congestionCharges.amount / 100.0)
-    else if congestionCharges.amount > 0.0 
+    else if congestionCharges.amount > 0.0
       then (1.0 + congestionCharges.amount / 100.0)
     else 1.0
 
@@ -111,14 +111,14 @@ getFareBreakupList fareBreakup maxTip =
   nightShiftStart = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftStartSeconds.amount)
 
   nightShiftEndSeconds = fetchSpecificFare fareBreakup "NIGHT_SHIFT_END_TIME_IN_SECONDS"
-  nightShiftEnd = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount) 
+  nightShiftEnd = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount)
 
   midNightUtc = EHC.getMidnightUTC unit
 
   nightShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_CHARGE_PERCENTAGE"
   ambulanceShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_STEP_PERCENTAGE0_Above"
 
-  isNightShift = if (nightShiftEndSeconds.amount > nightShiftStartSeconds.amount) 
+  isNightShift = if (nightShiftEndSeconds.amount > nightShiftStartSeconds.amount)
                     then JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC "")
                     else EHC.compareUTCDate nightShiftEnd (EHC.getCurrentUTC "") >= 0  || EHC.compareUTCDate (EHC.getCurrentUTC "") nightShiftStart >= 0
   -- Ambulance fare calculation
@@ -131,7 +131,7 @@ getFareBreakupList fareBreakup maxTip =
               else Nothing
           )
           fareBreakup
-  
+
 
   -- Pickup charges
   pickupCharges = priceToBeDisplayed $ fetchSpecificFare fareBreakup "DEAD_KILOMETER_FARE"

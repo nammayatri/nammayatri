@@ -359,7 +359,7 @@ getEn = Keymap {
 , nominal_fare: "Optional Driver Request*"
 , customer_cancellation_dues: "Cancellation Dues"
 , drivers_can_charge_an_additional_fare_upto: "* Drivers may optionally request 10% of base fare (rounded to nearest Rs.10) to cover other factors like traffic, chances of return trip etc."
-, waiting_charge_description: "°Waiting charge is zero for the first {} minutes. You will be charged ₹{} per minute of wait time after that."
+, waiting_charge_description: "°Waiting charge is zero for the first {} minutes. You will be charged €{} per minute of wait time after that."
 , waiting_charge_ratecard_description: (\ waitingCharge freeWaitingTime -> "1. Waiting Charge is zero for the first"<> freeWaitingTime <> "minutes.\n 2. Waiting Charge of " <> waitingCharge <> " per minute will be applicable thereafter.")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "Applicable @" <> waitingCharge <> "per minute after the first " <> freeWaitingTime <> "minutes of waiting")
 , successful_onboard: (\_ -> "You have successfully signed on to \nNamma Yatri")
@@ -437,7 +437,7 @@ getEn = Keymap {
 , gender_str: "Gender"
 , profile_completion: "Profile Completion"
 , early_end_ride_charges: "Early Ride End Charges^"
-, early_end_ride_charges_description: "^Ending a ride early incurs additional charges amounting to half the fare of the untravelled distance (max. ₹50)"
+, early_end_ride_charges_description: "^Ending a ride early incurs additional charges amounting to half the fare of the untravelled distance (max. €50)"
 , yes_try_again: "Yes, Try Again"
 , no_dont: "No, Don’t"
 , yes_cancel_search: "Yes, Cancel Search"
@@ -455,7 +455,7 @@ getEn = Keymap {
 , fare_update_policy: "Fare Update Policy"
 , driver_additions_optional: "Driver Additions (Optional)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "The Driver may quote extra to cover for traffic, chance of return trip etc."
-, driver_additions_are_calculated_at_rate: (\_ -> "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10")
+, driver_additions_are_calculated_at_rate: (\_ -> "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest €10")
 , driver_may_not_charge_this_additional_fare: "Note The driver may/may not charge this additional fare"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "You may see an updated final fare due to any of the below reasons"
 , reason_change_in_route_a: "1.Change in Route "
@@ -528,7 +528,7 @@ getEn = Keymap {
 , call_112: "Call 112"
 , call_emergency_centre: "Call Emergency Centre"
 , seats: "Seats"
-, driver_addition_limits_are_in_increments: "Driver addition limits are in increments of ₹20"
+, driver_addition_limits_are_in_increments: "Driver addition limits are in increments of €20"
 , hatchback: "Hatchback"
 , suv: "SUV"
 , sedan: "Sedan"
@@ -1181,7 +1181,7 @@ getEn = Keymap {
 , other_provider_no_receipt: "Driver receipt for rides fulfilled by other providers are not available yet."
 , ride_fulfilled_by: (\merchantName -> "Ride fulfilled by: " <> merchantName)
 , congestion_charges: "Congestion Charges*"
-, tip_can_be_added: (\maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare.")
+, tip_can_be_added: (\maxTip -> "Tip of upto €" <> maxTip <> " can be added to the ride fare.")
 , congestion_charges_desc: (\charges -> "*A Congestion Charge of "<> charges <>"% on your ride is applicable currently to compensate driver’s time in high traffic or to get more drivers available for you")
 , ac_turned_off: "A/C was not ON"
 , estimates_expiry_error: "Estimates has been expired. Please try again."
@@ -1350,9 +1350,9 @@ getEn = Keymap {
 , thrissur: "Thrissur"
 , trivandrum: "Trivandrum"
 , metro_free_ticket_event: (\freeTicketInterval -> "Every " <> freeTicketInterval <> " ticket is FREE!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "Get a FREE ticket (up to ₹" <> maxFreeTicketCashback <> ") on every " <> freeTicketInterval <> " ticket (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "Get a FREE ticket (up to €" <> maxFreeTicketCashback <> ") on every " <> freeTicketInterval <> " ticket (ONDC Offer)")
 , next_free_ticket: "Next ticket added is eligible for cashback"
-, free_ticket_available: (\maxCashback freeTicketCount -> "Unlocked cashback (upto ₹" <> maxCashback <> ") on " <> freeTicketCount <> " Ticket!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "Unlocked cashback (upto €" <> maxCashback <> ") on " <> freeTicketCount <> " Ticket!")
 , additional_charges_will_be_applicable: "Additional charges may be applicable when driver is near pickup location."
 , parking_charges_included: (\amount -> amount <> " parking charges included")
 , app_toll_charges: "Toll charges are included"
@@ -1729,7 +1729,7 @@ getEn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More coming soon!")
 , note_your_ticket_is_only_valid_for : (\s -> "Note: Ticket is valid for " <> s <> ". Bus times may vary due to local conditions, so be at the stop when booking")
 , here_is_bus_ticket : "Here is your bus ticket"
-,a_c : "Agree & Continue" 
+,a_c : "Agree & Continue"
 ,no_oxygen :  "No Oxygen"
 ,oxygen  : "Oxygen"
 ,ventilator : "Ventilator"
@@ -1750,7 +1750,7 @@ getEn = Keymap {
     , total_earned: "Total Earned"
     , took_cab_ride_using_referral_code: "Took cab ride using referral code"
     , success: "SUCCESS"
-    , invite_and_earn_: \ a ->"Invite and Earn ₹"<> a <> "!"
+    , invite_and_earn_: \ a ->"Invite and Earn €"<> a <> "!"
     , enjoy_extra_kekkadha_rides: "& enjoy Extra Kekkadha Rides!"
     , your_invite_code: "Your Invite Code"
     , share: "Share"
@@ -1780,19 +1780,19 @@ getEn = Keymap {
     , amount: "Amount"
     , download_app: "Download App"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "Scan QR code to download the app and apply your invite code automatically"
-    , earn_: \a ->  "Earn ₹" <> a
-    , collect_: \a -> "Collect ₹" <> a
+    , earn_: \a ->  "Earn €" <> a
+    , collect_: \a -> "Collect €" <> a
     , add_upi_id: "Add UPI ID"
     , earnings: "Earnings"
     , enter_upi_id: "Enter UPI ID"
-    , you_get_50__they_get_50: \a b ->"You get ₹" <> a <> "& They Get ₹" <> b
+    , you_get_50__they_get_50: \a b ->"You get €" <> a <> "& They Get €" <> b
     , when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride: "When your friend uses your referral code \n and takes their first ride."
     , read_terms_and_conditions: "Read Terms and Conditions"
     , ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally: "Ride is considered valid based on certain ride distance, ride time and fraud checks maintained internally"
     , collect_earnings_now: "Collect Earnings now"
     , update_upi_id: "Update UPI ID"
-    , youve_earned_50_for_taking_your_first_ride: \a ->"You’ve earned ₹" <> a <> " for taking your first ride!"
-    , get_50_referral_benefit_for_your_first_ride: \a ->"Get ₹" <> a <> " Referral Benefit for your first ride!"
+    , youve_earned_50_for_taking_your_first_ride: \a ->"You’ve earned €" <> a <> " for taking your first ride!"
+    , get_50_referral_benefit_for_your_first_ride: \a ->"Get €" <> a <> " Referral Benefit for your first ride!"
     , take_a_ride_now: "Take a ride now"
-    , take_a_ride__claim_50: \a ->  "Take a ride & claim ₹" <> a 
+    , take_a_ride__claim_50: \a ->  "Take a ride & claim €" <> a
 }

@@ -86,7 +86,7 @@ view push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
-  ][ 
+  ][
     linearLayout[
       height WRAP_CONTENT
     , width MATCH_PARENT
@@ -100,7 +100,7 @@ view push state =
     , margin $ MarginRight 10
     , onClick push $ const GoToDriverProfile
     ][
-       textView $ 
+       textView $
         [ text $ getString KNOWS_YOUR_DRIVER
         , color Color.blue900
         , weight 1.0
@@ -140,15 +140,15 @@ view push state =
                 , background Color.blue600
                 , padding $ Padding 16 16 16 16
                 , cornerRadius 8.0
-                ] [ 
-                  
+                ] [
+
                   linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     , orientation HORIZONTAL
                     , gravity CENTER_VERTICAL
                     ] [ imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET "ic_vehicle_side" 
+                        [ imageWithFallback $ fetchImage FF_ASSET "ic_vehicle_side"
                         , width $ V 35
                         , visibility GONE
                         , height $ V 35
@@ -188,8 +188,8 @@ view push state =
                           , gravity RIGHT
                           , orientation VERTICAL
                           ] [ textView $
-                              [ text $ "₹"<>show (fromMaybe 0 item.totalFare)
-                              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") $ show (fromMaybe 0 item.totalFare)) <> (getString RUPEES)
+                              [ text $ "€"<>show (fromMaybe 0 item.totalFare)
+                              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "€") (DS.Replacement "") $ show (fromMaybe 0 item.totalFare)) <> (getString RUPEES)
                               , accessibility ENABLE
                               , color Color.black
                               ] <> FontStyle.h3 LanguageStyle
@@ -225,7 +225,7 @@ view push state =
                       , gravity CENTER_VERTICAL
                       , orientation HORIZONTAL
                       , visibility $ boolToVisibility $ item.rideRating /= Nothing
-                      ] [ textView $ 
+                      ] [ textView $
                           [ text $ getString YOU_RATED <> ":"
                           , accessibilityHint $ "You Rated " <> (show item.rideRating) <> " Stars"
                           , accessibility ENABLE
@@ -234,7 +234,7 @@ view push state =
                         , linearLayout[
                             height WRAP_CONTENT
                           , width WRAP_CONTENT
-                          ](map(\i -> 
+                          ](map(\i ->
                             imageView
                               [ width $ V 18
                               , height $ V 18
@@ -244,17 +244,17 @@ view push state =
                         ]
 
                   ]
-                ] 
+                ]
             ]) state.data.details)
       ]
       , linearLayout[
         height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
-      , onClick push $ const RemoveFav 
+      , onClick push $ const RemoveFav
       , margin $ Margin 0 7 0 35
       ][
-        textView $ 
+        textView $
           [ textFromHtml $ "<u>" <> getString REMOVE_FAVOURITE <> "</u>"
           , accessibilityHint $ "Remove From Favourites"
           , accessibility ENABLE

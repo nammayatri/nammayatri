@@ -66,8 +66,8 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  let 
-    filteredTopics = DA.filter (\topic -> 
+  let
+    filteredTopics = DA.filter (\topic ->
         topic.categoryType == "Category" &&
         RSST.findIfRideIsValid (Just topic) state.data.selectedItem.rideStatus state.data.selectedItem.rideCreatedAt state.data.selectedItem.status
       ) (topicsList state)
@@ -98,7 +98,7 @@ view push state =
         , reportIssueView state push filteredTopics
         ]
       ]
-    ] 
+    ]
  ]<> (if state.props.isContactSupportPopUp then [PopUpModal.view (push <<< ContactSupportPopUpAction) (CommonComponentConfig.contactSupportPopUpConfig state.data.config)] else [])
 
 
@@ -154,8 +154,8 @@ tripDetailsLayout state push showDivider =
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , visibility $ boolToVisibility $ not $ state.data.selectedItem.status == "CANCELLED" 
-          , padding $ PaddingHorizontal 16 16 
+          , visibility $ boolToVisibility $ not $ state.data.selectedItem.status == "CANCELLED"
+          , padding $ PaddingHorizontal 16 16
           , orientation VERTICAL
           ][ invoiceView state push
             , linearLayout
@@ -173,7 +173,7 @@ tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState ->
 tripIdView push state =
   let serviceTierName = fromMaybe "" state.data.selectedItem.serviceTierName
       cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-      rideType = if cityConfig.enableAcViews 
+      rideType = if cityConfig.enableAcViews
                   then ServiceTierCard.parseName serviceTierName
                   else serviceTierName
       hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing (if state.data.vehicleVariant == Just DELIVERY_BIKE then DELIVERY else ONE_WAY)
@@ -304,7 +304,7 @@ tripDetailsView state =
   ][   imageView
         [ imageWithFallback $ case state.data.vehicleVariant of
                                 Just variant -> getVehicleVariantImage (show variant) RIGHT_VIEW
-                                Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
+                                Nothing      -> fetchImage FF_ASSET "ic_vehicle_side"
         , width $ V 40
         , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
         , height $ V 40
@@ -349,7 +349,7 @@ tripDetailsView state =
               ]
             , textView $
               [ text state.data.totalAmount
-              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
+              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "€") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
               , accessibility ENABLE
               , color Color.black
               ] <> FontStyle.h2 LanguageStyle
@@ -375,9 +375,9 @@ tripDetailsView state =
     ]
   where
     getProperVehicleModelName :: String -> String
-    getProperVehicleModelName vehicleModel = 
-      if vehicleModel == "Unkown" -- Fallback case when vehicle mapping fails during vehicle onboarding 
-        then fromMaybe "" $ state.data.selectedItem.serviceTierName 
+    getProperVehicleModelName vehicleModel =
+      if vehicleModel == "Unkown" -- Fallback case when vehicle mapping fails during vehicle onboarding
+        then fromMaybe "" $ state.data.selectedItem.serviceTierName
         else vehicleModel
 
 ------------------- separator -------------------
@@ -399,7 +399,7 @@ ratingAndInvoiceView state push =
   , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
   , visibility if state.data.selectedItem.status == "CANCELLED" || state.props.fromMyRides == ST.Home then GONE else VISIBLE
-  ][  textView $ 
+  ][  textView $
       [ text $ getString YOU_RATED
       , accessibilityHint $ "You Rated " <> (show state.data.rating) <> " Stars"
       , accessibility ENABLE
@@ -418,7 +418,7 @@ ratingAndInvoiceView state push =
                           ][imageView
                               [ height $ V 14
                               , width $ V 14
-                              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive" 
+                              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive"
                               ]
                             ]) [1 ,2 ,3 ,4 ,5])
     ]
@@ -468,17 +468,17 @@ reportIssueView state push filteredTopics =
     , height WRAP_CONTENT
     , disableClickFeedback true
     , onClick push $ const ReportIssue
-    , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat && DA.length filteredTopics > 0) 
+    , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat && DA.length filteredTopics > 0)
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin $ Margin 16 0 16 16
-        ][  
+        ][
           imageView
             [ width $ V 20
-            , height $ V 20 
+            , height $ V 20
             , imageWithFallback $ fetchImage FF_COMMON_ASSET if state.props.reportIssue then "ny_ic_help_and_support_dark" else "ny_ic_help"
             , margin $ MarginRight 12
             ]
@@ -487,37 +487,37 @@ reportIssueView state push filteredTopics =
             , accessibilityHint "Report an Issue : Button"
             , accessibility ENABLE
             , color if state.props.reportIssue then Color.black900 else Color.black800
-            ] <> (if state.props.reportIssue then FontStyle.body4 else FontStyle.body1) LanguageStyle 
+            ] <> (if state.props.reportIssue then FontStyle.body4 else FontStyle.body1) LanguageStyle
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity RIGHT
-            ][imageView[ 
+            ][imageView[
                 imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up_dark" else "ny_ic_chevron_down_light"
               , height $ V 20
               , width $ V 20
               ]
             ]
-          ] 
+          ]
         , allTopicsView state push filteredTopics
         ]
 
 
 allTopicsView :: forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
-allTopicsView state push topicList = 
+allTopicsView state push topicList =
   PrestoAnim.animationSet ([] <>
     if EHC.os == "IOS" then
-      [ Anim.fadeIn state.props.reportIssue 
+      [ Anim.fadeIn state.props.reportIssue
       , Anim.fadeOut $ not state.props.reportIssue ]
     else
       [Anim.listExpandingAnimation $ listExpandingAnimationConfig state.props.reportIssue])
-   $ 
+   $
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation VERTICAL
-    , margin $ Margin 32 16 16 0 
+    , margin $ Margin 32 16 16 0
     , visibility $ boolToVisibility $ state.props.reportIssue
     , onAnimationEnd push $ const ListExpandAinmationEnd
     ](DA.mapWithIndex (\index item ->
@@ -550,7 +550,7 @@ allTopicsView state push topicList =
                 ][  imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
                     , height $ V 20
-                    , width $ V 20 
+                    , width $ V 20
                     ]
                   ]
               ]

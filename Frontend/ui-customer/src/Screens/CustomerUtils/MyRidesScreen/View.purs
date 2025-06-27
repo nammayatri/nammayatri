@@ -74,11 +74,11 @@ screen initialState listItemm =
         let _ = spy "MyRidesScreen state  " state
         eval action state
   }
-  where 
-  globalNotificationListener push = do    
+  where
+  globalNotificationListener push = do
     void $ HU.storeCallBackCustomer push NotificationListener "MyRidesScreen" Just Nothing
     pure $ pure unit
-    
+
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
 view listItemm push state =
@@ -96,12 +96,12 @@ view listItemm push state =
       , orientation VERTICAL
       , weight 1.0
       ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-        , if (not state.data.config.nyBrandingVisibility) then 
+        , if (not state.data.config.nyBrandingVisibility) then
             separatorView
           else
             linearLayout[][]
         , if state.data.config.nyBrandingVisibility && HU.showTitle FunctionCall then do
-            textView $ 
+            textView $
               [ text (getString SELECT_A_RIDE)
               , color Color.black700
               , padding (Padding 16 0 16 0)
@@ -131,7 +131,7 @@ loadButtonView state push =
   , orientation VERTICAL
   , background Color.white900
   , onClick push (const Loader)
-  , clickable state.data.loadMoreText 
+  , clickable state.data.loadMoreText
   , gravity CENTER
   , alignParentBottom "true,-1"
   , padding (Padding 0 0 0 5)
@@ -242,7 +242,7 @@ shimmerData i = {
   time : toPropValue "7:35pm",
   source : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
-  totalAmount : toPropValue "₹ 0.0",
+  totalAmount : toPropValue "€ 0.0",
   cardVisibility : toPropValue "gone",
   shimmerVisibility : toPropValue "visible",
   driverImage : toPropValue "",

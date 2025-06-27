@@ -601,7 +601,7 @@ freeTrialEndingPopupConfig state =
 paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
-      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
+      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( €" <> getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
       isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.high_due_warning_limit
   in
   PopUpModal.config {
@@ -642,8 +642,8 @@ paymentPendingPopupConfig state =
     },
     option1 {
       text = getString CLEAR_DUES <> dues
-    , background = Color.black900
-    , color = Color.yellow900
+    , background = "#7435FC"
+    , color = "#FFFFFF"
     , showShimmer = state.data.paymentState.showShimmer
     , enableRipple = true
     },
@@ -1070,7 +1070,7 @@ waitTimeInfoCardConfig state =
         padding = Padding 16 16 0 0
       }
     , secondaryText {
-        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes),
+        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("€" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes),
         visibility = if rideInProgress then GONE else VISIBLE,
         padding = PaddingLeft 16
       }
@@ -1100,13 +1100,13 @@ makePaymentState state =
     description : getDescription state,
     description2 : getString $ COMPLETE_PAYMENT_TO_CONTINUE "COMPLETE_PAYMENT_TO_CONTINUE",
     okButtontext : ( case getLanguageLocale languageKey of
-                          "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
-                          "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
-                          "KN_IN" -> "ಈಗ ₹"<> payableAndGST <>" ಪಾವತಿಸಿ"
-                          "TA_IN" -> "இப்போது ₹" <> payableAndGST <> " செலுத்துங்கள்"
+                          "EN_US" -> "Pay €" <> payableAndGST <> " now"
+                          "HI_IN" -> "अभी €" <> payableAndGST <>" का भुगतान करें"
+                          "KN_IN" -> "ಈಗ €"<> payableAndGST <>" ಪಾವತಿಸಿ"
+                          "TA_IN" -> "இப்போது €" <> payableAndGST <> " செலுத்துங்கள்"
                           "BN_IN" -> "এখন " <> payableAndGST <> " পে করুন"
-                          "TE_IN" -> "చెల్లించండి ₹" <> payableAndGST <> " ఇప్పుడు"
-                          _       -> "Pay ₹" <> payableAndGST <> " now"
+                          "TE_IN" -> "చెల్లించండి €" <> payableAndGST <> " ఇప్పుడు"
+                          _       -> "Pay €" <> payableAndGST <> " now"
                       ),
     cancelButtonText : if useTimeRange || state.data.paymentState.laterButtonVisibility then Just $ getString LATER else Nothing,
     ridesCount : state.data.paymentState.rideCount,
@@ -1151,7 +1151,7 @@ rateCardState state =
           {key : "FEE_CORRESPONDING_TO_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
           {key : "GOT_IT", val : getString GOT_IT},
           {key : "TOTAL_PAYABLE", val : getString TOTAL_PAYABLE},
-          {key : "TOTAL_PAYABLE_VAL", val : "₹" <> (show state.data.paymentState.payableAndGST)}]
+          {key : "TOTAL_PAYABLE_VAL", val : "€" <> (show state.data.paymentState.payableAndGST)}]
 
         , fareList = getChargesBreakup state.data.paymentState.chargesBreakup
 
@@ -1161,7 +1161,7 @@ rateCardState state =
 
 
 getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
-getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
+getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "€" <>  (show item.amount),
   key : case item.component of
         "Government Charges" -> getString GOVERMENT_CHARGES
         "Platform Fee" -> getString PLATFORM_FEE
@@ -2936,7 +2936,7 @@ referralEarnedConfig state =
           , textStyle = SubHeading2
           }
         , topTitle
-          { text = "₹100 referral bonus earned!"
+          { text = "€100 referral bonus earned!"
           , textStyle = Heading2
           , margin = MarginBottom 8
           , visibility = VISIBLE

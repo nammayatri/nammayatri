@@ -91,9 +91,9 @@ screen initialState rideListItem =
             pure $ pure unit
         )
   ]
-  , eval : (\action state -> do 
+  , eval : (\action state -> do
     let _ = spy "RideHistoryScreenState action" action
-    let _ = spy "RideHistoryScreenState state" state 
+    let _ = spy "RideHistoryScreenState state" state
     eval action state)
   , parent : Nothing
   , logWhitelist: initialState.data.config.logWhitelistConfig.rideHistoryScreenLogWhitelist
@@ -116,7 +116,7 @@ view rideListItem push state =
     ]
 
 rideListView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
-rideListView rideListItem push state = 
+rideListView rideListItem push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -157,7 +157,7 @@ rideListView rideListItem push state =
   ]
 
 paymentHistoryModel :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
-paymentHistoryModel push state = 
+paymentHistoryModel push state =
     PrestoAnim.animationSet[
     fadeIn state.props.showPaymentHistory
   , fadeOut $ not state.props.showPaymentHistory
@@ -204,7 +204,7 @@ headerView push state =
     ]
 
 tabsView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
-tabsView push state = 
+tabsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -389,7 +389,7 @@ shimmerData :: Int -> ST.ItemState
 shimmerData i = {
   date : toPropValue "31/05/2022",
   time : toPropValue "7:35pm",
-  total_amount : toPropValue "₹ 0.0",
+  total_amount : toPropValue "€ 0.0",
   card_visibility : toPropValue "gone",
   shimmer_visibility : toPropValue "visible",
   rideDistance : toPropValue "10km Ride with Bharat",

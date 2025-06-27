@@ -637,9 +637,9 @@ getKn =
     , n_day_free_trial_activated: (\day -> day <> "-ದಿನದ ಉಚಿತ ಪ್ರಯೋಗವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "ಮೊದಲ " <> days <> " ದಿನಗಳಲ್ಲಿ ಉಚಿತವಾಗಿ " <> rides <> " ಸವಾರಿ ಮಾಡಿ")
     , every_ride_at_zero_commission: "ZERO ಆಯೋಗದಲ್ಲಿ ಪ್ರತಿ ಸವಾರಿ!"
-    , earn_upto_per_day: "ದಿನಕ್ಕೆ ₹{} ವರೆಗೆ ಗಳಿಸಿ!"
+    , earn_upto_per_day: "ದಿನಕ್ಕೆ €{} ವರೆಗೆ ಗಳಿಸಿ!"
     , how_this_works: "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ"
-    , sign_up_for_autopay_by_paying_just: "ಕೇವಲ ₹1 ಪಾವತಿಸುವ ಮೂಲಕ ಸ್ವಯಂ ಪಾವತಿಗೆ ಸೈನ್ ಅಪ್ ಮಾಡಿ"
+    , sign_up_for_autopay_by_paying_just: "ಕೇವಲ €1 ಪಾವತಿಸುವ ಮೂಲಕ ಸ್ವಯಂ ಪಾವತಿಗೆ ಸೈನ್ ಅಪ್ ಮಾಡಿ"
     , get_reminded_about_your_plan_setup: "ನಿಮ್ಮ ಪ್ಲಾನ್ ಸೆಟಪ್ ಕುರಿತು ನೆನಪಿಸಿಕೊಳ್ಳಿ"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "ದಿನ " <> days <> " ಅಥವಾ " <> rides <> " ಸವಾರಿ: ಉಚಿತ ಪ್ರಯೋಗಾವಧಿ ನೆನಪಿನ")
     , plan_starts_n_days_m_rides: (\days rides -> "ದಿನ " <> days <> " ಅಥವಾ " <> rides <> " ಸವಾರಿ: ಯೋಜನೆ ಪ್ರಾರಂಭ")
@@ -677,7 +677,7 @@ getKn =
     , manage_plan: "ಯೋಜನೆಯನ್ನು ನಿರ್ವಹಿಸಿ"
     , view_autopay_details: "ಸ್ವಯಂ ಪಾವತಿ ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
     , switch_and_save: "ಸ್ವಿಚ್ ಮತ್ತು ಸೇವ್"
-    , switch_and_save_desc: "ನೀವು ಇಂದು 7 ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ದೈನಂದಿನ ಅನ್ಲಿಮಿಟೆಡ್ ಯೋಜನೆಗೆ ಬದಲಾಯಿಸುವ ಮೂಲಕ ₹10 ವರೆಗೆ ಉಳಿಸಿ"
+    , switch_and_save_desc: "ನೀವು ಇಂದು 7 ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ದೈನಂದಿನ ಅನ್ಲಿಮಿಟೆಡ್ ಯೋಜನೆಗೆ ಬದಲಾಯಿಸುವ ಮೂಲಕ €10 ವರೆಗೆ ಉಳಿಸಿ"
     , switch_now: "ಈಗ ಬದಲಿಸಿ"
     , payment_mode_changed_to_manual: "ಪಾವತಿ ಮೋಡ್ ಅನ್ನು ಹಸ್ತಚಾಲಿತವಾಗಿ ಬದಲಾಯಿಸಲಾಗಿದೆ"
     , payment_mode_changed_to_manual_desc: "ನಿಮ್ಮ UPI ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ನೀವು ವಿರಾಮಗೊಳಿಸಿರುವಿರಿ. ನಿಮ್ಮ ಬಾಕಿಯನ್ನು ನೀವು ಹಸ್ತಚಾಲಿತವಾಗಿ ತೆರವುಗೊಳಿಸಬಹುದು."
@@ -743,12 +743,12 @@ getKn =
     , daily_unlimited: "ದೈನಂದಿನ ಅನಿಯಮಿತ"
     , daily_per_ride: "ಪ್ರತಿದಿನ ಪ್ರತಿ ಸವಾರಿಗೆ"
     , daily_unlimited_plan_desc: "ಪ್ರತಿದಿನ ಅನ್ಲಿಮಿಟೆಡ್ ರೈಡ್‌ಗಳನ್ನು ಆನಂದಿಸಿ"
-    , daily_per_ride_plan_desc: (\price -> "ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹" <> price)
+    , daily_per_ride_plan_desc: (\price -> "ದಿನಕ್ಕೆ ಗರಿಷ್ಠ €" <> price)
     , autopay_cancelled: "ಸ್ವಯಂ ಪಾವತಿ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
     , no: "ಇಲ್ಲ"
     , yes_cancel: "ಹೌದು, ರದ್ದುಮಾಡಿ"
     , plan_switched_to: "ಪ್ಲಾನ್ ಬದಲಾಯಿಸಲು "
-    , pay_to_join_this_plan: "ಯೋಜನೆಗೆ ಸೇರಲು ₹1 ಪಾವತಿಸಿ"
+    , pay_to_join_this_plan: "ಯೋಜನೆಗೆ ಸೇರಲು €1 ಪಾವತಿಸಿ"
     , offers_not_applicable: "ಪೂರ್ಣಗೊಳ್ಳದ ಹೊರತು ಆಫರ್‌ಗಳು ಅನ್ವಯವಾಗುವುದಿಲ್ಲ"
     , paused_str: "ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ"
     , pending_str: "ಬಾಕಿಯಿದೆ"
@@ -850,7 +850,7 @@ getKn =
     , retry_autopay: "ಸ್ವಯಂಪಾವತಿಯನ್ನು ಮರುಪ್ರಯತ್ನಿಸಿ"
     , retry_str: "ಮರುಪ್ರಯತ್ನಿಸಿ"
     , ongoing_payment_execution: "ಹಸ್ತಚಾಲಿತ ಪಾವತಿ ನಡೆಯುತ್ತಿದೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ"
-    , offer_card_banner_title: (\_ date price -> "ಆಟೋಪೆ ಸೆಟಪ್ ಮಾಡಿ ಮತ್ತು " <> date <> " ರವರೆಗೆ ₹" <> price <> "/ದಿನ ಮಾತ್ರ ಪಾವತಿಸಿ")
+    , offer_card_banner_title: (\_ date price -> "ಆಟೋಪೆ ಸೆಟಪ್ ಮಾಡಿ ಮತ್ತು " <> date <> " ರವರೆಗೆ €" <> price <> "/ದಿನ ಮಾತ್ರ ಪಾವತಿಸಿ")
     , offer_card_banner_desc: "ಆಟೋಪೆಯನ್ನು ಸೆಪ್ಟೆಂ 25 ರೊಳಗೆ ಹೊಂದಿಸಿದರೆ ಮಾತ್"
     , offer_card_banner_alert: "ನಿಮ್ಮ ಆಟೋಪೆ ಸೆಟಪ್ ಬಾಕಿಯಿದೆ!"
     , or: "ಅಥವಾ"
@@ -867,7 +867,7 @@ getKn =
     , execution_failed: "ಎಕ್ಸಿಕ್ಯೂಶನ್ ವಿಫಲವಾಗಿದೆ"
     , notification_failed: "ಅಧಿಸೂಚನೆ ವಿಫಲವಾಗಿದೆ"
     , pay_now: "ಈಗ ಪಾವತಿಸಿ"
-    , clear_dues_banner_title: "ತಡೆರಹಿತ ರೈಡ್‌ಗಳನ್ನು ಆನಂದಿಸಲು ನಿಮ್ಮ ಬಾಕಿಯನ್ನು (₹{}) ತೆರವುಗೊಳಿಸಿ"
+    , clear_dues_banner_title: "ತಡೆರಹಿತ ರೈಡ್‌ಗಳನ್ನು ಆನಂದಿಸಲು ನಿಮ್ಮ ಬಾಕಿಯನ್ನು (€{}) ತೆರವುಗೊಳಿಸಿ"
     , collect_via_upi_qr_or_cash: "UPI QR ಅಥವಾ ನಗದು ಮೂಲಕ ಸಂಗ್ರಹಿಸಿ"
     , transaction_debited_on: "ವ್ಯವಹಾರ ಡೆಬಿಟ್ ಮಾಡಲಾಗಿದೆ"
     , transaction_attempted_on: "ವಹಿವಾಟು ಪ್ರಯತ್ನಿಸಲಾಗಿದೆ"
@@ -883,7 +883,7 @@ getKn =
     , watch_video_for_help: "ಸಹಾಯಕ್ಕಾಗಿ ವೀಡಿಯೊ ನೋಡಿ"
     , payment_pending_soft_nudge: "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ"
     , clear_your_dues_early: "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಮುಂಚಿತವಾಗಿ ತೆರವುಗೊಳಿಸಿ"
-    , due_limit_warning_banner_title: "ನಿಮ್ಮ ಬಾಕಿಯ ಮಿತಿ ಶೀಘ್ರದಲ್ಲೇ ₹{} ಕ್ಕೆ ತಲುಪಲಿದೆ."
+    , due_limit_warning_banner_title: "ನಿಮ್ಮ ಬಾಕಿಯ ಮಿತಿ ಶೀಘ್ರದಲ್ಲೇ €{} ಕ್ಕೆ ತಲುಪಲಿದೆ."
     , scheduled_on: "ಕಡಿತ ದಿನಾಂಕ"
     , attempted_on: "ಪ್ರಯತ್ನದ ದಿನಾಂಕ"
     , debited_on: "ಡೆಬಿಟ್ ದಿನಾಂಕ"
@@ -1106,7 +1106,7 @@ getKn =
     , this_extra_amount_the_customer_will_pay: "ಇದು ಗ್ರಾಹಕರು ನಿಮಗೆ ಪಾವತಿಸುವ ಹೆಚ್ಚುವರಿ ಮೊತ್ತವಾಗಿದೆ ಏಕೆಂದರೆ ನೀವು {} ನಿಮಿಷಗಳಿಗಿಂತ ಹೆಚ್ಚು ಕಾಯುತ್ತಿದ್ದೀರಿ"
     , ten_digit_mobile_number: "10-ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ"
     , booth_charges: "ಬೂತ್ ಚಾರ್ಜ್"
-    , booth_charges_included: "ಬೂತ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ: ₹{}"
+    , booth_charges_included: "ಬೂತ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ: €{}"
     , total_amount: "ಒಟ್ಟು ಮೊತ್ತ"
     , please_add_rc: "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ದಯವಿಟ್ಟು RC ಸೇರಿಸಿ"
     , location_cannot_be_added_while_goto_active: "ಗೋ-ಟು ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸದಿದ್ದಾಗ ಮಾತ್ರ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುತ್ತದೆ"
@@ -1475,7 +1475,7 @@ getKn =
     , fare_for: (\limit -> limit <> "  ಕ್ಕೆ ಭಾಡೆ")
     , waiting_charge_limit: (\timeLimit -> timeLimit <> " ನಿಮಿಷಗಳ ನಂತರ ನಿರೀಕ್ಷಣಾ ಶುಲ್ಕ")
     , parking_charges_desc: "ಚಾಲಕನಿಂದ ಹಾಕಲಾದ ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕವು ಭಾಡೆಯಲ್ಲಿ ಸೇರಿಸಲಾಗಿಲ್ಲ. ಇದನ್ನು ಯಾತ್ರೆಯ ನಂತರ ಚಾಲಕ ಮತ್ತು ಪ್ರಯಾಣಿಕರ ನಡುವೆ ಕ್ಲಿಯರ್ ಮಾಡಬೇಕು."
-    , tip_can_be_added: (\maxTip -> "ಗುರ್ತಿನ ಫೀಸ್ ಗಾಗಿ ₹" <> maxTip <> " ವರೆಗೆ ಸೇರ್ಪಡೆ ಮಾಡಬಹುದು.")
+    , tip_can_be_added: (\maxTip -> "ಗುರ್ತಿನ ಫೀಸ್ ಗಾಗಿ €" <> maxTip <> " ವರೆಗೆ ಸೇರ್ಪಡೆ ಮಾಡಬಹುದು.")
     , day_time_charges: (\from till -> "ಹಗಲು ಸಮಯದ ಶುಲ್ಕಗಳು (" <> from <> " ರಿಂದ " <> till <> ")")
     , congestion_charges_desc: (\charges -> "*ರಶ್ ಅವರ್ಸ್ ಸಮಯದಲ್ಲಿ, ಹೆಚ್ಚಿನ ಸಂಚಾರ ಸಮಯಕ್ಕಾಗಿ ಚಾಲಕರ ಸಮಯವನ್ನು ಪೂರೈಸಲು " <> charges <> "% ಹೆಚ್ಚುವರಿ ಭಾಡೆ ಅನ್ವಯಿಸುತ್ತದೆ.")
     , toll_or_parking_charges: "^ಟೋಲ್/ ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು"

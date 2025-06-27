@@ -120,7 +120,7 @@ public class SliderComponent {
             float minVal = (nearestMultiple * conversionRate);
             String minValueToShow = Math.ceil(minVal) == Math.floor(minVal) ? String.valueOf((int)minVal) : String.valueOf(minVal);
             prefTextView.setText(String.valueOf(nearestMultiple));
-            suffTextView.setText(" = ₹" + minValueToShow);
+            suffTextView.setText(" = €" + minValueToShow);
             int seekBarPosition = seekBar.getThumb().getBounds().centerX();
             int thumbWidth = thumbDrawable.getIntrinsicWidth();
             final int[] tooltipX = {seekBarPosition - thumbWidth + dpToPx(context, 12)};
@@ -141,7 +141,7 @@ public class SliderComponent {
                     float newVal = (progress * conversionRate);
                     String valueToShow = Math.ceil(newVal) == Math.floor(newVal) ? String.valueOf((int) newVal) : String.format("%.2f", newVal);
                     prefTextView.setText(String.valueOf(progress));
-                    suffTextView.setText(" = ₹" + valueToShow);
+                    suffTextView.setText(" = €" + valueToShow);
                     int nearestMultiple = Math.round(seekBar.getProgress() / stepFunctionForCoinConversion) * stepFunctionForCoinConversion;
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                             callback, nearestMultiple);
@@ -161,7 +161,7 @@ public class SliderComponent {
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    if(enableToolTip){ 
+                    if(enableToolTip){
                         tooltipX[0] =thumbPosition - thumbWidth + dpToPx(context, 12);
                         updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
                     }

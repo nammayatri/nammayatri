@@ -362,7 +362,7 @@ getOd = Keymap {
 , nominal_fare: "ଅପେକ୍ଷା କ୍ଷେତ୍ରରେ ଡ୍ରାଇଭର ଅନୁରୋଧ*"
 , customer_cancellation_dues: "କ୍ଷତିପୂରଣ ଦାୟି"
 , drivers_can_charge_an_additional_fare_upto: "* ଡ୍ରାଇଭରମାନେ ଚାହିଲେ ମୂଳ ଦରର 10% ଅତିରିକ୍ତ ଆବଦାନ (ନିକଟତମ ରୁ. 10 ରେ ପରିବର୍ତ୍ତିତ) ମାଗିପାରନ୍ତି ଯାହା ଯାତାୟାତର ପରିସ୍ଥିତି, ଫେରାଯାଇବାର ସମ୍ଭାବନା ଇତ୍ୟାଦି ଦ୍ୱାରା କୋରିବାକୁ ସାହାଯ୍ୟ କରେ।"
-, waiting_charge_description: "° ପ୍ରଥମ {} ମିନିଟ ପାଇଁ ପ୍ରତିକ୍ଷା ଚାର୍ଜ ଶୂନ୍ୟ। ତାପରେ ଆପଣଙ୍କୁ ପ୍ରତି ମିନିଟ ପାଇଁ ₹{} ଚାର୍ଜ କରାଯିବ।"
+, waiting_charge_description: "° ପ୍ରଥମ {} ମିନିଟ ପାଇଁ ପ୍ରତିକ୍ଷା ଚାର୍ଜ ଶୂନ୍ୟ। ତାପରେ ଆପଣଙ୍କୁ ପ୍ରତି ମିନିଟ ପାଇଁ €{} ଚାର୍ଜ କରାଯିବ।"
 , waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. ପ୍ରଥମ" <> freeWaitingTime <> " ମିନିଟ ପାଇଁ ପ୍ରତିକ୍ଷା ଚାର୍ଜ ଶୂନ୍ୟ।\n 2. ପରେ ମିନିଟ ପିଛା" <> waitingCharge <> " ଚାର୍ଜ ପ୍ରଯୋଜ୍ୟ ହେବ।")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "ପ୍ରଥମ " <> freeWaitingTime <> " ମିନିଟ ପରେ ପ୍ରତି ମିନିଟରେ " <> waitingCharge <> " ରେ ପ୍ରଯୋଜ୍ୟ।")
 , successful_onboard: (\_ -> "ଆପଣ ସଫଳତାର ସହ ନମ୍ମା ଯାତ୍ରିକୁ ସାଇନ୍ କରିଛନ୍ତି।")
@@ -459,7 +459,7 @@ getOd = Keymap {
 , fare_update_policy: "ଭଡା ଅପଡେଟ୍ ନୀତି"
 , driver_additions_optional: "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ସେବା (ଇଚ୍ଛାନୁସାରେ)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ଡ୍ରାଇଭର ଯାତାୟାତ ଆବଶ୍ୟକତା ପାଇଁ ଅତିରିକ୍ତ ଦାମ ମାଗିପାରନ୍ତି।"
-, driver_additions_are_calculated_at_rate: (\_ -> "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ଦାମ ମୂଳ ଭଡାର 10% ହାରରେ ନିକଟତମ ₹10 ପର୍ଯ୍ୟନ୍ତ ଗଣାଯାଇଛି।")
+, driver_additions_are_calculated_at_rate: (\_ -> "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ଦାମ ମୂଳ ଭଡାର 10% ହାରରେ ନିକଟତମ €10 ପର୍ଯ୍ୟନ୍ତ ଗଣାଯାଇଛି।")
 , driver_may_not_charge_this_additional_fare: "ଲକ୍ଷ୍ୟ କରନ୍ତୁ ଡ୍ରାଇଭର ଏହି ଅତିରିକ୍ତ ଦାମ ଚାର୍ଜ୍ କରିବା ନ ହେବ ମାଗିବାକୁ ଥାଏ।"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "ନିମ୍ନଲିଖିତ କାରଣରୁ ଆପଣ ଏକ ଅପଡେଟ୍ ଅନ୍ତିମ ଭଡା ଦେଖିପାରିବେ"
 , reason_change_in_route_a: "1. ରୁଟ୍ ରେ ପରିବର୍ତ୍ତନ"
@@ -532,7 +532,7 @@ getOd = Keymap {
 , call_112: "112 କୁ କଲ୍ କରନ୍ତୁ"
 , call_emergency_centre: "ଆପତ୍କାଳୀନ କେନ୍ଦ୍ରକୁ କଲ୍ କରନ୍ତୁ"
 , seats: "ଆସନ"
-, driver_addition_limits_are_in_increments: "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ମର୍ଯ୍ୟାଦା ଭାଗରେ ₹20 ରେ ରହିଛି"
+, driver_addition_limits_are_in_increments: "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ମର୍ଯ୍ୟାଦା ଭାଗରେ €20 ରେ ରହିଛି"
 , hatchback: "ହାଚବ୍ୟାକ୍"
 , suv: "SUV"
 , sedan: "ସେଡାନ"
@@ -1183,7 +1183,7 @@ getOd = Keymap {
 , other_provider_no_receipt: "ଅନ୍ୟ ପ୍ରଦାନକାରୀ ଦ୍ୱାରା ସମାପ୍ତ ଯାତ୍ରା ପାଇଁ ଡ୍ରାଇଭର ରସିଦ ଉପଲବ୍ଧ ନାହିଁ।"
 , ride_fulfilled_by: (\merchantName -> "ରାଇଡ୍ ପୂରଣ କରିଛି: " <> merchantName)
 , congestion_charges: "ଜନାସ୍ତର ଚାର୍ଜ*"
-, tip_can_be_added: (\maxTip -> "ରାଇଡ଼ ଭାଡ଼ାରେ ଅଧିକତମ ₹" <> maxTip <> " ଟିପ୍ ଯୋଗ କରାଯାଇପାରେ")
+, tip_can_be_added: (\maxTip -> "ରାଇଡ଼ ଭାଡ଼ାରେ ଅଧିକତମ €" <> maxTip <> " ଟିପ୍ ଯୋଗ କରାଯାଇପାରେ")
 , congestion_charges_desc: (\charges -> "ଜନାସ୍ତର ଚାର୍ଜ "<> charges <>"% ରେ ଲାଗିଛି କାରଣ ଲୋକମାନଙ୍କର ସମୟକୁ ସଂକୋଚିତ କରି ଦରକାର ଉପଲବ୍ଧ କରିବାକୁ")
 , ac_turned_off: "AC ଚାଲୁ ହୋଇନାହିଁ"
 , estimates_expiry_error: "ଅନୁମାନ ସମାପ୍ତ ହୋଇଛି। ଦୟାକରି ପୁନଃଚେଷ୍ଟା କରନ୍ତୁ।"
@@ -1346,7 +1346,7 @@ getOd = Keymap {
 , kozhikode: "କୋଜିକୋଡ୍"
 , thrissur: "ଥ୍ରିଶୁର୍"
 , metro_free_ticket_event: (\freeTicketInterval -> "ପ୍ରତ୍ୟେକ " <> freeTicketInterval <> " ଟିକେଟ୍ ମାଗଣା!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ପ୍ରତ୍ୟେକ " <> freeTicketInterval <> " ଟିକେଟ୍ ରେ ମାଗଣା ଟିକେଟ୍ (ଅଧିକତମ ₹" <> maxFreeTicketCashback <> ") ପାନ୍ତି (ONDC ଆଫର)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ପ୍ରତ୍ୟେକ " <> freeTicketInterval <> " ଟିକେଟ୍ ରେ ମାଗଣା ଟିକେଟ୍ (ଅଧିକତମ €" <> maxFreeTicketCashback <> ") ପାନ୍ତି (ONDC ଆଫର)")
 , next_free_ticket: "ପରବର୍ତ୍ତୀ ଟିକେଟ୍ କ୍ୟାସବାକ୍ ପାଇଁ ଯୋଗ୍ୟ"
 , free_ticket_available: (\maxCashback freeTicketCount -> maxCashback <> " ଟିକେଟରେ ଅଫର ଆବଶ୍ୟକ!")
 , additional_charges_will_be_applicable: "ଅଧିକ ଚାର୍ଜ ଲାଗିପାରେ ଡ୍ରାଇଭର ଉଠା ଅବସ୍ଥାନ ପାଖରେ ଥିବା ବେଳେ"
@@ -1703,31 +1703,31 @@ getOd = Keymap {
 , book_any_details: "ଯେକଉଣସି ବିବରଣୀ ବୁକ୍ କରନ୍ତୁ"
 , boost_search: "ଖୋଜ ବୃଦ୍ଧି କରନ୍ତୁ"
 , delivery_str: "Delivery"
-, bus__ : "ବସ୍"  
-, tickets_for_chennai_bus : "ଚେନ୍ନାଇ ବସ୍ ଟିକେଟ୍"  
-, buy_bus_tickets : "ବସ୍ ଟିକେଟ୍ କିଣନ୍ତୁ"  
-, book_and_pay : "ବୁକ୍ କରନ୍ତୁ ଏବଂ ଦେୟ କରନ୍ତୁ"  
-, bus_ticket : "ବସ୍ ଟିକେଟ୍"  
-, check_spelling_and_try_again : "ଅଫସ! ଦୟାକରି ନିଜର ଭାଷା ଯାଞ୍ଚ କରନ୍ତୁ ଏବଂ ପୁନର୍ବାର ଖୋଜନ୍ତୁ"  
-, book_bus_ticket : "ବସ୍ ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"  
-, book_a_one_way_instant_bus_ticket : "ଏକ-ଦିଗର ତୁରନ୍ତ ବସ୍ ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"  
-, recent_ticket : "ସମ୍ପ୍ରତିର ଟିକେଟ୍"  
-, experience_hassle_free_bus_bookings_with : "ଆମ ସହ ଅତ୍ୟନ୍ତ ସୁବିଧାଜନକ ବସ୍ ବୁକିଂ ଅଭିଜ୍ଞତା ନିଆନ୍ତୁ"  
-, enter_bus_number_or_destination : "ବସ୍ ନମ୍ବର କିମ୍ବା ଗନ୍ତବ୍ୟ ସ୍ଥାନ ପ୍ରବେଶ କରନ୍ତୁ"  
-, destination_stop : "ଗନ୍ତବ୍ୟ ଷ୍ଟପ୍"  
-, route_bus_number : "ପଥ/ବସ୍ ନମ୍ବର"  
-, pickup_stop : "ପିକ୍ଅପ୍ ଷ୍ଟପ୍"  
-, tickets_for_kolkata_bus : "କଲକାତା ବସ୍ ଟିକେଟ୍"  
-, ticket_validity_30_minutes : "ଟିକେଟ୍ ବୁକିଂ ପରଠାରୁ ୩୦ ମିନିଟ୍ ପର୍ଯ୍ୟନ୍ତ ମାତ୍ର ପ୍ରାମାଣିକ ହେବ"  
-, fare_commission_free_wbtc : "ଭାଡା ଦାଲାଲ ମୁକ୍ତ ଏବଂ ଏହା WBTC ଦ୍ୱାରା ନିର୍ଦ୍ଧାରିତ"  
-, select_route_number : "ପଥ ସଂଖ୍ୟା ଚୟନ କରନ୍ତୁ"  
-, pickup_and_destination_stop : "ପିକ୍ଅପ୍ ଏବଂ ଗନ୍ତବ୍ୟ ଷ୍ଟପ୍"  
-, bus_boarded_confirmation : "ଦୟାକରି ନିଶ୍ଚିତ କରନ୍ତୁ ଯେ ଆପଣ ବସ୍ ଭିତରେ ଅଛନ୍ତି କି?"  
-, towards_station : (\s -> "ସ୍ଥାନାନ୍ତର ମୁଖେ " <> s)  
-, bus_no : (\s -> "ବସ୍ ନମ୍ବର: " <> s)  
-, verified : "ପ୍ରମାଣିତ"  
-, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "ଆମ ପାଇଲଟ୍ ପ୍ରବର୍ତ୍ତନକୁ ଅନୁଭବ କରନ୍ତୁ " <> s <> " ମୁଖ୍ୟ ପଥଗୁଡିକରେ। ସିଗ୍ରହ ସବୁ ଆସୁଛି!")  
-, note_your_ticket_is_only_valid_for : (\s -> "ଧ୍ୟାନ ଦିଅନ୍ତୁ: ଆପଣଙ୍କ ଟିକେଟ୍ କେବଳ " <> s <> " ପାଇଁ ପ୍ରାମାଣିକ ଅଟେ। ସ୍ଥାନୀୟ ପରିସ୍ଥିତି ଅନୁସାରେ ବସ୍ ସମୟ ପରିବର୍ତ୍ତିତ ହୋଇପାରେ, ସେପରି ଷ୍ଟପ୍ରେ ବସ୍ ବୁକିଂ କରିବା ସମୟରେ ଥାନ୍ତୁ")  
+, bus__ : "ବସ୍"
+, tickets_for_chennai_bus : "ଚେନ୍ନାଇ ବସ୍ ଟିକେଟ୍"
+, buy_bus_tickets : "ବସ୍ ଟିକେଟ୍ କିଣନ୍ତୁ"
+, book_and_pay : "ବୁକ୍ କରନ୍ତୁ ଏବଂ ଦେୟ କରନ୍ତୁ"
+, bus_ticket : "ବସ୍ ଟିକେଟ୍"
+, check_spelling_and_try_again : "ଅଫସ! ଦୟାକରି ନିଜର ଭାଷା ଯାଞ୍ଚ କରନ୍ତୁ ଏବଂ ପୁନର୍ବାର ଖୋଜନ୍ତୁ"
+, book_bus_ticket : "ବସ୍ ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"
+, book_a_one_way_instant_bus_ticket : "ଏକ-ଦିଗର ତୁରନ୍ତ ବସ୍ ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"
+, recent_ticket : "ସମ୍ପ୍ରତିର ଟିକେଟ୍"
+, experience_hassle_free_bus_bookings_with : "ଆମ ସହ ଅତ୍ୟନ୍ତ ସୁବିଧାଜନକ ବସ୍ ବୁକିଂ ଅଭିଜ୍ଞତା ନିଆନ୍ତୁ"
+, enter_bus_number_or_destination : "ବସ୍ ନମ୍ବର କିମ୍ବା ଗନ୍ତବ୍ୟ ସ୍ଥାନ ପ୍ରବେଶ କରନ୍ତୁ"
+, destination_stop : "ଗନ୍ତବ୍ୟ ଷ୍ଟପ୍"
+, route_bus_number : "ପଥ/ବସ୍ ନମ୍ବର"
+, pickup_stop : "ପିକ୍ଅପ୍ ଷ୍ଟପ୍"
+, tickets_for_kolkata_bus : "କଲକାତା ବସ୍ ଟିକେଟ୍"
+, ticket_validity_30_minutes : "ଟିକେଟ୍ ବୁକିଂ ପରଠାରୁ ୩୦ ମିନିଟ୍ ପର୍ଯ୍ୟନ୍ତ ମାତ୍ର ପ୍ରାମାଣିକ ହେବ"
+, fare_commission_free_wbtc : "ଭାଡା ଦାଲାଲ ମୁକ୍ତ ଏବଂ ଏହା WBTC ଦ୍ୱାରା ନିର୍ଦ୍ଧାରିତ"
+, select_route_number : "ପଥ ସଂଖ୍ୟା ଚୟନ କରନ୍ତୁ"
+, pickup_and_destination_stop : "ପିକ୍ଅପ୍ ଏବଂ ଗନ୍ତବ୍ୟ ଷ୍ଟପ୍"
+, bus_boarded_confirmation : "ଦୟାକରି ନିଶ୍ଚିତ କରନ୍ତୁ ଯେ ଆପଣ ବସ୍ ଭିତରେ ଅଛନ୍ତି କି?"
+, towards_station : (\s -> "ସ୍ଥାନାନ୍ତର ମୁଖେ " <> s)
+, bus_no : (\s -> "ବସ୍ ନମ୍ବର: " <> s)
+, verified : "ପ୍ରମାଣିତ"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "ଆମ ପାଇଲଟ୍ ପ୍ରବର୍ତ୍ତନକୁ ଅନୁଭବ କରନ୍ତୁ " <> s <> " ମୁଖ୍ୟ ପଥଗୁଡିକରେ। ସିଗ୍ରହ ସବୁ ଆସୁଛି!")
+, note_your_ticket_is_only_valid_for : (\s -> "ଧ୍ୟାନ ଦିଅନ୍ତୁ: ଆପଣଙ୍କ ଟିକେଟ୍ କେବଳ " <> s <> " ପାଇଁ ପ୍ରାମାଣିକ ଅଟେ। ସ୍ଥାନୀୟ ପରିସ୍ଥିତି ଅନୁସାରେ ବସ୍ ସମୟ ପରିବର୍ତ୍ତିତ ହୋଇପାରେ, ସେପରି ଷ୍ଟପ୍ରେ ବସ୍ ବୁକିଂ କରିବା ସମୟରେ ଥାନ୍ତୁ")
 , here_is_bus_ticket : "ଏହା ଆପଣଙ୍କର ବସ୍ ଟିକେଟ୍"
 ,a_c : "ଏସି"
 ,no_oxygen : "ଅକ୍ସିଜେନ୍ ନାହିଁ"
@@ -1737,7 +1737,7 @@ getOd = Keymap {
 ,uncomfortable_ambulance : "ଅସୁବିଧାଜନକ ଆମ୍ବୁଲାନ୍ସ"
 ,clean_ambulance : "ପରିଷ୍କାର ଆମ୍ବୁଲାନ୍ସ"
 ,ambulance_booking_disclaimer : "ଯାତ୍ରୀ ସାଥୀ କେବଳ ଏକ ପ୍ଲାଟଫର୍ମ ଯାହା ଆମ୍ବୁଲେନ୍ସ ସେବା ପ୍ରଦାତାମାନେ ଗ୍ରାହକଙ୍କ ସହିତ ସଂଯୋଗ କରେ। ଆମ୍ବୁଲେନ୍ସ ପକ୍ଷ ଦ୍ୱାରା ଦିଆଯାଇଥିବା ସୂଚନା ପାଇଁ ଆମେ ଦାୟୀ ନୁହେଁ।"
-, no_remaining_tickets : "କୌଣସି ଅବଶିଷ୍ଟ ଟିକେଟ୍ ନାହିଁ" 
+, no_remaining_tickets : "କୌଣସି ଅବଶିଷ୍ଟ ଟିକେଟ୍ ନାହିଁ"
     , your_earnings_will_be_credited_to_this_account: "ଆପଣଙ୍କ ଆୟ ଏହି ଖାତାରେ ଜମା ହେବ"
     , transaction_history: "ଲେନଦେନ ଇତିହାସ"
     , total_earned: "ମୋଟ ଆର୍ଜନ"
@@ -1773,21 +1773,21 @@ getOd = Keymap {
     , amount: "Amount"
     , download_app: "Download App"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "Scan QR code to download the app and apply your invite code automatically"
-    , earn_:  \a ->  "₹" <> a <> " ଉପାର୍ଜନ କରନ୍ତୁ"
-    ,  collect_:  \a ->  "₹" <> a <> " ସଂଗ୍ରହ କରନ୍ତୁ"
+    , earn_:  \a ->  "€" <> a <> " ଉପାର୍ଜନ କରନ୍ତୁ"
+    ,  collect_:  \a ->  "€" <> a <> " ସଂଗ୍ରହ କରନ୍ତୁ"
     , add_upi_id: "UPI ID ଯୋଡନ୍ତୁ"
     , earnings: "ରୋଜଗାର"
     , enter_upi_id: "UPI ID ପ୍ରବେଶ କରନ୍ତୁ"
-    , you_get_50__they_get_50: \a b ->"ଆପଣ ₹" <> a <> " ପାଇବେ & ସେମାନେ ₹" <> b <> " ପାଇବେ"
+    , you_get_50__they_get_50: \a b ->"ଆପଣ €" <> a <> " ପାଇବେ & ସେମାନେ €" <> b <> " ପାଇବେ"
     , when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride: "ଆପଣଙ୍କର ମିତ୍ର ଆପଣଙ୍କ ରେଫରାଲ୍ କୋଡ୍ ବ୍ୟବହାର କଲେ \n ଏବଂ ସେମାନଙ୍କର ପ୍ରଥମ ଯାତ୍ରା ନେଲେ।"
     , read_terms_and_conditions: "ନିୟମ ଏବଂ ନିବନ୍ଧନଗୁଡ଼ିକ ପଢନ୍ତୁ"
     , ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally: "ଏକ ରାଇଡ୍‌କୁ ବୈଧ ମନ୍ୟ କରାଯାଏ ଯଦି ଏହା ନିର୍ଦ୍ଦିଷ୍ଟ ରାଇଡ୍ ଦୂରତା, ରାଇଡ୍ ସମୟ ଏବଂ ଆନ୍ତରିକ ଭାବେ ପରିଚାଳିତ କରାଯାଉଥିବା ଧୋଖା ପରିଯୀକ୍ଷାର ଆଧାରରେ ଥାଏ।"
     , collect_earnings_now: "ବର୍ତ୍ତମାନ ଅର୍ଜିତ ରାଶି ସଂଗ୍ରହ କରନ୍ତୁ"
     , update_upi_id: "UPI ID ଅଦ୍ୟତନ କରନ୍ତୁ"
-    , youve_earned_50_for_taking_your_first_ride: \a ->"ଆପଣ ଆପଣଙ୍କର ପ୍ରଥମ ଯାତ୍ରା ନେଇଥିବାରେ ₹" <> a <> " ଅର୍ଜନ କରିଛନ୍ତି!"
-    , get_50_referral_benefit_for_your_first_ride: \a ->"ଆପଣଙ୍କ ପ୍ରଥମ ଯାତ୍ରା ପାଇଁ ₹" <> a <> " ପରାମର୍ଶ ଲାଭ ପାଆନ୍ତୁ!"
+    , youve_earned_50_for_taking_your_first_ride: \a ->"ଆପଣ ଆପଣଙ୍କର ପ୍ରଥମ ଯାତ୍ରା ନେଇଥିବାରେ €" <> a <> " ଅର୍ଜନ କରିଛନ୍ତି!"
+    , get_50_referral_benefit_for_your_first_ride: \a ->"ଆପଣଙ୍କ ପ୍ରଥମ ଯାତ୍ରା ପାଇଁ €" <> a <> " ପରାମର୍ଶ ଲାଭ ପାଆନ୍ତୁ!"
     , take_a_ride_now: "ଏବେ ଏକ ଯାତ୍ରା କରନ୍ତୁ"
-    , take_a_ride__claim_50: \a ->  "ଏକ ଯାତ୍ରା କରନ୍ତୁ ଏବଂ ₹" <> a <> " ପାଆନ୍ତୁ"
+    , take_a_ride__claim_50: \a ->  "ଏକ ଯାତ୍ରା କରନ୍ତୁ ଏବଂ €" <> a <> " ପାଆନ୍ତୁ"
     , select_route : "ରୁଟ୍ ବାଛନ୍ତୁ"
     , ac_bus : "ଏସି ବସ୍"
     , early_departure : "ପূର୍ବରୁ ଯାତ୍ରା ଆରମ୍ଭ"

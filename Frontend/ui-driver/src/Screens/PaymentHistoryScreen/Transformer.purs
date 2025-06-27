@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -42,7 +42,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                                   Nothing -> dummyDriverFee
         statusTime = if resp.feeType == AUTOPAY_PAYMENT then resp.executionAt else resp.createdAt
         boothCharges specialZoneRideCount totalSpecialZoneCharges = case specialZoneRideCount,totalSpecialZoneCharges of
-                      Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
+                      Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x €" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
                       _, _ -> Nothing
         fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge fee.coinDiscountAmount (max 0.0 (fee.driverFeeAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges))) fee.totalRides
         autoPaySpecificKeys = do
@@ -69,7 +69,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                   {
                     key : "YOUR_EARNINGS",
                     title : getString YOUR_EARNINGS,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "₹" <> getFixedTwoDecimals driverFee'.totalEarnings
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "€" <> getFixedTwoDecimals driverFee'.totalEarnings
                   },
                   {
                     key : "FEE_BREAKUP",
@@ -102,11 +102,11 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                   }
                 ]
               false -> []
- 
+
         transactionDetails = {
             notificationStatus : driverFee'.autoPayStage,
             paymentStatus : if resp.feeType == AUTOPAY_PAYMENT then getAutoPayPaymentStatus driverFee'.autoPayStage else getInvoiceStatus driverFee'.paymentStatus,
-            statusTime : case statusTime of 
+            statusTime : case statusTime of
                             Just time -> convertUTCtoISC time "Do MMM YYYY, h:mm A"
                             Nothing -> "",
             isSplit : (length filteredDriverFees == 1) && driverFee'.isSplit,
@@ -124,7 +124,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
               {
                 key : "AMOUNT_PAID",
                 title : getString TOTAL_AMOUNT,
-                val : "₹" <> getFixedTwoDecimals resp.amount
+                val : "€" <> getFixedTwoDecimals resp.amount
               },
               { key : "PAYMENT_MODE",
                 title : getString PAYMENT_MODE,
@@ -160,14 +160,14 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                                             false -> driverFee.coinDiscountAmount
                             }
                             ) filteredDriverFees
-                        false -> []          
+                        false -> []
         }
         in transactionDetails
 
 getAutoPayPaymentStatus :: Maybe API.AutopayPaymentStage -> PaymentStatus
 getAutoPayPaymentStatus status' = do
   let status = fromMaybe API.NOTIFICATION_SCHEDULED status'
-  case status of 
+  case status of
     API.NOTIFICATION_SCHEDULED -> Scheduled
     API.NOTIFICATION_ATTEMPTING -> Scheduled
     API.EXECUTION_SCHEDULED -> Scheduled
@@ -176,10 +176,10 @@ getAutoPayPaymentStatus status' = do
     _ -> Failed
 
 getAutoPayStageData :: Maybe API.AutopayPaymentStage -> Boolean -> {stage :: String, statusTimeDesc :: String}
-getAutoPayStageData stage isCoinCleared = 
+getAutoPayStageData stage isCoinCleared =
   let status = fromMaybe API.NOTIFICATION_SCHEDULED stage
   in
-  case status, isCoinCleared of 
+  case status, isCoinCleared of
     _ , true -> { stage : getString PAYMENT_SUCCESSFUL, statusTimeDesc : getString TRANSACTION_DEBITED_ON }
     API.NOTIFICATION_SCHEDULED, _ -> { stage : getString NOTIFICATION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
     API.NOTIFICATION_ATTEMPTING, _ -> { stage : getString NOTIFICATION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
@@ -193,7 +193,7 @@ getAutoPayStageData stage isCoinCleared =
 getInvoiceStatus :: Maybe API.InvoiceStatus -> PaymentStatus
 getInvoiceStatus status' = do
   let status = fromMaybe API.ACTIVE_INVOICE status'
-  case status of 
+  case status of
     API.ACTIVE_INVOICE -> Pending
     API.SUCCESS -> Success
     API.FAILED -> Failed
@@ -202,7 +202,7 @@ getInvoiceStatus status' = do
     API.CLEARED_BY_YATRI_COINS -> Success
 
 dummyDriverFee :: API.DriverFeeInfoEntity
-dummyDriverFee = 
+dummyDriverFee =
   API.DriverFeeInfoEntity {
       autoPayStage : Just API.NOTIFICATION_SCHEDULED, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
       paymentStatus : Just API.ACTIVE_INVOICE, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE | CLEARED_BY_YATRI_COINS
@@ -223,8 +223,8 @@ dummyDriverFee =
   }
 
 coinsOfferConfig :: String -> PromoConfig
-coinsOfferConfig amount = 
-    {  
+coinsOfferConfig amount =
+    {
     title : Just $ amount <> " " <> getString DISCOUNT_POINTS_SMALL,
     isGradient : true,
     gradient : [Color.yellowCoinGradient1, Color.yellowCoinGradient2],

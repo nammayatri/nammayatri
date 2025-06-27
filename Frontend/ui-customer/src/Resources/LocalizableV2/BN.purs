@@ -352,9 +352,9 @@ getBn = Keymap {
 , pickup_charge: "পিকআপ চার্জ"
 , total_paid: "মোট প্রদত্ত"
 , waiting_charge: "অপেক্ষার চার্জ"
-, drivers_can_charge_an_additional_fare_upto: "* ড্রাইভাররা ট্রাফিক, রিটার্ন ট্রিপের সম্ভাবনা ইত্যাদির মতো অন্যান্য বিষয়গুলি কভার করতে ₹20 পর্যন্ত অতিরিক্ত ভাড়া নিতে পারে।"
-, waiting_charge_description: "°প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। এর পরে অপেক্ষার সময় প্রতি মিনিটে আপনাকে ₹1.5 চার্জ করা হবে।"
-, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। \n 2. এর পরে প্রতি মিনিটে ₹1.5 এর ওয়েটিং চার্জ প্রযোজ্য হবে।")
+, drivers_can_charge_an_additional_fare_upto: "* ড্রাইভাররা ট্রাফিক, রিটার্ন ট্রিপের সম্ভাবনা ইত্যাদির মতো অন্যান্য বিষয়গুলি কভার করতে €20 পর্যন্ত অতিরিক্ত ভাড়া নিতে পারে।"
+, waiting_charge_description: "°প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। এর পরে অপেক্ষার সময় প্রতি মিনিটে আপনাকে €1.5 চার্জ করা হবে।"
+, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। \n 2. এর পরে প্রতি মিনিটে €1.5 এর ওয়েটিং চার্জ প্রযোজ্য হবে।")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "প্রযোজ্য @ "<>waitingCharge<>" প্রতি মিনিটে প্রথম "<> freeWaitingTime <>" মিনিট অপেক্ষা করার পরে")
 , successful_onboard: (\_ -> "আপনি সফলভাবে \n জাত্রি সাথিতে স্বাক্ষর করেছেন")
 , have_referral_code: "একটি রেফারেল কোড আছে?"
@@ -434,7 +434,7 @@ getBn = Keymap {
 , gender_str: "লিঙ্গ"
 , profile_completion: "প্রোফাইল সমাপ্তি"
 , early_end_ride_charges: "প্রারম্ভিক রাইড শেষ চার্জ^"
-, early_end_ride_charges_description: "Reard যাত্রা শেষে প্রথম দিকে অবরুদ্ধ দূরত্বের অর্ধেক ভাড়ার পরিমাণের অতিরিক্ত চার্জ দেয় (সর্বোচ্চ ₹ 50)"
+, early_end_ride_charges_description: "Reard যাত্রা শেষে প্রথম দিকে অবরুদ্ধ দূরত্বের অর্ধেক ভাড়ার পরিমাণের অতিরিক্ত চার্জ দেয় (সর্বোচ্চ € 50)"
 , yes_try_again: "হ্যাঁ, আবার চেষ্টা করুন"
 , no_dont: "না, না"
 , yes_cancel_search: "হ্যাঁ, অনুসন্ধান বাতিল করুন"
@@ -463,7 +463,7 @@ getBn = Keymap {
 , update_now: "এখন হালনাগাদ করুন"
 , driver_additions_optional: "ড্রাইভার সংযোজন (ঐচ্ছিক)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ড্রাইভার ট্রাফিক কভার করার জন্য অতিরিক্ত উদ্ধৃত করতে পারে, ফিরতি ট্রিপের সুযোগ ইত্যাদি।"
-, driver_additions_are_calculated_at_rate: (\_ -> "ড্রাইভার সংযোজনের সীমা বেস ভাড়ার 10% এ গণনা করা হয় নিকটতম ₹10 এ রাউন্ড অফ")
+, driver_additions_are_calculated_at_rate: (\_ -> "ড্রাইভার সংযোজনের সীমা বেস ভাড়ার 10% এ গণনা করা হয় নিকটতম €10 এ রাউন্ড অফ")
 , driver_may_not_charge_this_additional_fare: "দ্রষ্টব্য: ড্রাইভার এই অতিরিক্ত ভাড়া নিতে পারে/নাও পারে"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "নিচের যেকোনো কারণে আপনি একটি আপডেট করা চূড়ান্ত ভাড়া দেখতে পারেন:"
 , reason_change_in_route_a: "1. রুটে পরিবর্তন: "
@@ -522,7 +522,7 @@ getBn = Keymap {
 , call_namma_yatri_support: (\_ -> "নম্মা যাত্রী সমর্থনে কল করুন")
 , call_112: "112 কল করুন"
 , call_emergency_centre: "ইমার্জেন্সি সেন্টারে কল করুন"
-, driver_addition_limits_are_in_increments: "ড্রাইভার যোগ করার সীমা ₹20 বৃদ্ধিতে রয়েছে "
+, driver_addition_limits_are_in_increments: "ড্রাইভার যোগ করার সীমা €20 বৃদ্ধিতে রয়েছে "
 , seats: "আসন"
 , hatchback: "হ্যাচব্যাক"
 , suv: "এসইউভি"
@@ -1346,9 +1346,9 @@ getBn = Keymap {
 , kozhikode: "কোজিকোড"
 , thrissur: "ত্রিশূর"
 , metro_free_ticket_event: (\freeTicketInterval -> "প্রতিটি " <> freeTicketInterval <> " টিকেট বিনামূল্যে!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "প্রতিটি " <> freeTicketInterval <> " টিকেটে একটি বিনামূল্যে টিকেট পান (সর্বোচ্চ ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "প্রতিটি " <> freeTicketInterval <> " টিকেটে একটি বিনামূল্যে টিকেট পান (সর্বোচ্চ €" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "পরবর্তী টিকেট বিনামূল্যে"
-, free_ticket_available: (\maxCashback freeTicketCount -> "আনলক ক্যাশব্যাক (সর্বোচ্চ ₹" <> maxCashback <> ") এ " <> freeTicketCount <> " টিকেট!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "আনলক ক্যাশব্যাক (সর্বোচ্চ €" <> maxCashback <> ") এ " <> freeTicketCount <> " টিকেট!")
 , additional_charges_will_be_applicable: "চালক যখন পিকআপ অবস্থানের কাছাকাছি থাকে তখন অতিরিক্ত চার্জ প্রযোজ্য হতে পারে।"
 , parking_charges_included: (\amount -> amount <> " পার্কিং চার্জ অন্তর্ভুক্ত")
 , app_toll_charges: "প্রযোজ্য টোল চার্জ ভাড়ার মধ্যে অন্তর্ভুক্ত করা হয়েছে"
@@ -1717,7 +1717,7 @@ getBn = Keymap {
 , destination_stop : "গন্তব্য স্টপ"
 , route_bus_number : "রুট বাস নম্বর"
 , pickup_stop : "পিকআপ স্টপ"
-, tickets_for_kolkata_bus : "কলকাতা ব" 
+, tickets_for_kolkata_bus : "কলকাতা ব"
 , ticket_validity_30_minutes : "টিকিটটি বুকিংয়ের সময় থেকে মাত্র ৩০ মিনিটের জন্য বৈধ।"
 , fare_commission_free_wbtc :"ভাড়া কমিশন-মুক্ত এবং WBTC দ্বারা নির্ধারিত।"
 , select_route_number : "রুট নম্বর নির্বাচন করুন"
@@ -1737,7 +1737,7 @@ getBn = Keymap {
 ,uncomfortable_ambulance : "অস্বস্তিকর অ্যাম্বুলেন্স"
 ,clean_ambulance : "পরিষ্কার অ্যাম্বুলেন্স"
 ,ambulance_booking_disclaimer : "যাত্রী সাথী শুধুমাত্র একটি প্ল্যাটফর্ম যা অ্যাম্বুলেন্স সেবা প্রদানকারীদের গ্রাহকদের সাথে সংযুক্ত করে। আমরা অ্যাম্বুলেন্স পার্টির দ্বারা প্রদত্ত তথ্যের জন্য দায়ী নই।"
-, no_remaining_tickets : "কোনো অবশিষ্ট টিকিট নেই" 
+, no_remaining_tickets : "কোনো অবশিষ্ট টিকিট নেই"
     , your_earnings_will_be_credited_to_this_account: "আপনার উপার্জন এই অ্যাকাউন্টে জমা হবে"
     , transaction_history: "লেনদেনের ইতিহাস"
     , total_earned: "মোট উপার্জন"
@@ -1773,21 +1773,21 @@ getBn = Keymap {
     , amount: "পরিমাণ"
     , download_app: "অ্যাপ ডাউনলোড করুন"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "অ্যাপ ডাউনলোড করতে এবং আপনার আমন্ত্রণ কোড স্বয়ংক্রিয়ভাবে প্রয়োগ করতে QR কোড স্ক্যান করুন"
-    , earn_:  \a ->  "₹" <> a <> " উপার্জন করুন"
-    ,  collect_:  \a ->  "₹" <> a <> " সংগ্রহ করুন"
+    , earn_:  \a ->  "€" <> a <> " উপার্জন করুন"
+    ,  collect_:  \a ->  "€" <> a <> " সংগ্রহ করুন"
     , add_upi_id: "UPI আইডি যোগ করুন"
     , earnings: "উপার্জন"
     , enter_upi_id: "UPI ID প্রবেশ করুন"
-    , you_get_50__they_get_50: \a b ->"আপনি ₹" <> a <> " পাবেন & তারা ₹"<> b <>" পাবে"
+    , you_get_50__they_get_50: \a b ->"আপনি €" <> a <> " পাবেন & তারা €"<> b <>" পাবে"
     , when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride: "আপনার বন্ধু আপনার রেফারেল কোড ব্যবহার করলে \n এবং তাদের প্রথম রাইড নিলে।"
     , read_terms_and_conditions: "শর্তাবলী পড়ুন"
     , ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally: "একটি রাইডকে বৈধ বলে গণ্য করা হয় যদি এটি নির্দিষ্ট রাইড দূরত্ব, রাইড সময় এবং কোম্পানির অভ্যন্তরীণভাবে পরিচালিত প্রতারণা পরীক্ষার ভিত্তিতে থাকে।"
     , collect_earnings_now: "এখন আয় সংগ্রহ করুন"
     , update_upi_id: "UPI ID আপডেট করুন"
-    , youve_earned_50_for_taking_your_first_ride: \a ->"আপনি আপনার প্রথম রাইড নেওয়ার জন্য ₹" <> a <> " উপার্জন করেছেন!"
+    , youve_earned_50_for_taking_your_first_ride: \a ->"আপনি আপনার প্রথম রাইড নেওয়ার জন্য €" <> a <> " উপার্জন করেছেন!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"আপনার প্রথম রাইডের জন্য " <> a <> " রেফারেল বেনিফিট পান!"
     , take_a_ride_now: "এখনই একটি যাত্রা করুন"
-    , take_a_ride__claim_50: \a ->  "একটি যাত্রা করুন এবং ₹" <> a <> " দাবি করুন"
+    , take_a_ride__claim_50: \a ->  "একটি যাত্রা করুন এবং €" <> a <> " দাবি করুন"
 , select_route : "রুট নির্বাচন করুন"
 , ac_bus : "এসি বাস"
 , early_departure : "প্রথম যাত্রা"

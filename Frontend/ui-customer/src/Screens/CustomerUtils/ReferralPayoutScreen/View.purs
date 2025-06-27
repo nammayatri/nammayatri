@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Screens.ReferralPayoutScreen.View where
@@ -253,7 +253,7 @@ transactionView push state =
                   <> FontStyle.paragraphText TypoGraphy
               , linearLayout [ weight 1.0 ] []
               , textView
-                  $ [ text $ "₹" <> show (state.data.referralEarnings + state.data.referredByEarnings)
+                  $ [ text $ "€" <> show (state.data.referralEarnings + state.data.referredByEarnings)
                     , color Colors.black700
                     ]
                   <> FontStyle.h2 TypoGraphy
@@ -332,7 +332,7 @@ transactionView push state =
                                     , gravity RIGHT
                                     ]
                                     [ textView
-                                        $ [ text $ "₹" <> (show item.amount)
+                                        $ [ text $ "€" <> (show item.amount)
                                           , color config.textColor
                                           ]
                                         <> FontStyle.subHeading2 TypoGraphy
@@ -809,7 +809,7 @@ collectEarningView push state =
                 ]
               <> FontStyle.h2 TypoGraphy
           , textView
-              $ [ text if isPayoutPending then "" else "₹ " <> show totalEarning
+              $ [ text if isPayoutPending then "" else "€ " <> show totalEarning
                 , color if isPayoutPending then Colors.blue900 else Colors.black800
                 , padding $ PaddingBottom 3
                 , margin $ MarginRight 10
@@ -902,7 +902,7 @@ upiAddedSuccessfully push state =
                 ]
               <> FontStyle.h2 TypoGraphy
           , textView
-              $ [ text $ getString $ PENDINGAMOUNT_WILL_BE_CREDITED_SOON_TO_N_STATEDATAVPA ("₹" <> show pendingAmount) (fromMaybe "" state.data.existingVpa)
+              $ [ text $ getString $ PENDINGAMOUNT_WILL_BE_CREDITED_SOON_TO_N_STATEDATAVPA ("€" <> show pendingAmount) (fromMaybe "" state.data.existingVpa)
                 , margin $ MarginTop 8
                 , color Colors.black700
                 , gravity CENTER

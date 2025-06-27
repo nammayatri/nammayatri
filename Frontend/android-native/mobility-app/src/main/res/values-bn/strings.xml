@@ -29,7 +29,7 @@
     <string name="tap_on">3. আলতো চাপুন</string>
     <string name="location">অবস্থান</string>
     <string name="phone">ফোন</string>
-    <string name="includes_pickup_charges_10">পিকআপ ₹{#amount#}</string>
+    <string name="includes_pickup_charges_10">পিকআপ €{#amount#}</string>
     <string name="away">দূরে</string>
     <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
     <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>
@@ -76,7 +76,7 @@
     <string name="no_change">কোনো পরিবর্তন নেই</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"অতিরিক্ত ভাড়া নেই। টিপস নেই। অপেক্ষা চার্জ নেই।"</string>
     <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
-    <string name="parking_charges">%1$.0f₹ পার্কিং</string>
+    <string name="parking_charges">%1$.0f€ পার্কিং</string>
     <string name="includes">অন্তর্ভুক্ত</string>
     <string name="stops_info">%1$d স্টপস (স্টপ চার্জ সহ)</string>
     <string name="stops">%1$d স্টপস</string>

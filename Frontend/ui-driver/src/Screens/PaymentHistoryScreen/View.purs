@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -129,7 +129,7 @@ emptyView :: forall w. PrestoDOM (Effect Unit) w
 emptyView = linearLayout[visibility GONE][]
 
 paymentHistoryView :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-paymentHistoryView push state visibility' = 
+paymentHistoryView push state visibility' =
   PrestoAnim.animationSet [Anim.fadeIn visibility'] $
   linearLayout
   [ width MATCH_PARENT
@@ -142,12 +142,12 @@ paymentHistoryView push state visibility' =
   ]
 
 paymentList :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
-paymentList push state = 
+paymentList push state =
   let transactionItems = if state.props.autoPayHistory then state.data.autoPayList else state.data.manualPayList
   in
-  PrestoAnim.animationSet [Anim.fadeIn true] $ 
-  if DA.null transactionItems then noPaymentsView state push 
-  else 
+  PrestoAnim.animationSet [Anim.fadeIn true] $
+  if DA.null transactionItems then noPaymentsView state push
+  else
     scrollView
     [ width MATCH_PARENT
     , weight 1.0
@@ -162,7 +162,7 @@ paymentList push state =
           , height WRAP_CONTENT
           , orientation VERTICAL
           , visibility if DA.length transactionItems > 0 then VISIBLE else GONE
-          ] (DA.mapWithIndex (\index item -> 
+          ] (DA.mapWithIndex (\index item ->
             let itemConfig = getStatusConfig item.paymentStatus item.isPaidByYatriCoins
             in
             linearLayout
@@ -190,7 +190,7 @@ paymentList push state =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , visibility if item.isPaidByYatriCoins then GONE else VISIBLE
-                    ][ commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                    ][ commonTV push ("€" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
                       , linearLayout
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
@@ -224,7 +224,7 @@ paymentList push state =
                             , imageWithFallback $ fetchImage FF_ASSET if item.isPaidByYatriCoins then "ny_ic_yatri_coin" else "ny_ic_upi_logo"
                             ]
                           , commonTV push (getString DISCOUNT_POINTS) Color.black900 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
-                          , commonTV push (case item.feeType of 
+                          , commonTV push (case item.feeType of
                                             AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
                                             AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
                                             _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER (not item.isPaidByYatriCoins)
@@ -245,7 +245,7 @@ paymentList push state =
     ]
 
 noPaymentsView :: forall w. PaymentHistoryScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-noPaymentsView state push =  
+noPaymentsView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -299,7 +299,7 @@ commonTV push text' color' fontStyle marginTop gravity' visibility'=
   ] <> fontStyle
 
 textView' :: forall w. (Action -> Effect Unit) -> Maybe Action -> String -> String -> Style -> Maybe Padding -> Maybe Margin -> PrestoDOM (Effect Unit) w
-textView' push action txt txtColor style padding' margin' =  
+textView' push action txt txtColor style padding' margin' =
   textView $
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -307,32 +307,32 @@ textView' push action txt txtColor style padding' margin' =
   , text txt
   , gravity CENTER
   ] <> (getFontStyle style LanguageStyle)
-    <> case padding' of  
+    <> case padding' of
          Just value -> [padding value]
          Nothing -> []
-    <> case margin' of  
+    <> case margin' of
         Just value -> [margin value]
         Nothing -> []
-    <> case action of  
+    <> case action of
         Just value -> [onClick push $ const $ value]
         Nothing -> []
 
 tabView :: forall w. PaymentHistoryScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tabView state push = 
+tabView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , cornerRadius 24.0 
+  , cornerRadius 24.0
   , background Color.grey700
   , padding $ Padding 4 4 4 4
   , margin $ MarginBottom 28
   , gravity CENTER
   ][  textView
       [ height WRAP_CONTENT
-      , weight 1.0 
+      , weight 1.0
       , background if state.props.autoPayHistory then Color.black900 else Color.grey700
       , text (getString AUTOPAY_PAYMENTS)
-      , cornerRadius 24.0 
+      , cornerRadius 24.0
       , padding $ PaddingVertical 6 8
       , onClick push $ const $ ChangeTab true
       , fontStyle $ FontStyle.medium LanguageStyle
@@ -341,9 +341,9 @@ tabView state push =
       ]
     , textView
       [ height WRAP_CONTENT
-      , weight 1.0 
+      , weight 1.0
       , gravity CENTER
-      , cornerRadius 24.0  
+      , cornerRadius 24.0
       , onClick push $ const $ ChangeTab false
       , padding $ PaddingVertical 6 8
       , text (getString MANUAL_PAYMENTS)
@@ -354,7 +354,7 @@ tabView state push =
   ]
 
 transactionDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-transactionDetails push state visibility' = 
+transactionDetails push state visibility' =
   let config = getTransactionConfig state.data.transactionDetails
       autopayStageData = getAutoPayStageData state.data.transactionDetails.notificationStatus state.data.transactionDetails.isCoinCleared
       title = if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.title else autopayStageData.stage
@@ -423,7 +423,7 @@ transactionDetails push state visibility' =
                         , width MATCH_PARENT
                         , margin $ MarginRight 8
                         , color Color.black600
-                        , visibility $ boolToVisibility state.data.transactionDetails.isAutoPayFailed 
+                        , visibility $ boolToVisibility state.data.transactionDetails.isAutoPayFailed
                         , padding $ Padding 8 8 8 8
                       ] <> FontStyle.tags TypoGraphy
                     , linearLayout
@@ -432,7 +432,7 @@ transactionDetails push state visibility' =
                         , width MATCH_PARENT
                         , background Color.grey900
                         , margin $ MarginHorizontal 8 16
-                        , visibility $ boolToVisibility (state.data.transactionDetails.isAutoPayFailed && state.data.transactionDetails.isSplit) 
+                        , visibility $ boolToVisibility (state.data.transactionDetails.isAutoPayFailed && state.data.transactionDetails.isSplit)
                       ][]
                     , textView $ [
                         text $ getString SPLIT_PAYMENT
@@ -445,10 +445,10 @@ transactionDetails push state visibility' =
                  ]
         ]
     ]
-  
 
-transactionHistoryRow ∷ ∀ (a ∷ Type). (Action → Effect Unit) -> String -> Int -> Int -> Boolean -> VDom (Array (Prop (Effect Unit))) a -> VDom (Array (Prop (Effect Unit))) a 
-transactionHistoryRow push item index length visibility' rightLayout  = 
+
+transactionHistoryRow ∷ ∀ (a ∷ Type). (Action → Effect Unit) -> String -> Int -> Int -> Boolean -> VDom (Array (Prop (Effect Unit))) a -> VDom (Array (Prop (Effect Unit))) a
+transactionHistoryRow push item index length visibility' rightLayout  =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -471,15 +471,15 @@ transactionHistoryRow push item index length visibility' rightLayout  =
     , separatorView (index /= (length -1))
     ]
 
-separatorView :: forall w. Boolean -> PrestoDOM (Effect Unit) w 
-separatorView visible = 
+separatorView :: forall w. Boolean -> PrestoDOM (Effect Unit) w
+separatorView visible =
   linearLayout
       [ width MATCH_PARENT
       , height $ V 1
       , background Color.white900
       , visibility if visible then VISIBLE else GONE
       ][]
-promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
+promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w
 promoCodeView push config =
   linearLayout
   ([ height WRAP_CONTENT
@@ -495,9 +495,9 @@ promoCodeView push config =
      [ width $ V 12
      , height $ V 12
      , margin (MarginRight 4)
-     , visibility $ boolToVisibility config.hasImage 
+     , visibility $ boolToVisibility config.hasImage
      , imageWithFallback config.imageURL
-     ] 
+     ]
    , textView $
      [ textSize FontSize.a_10
      , fontStyle $ FontStyle.medium LanguageStyle
@@ -506,17 +506,17 @@ promoCodeView push config =
      ] <> case config.title of
           Nothing -> [visibility GONE]
           Just txt -> [text txt]
-   , imageView 
+   , imageView
      [ width $ V 12
      , height $ V 12
      , margin $ MarginLeft 3
      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
-     , visibility $ boolToVisibility config.isPaidByYatriCoins 
+     , visibility $ boolToVisibility config.isPaidByYatriCoins
      ]
   ]
 
 
-feeBreakUpView :: forall w. (Action -> Effect Unit) -> Boolean -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Boolean -> PrestoDOM (Effect Unit) w 
+feeBreakUpView :: forall w. (Action -> Effect Unit) -> Boolean -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Boolean -> PrestoDOM (Effect Unit) w
 feeBreakUpView push isPaidByYatriCoins text' color' fontStyle marginTop gravity' visibility' =
   linearLayout
   ([ width WRAP_CONTENT
@@ -534,7 +534,7 @@ feeBreakUpView push isPaidByYatriCoins text' color' fontStyle marginTop gravity'
       , visibility if visibility' then VISIBLE else GONE
       , text text'
      ] <> fontStyle)
-   , imageView 
+   , imageView
      [ width $ V 12
      , height $ V 12
       , color color'
@@ -542,11 +542,11 @@ feeBreakUpView push isPaidByYatriCoins text' color' fontStyle marginTop gravity'
       , padding $ PaddingTop 3
       , gravity CENTER_VERTICAL
       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
-      , visibility $ boolToVisibility isPaidByYatriCoins 
+      , visibility $ boolToVisibility isPaidByYatriCoins
      ]
   ]
 
-rightItem :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+rightItem :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 rightItem push val prefixImage postfixImage =
   linearLayout
   [ height WRAP_CONTENT
@@ -559,7 +559,7 @@ rightItem push val prefixImage postfixImage =
      , margin (MarginRight 4)
      , visibility $ boolToVisibility prefixImage
      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
-     ] 
+     ]
    , textView $
      [ text val
      , color Color.black900
@@ -571,11 +571,11 @@ rightItem push val prefixImage postfixImage =
      , margin (MarginLeft 3)
      , visibility if postfixImage then VISIBLE else GONE
      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_copy_blue"
-     ] 
+     ]
   ]
 
 manualPaymentRidesList :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
-manualPaymentRidesList push state = 
+manualPaymentRidesList push state =
   let screenwidth = (screenWidth unit) - 64
   in
   linearLayout
@@ -600,7 +600,7 @@ manualPaymentRidesList push state =
           , width $ V (screenwidth/3)
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ "₹" <> getString TOTAL_AMOUNT
+          [ text $ "€" <> getString TOTAL_AMOUNT
           , width $ V (screenwidth/3)
           , color Color.black700
           , gravity RIGHT
@@ -611,7 +611,7 @@ manualPaymentRidesList push state =
       , height WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginBottom 16
-      ](map (\item -> 
+      ](map (\item ->
             linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -628,7 +628,7 @@ manualPaymentRidesList push state =
                 , color Color.black800
                 ] <> FontStyle.tags TypoGraphy
               , textView $
-                [ text ("₹" <> getFixedTwoDecimals item.dueAmount)
+                [ text ("€" <> getFixedTwoDecimals item.dueAmount)
                 , color Color.black800
                 , width $ V (screenwidth/3)
                 , gravity RIGHT
@@ -645,12 +645,12 @@ manualPaymentRidesList push state =
       , onClick push $ const ViewRideDetails
       , padding $ PaddingVertical 16 16
       ] <> FontStyle.body1 TypoGraphy
-    
+
   ]
 
 
 rideDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-rideDetails push state visibility' = 
+rideDetails push state visibility' =
   PrestoAnim.animationSet [Anim.fadeIn visibility'] $
   linearLayout
   [ width MATCH_PARENT

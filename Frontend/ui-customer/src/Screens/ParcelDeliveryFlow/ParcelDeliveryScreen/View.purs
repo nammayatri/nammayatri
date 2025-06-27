@@ -82,7 +82,7 @@ view push state =
     , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , onClick push $ const NoAction
     ]
-    [ linearLayout 
+    [ linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , background Color.white900
@@ -90,7 +90,7 @@ view push state =
       ][
         GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
         , linearLayout
-          [ height $ V 1 
+          [ height $ V 1
           , width MATCH_PARENT
           , background Color.grey900
           ] []
@@ -105,15 +105,15 @@ view push state =
     , separatorView push state
     , footerView push state
     , (case state.data.currentStage of
-        ST.SENDER_DETAILS -> deliveryDetailPopupView push state 
-        ST.RECEIVER_DETAILS -> deliveryDetailPopupView push state 
+        ST.SENDER_DETAILS -> deliveryDetailPopupView push state
+        ST.RECEIVER_DETAILS -> deliveryDetailPopupView push state
         _ -> emptyTextView),
       (if state.props.showRateCard then (rateCardView push state) else emptyTextView)
     ]
-    
+
 
 mapViewLayout :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-mapViewLayout push state = 
+mapViewLayout push state =
   relativeLayout
   [ height $ V $ JB.getHeightFromPercent 20
   , width MATCH_PARENT
@@ -166,7 +166,7 @@ dropView push state =
 
 pickupDropItemView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 pickupDropItemView push state isSource =
-  let 
+  let
     personDetails = if isSource then state.data.senderDetails else state.data.receiverDetails
   in linearLayout
     [ height WRAP_CONTENT
@@ -207,7 +207,7 @@ sourceDestinationAddressView :: forall w. (Action -> Effect Unit) -> ST.ParcelDe
 sourceDestinationAddressView push state isSource =
   let
     personDetails = if isSource then state.data.senderDetails else  state.data.receiverDetails
-  in 
+  in
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -269,7 +269,7 @@ sourceDestinationAddressView push state isSource =
               ] <> FontStyle.body3 TypoGraphy
             ]
           ]
-        ]  
+        ]
       ]
     ]
 
@@ -290,11 +290,11 @@ deliveryGuidelinesView push state =
     , padding $ Padding 16 16 16 16
     , cornerRadius 16.0
     ]
-    [ textView $ 
+    [ textView $
       [ text $ getString DELIVERY_GUIDELINES
       , color Color.black800
       , margin $ MarginBottom 20
-      ] 
+      ]
       <> FontStyle.subHeading3 TypoGraphy
     , linearLayout
       [ height WRAP_CONTENT
@@ -302,7 +302,7 @@ deliveryGuidelinesView push state =
       , orientation VERTICAL
       ]
       ( map (\item -> instructionItem item) instructionData)
-    , textView $ 
+    , textView $
       [ text $ getString VIEW_ALL_GUIDELINES
       , color Color.blue800
       , layoutGravity "center_horizontal"
@@ -321,7 +321,7 @@ footerView push state =
     , width MATCH_PARENT
     , gravity BOTTOM
     , background Color.transparent
-    ][ 
+    ][
       linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -329,7 +329,7 @@ footerView push state =
         , orientation VERTICAL
         , background Color.white900
         ]
-        [ linearLayout  
+        [ linearLayout
           [ height $ V 1
           , width MATCH_PARENT
           , margin $ MarginBottom 16
@@ -347,7 +347,7 @@ footerView push state =
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
       ]
     ]
-    
+
 
 instructionItem :: forall w. { title :: String, image :: String } -> PrestoDOM (Effect Unit) w
 instructionItem item =
@@ -369,10 +369,10 @@ instructionItem item =
       ]
     <> FontStyle.body20 TypoGraphy
   ]
-  
+
 editButtonView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 editButtonView push state isSource =
-  textView $ 
+  textView $
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , text $ getString EDIT
@@ -409,7 +409,7 @@ separatorView push state =
   []
 
 instructionData :: Array { title :: String, image :: String }
-instructionData = 
+instructionData =
   [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "15", image: "ny_ic_backpack" }
   , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
   , { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
@@ -438,7 +438,7 @@ rateCardView push state =
         [ RateCard.view (push <<< RateCardAction) (rateCardConfig state) ]
 
 tipView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-tipView push state = 
+tipView push state =
   linearLayout
   [
      height WRAP_CONTENT
@@ -455,8 +455,8 @@ tipView push state =
     , gravity CENTER
     , visibility $ boolToVisibility $ isJust state.data.tipForDriver
     ][
-      textView $ 
-      [ text $ "₹" <> (show $ fromMaybe 0 state.data.tipForDriver) <> " " <> getString TIP_ADDED
+      textView $
+      [ text $ "€" <> (show $ fromMaybe 0 state.data.tipForDriver) <> " " <> getString TIP_ADDED
       , color Color.black900
       , width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -486,14 +486,14 @@ deliveryDetailsView push state = do
     ]
 
 deliveryInstructionView :: forall w . (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-deliveryInstructionView push state = 
+deliveryInstructionView push state =
   let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in scrollView
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , fillViewport true
     , visibility $ boolToVisibility $ state.data.currentStage == ST.DELIVERY_INSTRUCTIONS
-    ][ 
+    ][
       linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

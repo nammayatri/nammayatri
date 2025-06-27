@@ -58,7 +58,7 @@ window.getMerchantConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "currency": "₹",
+    "currency": "€",
     "alertDialogPrimaryColor": "#BD5500",
     "logs": ["JUSPAY"],
     "primaryButtonCornerRadius": 8.0,

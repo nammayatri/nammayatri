@@ -175,9 +175,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
-                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "€") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
-                holder.petTagText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getPetCharges() + " " + getString(R.string.pet));
+                holder.petTagText.setText(sharedPref.getString("CURRENCY", "€") + " " + model.getPetCharges() + " " + getString(R.string.pet));
                 holder.petTag.setVisibility(model.getPetCharges() > 0 ? View.VISIBLE : View.GONE);
                 holder.congestionTagText.setText(model.getCongestionCharges() + " " + getString(R.string.extra));
                 holder.congestionTag.setVisibility(model.getCongestionCharges() > 0 ? View.VISIBLE : View.GONE);
@@ -1256,7 +1256,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (i < sheetArrayList.size()) {
                     shimmerTipList.get(i).setVisibility(View.VISIBLE);
                     updateTopBarBackground(i);
-                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "€") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                     boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
                     updateTopBar(i);
@@ -1328,7 +1328,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             default:
                 if (sheetArrayList.get(i).getCustomerTip() > 0 || sheetArrayList.get(i).getCongestionCharges() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : sheetArrayList.get(i).getCongestionCharges() > 0 ? sharedPref.getString("CURRENCY", "₹") + sharedPref.getString("CURRENCY", "₹") : "Favourite"));
+                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : sheetArrayList.get(i).getCongestionCharges() > 0 ? sharedPref.getString("CURRENCY", "€") + sharedPref.getString("CURRENCY", "€") : "Favourite"));
                     indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
                     shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : sheetArrayList.get(i).getCongestionCharges() > 0 ? getColor(R.color.orange900) : getColor(R.color.blue800), cornerRadii));
                 } else {

@@ -29,16 +29,16 @@ blueGrey :: Color
 blueGrey = "#9899a1"
 
 blue600 :: Color
-blue600 = "#f4F7FF"
+blue600 = "#F9F6FF"
 
 blue700 :: Color
 blue700 = "#80B2FF"
 
 blue800 :: Color
-blue800 = "#2194FF"
+blue800 = "#7D4BFF"
 
 blue900 :: Color
-blue900 = "#0066FF"
+blue900 = "#7D4BFF"
 
 blue9000 :: Color
 blue9000 = "#1A0066FF"

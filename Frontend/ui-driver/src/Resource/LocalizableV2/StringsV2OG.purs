@@ -15,6 +15,7 @@ import Resource.Localizable.ML (getMl)
 import Resource.Localizable.TA (getTa)
 import Resource.Localizable.TE (getTe)
 import Resource.Localizable.OD (getOd)
+import Resource.Localizable.DU (getDu)
 import Resource.Localizable.TypesV2
 import Locale.Utils
 import Language.Types
@@ -32,6 +33,7 @@ stringsMap =
     , kannada: getKn
     , telugu: getTe
     , odiya: getOd
+    , dutch: getDu
     }
 
 infixl 1 readFromNT as @~
@@ -64,6 +66,7 @@ getStringV2 key =
       "TA_IN" -> stringsMap @~ tamil @~ key
       "TE_IN" -> stringsMap @~ telugu @~ key
       "OD_IN" -> stringsMap @~ odiya @~ key
+      "DU_NL" -> stringsMap @~ dutch @~ key
       _ -> stringsMap @~ english @~ key
 
 getString :: String -> STR -> String
@@ -73,7 +76,7 @@ getString language str = do
   case fromConfig of
     Just val -> val
     Nothing -> do
-      let 
+      let
         proxy = getProxy str
         langMap = case language of
           "BN_IN" -> stringsMap @~ bengali
@@ -83,6 +86,7 @@ getString language str = do
           "TA_IN" -> stringsMap @~ tamil
           "TE_IN" -> stringsMap @~ telugu
           "OD_IN" -> stringsMap @~ odiya
+          "DU_NL" -> stringsMap @~ dutch
           _ -> stringsMap @~ english
       proxy $ langMap
 

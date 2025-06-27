@@ -45,7 +45,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="₹ 10 tip included !"
+                            android:text="€ 10 tip included !"
                             android:id="@+id/customer_tip_text"
                             android:textSize="16dp"
                             android:lineHeight="20dp"
@@ -169,7 +169,7 @@
                                             android:layout_height="wrap_content"
                                             android:layout_marginTop="5dp"
                                             android:fontFamily="@font/plus_jakartasans_medium"
-                                            android:text="+₹20"
+                                            android:text="+€20"
                                             android:textAlignment="center"
                                             android:textColor="#2C2F3A"
                                             android:textFontWeight="700"
@@ -423,7 +423,7 @@
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/saira_semi_condensed_semi_bold"
                                             android:paddingBottom="0.5dp"
-                                            android:text="₹"
+                                            android:text="€"
                                             android:textColor="#2C2F3A"
                                             android:textFontWeight="500"
                                             android:textSize="25dp" />

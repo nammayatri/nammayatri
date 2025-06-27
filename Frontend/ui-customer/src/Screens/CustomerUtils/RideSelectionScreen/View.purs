@@ -49,7 +49,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
-import Screens.RideSelectionScreen.ScreenData 
+import Screens.RideSelectionScreen.ScreenData
 import Data.Maybe(Maybe(..))
 import Data.Function.Uncurried (runFn1)
 
@@ -227,7 +227,7 @@ shimmerData i = {
   time : toPropValue "7:35pm",
   source : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
-  totalAmount : toPropValue "₹ 0.0",
+  totalAmount : toPropValue "€ 0.0",
   cardVisibility : toPropValue "gone",
   shimmerVisibility : toPropValue "visible",
   driverImage : toPropValue "",

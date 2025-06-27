@@ -640,9 +640,9 @@ getTa =
     , n_day_free_trial_activated: (\day -> day <> " நாள் இலவச சோதனை செயல்படுத்தப்பட்டது!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "முதல் " <> days <> " நாட்களில் இலவசமாக " <> rides <> " சவாரிகள் எடுக்கவும்")
     , every_ride_at_zero_commission: "ZERO கமிஷனில் ஒவ்வொரு சவாரியும்!"
-    , earn_upto_per_day: "ஒரு நாளைக்கு ₹{} வரை சம்பாதிக்கவும்!"
+    , earn_upto_per_day: "ஒரு நாளைக்கு €{} வரை சம்பாதிக்கவும்!"
     , how_this_works: "இது எப்படி வேலை செய்கிறது?"
-    , sign_up_for_autopay_by_paying_just: "வெறும் ₹1 செலுத்தி தன்னியக்கச் செலுத்துதலுக்குப் பதிவு செய்யவும்"
+    , sign_up_for_autopay_by_paying_just: "வெறும் €1 செலுத்தி தன்னியக்கச் செலுத்துதலுக்குப் பதிவு செய்யவும்"
     , get_reminded_about_your_plan_setup: "உங்கள் திட்ட அமைப்பைப் பற்றி நினைவூட்டுங்கள்"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "நாள் " <> days <> " அல்லது " <> rides <> " சவாரிகள்: இலவச சோதனை நினைவூட்டல்")
     , plan_starts_n_days_m_rides: (\days rides -> "நாள் " <> days <> " அல்லது " <> rides <> " சவாரிகள்: திட்டம் தொடங்குகிறது")
@@ -654,7 +654,7 @@ getTa =
     , offers: "சலுகைகள்"
     , you_are_on_the_free_trial: "நீங்கள் இலவச சோதனையில் இருக்கிறீர்கள்"
     , setup_autopay_before_the_trail_period_expires: "சோதனைக் காலம் காலாவதியாகும் முன் தானாகப் பணம் செலுத்துதலை அமைக்கவும்"
-    , pay_to_join_this_plan: "திட்டத்தில் சேர ₹1 செலுத்தவும்"
+    , pay_to_join_this_plan: "திட்டத்தில் சேர €1 செலுத்தவும்"
     , get_free_trail_until: "வரை இலவசம்‌"
     , clear_dues: "பாக்கிகளை செலுத்தவும்‌"
     , payment_pending_alert: "⚠️கட்டணம் நிலுவையில் உள்ளது!⚠️"
@@ -681,7 +681,7 @@ getTa =
     , manage_plan: "திட்டத்தை நிர்வகிக்க"
     , view_autopay_details: "<u>ஆட்டோ டெபிட் விவரங்களைக் காண்க</u>"
     , switch_and_save: "திட்டம் மாறி சேமிக்கவும்"
-    , switch_and_save_desc: "இன்று 7 சவாரிகளுக்கு மேல் முடித்துவிட்டீர்கள். டெய்லி அன்லிமிட்டட்‌ திட்டத்திற்கு மாறுவதன் மூலம் ₹10 வரை சேமிக்கலாம்‌"
+    , switch_and_save_desc: "இன்று 7 சவாரிகளுக்கு மேல் முடித்துவிட்டீர்கள். டெய்லி அன்லிமிட்டட்‌ திட்டத்திற்கு மாறுவதன் மூலம் €10 வரை சேமிக்கலாம்‌"
     , switch_now: "இப்போதே மாறு"
     , payment_mode_changed_to_manual: "கட்டண முறை நேரடியாக பணம் செலுத்தும் முறைக்கு மாற்றப்பட்டது"
     , payment_mode_changed_to_manual_desc: "உங்கள் UPI ஆட்டோ டெபிட் இடைநிறுத்திவிட்டீர்கள். உங்கள் பாக்கிகளை நேரடியாக பணம் செலுத்தலாம்."
@@ -747,7 +747,7 @@ getTa =
     , daily_unlimited: "டெய்லி அன்லிமிடெட்"
     , daily_per_ride: "டெய்லி பர்‌ ரைட்‌"
     , daily_unlimited_plan_desc: "தினமும் அன்லிமிட்டட்‌ சவாரிகள்"
-    , daily_per_ride_plan_desc: (\price -> "ஒரு நாளைக்கு அதிகபட்சம் ₹" <> price <> " வரை")
+    , daily_per_ride_plan_desc: (\price -> "ஒரு நாளைக்கு அதிகபட்சம் €" <> price <> " வரை")
     , autopay_cancelled: "தானியங்கு கட்டணம் ரத்து செய்யப்பட்டது"
     , no: "இல்லை"
     , yes_cancel: "ஆம், ரத்துசெய்"
@@ -853,7 +853,7 @@ getTa =
     , retry_autopay: "தானாகச் செலுத்த மீண்டும் முயற்சிக்கவும்"
     , retry_str: " மீண்டும் முயற்சிக்கவும்"
     , ongoing_payment_execution: "தற்போது கைமுறையாக பணம் செலுத்துகிறது தயவு செய்து காத்திருக்கவும்"
-    , offer_card_banner_title: (\_ date price -> "ஆட்டோப்பே அமைத்து " <> date <> " வரை ₹" <> price <> "/தினம்‌ சலுகை பெறுங்கள்")
+    , offer_card_banner_title: (\_ date price -> "ஆட்டோப்பே அமைத்து " <> date <> " வரை €" <> price <> "/தினம்‌ சலுகை பெறுங்கள்")
     , offer_card_banner_desc: "செப் 25க்குள் ஆட்டோபே அமைக்கப்பட்டால்"
     , offer_card_banner_alert: "உங்கள் ஆக்டோபய அமைப்பு நிலுவையில் உள்ளது!"
     , or: "அல்லது"
@@ -870,7 +870,7 @@ getTa =
     , execution_failed: "செயல்படுத்தும் தோல்வியடைந்தது"
     , notification_failed: "அறிவிப்பு தோல்வியடைந்தது"
     , pay_now: "பணம்‌ செலுத்தவும்‌"
-    , clear_dues_banner_title: "இடைவிடாத சவாரிகளை அனுபவிக்க உங்கள் நிலுவைத் தொகையை (₹{}) செலுத்துங்கள்"
+    , clear_dues_banner_title: "இடைவிடாத சவாரிகளை அனுபவிக்க உங்கள் நிலுவைத் தொகையை (€{}) செலுத்துங்கள்"
     , collect_via_upi_qr_or_cash: "UPI QR அல்லது பணத்தின் மூலம் சேகரிக்கவும்"
     , transaction_debited_on: "பரிவர்த்தனை டெபிட் ஆன்"
     , transaction_attempted_on: "பரிவர்த்தனை முயற்சி"
@@ -886,7 +886,7 @@ getTa =
     , watch_video_for_help: "உதவிக்கு வீடியோவைப் பாருங்கள்"
     , payment_pending_soft_nudge: "நிலுவைத் தொகை விரைவில் எட்டப்படும்.இடைவிடாத சவாரிகளை அனுபவிக்க தெளிவான நிலுவைத் தொகை"
     , clear_your_dues_early: "உங்கள் கடன்களை விரைவில் செலுத்துக"
-    , due_limit_warning_banner_title: "உங்கள் நிலுவைத் தொகையான ₹{} விரைவில் எட்டப்படும்"
+    , due_limit_warning_banner_title: "உங்கள் நிலுவைத் தொகையான €{} விரைவில் எட்டப்படும்"
     , scheduled_on: "துப்பறியும் தேதி"
     , attempted_on: "முயற்சி தேதி"
     , debited_on: "பற்று தேதி"
@@ -1105,7 +1105,7 @@ getTa =
     , this_extra_amount_the_customer_will_pay: "நீங்கள் {} நிமிடங்களுக்கு மேல் காத்திருந்ததால் வாடிக்கையாளர் உங்களுக்குச் செலுத்தும் கூடுதல் தொகை இது"
     , ten_digit_mobile_number: "10 இலக்க மொபைல் எண்"
     , booth_charges: "பூத் கட்டணம்"
-    , booth_charges_included: "பூத் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன: ₹{}"
+    , booth_charges_included: "பூத் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன: €{}"
     , total_amount: "மொத்தத் தொகை"
     , please_add_rc: "சவாரி செய்ய RC ஐச் சேர்க்கவும்"
     , location_cannot_be_added_while_goto_active: "Go-To இயக்கப்படாத போது மட்டுமே விருப்பம் கிடைக்கும்"
@@ -1476,7 +1476,7 @@ getTa =
     , fare_for: (\limit -> limit <> " க்கு கட்டணம்")
     , waiting_charge_limit: (\timeLimit -> timeLimit <> " நிமிடங்கள் கழித்துப் பிறகு காத்திருப்பு கட்டணங்கள்")
     , parking_charges_desc: "ஓட்டுனரால் சேர்க்கப்படும் பார்கிங் கட்டணங்கள் கட்டணத்தில் சேர்க்கப்படவில்லை. இது பயணத்திற்குப் பிறகு ஓட்டுனர் மற்றும் பயணியிடையே தீர்க்கப்பட வேண்டும்."
-    , tip_can_be_added: (\maxTip -> "உயர்ந்து ₹" <> maxTip <> " வரை சேர்க்க முடியும்.")
+    , tip_can_be_added: (\maxTip -> "உயர்ந்து €" <> maxTip <> " வரை சேர்க்க முடியும்.")
     , day_time_charges: (\from till -> "பகல் நேர கட்டணங்கள் (" <> from <> " முதல் " <> till <> ")")
     , congestion_charges: "நெரிசல் கட்டணம்*"
     , congestion_charges_desc: (\charges -> "*உங்கள் சவாரியில் தற்போது " <> charges <> "% நெரிசல் கட்டணம் பொருந்தும், அதிக போக்குவரத்து அல்லது உங்களுக்கு அதிக டிரைவர்கள் கிடைக்க பெற டிரைவர்களின் நேரத்தை இழப்பீடு செய்ய.")

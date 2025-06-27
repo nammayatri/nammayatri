@@ -123,7 +123,7 @@ bottomLayoutView push config visibility' id' =
    , addTipView push config
    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm")
    ]
-   
+
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state =
   Keyed.linearLayout
@@ -174,7 +174,7 @@ addTipView push state =
       , clickable true
       , onClick push $ const $ ChangeTip state.tipViewProps
       ][ textView $
-        [ text $ "₹" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
+        [ text $ "€" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
         , color Color.black900
         , width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -237,7 +237,7 @@ tipsHorizontalView push state =
               , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.green900 else Color.grey900)
               , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index)) state.customerTipArrayWithValues
               , accessibility ENABLE
-              , accessibilityHint $ "₹" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+              , accessibilityHint $ "€" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
               ][textView $
                 [ text $ item
                 , color $ Color.black800
@@ -432,8 +432,8 @@ chooseYourRideView push config =
     nearByDrivers = fromMaybe 0 config.nearByDrivers
     offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
     offerText = fromMaybe "" $ lookup (DS.toLower (getLanguageLocale languageKey)) offerConfig.translations
-    hasOffer = case config.quoteList !! config.activeIndex of 
-                  Nothing -> offerConfig.enableAllVariant 
+    hasOffer = case config.quoteList !! config.activeIndex of
+                  Nothing -> offerConfig.enableAllVariant
                   Just item -> if item.vehicleVariant == "BOOK_ANY" then false else (getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)) > 0.0
   in
   PrestoAnim.animationSet anims $
@@ -556,7 +556,7 @@ chooseYourRideView push config =
             , padding $ PaddingVertical 4 4
             ][ textView $
                [ text $ offerText
-               , color Color.white900 
+               , color Color.white900
                ] <> FontStyle.body9 TypoGraphy
             ]
           , textView $
@@ -710,7 +710,7 @@ quoteListView push config =
                                 offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
                                 ratio = getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)
                                 enableOffer = ratio > 0.0 && not isBookAny
-                                finalPrice = if fromPrice /= toPrice && (fromPrice > 0.0) && (toPrice > 0.0) then "₹" <> EHC.parseFloat (fromPrice * ratio) 0 <> " - " <> "₹" <> EHC.parseFloat (toPrice * ratio) 0 else "₹" <> EHC.parseFloat (actualPrice * ratio) 0
+                                finalPrice = if fromPrice /= toPrice && (fromPrice > 0.0) && (toPrice > 0.0) then "€" <> EHC.parseFloat (fromPrice * ratio) 0 <> " - " <> "€" <> EHC.parseFloat (toPrice * ratio) 0 else "€" <> EHC.parseFloat (actualPrice * ratio) 0
                             ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services, actualPrice = finalPrice, enableOffer = enableOffer})
                         ) variantBasedList
                   else
@@ -733,7 +733,7 @@ quoteListView push config =
                                 offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
                                 ratio = getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)
                                 enableOffer = ratio > 0.0 && not isBookAny
-                                finalPrice = if fromPrice /= toPrice && (fromPrice > 0.0) && (toPrice > 0.0) then "₹" <> EHC.parseFloat (fromPrice * ratio) 0 <> " - " <> "₹" <> EHC.parseFloat (toPrice * ratio) 0 else "₹" <> EHC.parseFloat (actualPrice * ratio) 0
+                                finalPrice = if fromPrice /= toPrice && (fromPrice > 0.0) && (toPrice > 0.0) then "€" <> EHC.parseFloat (fromPrice * ratio) 0 <> " - " <> "€" <> EHC.parseFloat (toPrice * ratio) 0 else "€" <> EHC.parseFloat (actualPrice * ratio) 0
                             ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, activeIndex = config.activeIndex, services = services, actualPrice = finalPrice, enableOffer = enableOffer})
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
@@ -859,8 +859,8 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
               RENTAL -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Rental" <> " " <> name )
               INTER_CITY -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Intercity" <> " " <> name )
               AMBULANCE -> getString $ BOOK ( fromMaybe "" selectedItem.serviceTierName )
-              _ -> getString $ BOOK_FOR_ priceRange 
-    
+              _ -> getString $ BOOK_FOR_ priceRange
+
 
 filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)
 filterVariantAndEstimate configArray = fromMaybe [] $ do

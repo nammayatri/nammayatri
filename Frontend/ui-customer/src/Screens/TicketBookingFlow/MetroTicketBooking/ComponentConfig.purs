@@ -1,22 +1,22 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Screens.TicketBookingFlow.MetroTicketBooking.ComponentConfig where
 
 import Prelude
 import Components.GenericHeader as GenericHeader
-import Components.PrimaryButton as PrimaryButton 
+import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM
 import Styles.Colors as Color
@@ -30,7 +30,7 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Screens.Types as ST
 import Components.RequestInfoCard as InfoCard
-import Language.Strings 
+import Language.Strings
 import Resources.LocalizableV2.Strings (getEN)
 import Language.Types
 import Helpers.Utils (CityMetroConfig(..))
@@ -50,7 +50,7 @@ import Data.Int as INT
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
     config = GenericHeader.config
-    genericHeaderConfig' = config 
+    genericHeaderConfig' = config
         {
           height = WRAP_CONTENT
         , width = WRAP_CONTENT
@@ -60,7 +60,7 @@ metroTicketBookingHeaderConfig state = let
           , height = V 25
           , width = V 25
           , margin = Margin 16 16 16 16
-          } 
+          }
         , padding = PaddingVertical 5 5
         , textConfig {
             text = if state.props.currentStage == ST.OfferSelection then "Offers" else if state.props.ticketServiceType == BUS then getString BUY_BUS_TICKETS else getString BUY_METRO_TICKETS
@@ -80,13 +80,13 @@ updateButtonConfig state = let
     eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
     (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
     priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100.0) + price)
-    discountText = if price /= priceAfterExtraDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show price)  <> " </span>" <> " </strike>" <> " ") else ""
-    cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
+    discountText = if price /= priceAfterExtraDiscount then ("&nbsp;&nbsp; " <> " €" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show price)  <> " </span>" <> " </strike>" <> " ") else ""
+    cashbackText = if eventDiscountAmount > 0 then (" (" <> "€" <> show eventDiscountAmount <> " cashback)") else ""
     showFare = state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection
     showBusFareButton = (state.data.searchRideType /= BUS_DESTINATION) || (showFare && priceAfterExtraDiscount /= 0.0)
-    updateButtonConfig' = config 
-        { textConfig { textFromHtml = Just $ 
-            if (showFare &&  priceAfterExtraDiscount /= 0.0 && state.props.isButtonActive) then (getString BOOK_AND_PAY <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) 
+    updateButtonConfig' = config
+        { textConfig { textFromHtml = Just $
+            if (showFare &&  priceAfterExtraDiscount /= 0.0 && state.props.isButtonActive) then (getString BOOK_AND_PAY <> discountText <> " €" <> (show priceAfterExtraDiscount) <> cashbackText)
             else "Getting Fare ..."}
         , height = (V 48)
         , cornerRadius = 8.0
@@ -104,8 +104,8 @@ updateButtonConfig state = let
       extractDiscountCodes :: Array FRFSDiscountReq -> Array String
       extractDiscountCodes discounts = map (\(FRFSDiscountReq discountItem) -> discountItem.code) discounts
 
-      priceAfterExtraDiscount = 
-        state.data.ticketPrice * (INT.toNumber state.data.ticketCount) - ( 
+      priceAfterExtraDiscount =
+        state.data.ticketPrice * (INT.toNumber state.data.ticketCount) - (
             case DA.find (\discount -> discount.code == (fromMaybe "" $ DA.head appliedDiscountCodes)) state.data.discounts of
               Just discount -> discount.price.amount
               _ -> 0.0)
@@ -117,7 +117,7 @@ metroBannerConfig (CityMetroConfig cityMetroConfig) state =
     appName = fromMaybe state.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
     title' = if (metroBookingConfigResp.isEventOngoing == Just true) then (getString $ METRO_FREE_TICKET_EVENT $ getNumberWithSuffix $ fromMaybe 0 metroBookingConfigResp.freeTicketInterval) else getString $ EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName
-    actionText' = config.actionText { 
+    actionText' = config.actionText {
                       text = if (metroBookingConfigResp.isEventOngoing == Just true) then (getString $ METRO_FREE_TICKET_EVENT_DESC (getNumberWithSuffix $ fromMaybe 0 metroBookingConfigResp.freeTicketInterval) (maybe "" show metroBookingConfigResp.maxFreeTicketCashback)) else ""
                     , textColor = Color.metroBlue
                     , style = FontStyle.Tags
@@ -134,7 +134,7 @@ metroBannerConfig (CityMetroConfig cityMetroConfig) state =
       , title = title'
       , titleColor = cityMetroConfig.bannerTextColor
       , padding = PaddingLeft 5
-      , actionTextVisibility = metroBookingConfigResp.isEventOngoing == Just true 
+      , actionTextVisibility = metroBookingConfigResp.isEventOngoing == Just true
       , cornerRadius = 8.0
       , imageUrl = imageUrl'
       , imageMargin = Margin 18 6 6 6
@@ -147,7 +147,7 @@ metroTimeErrorPopupConfig :: ST.MetroTicketBookingScreenState -> CityMetroConfig
 metroTimeErrorPopupConfig state (CityMetroConfig cityMetroConfig) = let
   requestInfoCardConfig' =  InfoCard.config{
     title {
-      text = getString METRO_BOOKING_TIMINGS, 
+      text = getString METRO_BOOKING_TIMINGS,
       accessibilityHint = "Metro Booking Timings"
     }
   , primaryText {

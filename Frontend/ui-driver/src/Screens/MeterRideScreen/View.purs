@@ -243,7 +243,7 @@ rateCardView push state =
                                 [ textView
                                     $ [ height WRAP_CONTENT
                                       , width MATCH_PARENT
-                                      , text $ "₹" <> show (state.props.rateCardConfig.sliderFare)
+                                      , text $ "€" <> show (state.props.rateCardConfig.sliderFare)
                                       , visibility INVISIBLE
                                       ]
                                     <> FontStyle.priceFont TypoGraphy
@@ -258,7 +258,7 @@ rateCardView push state =
                                 [ textView
                                     $ [ height WRAP_CONTENT
                                       , width MATCH_PARENT
-                                      , text $ "₹" <> show state.props.rateCardConfig.ratePerKM <> "/km"
+                                      , text $ "€" <> show state.props.rateCardConfig.ratePerKM <> "/km"
                                       , visibility INVISIBLE
                                       ]
                                     <> FontStyle.body3 TypoGraphy
@@ -274,7 +274,7 @@ rateCardView push state =
                             , orientation VERTICAL
                             ]
                             [ textView
-                                $ [ text $ "₹" <> show (state.props.rateCardConfig.sliderFare)
+                                $ [ text $ "€" <> show (state.props.rateCardConfig.sliderFare)
                                   , height WRAP_CONTENT
                                   , width MATCH_PARENT
                                   , color Color.black800
@@ -283,7 +283,7 @@ rateCardView push state =
                                   ]
                                 <> FontStyle.priceFont TypoGraphy
                             , textView
-                                $ [ text $ "₹" <> show state.props.rateCardConfig.ratePerKM <> "/km"
+                                $ [ text $ "€" <> show state.props.rateCardConfig.ratePerKM <> "/km"
                                   , height WRAP_CONTENT
                                   , width MATCH_PARENT
                                   , color Color.black500
@@ -1086,7 +1086,7 @@ fareView push state =
             , padding $ Padding 0 2 14 0
             ]
             [ textView
-                $ [ text "₹"
+                $ [ text "€"
                   , color Color.black600
                   , gravity TOP_VERTICAL
                   ]

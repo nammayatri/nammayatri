@@ -4,7 +4,7 @@ import Prelude
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Array (mapWithIndex, (!!), elem)
-import Data.Maybe 
+import Data.Maybe
 import Data.String as DS
 import Helpers.Utils as HU
 import Data.Int
@@ -25,7 +25,7 @@ import Engineering.Helpers.Utils as EHU
 type TipConfig = {
   customerTipArray :: Array String,
   customerTipArrayWithValues :: Array Int
-} 
+}
 
 type TipVehicleConfig = {
   sedan :: TipConfig,
@@ -70,13 +70,13 @@ mkTipConfig customerTipArrayWithValues = {
 }
 
 getTips :: Array Int -> Array String
-getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
-                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
+getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP)
+                                           else "€" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
   where
     emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
 
 yatriSathiConfig :: String -> TipConfig
-yatriSathiConfig variant = 
+yatriSathiConfig variant =
   case variant of
     "BIKE" -> mkTipConfig [0, 10, 20, 30]
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
@@ -89,7 +89,7 @@ getTipViewProps tipViewProps vehicleVariant smartTipReason smartTipSuggestion = 
       tipConfig = getTipConfig vehicleVariant
       customerTipArrWithValues = if smartTipSuggestion == Nothing then tipConfig.customerTipArrayWithValues else if smartTipSuggestionValue <= 10 then [0, 10, 20, 30] else [0, roundUpToNearest10 (smartTipSuggestionValue `div` 2), smartTipSuggestionValue, roundUpToNearest10 (ceil (toNumber smartTipSuggestionValue * 1.5))]
       customerTipArray = if smartTipSuggestion == Nothing then tipConfig.customerTipArray else getTips customerTipArrWithValues
-      suggestedActiveIndex = if smartTipSuggestion == Nothing then Nothing else if smartTipSuggestionValue <= 10 then Just 1 else Just 2  
+      suggestedActiveIndex = if smartTipSuggestion == Nothing then Nothing else if smartTipSuggestionValue <= 10 then Just 1 else Just 2
       tipViewPropsModified = tipViewProps{suggestedActiveIndex = suggestedActiveIndex, customerTipArray = if tipViewProps.customerTipArray == [] then customerTipArray else tipViewProps.customerTipArray, customerTipArrayWithValues = if tipViewProps.customerTipArrayWithValues == [] then customerTipArrWithValues else tipViewProps.customerTipArrayWithValues}
   case tipViewProps.stage of
     DEFAULT -> do
@@ -116,19 +116,19 @@ getTipViewText :: TipViewProps -> String-> String -> String
 getTipViewText tipViewProps vehicleVariant prefixString = do
   let tipConfig = getTipConfig vehicleVariant
       tip = show (fromMaybe 0 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))
-  if tip == "0" then 
+  if tip == "0" then
     case tipViewProps.stage of
       TIP_AMOUNT_SELECTED -> getString CONTINUE_SEARCH_WITH_NO_TIP
       DEFAULT -> getString CONTINUE_SEARCH_WITH_NO_TIP
       _ -> getString SEARCHING_WITH_NO_TIP
-  else  
+  else
     case (getLanguageLocale languageKey) of
-      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " ₹" else " ₹")<>tip<>" "<> (getString TIP)
-      _ -> "₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
+      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " €" else " €")<>tip<>" "<> (getString TIP)
+      _ -> "€"<>tip<>" "<>(getString TIP) <> " " <> prefixString
 
 isTipEnabled :: CustomerTip -> String -> Boolean
 isTipEnabled tipConfig vehicleVariant =
-  case vehicleVariant of 
+  case vehicleVariant of
     "AUTO_RICKSHAW" -> tipConfig.auto
     _ -> tipConfig.cabs
 

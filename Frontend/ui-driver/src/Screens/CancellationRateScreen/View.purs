@@ -242,7 +242,7 @@ cancellationRateData state push =
             , background Color.lightGreyShade
             ]
             []
-        , infoTileView state { primaryText: "₹ " <> EHC.formatCurrencyWithCommas (show state.data.missedEarnings), secondaryText: "", subText: getString TOTAL_EARNINGS_MISSED, margin: Margin 0 0 0 0 }
+        , infoTileView state { primaryText: "€ " <> EHC.formatCurrencyWithCommas (show state.data.missedEarnings), secondaryText: "", subText: getString TOTAL_EARNINGS_MISSED, margin: Margin 0 0 0 0 }
         ]
       ]
     ]

@@ -15,7 +15,7 @@ function getAppLink(os) {
     }
     else {
       return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
-      
+
     }
   }
   else if (lowerCaseAppName.includes("mana")) {
@@ -62,7 +62,7 @@ const nammaYatriConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "currency": "₹",
+    "currency": "€",
     "alertDialogPrimaryColor": "#2194FF",
     "logs": ["JUSPAY", "FIREBASE", "CLEVERTAP"],
     "primaryButtonCornerRadius": 8.0,
@@ -98,7 +98,7 @@ const nammaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "Your feedback helps us improve the Namma Yatri experience",
       "LEARN_HOW_TEXT": "Learn how NammaYatri caters to your needs",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest €10",
       "FARE_INFO_TEXT": "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Namma Yatri.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE": "from Namma Yatri Zone",
@@ -113,7 +113,7 @@ const nammaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "वेबसाइट: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "आपकी प्रतिक्रिया हमें नम्मा यात्री अनुभव को बेहतर बनाने में मदद करती है",
       "LEARN_HOW_TEXT": "जानें कि नम्मा यात्री आपकी आवश्यकताओं को कैसे पूरा करता है",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम €10 में राउंड किया जाता है",
       "FARE_INFO_TEXT": "किराया कर्नाटक राज्य सरकार के नियमों पर आधारित है जिसमें ऑटो चालक की संख्या को शामिल किया गया है और यह नम्मा यात्री द्वारा निर्धारित नहीं किया जाता है।",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
       "TAXI_FROM_ZONE": "नम्मा यात्री जोन से",
@@ -128,7 +128,7 @@ const nammaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮ್ಮ ಯಾತ್ರಿ ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ",
       "LEARN_HOW_TEXT": "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಅಗತ್ಯಗಳನ್ನು ಹೇಗೆ ಪೂರೈಸುತ್ತದೆ ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು ₹10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು €10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ",
       "FARE_INFO_TEXT": "ದರವು ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ನಿಯಮಗಳ ಅಂಶವನ್ನು ಆಧರಿಸಿದ ಆಟೋ ಚಾಲಕರ ಸೇರ್ಪಡೆಗಳನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ನಮ್ಮ ಯಾತ್ರಿ ನಿರ್ಧರಿಸುವುದಿಲ್ಲ",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
       "TAXI_FROM_ZONE": " ಹತ್ತಿ",
@@ -143,7 +143,7 @@ const nammaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "இணையதளம்: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "உங்கள் கருத்து நம்ம யாத்ரி அனுபவத்தை மேம்படுத்த உதவுகிறது",
       "LEARN_HOW_TEXT": "நம்ம யாத்ரி உங்கள் தேவைகளை எப்படிப் பூர்த்தி செய்கிறது",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள ₹10 வரை கணக்கிடப்படும்",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள €10 வரை கணக்கிடப்படும்",
       "FARE_INFO_TEXT": "கர்நாடக மாநில அரசு விதிகளின் அடிப்படையிலான ஆட்டோ ஓட்டுநர் சேர்க்கையின் அடிப்படையில் கட்டணம் நிர்ணயிக்கப்பட்டுள்ளது, மேலும் இது நம்ம யாத்ரியால் நிர்ணயிக்கப்படவில்லை.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "சவாரிகளைத் தேடத் தொடங்க, அமைப்புகள் பயன்பாட்டிலிருந்து நம்ம யாத்ரிக்கான இருப்பிட அனுமதிகளை இயக்கவும்.",
       "TAXI_FROM_ZONE": "நம்ம யாத்ரி மண்டலத்திலிருந்து",
@@ -158,7 +158,7 @@ const nammaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "వెబ్‌సైట్: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "మీ అభిప్రాయం యాప్ అనుభవాన్ని మెరుగుపరచడంలో మాకు సహాయపడుతుంది",
       "LEARN_HOW_TEXT": "నమ్మ యాత్రి మీ అవసరాలను ఎలా తీరుస్తుందో తెలుసుకోండి",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప ₹10కి లెక్కించబడతాయి",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప €10కి లెక్కించబడతాయి",
       "FARE_INFO_TEXT": "ఈ ఛార్జీ కర్ణాటక రాష్ట్ర ప్రభుత్వ నిబంధనల ప్రకారం ఆటో డ్రైవర్ చేర్పులపై ఆధారపడి ఉంటుంది మరియు ఇది నమ్మ యాత్రి ద్వారా నిర్ణయించబడదు.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "రైడ్‌ల కోసం వెతకడం ప్రారంభించడానికి దయచేసి యాప్ సెట్టింగ్‌ల నుండి స్థాన అనుమతులను ప్రారంభించండి.",
       "TAXI_FROM_ZONE": "నమ్మాయాత్రి జోన్ నుండి",
@@ -441,7 +441,7 @@ const odishaYatriConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "currency": "₹",
+    "currency": "€",
     "alertDialogPrimaryColor": "#2194FF",
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP","META"],
     "primaryButtonCornerRadius" : 8.0,
@@ -477,7 +477,7 @@ const odishaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Namma Yatri experience",
       "LEARN_HOW_TEXT" : "Learn how NammaYatri caters to your needs",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest €10",
       "FARE_INFO_TEXT" : "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Namma Yatri.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE" : "from Namma Yatri Zone",
@@ -492,7 +492,7 @@ const odishaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US" : "आपकी प्रतिक्रिया हमें नम्मा यात्री अनुभव को बेहतर बनाने में मदद करती है",
       "LEARN_HOW_TEXT" : "जानें कि नम्मा यात्री आपकी आवश्यकताओं को कैसे पूरा करता है",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम €10 में राउंड किया जाता है",
       "FARE_INFO_TEXT" : "किराया कर्नाटक राज्य सरकार के नियमों पर आधारित है जिसमें ऑटो चालक की संख्या को शामिल किया गया है और यह नम्मा यात्री द्वारा निर्धारित नहीं किया जाता है।",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
       "TAXI_FROM_ZONE" : "नम्मा यात्री जोन से",
@@ -507,7 +507,7 @@ const odishaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US" : "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮ್ಮ ಯಾತ್ರಿ ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ",
       "LEARN_HOW_TEXT" : "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಅಗತ್ಯಗಳನ್ನು ಹೇಗೆ ಪೂರೈಸುತ್ತದೆ ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು ₹10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು €10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ",
       "FARE_INFO_TEXT" : "ದರವು ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ನಿಯಮಗಳ ಅಂಶವನ್ನು ಆಧರಿಸಿದ ಆಟೋ ಚಾಲಕರ ಸೇರ್ಪಡೆಗಳನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ನಮ್ಮ ಯಾತ್ರಿ ನಿರ್ಧರಿಸುವುದಿಲ್ಲ",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
       "TAXI_FROM_ZONE" : " ಹತ್ತಿ",
@@ -522,7 +522,7 @@ const odishaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "இணையதளம்: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US" : "உங்கள் கருத்து நம்ம யாத்ரி அனுபவத்தை மேம்படுத்த உதவுகிறது",
       "LEARN_HOW_TEXT" : "நம்ம யாத்ரி உங்கள் தேவைகளை எப்படிப் பூர்த்தி செய்கிறது",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள ₹10 வரை கணக்கிடப்படும்",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள €10 வரை கணக்கிடப்படும்",
       "FARE_INFO_TEXT" : "கர்நாடக மாநில அரசு விதிகளின் அடிப்படையிலான ஆட்டோ ஓட்டுநர் சேர்க்கையின் அடிப்படையில் கட்டணம் நிர்ணயிக்கப்பட்டுள்ளது, மேலும் இது நம்ம யாத்ரியால் நிர்ணயிக்கப்படவில்லை.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "சவாரிகளைத் தேடத் தொடங்க, அமைப்புகள் பயன்பாட்டிலிருந்து நம்ம யாத்ரிக்கான இருப்பிட அனுமதிகளை இயக்கவும்.",
       "TAXI_FROM_ZONE" : "நம்ம யாத்ரி மண்டலத்திலிருந்து",
@@ -537,7 +537,7 @@ const odishaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "వెబ్‌సైట్: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "మీ అభిప్రాయం యాప్ అనుభవాన్ని మెరుగుపరచడంలో మాకు సహాయపడుతుంది",
       "LEARN_HOW_TEXT": "నమ్మ యాత్రి మీ అవసరాలను ఎలా తీరుస్తుందో తెలుసుకోండి",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప ₹10కి లెక్కించబడతాయి",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప €10కి లెక్కించబడతాయి",
       "FARE_INFO_TEXT": "ఈ ఛార్జీ కర్ణాటక రాష్ట్ర ప్రభుత్వ నిబంధనల ప్రకారం ఆటో డ్రైవర్ చేర్పులపై ఆధారపడి ఉంటుంది మరియు ఇది నమ్మ యాత్రి ద్వారా నిర్ణయించబడదు.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "రైడ్‌ల కోసం వెతకడం ప్రారంభించడానికి దయచేసి యాప్ సెట్టింగ్‌ల నుండి స్థాన అనుమతులను ప్రారంభించండి.",
       "TAXI_FROM_ZONE": "నమ్మాయాత్రి జోన్ నుండి",
@@ -600,7 +600,7 @@ const odishaYatriConfig = function () {
     , "specialLocationView" : false
     , "geoCoder": {
       "enableLLtoAddress" : true
-      , "enableAddressToLL" : false 
+      , "enableAddressToLL" : false
     }
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
@@ -618,8 +618,8 @@ const odishaYatriConfig = function () {
     , "enableWhatsappOTP" : ["BD", "US"]
     , "countryCodeConfig" : [
       {
-        "countryName" : "India" 
-      , "countryCode"  : "+91" 
+        "countryName" : "India"
+      , "countryCode"  : "+91"
       , "countryShortCode" : "IN"
       }
     ]
@@ -635,8 +635,8 @@ const odishaYatriConfig = function () {
     , "metroTicketingConfig" : [
       { "cityName" : "kochi"
       , "cityCode" : "std:0484"
-      , "customEndTime" : "23:59:59" 
-      , "customDates" : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]       
+      , "customEndTime" : "23:59:59"
+      , "customDates" : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]
       , "metroStationTtl" : 10080
       , "metroHomeBannerImage" : "ny_ic_kochi_metro_banner"
       , "metroBookingBannerImage" : "ny_ic_kochi_metro_banner"
@@ -649,8 +649,8 @@ const odishaYatriConfig = function () {
       },
       { "cityName" : "chennai"
       , "cityCode" : "std:040"
-      , "customEndTime" : "01:00:00" 
-      , "customDates" : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
+      , "customEndTime" : "01:00:00"
+      , "customDates" : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"]
       , "metroStationTtl" : 10080
       , "metroHomeBannerImage" : "ny_ic_chennai_metro_discount_banner"
       , "metroBookingBannerImage" : "ny_ic_chennai_metro_banner"
@@ -662,7 +662,7 @@ const odishaYatriConfig = function () {
       }
       }
     ]
-    , "estimateAndQuoteConfig" : 
+    , "estimateAndQuoteConfig" :
       { "variantTypes" : [["AUTO_RICKSHAW"], ["SUV"], ["SEDAN", "TAXI_PLUS"], ["HATCHBACK"], ["TAXI"], ["BOOK_ANY"], ["BIKE"],["SUV_PLUS"], ["AMBULANCE_VENTILATOR"],["AMBULANCE_AC_OXY"], ["AMBULANCE_AC"],["AMBULANCE_TAXI_OXY"] ,["AMBULANCE_TAXI"]]
       , "variantOrder" : ["BIKE", "BOOK_ANY", "HATCHBACK", "TAXI", "SEDAN", "TAXI_PLUS", "SUV" , "SUV_PLUS","AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI"]
       , "variantInfo" : {
@@ -751,7 +751,7 @@ const odishaYatriConfig = function () {
       , "showNearByDrivers": false
       , "enableBookingPreference": true
       , "textColor": "#6D7280"
-      , "showInfoIcon" : true 
+      , "showInfoIcon" : true
       }
     , "rideCompletedCardConfig" : {
         "topCard" : {
@@ -812,7 +812,7 @@ const manaYatriConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "currency": "₹",
+    "currency": "€",
     "alertDialogPrimaryColor": "#2194FF",
     "logs": ["JUSPAY", "FIREBASE", "CLEVERTAP"],
     "primaryButtonCornerRadius": 8.0,
@@ -848,7 +848,7 @@ const manaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "Your feedback helps us improve the Namma Yatri experience",
       "LEARN_HOW_TEXT": "Learn how NammaYatri caters to your needs",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest €10",
       "FARE_INFO_TEXT": "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Namma Yatri.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE": "from Namma Yatri Zone",
@@ -863,7 +863,7 @@ const manaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "वेबसाइट: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "आपकी प्रतिक्रिया हमें नम्मा यात्री अनुभव को बेहतर बनाने में मदद करती है",
       "LEARN_HOW_TEXT": "जानें कि नम्मा यात्री आपकी आवश्यकताओं को कैसे पूरा करता है",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम €10 में राउंड किया जाता है",
       "FARE_INFO_TEXT": "किराया कर्नाटक राज्य सरकार के नियमों पर आधारित है जिसमें ऑटो चालक की संख्या को शामिल किया गया है और यह नम्मा यात्री द्वारा निर्धारित नहीं किया जाता है।",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
       "TAXI_FROM_ZONE": "नम्मा यात्री जोन से",
@@ -878,7 +878,7 @@ const manaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮ್ಮ ಯಾತ್ರಿ ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ",
       "LEARN_HOW_TEXT": "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಅಗತ್ಯಗಳನ್ನು ಹೇಗೆ ಪೂರೈಸುತ್ತದೆ ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು ₹10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು €10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ",
       "FARE_INFO_TEXT": "ದರವು ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ನಿಯಮಗಳ ಅಂಶವನ್ನು ಆಧರಿಸಿದ ಆಟೋ ಚಾಲಕರ ಸೇರ್ಪಡೆಗಳನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ನಮ್ಮ ಯಾತ್ರಿ ನಿರ್ಧರಿಸುವುದಿಲ್ಲ",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
       "TAXI_FROM_ZONE": " ಹತ್ತಿ",
@@ -893,7 +893,7 @@ const manaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "இணையதளம்: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "உங்கள் கருத்து நம்ம யாத்ரி அனுபவத்தை மேம்படுத்த உதவுகிறது",
       "LEARN_HOW_TEXT": "நம்ம யாத்ரி உங்கள் தேவைகளை எப்படிப் பூர்த்தி செய்கிறது",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள ₹10 வரை கணக்கிடப்படும்",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள €10 வரை கணக்கிடப்படும்",
       "FARE_INFO_TEXT": "கர்நாடக மாநில அரசு விதிகளின் அடிப்படையிலான ஆட்டோ ஓட்டுநர் சேர்க்கையின் அடிப்படையில் கட்டணம் நிர்ணயிக்கப்பட்டுள்ளது, மேலும் இது நம்ம யாத்ரியால் நிர்ணயிக்கப்படவில்லை.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "சவாரிகளைத் தேடத் தொடங்க, அமைப்புகள் பயன்பாட்டிலிருந்து நம்ம யாத்ரிக்கான இருப்பிட அனுமதிகளை இயக்கவும்.",
       "TAXI_FROM_ZONE": "நம்ம யாத்ரி மண்டலத்திலிருந்து",
@@ -908,7 +908,7 @@ const manaYatriConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "వెబ్‌సైట్: <u>https://nammayatri.in/</u>",
       "YOUR_FEEDBACK_HELPS_US": "మీ అభిప్రాయం యాప్ అనుభవాన్ని మెరుగుపరచడంలో మాకు సహాయపడుతుంది",
       "LEARN_HOW_TEXT": "నమ్మ యాత్రి మీ అవసరాలను ఎలా తీరుస్తుందో తెలుసుకోండి",
-      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప ₹10కి లెక్కించబడతాయి",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప €10కి లెక్కించబడతాయి",
       "FARE_INFO_TEXT": "ఈ ఛార్జీ కర్ణాటక రాష్ట్ర ప్రభుత్వ నిబంధనల ప్రకారం ఆటో డ్రైవర్ చేర్పులపై ఆధారపడి ఉంటుంది మరియు ఇది నమ్మ యాత్రి ద్వారా నిర్ణయించబడదు.",
       "PLEASE_ENABLE_LOCATION_PERMISSION": "రైడ్‌ల కోసం వెతకడం ప్రారంభించడానికి దయచేసి యాప్ సెట్టింగ్‌ల నుండి స్థాన అనుమతులను ప్రారంభించండి.",
       "TAXI_FROM_ZONE": "నమ్మాయాత్రి జోన్ నుండి",

@@ -208,7 +208,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
   in
       { vehicleServiceTierImageUrl : fetchImage FF_COMMON_ASSET $ getVehicleServiceTierImage vehicleServiceTier
       , rideAmount : (case currency of
-                      INR -> "₹"
+                      INR -> "€"
                       USD -> "$"
                       EUR -> "€") <> (show  (INT.ceil estimatedFare))
       , vehicleInfo :

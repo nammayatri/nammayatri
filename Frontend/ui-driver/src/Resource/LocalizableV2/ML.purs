@@ -628,9 +628,9 @@ getMl =
     , n_day_free_trial_activated: (\day -> day <> " ദിവസത്തെ സൗജന്യ ട്രയൽ സജീവമാക്കി!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "ആദ്യ " <> days <> " ദിവസങ്ങളിൽ സൗജന്യമായി " <> rides <> " യാത്രകൾ എടുക്കുക")
     , every_ride_at_zero_commission: "ZERO കമ്മീഷനിലെ ഓരോ റൈഡും!"
-    , earn_upto_per_day: "ഒരു ദിവസം ₹{} വരെ സമ്പാദിക്കുക!"
+    , earn_upto_per_day: "ഒരു ദിവസം €{} വരെ സമ്പാദിക്കുക!"
     , how_this_works: "ഇത് എങ്ങനെ പ്രവർത്തിക്കുന്നു"
-    , sign_up_for_autopay_by_paying_just: "വെറും ₹1 നൽകി സ്വയമേവ പണമടയ്ക്കാൻ സൈൻ അപ്പ് ചെയ്യുക"
+    , sign_up_for_autopay_by_paying_just: "വെറും €1 നൽകി സ്വയമേവ പണമടയ്ക്കാൻ സൈൻ അപ്പ് ചെയ്യുക"
     , get_reminded_about_your_plan_setup: "നിങ്ങളുടെ പ്ലാൻ സജ്ജീകരണത്തെക്കുറിച്ച് ഓർമ്മപ്പെടുത്തുക"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "ദിവസം " <> days <> " അല്ലെങ്കിൽ " <> rides <> " യാത്രകൾ: സൗജന്യ പരീക്ഷണ ഓർമ്മപ്പെടുത്തൽ")
     , plan_starts_n_days_m_rides: (\days rides -> "ദിവസം " <> days <> " അല്ലെങ്കിൽ " <> rides <> " യാത്രകൾ: പദ്ധതി ആരംഭിക്കുന്നു")
@@ -668,7 +668,7 @@ getMl =
     , manage_plan: "പ്ലാൻ നിയന്ത്രിക്കുക"
     , view_autopay_details: "ഓട്ടോപേ വിശദാംശങ്ങൾ കാണുക"
     , switch_and_save: "സ്വിച്ച് ചെയ്ത് സംരക്ഷിക്കുക"
-    , switch_and_save_desc: "നിങ്ങൾ ഇന്ന് 7-ലധികം റൈഡുകൾ പൂർത്തിയാക്കി. ഡെയ്‌ലി അൺലിമിറ്റഡ് പ്ലാനിലേക്ക് മാറുന്നതിലൂടെ ₹10 വരെ ലാഭിക്കൂ"
+    , switch_and_save_desc: "നിങ്ങൾ ഇന്ന് 7-ലധികം റൈഡുകൾ പൂർത്തിയാക്കി. ഡെയ്‌ലി അൺലിമിറ്റഡ് പ്ലാനിലേക്ക് മാറുന്നതിലൂടെ €10 വരെ ലാഭിക്കൂ"
     , switch_now: "ഇപ്പോൾ മാറുക"
     , payment_mode_changed_to_manual: "പേയ്‌മെന്റ് മോഡ് മാനുവലിലേക്ക് മാറ്റി"
     , payment_mode_changed_to_manual_desc: "നിങ്ങളുടെ UPI ഓട്ടോപേ താൽക്കാലികമായി നിർത്തി. നിങ്ങൾക്ക് കുടിശ്ശിക നേരിട്ട് തീർക്കാനാകും."
@@ -718,8 +718,8 @@ getMl =
     , daily_unlimited: "ദിവസേന അൺലിമിറ്റഡ്"
     , daily_per_ride: "ദിവസേന ഓരോ റൈഡിനും"
     , daily_unlimited_plan_desc: "എല്ലാ ദിവസവും പരിധിയില്ലാത്ത റൈഡുകൾ ആസ്വദിക്കൂ"
-    , daily_per_ride_plan_desc: (\price -> "പ്രതിദിനം പരമാവധി ₹" <> price <> " വരെ")
-    , pay_to_join_this_plan: "പ്ലാനിൽ ചേരാൻ ₹1 അടയ്ക്കുക"
+    , daily_per_ride_plan_desc: (\price -> "പ്രതിദിനം പരമാവധി €" <> price <> " വരെ")
+    , pay_to_join_this_plan: "പ്ലാനിൽ ചേരാൻ €1 അടയ്ക്കുക"
     , offers_not_applicable: "പൂർത്തിയാക്കിയില്ലെങ്കിൽ ഓഫറുകൾ ബാധകമല്ല"
     , paused_str: "താൽക്കാലികമായി നിർത്തി"
     , pending_str: "തീർപ്പാക്കാത്തത്"
@@ -814,8 +814,8 @@ getMl =
     , scheduled: "ഷെഡ്യൂൾഡ്"
     , one_time_settlement: "ഒറ്റത്തവണ സെറ്റിൽമെന്റ് നടത്തുക"
     , payment_scheduled: "പേയ്‌മെന്റ് ഷെഡ്യൂൾ ചെയ്തു"
-    , offer_card_banner_title: (\_ date price -> "ഓട്ടോപേ സജ്ജീകരിച്ച് " <> date <> " വരെ പ്രതിദിനം ₹" <> price <> " മാത്രം നൽകുക")
-    , offer_card_banner_desc: "നവംബർ 1 വരെ പ്രതിദിനം ₹15 മാത്രം നൽകുക"
+    , offer_card_banner_title: (\_ date price -> "ഓട്ടോപേ സജ്ജീകരിച്ച് " <> date <> " വരെ പ്രതിദിനം €" <> price <> " മാത്രം നൽകുക")
+    , offer_card_banner_desc: "നവംബർ 1 വരെ പ്രതിദിനം €15 മാത്രം നൽകുക"
     , offer_card_banner_alert: "നിങ്ങളുടെ ഓട്ടോപേ സെറ്റപ്പ് തീർച്ചപ്പെടുത്തിയിട്ടില്ല!"
     , or: "അല്ലെങ്കിൽ"
     , collect_cash_directly: "നേരിട്ട് പണം സ്വികരിക്കുക"
@@ -1106,7 +1106,7 @@ getMl =
     , this_extra_amount_the_customer_will_pay: "നിങ്ങൾ {} മിനിറ്റിലധികം കാത്തിരുന്നതിനാൽ ഉപഭോക്താവ് നിങ്ങൾക്ക് നൽകുന്ന അധിക തുകയാണിത്"
     , ten_digit_mobile_number: "10 അക്ക മൊബൈൽ നമ്പർ"
     , booth_charges: "ബൂത്ത് ചാർജ്"
-    , booth_charges_included: "ബൂത്ത് ചാർജുകൾ ഉൾപ്പെടുന്നു: ₹{}"
+    , booth_charges_included: "ബൂത്ത് ചാർജുകൾ ഉൾപ്പെടുന്നു: €{}"
     , total_amount: "മൊത്തം തുക"
     , please_add_rc: "സവാരി ചെയ്യാൻ ദയവായി RC ചേർക്കുക"
     , location_cannot_be_added_while_goto_active: "Go-To പ്രവർത്തനക്ഷമമാക്കാത്തപ്പോൾ മാത്രമേ ഓപ്ഷൻ ലഭ്യമാകൂ"
@@ -1475,7 +1475,7 @@ getMl =
     , fare_for: (\limit -> limit <> "  ക്കുള്ള നിരക്ക്")
     , waiting_charge_limit: (\timeLimit -> timeLimit <> " മിനിറ്റുകൾക്കുശേഷം കാത്തിരുപ്പ് ചാർജുകൾ")
     , parking_charges_desc: "ഡ്രൈവർ tarafından സ്രെ ചെയ്കാത്തിട്ടുള്ള പാർക്കിംഗ് ചാർജുകൾ നിരക്കിൽ ഉൾപ്പെടുത്തിയിട്ടില്ല. ഇത് യാത്ര കഴിഞ്ഞ് ഡ്രൈവർക്കും യാത്രക്കാരനും തമ്മിൽ തീർപ്പാക്കണം."
-    , tip_can_be_added: (\maxTip -> "യാത്ര നിരക്കിൽ ₹" <> maxTip <> " വരെ ടിപ്പ് ചേർക്കാം.")
+    , tip_can_be_added: (\maxTip -> "യാത്ര നിരക്കിൽ €" <> maxTip <> " വരെ ടിപ്പ് ചേർക്കാം.")
     , day_time_charges: (\from till -> "പകൽ സമയ ചാർജുകൾ (" <> from <> " മുതൽ " <> till <> ")")
     , congestion_charges: "തിരക്ക് ചാർജ്*"
     , congestion_charges_desc: (\charges -> "*നിങ്ങളുടെ യാത്രയിൽ നിലവിൽ " <> charges <> "% തിരക്ക് ചാർജ് ബാധകമാണ്, ഡ്രൈവറുടെ സമയത്തിന് തിരക്കുള്ള സമയം പ്രതിപൂരിപ്പിക്കുന്നതിനോ നിങ്ങൾക്കായി കൂടുതൽ ഡ്രൈവർമാരെ ലഭ്യമാക്കുന്നതിനോ.")

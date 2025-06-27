@@ -4,7 +4,7 @@ import Prelude
 import Resources.LocalizableV2.Types
 
 
-getHi :: Keymap 
+getHi :: Keymap
 getHi = Keymap {
   safety: "सुरक्षा"
 , safety_check_in: "सुरक्षा जाँच"
@@ -358,7 +358,7 @@ getHi = Keymap {
 , nominal_fare: "वैकल्पिक ड्राइवर का अनुरोध*"
 , customer_cancellation_dues: "रद्दीकरण बकाया"
 , drivers_can_charge_an_additional_fare_upto: "* ड्राइवर वैकल्पिक रूप से ट्रैफ़िक, वापसी यात्रा की संभावना आदि जैसे अन्य कारकों को कवर करने के लिए बेस फेयर के 10% (निकटतम रु. 10 तक) का अनुरोध कर सकते हैं।"
-, waiting_charge_description: "°प्रतीक्षा शुल्क पहले {} मिनट के लिए शून्य है। उसके बाद आपसे प्रति मिनट प्रतीक्षा समय के लिए ₹{} शुल्क लिया जाएगा।"
+, waiting_charge_description: "°प्रतीक्षा शुल्क पहले {} मिनट के लिए शून्य है। उसके बाद आपसे प्रति मिनट प्रतीक्षा समय के लिए €{} शुल्क लिया जाएगा।"
 , waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. पहले 3 मिनट के लिए वेटिंग चार्ज शून्य है।\n 2. इसके बाद प्रति मिनट 1.5 रुपये का प्रतीक्षा शुल्क लागू होगा।")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "प्रतीक्षा के पहले "<> freeWaitingTime <>" मिनट के बाद " <> waitingCharge <>" प्रति मिनट की दर से लागू")
 , successful_onboard: (\_ -> "आपने नम्मा यात्री में सफलतापूर्वक साइन इन कर लिया है")
@@ -435,7 +435,7 @@ getHi = Keymap {
 , gender_str: "लिंग"
 , profile_completion: "प्रोफ़ाइल पूर्णता"
 , early_end_ride_charges: "जल्दी सवारी खत्म करने का शुल्क^"
-, early_end_ride_charges_description: "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम ₹50)।"
+, early_end_ride_charges_description: "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम €50)।"
 , cancel_ongoing_search: "क्या आप वाकई चल रही खोज को रद्द करना जारी रखना चाहते हैं?"
 , yes_try_again: "हाँ, पुन: प्रयास करें"
 , no_dont: "नहीं"
@@ -455,7 +455,7 @@ getHi = Keymap {
 , fare_update_policy: "किराया अपडेट नीति"
 , driver_additions_optional: "चालक जोड़ (वैकल्पिक)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "चालक यातायात को कवर करने, वापसी यात्रा की संभावना आदि के लिए अतिरिक्त बोली लगा सकता है"
-, driver_additions_are_calculated_at_rate: (\_ -> "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है")
+, driver_additions_are_calculated_at_rate: (\_ -> "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम €10 में राउंड किया जाता है")
 , driver_may_not_charge_this_additional_fare: "ध्यान दें: ड्राइवर पार्टनर यह अतिरिक्त किराया चार्ज कर सकते हैं या नहीं भी कर सकते हैं।"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:"
 , reason_change_in_route_a: "1.मार्ग में परिवर्तन: "
@@ -526,7 +526,7 @@ getHi = Keymap {
 , call_112: "112 पर कॉल करें"
 , call_emergency_centre: "आपातकालीन केंद्र को कॉल करें"
 , seats: "सीटें"
-, driver_addition_limits_are_in_increments: "ड्राइवर जोड़ने की सीमा ₹20 की वृद्धि में है"
+, driver_addition_limits_are_in_increments: "ड्राइवर जोड़ने की सीमा €20 की वृद्धि में है"
 , hatchback: "हैचबैक"
 , suv: "एसयूवी"
 , sedan: "सेडान"
@@ -1181,7 +1181,7 @@ getHi = Keymap {
 , other_provider_no_receipt: "अन्य प्रदाताओं द्वारा पूरी की गई सवारी के लिए ड्राइवर रसीद अभी तक उपलब्ध नहीं है।"
 , ride_fulfilled_by: (\merchantName -> "सवारी इसके द्वारा पूरी की गई:" <> merchantName)
 , congestion_charges: "भीड़भाड़ शुल्क*"
-, tip_can_be_added: (\maxTip -> "राइड किराये में उपेक्ष्य ₹" <> maxTip <> " तक की टिप जोड़ी जा सकती है।")
+, tip_can_be_added: (\maxTip -> "राइड किराये में उपेक्ष्य €" <> maxTip <> " तक की टिप जोड़ी जा सकती है।")
 , congestion_charges_desc: (\charges -> "*वर्तमान में आपकी सवारी पर "<> charges <>"% का भीड़भाड़ शुल्क लागू है ताकि ड्राइवर के उच्च ट्रैफिक में समय की भरपाई की जा सके या आपके लिए अधिक ड्राइवर उपलब्ध कराए जा सकें।")
 , ac_turned_off: "एसी बंद था"
 , estimates_expiry_error: "अनुमान समाप्त हो गया है। कृपया पुनः प्रयास करें।"
@@ -1347,9 +1347,9 @@ getHi = Keymap {
 , thrissur: "त्रिशूर"
 , trivandrum: "तिरुवनंतपुरम"
 , metro_free_ticket_event: (\freeTicketInterval -> "हर " <> freeTicketInterval <> " टिकट मुफ्त है!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "हर " <> freeTicketInterval <> " टिकट पर मुफ्त टिकट प्राप्त करें (अधिकतम ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "हर " <> freeTicketInterval <> " टिकट पर मुफ्त टिकट प्राप्त करें (अधिकतम €" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "अगली टिकट मुफ्त है"
-, free_ticket_available: (\maxCashback freeTicketCount -> "अनलॉक करें कैशबैक (अधिकतम ₹" <> maxCashback <> ") पर " <> freeTicketCount <> " टिकट!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "अनलॉक करें कैशबैक (अधिकतम €" <> maxCashback <> ") पर " <> freeTicketCount <> " टिकट!")
 , additional_charges_will_be_applicable: "अतिरिक्त शुल्क तब लागू हो सकता है जब ड्राइवर पिकअप स्थान के पास हो।"
 , parking_charges_included: (\amount -> amount <> " पार्किंग शुल्क शामिल")
 , app_toll_charges: "लागू टोल शुल्क किराए में शामिल हैं"
@@ -1773,21 +1773,21 @@ getHi = Keymap {
     , amount: "राशि"
     , download_app: "ऐप डाउनलोड करें"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "ऐप डाउनलोड करने और अपना इनवाइट कोड स्वचालित रूप से लागू करने के लिए QR कोड स्कैन करें"
-    , earn_:  \a ->  "₹" <> a <> " कमाएं"
-    ,  collect_:  \a ->  "₹" <> a <> " इकट्ठा करें"
+    , earn_:  \a ->  "€" <> a <> " कमाएं"
+    ,  collect_:  \a ->  "€" <> a <> " इकट्ठा करें"
     , add_upi_id: "UPI आईडी जोड़ें"
     , earnings: "आय"
     , enter_upi_id: "UPI ID दर्ज करें"
-    , you_get_50__they_get_50: \a b ->"आपको ₹" <> a <> " मिलेगा & उन्हें ₹" <> b <> " मिलेगा"
+    , you_get_50__they_get_50: \a b ->"आपको €" <> a <> " मिलेगा & उन्हें €" <> b <> " मिलेगा"
     , when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride: "जब आपका मित्र आपका रेफ़रल कोड उपयोग करता है \n और अपनी पहली सवारी करता है।"
     , read_terms_and_conditions: "नियम और शर्तें पढ़ें"
     , ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally: "यात्रा की दूरी, यात्रा का समय और कंपनी द्वारा आंतरिक रूप से संचालित धोखाधड़ी जाँच के आधार पर एक यात्रा को वैध माना जाता है।"
     , collect_earnings_now: "अब अपनी कमाई प्राप्त करें"
     , update_upi_id: "UPI आईडी अपडेट करें"
-    , youve_earned_50_for_taking_your_first_ride: \a ->"आपने अपनी पहली सवारी लेने के लिए ₹" <> a <> " कमा लिए हैं!"
-    , get_50_referral_benefit_for_your_first_ride: \a ->"अपनी पहली सवारी के लिए ₹" <> a <> " रेफरल लाभ प्राप्त करें!"
+    , youve_earned_50_for_taking_your_first_ride: \a ->"आपने अपनी पहली सवारी लेने के लिए €" <> a <> " कमा लिए हैं!"
+    , get_50_referral_benefit_for_your_first_ride: \a ->"अपनी पहली सवारी के लिए €" <> a <> " रेफरल लाभ प्राप्त करें!"
     , take_a_ride_now: "अभी यात्रा करें"
-    , take_a_ride__claim_50: \a ->  "एक सवारी करें और ₹" <> a <> " प्राप्त करें"
+    , take_a_ride__claim_50: \a ->  "एक सवारी करें और €" <> a <> " प्राप्त करें"
 , select_route : "मार्ग चुनें"
 , ac_bus : "एसी बस"
 , early_departure : "जल्दी प्रस्थान"

@@ -366,7 +366,7 @@ includedChargesCard state push =
     , margin $ MarginLeft 2
     ][
       textView $ [
-        text $ "Total Fare: ₹"  <> (show $ INT.ceil entity.estimatedFare)
+        text $ "Total Fare: €"  <> (show $ INT.ceil entity.estimatedFare)
       , width MATCH_PARENT
       , height WRAP_CONTENT
       , color Color.black800
@@ -412,23 +412,23 @@ includedChargesBox state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            [ if tripCategory.tag==CTA.InterCity then chargesTile (getString  PER_KM_CHARGE) ("₹"<>(show plannedKMFare.price)<>"/km") (plannedKMFare.price /= 0) state push else chargesTile (getString $ BASE_CHARGE "(10km, 1hr)") ("₹"<>(show perHourFare.price)) (perHourFare.price /= 0) state push
+            [ if tripCategory.tag==CTA.InterCity then chargesTile (getString  PER_KM_CHARGE) ("€"<>(show plannedKMFare.price)<>"/km") (plannedKMFare.price /= 0) state push else chargesTile (getString $ BASE_CHARGE "(10km, 1hr)") ("€"<>(show perHourFare.price)) (perHourFare.price /= 0) state push
             , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 ][]
             , (case tripCategory.tag of
-                CTA.InterCity -> chargesTile (getString EXTRA_TIME_CHARGE) ("₹"<>(show perMinFare.price)<>"/hr") (perMinFare.price /=0 ) state push
+                CTA.InterCity -> chargesTile (getString EXTRA_TIME_CHARGE) ("€"<>(show perMinFare.price)<>"/hr") (perMinFare.price /=0 ) state push
                 CTA.Rental -> chargesTile (getString TOLL_CHARGES) (getString ADDED_AT_END_OF_TRIP) true state push
-                _ -> chargesTile (getString $ FARE_FOR "4km -10km") ("₹"<>(show fare.price)<>"/km") (fare.price /= 0) state push)
+                _ -> chargesTile (getString $ FARE_FOR "4km -10km") ("€"<>(show fare.price)<>"/km") (fare.price /= 0) state push)
             , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 , visibility $ boolToVisibility $  tripCategory.tag /= CTA.InterCity
                 ][]
-            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_TIME_CHARGE) ("₹"<>(show perMinFare.price)<>"/min") (tripCategory.tag /= CTA.InterCity && perMinFare.price /= 0) state push else chargesTile (getString $ FARE_FOR "10+km") ("₹"<>(show fare.price)<>"/km") (tripCategory.tag /= CTA.InterCity && fare.price/= 0) state push
+            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_TIME_CHARGE) ("€"<>(show perMinFare.price)<>"/min") (tripCategory.tag /= CTA.InterCity && perMinFare.price /= 0) state push else chargesTile (getString $ FARE_FOR "10+km") ("€"<>(show fare.price)<>"/km") (tripCategory.tag /= CTA.InterCity && fare.price/= 0) state push
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -440,21 +440,21 @@ includedChargesBox state push =
             , orientation VERTICAL
             ]
             [ (case tripCategory.tag of
-                CTA.Rental -> chargesTile (getString ADD_ON_KM_CHARGE) ("₹"<>(show plannedKMFare.price)<>"/km") (plannedKMFare.price /= 0) state push
-                _ -> chargesTile (getString PICKUP_CHARGE) ("₹"<>(show deadKMFare.price)) (deadKMFare.price /= 0) state push)
+                CTA.Rental -> chargesTile (getString ADD_ON_KM_CHARGE) ("€"<>(show plannedKMFare.price)<>"/km") (plannedKMFare.price /= 0) state push
+                _ -> chargesTile (getString PICKUP_CHARGE) ("€"<>(show deadKMFare.price)) (deadKMFare.price /= 0) state push)
             , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 ][]
-            , if tripCategory.tag==CTA.InterCity then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("₹"<>(show unplannedKMFare.price)<>"/km") (unplannedKMFare.price /= 0) state push else chargesTile (getString WAITING_CHARGES) ("₹"<>(show waitPerMinFare.price)<>"/min") (waitPerMinFare.price /= 0) state push
+            , if tripCategory.tag==CTA.InterCity then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("€"<>(show unplannedKMFare.price)<>"/km") (unplannedKMFare.price /= 0) state push else chargesTile (getString WAITING_CHARGES) ("€"<>(show waitPerMinFare.price)<>"/min") (waitPerMinFare.price /= 0) state push
             , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 , visibility if tripCategory.tag == CTA.InterCity then GONE else VISIBLE
                 ][]
-            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("₹"<>(show unplannedKMFare.price)<>"/km") (tripCategory.tag /= CTA.InterCity && unplannedKMFare.price/=0) state push else chargesTile (getString TOLL_CHARGES) ("₹"<>(show fare.price)) (tripCategory.tag /= CTA.InterCity && fare.price /= 0) state push
+            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("€"<>(show unplannedKMFare.price)<>"/km") (tripCategory.tag /= CTA.InterCity && unplannedKMFare.price/=0) state push else chargesTile (getString TOLL_CHARGES) ("€"<>(show fare.price)) (tripCategory.tag /= CTA.InterCity && fare.price /= 0) state push
             ]
         ]
 

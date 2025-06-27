@@ -160,7 +160,7 @@ public class RideRequestActivity extends AppCompatActivity {
             }
             SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             int negotiationUnit = rideRequestBundle.getInt("driverStepFeeWithCurrency", Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10")));
-  
+
             double srcLat = rideRequestBundle.getDouble("srcLat");
             double srcLng = rideRequestBundle.getDouble("srcLng");
             double destLat = rideRequestBundle.getDouble("destLat");
@@ -277,9 +277,9 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
                 holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
-                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "€") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
-                holder.petTagText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getPetCharges() + " " + getString(R.string.pet));
+                holder.petTagText.setText(sharedPref.getString("CURRENCY", "€") + " " + model.getPetCharges() + " " + getString(R.string.pet));
                 holder.petTag.setVisibility(model.getPetCharges() > 0 ? View.VISIBLE : View.GONE);
                 holder.congestionTagText.setText(model.getCongestionCharges() + " " + getString(R.string.extra));
                 holder.congestionTag.setVisibility(model.getCongestionCharges() > 0 ? View.VISIBLE : View.GONE);
@@ -704,7 +704,7 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
                 if (i < sheetArrayList.size()) {
                     shimmerTipList.get(i).setVisibility(View.VISIBLE);
                     updateTopBarBackground(i);
-                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "€") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                     updateTopBar(i);
                 } else {
@@ -774,7 +774,7 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
             default:
                 if (sheetArrayList.get(i).getCustomerTip() > 0 || sheetArrayList.get(i).getCongestionCharges() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : sheetArrayList.get(i).getCongestionCharges() > 0 ? sharedPref.getString("CURRENCY", "₹") + sharedPref.getString("CURRENCY", "₹") : "Favourite"));
+                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : sheetArrayList.get(i).getCongestionCharges() > 0 ? sharedPref.getString("CURRENCY", "€") + sharedPref.getString("CURRENCY", "€") : "Favourite"));
                     indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
                     shimmerTipList.get(i).setBackground(isSpecialZone ? DrawableUtil.createRoundedDrawable(Color.parseColor("#53BB6F"), cornerRadii) : DrawableUtil.createRoundedDrawable(sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.yellow900) : sheetArrayList.get(i).getCongestionCharges() > 0 ? getColor(R.color.orange900) : getColor(R.color.blue800), cornerRadii));
                 } else {
@@ -801,7 +801,7 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
 
     private void updateProgressBars(boolean animated) {
         if (sheetArrayList == null) return;
-        try {    
+        try {
         progressIndicatorsList = new ArrayList<>(Arrays.asList(
                 findViewById(R.id.progress_indicator_1),
                 findViewById(R.id.progress_indicator_2),

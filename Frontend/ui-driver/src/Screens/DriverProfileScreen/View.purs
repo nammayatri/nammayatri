@@ -328,7 +328,7 @@ manageVehicleItem state vehicle push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background Color.blue600
+    , background "#F9F6FF"
     , cornerRadius 12.0
     , margin $ MarginBottom 18
     ]
@@ -446,7 +446,7 @@ profileView push state =
     $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background Color.blue600
+        , background "#F9F6FF"
         , orientation VERTICAL
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
@@ -461,7 +461,7 @@ profileView push state =
         , scrollView
             [ height MATCH_PARENT
             , width MATCH_PARENT
-            , background if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else Color.blue600
+            , background if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else "#F9F6FF"
             , orientation VERTICAL
             , weight 1.0
             , fillViewport true
@@ -476,7 +476,7 @@ profileView push state =
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
-                    , background Color.blue600
+                    , background "#F9F6FF"
                     , padding $ if state.props.screenType == ST.DRIVER_DETAILS then (PaddingVertical 16 24) else (PaddingTop 16)
                     ]
                     [ tabView state push
@@ -681,13 +681,8 @@ headerView state push =
         , cornerRadius 20.0
         , padding $ PaddingHorizontal 3 6
         ]
-        [ imageView
-            [ height $ V 20
-            , width $ V 20
-            , margin $ MarginRight 4
-            , imageWithFallback $ fetchImage FF_ASSET "ic_settings"
-            ]
-        , textView
+        [
+         textView
             ( [ text (getString SETTINGS)
               , color Color.blue900
               , padding $ PaddingBottom 2
@@ -787,7 +782,7 @@ tabImageView state push =
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
       , padding $ PaddingVertical 32 $ if state.props.screenType == ST.DRIVER_DETAILS then 12 else 32
-      , background Color.blue600
+      , background "#F9F6FF"
       , orientation HORIZONTAL
       ]
       [ PrestoAnim.animationSet
@@ -997,7 +992,7 @@ missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
 missedOppArray analyticsData =
   [ { key: (getString CANCELLATION_RATE), value: (show analyticsData.cancellationRate <> "%"), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
   , { key: (getString RIDES_CANCELLED), value: show analyticsData.ridesCancelled, value1: show analyticsData.totalRidesAssigned, infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
-  , { key: (getString EARNINGS_MISSED), value: "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
+  , { key: (getString EARNINGS_MISSED), value: "€" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
   ]
 
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
@@ -1026,7 +1021,7 @@ driverAnalyticsView state push =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , margin if bonusActivated then (MarginVertical 12 12) else (MarginVertical 4 12)
-            , background if bonusActivated then Color.blue600 else Color.transparent
+            , background if bonusActivated then "#F9F6FF" else Color.transparent
             , cornerRadius 10.0
             ]
             [ if bonusActivated then
@@ -1034,7 +1029,7 @@ driverAnalyticsView state push =
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   ]
-                  [ infoTileView state { primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
+                  [ infoTileView state { primaryText: "€ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
                   , linearLayout
                       [ height MATCH_PARENT
                       , width (V 1)
@@ -1042,10 +1037,10 @@ driverAnalyticsView state push =
                       , background Color.lightGreyShade
                       ]
                       []
-                  , infoTileView state { primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned, subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
+                  , infoTileView state { primaryText: "€ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned, subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
                   ]
               else
-                infoCard state push { key: (getString $ EARNED_ON_APP "EARNED_ON_APP"), value: "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), value1: "", infoImageUrl: "", postfixImage: "", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
+                infoCard state push { key: (getString $ EARNED_ON_APP "EARNED_ON_APP"), value: "€" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), value1: "", infoImageUrl: "", postfixImage: "", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
             ]
       , linearLayout
           [ width MATCH_PARENT
@@ -1070,7 +1065,7 @@ driverAnalyticsView state push =
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , cornerRadius 20.0
-                  , background Color.blue600
+                  , background "#F9F6FF"
                   , padding $ Padding 12 10 12 10
                   , margin $ MarginHorizontal 5 5
                   , gravity CENTER_VERTICAL
@@ -1228,7 +1223,7 @@ chipRailView item =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , cornerRadius 20.0
-    , background Color.blue600
+    , background "#F9F6FF"
     , padding $ Padding 12 10 12 10
     , margin $ MarginHorizontal 5 5
     , gravity CENTER_VERTICAL
@@ -1290,7 +1285,7 @@ badgeView state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , background Color.blue600
+    , background "#F9F6FF"
     , cornerRadius 15.0
     , padding $ Padding 25 10 25 12
     , margin $ MarginRight 16
@@ -1406,7 +1401,7 @@ payment push state =
       ]
         <> if state.data.autoPayStatus == ACTIVE_AUTOPAY then
             [ detailsListViewComponent state push
-                { backgroundColor: Color.blue600
+                { backgroundColor: "#F9F6FF"
                 , separatorColor: Color.white900
                 , isLeftKeyClickable: false
                 , arrayList: driverPaymentsArray state
@@ -1414,7 +1409,7 @@ payment push state =
             ]
           else
             [ detailsListViewComponent state push
-                { backgroundColor: Color.blue600
+                { backgroundColor: "#F9F6FF"
                 , separatorColor: Color.white900
                 , isLeftKeyClickable: true
                 , arrayList: driverNoAutoPayArray state
@@ -1440,7 +1435,7 @@ additionalDetails push state =
           ]
       ]
         <> [ detailsListViewComponent state push
-              { backgroundColor: Color.blue600
+              { backgroundColor: "#F9F6FF"
               , separatorColor: Color.white900
               , isLeftKeyClickable: false
               , arrayList: if state.props.screenType == ST.DRIVER_DETAILS then driverAboutMeArray state else vehicleAboutMeArray state
@@ -1700,7 +1695,7 @@ infoView state push =
     , margin $ MarginHorizontal 16 16
     ]
     [ detailsListViewComponent state push
-        { backgroundColor: Color.blue600
+        { backgroundColor: "#F9F6FF"
         , separatorColor: Color.grey700
         , isLeftKeyClickable: false
         , arrayList: driverDetailsArray state
@@ -1907,7 +1902,7 @@ vehicleListItem state push vehicle =
     , gravity CENTER_VERTICAL
     , clickable $ not $ vehicle.isActive && vehicle.isVerified
     , visibility $ MP.boolToVisibility $ not $ state.props.screenType == ST.DRIVER_DETAILS
-    , background if vehicle.isVerified then Color.white900 else Color.blue600
+    , background if vehicle.isVerified then Color.white900 else "#F9F6FF"
     , cornerRadius 15.0
     , padding $ Padding 16 16 16 16
     , margin $ Margin 16 12 16 0
@@ -1971,7 +1966,7 @@ vehicleListItem state push vehicle =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , background Color.blue600
+        , background "#F9F6FF"
         , cornerRadius 8.0
         , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory `elem` [ST.AmbulanceCategory, ST.TruckCategory, ST.BusCategory])
         , padding $ Padding 16 8 16 8
@@ -2059,7 +2054,7 @@ infoTileView state config =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , margin $ config.margin
-        , background Color.blue600
+        , background "#F9F6FF"
         , padding $ Padding 16 16 16 16
         , cornerRadius 10.0
         ]
@@ -2133,7 +2128,7 @@ showMenuButtonView state push genderName genderType =
     , height $ V 56
     , gravity CENTER
     , margin $ (Margin 0 10 0 10)
-    , background if checkGenderSelect state.data.genderTypeSelect genderType then Color.blue600 else Color.white900
+    , background if checkGenderSelect state.data.genderTypeSelect genderType then "#F9F6FF" else Color.white900
     , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("1," <> Color.blue900) else ("1," <> Color.grey700)
     , cornerRadius 6.0
     , onClick push (const $ CheckBoxClick genderType)
@@ -2299,7 +2294,7 @@ infoCard state push config =
     , padding $ Padding 16 16 16 16
     , margin $ MarginTop 8
     , cornerRadius 10.0
-    , background Color.blue600
+    , background "#F9F6FF"
     ]
     [ (addAnimation state)
         $ linearLayout

@@ -194,9 +194,9 @@ public class OverlayMessagingService extends Service {
             if (updateLocDetailsComponentVisibility) {
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
-                currency = sharedPref.getString("CURRENCY", "₹");
+                currency = sharedPref.getString("CURRENCY", "€");
                 lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-                editor.putString("CALL_REFRESH", "true").apply(); 
+                editor.putString("CALL_REFRESH", "true").apply();
             }
             boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
             boolean buttonOkVisibility = data.has("buttonOkVisibility") && data.getBoolean("buttonOkVisibility");

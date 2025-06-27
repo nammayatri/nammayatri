@@ -27,7 +27,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">Pickup ₹{#amount#}</string>
+    <string name="includes_pickup_charges_10">Pickup €{#amount#}</string>
     <string name="away">away</string>
     <string name="we_made_you_online">We made you Online</string>
     <string name="location_is_turned_on">Location is turned on</string>
@@ -92,7 +92,7 @@
     <string name="no_change">No Change</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
     <string name="third_party_booking">"Third Party Booking"</string>
-    <string name="parking_charges">%1$.0f₹ Parking</string>
+    <string name="parking_charges">%1$.0f€ Parking</string>
     <string name="includes">Includes</string>
     <string name="stops_info">%1$d Stops (incl. stop charge)</string>
     <string name="stops">%1$d Stops</string>

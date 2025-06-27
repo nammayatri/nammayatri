@@ -1,8 +1,8 @@
 module Screens.TicketInfoScreen.View where
 
-import Animation as Anim 
+import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
-import JBridge as JB 
+import JBridge as JB
 import Prelude (not, Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-), (*), (/))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick, clickable, id, horizontalScrollView)
 import PrestoDOM.Animation as PrestoAnim
@@ -10,7 +10,7 @@ import Screens.TicketInfoScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
--- import Screens.TicketBookingFlow.TicketBooking.ComponentConfig 
+-- import Screens.TicketBookingFlow.TicketBooking.ComponentConfig
 import Effect (Effect)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
@@ -27,7 +27,7 @@ import Data.List ((:))
 import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
-import Data.Int as DI 
+import Data.Int as DI
 import Data.String as DS
 
 screen :: ST.TicketInfoScreenState -> Screen Action ST.TicketInfoScreenState ScreenOutput
@@ -52,7 +52,7 @@ view push state =
   , onBackPressed push $ const BackPressed
   , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
    ][
-    linearLayout 
+    linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
@@ -60,7 +60,7 @@ view push state =
     , padding $ PaddingBottom 70
     ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , linearLayout
-      [ height $ V 1 
+      [ height $ V 1
       , width MATCH_PARENT
       , background Color.grey900][]
     , separatorView Color.greySmoke
@@ -95,7 +95,7 @@ view push state =
 genericHeaderConfig :: ST.TicketInfoScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
@@ -104,7 +104,7 @@ genericHeaderConfig state = let
       , height = V 25
       , width = V 25
       , margin = Margin 16 16 16 16
-      } 
+      }
     , padding = PaddingVertical 5 5
     , textConfig {
         text = state.data.selectedBookingInfo.ticketPlaceName
@@ -134,7 +134,7 @@ individualBookingInfoView state push =
   , afterRender push (const AfterRender)
   ][  scrollView
       [ height MATCH_PARENT
-      , background Color.white900 
+      , background Color.white900
       , padding $ Padding 16 20 16 20
       , width MATCH_PARENT
       ][ linearLayout
@@ -223,7 +223,7 @@ ticketHeaderView state push placeColor infoColor  =
      [ margin $ Margin 0 0 10 0
      , width $ V 24
      , height $ V 24
-     , imageWithFallback $ getTicketImage activeItem.ticketServiceName 
+     , imageWithFallback $ getTicketImage activeItem.ticketServiceName
      ]
   ,  linearLayout
      [ width $ MATCH_PARENT
@@ -236,10 +236,10 @@ ticketHeaderView state push placeColor infoColor  =
         , orientation HORIZONTAL
         ][ textContentView (convertUTCtoISC state.data.selectedBookingInfo.visitDate "Do MMM, YYYY") infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
         ,  dotView placeColor (Margin 10 10 10 10) 5
-        ,  textContentView ("Total : ₹ " <>  show state.data.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+        ,  textContentView ("Total : € " <>  show state.data.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
         ]
      ]
-  
+
   ]
 
 getTicketImage :: String -> String
@@ -340,7 +340,7 @@ getPillInfoColor ticketServiceName = case ticketServiceName of
   "Videography" -> Color.black800
   "Aquarium" ->  Color.white900
   _ -> Color.grey900
-  
+
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
   "Videography" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left"
@@ -379,7 +379,7 @@ pillView state push backgroudColor textColor =
     getPCs categories = case categories DA.!! 0 of
       Nothing -> { length : 0, pcs : []}
       Just cat -> {length : DA.length cat.peopleCategories, pcs : cat.peopleCategories}
-    
+
     getFormattedSlot slot = maybe [] (\formattedSlot -> [individualPill state push backgroudColor textColor formattedSlot ""]) (convertUTCToISTAnd12HourFormat slot)
 
     getNameAccToPlaceType pcName activeItem = pcName -- todo : handle the case to show person for ferry
@@ -413,7 +413,7 @@ dotView color layMargin size =
   ][]
 
 textContentView :: forall w. String -> String -> Margin -> (forall properties. (Array (Prop properties))) -> PrestoDOM (Effect Unit) w
-textContentView textString textColor textMargin fontSt = 
+textContentView textString textColor textMargin fontSt =
   textView
   ([ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -426,7 +426,7 @@ textContentView textString textColor textMargin fontSt =
 bookingInfoView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bookingInfoView state push =
   let activeItem = state.props.activeListItem
-      validityTime = (maybe (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) activeItem.slot )  
+      validityTime = (maybe (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) activeItem.slot )
                      <> ", " <> (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "Do MMM YYYY")
   in
   linearLayout
@@ -435,8 +435,8 @@ bookingInfoView state push =
   , orientation VERTICAL
   ]([  bookingInfoListItemView push state "Service ID" activeItem.ticketServiceShortId
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
-    , bookingInfoListItemView push state (getTextForQRType activeItem.ticketServiceName) ("₹" <> show activeItem.amount)
-  ] <> case activeItem.expiryDate of 
+    , bookingInfoListItemView push state (getTextForQRType activeItem.ticketServiceName) ("€" <> show activeItem.amount)
+  ] <> case activeItem.expiryDate of
           Just expiryDate ->  [ separatorView (getSeparatorColor activeItem.ticketServiceName)
                               , bookingInfoListItemView push state "Valid Until" validityTime]
           _ -> [])
@@ -489,7 +489,7 @@ shareTicketView state push =
     , imageWithFallback $ fetchImage FF_ASSET $ getShareButtonIcon state.props.activeListItem.ticketServiceName
     , margin $ MarginRight 8
     ]
-  , textView $ 
+  , textView $
     [ height $ WRAP_CONTENT
     , width $ WRAP_CONTENT
     , padding $ PaddingBottom 5

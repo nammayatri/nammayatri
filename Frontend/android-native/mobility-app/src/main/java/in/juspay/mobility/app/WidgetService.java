@@ -281,7 +281,7 @@ public class WidgetService extends Service {
 
                 // Update text for fare and distanceToPickup
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                String fareText = sharedPref.getString("CURRENCY", "₹") + fare;
+                String fareText = sharedPref.getString("CURRENCY", "€") + fare;
                 fareTextView.setText(fareText);
                 fareTextView.setTextSize(20);
                 String distanceText;

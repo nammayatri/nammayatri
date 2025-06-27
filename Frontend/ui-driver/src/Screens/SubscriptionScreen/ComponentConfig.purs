@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -63,14 +63,14 @@ import Resource.Localizable.TypesV2
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
     config = PrimaryButton.config
-    buttonText = 
+    buttonText =
       case state.data.myPlanData.manualDueAmount > 0.0, state.data.myPlanData.autoPayStatus, isJust state.data.orderId of
-        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <> "  " <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
-        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
-        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
-        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
+        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <> "  " <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(€" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(€" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (€" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (€" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
         false,_, _ -> getString SETUP_AUTOPAY_STR
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig { text = buttonText }
       , isClickable = true
       , alpha = 1.0
@@ -84,7 +84,7 @@ clearDueButtonConfig state = let
   in primaryButtonConfig'
 
 settlementButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
-settlementButtonConfig state = 
+settlementButtonConfig state =
     PrimaryButton.config
     { textConfig { text = getString ONE_TIME_SETTLEMENT, color = Color.black700 }
       , isClickable = true
@@ -140,7 +140,7 @@ retryPaymentButtonConfig state =
       }
 
 checkStatusButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
-checkStatusButtonConfig state = 
+checkStatusButtonConfig state =
     PrimaryButton.config
       { textConfig
         { text = getString REFRESH_STR
@@ -173,7 +173,7 @@ checkStatusButtonConfig state =
 switchPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 switchPlanButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig{ text = (getVarString SWITCH_TO [getSelectedAlternatePlan state]) }
       , height = (V 48)
       , cornerRadius = 8.0
@@ -186,7 +186,7 @@ switchPlanButtonConfig state = let
 resumeAutopayButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 resumeAutopayButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig{ text = (getString SETUP_AUTOPAY_STR) }
       , isClickable = true
       , alpha = if true then 1.0 else 0.6
@@ -200,8 +200,8 @@ resumeAutopayButtonConfig state = let
 joinPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 joinPlanButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig{ text = case (getSelectedJoiningPlan state) of 
+    primaryButtonConfig' = config
+      { textConfig{ text = case (getSelectedJoiningPlan state) of
                                 Mb.Just _ -> (getString PAY_TO_JOIN_THIS_PLAN)
                                 Mb.Nothing -> (getString TAP_A_PLAN_TO_VIEW_DETAILS) }
       , isClickable = if isNothing state.props.joinPlanProps.selectedPlanItem then false else true
@@ -285,8 +285,8 @@ popupModalConfig state = let
       , height = V 114
       },
     secondaryText {
-      text = if state.props.popUpState == Mb.Just FailedPopup 
-                then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL 
+      text = if state.props.popUpState == Mb.Just FailedPopup
+                then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL
              else if state.props.popUpState == Mb.Just SupportPopup
                 then getString NEED_HELP_JOINING_THE_PLAN
              else ""
@@ -295,7 +295,7 @@ popupModalConfig state = let
       , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan, Mb.Just SupportPopup] then VISIBLE else GONE
       , textStyle = if Mb.Just SupportPopup == state.props.popUpState then SubHeading1 else Body1
       },
-    option2 { 
+    option2 {
       visibility = state.props.popUpState == Mb.Just SupportPopup
       , text = getString CANCEL
       , color = Color.black650
@@ -316,7 +316,7 @@ popupModalConfig state = let
         , textStyle = SubHeading2
         , text = getString CALL_SUPPORT
         , visibility = VISIBLE
-      } 
+      }
       , image {
           imageUrl =  HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_blue"
           , height = (V 16)
@@ -375,24 +375,24 @@ confirmCancelPopupConfig state = let
 getSelectedAlternatePlan :: ST.SubscriptionScreenState -> String
 getSelectedAlternatePlan state = do
   let plan = (DA.filter(\item -> item.id == state.props.managePlanProps.selectedPlanItem.id) state.data.managePlanData.alternatePlans)
-  case plan DA.!! 0 of 
+  case plan DA.!! 0 of
     Mb.Just value -> value.title
     Mb.Nothing -> state.data.myPlanData.planEntity.title
 
 getSelectedJoiningPlan :: ST.SubscriptionScreenState -> Mb.Maybe String
 getSelectedJoiningPlan state = do
   case state.props.joinPlanProps.selectedPlanItem of
-    Mb.Just planEntity -> do 
+    Mb.Just planEntity -> do
                     let plan = (DA.filter(\item -> item.id == planEntity.id) state.data.joinPlanData.allPlans)
-                    case plan DA.!! 0 of 
+                    case plan DA.!! 0 of
                       Mb.Just value -> Mb.Just value.title
                       Mb.Nothing -> Mb.Nothing
     Mb.Nothing -> Mb.Nothing
-  
+
 tryAgainButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 tryAgainButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig{ text = getString TRY_AGAIN }
       , isClickable = true
       , alpha = if true then 1.0 else 0.6
@@ -404,7 +404,7 @@ tryAgainButtonConfig state = let
   in primaryButtonConfig'
 
 optionsMenuConfig :: ST.SubscriptionScreenState -> OptionsMenuConfig.Config
-optionsMenuConfig state = 
+optionsMenuConfig state =
   let optionsMenuItems = state.data.config.subscriptionConfig.optionsMenuItems
   in
   OptionsMenuConfig.config {
@@ -430,7 +430,7 @@ optionsMenuConfig state =
 clearManualDuesBtn :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearManualDuesBtn state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig{ text = getString CLEAR_MANUAL_DUES}
       , height = (V 48)
       , cornerRadius = 8.0
@@ -441,7 +441,7 @@ clearManualDuesBtn state = let
   in primaryButtonConfig'
 
 getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
-getHeaderConfig subView isManualPayDue isMultiDueType = 
+getHeaderConfig subView isManualPayDue isMultiDueType =
   case subView of
     ST.JoinPlan    -> {title : (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
@@ -449,7 +449,7 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
     ST.FindHelpCentre -> {title : (getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE")), actionText : "", backbutton : true}
     ST.DuesView -> {title : (getString DUE_OVERVIEW), actionText : "", backbutton : true}
-    ST.DueDetails -> {title : getString case isMultiDueType, isManualPayDue of 
+    ST.DueDetails -> {title : getString case isMultiDueType, isManualPayDue of
                                           true, false -> AUTOPAY_DUE_DETAILS
                                           true, true -> MANUAL_DUE_DETAILS
                                           _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
@@ -459,10 +459,10 @@ type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 
 
 dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
-dueDetailsListState state = let 
-    calculateCharges count charges = 
-      if count == 0 || charges == 0.0 then Nothing 
-      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
+dueDetailsListState state = let
+    calculateCharges count charges =
+      if count == 0 || charges == 0.0 then Nothing
+      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x €" <> getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
   in
   {
   dues : map (\ item -> do
@@ -490,7 +490,7 @@ dueDetailsListState state = let
 }
 
 planCardConfig :: PlanCardConfig -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> Array String -> Maybe Number -> ST.PlanCardState
-planCardConfig state isSelected clickable isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans mbCoinDiscountUpto = 
+planCardConfig state isSelected clickable isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans mbCoinDiscountUpto =
   {
     id : state.id,
     title : state.title,
@@ -534,18 +534,18 @@ paymentUnderMaintenanceConfig state = let
       visibility = GONE
       },
     primaryText {
-      text = getStringV2 payment_under_maintenance, 
+      text = getStringV2 payment_under_maintenance,
       gravity = CENTER,
       margin = MarginTop 16
       },
-    secondaryText { 
+    secondaryText {
       text = getStringV2 payments_temporarily_unavailable,
       margin = MarginTop 4
       },
     option1 {
       visibility = false
       },
-    option2 { 
+    option2 {
       text = (getStringV2 okay),
       padding = (Padding 16 0 16 0)
     },

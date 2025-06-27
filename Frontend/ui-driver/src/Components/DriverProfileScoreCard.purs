@@ -71,7 +71,7 @@ verticalView push config =
             width $ V $ (screenWidth unit) / 2 - 22
         ,   height $ WRAP_CONTENT
         ,   orientation VERTICAL
-        ,   background Colors.aliceBlueLight
+        ,   background "#F9F6FF"
         ,   cornerRadius 16.0
         ,   gravity CENTER
         ][

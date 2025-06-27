@@ -58,7 +58,7 @@ window.getMerchantConfig = function () {
       "enableGoto" : true
     },
     "fontType": "Assets",
-    "currency": "₹",
+    "currency": "€",
     "isGradient" : "false",
     "BONUS_EARNED" : "false",
     "gradient": [],
@@ -98,7 +98,7 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "Travelled On Yatri Sathi",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "MY_PLAN_TITLE" : "Yatri Sathi Plans",
-      "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹1/ride from Jan 1-31",
+      "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only €1/ride from Jan 1-31",
       "TO_CONTINUE_USING_YATRI_SATHI" : "To continue using Yatri Sathi, please complete your payment for",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "Yatri Sathi fee payable for",
       "PAYMENT_FAILED_DESC" : "You may retry payment, or make the payment at your nearest Yatri Sathi booth",
@@ -139,7 +139,7 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "यात्री साथी पर तय की गई दूरी",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "MY_PLAN_TITLE" : "यात्री साथी प्लान्स",
-      "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹1/सवारी का पेमेंट करें",
+      "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल €1/सवारी का पेमेंट करें",
       "TO_CONTINUE_USING_YATRI_SATHI" : "यात्री साथी का उपयोग जारी रखने के लिए",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "यात्री साथी शुल्क लागू" ,
       "PAYMENT_FAILED_DESC" : "आप भुगतान को पुनः प्रयास कर सकते हैं, या अपने नजदीकी यात्री साथी बूथ पर भुगतान कर सकते हैं",
@@ -180,7 +180,7 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "যাত্রী সাথীতে দূরত্ব ভ্রমণ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।",
       "MY_PLAN_TITLE" : "যাত্রী সাথী পরিকল্পনা",
-      "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹1/রাইড প্রদান করুন",
+      "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র €1/রাইড প্রদান করুন",
       "TO_CONTINUE_USING_YATRI_SATHI" : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "Yatri Sathi ফি জন্য প্রদেয়" ,
       "PAYMENT_FAILED_DESC" : "আপনি আবার অর্থপ্রদানের চেষ্টা করতে পারেন, অথবা আপনার নিকটস্থ Yatri Sathi বুথে অর্থপ্রদান করতে পারেন",
@@ -345,7 +345,7 @@ let defRateCardConfig = {
 
 let staticSubscriptionConfig = [
   {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
-  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of €99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ €99-*$*-प्रति दिन अधिकतम €99 तक-*$*-প্রতিদিন সর্বোচ্চ €99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി €99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் €99 வரை-*$*-రోజుకు గరిష్టంగా €99 వరకు"},
   {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
 ]
 

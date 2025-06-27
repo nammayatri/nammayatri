@@ -465,7 +465,7 @@ totalEarningsView push state =
             , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ "₹" <> (formatCurrencyWithCommas (show state.props.totalEarningsData.totalEarnings))
+                  , text $ "€" <> (formatCurrencyWithCommas (show state.props.totalEarningsData.totalEarnings))
                   , color Color.black900
                   ]
                 <> FontStyle.priceFont TypoGraphy
@@ -748,7 +748,7 @@ balanceView push state =
       ]
 
 -- insightView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
--- insightView push state = 
+-- insightView push state =
 --   linearLayout
 --   [ height WRAP_CONTENT
 --   , width MATCH_PARENT
@@ -962,7 +962,7 @@ tableItemView (API.CoinInfo item) index state =
                 ]
                   <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy
               )
-            , textView 
+            , textView
                 ( [
                     height WRAP_CONTENT
                   , width $ V (((screenWidth unit - 10) * 55) / 100)
@@ -1316,7 +1316,7 @@ historyViewItem item isLast subView =
                   , width WRAP_CONTENT
                   ]
                   [ textView
-                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else (if subView == ST.USE_COINS_VIEW then "" else "₹") <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
+                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else (if subView == ST.USE_COINS_VIEW then "" else "€") <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
                         , color Color.black900
                         ]
                       <> FontStyle.tags TypoGraphy
@@ -1447,7 +1447,7 @@ alertView push image messagePref message messageSuf showButton backgroundColor c
             , width $ V 14
             , margin $ MarginRight 8
             ]
-        , linearLayout 
+        , linearLayout
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
            , orientation VERTICAL
@@ -1462,14 +1462,14 @@ alertView push image messagePref message messageSuf showButton backgroundColor c
               ][  textView
                   $ [ text message
                     , color Color.blue800
-                    , visibility $ boolToVisibility (not (DS.null message)) 
+                    , visibility $ boolToVisibility (not (DS.null message))
                     , onClick push $ const $ ShowMyPlanPage
                     ]
                   <> FontStyle.tags TypoGraphy
               , textView
                   $ [ text messageSuf
                     , color Color.black700
-                    , visibility $ boolToVisibility (not (DS.null messageSuf)) 
+                    , visibility $ boolToVisibility (not (DS.null messageSuf))
                     ]
                   <> FontStyle.tags TypoGraphy
               ]
@@ -1538,7 +1538,7 @@ convertView push state =
           , gravity CENTER
           ]
           [
-            linearLayout 
+            linearLayout
               [
                 height $ V 44
               , width MATCH_PARENT
@@ -1550,7 +1550,7 @@ convertView push state =
               ]
               [
                   pointsOrDiscountTally push (show coinsDefaultValue) (getString YATRI_POINTS)
-                  , textView $ [ 
+                  , textView $ [
                     text $ " → "
                     , color Color.black800
                     , width WRAP_CONTENT
@@ -1566,14 +1566,14 @@ convertView push state =
               dummyView
             , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig (coinsDefaultValue > 0 && state.data.hasActivePlan && state.data.coinsToUse <= state.data.coinBalance))
           ]
-        
+
       ]
 
 
 
 pointsOrDiscountTally :: forall w. (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
-pointsOrDiscountTally push amount title = 
-   linearLayout 
+pointsOrDiscountTally push amount title =
+   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
@@ -1737,7 +1737,7 @@ historyViewForEarnings push state =
                   ]
                 <> FontStyle.paragraphText TypoGraphy
             , textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
+                $ [ text $ "€" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
                   , color Color.black800
                   ]
                 <> FontStyle.h2 TypoGraphy
@@ -1768,7 +1768,7 @@ dottedLineView push margintop earnings =
         $ [ height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
           , gravity RIGHT
-          , text $ "₹" <> formatCurrencyWithCommas (show earnings)
+          , text $ "€" <> formatCurrencyWithCommas (show earnings)
           ]
         <> FontStyle.paragraphText TypoGraphy
     ]
@@ -1940,7 +1940,7 @@ historyViewItemForEarnings push item state index =
               , padding $ Padding 11 3 11 6
               ]
               [ textView
-                  $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
+                  $ [ text $ if rideStatus /= "CANCELLED" then "€" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
                     , height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , color color'
@@ -1980,7 +1980,7 @@ lottieCoinDifference :: forall w. ST.DriverEarningsScreenState -> (Action -> Eff
 lottieCoinDifference state push =
   let
     id' = (getNewIDWithTag "lottieCoinDifference")
-    
+
   in
     relativeLayout
       [ height MATCH_PARENT

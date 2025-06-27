@@ -57,7 +57,7 @@
                                 android:gravity="center"
                                 android:lineHeight="14dp"
                                 android:maxLines="1"
-                                android:text="₹120"
+                                android:text="€120"
                                 android:textColor="@color/Black800"
                                 android:textSize="14sp" />
 
@@ -109,7 +109,7 @@
                                 android:gravity="center"
                                 android:lineHeight="28dp"
                                 android:maxLines="1"
-                                android:text="₹40"
+                                android:text="€40"
                                 android:textColor="@color/Black800"
                                 android:textSize="14sp" />
 
@@ -161,7 +161,7 @@
                                 android:gravity="center"
                                 android:lineHeight="28dp"
                                 android:maxLines="1"
-                                android:text="₹160"
+                                android:text="€160"
                                 android:textColor="@color/Black800"
                                 android:textSize="14sp" />
 
@@ -212,7 +212,7 @@
                                 android:gravity="center"
                                 android:lineHeight="28dp"
                                 android:maxLines="1"
-                                android:text="₹160"
+                                android:text="€160"
                                 android:textColor="@color/Black800"
                                 android:textSize="14sp" />
 
@@ -263,7 +263,7 @@
                                 android:gravity="center"
                                 android:lineHeight="28dp"
                                 android:maxLines="1"
-                                android:text="₹160"
+                                android:text="€160"
                                 android:textColor="@color/Black800"
                                 android:textSize="14sp" />
 
@@ -313,7 +313,7 @@
                                 android:gravity="center"
                                 android:lineHeight="28dp"
                                 android:maxLines="1"
-                                android:text="₹160"
+                                android:text="€160"
                                 android:textColor="@color/Black800"
                                 android:textSize="14sp" />
 

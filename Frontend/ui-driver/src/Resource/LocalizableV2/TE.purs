@@ -672,9 +672,9 @@ getTe =
     , n_day_free_trial_activated: (\day -> day <> "-రోజుల ఉచిత ట్రయల్ ఆక్టివేట్ చేయబడింది!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "మొదటి " <> days <> " రోజుల్లో ఉచితంగా " <> rides <> " రైడ్లు తీసుకోండి")
     , every_ride_at_zero_commission: "ప్రతి రైడ్ జీరో కమిషన్ తో!"
-    , earn_upto_per_day: "రోజుకు ₹{} వరకు సంపాదించండి!"
+    , earn_upto_per_day: "రోజుకు €{} వరకు సంపాదించండి!"
     , how_this_works: "ఇది ఎలా పని చేస్తుంది"
-    , sign_up_for_autopay_by_paying_just: "కేవలం ₹1 చెల్లించడం ద్వారా ఆటోపేయ్ సైన్ అప్ చేయండి"
+    , sign_up_for_autopay_by_paying_just: "కేవలం €1 చెల్లించడం ద్వారా ఆటోపేయ్ సైన్ అప్ చేయండి"
     , get_reminded_about_your_plan_setup: "నా ప్లాన్ సెటప్ గురించి నాకు గుర్తు చేయండి"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "రోజు " <> days <> " లేదా " <> rides <> " రైడ్లు: ఉచిత ట్రయల్ రిమైండర్")
     , plan_starts_n_days_m_rides: (\days rides -> "రోజు " <> days <> " లేదా " <> rides <> " రైడ్లు: ప్లాన్ ప్రారంభం")
@@ -691,7 +691,7 @@ getTe =
     , payment_pending_alert: "⚠️ చెల్లింపు పెండింగ్‌లో ఉంది! ⚠️"
     , payment_pending_alert_desc: (\_ -> "నమ్మ యాత్రిలో ప్రయాణించడం కొనసాగించడానికి, మీ చెల్లింపు బాకీలను క్లియర్ చేయండి")
     , low_account_balance: "తక్కువ ఖాతా బ్యాలెన్స్"
-    , low_account_balance_desc: "మీ బ్యాంక్ ఖాతా బ్యాలెన్స్ తక్కువగా ఉంది. అంతరాయం లేని రైడ్‌లను ఆస్వాదించడానికి ఈరోజులోపు ₹<X> జోడించండి."
+    , low_account_balance_desc: "మీ బ్యాంక్ ఖాతా బ్యాలెన్స్ తక్కువగా ఉంది. అంతరాయం లేని రైడ్‌లను ఆస్వాదించడానికి ఈరోజులోపు €<X> జోడించండి."
     , okay_got_it: "సరే, అర్థమైంది"
     , limited_time_offer: "మీ కోసం పరిమిత కాల ఆఫర్!"
     , join_now: "ఇప్పుడే చేరండి"
@@ -712,7 +712,7 @@ getTe =
     , manage_plan: "ప్రణాళికను నిర్వహించండి"
     , view_autopay_details: "ఆటోపాయ్ వివరాలను వీక్షించండి"
     , switch_and_save: "మారండి మరియు సేవ్ చేయండి"
-    , switch_and_save_desc: "మీరు ఈరోజు 7 రైడ్‌లను పూర్తి చేసారు. రోజువారీ అన్‌లిమిటెడ్ ప్లాన్‌కి మారడం ద్వారా ₹10 వరకు ఆదా చేసుకోండి"
+    , switch_and_save_desc: "మీరు ఈరోజు 7 రైడ్‌లను పూర్తి చేసారు. రోజువారీ అన్‌లిమిటెడ్ ప్లాన్‌కి మారడం ద్వారా €10 వరకు ఆదా చేసుకోండి"
     , switch_now: "ఇప్పుడే మారండి"
     , payment_mode_changed_to_manual: "చెల్లింపు మోడ్ మాన్యువల్‌కి మార్చబడింది"
     , payment_mode_changed_to_manual_desc: "<b>మీరు మీ UPI ఆటోపే పాజ్ చేసారు. ఇది మీ UPI యాప్ నుండి పునఃప్రారంభించబడుతుంది.</b><br>మీరు మీ బాకీలను మాన్యువల్‌గా కూడా క్లియర్ చేయవచ్చు."
@@ -778,11 +778,11 @@ getTe =
     , daily_unlimited: "డైలీ అన్లిమిటెడ్"
     , daily_per_ride: "డైలీ పర్ రైడ్"
     , daily_unlimited_plan_desc: "ప్రతిరోజూ అపరిమిత రైడ్‌లను ఆస్వాదించండి"
-    , daily_per_ride_plan_desc: (\price -> "రోజుకు గరిష్టంగా ₹" <> price <> " వరకు")
+    , daily_per_ride_plan_desc: (\price -> "రోజుకు గరిష్టంగా €" <> price <> " వరకు")
     , autopay_cancelled: "ఆటోపే రద్దు చేయబడింది"
     , no: "లేదు"
     , yes_cancel: "అవును, రద్దు చేయి"
-    , pay_to_join_this_plan: "ప్లాన్‌లో చేరడానికి ₹1 మాత్రమే చెల్లించండి"
+    , pay_to_join_this_plan: "ప్లాన్‌లో చేరడానికి €1 మాత్రమే చెల్లించండి"
     , offers_not_applicable: "పూర్తయితే తప్ప ఆఫర్‌లు వర్తించవు"
     , paused_str: "పాజ్ చేయబడింది"
     , pending_str: "పెండింగ్‌లో ఉంది"
@@ -884,8 +884,8 @@ getTe =
     , retry_autopay: "ఆటోపే మళ్లీ ప్రయత్నించండి"
     , retry_str: "మళ్లీ ప్రయత్నించండి"
     , ongoing_payment_execution: "మాన్యువల్ చెల్లింపు కొనసాగుతోంది, దయచేసి వేచి ఉండండి"
-    , offer_card_banner_title: (\_ date price -> "ఆటోపే సెటప్ చేయండి మరియు " <> date <> " వరకు రోజుకు ₹" <> price <> " మాత్రమే చెల్లించండి")
-    , offer_card_banner_desc: "నవంబర్ 1 వరకు రోజుకు ₹15 మాత్రమే చెల్లించండి"
+    , offer_card_banner_title: (\_ date price -> "ఆటోపే సెటప్ చేయండి మరియు " <> date <> " వరకు రోజుకు €" <> price <> " మాత్రమే చెల్లించండి")
+    , offer_card_banner_desc: "నవంబర్ 1 వరకు రోజుకు €15 మాత్రమే చెల్లించండి"
     , offer_card_banner_alert: "మీ ఆటోపే సెటప్ పెండింగ్‌లో ఉంది!"
     , or: "లేదా"
     , collect_cash_directly: "నేరుగా కాష్ సేకరించండి"
@@ -901,7 +901,7 @@ getTe =
     , execution_failed: "అమలు విఫలమైంది"
     , notification_failed: "నోటిఫికేషన్ విఫలమైంది"
     , pay_now: "ఇప్పుడే చెల్లించండి"
-    , clear_dues_banner_title: "నాన్‌స్టాప్ రైడ్‌లను ఆస్వాదించడానికి \nమీ బకాయిలను (₹{}) క్లియర్ చేయండి"
+    , clear_dues_banner_title: "నాన్‌స్టాప్ రైడ్‌లను ఆస్వాదించడానికి \nమీ బకాయిలను (€{}) క్లియర్ చేయండి"
     , collect_via_upi_qr_or_cash: "UPI QR లేదా కాష్ ద్వారా సేకరించండి"
     , transaction_debited_on: "లావాదేవీ డెబిట్ తేదీ"
     , transaction_attempted_on: "లావాదేవీకి ప్రయత్నించిన తేదీ"
@@ -917,7 +917,7 @@ getTe =
     , watch_video_for_help: "సహాయం కోసం వీడియో చూడండి"
     , payment_pending_soft_nudge: "బకాయిల పరిమితి త్వరలో చేరుకుంటుంది. నాన్‌స్టాప్ రైడ్‌లను ఆస్వాదించడానికి బకాయిలను క్లియర్ చేయండి"
     , clear_your_dues_early: "మీ బకాయిలను ముందుగానే క్లియర్ చేయండి"
-    , due_limit_warning_banner_title: "మీ బకాయి పరిమితి ₹{} త్వరలో చేరుకుంటుంది"
+    , due_limit_warning_banner_title: "మీ బకాయి పరిమితి €{} త్వరలో చేరుకుంటుంది"
     , scheduled_on: "షెడ్యూల్ చేసిన తేదీ"
     , attempted_on: "ప్రయత్నించిన తేదీ"
     , free_trial_ending_tomorrow: "ఉచిత ట్రయల్ రేపటితో ముగుస్తుంది!"
@@ -1106,7 +1106,7 @@ getTe =
     , this_extra_amount_the_customer_will_pay: "మీరు {} నిమిషాల కంటే ఎక్కువ వేచి ఉన్నందున కస్టమర్ మీకు చెల్లించే అదనపు మొత్తం ఇది"
     , ten_digit_mobile_number: "10-అంకెల మొబైల్ నంబర్"
     , booth_charges: "బూత్ ఛార్జ్"
-    , booth_charges_included: "బూత్ ఛార్జీలు చేర్చబడ్డాయి: ₹{}"
+    , booth_charges_included: "బూత్ ఛార్జీలు చేర్చబడ్డాయి: €{}"
     , total_amount: "మొత్తం మొత్తం"
     , please_add_rc: "దయచేసి రైడ్ చేయడానికి RCని జోడించండి"
     , location_cannot_be_added_while_goto_active: "Go-To ప్రారంభించబడనప్పుడు మాత్రమే ఎంపిక అందుబాటులో ఉంటుంది"
@@ -1476,7 +1476,7 @@ getTe =
     , fare_for: (\limit -> limit <> " కి కిరాయి")
     , waiting_charge_limit: (\timeLimit -> timeLimit <> " నిమిషాల తర్వాత వేచి ఉండే చార్జీలు")
     , parking_charges_desc: "డ్రైవర్ ద్వారా వసూలు చేయబడిన పార్కింగ్ చార్జీలు కిరాయిలో చేర్చబడలేదు. ఇది ప్రయాణం తర్వాత డ్రైవర్ మరియు ప్రయాణికుడు మధ్య తేల్చుకోవాలి."
-    , tip_can_be_added: (\maxTip -> "కిరాయిలో ₹" <> maxTip <> " వరకు చేర్చవచ్చు.")
+    , tip_can_be_added: (\maxTip -> "కిరాయిలో €" <> maxTip <> " వరకు చేర్చవచ్చు.")
     , day_time_charges: (\from till -> "పగటి సమయం చార్జీలు (" <> from <> " నుండి " <> till <> ")")
     , congestion_charges: "రద్దీ ఛార్జీలు*"
     , congestion_charges_desc: (\charges -> "*మీ రైడ్‌పై ప్రస్తుతం " <> charges <> "% రద్దీ ఛార్జీలు వర్తిస్తాయి, అధిక ట్రాఫిక్‌లో డ్రైవర్ సమయాన్ని పరిహరించడానికి లేదా మీకు ఎక్కువ డ్రైవర్లను అందుబాటులోకి తీసుకురావడానికి.")

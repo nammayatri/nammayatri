@@ -668,9 +668,9 @@ getHi =
     , n_day_free_trial_activated: (\day -> day <> "-दिवसीय निःशुल्क परीक्षण सक्रिय!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "पहले " <> days <> " दिनों के लिए मुफ्त में " <> rides <> " राइड्स लें")
     , every_ride_at_zero_commission: "प्रत्येक सवारी शून्य कमीशन पर!"
-    , earn_upto_per_day: "प्रतिदिन ₹{} तक कमाएं!"
+    , earn_upto_per_day: "प्रतिदिन €{} तक कमाएं!"
     , how_this_works: "यह कैसे काम करता है"
-    , sign_up_for_autopay_by_paying_just: "केवल ₹1 का भुगतान करके ऑटोपे के लिए साइन अप करें"
+    , sign_up_for_autopay_by_paying_just: "केवल €1 का भुगतान करके ऑटोपे के लिए साइन अप करें"
     , get_reminded_about_your_plan_setup: "अपने प्लान सेटअप के बारे में याद दिलाएं"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "दिन " <> days <> " या " <> rides <> " राइड्स: मुफ्त ट्रायल रिमाइंडर")
     , plan_starts_n_days_m_rides: (\days rides -> "दिन " <> days <> " या " <> rides <> " राइड्स: योजना शुरू")
@@ -708,7 +708,7 @@ getHi =
     , manage_plan: "योजना प्रबंधित करें"
     , view_autopay_details: "ऑटोपे विवरण देखें"
     , switch_and_save: "स्विच करें और सहेजें"
-    , switch_and_save_desc: "आपने आज 7 से अधिक यात्राएं पूरी की हैं। डेली अनलिमिटेड योजना पर स्विच करके ₹10 तक बचाएं"
+    , switch_and_save_desc: "आपने आज 7 से अधिक यात्राएं पूरी की हैं। डेली अनलिमिटेड योजना पर स्विच करके €10 तक बचाएं"
     , switch_now: "अभी स्विच करें"
     , payment_mode_changed_to_manual: "भुगतान मोड को मैन्युअल में बदल दिया गया"
     , payment_mode_changed_to_manual_desc: "आपने अपना UPI ऑटोपे रोक दिया है। आप अपनी शेष राशि मैन्युअल रूप से चुका सकते हैं।"
@@ -774,11 +774,11 @@ getHi =
     , daily_unlimited: "डेली अनलिमिटेड"
     , daily_per_ride: "दैनिक प्रति सवारी"
     , daily_unlimited_plan_desc: "हर दिन असीमित सवारी का आनंद लें"
-    , daily_per_ride_plan_desc: (\price -> "प्रति दिन अधिकतम ₹" <> price <> " तक")
+    , daily_per_ride_plan_desc: (\price -> "प्रति दिन अधिकतम €" <> price <> " तक")
     , autopay_cancelled: "ऑटोपे भुगतान रद्द"
     , no: "नहीं"
     , yes_cancel: "हां, रद्द करें"
-    , pay_to_join_this_plan: "योजना से जुड़ने के लिए ₹1 का भुगतान करें"
+    , pay_to_join_this_plan: "योजना से जुड़ने के लिए €1 का भुगतान करें"
     , offers_not_applicable: "पूरा होने तक ऑफर लागू नहीं होंगे"
     , paused_str: "रोके गए"
     , pending_str: "लंबित"
@@ -878,8 +878,8 @@ getHi =
     , retry_autopay: "ऑटोपे पुनः प्रयास करें "
     , retry_str: "पुनः प्रयास करें"
     , ongoing_payment_execution: "मैन्युअल भुगतान जारी है, कृपया प्रतीक्षा करें"
-    , offer_card_banner_title: (\_ date price -> "ऑटोपे सेटअप करें और " <> date <> " तक केवल ₹" <> price <> "/दिन पे करें")
-    , offer_card_banner_desc: "1 नवंबर तक केवल ₹15/दिन पे करें|"
+    , offer_card_banner_title: (\_ date price -> "ऑटोपे सेटअप करें और " <> date <> " तक केवल €" <> price <> "/दिन पे करें")
+    , offer_card_banner_desc: "1 नवंबर तक केवल €15/दिन पे करें|"
     , offer_card_banner_alert: "आपका ऑटोपे सेटअप शेष है!"
     , or: "या"
     , collect_cash_directly: "सीधे नकद जमा करें"
@@ -895,7 +895,7 @@ getHi =
     , execution_failed: "क्रियान्विति असफल हुई"
     , notification_failed: "सूचना असफल हुई"
     , pay_now: "भुगतान करें"
-    , clear_dues_banner_title: "नॉन-स्टॉप सवारी का आनंद लेने के लिए शेष राशि(₹{}) चुकाएँ"
+    , clear_dues_banner_title: "नॉन-स्टॉप सवारी का आनंद लेने के लिए शेष राशि(€{}) चुकाएँ"
     , collect_via_upi_qr_or_cash: "UPI,QR या नकद के माध्यम से जमा करें|"
     , transaction_debited_on: "राशि डेबिट की तिथि"
     , transaction_attempted_on: "डेबिट प्रयास की तिथि"
@@ -911,7 +911,7 @@ getHi =
     , watch_video_for_help: "मदद के लिए वीडियो देखें"
     , payment_pending_soft_nudge: "शेष राशि सीमा जल्द ही पूरी हो जाएगी. नॉन-स्टॉप सवारी का आनंद लेने के लिए शेष राशि चुकाएँ"
     , clear_your_dues_early: "अपनी शेष राशि जल्दी चुकाएँ"
-    , due_limit_warning_banner_title: "आपकी ₹{} की देय सीमा जल्द ही पूरी हो जाएगी"
+    , due_limit_warning_banner_title: "आपकी €{} की देय सीमा जल्द ही पूरी हो जाएगी"
     , scheduled_on: "निर्धारित तिथि"
     , attempted_on: "प्रयास की तिथि"
     , debited_on: "डेबिट की तारीख"
@@ -1107,7 +1107,7 @@ getHi =
     , this_extra_amount_the_customer_will_pay: "यह वह अतिरिक्त राशि है जो ग्राहक आपको भुगतान करेगा क्योंकि आपने {} मिनट से अधिक प्रतीक्षा की है"
     , ten_digit_mobile_number: "10 अंकों का मोबाइल नंबर"
     , booth_charges: "बूथ चार्ज"
-    , booth_charges_included: "बूथ शुल्क शामिल: ₹{}"
+    , booth_charges_included: "बूथ शुल्क शामिल: €{}"
     , total_amount: "कुल राशि"
     , please_add_rc: "कृपया सवारी लेने के लिए RC जोड़ें"
     , location_cannot_be_added_while_goto_active: "विकल्प केवल तभी उपलब्ध होता है जब गो-टू सक्षम न हो"
@@ -1475,7 +1475,7 @@ getHi =
     , fare_for: (\limit -> limit <> " के लिए किराया")
     , waiting_charge_limit: (\timeLimit -> timeLimit <> " मिनटों के बाद प्रतीक्षा शुल्क")
     , parking_charges_desc: "चालक द्वारा लगाए गए पार्किंग शुल्क किराए में शामिल नहीं हैं। इसे यात्रा के बाद चालक और यात्री के बीच निपटाना है।"
-    , tip_can_be_added: (\maxTip -> "किराए में ₹" <> maxTip <> " तक की टिप जोड़ी जा सकती है।")
+    , tip_can_be_added: (\maxTip -> "किराए में €" <> maxTip <> " तक की टिप जोड़ी जा सकती है।")
     , day_time_charges: (\from till -> "दिन का शुल्क (" <> from <> " से " <> till <> ")")
     , toll_or_parking_charges: "^टोल/पार्किंग शुल्क"
     , toll_charges_estimated: "टोल शुल्क (अनुमानित)^"

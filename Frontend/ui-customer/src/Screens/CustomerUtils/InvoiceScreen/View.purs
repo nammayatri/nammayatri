@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Screens.InvoiceScreen.View where
@@ -120,18 +120,18 @@ referenceList state =
       nightChargeTill = "5 AM"
       cityConfig = getCityConfig state.data.config.cityConfig cityStr
       rideType = state.data.selectedItem.rideType
-      autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+      autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
       ambulanceWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.ambulance else cityConfig.waitingChargeConfig.ambulance
-      waitingCharges = 
+      waitingCharges =
         if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.AUTO_RICKSHAW, Just VV.EV_AUTO_RICKSHAW] then
             autoWaitingCharges
         else if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.BIKE, Just VV.DELIVERY_BIKE] then
             bikeWaitingCharges
         else if rideType == FPT.AMBULANCE then
             ambulanceWaitingCharges
-        else 
+        else
             cabsWaitingCharges
   in
   (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])
@@ -162,7 +162,7 @@ amountBreakupView state =
               [ textView $
                   [ text (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType)
                   , color Color.black800
-                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
+                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "€") (DS.Replacement "") item.price) <> " Rupees"
                   , accessibility ENABLE
                   , layoutGravity "bottom"
                   ] <> FontStyle.paragraphText LanguageStyle
@@ -198,7 +198,7 @@ totalAmountView state =
     ]
     [ textView $
         [ text $ getString TOTAL_PAID
-        , accessibilityHint $ "Total Paid : "<> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
+        , accessibilityHint $ "Total Paid : "<> (DS.replaceAll (DS.Pattern "€") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
         , accessibility ENABLE
         , color Color.black800
         , lineHeight "28"
@@ -252,7 +252,7 @@ getBaseFareForRentalOrInterCity baseDistance =
   (fromMaybe 0 $ fromNumber =<< fromString =<< ((DS.split (DS.Pattern " ") baseDistance) DA.!! 0)) * 1000
 
 getFareText :: String -> String -> Int -> ST.FareProductType -> String
-getFareText fareType baseDistance estimatedDistance rideType = 
+getFareText fareType baseDistance estimatedDistance rideType =
     let baseDistance' = if rideType == FPT.RENTAL then Constants.getKmMeter estimatedDistance else baseDistance
         isSpecialZone = if rideType == FPT.ONE_WAY_SPECIAL_ZONE then true else false
         baseDistanceInMeters = getBaseFareForRentalOrInterCity baseDistance
@@ -276,7 +276,7 @@ getFareText fareType baseDistance estimatedDistance rideType =
         "TOLL_CHARGES" -> getString TOLL_CHARGES <> "⁺"
         "DIST_BASED_FARE" -> distanceBasedCharges
         "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
-        "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES 
+        "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES
         "PARKING_CHARGE" -> getString PARKING_CHARGE <> "⁺"
         "DISTANCE_FARE" -> getString DISTANCE_FARE
         _ -> formatFareType fareType

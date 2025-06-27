@@ -66,14 +66,14 @@ screen initialState =
   { initialState
   , view
   , name : "OnBoardingSubscriptionScreen"
-  , globalEvents : [(\push -> do 
+  , globalEvents : [(\push -> do
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
         uiPlans <- Remote.getUiPlans if(initialState.data.vehicleCategory == Just ST.BikeCategory) then "BIKE" else "null"
         case uiPlans of
-          Right plansResp -> do 
+          Right plansResp -> do
             liftFlow $ push $ LoadPlans plansResp
             pure unit
-          Left err -> do 
+          Left err -> do
             pure unit
       pure (pure unit)
     )]
@@ -88,7 +88,7 @@ screen initialState =
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
-view push state = 
+view push state =
     relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -124,8 +124,8 @@ view push state =
             , orientation VERTICAL
             ][
               commonTV push (getString $ CHOOSE_YOUR_PLAN "CHOOSE_YOUR_PLAN") Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
-            , let date = getDateAfterNDays (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) -1) in 
-              commonTV push ( case getLanguageLocale languageKey of 
+            , let date = getDateAfterNDays (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) -1) in
+              commonTV push ( case getLanguageLocale languageKey of
                                 "EN_US" -> (getString FREE_UNTIL <> date)
                                 _ -> (date <> getString FREE_UNTIL)
                             ) Color.black700 FontStyle.body3 LEFT 0 NoAction false
@@ -141,7 +141,7 @@ view push state =
                 ]
             ]
           ]
-        , let selectedPlan = fromMaybe dummyPlanConfig state.data.selectedPlanItem in  
+        , let selectedPlan = fromMaybe dummyPlanConfig state.data.selectedPlanItem in
           linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -181,10 +181,10 @@ youtubeView push state reelDataItem =
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_youtube_big_image"]
      ]
   ]
-  
+
 
 headerLayout :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
-headerLayout push state = 
+headerLayout push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -273,7 +273,7 @@ infoView push state =
   ][
     commonTV push (getString $ N_DAY_FREE_TRIAL_ACTIVATED (show freeTrialDays)) Color.black900 FontStyle.h2 CENTER 0 NoAction false
   , commonTV push (getString $ TAKE_N_RIDES_FOR_THE_NEXT_N_DAYS (show freeRides) (show freeTrialDays)) Color.black700 FontStyle.subHeading2 CENTER 1 NoAction false
-  , case (state.data.reelsData DA.!! 0)  of 
+  , case (state.data.reelsData DA.!! 0)  of
     Just reelData -> youtubeView push state reelData
     Nothing -> linearLayout [][]
   , linearLayout
@@ -291,7 +291,7 @@ infoView push state =
       , orientation VERTICAL
       , gravity CENTER
       , width $ V $ round (toNumber (screenWidth unit - 66)*0.5 )
-      ][ 
+      ][
         imageView
         [ width $ V 32
         , height $ V 32
@@ -310,7 +310,7 @@ infoView push state =
       , orientation VERTICAL
       , gravity CENTER
       , width $ V $ round (toNumber (screenWidth unit - 64)*0.5 )
-      ][ 
+      ][
         imageView
         [ width $ V 32
         , height $ V 32
@@ -322,7 +322,7 @@ infoView push state =
   ]
 
 workFlowView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
-workFlowView push state = 
+workFlowView push state =
   let freeTrialDays = fromMaybe 30 state.data.freeTrialDays
       freeTrialRemonderDays = freeTrialDays - 2
       freeRides = fromMaybe 20 state.data.freeTrialRides
@@ -409,7 +409,7 @@ workFlowView push state =
 --       linearLayout
 --       [ height WRAP_CONTENT
 --       , width MATCH_PARENT
---       ](mapWithIndex 
+--       ](mapWithIndex
 --             (\index item -> planCardView push item (index == state.props.selectedPlanIndex) index
 --         ) state.data.plansList)
 --     ]
@@ -437,7 +437,7 @@ workFlowView push state =
 --       , cornerRadius 8.0
 --       , orientation VERTICAL
 --       , onClick push $ const $ SelectPlan index
---       ][ 
+--       ][
 --         linearLayout
 --         [ height WRAP_CONTENT
 --         , width MATCH_PARENT
@@ -452,7 +452,7 @@ workFlowView push state =
 --           , textSize FontSize.a_16
 --           , fontStyle $ FontStyle.bold LanguageStyle
 --           ]
---         , horizontalScrollView 
+--         , horizontalScrollView
 --           [ height WRAP_CONTENT
 --           , width MATCH_PARENT
 --           , scrollBarX false
@@ -462,7 +462,7 @@ workFlowView push state =
 --             [ height WRAP_CONTENT
 --             , width MATCH_PARENT
 --             , orientation HORIZONTAL
---             ](map  (\item -> 
+--             ](map  (\item ->
 --                     linearLayout
 --                     [ height WRAP_CONTENT
 --                     , width MATCH_PARENT
@@ -546,7 +546,7 @@ planCardView push state isSelected isExpanded clickable' action isSelectedLangTa
          ]
        , if state.showOffer then offerCountView (DA.length state.offers) isExpanded else linearLayout[visibility GONE][]
        ]
-    , horizontalScrollView 
+    , horizontalScrollView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarX false
@@ -572,7 +572,7 @@ planCardView push state isSelected isExpanded clickable' action isSelectedLangTa
             , margin $ MarginTop if isExpanded then 0 else 8
             , background Color.grey700
             , cornerRadius 4.0
-            ] <> case item.offerDescription of 
+            ] <> case item.offerDescription of
                   Just desc -> [text desc, visibility if isExpanded then VISIBLE else GONE]
                   Nothing -> [visibility GONE])
             [ textView
@@ -587,7 +587,7 @@ planCardView push state isSelected isExpanded clickable' action isSelectedLangTa
     ]
 
 offerCountView :: forall w. Int -> Boolean -> PrestoDOM (Effect Unit) w
-offerCountView count isSelected = 
+offerCountView count isSelected =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -613,9 +613,9 @@ offerCountView count isSelected =
   ]
 
 
-promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
+promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w
 promoCodeView push state =
-  linearLayout 
+  linearLayout
   ([ height WRAP_CONTENT
   , width MATCH_PARENT
   , cornerRadius 100.0
@@ -632,7 +632,7 @@ promoCodeView push state =
      , margin (MarginRight 4)
      , visibility if state.hasImage then VISIBLE else GONE
      , imageWithFallback state.imageURL
-     ] 
+     ]
    , textView $
      [ textSize FontSize.a_10
      , fontStyle $ FontStyle.medium LanguageStyle
@@ -649,13 +649,13 @@ planPriceView fares frequency isSelectedLangTamil =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+  ][ textView $
+     [ textFromHtml $ "<strike> €" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
      , visibility if (HU.getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
    , textView
-      [ text $ "₹" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+      [ text $ "€" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
@@ -673,9 +673,9 @@ planPriceView fares frequency isSelectedLangTamil =
 --   [ height WRAP_CONTENT
 --   , width MATCH_PARENT
 --   , orientation VERTICAL
---   ][ 
---     textView $ 
---     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+--   ][
+--     textView $
+--     [ textFromHtml $ "<strike> €" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
 --     , visibility if (getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
 --     , color Color.black600
 --     ] <> FontStyle.body7 TypoGraphy
@@ -683,7 +683,7 @@ planPriceView fares frequency isSelectedLangTamil =
 --     [ height WRAP_CONTENT
 --     , width MATCH_PARENT
 --     , gravity LEFT
---     , text $ "₹" <> (getPlanPrice fares "FINAL_FEE")
+--     , text $ "€" <> (getPlanPrice fares "FINAL_FEE")
 --     , textSize FontSize.a_32
 --     , fontStyle $ FontStyle.bold LanguageStyle
 --     , color Color.black800
@@ -703,7 +703,7 @@ planPriceView fares frequency isSelectedLangTamil =
 --   ]
 
 bottomView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
-bottomView push state = 
+bottomView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -718,7 +718,7 @@ bottomView push state =
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 16 0 16 16 
+    , padding $ Padding 16 0 16 16
     , orientation VERTICAL
     , gravity CENTER
     ][
@@ -752,7 +752,7 @@ underlinedTextView value push =
 
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean-> PrestoDOM (Effect Unit) w
-commonTV push text' color' theme gravity' marginTop action txtFromHtml = 
+commonTV push text' color' theme gravity' marginTop action txtFromHtml =
   textView $
   [ width MATCH_PARENT
   , height WRAP_CONTENT

@@ -31,7 +31,7 @@
 <string name="tap_on">3. ట్యాప్ చేయండి</string>
 <string name="location">లొకేషన్</string>
 <string name="phone">ఫోన్</string>
-<string name="includes_pickup_charges_10">పికప్ ₹{#amount#}</string>
+<string name="includes_pickup_charges_10">పికప్ €{#amount#}</string>
 <string name="away">దూరంలో</string>
 <string name="we_made_you_online">మేము మిమ్మల్ని ఆన్‌లైన్‌లో ఉంచాము</string>
 <string name="location_is_turned_on">లొకేషన్ ఆన్ చేయబడింది</string>

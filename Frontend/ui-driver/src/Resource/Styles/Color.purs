@@ -169,7 +169,7 @@ incorrectAlert :: Color
 incorrectAlert  = "#F76F6F"
 
 darkMint :: Color
-darkMint = "#53BB6F"
+darkMint = "#378C66"
 
 charcoalGrey :: Color
 charcoalGrey = "#323643"
@@ -418,10 +418,10 @@ lightPurple = "#F4ECFF"
 purple :: Color
 purple = "#9747FF"
 
-peacoat :: Color 
+peacoat :: Color
 peacoat = "#33394A"
 
-mangolia :: Color 
+mangolia :: Color
 mangolia = "#F4ECFF"
 
 athensGray :: Color

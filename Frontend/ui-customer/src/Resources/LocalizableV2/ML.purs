@@ -5,7 +5,7 @@ import Resources.LocalizableV2.Types
 
 
 
-getMl :: Keymap 
+getMl :: Keymap
 getMl = Keymap {
   safety: "സുരക്ഷ"
 , safety_check_in: "സുരക്ഷ പരിശോധന"
@@ -348,9 +348,9 @@ getMl = Keymap {
 , pickup_charge: "പിക്കപ്പ് ചാർജുകൾ"
 , total_paid: "ആകെ നൽകിയ പണം"
 , waiting_charge: "കാത്തിരിപ്പ് ചാർജുകൾ"
-, drivers_can_charge_an_additional_fare_upto: "* ഡ്രൈവർമാർക്ക് റിട്ടേൺ യാത്ര ലഭിക്കാനുള്ള സാധ്യത, ട്രാഫിക് തുടങ്ങിയ മറ്റ് ഘടകങ്ങൾ ഉൾകോള്ളിച്ചുകൊണ്ട് ₹20 വരെ കൂടുതൽ അഭ്യർത്ഥിക്കാം."
-, waiting_charge_description: "°ആദ്യ {} മിനിറ്റിൽ വെയ്റ്റിംഗ് ചാർജ് പൂജ്യമാണ്. അതിനുശേഷം കാത്തിരിപ്പ് സമയത്തിന് ഒരു മിനിറ്റിന് ₹{} ഈടാക്കും."
-, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. ആദ്യ 3 മിനിറ്റിൽ വെയിറ്റിംഗ് ചാർജ് പൂജ്യമാണ്.\n 2. ഒരു മിനിറ്റിന് ₹1.5 വെയിറ്റിംഗ് ചാർജ് അതിനുശേഷം ബാധകമാകും.")
+, drivers_can_charge_an_additional_fare_upto: "* ഡ്രൈവർമാർക്ക് റിട്ടേൺ യാത്ര ലഭിക്കാനുള്ള സാധ്യത, ട്രാഫിക് തുടങ്ങിയ മറ്റ് ഘടകങ്ങൾ ഉൾകോള്ളിച്ചുകൊണ്ട് €20 വരെ കൂടുതൽ അഭ്യർത്ഥിക്കാം."
+, waiting_charge_description: "°ആദ്യ {} മിനിറ്റിൽ വെയ്റ്റിംഗ് ചാർജ് പൂജ്യമാണ്. അതിനുശേഷം കാത്തിരിപ്പ് സമയത്തിന് ഒരു മിനിറ്റിന് €{} ഈടാക്കും."
+, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. ആദ്യ 3 മിനിറ്റിൽ വെയിറ്റിംഗ് ചാർജ് പൂജ്യമാണ്.\n 2. ഒരു മിനിറ്റിന് €1.5 വെയിറ്റിംഗ് ചാർജ് അതിനുശേഷം ബാധകമാകും.")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "കാത്തിരിപ്പിന്റെ ആദ്യ "<> freeWaitingTime <>" മിനിറ്റിന് ശേഷം മിനിറ്റിന് "<>waitingCharge<>" ബാധകം")
 , successful_onboard: (\_ -> "നിങ്ങൾ വിജയകരമായി \n നമ്മ യാത്രിയിലേക്ക് പ്രവേശിച്ചിരിക്കുന്നു")
 , have_referral_code: "റഫറൽ കോഡ് ഉണ്ടോ?"
@@ -434,7 +434,7 @@ getMl = Keymap {
 , gender_str: "ലിംഗം"
 , profile_completion: "പ്രൊഫൈൽ പൂർത്തീകരണം"
 , early_end_ride_charges: "യാത്ര നേരത്തെ അവസാനിപ്പിച്ചാൽ ബാധകമാകുന്ന നിരക്ക് "
-, early_end_ride_charges_description: "^ഒരു ട്രിപ്പ് നേരത്തെ അവസാനിപ്പിക്കുമ്പോൾ, ബാക്കിയായ ദൂരത്തിന്റെ പകുതി നിരക്ക് അധികമായി നൽകേണ്ടതുണ്ട് (പരമാവധി ₹50)"
+, early_end_ride_charges_description: "^ഒരു ട്രിപ്പ് നേരത്തെ അവസാനിപ്പിക്കുമ്പോൾ, ബാക്കിയായ ദൂരത്തിന്റെ പകുതി നിരക്ക് അധികമായി നൽകേണ്ടതുണ്ട് (പരമാവധി €50)"
 , yes_try_again: "അതെ, വീണ്ടും ശ്രമിക്കുക"
 , no_dont: "വേണ്ട"
 , yes_cancel_search: "അതെ, സെർച്ച് റദ്ദാക്കുക"
@@ -460,7 +460,7 @@ getMl = Keymap {
 , fare_update_policy: "നിരക്ക് അപ്ഡേറ്റ് നയം"
 , driver_additions_optional: "ഡ്രൈവർ കൂട്ടിച്ചേർക്കലുകൾ (ഓപ്ഷണൽ)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ഡ്രൈവർ ട്രാഫിക്ക്, റിട്ടേൺ ട്രിപ്പിനുള്ള സാധ്യത തുടങ്ങിയവയ്ക്കായി അധികമായി ഉദ്ധരിക്കാം."
-, driver_additions_are_calculated_at_rate: (\_ -> "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ അടിസ്ഥാന നിരക്കിന്റെ 10% കണക്കാക്കി, ഏറ്റവും അടുത്തുള്ള ₹10 ആയി കണക്കാക്കുന്നു")
+, driver_additions_are_calculated_at_rate: (\_ -> "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ അടിസ്ഥാന നിരക്കിന്റെ 10% കണക്കാക്കി, ഏറ്റവും അടുത്തുള്ള €10 ആയി കണക്കാക്കുന്നു")
 , driver_may_not_charge_this_additional_fare: "ശ്രദ്ധിക്കുക: ഡ്രൈവർ ഈ അധിക നിരക്ക് ഈടാക്കാം/അല്ലായിരിക്കാം"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "ചുവടെയുള്ള ഏതെങ്കിലും കാരണത്താൽ നിങ്ങൾക്ക് അപ്‌ഡേറ്റ് ചെയ്‌ത അന്തിമ നിരക്ക് കണ്ടേക്കാം:"
 , reason_change_in_route_a: "1. റൂട്ടിലെ മാറ്റം: "
@@ -520,7 +520,7 @@ getMl = Keymap {
 , call_namma_yatri_support: (\_ -> "നമ്മ യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക")
 , call_112: "വിളിക്കുക 112"
 , call_emergency_centre: "എമർജൻസി സെന്ററിലേക്ക് വിളിക്കുക"
-, driver_addition_limits_are_in_increments: "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹20 ഇൻക്രിമെന്റിലാണ്"
+, driver_addition_limits_are_in_increments: "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ €20 ഇൻക്രിമെന്റിലാണ്"
 , seats: "സീറ്റുകൾ"
 , hatchback: "ഹാച്ച്ബാക്ക്"
 , suv: "സ്ഉവി"
@@ -1181,7 +1181,7 @@ getMl = Keymap {
 , other_provider_no_receipt: "മറ്റ് ദാതാക്കൾ നിറവേറ്റിയ റൈഡുകളുടെ ഡ്രൈവർ രസീത് ഇതുവരെ ലഭ്യമല്ല."
 , ride_fulfilled_by: (\merchantName -> "റൈഡ് പൂർത്തിയാക്കിയത്: " <> merchantName)
 , congestion_charges: "തിരക്ക് ചാർജ്*"
-, tip_can_be_added: (\maxTip -> "റൈഡ് ഫേയിർക്കുള്ള ടിപ്പ് അപ്ടിൽ ₹" <> maxTip <> " വരെ ചേർത്തുകൂടാവുന്നു")
+, tip_can_be_added: (\maxTip -> "റൈഡ് ഫേയിർക്കുള്ള ടിപ്പ് അപ്ടിൽ €" <> maxTip <> " വരെ ചേർത്തുകൂടാവുന്നു")
 , congestion_charges_desc: (\charges -> "*നിങ്ങളുടെ യാത്രയിൽ നിലവിൽ "<> charges <>"% തിരക്ക് ചാർജ് ബാധകമാണ്, ഡ്രൈവറുടെ സമയത്തിന് തിരക്കുള്ള സമയം പ്രതിപൂരിപ്പിക്കുന്നതിനോ നിങ്ങൾക്കായി കൂടുതൽ ഡ്രൈവർമാരെ ലഭ്യമാക്കുന്നതിനോ.")
 , ac_turned_off: "എസി ഓഫ് ചെയ്തു"
 , book_any: "ബുക്ക് ഏതെങ്കിലും"
@@ -1347,7 +1347,7 @@ getMl = Keymap {
 , kozhikode: "കോഴിക്കോട്"
 , thrissur: "തൃശ്ശൂർ"
 , metro_free_ticket_event: (\freeTicketInterval -> "ഓരോ " <> freeTicketInterval <> " ടിക്കറ്റ് സൗജന്യമാണ്!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ഓരോ " <> freeTicketInterval <> " ടിക്കറ്റിനുള്ള ഒരു സൗജന്യ ടിക്കറ്റ് (അതിലുള്ള പരമാവധി ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ഓരോ " <> freeTicketInterval <> " ടിക്കറ്റിനുള്ള ഒരു സൗജന്യ ടിക്കറ്റ് (അതിലുള്ള പരമാവധി €" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "അടുത്ത ടിക്കറ്റ് സൗജന്യമാണ്"
 , free_ticket_available: (\maxCashback freeTicketCount -> "സൗജന്യ ടിക്കറ്റ് (അതിലുള്ള പരമാവധി " <> maxCashback <> ") ലഭ്യമാണ് " <> freeTicketCount <> " ടിക്കറ്റുകൾ!")
 , additional_charges_will_be_applicable: "ഡ്രൈവർ പിക്കപ്പ് സ്ഥലത്തിന് സമീപം ആയിരിക്കുമ്പോൾ അധിക നിരക്കുകൾ ബാധകമായേക്കാം."
@@ -1774,21 +1774,21 @@ getMl = Keymap {
     , amount: "തുക"
     , download_app: "ആപ്പ് ഡൗൺലോഡ് ചെയ്യുക"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "ആപ്പ് ഡൗൺലോഡ് ചെയ്യാനും നിങ്ങളുടെ ക്ഷണ കോഡ് സ്വയം പ്രയോഗിക്കാനും QR കോഡ് സ്കാൻ ചെയ്യുക"
-    , earn_:  \a ->  "₹" <> a <> " സമ്പാദിക്കുക"
-    ,  collect_:  \a ->  "₹" <> a <> " ശേഖരിക്കുക"
+    , earn_:  \a ->  "€" <> a <> " സമ്പാദിക്കുക"
+    ,  collect_:  \a ->  "€" <> a <> " ശേഖരിക്കുക"
     , add_upi_id: "UPI ഐഡി ചേർക്കുക"
     , earnings: "വരുമാനം"
     , enter_upi_id: "UPI ഐഡി നൽകുക"
-    , you_get_50__they_get_50: \a b ->"നിങ്ങൾ ₹" <> a <> " നേടും & അവർ ₹" <> b <> " നേടും"
+    , you_get_50__they_get_50: \a b ->"നിങ്ങൾ €" <> a <> " നേടും & അവർ €" <> b <> " നേടും"
     , when_your_friend_uses_your_referral_code_n_and_takes_their_first_ride: "നിങ്ങളുടെ സുഹൃത്ത് നിങ്ങളുടെ റഫറൽ കോഡ് ഉപയോഗിച്ച് \n അവരുടെ ആദ്യ യാത്ര ചെയ്താൽ."
     , read_terms_and_conditions: "നിബന്ധനകളും വ്യവസ്ഥകളും വായിക്കുക"
     , ride_is_considered_valid_based_on_certain_ride_distance_ride_time_and_fraud_checks_maintained_internally: "ഒരു യാത്രയെ സാധുവായതായി കണക്കാക്കുന്നത് പ്രത്യേക യാത്ര ദൂരം, യാത്രാ സമയം, കൂടാതെ സ്ഥാപനത്തിൽ നടത്തപ്പെടുന്ന വഞ്ചന പരിശോധനകളുടെ അടിസ്ഥാനത്തിലാണ്."
     , collect_earnings_now: "ഇപ്പോൾ വരുമാനം ശേഖരിക്കുക"
     , update_upi_id: "UPI ID അപ്‌ഡേറ്റ് ചെയ്യുക"
-    , youve_earned_50_for_taking_your_first_ride: \a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി ₹" <> a <> " നേടിയിട്ടുണ്ട്!"
-    , get_50_referral_benefit_for_your_first_ride: \a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി ₹" <> a <> " റഫറൽ പ്രയോജനം നേടുക!"
+    , youve_earned_50_for_taking_your_first_ride: \a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി €" <> a <> " നേടിയിട്ടുണ്ട്!"
+    , get_50_referral_benefit_for_your_first_ride: \a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി €" <> a <> " റഫറൽ പ്രയോജനം നേടുക!"
     , take_a_ride_now: "ഇപ്പോഴെന്തെങ്കിലും യാത്ര ചെയ്യൂ"
-    , take_a_ride__claim_50: \a ->  "ഒരു യാത്ര എടുക്കൂ & ₹" <> a <> " വാങ്ങൂ"
+    , take_a_ride__claim_50: \a ->  "ഒരു യാത്ര എടുക്കൂ & €" <> a <> " വാങ്ങൂ"
 , select_route : "റൂട്ട് തിരഞ്ഞെടുക്കുക"
 , ac_bus : "എസി ബസ്"
 , early_departure : "മുന്നത്തെ പുറപ്പെടൽ"

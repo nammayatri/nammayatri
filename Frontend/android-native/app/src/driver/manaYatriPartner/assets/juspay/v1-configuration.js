@@ -14,7 +14,7 @@ window.getMerchantConfig = function () {
     "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION", "MY_PLAN_TITLE", "BONUS_PRIMARY_TEXT", "BONUS_SECONDARY_TEXT", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "DOWNLOAD_NAMMA_YATRI", "SHARE_NAMMA_YATRI", "NAMMA_BONUS", "REFERRED_DRIVERS_INFO","REFERRED_CUSTOMERS_INFO"],
     "fontType": "Assets",
-    "currency": "₹",
+    "currency": "€",
     "isGradient" : "false",
     "gradient": [],
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
@@ -2830,9 +2830,9 @@ window.getMerchantConfig = function () {
 
 let staticSubscriptionConfig = [
   {"price" : 45.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
-  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹90 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹90-*$*-प्रति दिन अधिकतम ₹90 तक-*$*-প্রতিদিন সর্বোচ্চ ₹90 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹90 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹90 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of €90 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ €90-*$*-प्रति दिन अधिकतम €90 तक-*$*-প্রতিদিন সর্বোচ্চ €90 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി €90 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் €90 வரை-*$*-రోజుకు గరిష్టంగా €99 వరకు"},
   { "price": 25.0, "frequency": "PER_DAY", "variantCategory": "AutoCategory", "name": "DAILY_UNLIMITED", "introductoryOffer": "", "showSelected": false, "planDesc": "CAB_DAILY_UNLIMITED_OFFER"},
-  { "price": 3.5, "frequency": "PER_RIDE", "variantCategory": "AutoCategory", "name": "DAILY_PER_RIDE", "introductoryOffer": "", "showSelected": false, "planDesc": "Up to a maximum of ₹35 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹35-*$*-प्रति दिन अधिकतम ₹35 तक-*$*-প্রতিদিন সর্বোচ্চ ₹35 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹35 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹35 வரை-*$*-రోజుకు గరిష్టంగా ₹35 వరకు" }
+  { "price": 3.5, "frequency": "PER_RIDE", "variantCategory": "AutoCategory", "name": "DAILY_PER_RIDE", "introductoryOffer": "", "showSelected": false, "planDesc": "Up to a maximum of €35 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ €35-*$*-प्रति दिन अधिकतम €35 तक-*$*-প্রতিদিন সর্বোচ্চ €35 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി €35 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் €35 வரை-*$*-రోజుకు గరిష్టంగా €35 వరకు" }
 ]
 
 let defWaitingChargesConfig = {

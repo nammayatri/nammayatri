@@ -662,9 +662,9 @@ getBn =
     , n_day_free_trial_activated: (\day -> day <> "-দিনের বিনামূল্যে ট্রায়াল সক্রিয়!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "প্রথম " <> days <> " দিনের জন্য বিনামূল্যে " <> rides <> " টি রাইড নিন")
     , every_ride_at_zero_commission: "জিরো কমিশনে প্রতিটি রাইড!"
-    , earn_upto_per_day: "প্রতিদিন ₹{} পর্যন্ত উপার্জন করুন!"
+    , earn_upto_per_day: "প্রতিদিন €{} পর্যন্ত উপার্জন করুন!"
     , how_this_works: "কিভাবে এই কাজ করে"
-    , sign_up_for_autopay_by_paying_just: "মাত্র ₹1 দিয়ে অটোপে-এর জন্য সাইন আপ করুন"
+    , sign_up_for_autopay_by_paying_just: "মাত্র €1 দিয়ে অটোপে-এর জন্য সাইন আপ করুন"
     , get_reminded_about_your_plan_setup: "আপনার প্ল্যান সেটআপ সম্পর্কে মনে করিয়ে দিন"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "Day " <> days <> " or " <> rides <> " rides: FREE TRIAL reminder")
     , plan_starts_n_days_m_rides: (\days rides -> "Day " <> days <> " or " <> rides <> " rides: Plan Starts")
@@ -702,7 +702,7 @@ getBn =
     , manage_plan: "পরিকল্পনা পরিচালনা করুন"
     , view_autopay_details: "স্বয়ংক্রিয় অর্থপ্রদানের বিবরণ দেখুন"
     , switch_and_save: "সুইচ এবং সেভ করুন"
-    , switch_and_save_desc: "আপনি আজ 7টির বেশি রাইড সম্পূর্ণ করেছেন। দৈনিক আনলিমিটেড প্ল্যানে স্যুইচ করে ₹10 পর্যন্ত সঞ্চয় করুন"
+    , switch_and_save_desc: "আপনি আজ 7টির বেশি রাইড সম্পূর্ণ করেছেন। দৈনিক আনলিমিটেড প্ল্যানে স্যুইচ করে €10 পর্যন্ত সঞ্চয় করুন"
     , switch_now: "এখনই পাল্টান"
     , payment_mode_changed_to_manual: "পেমেন্ট মোড ম্যানুয়াল এ পরিবর্তিত হয়েছে"
     , payment_mode_changed_to_manual_desc: "আপনি আপনার UPI স্বয়ংক্রিয় অর্থপ্রদান বিরাম দিয়েছেন। আপনি আপনার বকেয়া ম্যানুয়ালি সাফ করতে পারেন।"
@@ -753,8 +753,8 @@ getBn =
     , daily_unlimited: "দৈনিক সীমাহীন"
     , daily_per_ride: "প্রতি যাত্রায় প্রতিদিন"
     , daily_unlimited_plan_desc: "প্রতিদিন সীমাহীন রাইড উপভোগ করুন"
-    , daily_per_ride_plan_desc: (\price -> "প্রতিদিন সর্বোচ্চ ₹" <> price <> " পর্যন্ত")
-    , pay_to_join_this_plan: "প্ল্যানে যোগ দিতে ₹1 পে করুন"
+    , daily_per_ride_plan_desc: (\price -> "প্রতিদিন সর্বোচ্চ €" <> price <> " পর্যন্ত")
+    , pay_to_join_this_plan: "প্ল্যানে যোগ দিতে €1 পে করুন"
     , offers_not_applicable: "সম্পূর্ণ না হলে অফার প্রযোজ্য নয়"
     , paused_str: "বিরতি দেওয়া হয়েছে"
     , pending_str: "বিচারাধীন"
@@ -860,8 +860,8 @@ getBn =
     , execution_attempting: "সম্পাদনা করার প্রচেষ্টা"
     , execution_success: "সম্পাদনা সফল"
     , payment_scheduled: "পেমেন্ট নির্ধারিত"
-    , offer_card_banner_title: (\_ date price -> "অটোপে সেটআপ করুন এবং " <> date <> " পর্যন্ত শুধুমাত্র ₹" <> price <> "/দিন পে করুন")
-    , offer_card_banner_desc: "1 নভেম্বর পর্যন্ত শুধুমাত্র ₹15/দিন পে করুন"
+    , offer_card_banner_title: (\_ date price -> "অটোপে সেটআপ করুন এবং " <> date <> " পর্যন্ত শুধুমাত্র €" <> price <> "/দিন পে করুন")
+    , offer_card_banner_desc: "1 নভেম্বর পর্যন্ত শুধুমাত্র €15/দিন পে করুন"
     , offer_card_banner_alert: "আপনার অটোপে সেটআপ মুলতুবি আছে!"
     , execution_failed: "সম্পাদনা ব্যর্থ"
     , notification_failed: "বিজ্ঞপ্তি ব্যর্থ হয়েছে"
@@ -881,7 +881,7 @@ getBn =
     , watch_video_for_help: "সাহায্যের জন্য ভিডিও দেখুন"
     , payment_pending_soft_nudge: "প্রাপ্য সীমা শীঘ্রই পৌঁছে যাবে।নন-স্টপ রাইডগুলি উপভোগ করার জন্য সাফ বকেয়া পরিষ্কার করুন"
     , clear_your_dues_early: "আপনার বকেয়া তাড়াতাড়ি সাফ করুন"
-    , due_limit_warning_banner_title: "আপনার যথাসময়ে ₹{} ডলার সীমা শীঘ্রই পৌঁছে যাবে"
+    , due_limit_warning_banner_title: "আপনার যথাসময়ে €{} ডলার সীমা শীঘ্রই পৌঁছে যাবে"
     , free_trial_ending_tomorrow: "বিনামূল্যে ট্রায়াল আগামীকাল শেষ!"
     , free_trial_ends_tonight: "বিনামূল্যে ট্রায়াল আজ রাতে শেষ!"
     , join_a_plan_to_continue_taking_rides: "রাইডগুলি চালিয়ে যাওয়ার পরিকল্পনায় যোগ দিন"
@@ -1105,7 +1105,7 @@ getBn =
     , this_extra_amount_the_customer_will_pay: "এই অতিরিক্ত পরিমাণ গ্রাহক আপনাকে প্রদান করবে কারণ আপনি {} মিনিটের বেশি অপেক্ষা করেছেন"
     , ten_digit_mobile_number: "10-সংখ্যার মোবাইল নম্বর"
     , booth_charges: "বুথ চার্জ"
-    , booth_charges_included: "বুথ চার্জ অন্তর্ভুক্ত: ₹{}"
+    , booth_charges_included: "বুথ চার্জ অন্তর্ভুক্ত: €{}"
     , total_amount: "মোট পরিমাণ"
     , please_add_rc: "অনুগ্রহ করে রাইড নিতে RC যোগ করুন"
     , location_cannot_be_added_while_goto_active: "গো-টু সক্ষম না থাকলেই বিকল্প উপলব্ধ"
@@ -1475,7 +1475,7 @@ getBn =
     , fare_for: (\limit -> limit <> " জন্য ভাড়া")
     , waiting_charge_limit: (\timeLimit -> timeLimit <> " মিনিট পরে ওয়েটিং চার্জ")
     , parking_charges_desc: "ড্রাইভার দ্বারা সংগৃহীত পার্কিং চার্জ ভাড়ার অন্তর্ভুক্ত নয়। এটি রাইডের পরে ড্রাইভার এবং যাত্রীর মধ্যে নিষ্পত্তি করতে হবে।"
-    , tip_can_be_added: (\maxTip -> "টিপ হিসাবে সর্বোচ্চ ₹" <> maxTip <> " রাইড ভাড়ায় যোগ করা যেতে পারে।")
+    , tip_can_be_added: (\maxTip -> "টিপ হিসাবে সর্বোচ্চ €" <> maxTip <> " রাইড ভাড়ায় যোগ করা যেতে পারে।")
     , day_time_charges: (\from till -> "দিবাকালীন চার্জ (" <> from <> " থেকে " <> till <> ")")
     , toll_or_parking_charges: "^টোল/পার্কিং চার্জ"
     , toll_charges_estimated: "টোল চার্জ (আনুমানিক)^"

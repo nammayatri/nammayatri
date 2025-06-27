@@ -47,7 +47,7 @@ view push state =
     ]
 
 tipInfoView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-tipInfoView push state = 
+tipInfoView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -140,7 +140,7 @@ androidTipsView push state =
                 , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
                 , accessibility ENABLE
                 , padding $ if index == 0 then Padding 5 10 5 10 else Padding 8 10 8 10
-                , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip" <> (if (state.activeIndex == index) then " Selected" else " : Button")
+                , accessibilityHint $ "€" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip" <> (if (state.activeIndex == index) then " Selected" else " : Button")
                 , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                 , clickable true
                 , background $ if state.activeIndex == index then Color.blue600 else Color.white900
@@ -194,7 +194,7 @@ iOSTipsView push state =
                             , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
                             , accessibility ENABLE
                             , padding $ if index == 0 then Padding 5 10 5 10 else Padding 8 10 8 10
-                            , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " : Button"
+                            , accessibilityHint $ "€" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " : Button"
                             , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                             , clickable $ true
                             , background $ if state.activeIndex == index then Color.blue600 else Color.white900

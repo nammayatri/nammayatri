@@ -37,7 +37,7 @@ window.getMerchantConfig = function () {
     "isGradient": "false",
     "gradient": [],
     "primaryBackground": "#03B9F5",
-    "currency": "₹",
+    "currency": "€",
     "alertDialogPrimaryColor": "#00B8F5",
     "primaryButtonCornerRadius": 8.0,
     "cancelSearchTextColor": "#FD5154",
@@ -67,7 +67,7 @@ window.getMerchantConfig = function () {
       "showAdditionalChargesText" : false,
       "lottieHeight": 96,
       "enableRateCard" : true,
-          
+
       "lottieWidth": 96,
       "primaryButtonHeight": 60,
       "backArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"

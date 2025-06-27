@@ -28,7 +28,7 @@
     <string name="tap_on">3. আলতো চাপুন</string>
     <string name="location">অবস্থান</string>
     <string name="phone">ফোন</string>
-    <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ {#amount#} অন্তর্ভুক্ত</string>
+    <string name="includes_pickup_charges_10">পিকআপ চার্জ € {#amount#} অন্তর্ভুক্ত</string>
     <string name="away">দূরে</string>
     <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
     <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>

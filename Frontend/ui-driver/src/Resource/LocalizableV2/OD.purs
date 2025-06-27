@@ -670,9 +670,9 @@ getOd =
     , n_day_free_trial_activated: (\day -> day <> "ଦିନ ମୁକ୍ତ ପରୀକ୍ଷଣ ସକ୍ରିୟ ହୋଇଛି!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "ପ୍ରଥମ " <> days <> " ଦିନ ପାଇଁ ମୁକ୍ତରେ " <> rides <> " ଯାତ୍ରା ନିଅନ୍ତୁ")
     , every_ride_at_zero_commission: "ପ୍ରତ୍ୟେକ ଯାତ୍ରାରେ ଶୂନ୍ୟ କମିଶନ୍!"
-    , earn_upto_per_day: "ଦିନକୁ ₹{} ଆର୍ଜନ କରନ୍ତୁ!"
+    , earn_upto_per_day: "ଦିନକୁ €{} ଆର୍ଜନ କରନ୍ତୁ!"
     , how_this_works: "ଏହା କିପରି କାମ କରେ"
-    , sign_up_for_autopay_by_paying_just: "କେବଳ ₹1 ଦେଇ ଅଟୋପେ ପାଇଁ ସ୍ବାୟଂ ସବୁଖୁରାହ୍ କରନ୍ତୁ"
+    , sign_up_for_autopay_by_paying_just: "କେବଳ €1 ଦେଇ ଅଟୋପେ ପାଇଁ ସ୍ବାୟଂ ସବୁଖୁରାହ୍ କରନ୍ତୁ"
     , get_reminded_about_your_plan_setup: "ଆପଣଙ୍କ ପ୍ରକଳ୍ପ ସ୍ଥାପନ ପାଇଁ ସ୍ମରଣ ଦିଆଯାଇବ"
     , free_trial_reminder_n_days_m_rides: (\days rides -> "ଦିନ " <> days <> " କିମ୍ବା " <> rides <> " ଯାତ୍ରା: ମୁକ୍ତ ପରୀକ୍ଷଣ ସ୍ମରଣ")
     , plan_starts_n_days_m_rides: (\days rides -> "ଦିନ " <> days <> " କିମ୍ବା " <> rides <> " ଯାତ୍ରା: ପ୍ରକଳ୍ପ ଆରମ୍ଭ ହେବା")
@@ -689,7 +689,7 @@ getOd =
     , payment_pending_alert: "⚠️ ଭୁଗତା ଅପେକ୍ଷାରତ! ⚠️"
     , payment_pending_alert_desc: (\_ -> "ନମ୍ମା ଯାତ୍ରୀରେ ଯାତ୍ରା ଜାରି ରଖିବା ପାଇଁ ଆପଣଙ୍କ ଭୁଗତାକୁ ଅଦାୟ କରନ୍ତୁ")
     , low_account_balance: "ଅକାଉଣ୍ଟରେ କମ୍ ବ୍ୟାଲାନ୍ସ"
-    , low_account_balance_desc: "ଅବିରତ ଯାତ୍ରା ପାଇଁ ଆଜି ₹<X> ଯୋଡନ୍ତୁ।"
+    , low_account_balance_desc: "ଅବିରତ ଯାତ୍ରା ପାଇଁ ଆଜି €<X> ଯୋଡନ୍ତୁ।"
     , okay_got_it: "ଠିକ୍ ଅଛି, ମୁଁ ବୁଝିବି"
     , limited_time_offer: "ଆପଣଙ୍କ ପାଇଁ ସୀମିତ ସମୟର ଅଫର୍!"
     , join_now: "ଏବେ ଯୋଗ ଦିଅନ୍ତୁ"
@@ -710,7 +710,7 @@ getOd =
     , manage_plan: "ପ୍ଲାନ୍ ପରିଚାଳନା କରନ୍ତୁ"
     , view_autopay_details: "ଆଟୋପେ ବିବରଣୀ ଦେଖନ୍ତୁ"
     , switch_and_save: "ସ୍ୱିଚ୍ କରନ୍ତୁ ଏବଂ ଅଧିକ ସଞ୍ଚୟ କରନ୍ତୁ"
-    , switch_and_save_desc: "ଆପଣ ଆଜି 7ରୁ ଅଧିକ ରାଇଡ୍ ସମାପ୍ତ କରିଛନ୍ତି। ଦୈନିକ ଅନଲିମିଟେଡ୍ ପ୍ଲାନ୍କୁ ସ୍ୱିଚ୍ କରି ₹10 ପର୍ଯ୍ୟନ୍ତ ସଞ୍ଚୟ କରନ୍ତୁ"
+    , switch_and_save_desc: "ଆପଣ ଆଜି 7ରୁ ଅଧିକ ରାଇଡ୍ ସମାପ୍ତ କରିଛନ୍ତି। ଦୈନିକ ଅନଲିମିଟେଡ୍ ପ୍ଲାନ୍କୁ ସ୍ୱିଚ୍ କରି €10 ପର୍ଯ୍ୟନ୍ତ ସଞ୍ଚୟ କରନ୍ତୁ"
     , switch_now: "ସମ୍ପର୍କ କରନ୍ତୁ"
     , payment_mode_changed_to_manual: "ପେମେଣ୍ଟ ମୋଡ୍ ମାନୁଆଲ୍ କୁ ପରିବର୍ତ୍ତିତ ହୋଇଛି"
     , payment_mode_changed_to_manual_desc: "<b>ଆପଣ ଆପଣଙ୍କ UPI ଆଟୋପେକୁ ବିରତି ଦେଇଛନ୍ତି। ଏହାକୁ ଆପଣଙ୍କ UPI ଆପ୍ରୁ ପୁନଃ ସକ୍ରିୟ କରାଯାଇପାରେ।</b><br>ଆପଣ ମାନୁଆଲ୍ ଭାବେ ଆପଣଙ୍କ ବକେୟା ସଫା କରିପାରିବେ।"
@@ -776,11 +776,11 @@ getOd =
     , daily_unlimited: "ଦୈନିକ ଅନଲିମିଟେଡ୍"
     , daily_per_ride: "ଦୈନିକ ପ୍ରତି ରାଇଡ୍"
     , daily_unlimited_plan_desc: "ଆନନ୍ଦ କରନ୍ତୁ ଦୈନିକ ଅନଲିମିଟେଡ୍ ରାଇଡ୍"
-    , daily_per_ride_plan_desc: (\price -> "ଦିନ ପ୍ରତି ଅଧିକତମ ₹" <> price <> " ପର୍ଯ୍ୟନ୍ତ")
+    , daily_per_ride_plan_desc: (\price -> "ଦିନ ପ୍ରତି ଅଧିକତମ €" <> price <> " ପର୍ଯ୍ୟନ୍ତ")
     , autopay_cancelled: "ଆଟୋପେ ବିଲକରାଗଲା"
     , no: "ନା"
     , yes_cancel: "ହଁ, କାନ୍ସଲ୍"
-    , pay_to_join_this_plan: "ପ୍ଲାନ୍ରେ ଯୋଗ ଦେବାକୁ ₹1 ମାତ୍ର ପେ କରନ୍ତୁ"
+    , pay_to_join_this_plan: "ପ୍ଲାନ୍ରେ ଯୋଗ ଦେବାକୁ €1 ମାତ୍ର ପେ କରନ୍ତୁ"
     , offers_not_applicable: "ଅଫର୍ ଲାଗୁ ହେବନାହିଁ ଯଦି ପୂରଣ ହେଉନାହିଁ"
     , paused_str: "ବିରତି"
     , pending_str: "ପେଣ୍ଡିଂ"
@@ -882,8 +882,8 @@ getOd =
     , retry_autopay: "ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ"
     , retry_str: "ପୁନଃ ଚେଷ୍ଟା"
     , ongoing_payment_execution: "ଚାଲୁଥିବା ହସ୍ତଚାଳିତ ଭୁଗତା ଅଛି, ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ"
-    , offer_card_banner_title: (\_ date price -> "ଅଟୋପେ ସ୍ଥାପନ କରନ୍ତୁ ଏବଂ ସେହି ସମୟ ପର୍ଯ୍ୟନ୍ତ କେବଳ ₹" <> price <> "/ଦିନ ଯାଏଁ " <> date)
-    , offer_card_banner_desc: "କେବଳ ₹15/ଦିନ ଯାଏଁ ନଭେମ୍ବର୍ 1 ପର୍ଯ୍ୟନ୍ତ ଭୁଗତା କରନ୍ତୁ"
+    , offer_card_banner_title: (\_ date price -> "ଅଟୋପେ ସ୍ଥାପନ କରନ୍ତୁ ଏବଂ ସେହି ସମୟ ପର୍ଯ୍ୟନ୍ତ କେବଳ €" <> price <> "/ଦିନ ଯାଏଁ " <> date)
+    , offer_card_banner_desc: "କେବଳ €15/ଦିନ ଯାଏଁ ନଭେମ୍ବର୍ 1 ପର୍ଯ୍ୟନ୍ତ ଭୁଗତା କରନ୍ତୁ"
     , offer_card_banner_alert: "ଆପଣଙ୍କ ଅଟୋପେ ସ୍ଥାପନ ଅପେକ୍ଷାରତ!"
     , or: "କିମ୍ବା"
     , collect_cash_directly: "ସିଧାସିଧି କ୍ୟାଶ୍ ନିଅନ୍ତୁ "
@@ -899,7 +899,7 @@ getOd =
     , execution_failed: "ପ୍ରକ୍ରିୟା ବିଫଳ"
     , notification_failed: "ନୋଟିଫିକେସନ୍ ବିଫଳ"
     , pay_now: "ଏବେ ଭୁଗତା କରନ୍ତୁ"
-    , clear_dues_banner_title: "ନିରାବାଦି ଯାତ୍ରା ପାଇଁ ଆପଣଙ୍କ ବାକି (₹{}) \n ସଫା କରନ୍ତୁ"
+    , clear_dues_banner_title: "ନିରାବାଦି ଯାତ୍ରା ପାଇଁ ଆପଣଙ୍କ ବାକି (€{}) \n ସଫା କରନ୍ତୁ"
     , collect_via_upi_qr_or_cash: "UPI QR କିମ୍ବା କ୍ୟାଶ୍ ଦ୍ୱାରା ସଂଗ୍ରହ କରନ୍ତୁ"
     , transaction_debited_on: "ଟ୍ରାଞ୍ଜାକ୍ସନ୍ ଆଦାୟ ହୋଇଛି"
     , transaction_attempted_on: "ଟ୍ରାଞ୍ଜାକ୍ସନ୍ ଚେଷ୍ଟା ହୋଇଛି"
@@ -915,7 +915,7 @@ getOd =
     , watch_video_for_help: "ସହାୟତା ପାଇଁ ଭିଡିଓ ଦେଖନ୍ତୁ"
     , payment_pending_soft_nudge: "ବକେୟା ସୀମା ଶୀଘ୍ର ପହଞ୍ଚିବ। ନନ୍-ସ୍ଟପ୍ ରାଇଡ୍ ଆନନ୍ଦ କରିବାକୁ ବକେୟା ସଫା କରନ୍ତୁ"
     , clear_your_dues_early: "ଆପଣଙ୍କର ବକେୟା ଶୀଘ୍ର ସଫା କରନ୍ତୁ"
-    , due_limit_warning_banner_title: "ଆପଣଙ୍କର ₹{} ବକେୟା ସୀମା ଶୀଘ୍ର ପହଞ୍ଚିବ"
+    , due_limit_warning_banner_title: "ଆପଣଙ୍କର €{} ବକେୟା ସୀମା ଶୀଘ୍ର ପହଞ୍ଚିବ"
     , scheduled_on: "ସଜାଣା ହେଉଛି"
     , attempted_on: "ଚେଷ୍ଟା କରାଯାଇଛି"
     , free_trial_ending_tomorrow: "ମୁକ୍ତ ଟ୍ରାଇଆଲ୍ କାଲି ସମାପ୍ତ ହେବ!"
@@ -1103,7 +1103,7 @@ getOd =
     , this_extra_amount_the_customer_will_pay: "ଏହା ହେଉଛି ଅତିରିକ୍ତ ରାଶି ଯାହା ଗ୍ରାହକ ଆପଣଙ୍କୁ ଦେବେ କାରଣ ଆପଣ {} ମିନିଟ୍ ଅଧିକ ଅପେକ୍ଷା କରିଛନ୍ତି"
     , ten_digit_mobile_number: "10-ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର"
     , booth_charges: "ବୁଥ ଚାର୍ଜ"
-    , booth_charges_included: "ବୁଥ ଚାର୍ଜ ସମାବିଷ୍ଟ: ₹{}"
+    , booth_charges_included: "ବୁଥ ଚାର୍ଜ ସମାବିଷ୍ଟ: €{}"
     , total_amount: "ମୋଟ ରାଶି"
     , please_add_rc: "ରାଇଡ୍ ନିବା ପାଇଁ ଦୟାକରି RC ଯୋଡନ୍ତୁ"
     , location_cannot_be_added_while_goto_active: "ଗୋ-ଟୁ ସକ୍ରିୟ ନ ଥିବାବେଳେ ଏହି ବିକଳ୍ପ ଉପଲବ୍ଧ"
@@ -1461,7 +1461,7 @@ getOd =
     , fare_for: (\limit -> limit <> " ପାଇଁ ଭାଡା")
     , waiting_charge_limit: (\timeLimit -> "ଅପେକ୍ଷା ଚାର୍ଜ୍ (" <> timeLimit <> " ମିନିଟ୍ ପରେ)")
     , parking_charges_desc: "ଡ୍ରାଇଭର ଦ୍ୱାରା ଦେବା ପାର୍କିଂ ଚାର୍ଜ୍ ଭାଡାରେ ସମାବିଷ୍ଟ ନୁହେଁ। ଏହା ଯାତ୍ରା ପରେ ଡ୍ରାଇଭର ଏବଂ ଯାତ୍ରୀ ମଧ୍ୟରେ ନିର୍ଦ୍ଧାରଣ କରାଯିବ।"
-    , tip_can_be_added: (\maxTip -> "ରାଇଡ଼ ଭାଡାରେ ଅଧିକତମ ₹" <> maxTip <> " ଟିପ୍ ଯୋଡାଯାଇପାରେ।")
+    , tip_can_be_added: (\maxTip -> "ରାଇଡ଼ ଭାଡାରେ ଅଧିକତମ €" <> maxTip <> " ଟିପ୍ ଯୋଡାଯାଇପାରେ।")
     , day_time_charges: (\from till -> "ଦିନରେ ଚାର୍ଜ୍ (" <> from <> " ରୁ " <> till <> " ପର୍ଯ୍ୟନ୍ତ)")
     , toll_or_parking_charges: "^ଟୋଲ୍/ପାର୍କିଂ ଚାର୍ଜ୍"
     , toll_charges_estimated: "ଟୋଲ୍ ଚାର୍ଜ୍ (ଅନୁମାନିତ)^"
@@ -1505,7 +1505,7 @@ getOd =
     , select_one: "ସୁବିଧା ବାଛନ୍ତୁ"
     , first_ride_free: (\count -> "ପ୍ରଥମ " <> count <> " ଯାତ୍ରା ମୁକ୍ତ")
     , first_rides_free: (\count -> "ପ୍ରଥମ " <> count <> " ଯାତ୍ରାଗୁଡିକ ମୁକ୍ତ")
-    , referral_first_ride_description: (\money -> "ରେଫର୍ କରାଯାଇଥିବା ଗ୍ରାହକଙ୍କ ପ୍ରଥମ ଯାତ୍ରା ପାଇଁ ₹" <> money <> " ଆର୍ଜନ କରନ୍ତୁ")
+    , referral_first_ride_description: (\money -> "ରେଫର୍ କରାଯାଇଥିବା ଗ୍ରାହକଙ୍କ ପ୍ରଥମ ଯାତ୍ରା ପାଇଁ €" <> money <> " ଆର୍ଜନ କରନ୍ତୁ")
     , steps: "ପଦକ୍ଷେପଗୁଡିକ"
     , customer_completed_first_ride: "ଗ୍ରାହକ ପ୍ରଥମ ଯାତ୍ରା ସମାପ୍ତ କଲେ"
     , verifying: "ଯାଞ୍ଚ କରାଯାଉଛି"
@@ -1515,9 +1515,9 @@ getOd =
     , referral_bonus_tracker: "ରେଫରେଲ୍ ବୋନାସ୍ ଟ୍ରାକର୍"
     , upi_details: "UPI ବିବରଣୀ"
     , customer_referral_tracker: "ଗ୍ରାହକ ରେଫରେଲ୍ ଟ୍ରାକର୍"
-    , pay_to_add_upi: (\money -> "ବିବରଣୀ ଯୋଡିବାକୁ କେବଳ ₹" <> money <> " ଦେଇପାରିବେ")
+    , pay_to_add_upi: (\money -> "ବିବରଣୀ ଯୋଡିବାକୁ କେବଳ €" <> money <> " ଦେଇପାରିବେ")
     , add_upi_to_receive_reward: "ପୁରସ୍କାର ରାଶି ପାଇଁ UPI ବିବରଣୀ ଯୋଡନ୍ତୁ"
-    , earn_for_each_referral: (\money -> "ପ୍ରତ୍ୟେକ ଗ୍ରାହକ ରେଫରେଲ୍ ପାଇଁ ₹" <> money <> " ଆର୍ଜନ କରନ୍ତୁ")
+    , earn_for_each_referral: (\money -> "ପ୍ରତ୍ୟେକ ଗ୍ରାହକ ରେଫରେଲ୍ ପାଇଁ €" <> money <> " ଆର୍ଜନ କରନ୍ତୁ")
     , start_referring_now: "ଏବେ ରେଫର୍ କରାରେ ଆରମ୍ଭ କରନ୍ତୁ"
     , will_get_referral_to_upi_id: "ଆପଣଙ୍କ ଏହି UPI ID ସହିତ ଲିଙ୍କ ଥିବା ବ୍ୟାଙ୍କ ଖାତାରେ ରେଫରେଲ୍ ପୁରସ୍କାର ରାଶି ପାଇପାରିବେ"
     , delete_upi_id: "UPI ID ହଟାନ୍ତୁ"

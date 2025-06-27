@@ -16,7 +16,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
+view push config =
   let styleConfig = getPaymentCardConfig config.status
   in
     PrestoAnim.animationSet
@@ -69,7 +69,7 @@ view push config =
         , textView
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text $ "₹" <> formatCurrencyWithCommas (show config.charges)
+              , text $ "€" <> formatCurrencyWithCommas (show config.charges)
               , color styleConfig.textColor
               ]
             <> FontStyle.h2 LanguageStyle
@@ -90,7 +90,7 @@ view push config =
         , textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ " ₹" <> formatCurrencyWithCommas (show config.totalEarning)
+            , text $ " €" <> formatCurrencyWithCommas (show config.totalEarning)
             , color Color.black800
             , textSize FontSize.a_14
             , fontStyle $ FontStyle.semiBold TypoGraphy
@@ -103,7 +103,7 @@ view push config =
         , textView
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text styleConfig.paymentStatusText 
+              , text styleConfig.paymentStatusText
               , color styleConfig.textColor
               ]
             <> FontStyle.tags LanguageStyle
@@ -112,18 +112,18 @@ view push config =
     ]
 
 paymentBreakupView :: forall w. Config -> PrestoDOM (Effect Unit) w
-paymentBreakupView config = 
+paymentBreakupView config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , visibility if config.isSelected then VISIBLE else GONE
-    ] $ [ breakupView (getString TOTAL_PAYABLE) (" ₹" <> formatCurrencyWithCommas (show config.charges))
+    ] $ [ breakupView (getString TOTAL_PAYABLE) (" €" <> formatCurrencyWithCommas (show config.charges))
       , dashDividerView
-    ] <> (map (\item -> breakupView item.description ("₹ " <> formatCurrencyWithCommas (show item.amount))) config.paymentBreakUp)
+    ] <> (map (\item -> breakupView item.description ("€ " <> formatCurrencyWithCommas (show item.amount))) config.paymentBreakUp)
 
 breakupView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
-breakupView description amount = 
+breakupView description amount =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -150,7 +150,7 @@ breakupView description amount =
   ]
 
 dashDividerView :: forall w. PrestoDOM (Effect Unit) w
-dashDividerView = 
+dashDividerView =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -169,25 +169,25 @@ getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1
 getPaymentCardConfig :: PaymentStatus -> PaymentCardConfig
 getPaymentCardConfig status = case status of
   Pending ->{
-    textColor : Color.yellow900 
+    textColor : Color.yellow900
   , bgColor : Color.yellow100
   , paymentStatusText : getString PAYMENT_PENDING
-  } 
+  }
   Success -> {
     textColor : Color.darkMint
   , bgColor : Color.green100
   , paymentStatusText : getString PAYMENT_SUCCESSFUL
   }
   Failed -> {
-    textColor : Color.red 
+    textColor : Color.red
   , bgColor : Color.red100
   , paymentStatusText : getString PAYMENT_FAILED
   }
   Scheduled -> {
-    textColor : Color.yellow900 
+    textColor : Color.yellow900
   , bgColor : Color.yellow100
   , paymentStatusText : getString PAYMENT_SCHEDULED
-  } 
+  }
 
 type PaymentCardConfig =  {
   textColor :: String

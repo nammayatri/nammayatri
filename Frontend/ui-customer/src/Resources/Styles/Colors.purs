@@ -158,7 +158,7 @@ incorrectAlert :: Color
 incorrectAlert  = "#F76F6F"
 
 darkMint :: Color
-darkMint = "#53bb6f"
+darkMint = "#378C66"
 
 charcoalGrey :: Color
 charcoalGrey = "#323643"
@@ -396,13 +396,13 @@ elfGreen = "#269574"
 transparentBlue :: Color
 transparentBlue = "#100066FF"
 
-aliceBlue :: Color 
+aliceBlue :: Color
 aliceBlue = "#F1F3F4"
 
-paleLavender :: Color 
-paleLavender = "#F4ECFF" 
+paleLavender :: Color
+paleLavender = "#F4ECFF"
 
-purple :: Color 
+purple :: Color
 purple = "#9747FF"
 
 darkGreyishBlue :: Color
@@ -426,16 +426,16 @@ moonCreme = "#FFF5DA"
 manatee5 :: Color
 manatee5 = "#059A9CA1"
 
-manatee33 :: Color 
+manatee33 :: Color
 manatee33 = "#339A9CA1"
 
-gunMetal :: Color 
+gunMetal :: Color
 gunMetal = "#2E303A"
 
-eerieBlack :: Color 
+eerieBlack :: Color
 eerieBlack = "#1A1C24"
 
-greyBackground :: Color 
+greyBackground :: Color
 greyBackground = "#F2F2F2"
 
 seashell :: Color
@@ -447,7 +447,7 @@ seashellBorder = "#FFECE1"
 activeTicketColor :: Color
 activeTicketColor = "#165718"
 
-expiredTicketColor :: Color 
+expiredTicketColor :: Color
 expiredTicketColor = "#2C2F3A"
 
 backgroundPassengerColor :: Color
@@ -465,7 +465,7 @@ mutedRed = "#E554541A"
 amber :: Color
 amber = "#FF85331A"
 
-cosmicLatte :: Color 
+cosmicLatte :: Color
 cosmicLatte = "#FFF9EA"
 
 darkGrey :: Color

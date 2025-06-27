@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -39,12 +39,12 @@ instance showAction :: Show Action where
   show (GoToTollAndParkingCharges) = "GoToTollAndParkingCharges"
   show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
 
-data Action = Close 
-              | BackPressed 
-              | NoAction 
-              | GoToDefaultStart 
-              | GoToDriverAddition 
-              | GoToFareUpdate 
+data Action = Close
+              | BackPressed
+              | NoAction
+              | GoToDefaultStart
+              | GoToDriverAddition
+              | GoToFareUpdate
               | GoToWaitingCharges
               | GoToTollOrParkingCharges
               | GoToDriverAllowance
@@ -86,10 +86,10 @@ type ButtonConfig =
   , rippleColor :: String
   }
 
-config :: Config 
+config :: Config
 config = {
     isNightShift : false,
-    additionalFare : "₹30",
+    additionalFare : "€30",
     currentRateCardType : DefaultRateCard,
     onFirstPage : false,
     showDetails : true,

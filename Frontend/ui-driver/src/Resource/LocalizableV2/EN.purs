@@ -671,7 +671,7 @@ getEn =
     , n_day_free_trial_activated: (\day -> day <> "-Day FREE TRIAL Activated!")
     , take_n_rides_for_the_next_n_days: (\rides days -> "Take up to " <> rides <> " rides FREE for the first " <> days <> " days")
     , every_ride_at_zero_commission: "Every ride at ZERO Commission!"
-    , earn_upto_per_day: "Earn upto ₹{} a day!"
+    , earn_upto_per_day: "Earn upto €{} a day!"
     , how_this_works: "How this Works"
     , sign_up_for_autopay_by_paying_just: "Sign up for Autopay by paying just ₹1"
     , get_reminded_about_your_plan_setup: "Get reminded about your plan setup"
@@ -690,7 +690,7 @@ getEn =
     , payment_pending_alert: "⚠️ Payment Pending! ⚠️"
     , payment_pending_alert_desc: (\_ -> "To continue taking rides on Namma Yatri, clear your payment dues")
     , low_account_balance: "Low Account Balance"
-    , low_account_balance_desc: "Your bank account balance is low. Add ₹<X> by today to enjoy uninterrupted rides."
+    , low_account_balance_desc: "Your bank account balance is low. Add €<X> by today to enjoy uninterrupted rides."
     , okay_got_it: "Okay, Got it"
     , limited_time_offer: "Limited Time Offer for you!"
     , join_now: "Join Now"
@@ -777,7 +777,7 @@ getEn =
     , daily_unlimited: "DAILY UNLIMITED"
     , daily_per_ride: "DAILY PER RIDE"
     , daily_unlimited_plan_desc: "Enjoy UNLIMITED rides, every day"
-    , daily_per_ride_plan_desc: (\price -> "Up to a maximum of ₹" <> price <> " per day")
+    , daily_per_ride_plan_desc: (\price -> "Up to a maximum of €" <> price <> " per day")
     , autopay_cancelled: "Autopay Cancelled"
     , no: "No"
     , yes_cancel: "Yes, Cancel"
@@ -883,7 +883,7 @@ getEn =
     , retry_autopay: "Retry Autopay"
     , retry_str: "Retry"
     , ongoing_payment_execution: "There is ongoing manual payment pls wait"
-    , offer_card_banner_title: (\_ date price -> "Setup Autopay and pay only ₹" <> price <> "/day until  " <> date)
+    , offer_card_banner_title: (\_ date price -> "Setup Autopay and pay only €" <> price <> "/day until  " <> date)
     , offer_card_banner_desc: "Pay only ₹15/Day until Nov 1"
     , offer_card_banner_alert: "Your Autopay Setup is Pending!"
     , or: "OR"
@@ -900,7 +900,7 @@ getEn =
     , execution_failed: "Execution Failed"
     , notification_failed: "Notification Failed"
     , pay_now: "Pay Now"
-    , clear_dues_banner_title: "Clear your Dues (₹{}) \nto enjoy non-stop rides"
+    , clear_dues_banner_title: "Clear your Dues (€{}) \nto enjoy non-stop rides"
     , collect_via_upi_qr_or_cash: "Collect via UPI QR or Cash"
     , transaction_debited_on: "Transaction Debited On"
     , transaction_attempted_on: "Transaction Attempted On"
@@ -916,7 +916,7 @@ getEn =
     , watch_video_for_help: "Watch video for help"
     , payment_pending_soft_nudge: "Dues limit will be reached soon. Clear dues to enjoy non-stop rides"
     , clear_your_dues_early: "Clear your Dues Early"
-    , due_limit_warning_banner_title: "Your due limit of ₹{} will be reached soon"
+    , due_limit_warning_banner_title: "Your due limit of €{} will be reached soon"
     , scheduled_on: "Scheduled On"
     , attempted_on: "Attempted On"
     , free_trial_ending_tomorrow: "Free trial ending tomorrow!"
@@ -1105,7 +1105,7 @@ getEn =
     , this_extra_amount_the_customer_will_pay: "This is the extra amount the customer will pay you because you have waited more than {} minutes"
     , ten_digit_mobile_number: "10-digit mobile number"
     , booth_charges: "Booth Charges"
-    , booth_charges_included: "Booth Charges included: ₹{}"
+    , booth_charges_included: "Booth Charges included: €{}"
     , total_amount: "Total Amount"
     , please_add_rc: "Please add RC to take rides"
     , location_cannot_be_added_while_goto_active: "Option is available only when Go-To is not enabled"
@@ -1476,7 +1476,7 @@ getEn =
     , fare_for: (\limit -> "Fare for  " <> limit)
     , waiting_charge_limit: (\timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)")
     , parking_charges_desc: "Parking charges accrued by the driver is not included in the fare. This is to be settled post ride between driver and passenger."
-    , tip_can_be_added: (\maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare.")
+    , tip_can_be_added: (\maxTip -> "Tip of upto €" <> maxTip <> " can be added to the ride fare.")
     , day_time_charges: (\from till -> "Daytime Charges (" <> from <> " to " <> till <> ")")
     , toll_or_parking_charges: "^Toll/ Parking Charges"
     , toll_charges_estimated: "Toll Charges (Estimated)^"

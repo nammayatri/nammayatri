@@ -109,8 +109,8 @@ eval (SelectDay index) state = do
 
 eval NoAction state = continue state
 
-eval Refresh state = 
-  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}, props{noLocationFlag = false}} 
+eval Refresh state =
+  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}, props{noLocationFlag = false}}
   in updateAndExit newState $ RefreshScreen newState
 
 eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderButtonVisibility = true}, props{noLocationFlag = false}} $ LoaderOutput state
@@ -118,7 +118,7 @@ eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderBu
 
 eval AfterRender state = continue state
 
-eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do 
+eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do
 
   let (ScheduledBookingListResponse oldBookingsResp) = state.data.resp
       updatedBookings = nubByEq (\(ScheduleBooking a) (ScheduleBooking b) -> let
@@ -132,16 +132,16 @@ eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do
 
 eval (RideTypeSelected rideType idx  )state = do
   let
-    newState =  state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} , props{noLocationFlag = false} } 
+    newState =  state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} , props{noLocationFlag = false} }
   exit $ GoBackToRideRequest newState
-  
+
 
 
 eval FilterSelected state = do
   let
     (ScheduledBookingListResponse resp) = state.data.resp
-    rideType =  maybe Nothing (\item -> item.rideType) (state.data.pillViewArray !! state.data.activeRideIndex) 
-    filteredList =resp.bookings    
+    rideType =  maybe Nothing (\item -> item.rideType) (state.data.pillViewArray !! state.data.activeRideIndex)
+    filteredList =resp.bookings
     shimmerLoader =  ST.AnimatedOut
   continue state { data { filteredArr = filteredList, shimmerLoader = shimmerLoader }, props{receivedResponse = false} }
 
@@ -167,18 +167,18 @@ eval (ScrollStateChanged scrollState) state = case scrollState of
            SCROLL_STATE_FLING -> continue state{data{scrollEnable = true}}
            _ -> continue state
 
-eval (RideRequestCardActionController (RideRequestCardActionController.Select index )) state = do 
+eval (RideRequestCardActionController (RideRequestCardActionController.Select index )) state = do
                                                                                                 let newArr = (state.data.filteredArr) !! index
-                                                                                                case newArr of 
+                                                                                                case newArr of
                                                                                                   Nothing -> continue state
-                                                                                                  Just (ScheduleBooking cardData) -> do 
+                                                                                                  Just (ScheduleBooking cardData) -> do
                                                                                                                                         let (BookingAPIEntity booking) = cardData.bookingDetails
                                                                                                                                             now = EHC.getCurrentUTC ""
-                                                                                                                                            diff = runFn2 differenceBetweenTwoUTC booking.startTime now 
+                                                                                                                                            diff = runFn2 differenceBetweenTwoUTC booking.startTime now
                                                                                                                                         if diff < 0 then continue state else exit $ GoToRideSummary state{data{currCard = cardData.bookingDetails, fareDetails = cardData.fareDetails}}
 
-eval (OnFadeComplete _ ) state = do      
-  if not state.props.receivedResponse 
+eval (OnFadeComplete _ ) state = do
+  if not state.props.receivedResponse
     then do
       continue state
     else do
@@ -200,14 +200,14 @@ eval (UpdateCurrentLocation lat lon) state = do
       new_lon = fromMaybe 0.0 (Number.fromString lon)
       curr_lat = state.data.driverLat
       curr_lon = state.data.driverLong
-      updatedState = 
+      updatedState =
         if new_lat /= 0.0 && new_lon /= 0.0 then
           state { data { driverLat = Just $ show new_lat, driverLong =Just $ show new_lon } }
         else
           state { data { driverLat = curr_lat, driverLong = curr_lon } }
   continue updatedState
 
-eval (UpdateNoLocationFlag) state = continue state{data{shimmerLoader = AnimatedOut },props{noLocationFlag = true}} 
+eval (UpdateNoLocationFlag) state = continue state{data{shimmerLoader = AnimatedOut },props{noLocationFlag = true}}
 
 eval _ state = update state
 
@@ -239,7 +239,7 @@ myRideListTransformerProp listres =
 
           srcLong = fromLocation.lon
 
-          (Location toLocation) = 
+          (Location toLocation) =
             fromMaybe
               ( Location
                   { address:
@@ -270,19 +270,19 @@ myRideListTransformerProp listres =
           (CTA.TripCategory tripCategory) = booking.tripCategory
 
           rideType = tripCategory.tag
-          
+
           visible = if isJust booking.toLocation then "visible" else "gone"
 
 
           pillColor  = case rideType of
                CTA.Rental -> Color.blueGreen
-               CTA.InterCity -> Color.blue800 
+               CTA.InterCity -> Color.blue800
                _ -> Color.green700
-          
-          visiblePill = if rideType == CTA.OneWay then "gone" else "visible"
-          
 
-          vehicleType = booking.vehicleServiceTierName 
+          visiblePill = if rideType == CTA.OneWay then "gone" else "visible"
+
+
+          vehicleType = booking.vehicleServiceTierName
 
           image = case booking.vehicleServiceTier of
             _ | DA.elem booking.vehicleServiceTier [AUTO_RICKSHAW, EV_AUTO_RICKSHAW]-> "ny_ic_auto_side_view"
@@ -298,29 +298,29 @@ myRideListTransformerProp listres =
             HERITAGE_CAB_TIER -> "ny_ic_heritage_cab_side"
             _ -> "ny_ic_ac_mini"
 
-          
+
           now   = EHC.getCurrentUTC ""
-          diff  = runFn2 differenceBetweenTwoUTC booking.startTime now 
+          diff  = runFn2 differenceBetweenTwoUTC booking.startTime now
           overlayVisiblity  = if  diff< 0 then "visible" else "gone"
           imageType = case rideType of
                 CTA.Rental -> "ny_ic_clock_unfilled"
                 _ -> "ny_ic_ride_rental_vector"
-          
-          journeyType  = case rideType of 
+
+          journeyType  = case rideType of
                   CTA.Rental -> getString LType.RENTAL
                   CTA.InterCity -> getString LType.INTERCITY
                   _             -> ""
-          
-          
 
-          
+
+
+
         in
           { date: toPropValue date
           , time: toPropValue startTime
           , distance: toPropValue distance
           , source: toPropValue (decodeShortAddress (transformer booking.fromLocation))
           , destination: toPropValue $ (decodeShortAddress (transformer (Location toLocation)))
-          , totalAmount: toPropValue $ ("₹ " <> show totalAmount)
+          , totalAmount: toPropValue $ ("€ " <> show totalAmount)
           , cardVisibility: toPropValue "visible"
           , shimmerVisibility: toPropValue "gone"
           , carImage: toPropValue $ totalAmount
@@ -342,7 +342,7 @@ myRideListTransformerProp listres =
           }
         )
         listres
-    in resp 
+    in resp
 transformer :: Location -> LocationInfo
 transformer (Location loc) =
   let

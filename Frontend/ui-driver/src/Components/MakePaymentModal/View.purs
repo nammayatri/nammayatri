@@ -25,7 +25,7 @@ import JBridge as JB
 
 
 view :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> PrestoDOM (Effect Unit) w
-view push state = 
+view push state =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -54,7 +54,7 @@ view push state =
   ]
 
 primaryButton :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> PrestoDOM (Effect Unit) w
-primaryButton push state = 
+primaryButton push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -63,7 +63,7 @@ primaryButton push state =
   ][PrimaryButton.view (push <<< PrimaryButtonActionController) (buttonConfig state)]
 
 paymentReview :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> PrestoDOM (Effect Unit) w
-paymentReview push state = 
+paymentReview push state =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -72,7 +72,7 @@ paymentReview push state =
     , background Color.blue600
     , cornerRadius 8.0
     , padding $ Padding 10 10 10 10
-    ](DA.mapWithIndex (\index item -> 
+    ](DA.mapWithIndex (\index item ->
       linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -80,17 +80,17 @@ paymentReview push state =
       ][  feeItem push state item
         , imageView
           [ width MATCH_PARENT
-          , height $ V 2 
+          , height $ V 2
           , padding $ PaddingHorizontal 10 10
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , visibility if index == 0 then VISIBLE else GONE
           ]
       ]
       ) state.feeItem )
-      
-      
+
+
 feeItem :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> FeeItem -> PrestoDOM (Effect Unit) w
-feeItem push state item = 
+feeItem push state item =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -104,7 +104,7 @@ feeItem push state item =
       , text item.title
       , color Color.black800
       ] <> FontStyle.body1 TypoGraphy
-    , imageView 
+    , imageView
       [ height $ V 18
       , width $ V 18
       , margin $ MarginLeft 5
@@ -118,12 +118,12 @@ feeItem push state item =
       , gravity RIGHT
       , weight 1.0
       , color Color.black800
-      , text $ "₹" <> EHC.formatCurrencyWithCommas (show item.val)
+      , text $ "€" <> EHC.formatCurrencyWithCommas (show item.val)
       ] <> FontStyle.body6 TypoGraphy
   ]
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Padding -> PrestoDOM (Effect Unit) w
-commonTV push text' color' theme gravity' marginTop action txtFromHtml padding' = 
+commonTV push text' color' theme gravity' marginTop action txtFromHtml padding' =
   textView $
   [ width MATCH_PARENT
   , height WRAP_CONTENT

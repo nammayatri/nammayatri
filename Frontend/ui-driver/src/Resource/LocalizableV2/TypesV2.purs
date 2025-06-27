@@ -17,6 +17,7 @@ newtype Languages
   , kannada :: Keymap
   , telugu :: Keymap
   , odiya :: Keymap
+  , dutch :: Keymap
   }
 
 newtype Keymap = Keymap {
@@ -5651,6 +5652,9 @@ french = a
 
 bengali :: Proxy "bengali"
 bengali = a
+
+dutch :: Proxy "dutch"
+dutch = a
 
 you_have_successfully_completed :: Proxy "you_have_successfully_completed"
 you_have_successfully_completed = a

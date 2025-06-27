@@ -29,7 +29,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">பிக்கப் ₹{#amount#}</string>
+    <string name="includes_pickup_charges_10">பிக்கப் €{#amount#}</string>
     <string name="away">தொலைவில்</string>
     <string name="we_made_you_online">நாங்கள் உங்களை ஆன்லைனில் உருவாக்கினோம்</string>
     <string name="location_is_turned_on">இருப்பிடம் இயக்கப்பட்டது</string>
@@ -82,7 +82,7 @@
     <string name="no_change">மாற்றம் இல்லை</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"கூடுதல் கட்டணம் இல்லை. காலிகைகள் இல்லை. காதிரி கட்டணங்கள் இல்லை."</string>
     <string name="third_party_booking">"மூன்றாம் தரப்பு முன்பதிவு"</string>
-    <string name="parking_charges">%1$.0f₹ பார்க்கிங்</string>
+    <string name="parking_charges">%1$.0f€ பார்க்கிங்</string>
     <string name="includes">அடங்கும்</string>
     <string name="stops_info">%1$d நிறுத்தங்கள் (நிறுத்த கட்டணத்துடன்)</string>
     <string name="stops">%1$d நிறுத்தங்கள்</string>

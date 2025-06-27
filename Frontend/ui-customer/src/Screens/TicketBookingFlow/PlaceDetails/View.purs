@@ -138,8 +138,8 @@ view push state =
         ST.DescriptionStage -> generalActionButtons state push
         _ -> generalActionButtons state push
     allowFutureBooking services = foldl (\acc service -> acc || service.allowFutureBooking) false services
-    
-    serviceClosedView = 
+
+    serviceClosedView =
       let (mbStartEndDate) = case head state.data.servicesInfo of
             Just serviceCat -> case head serviceCat.serviceCategories of
               Just category -> case category.operationalDate of
@@ -198,8 +198,8 @@ view push state =
       , orientation VERTICAL
       ]
       [ if (state.props.currentStage == ST.ChooseTicketStage) then chooseTicketsView state push else textView[visibility GONE]
-      , if (state.props.currentStage == ST.DescriptionStage) 
-          then 
+      , if (state.props.currentStage == ST.DescriptionStage)
+          then
             case state.data.placeInfo of
               Just placeInfo -> descriptionWithPlaceIconView push state placeInfo
               Nothing -> noDataView state push "No ticketing zones in this area"
@@ -451,7 +451,7 @@ serviceBreakUpView state push servicesv2 (TicketPlaceResp ticketPlaceResp) =
     daysOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     indexOf x xs = maybe 8 (\idx -> idx) (DA.findIndex (_ == x) xs)
 
-    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "₹" <>  show peopleCat.pricePerUnit }
+    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "€" <>  show peopleCat.pricePerUnit }
 
     getCategoryNameMap catName isSinglePC = case catName, isSinglePC  of
                                               "Adult", true         -> "Per Person"
@@ -1009,7 +1009,7 @@ incrementDecrementView push state  serviceId serviceCatId serviceCategory pcCate
   , orientation VERTICAL
   , margin $ MarginTop 24
   ][  textView $
-      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (₹" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
+      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (€" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
       , color Color.black800
       , margin $ MarginBottom 8
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -1410,18 +1410,18 @@ checkIfSameDayBookingNotAllowedForToday state =
 isSameDayBookingAllowed placeInfo = case placeInfo of
       Just (TicketPlaceResp placeInfo) -> fromMaybe true placeInfo.allowSameDayBooking
       Nothing -> true
-  
+
 isVisitDateWithinOperationalDate :: ST.TicketBookingScreenState -> Boolean
-isVisitDateWithinOperationalDate state = 
+isVisitDateWithinOperationalDate state =
   let visitDate = convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD"
       _ = spy "visitDate" visitDate
       _ = spy "state.data.servicesInfo" state.data.servicesInfo
-      withinOperationDate = foldl 
-        (\acc1 (service :: ST.TicketServiceData) -> acc1 || 
-          foldl (\acc (serviceCategory :: ST.ServiceCategory) -> 
+      withinOperationDate = foldl
+        (\acc1 (service :: ST.TicketServiceData) -> acc1 ||
+          foldl (\acc (serviceCategory :: ST.ServiceCategory) ->
             let _ = spy "serviceCategory.operationalDate" (maybe true (\oplDate -> visitDate <= oplDate.endDate && visitDate >= oplDate.startDate) serviceCategory.operationalDate)
             in acc || maybe true (\oplDate -> visitDate <= oplDate.endDate && visitDate >= oplDate.startDate) serviceCategory.operationalDate) false service.serviceCategories)
          false state.data.servicesInfo
-      
+
       _ = spy "withinOperationDate" withinOperationDate
   in withinOperationDate

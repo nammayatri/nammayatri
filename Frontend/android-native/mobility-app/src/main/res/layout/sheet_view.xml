@@ -178,7 +178,7 @@
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
                                         android:paddingVertical="6dp"
-                                        android:text="₹10 Tip"
+                                        android:text="€10 Tip"
                                         android:textColor="@color/Black900"
                                         android:textSize="12dp" />
                                 </LinearLayout>
@@ -203,7 +203,7 @@
                                         android:paddingLeft="6dp"
                                         android:paddingRight="2dp"
                                         android:paddingBottom="1dp"
-                                        android:text="₹₹"
+                                        android:text="€€"
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
 
@@ -246,7 +246,7 @@
                                         android:lineHeight="20dp"
                                         android:paddingTop="5dp"
                                         android:paddingRight="7dp"
-                                        android:text="₹10 Pet"
+                                        android:text="€10 Pet"
                                         android:paddingBottom="8dp"
                                         android:textColor="#844E00"
                                         android:textSize="12dp" />
@@ -406,7 +406,7 @@
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
-                        
+
                                 <LinearLayout
                                     android:id="@+id/pointsTag"
                                     android:layout_width="wrap_content"
@@ -843,7 +843,7 @@
                                             android:layout_height="wrap_content"
                                             android:layout_marginTop="5dp"
                                             android:fontFamily="@font/plus_jakartasans_medium"
-                                            android:text="+₹20"
+                                            android:text="+€20"
                                             android:textAlignment="center"
                                             android:textColor="#2C2F3A"
                                             android:textFontWeight="700"
@@ -1215,7 +1215,7 @@
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/saira_semi_condensed_semi_bold"
                                             android:paddingBottom="0.5dp"
-                                            android:text="₹"
+                                            android:text="€"
                                             android:textColor="#2C2F3A"
                                             android:textFontWeight="500"
                                             android:textSize="25dp" />

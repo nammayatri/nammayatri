@@ -59,7 +59,7 @@ rideScheduledScreen initialState =
       pure $ pure unit
     getBooking :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RideScheduledScreenState -> Flow GlobalState Unit
     getBooking action flowStatusAction count duration push state = do
-        let 
+        let
           bookingId = state.data.bookingId
         if(count > 0 && bookingId /= "") then do
           rideBookingResponse <- Remote.rideBooking bookingId
@@ -102,7 +102,7 @@ view push state =
         , separatorView push state ]
     , linearLayout
       [ height MATCH_PARENT
-      , margin $ MarginTop 60 
+      , margin $ MarginTop 60
       , width MATCH_PARENT
       ][  scrollView
           [ height MATCH_PARENT
@@ -117,11 +117,11 @@ view push state =
                     [shimmerFrameLayout
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
-                      , orientation VERTICAL 
+                      , orientation VERTICAL
                       , background Color.transparent
                       ][ sheduledDetailsShimmerView state]
                       ]
-                    else 
+                    else
                       [ scheduledDetailsView push state
                       , notificationView push state
                       , cancelBookingView push state
@@ -133,9 +133,9 @@ view push state =
     ] <> if state.props.isCancelRide then [cancelRidePopUpView push state] else [dummyView])
 
 
-sheduledDetailsShimmerView state = 
+sheduledDetailsShimmerView state =
   linearLayout
-  [ height WRAP_CONTENT 
+  [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   ][  linearLayout[height $ V 180, width MATCH_PARENT, background Color.greyDark, margin $ Margin 40 20 40 40, cornerRadius 20.0][]
@@ -235,7 +235,7 @@ rideDetailsView push state =
       dummyView = linearLayout [height $ V 0, width $ V 0, visibility GONE] []
 
       addStopView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
-      addStopView push state = 
+      addStopView push state =
         textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -292,15 +292,15 @@ rideStartDetails push state =
     , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ "₹" <> state.data.finalPrice
+        , text $ "€" <> state.data.finalPrice
         , weight 0.1
         , gravity RIGHT
         , textSize FontSize.a_18
         ] <> FontStyle.h2 TypoGraphy
 
     ]
-    where 
-    getRideDetailsAccessibilty state = getEN RIDE_STARTS_ON <> EHC.convertUTCtoISC state.data.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.data.startTime "D" <> " " <> EHC.convertUTCtoISC state.data.startTime "MMM" <> " " <> EHC.convertUTCtoISC state.data.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTime "mm" <> " " <> EHC.convertUTCtoISC state.data.startTime "a" <> "and total Fare is : " <>  "₹" <> state.data.finalPrice
+    where
+    getRideDetailsAccessibilty state = getEN RIDE_STARTS_ON <> EHC.convertUTCtoISC state.data.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.data.startTime "D" <> " " <> EHC.convertUTCtoISC state.data.startTime "MMM" <> " " <> EHC.convertUTCtoISC state.data.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTime "mm" <> " " <> EHC.convertUTCtoISC state.data.startTime "a" <> "and total Fare is : " <>  "€" <> state.data.finalPrice
 
 notificationView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 notificationView push state =
@@ -351,11 +351,11 @@ sourceDestinationView push state =
 
 cancelBookingView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 cancelBookingView push state =
-  let cancelBookingText = case state.data.fareProductType of 
+  let cancelBookingText = case state.data.fareProductType of
         FPT.RENTAL -> getString CANCEL_RENTAL_BOOKING
         FPT.INTER_CITY -> getString CANCEL_INTERCITY_BOOKING
         _ -> getString CANCEL_BOOKING
-  in 
+  in
   textView $
   [ width MATCH_PARENT
   , textFromHtml $ "<u>" <> cancelBookingText <> "</u>"

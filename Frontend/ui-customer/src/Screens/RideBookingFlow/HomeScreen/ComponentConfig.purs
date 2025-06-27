@@ -648,7 +648,7 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
       , fareEstimateText = getString FARE_ESTIMATE
       , tipSelectedText = getString TIP_SELECTED
       , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
-      , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " ₹" <> (show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex)))
+      , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " €" <> (show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex)))
       , dismissPopup = true
       , customerTipArray = customerTipArray
       , customerTipArrayWithValues = customerTipArrayWithValues
@@ -761,8 +761,8 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
     let
       tip = show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex))
     case (getLanguageLocale languageKey) of
-      "EN_US" -> getString SEARCH_AGAIN_WITH <> " +₹" <> tip <> " " <> getString TIP
-      _ -> "+₹" <> tip <> " " <> (getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
+      "EN_US" -> getString SEARCH_AGAIN_WITH <> " +€" <> tip <> " " <> getString TIP
+      _ -> "+€" <> tip <> " " <> (getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
 
 getBottomMargin :: Int
 getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
@@ -945,7 +945,7 @@ waitTimeInfoCardConfig state = let
   where
     textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR, waitingChargeApplicable :: Boolean}
     textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_, waitingChargeApplicable : true}
-                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute, waitingChargeApplicable : waitingChargeInfo.chargePerMinute /= "₹0/min"}
+                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute, waitingChargeApplicable : waitingChargeInfo.chargePerMinute /= "€0/min"}
     waitingChargeInfo =
                       let rideType = state.data.fareProductType
                           cityConfig = state.data.currentCityConfig
@@ -963,10 +963,10 @@ waitTimeInfoCardConfig state = let
                       in
                       case state.data.rateCardCache of
                           Just rateCard ->
-                            if isIntercity then {freeMinutes : show waitingCharges.freeMinutes , chargePerMinute : "₹"<>show waitingCharges.perMinCharges <>"/min"}
+                            if isIntercity then {freeMinutes : show waitingCharges.freeMinutes , chargePerMinute : "€"<>show waitingCharges.perMinCharges <>"/min"}
                                             else {freeMinutes : rateCard.waitingTimeInfo.freeMinutes, chargePerMinute : rateCard.waitingTimeInfo.charge}
                           Nothing -> do
-                            {freeMinutes : (show waitingCharges.freeMinutes) , chargePerMinute : "₹"<> show waitingCharges.perMinCharges <>"/min"}
+                            {freeMinutes : (show waitingCharges.freeMinutes) , chargePerMinute : "€"<> show waitingCharges.perMinCharges <>"/min"}
 
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
@@ -1114,7 +1114,7 @@ estimateChangedPopupConfig state =
     popUpConfig' =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
-        , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> if state.data.rateCard.additionalFare > 0 then "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) else "" }
+        , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "€" <> (show state.data.suggestedAmount) <> if state.data.rateCard.additionalFare > 0 then "-" <> "€" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) else "" }
         , option1
           { background = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground

@@ -20,7 +20,7 @@ import Screens.Types (AnimationState(..), IndividualRideCardState, ZoneType(..),
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
-import Common.Types.App 
+import Common.Types.App
 import Screens.Types
 import Data.Maybe
 import ConfigProvider (appConfig, getAppConfig)
@@ -36,7 +36,7 @@ type RideSelectionScreenState =
     data :: RideSelectionScreenData,
     selectedCategory :: CategoryListType,
     selectedItem :: Maybe IndividualRideCardState
-  }  
+  }
 
 type RideSelectionScreenData = {
     offsetValue :: Int,
@@ -141,16 +141,16 @@ dummyIndividualCard = {
     destinationLocation : dummyBookingDetails,
     alpha : "",
     fareBreakUpList : {
-      baseFare : "₹ 0"
-    , pickupCharges : "₹ 0"
-    , nominalFare : "₹ 0"
-    , waitingCharges : "₹ 0"
+      baseFare : "€ 0"
+    , pickupCharges : "€ 0"
+    , nominalFare : "€ 0"
+    , waitingCharges : "€ 0"
     }
   , faresList : []
-  , baseFare : "₹ 0"
-  , pickupCharges : "₹ 0"
-  , extraFare : "₹ 0"
-  , waitingCharges : "₹ 0"
+  , baseFare : "€ 0"
+  , pickupCharges : "€ 0"
+  , extraFare : "€ 0"
+  , waitingCharges : "€ 0"
   , baseDistance : "0 km"
   , extraDistance : "0 km"
   , referenceString : ""

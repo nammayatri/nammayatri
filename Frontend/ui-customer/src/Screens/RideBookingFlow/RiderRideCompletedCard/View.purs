@@ -3,7 +3,7 @@ module Screens.RideBookingFlow.RiderRideCompletedCard.View where
 import Screens.RideBookingFlow.RiderRideCompletedCard.Controller
 import Screens.RideBookingFlow.RiderRideCompletedCard.Config
 
-import PrestoDOM 
+import PrestoDOM
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
 import Language.Types (STR(..))
-import Common.Types.App 
+import Common.Types.App
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
@@ -75,18 +75,18 @@ screen initialState =
           let
             _ = spy "RiderRideCompletedScreen action" action
             _ = spy "RiderRideCompletedScreen state" state
-          void $ case action of 
+          void $ case action of
             FeedbackChanged _ _ -> pure unit
             KeyboardCallback _ -> pure unit
-            _ -> do 
+            _ -> do
                 when(state.isKeyBoardOpen) $ void $ pure $ JB.hideKeyboardOnNavigation true
                 pure unit
           eval action state
-        ) 
+        )
     }
     where
     globalEvents' :: (Action -> Effect Unit) -> RiderRideCompletedScreenState -> Effect (Effect Unit)
-    globalEvents' push state = do 
+    globalEvents' push state = do
       void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
       void $ runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
       when (isNothing state.customerIssue.bannerComputedView) $ void $ launchAff $ flowRunner defaultGlobalState $ computeIssueReportBanners push
@@ -94,14 +94,14 @@ screen initialState =
 
 computeIssueReportBanners :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeIssueReportBanners push = do
-  bannerItem <- preComputeListItem $ RideCompletedCard.customerIssueCarousalView (push <<< RideCompletedAC) 
+  bannerItem <- preComputeListItem $ RideCompletedCard.customerIssueCarousalView (push <<< RideCompletedAC)
   void $ liftFlow $ push $ SetIssueReportBannerItems bannerItem
 
 view :: forall w.  (Action -> Effect Unit) -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   let pading = Padding 0 EHC.safeMarginTop 0 (if (state.isKeyBoardOpen) then 0 else EHC.safeMarginBottom)
   in
-  screenAnimation 
+  screenAnimation
     $ relativeLayout[
           width MATCH_PARENT
         , height MATCH_PARENT
@@ -114,13 +114,13 @@ view push state =
       , clickable true
       , background Color.white900
       , fillViewport true
-      ] $ [  
+      ] $ [
           linearLayout[
             width MATCH_PARENT
           , height $ V $ (EHC.screenHeight unit - (EHC.safeMarginTop + EHC.safeMarginBottom))
           ][rideCompletedView state push]
       ]
-    ] <> (if state.isRatingCard then 
+    ] <> (if state.isRatingCard then
           [
             linearLayout[
                 width MATCH_PARENT
@@ -147,50 +147,50 @@ view push state =
           else [])
 
 rideCompletedView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rideCompletedView config push = 
+rideCompletedView config push =
   linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , visibility $ boolToVisibility $ not config.isRatingCard
-      ][ topGradientView config push 
+      ][ topGradientView config push
       ,  bottomCardView config push
     ]
 
 topGradientView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-topGradientView config push = 
+topGradientView config push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 30 6 
+    , padding $ PaddingVertical 30 6
     , background $ Color.blue600
     , id $ getNewIDWithTag "topViewId"
     , visibility $ boolToVisibility $ not config.isRatingCard
     ]
-    [   
-        priceAndDistanceUpdateView config push 
+    [
+        priceAndDistanceUpdateView config push
       , whiteHorizontalLine config
-      , rideDetailsButtonView config push 
+      , rideDetailsButtonView config push
     ]
 
 priceAndDistanceUpdateView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-priceAndDistanceUpdateView state push = 
+priceAndDistanceUpdateView state push =
   let rideDuration = fromMaybe 0 state.rideDuration
       sec = if rideDuration >= 3600 then 0 else if rideDuration < 60 then rideDuration else rideDuration `mod` 60
-      min = if rideDuration >= 60 then 
-              if sec /= 0 then 
+      min = if rideDuration >= 60 then
+              if sec /= 0 then
                 rideDuration/60
               else (rideDuration/60) `mod` 60
             else 0
       hour = if rideDuration >= 3600 then rideDuration/3600 else 0
       timeString = (
-        if hour == 0 then 
-          if min == 0 then 
-            show sec <> " " <> getEN SEC 
-          else 
-            show min <> getEN MINS <> " " <> show sec <> " " <> getEN SEC 
-        else 
+        if hour == 0 then
+          if min == 0 then
+            show sec <> " " <> getEN SEC
+          else
+            show min <> getEN MINS <> " " <> show sec <> " " <> getEN SEC
+        else
           show hour <> " " <> getEN HOUR <> " " <> show min <> getEN MINS
         )
   in
@@ -215,7 +215,7 @@ priceAndDistanceUpdateView state push =
                 , margin $ MarginLeft $ if state.showSafetyCenter then 80 else 0
                 ]
             , layoutWithWeight
-            , sosButtonView state push 
+            , sosButtonView state push
           ]
         , textView $
           [ width MATCH_PARENT
@@ -226,15 +226,15 @@ priceAndDistanceUpdateView state push =
           , color Color.black800
           , singleLine false
           , margin $ Margin 75 12 75 0
-          ] <> FontStyle.h3 TypoGraphy 
+          ] <> FontStyle.h3 TypoGraphy
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
           , margin $ MarginHorizontal 16 16
-          ][ textView $ 
-              [ text if state.isFreeRide then "₹0" else "₹" <> (show state.topCard.finalAmount)
-              , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show state.topCard.finalAmount)
+          ][ textView $
+              [ text if state.isFreeRide then "€0" else "€" <> (show state.topCard.finalAmount)
+              , accessibilityHint $ "Ride Complete: Final Fare €"  <> (show state.topCard.finalAmount)
               , accessibility state.accessibility
               , color Color.black900
               , width WRAP_CONTENT
@@ -242,8 +242,8 @@ priceAndDistanceUpdateView state push =
               , gravity CENTER
               ] <> (FontStyle.body28 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show state.topCard.initialAmount) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show state.topCard.initialAmount) <> " To ₹" <> (show state.topCard.finalAmount)
+              [ textFromHtml $ "<strike> €" <> (show state.topCard.initialAmount) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From €"  <> (show state.topCard.initialAmount) <> " To €" <> (show state.topCard.finalAmount)
               , accessibility state.accessibility
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
@@ -263,7 +263,7 @@ priceAndDistanceUpdateView state push =
       ]
 
 additionalChargesView :: forall w. AdditionalCharges -> PrestoDOM (Effect Unit) w
-additionalChargesView config = 
+additionalChargesView config =
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -274,12 +274,12 @@ additionalChargesView config =
     imageView[
       height $ V 20
     , width $ V 20
-    , imageWithFallback config.image 
+    , imageWithFallback config.image
     ]
   , textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , text config.text 
+    , text config.text
     , color config.textColor
     , margin $ MarginLeft 4
     ] <> FontStyle.body1 TypoGraphy
@@ -288,7 +288,7 @@ additionalChargesView config =
 pillView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView state push =
   linearLayout
-    [ width MATCH_PARENT 
+    [ width MATCH_PARENT
     , height WRAP_CONTENT
     , padding $ Padding 16 8 8 8
     , margin $ Margin 15 15 15 5
@@ -315,10 +315,10 @@ pillView state push =
     ]
 
 rideDetailsButtonView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rideDetailsButtonView state push = 
+rideDetailsButtonView state push =
   linearLayout [
     width MATCH_PARENT
-  , height WRAP_CONTENT 
+  , height WRAP_CONTENT
   , layoutGravity "bottom"
   , padding $ PaddingHorizontal 16 16
   ][
@@ -374,8 +374,8 @@ bottomCardView state push =
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
 customerIssueView :: forall w. (Action -> Effect Unit) -> CustomerIssue -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
-customerIssueView push config state = 
-  case config.bannerComputedView , config.showIssueBanners, (null config.customerIssueCards) of 
+customerIssueView push config state =
+  case config.bannerComputedView , config.showIssueBanners, (null config.customerIssueCards) of
     Just listView , true, false ->
       linearLayout[
         width MATCH_PARENT
@@ -397,11 +397,11 @@ customerIssueView push config state =
     _,_,_-> textView[
         width $ V 0
       , height $ V 0
-      ] 
+      ]
 
 
 customerIssueCarouselView :: forall w. ListItem -> (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
-customerIssueCarouselView listView push config  = 
+customerIssueCarouselView listView push config  =
     linearLayout[
         width MATCH_PARENT
       , height WRAP_CONTENT
@@ -420,7 +420,7 @@ customerIssueCarouselView listView push config  =
         , gravity CENTER
         , margin $ MarginTop 8
         , visibility $ if length config.customerIssueCards > 1 then VISIBLE else GONE
-        ] $ mapWithIndex (\ idx elem -> 
+        ] $ mapWithIndex (\ idx elem ->
             linearLayout[
               height $ V $ if idx == config.currentIndex then 8 else 6
             , width $ V $ if idx == config.currentIndex then 8 else 6
@@ -432,17 +432,17 @@ customerIssueCarouselView listView push config  =
       ]
 
 customerIssuePopupView :: forall w. (Action -> Effect Unit) ->  CustomerIssue -> PrestoDOM (Effect Unit) w
-customerIssuePopupView  push config = 
-  let 
+customerIssuePopupView  push config =
+  let
     cardsArray = config.customerIssueCards
-    firstCard  = head cardsArray 
+    firstCard  = head cardsArray
     title      = maybe "" (\x -> x.title) firstCard
     selectedYes = maybe Nothing (\x -> x.selectedYes) firstCard
     yestext    = maybe "" (\x -> x.yesText) firstCard
     notext     = maybe "" (\x -> x.noText) firstCard
     subtitle   = maybe "" (\x -> x.subTitle) firstCard
   in
-  linearLayout 
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , padding $ Padding 16 24 16 24
@@ -451,22 +451,22 @@ customerIssuePopupView  push config =
   , orientation VERTICAL
   , stroke $ "1,"<>Color.grey800
   ][
-    textView $ 
+    textView $
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , text title
-    , color Color.black800 
+    , color Color.black800
     , gravity CENTER
     , padding $ PaddingBottom 4
     ] <> FontStyle.h3 TypoGraphy
-  , textView $ 
+  , textView $
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , text subtitle 
+    , text subtitle
     , color  Color.black700
     , gravity CENTER
-    ] <> FontStyle.paragraphText TypoGraphy 
-  , linearLayout 
+    ] <> FontStyle.paragraphText TypoGraphy
+  , linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
@@ -491,10 +491,10 @@ customerIssuePopupView  push config =
         , cornerRadius 6.0
         , background $ if selectedYes == Just true then Color.blue600 else Color.white900
         ][
-          textView $ 
+          textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ yestext 
+          , text $ yestext
           , color Color.black800
           ] <> FontStyle.subHeading1 TypoGraphy
         ]
@@ -519,11 +519,11 @@ customerIssuePopupView  push config =
         , cornerRadius 6.0
         , background $ if selectedYes == Just false then Color.blue600 else Color.white900
         ][
-          textView $ 
+          textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ notext
-          , color   Color.black800 
+          , color   Color.black800
           ] <> FontStyle.subHeading1 TypoGraphy
         ]
       ]
@@ -539,7 +539,7 @@ rentalTripDetailsViewWrapper config push =
     , orientation VERTICAL
     ]
     [ rentalTripDetailsView config push
-    , linearLayout[weight 1.0][] 
+    , linearLayout[weight 1.0][]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -554,7 +554,7 @@ rentalTripDetailsView :: forall w . RiderRideCompletedScreenState -> (Action -> 
 rentalTripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
       fareDiff = config.topCard.finalAmount - config.topCard.initialAmount
-  in 
+  in
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -573,8 +573,8 @@ rentalTripDetailsView config push =
       , padding $ Padding 16 16 16 16
       , stroke $ "1,"<> Color.grey900
       , orientation VERTICAL
-      ] 
-      [ 
+      ]
+      [
         rentalTripRowView config push RideStartedAt
       , rentalTripRowView config push RideEndedAt
       ]
@@ -602,12 +602,12 @@ rentalTripDetailsView config push =
       , rentalTripRowView config push TotalFare
       ]
     ]
-  
-  where 
-    separatorView = 
+
+  where
+    separatorView =
       linearLayout
       [ height $ V 1
-      , width MATCH_PARENT 
+      , width MATCH_PARENT
       , margin $ MarginTop 16
       , background Color.grey700
       ][]
@@ -616,25 +616,25 @@ rentalTripRowView :: forall w. RiderRideCompletedScreenState -> (Action -> Effec
 rentalTripRowView config push description =
   let rentalBookingData = config.rentalBookingData
       textConfig = getTextConfig config description
-  in 
-    linearLayout 
+  in
+    linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , margin $ MarginTop if any ( _ == description) [EstimatedFare, RideStartedAt] then 0 else 16
-    , visibility $ boolToVisibility (textConfig.estimatedValue /= "₹0")
-    ] 
+    , visibility $ boolToVisibility (textConfig.estimatedValue /= "€0")
+    ]
     [ linearLayout
       [ height WRAP_CONTENT
       , weight 0.1
-      , orientation VERTICAL 
+      , orientation VERTICAL
       ][  textView $ [
             text $ textConfig.title
           , gravity LEFT
           ] <> FontStyle.body1 TypoGraphy
         , textView $ [
             text $ textConfig.subTitle
-          , gravity LEFT 
+          , gravity LEFT
           , visibility $ boolToVisibility (textConfig.subTitle /= "")
           ] <> FontStyle.body1 TypoGraphy
         ]
@@ -642,7 +642,7 @@ rentalTripRowView config push description =
         height MATCH_PARENT
       , width WRAP_CONTENT
       , gravity RIGHT
-      ] 
+      ]
       [ textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -663,7 +663,7 @@ rentalTripRowView config push description =
     ]
     where
       getTextConfig :: RiderRideCompletedScreenState -> RentalRowView -> RentalTextConfig
-      getTextConfig config' description' = 
+      getTextConfig config' description' =
         let rentalBookingData = config'.rentalBookingData
             rentalRowDetails = config'.rentalRowDetails
             extraTimeFare = ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare))
@@ -674,13 +674,13 @@ rentalTripRowView config push description =
             RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance rentalRowDetails.rideDistanceInfo (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt "" rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt "" rentalBookingData.rideEndedAt "" Color.black600
-            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("₹" <> show extraTimeFare) "" Color.black600
-            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("₹" <> show extraDistFare ) "" Color.black600
-            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("₹" <> show config'.topCard.finalAmount) "" Color.black600
-            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("₹" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("€" <> show config'.topCard.initialAmount) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("€" <> show extraTimeFare) "" Color.black600
+            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("€" <> show extraDistFare ) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("€" <> show config'.topCard.finalAmount) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("€" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
 
-            
+
       mkRentalTextConfig :: String -> String -> String -> String -> String -> RentalTextConfig
       mkRentalTextConfig title' subTitle' estimatedValue' actualValue' color' = { title: title', subTitle: subTitle', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
       showRedOrBlackColor :: Boolean -> String
@@ -703,7 +703,7 @@ rideCustomerExperienceView state push =
     , gravity CENTER
     , margin $ MarginTop 10
       ][
-        needHelpPillView state push 
+        needHelpPillView state push
       ]
   , customerRatingDriverView state push
   , linearLayout[weight 1.0][]
@@ -746,7 +746,7 @@ customerRatingDriverView state push =
   ]
 
 needHelpPillView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-needHelpPillView state push = 
+needHelpPillView state push =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -765,14 +765,14 @@ needHelpPillView state push =
       , margin $ MarginRight 8
       ]
      , textView $ [
-        text $ getString NEED_HELP 
+        text $ getString NEED_HELP
       , color Color.black800
       ] <> FontStyle.paragraphText TypoGraphy
     ]
 
 stickyButtonView ::  forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 stickyButtonView state push =
-  screenAnimation 
+  screenAnimation
     $ linearLayout[
         width MATCH_PARENT
       , height WRAP_CONTENT
@@ -812,15 +812,15 @@ commonTextView state push text' color' fontStyle marginTop =
   ] <> fontStyle
 
 
-horizontalLine :: forall w. Margin -> String -> PrestoDOM (Effect Unit) w 
-horizontalLine margin' color = 
+horizontalLine :: forall w. Margin -> String -> PrestoDOM (Effect Unit) w
+horizontalLine margin' color =
   linearLayout
           [ height $ V 1
           , width MATCH_PARENT
           , background color
           , margin margin'
           ,gravity CENTER
-          ][] 
+          ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =
@@ -830,7 +830,7 @@ dummyTextView =
     ][]
 
 whiteHorizontalLine :: forall w . RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
-whiteHorizontalLine config = 
+whiteHorizontalLine config =
   linearLayout
     [ width MATCH_PARENT
     , height $ V 1
@@ -838,11 +838,11 @@ whiteHorizontalLine config =
     , background Color.grey900
     ][]
 
-getBottomCardHeight :: String -> Length 
+getBottomCardHeight :: String -> Length
 getBottomCardHeight id = V $ (screenHeight unit) - (runFn1 JB.getLayoutBounds $ getNewIDWithTag id).height - 82
 
 sosButtonView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-sosButtonView config push = 
+sosButtonView config push =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -864,8 +864,8 @@ sosButtonView config push =
   ]
 
 rideRatingView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rideRatingView state push = 
-  screenAnimation 
+rideRatingView state push =
+  screenAnimation
     $ scrollView
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -873,7 +873,7 @@ rideRatingView state push =
         , background Color.white900
         , fillViewport true
         , id (getNewIDWithTag "RideCompletedScrollView")
-        ] $ [  
+        ] $ [
             linearLayout
               [ height MATCH_PARENT
               , width MATCH_PARENT
@@ -882,29 +882,29 @@ rideRatingView state push =
               , onBackPressed push $ const Back
               , adjustViewWithKeyboard "true"
               , padding $ PaddingBottom 40
-              ][ 
-                topPartView state push 
+              ][
+                topPartView state push
               , bottomPartView state push
-              ]   
+              ]
         ]
 
 topPartView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-topPartView state push = 
+topPartView state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , background $ "#F4F7FF"
     ]
-    [  
+    [
       header state push
-    , profile state push 
+    , profile state push
     , driverRating state push
     , favComponent state push
     ]
 
 header :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-header state push = 
+header state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -922,7 +922,7 @@ header state push =
     ]
 
 profile :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-profile state push = 
+profile state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -951,7 +951,7 @@ profile state push =
         , onClick push $ const GoToDriverProfile
         ][
           textView
-            $ [ 
+            $ [
                 text $ state.driverInfoCardState.driverName
               , color Color.black900
               ]
@@ -963,7 +963,7 @@ profile state push =
           , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
           , margin $ if os == "IOS" then Margin 2 0 0 0 else Margin 2 2 0 0
           ]
-        ] 
+        ]
       , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -979,11 +979,11 @@ profile state push =
               imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_heart"
               , height $ V 15
               , width $ V 15
-              , visibility VISIBLE 
+              , visibility VISIBLE
               , margin $ MarginTop 2
             ]
           , textView $
-              [ 
+              [
                 accessibilityHint $ "liked by customers"
               , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> if state.driverInfoCardState.favCount > 1 then getString CUSTOMERS else getString CUSTOMER
               , color Color.blue800
@@ -1002,7 +1002,7 @@ starRatingView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginLeft 8
-    ][ 
+    ][
       linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -1022,7 +1022,7 @@ starRatingView state push =
     ]
 
 driverRating :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-driverRating state push = 
+driverRating state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -1031,7 +1031,7 @@ driverRating state push =
     , orientation HORIZONTAL
     ][
       textView $
-        [ 
+        [
           accessibilityHint $ "Rating given by customer"
         , text  $ getString YOU_RATED <> ":"
         , color Color.black700
@@ -1042,7 +1042,7 @@ driverRating state push =
     ]
 
 favComponent :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-favComponent state push = 
+favComponent state push =
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -1055,7 +1055,7 @@ favComponent state push =
       , gravity CENTER_VERTICAL
       ][
         textView $
-          [ 
+          [
             height WRAP_CONTENT
           , accessibilityHint $ "Your Favourite Driver"
           , text $ getString YOU_FAVOURITED <> " " <> state.rideRatingState.driverName
@@ -1070,12 +1070,12 @@ favComponent state push =
             imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_bluecircle_white_heart"
             , height $ V 35
             , width $ V 35
-            , visibility VISIBLE 
+            , visibility VISIBLE
           ]
       ]
 
 bottomPartView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bottomPartView state push = 
+bottomPartView state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -1098,21 +1098,21 @@ bottomPartView state push =
     ]
 
 feedbackPillView :: forall w. RiderRideCompletedScreenState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-feedbackPillView state push = 
+feedbackPillView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 15
-    ](map  
-      (\list1 ->  
+    ](map
+      (\list1 ->
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , margin $ MarginBottom 6
-        ](map 
-            (\item -> 
+        ](map
+            (\item ->
               let isSelected = checkPillSelected item.text state.ratingCard.feedbackList item.id
               in
                 linearLayout
@@ -1136,7 +1136,7 @@ feedbackPillView state push =
             )list1
           )
       ) (getFeedbackPillData state.ratingCard.rating state.ratingCard.feedbackPillData)
-    ) 
+    )
 
 getFeedbackPillData :: Int -> Array (Array (Array FeedbackItem)) -> Array (Array FeedbackItem)
 getFeedbackPillData rating feedbackPillData = fromMaybe [] $ (feedbackPillData) !! (rating - 1)
@@ -1149,7 +1149,7 @@ checkPillSelected feedbackItem feedbackList itemId =
     any (\item -> feedbackItem `elem` item.answer) selectedItems
 
 feedbackPills :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-feedbackPills state push = 
+feedbackPills state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -1167,7 +1167,7 @@ feedbackPills state push =
     ]
 
 riderFeedback :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-riderFeedback state push = 
+riderFeedback state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -1187,7 +1187,7 @@ riderFeedback state push =
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         ][
-          textView $ [ 
+          textView $ [
             text  $ getString FAVOURITE_DRIVER
             , color Color.black
             , maxLines 1
@@ -1196,12 +1196,12 @@ riderFeedback state push =
             imageWithFallback $ fetchImage FF_COMMON_ASSET $ "ny_ic_info"
             , height $ V 15
             , width $ V 15
-            , visibility VISIBLE 
+            , visibility VISIBLE
             , margin $ Margin 10 5 0 0
             , onClick push $ const DriverInfoCard
           ]
          ]
-      , textView $ [ 
+      , textView $ [
           text  $ getString PREFER_DRIVER
           , color Color.black700
           , maxLines 2
@@ -1217,15 +1217,15 @@ riderFeedback state push =
           imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.ratingCard.favDriver == false then "ny_ic_favourite_driver_unselected" else "ny_ic_favourite_driver_selected"
           , height $ V 60
           , width $ V 60
-          , visibility VISIBLE 
+          , visibility VISIBLE
           , onClick push $ const MakeFavourite
         ]
       ]
     ]
 
 title :: forall w. RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
-title state = 
-  textView $ [ 
+title state =
+  textView $ [
     text $ getString WRITE_REVIEW
     , color Color.black
     , maxLines 1
@@ -1258,17 +1258,17 @@ editTextView state push =
       , hint "Write a review"
       , weight 1.0
       , pattern "[^\n]*,255"
-      , singleLine true 
+      , singleLine true
       , margin $ MarginTop 20
       , id $ getNewIDWithTag "review-editText"
-      , onChange push (FeedbackChanged ( EHC.getNewIDWithTag "reviewBox-editText")) 
+      , onChange push (FeedbackChanged ( EHC.getNewIDWithTag "reviewBox-editText"))
       ]  <> FontStyle.body1 TypoGraphy
   , linearLayout[
       height MATCH_PARENT
     , width $ WRAP_CONTENT
     , margin $ MarginTop 8
     ][
-      imageView 
+      imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_microphone"
         , height $ V 46
         , width $ V 34
@@ -1290,14 +1290,14 @@ audioRecorder state push =
   , stroke $ "1," <> Color.grey800
   , visibility $ boolToVisibility $ state.recordedView
   ][
-    imageView 
+    imageView
       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete_icon"
       , height $ V 20
       , width $ V 20
       , margin $ MarginTop 18
       , onClick push $ const $ OnClickClose
       ]
-    , relativeLayout 
+    , relativeLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , margin $ Margin 7 12 0 0
@@ -1309,10 +1309,10 @@ audioRecorder state push =
             , margin $ MarginRight 2
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_paused_audio"
             , visibility $ boolToVisibility $ (not state.ratingCard.recordAudioState.isRecording && not state.ratingCard.recordAudioState.isListening )
-            ] 
+            ]
         , lottieAnimationView
             [ width $ V $ (screenWidth unit) - 170
-            , padding $ PaddingRight 8 
+            , padding $ PaddingRight 8
             , height $ V 36
             , color Color.white900
             , id $ getNewIDWithTag "recordAnimation1"
@@ -1344,14 +1344,14 @@ audioRecorder state push =
         , gravity RIGHT
         , visibility $ boolToVisibility $ state.ratingCard.recordAudioState.isRecording
         ][
-          textView 
+          textView
           ([ height WRAP_CONTENT
           , width WRAP_CONTENT
           , text state.ratingCard.recordAudioState.timer
           , margin $ if os == "IOS" then Margin 0 7 3 0 else Margin 1 7 0 0
           , weight 1.0
           ] <> FontStyle.body3 TypoGraphy )
-        ,  imageView 
+        ,  imageView
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_pause_icon"
           , height $ V 30
           , width $ V 30
@@ -1369,7 +1369,7 @@ audioRecorder state push =
             height WRAP_CONTENT
           , width WRAP_CONTENT
           ][
-            textView 
+            textView
               ([ height WRAP_CONTENT
               , width WRAP_CONTENT
               , text state.timerValue
@@ -1377,7 +1377,7 @@ audioRecorder state push =
               , weight 1.0
               , visibility $ boolToVisibility $ not state.ratingCard.recordAudioState.isListening
               ] <> FontStyle.body3 TypoGraphy )
-          , textView 
+          , textView
               ([ height WRAP_CONTENT
               , width WRAP_CONTENT
               , text state.countDownValue
@@ -1390,20 +1390,20 @@ audioRecorder state push =
               height WRAP_CONTENT
             , width WRAP_CONTENT
           ][
-            imageView 
+            imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_play_icon"
             , height $ V 30
             , width $ V 30
             , onClick push $ const $ OnClickPlay
             , visibility $ boolToVisibility $ not state.ratingCard.recordAudioState.isListening
             ]
-          ,  imageView 
+          ,  imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_pause"
             , height $ V 30
             , width $ V 30
             , onClick push $ const $ OnClickPause
             , visibility $ boolToVisibility $ state.ratingCard.recordAudioState.isListening
-            ] 
+            ]
           ]
         ]
         ]

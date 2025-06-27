@@ -20,7 +20,7 @@ import Language.Types (STR(..))
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
@@ -29,7 +29,7 @@ genericHeaderConfig state = let
       , height = V 25
       , width = V 25
       , margin = Margin 16 16 16 16
-      } 
+      }
     , padding = PaddingVertical 5 5
     , textConfig {
         text = case state.props.currentStage of
@@ -53,15 +53,15 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-        { text = (case state.props.currentStage of 
+        { text = (case state.props.currentStage of
                     ST.DescriptionStage -> "Book Tickets"
-                    ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                    ST.ChooseTicketStage -> ("Pay €" <> (show state.data.totalAmount))
                     ST.ViewTicketStage -> "Book Tickets"
                     _ -> "")
         , color = Color.yellow900
         }
       , cornerRadius = 8.0
-      , background = Color.black900 
+      , background = Color.black900
       , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate )
       , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate ) then 1.0 else 0.5
       , id = "BookTicketsButton"
@@ -70,17 +70,17 @@ primaryButtonConfig state = let
   in primaryButtonConfig'
 
 primaryButtonConfig1 :: ST.TicketBookingScreenState -> PrimaryButton.Config
-primaryButtonConfig1 state = 
+primaryButtonConfig1 state =
   let config = PrimaryButton.config
       primaryButtonConfig' = config
         { textConfig
-          { text = (case state.props.currentStage of 
-                      ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+          { text = (case state.props.currentStage of
+                      ST.ChooseTicketStage -> ("Pay €" <> (show state.data.totalAmount))
                       _ -> "")
           , color = Color.yellow900
           }
         , cornerRadius = 8.0
-        , background = Color.black900 
+        , background = Color.black900
         , isClickable = (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate)
         , alpha = if (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate) then 1.0 else 0.5
         , id =  "PayTicketsButton"
@@ -90,7 +90,7 @@ primaryButtonConfig1 state =
 
 shareTicketButtonConfig :: Boolean -> PrimaryButton.Config
 shareTicketButtonConfig visibility' = PrimaryButton.config
-  { textConfig 
+  { textConfig
     { text = "Share Tickets"
     , textStyle = Tags
     , weight = Just 1.0
@@ -102,7 +102,7 @@ shareTicketButtonConfig visibility' = PrimaryButton.config
   , visibility = if visibility' then VISIBLE else GONE
   , cornerRadius = 22.0
   , width = MATCH_PARENT
-  , padding = Padding 16 11 16 11 
+  , padding = Padding 16 11 16 11
   , margin = Margin 10 10 10 0
   , isPrefixImage = true
   , stroke = "1," <> Color.grey700
@@ -118,7 +118,7 @@ shareTicketButtonConfig visibility' = PrimaryButton.config
 
 refreshStatusButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
 refreshStatusButtonConfig state = PrimaryButton.config
-    { textConfig 
+    { textConfig
       { text = "Refresh Status"
       , textStyle = Tags
       , weight = Just 1.0
@@ -143,14 +143,14 @@ refreshStatusButtonConfig state = PrimaryButton.config
     }
 
 viewTicketButtonConfig :: String -> Boolean -> PrimaryButton.Config
-viewTicketButtonConfig text visibility' = 
-  PrimaryButton.config { 
+viewTicketButtonConfig text visibility' =
+  PrimaryButton.config {
   textConfig
       { text = text
       , color = Color.yellow900
       }
     , cornerRadius = 8.0
-    , background = Color.black900 
+    , background = Color.black900
     , visibility = if visibility' then VISIBLE else GONE
     , id = "ViewTicketsButton"
     , margin = (Margin 16 16 16 16)

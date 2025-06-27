@@ -38,7 +38,7 @@ view push state =
         gradient' = Linear 180.0 if isSelected && not isMyPlan then [Color.darkMint, Color.blue800] else [Color.darkMint, Color.grey900]
         coinDiscountUpto = maybe "" (\coinDiscount -> if coinDiscount > 0.0 then getFixedTwoDecimals coinDiscount else "") mbCoinDiscountUpto
         cardMargin = case isMyPlan, isIntroductory of
-                      true, _ -> Margin 16 13 16 0 
+                      true, _ -> Margin 16 13 16 0
                       _, _ -> MarginVertical 6 6
   in
   relativeLayout
@@ -68,12 +68,12 @@ view push state =
         , background if isSelected && not isMyPlan && not isIntroductory then Color.blue600 else Color.white900
         , stroke $ "1," <> (if isIntroductory then Color.grey900
                             else if isSelected && isActivePlan then Color.transparent
-                            else if isSelected && not isMyPlan then Color.blue800 
+                            else if isSelected && not isMyPlan then Color.blue800
                             else Color.grey900)
         , padding $ Padding 16 12 16 (if isMyPlan then 16 else 12)
         , cornerRadius 8.0
         , orientation VERTICAL
-        ] <> if isIntroductory 
+        ] <> if isIntroductory
                then []
                else [onClick push $ const $ OnClick $ mkPlanCardConfig state])
         [ linearLayout
@@ -100,7 +100,7 @@ view push state =
               ] <> if isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
             , if state.showOffer && DA.length state.offers > 1 then offerCountView (DA.length state.offers) isSelected else linearLayout[visibility GONE][]
             ]
-          , horizontalScrollView 
+          , horizontalScrollView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , scrollBarX false
@@ -125,7 +125,7 @@ view push state =
                   , margin $ MarginTop 8
                   , background if isMyPlan || isIntroductory then Color.grey700 else Color.white900
                   , cornerRadius 4.0
-                  ] <> case item.offerDescription of 
+                  ] <> case item.offerDescription of
                         Just desc -> [text desc, visibility if (isSelected || isIntroductory) && not DS.null desc then VISIBLE else GONE]
                         Nothing -> [visibility GONE])
                   [ textView $
@@ -135,11 +135,11 @@ view push state =
                   ]
               )state.offers)
           , offerCardBannerView push false (isJust offerBannerProps && (DA.any (_ == state.id) offerBannerPlans) && showBanner) true (fromMaybe dummyOfferConfig offerBannerProps) false
-            
+
           ]
       ]
       ,
-      linearLayout 
+      linearLayout
         [height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
@@ -149,13 +149,13 @@ view push state =
         , cornerRadii $ (Corners 8.0 false false true true)
         , padding $ Padding 2 4 2 4
         ]
-        [ 
+        [
           imageView
           [ width $ V 12
           , height $ V 12
           , margin (MarginRight 4)
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_discount"
-          ] 
+          ]
         , textView $
           [ color Color.black800
           , singleLine true
@@ -163,7 +163,7 @@ view push state =
           ]  <> (if isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy)
         ]
     ]
-   , linearLayout 
+   , linearLayout
      [  height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
@@ -175,9 +175,9 @@ view push state =
       , padding $ Padding 8 5 8 5
       , cornerRadius 100.0
       ] <> FontStyle.tags TypoGraphy
-    ] 
+    ]
   ]
-  where 
+  where
     mkPlanCardConfig state = {
         id : state.id,
         title : state.title,
@@ -207,9 +207,9 @@ offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps isFre
         Banner.view (push <<< OfferCardBanner) (offerCardBannerConfig isPlanCard offerBannerProps)
     ]
 
-promoCodeView :: forall w. (Action -> Effect Unit) -> ST.PromoConfig -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+promoCodeView :: forall w. (Action -> Effect Unit) -> ST.PromoConfig -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 promoCodeView push state isIntroductory isSelectedLangTamil =
-  linearLayout 
+  linearLayout
   ([ height WRAP_CONTENT
   , width MATCH_PARENT
   , cornerRadius 100.0
@@ -226,7 +226,7 @@ promoCodeView push state isIntroductory isSelectedLangTamil =
      , margin (MarginRight 4)
      , visibility if state.hasImage then VISIBLE else GONE
      , imageWithFallback state.imageURL
-     ] 
+     ]
    , textView $
      [ color Color.blue900
      , singleLine true
@@ -238,7 +238,7 @@ promoCodeView push state isIntroductory isSelectedLangTamil =
   ]
 
 offerCountView :: forall w. Int -> Boolean -> PrestoDOM (Effect Unit) w
-offerCountView count isSelected = 
+offerCountView count isSelected =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -267,7 +267,7 @@ offerCountView count isSelected =
 
 planPriceView :: forall w. Array API.PaymentBreakUp -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 planPriceView fares frequency isSelectedLangTamil isIntroductory =
-  let finalFee = "₹" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+  let finalFee = "€" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
@@ -276,8 +276,8 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+  ][ textView $
+     [ textFromHtml $ "<strike> €" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
      , visibility if (HU.getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 && not isIntroductory then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
@@ -289,8 +289,8 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
    ]
 
 offerCardBannerConfig :: Boolean -> ST.OfferBanner ->  Banner.Config
-offerCardBannerConfig isPlanCard bannerProps= 
-  let 
+offerCardBannerConfig isPlanCard bannerProps=
+  let
     strArray = DS.split (DS.Pattern "-*$*-") bannerProps.offerBannerDeadline
     getLanguage len = do
         case getLanguageLocale languageKey of
@@ -304,7 +304,7 @@ offerCardBannerConfig isPlanCard bannerProps=
     date = fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
     title' = getString $ OFFER_CARD_BANNER_TITLE "OFFER_CARD_BANNER_TITLE" date bannerProps.payAmount
     config = Banner.config
-    config' = config  
+    config' = config
       {
         backgroundColor = Color.yellow800,
         title = title',

@@ -1273,7 +1273,7 @@ config =
   , privacyLink : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
   , navigationAppConfig : defaultNavigationAppConfig
   , genericHeaderConfig : defaultGenericHeader
-  , currency: "₹"
+  , currency: "€"
   , internationalNumberEnabled : false
   , countryCodeConfig : []
   , feature : {
