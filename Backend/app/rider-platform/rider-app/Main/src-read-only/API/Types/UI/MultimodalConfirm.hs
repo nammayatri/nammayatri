@@ -95,7 +95,8 @@ data JourneyInfoResp = JourneyInfoResp
     merchantOperatingCityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
+    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR,
+    unifiedQRV2 :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQRV2
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

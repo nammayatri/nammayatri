@@ -14,6 +14,7 @@ imports:
   Price: Kernel.Types.Common
   JourneyLegStatus: Lib.JourneyLeg.Types
   UnifiedTicketQR: Lib.JourneyModule.Types
+  UnifiedTicketQRV2: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
@@ -42,6 +43,7 @@ types:
     estimatedDistance: Distance
     journeyStatus: Domain.Types.Journey.JourneyStatus
     unifiedQR: Maybe UnifiedTicketQR
+    unifiedQRV2: Maybe UnifiedTicketQRV2
     journeyId: Id Journey
     legs: [LegInfo]
     startTime: Maybe UTCTime
