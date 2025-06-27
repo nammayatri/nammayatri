@@ -216,6 +216,13 @@ initData =
       , overchargingTag : Nothing
       , driverBlocked : false
       , blockedExpiryTime : ""
+      , insuranceData : {
+        certificateUrl : Nothing,
+        message : Nothing,
+        plan : Nothing,
+        policyId : Nothing,
+        policyNumber : Nothing
+      }
     }
   , props:
       { isFreeRide: false
@@ -342,6 +349,7 @@ initData =
         , showLoadMoreForConductors : false
       }
       , showBlockerPopup : false
+      , showInsuranceBanner : false
       }
   }
 
@@ -477,6 +485,8 @@ dummyRideData = {
       , notifiedReachedDestination : false
       , destinationWaitingTime : Nothing
       , destinationWaitTimerId : ""
+      , isInsured : Nothing
+      , insuredAmount : Nothing
       }
 
 initialParkingData :: ParkingData

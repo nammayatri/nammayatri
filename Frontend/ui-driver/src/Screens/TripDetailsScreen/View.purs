@@ -114,35 +114,71 @@ view push state =
                     , padding (Padding 16 16 16 16)
                     , orientation VERTICAL
                     ][ reportIssueView state push
-                      , linearLayout
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , padding $ PaddingVertical 10 10
-                    ][ linearLayout
-                       [ height WRAP_CONTENT
-                       , width MATCH_PARENT
-                       , orientation HORIZONTAL
-                       , onClick push (const HelpAndSupport)
-                        ][ imageView
-                          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_support"
-                          , height $ V 17
-                          , width $ V 20
-                          , margin $ MarginRight 7
+                    , linearLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , orientation VERTICAL
+                        , padding $ PaddingVertical 10 10
+                        , visibility $ if state.data.isInsured then VISIBLE else GONE
+                        ][ 
+                          linearLayout
+                            [ height WRAP_CONTENT
+                            , width MATCH_PARENT
+                            , orientation HORIZONTAL
+                            , onClick
+                              ( \action -> do
+                                  void $ JB.openUrlInApp state.data.certificateUrl
+                                  pure unit
+                              )
+                              $ const NoAction
+                            ][ imageView
+                              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_grey_shield"
+                              , height $ V 17
+                              , width $ V 20
+                              , margin $ MarginRight 7
+                              ]
+                              , textView
+                              ([ text $ getString DOWNLOAD_INSURANCE_POLICY
+                                , color Color.black800
+                                , weight 1.0
+                                ] <> FontStyle.body1 TypoGraphy
+                              )
+                              , imageView
+                              [ width $ V 18
+                              , height $ V 18
+                              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey"
+                              ]
+                            ]
                           ]
-                          , textView
-                          ([ text (getString HELP_AND_SUPPORT)
-                           , color Color.black800
-                           , weight 1.0
-                           ] <> FontStyle.body1 TypoGraphy
-                          )
-                          , imageView
-                          [ width $ V 18
-                          , height $ V 18
-                          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey"
+                    , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      , padding $ PaddingVertical 10 10
+                      ][ linearLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , orientation HORIZONTAL
+                        , onClick push (const HelpAndSupport)
+                          ][ imageView
+                            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_support"
+                            , height $ V 17
+                            , width $ V 20
+                            , margin $ MarginRight 7
+                            ]
+                            , textView
+                            ([ text (getString HELP_AND_SUPPORT)
+                            , color Color.black800
+                            , weight 1.0
+                            ] <> FontStyle.body1 TypoGraphy
+                            )
+                            , imageView
+                            [ width $ V 18
+                            , height $ V 18
+                            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey"
+                            ]
                           ]
                         ]
-                      ]
                     ]
                   ]
                 , issueReportedView state push

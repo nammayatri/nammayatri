@@ -77,6 +77,7 @@ import Components.SelectableItems as SelectableItems
 import Components.SelectableItem as SelectableItem
 import Components.SearchableList.View as SearchableListView
 import Components.SearchableList.Controller as SearchableList
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -122,7 +123,7 @@ view push state =
         , height state.height
         , cornerRadii state.cornerRadius
         , orientation VERTICAL
-        , background Colors.white900
+        , background state.background
         , margin state.margin
         , padding state.padding
         , accessibility DISABLE
@@ -148,6 +149,7 @@ view push state =
             , orientation VERTICAL
             , background state.popUpHeaderConfig.backgroundColor
             , weight 1.0
+            , visibility $ state.popUpHeaderConfig.visibilityV2
             ]
         [textView $
             [ width MATCH_PARENT
@@ -325,7 +327,7 @@ view push state =
                , margin state.primaryText.prefixImage.margin
                 ]
             , textView $
-                [ text $ state.primaryText.text
+                ([ text $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
                 , accessibility ENABLE
                 , color $ state.primaryText.color
@@ -334,7 +336,7 @@ view push state =
                 , visibility $ state.primaryText.visibility
                 , margin $ state.primaryText.margin
                 , gravity $ state.primaryText.gravity
-                ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
+                ] <> (if state.primaryText.lineheight /= Nothing then [lineHeight $ fromMaybe "" state.primaryText.lineheight] else [])) <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -393,15 +395,15 @@ view push state =
                , margin state.secondaryText.prefixImage.margin
              ]
             , textView $
-             [ width WRAP_CONTENT
+             ([ width WRAP_CONTENT
              , height WRAP_CONTENT
              , color $ state.secondaryText.color
              , gravity $ state.secondaryText.gravity
-             , textFromHtml state.secondaryText.text
+             , if state.secondaryText.useTextFromHtml then textFromHtml state.secondaryText.text else text state.secondaryText.text
              , accessibility ENABLE
              , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") (if state.secondaryText.accessibilityHint /= ""  then state.secondaryText.accessibilityHint else state.secondaryText.text)
              , visibility $ state.secondaryText.visibility
-             ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+             ] <> (if state.secondaryText.lineheight /= Nothing then [lineHeight $ fromMaybe "" state.secondaryText.lineheight] else []))  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
             , imageView [
                width state.secondaryText.suffixImage.width
                , height state.secondaryText.suffixImage.height
@@ -410,6 +412,7 @@ view push state =
                , margin state.secondaryText.suffixImage.margin
              ]
           ]
+        , policyDownloadView push state
         , deliveryView push state
         , parcelDetailsView push state
         , selectItemsView push state
@@ -452,7 +455,7 @@ view push state =
                 ]
                 [ linearLayout
                     ([ if state.option2.visibility && state.deliveryDetailsConfig.visibility  == GONE && state.parcelDetailsVisibility == GONE then width state.option1.width 
-                       else weight 1.0
+                       else if state.option1.useWeight then weight 1.0 else width state.option1.width
                     , background state.option1.background
                     , height $ state.option1.height
                     , cornerRadius 8.0
@@ -773,6 +776,36 @@ deliveryView push state =
     ]
     [
         deliveryDetailsView push state
+    ]
+
+policyDownloadView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+policyDownloadView push state = 
+    linearLayout[
+        height WRAP_CONTENT,
+        width MATCH_PARENT,
+        gravity CENTER,
+        margin $ MarginTop 27,
+        visibility $ boolToVisibility $ state.showDownloadPolicy == true,
+        onClick
+            ( \action -> do
+                void $ openUrlInApp state.certificateUrl
+                pure unit
+            )
+            $ const NoAction
+    ][
+        imageView
+        [ width (V 18)
+        , height (V 18)
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_download_icon"
+        , margin $ Margin 0 2 5 0
+        ],
+        textView $
+        [
+          textFromHtml $ "<u>Download Policy</u>"
+        , color Color.white900
+        , textSize FontSize.a_16
+        , fontStyle $ FontStyle.bold LanguageStyle
+        ] <> FontStyle.body3 TypoGraphy
     ]
     
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

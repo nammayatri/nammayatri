@@ -105,6 +105,7 @@ type Config = {
     tipSelected :: String,
     fareEstimateText :: String,
     tipSelectedText :: String,
+    background :: String,
     backgroundColor  :: String,
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
@@ -129,7 +130,9 @@ type Config = {
     whereIsMyBusConfig :: WhereIsMyBusConfig,
     selectableItemsConfig :: forall a. SelectableItems.SelectableItemsConfig a,
     dropdownTextFieldConfig :: DropdownTextField.Config,
-    searchableListConfig :: SearchableList.Config
+    searchableListConfig :: SearchableList.Config,
+    showDownloadPolicy :: Boolean,
+    certificateUrl :: String
 }
 
 type OptionsConfig = {
@@ -234,13 +237,15 @@ type TextConfig = {
   color :: String,
   gravity :: Gravity,
   padding :: Padding,
+  lineheight :: Mb.Maybe String,
   margin :: Margin,
   visibility :: Visibility,
   textStyle :: Style,
   accessibilityHint :: String,
   suffixImage :: ImageConfig,
   prefixImage :: ImageConfig,
-  isClickable :: Boolean
+  isClickable :: Boolean,
+  useTextFromHtml :: Boolean
 }
 type ButtonConfig = {
   background :: String,
@@ -262,7 +267,8 @@ type ButtonConfig = {
   gravity :: Gravity,
   enableRipple :: Boolean,
   rippleColor :: String,
-  layoutGravity :: Mb.Maybe String
+  layoutGravity :: Mb.Maybe String,
+  useWeight :: Boolean
 }
 
 type DismissPopupConfig =
@@ -341,6 +347,7 @@ type PopUpHeaderConfig = {
   , margin :: Margin
   , padding :: Padding
   , visibility :: Visibility
+  , visibilityV2 :: Visibility
   , backgroundColor :: String
   , cornerRadius :: Number
   , orientation :: String
@@ -367,6 +374,8 @@ config = {
   , cornerRadius : (PTD.Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
+  , background : Color.white900
+  , showDownloadPolicy : false
   , backgroundColor : Color.black9000
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
@@ -391,6 +400,7 @@ config = {
       isClickable : false,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
+      lineheight : Mb.Nothing,
       visibility : VISIBLE,
       textStyle : Heading2,
       accessibilityHint : "", 
@@ -409,7 +419,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     }
   , secondaryText : {
       text : "Text2",
@@ -417,6 +428,7 @@ config = {
       gravity : CENTER,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
+      lineheight : Mb.Nothing,
       visibility : VISIBLE,
       isClickable : false ,
       textStyle : ParagraphText,
@@ -436,7 +448,8 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true
     }
   , headerInfo : {
       text : "Step",
@@ -463,7 +476,9 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true,
+      lineheight : Mb.Nothing
     }
   , tipButton: {
      background : Color.white900
@@ -493,6 +508,7 @@ config = {
     , enableRipple : false
     , rippleColor : Color.rippleShade
     , layoutGravity : Mb.Nothing
+    , useWeight : true
   } 
   , option1 : {
       background : Color.white900
@@ -522,6 +538,7 @@ config = {
     , enableRipple : false
     , rippleColor : Color.rippleShade
     , layoutGravity : Mb.Nothing
+    , useWeight : true
     }
   , option2 : {
       background : Color.black900
@@ -551,6 +568,7 @@ config = {
     , enableRipple : false
     , rippleColor : Color.rippleShade
     , layoutGravity : Mb.Nothing
+    , useWeight : true
     }
   , optionsConfig : {
       height : WRAP_CONTENT
@@ -587,7 +605,9 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
-        }
+        },
+        useTextFromHtml : true,
+        lineheight : Mb.Nothing
       },
       textOpt2 : {
         text : "",
@@ -614,7 +634,9 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
-        }
+        },
+        useTextFromHtml : true,
+        lineheight : Mb.Nothing
       },
       visibility : false,
       margin : (Margin 0 0 0 0),
@@ -718,7 +740,9 @@ config = {
             , width : (V 0)
             , margin : (Margin 0 0 0 0)
             , padding : (Padding 0 0 0 0)
-          }
+          },
+          useTextFromHtml : true,
+          lineheight : Mb.Nothing
       }
     },
     onlyTopTitle : VISIBLE,
@@ -744,6 +768,7 @@ config = {
       margin : (Margin 0 0 0 0),
       padding : (Padding 0 0 0 0),
       visibility : GONE,
+      visibilityV2 : VISIBLE,
       backgroundColor : Color.white900,
       cornerRadius : 0.0,
       orientation : "VERTICAL",
@@ -772,7 +797,9 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true,
+      lineheight : Mb.Nothing
     },
     subHeadingText :{
       text : "",
@@ -799,7 +826,9 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      useTextFromHtml : true,
+      lineheight : Mb.Nothing
     },
     imageConfig : {
       visibility : GONE
@@ -849,6 +878,7 @@ config = {
   , selectableItemsConfig : SelectableItems.defaultConfig
   , dropdownTextFieldConfig : DropdownTextField.config
   , searchableListConfig : SearchableList.config
+  , certificateUrl : ""
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

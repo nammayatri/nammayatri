@@ -858,6 +858,7 @@ type IndividualRideCardState =
     driverSelectedFare :: Int,
     vehicleColor :: String,
     id :: String,
+    rideId :: String,
     updatedAt :: String,
     source :: String,
     destination :: String,
@@ -878,7 +879,8 @@ type IndividualRideCardState =
     tripEndTime :: Maybe String,
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
-    parkingCharge :: Number
+    parkingCharge :: Number,
+    isInsured :: Boolean
   }
 
 
@@ -1103,7 +1105,7 @@ type HomeScreenData =  {
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
-, whereIsMyBusData :: WhereIsMyBusData
+, whereIsMyBusData :: WhereIsMyBusData, insuranceData :: InsuranceData
 , overchargingTag :: Maybe API.OverchargingTag
 , driverBlocked :: Boolean
 , blockedExpiryTime :: String
@@ -1126,6 +1128,14 @@ type FleetBadgeDrivers = {
 
 -- Represents either a current or assigned bus trip
 data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
+
+type InsuranceData = {
+  certificateUrl :: Maybe String,
+  message :: Maybe String,
+  plan :: Maybe String,
+  policyId :: Maybe String,
+  policyNumber :: Maybe String
+}
 
 type FavouritePopUp = {
   visibility :: Boolean,
@@ -1355,7 +1365,9 @@ type ActiveRide = {
   parcelQuantity :: Maybe Int,
   notifiedReachedDestination :: Boolean,
   destinationWaitingTime :: Maybe Int,
-  destinationWaitTimerId :: String
+  destinationWaitTimerId :: String,
+  isInsured :: Maybe Boolean,
+  insuredAmount :: Maybe String
 }
 
 type HomeScreenProps =  {
@@ -1455,7 +1467,8 @@ type HomeScreenProps =  {
   setBusOnline :: Boolean,
   bus_input_data :: String,
   whereIsMyBusConfig :: WhereIsMyBusConfig,
-  showBlockerPopup :: Boolean
+  showBlockerPopup :: Boolean,
+  showInsuranceBanner :: Boolean
  }
 
 type WhereIsMyBusConfig = {
@@ -1662,7 +1675,9 @@ type TripDetailsScreenData =
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
     parkingCharge :: Number,
-    tripType :: TripType
+    tripType :: TripType,
+    isInsured :: Boolean,
+    certificateUrl :: String
   }
 
 type TripDetailsScreenProps =

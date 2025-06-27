@@ -476,7 +476,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_COMPLETE_PROFILE_SCREEN
-                          | GO_TO_RIDE_DETAILS_SCREEN
+                          | GO_TO_RIDE_DETAILS_SCREEN String
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES
                           | ENABLE_GOTO_API HomeScreenState String String
@@ -506,6 +506,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_SCAN_BUS_QR HomeScreenState
                           | GO_START_BUS_RIDE HomeScreenState
                           | LINK_AND_START_BUS_RIDE HomeScreenState
+                          | UPDATE_DRIVER_INSURANCE HomeScreenState
                           | GO_TO_EDUCATION_SCREEN HomeScreenState
                           | WMB_END_TRIP HomeScreenState
                           | WMB_CANCEL_END_TRIP HomeScreenState

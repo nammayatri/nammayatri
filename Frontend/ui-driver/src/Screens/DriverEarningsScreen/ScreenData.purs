@@ -82,7 +82,9 @@ initData =
             tripEndTime : Nothing,
             acRide : Nothing,
             vehicleServiceTier : ""
-        , parkingCharge : 0.0
+        , parkingCharge : 0.0,
+            rideId : "",
+            isInsured : false
         }
       , logField : empty
       , coinInfoRes : Nothing
