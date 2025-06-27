@@ -4,6 +4,7 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2)
+import Data.Aeson (object, (.=))
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -426,6 +427,47 @@ instance FromJSON UnifiedTicketQR where
 
 data Provider = CMRL | MTC | DIRECT | CRIS
   deriving (Eq, Show)
+
+data BookingDataV2 = BookingDataV2
+  { bookingId :: Text,
+    isRoundTrip :: Bool,
+    ticketData :: [Text]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (FromJSON, ToSchema)
+
+instance ToJSON BookingDataV2 where
+  toJSON (BookingDataV2 bookingId isRoundTrip ticketData) =
+    object
+      [ "BookingId" .= bookingId,
+        "isRoundTrip" .= isRoundTrip,
+        "data" .= ticketData
+      ]
+
+data UnifiedTicketQRV2 = UnifiedTicketQRV2
+  { version :: Text,
+    _type :: Text,
+    txnId :: Text,
+    createdAt :: UTCTime,
+    cmrl :: [BookingDataV2],
+    mtc :: [BookingDataV2]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance FromJSON UnifiedTicketQRV2 where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON UnifiedTicketQRV2 where
+  toJSON (UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc) =
+    object
+      [ "version" .= version,
+        "type" .= _type,
+        "txnId" .= txnId,
+        "createdAt" .= createdAt,
+        "CMRL" .= cmrl,
+        "MTC" .= mtc
+      ]
 
 data IsCancellableResponse = IsCancellableResponse
   { canCancel :: Bool

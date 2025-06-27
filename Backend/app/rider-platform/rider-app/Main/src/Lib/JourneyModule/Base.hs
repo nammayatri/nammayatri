@@ -1498,6 +1498,7 @@ generateJourneyInfoResponse journey legs = do
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- maybe (pure Nothing) QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
+  let unifiedQRV2 = getUnifiedQRV2 unifiedQR
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
@@ -1512,8 +1513,32 @@ generateJourneyInfoResponse journey legs = do
         endTime = journey.endTime,
         merchantOperatingCityName,
         crisSdkToken = Nothing,
-        paymentOrderShortId = journey.paymentOrderShortId
+        paymentOrderShortId = journey.paymentOrderShortId,
+        unifiedQRV2
       }
+  where
+    getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2
+    getUnifiedQRV2 mbUnifiedQR =
+      mbUnifiedQR <&> convertUnifiedQRToV2
+
+    convertUnifiedQRToV2 :: JL.UnifiedTicketQR -> JL.UnifiedTicketQRV2
+    convertUnifiedQRToV2 unifiedQR =
+      JL.UnifiedTicketQRV2
+        { version = unifiedQR.version,
+          _type = unifiedQR._type,
+          txnId = unifiedQR.txnId,
+          createdAt = unifiedQR.createdAt,
+          cmrl = map convertBookingDataToV2 unifiedQR.cmrl,
+          mtc = map convertBookingDataToV2 unifiedQR.mtc
+        }
+
+    convertBookingDataToV2 :: JL.BookingData -> JL.BookingDataV2
+    convertBookingDataToV2 booking =
+      JL.BookingDataV2
+        { bookingId = booking.bookingId,
+          isRoundTrip = booking.isRoundTrip,
+          ticketData = booking.ticketData
+        }
 
 generateJourneyStatusResponse ::
   Id DPerson.Person ->
