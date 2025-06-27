@@ -181,6 +181,8 @@ dummyActiveRideData = {
   receiverPersonDetails : Nothing,
   notifiedReachedDestination : false,
   parcelType : Nothing,
+  isInsured : Nothing,
+  insuredAmount : Nothing,
   parcelQuantity : Nothing,
   destinationWaitingTime : Nothing,
   destinationWaitTimerId : ""

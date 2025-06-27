@@ -76,6 +76,9 @@ updateDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 listCancelReason :: String -> String
 listCancelReason dummyString = (getBaseUrl "") <> "/cancellationReason/list"
 
+getDriverInsurance :: String -> String
+getDriverInsurance rideId = (getBaseUrl "") <> "/insurance/" <> rideId
+
 getRoute :: String -> String
 getRoute routeType = (getBaseUrl "") <> "/" <> routeType <>"/route"
 

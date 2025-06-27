@@ -44,6 +44,7 @@ data Action = StartRide
             | ArrivedAtStop
             | GetFare
             | MoreDetails
+            | OpenInsuranceBanner
 
 type Config = { 
   startRideActive :: Boolean,
@@ -93,7 +94,8 @@ type Config = {
   delivery :: Mb.Maybe DeliveryDetails,
   isSourceDetailsExpanded :: Boolean,
   isDestinationDetailsExpanded :: Boolean,
-  showWaitingTime :: Boolean
+  showWaitingTime :: Boolean,
+  isInsured :: Boolean
 }
 
 type DeliveryDetails = {
@@ -183,5 +185,6 @@ config = {
   delivery : Nothing,
   isSourceDetailsExpanded : false,
   isDestinationDetailsExpanded : false,
+  isInsured : false,
   showWaitingTime : false
 }

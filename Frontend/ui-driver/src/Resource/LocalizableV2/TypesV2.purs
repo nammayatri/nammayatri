@@ -1335,6 +1335,15 @@ newtype Keymap = Keymap {
   , special_pickup_zone_nearby :: String
   , zone_pickup :: String
   , special_pickup_zone_ride :: String
+  , ride_ensured_at_no_extra_cost :: String
+  , policy_number :: String
+  , sum_insured :: String
+  , generating_your_policy :: String
+  , please_try_again_in_some_time :: String
+  , policy_generate_once_ride_start :: String
+  , this_ride_is_insured_for_free :: String
+  , this_ride_come_with_complimentary_insurance :: String
+  , download_insurance_policy :: String
   , special_pickup_zone :: String
   , special_pickup_zone_popup_info :: String
   , inside_special_pickup_zone_popup_info :: String
@@ -5828,6 +5837,33 @@ zone_pickup = a
 
 special_pickup_zone_ride :: Proxy "special_pickup_zone_ride"
 special_pickup_zone_ride = a
+
+ride_ensured_at_no_extra_cost :: Proxy "ride_ensured_at_no_extra_cost"
+ride_ensured_at_no_extra_cost = a
+
+policy_number :: Proxy "policy_number"
+policy_number = a
+
+sum_insured :: Proxy "sum_insured"
+sum_insured = a
+
+generating_your_policy :: Proxy "generating_your_policy"
+generating_your_policy = a
+
+please_try_again_in_some_time :: Proxy "please_try_again_in_some_time"
+please_try_again_in_some_time = a
+
+policy_generate_once_ride_start :: Proxy "policy_generate_once_ride_start"
+policy_generate_once_ride_start = a
+
+this_ride_is_insured_for_free :: Proxy "this_ride_is_insured_for_free"
+this_ride_is_insured_for_free = a
+
+this_ride_come_with_complimentary_insurance :: Proxy "this_ride_come_with_complimentary_insurance"
+this_ride_come_with_complimentary_insurance = a
+
+download_insurance_policy :: Proxy "download_insurance_policy"
+download_insurance_policy = a
 
 special_pickup_zone :: Proxy "special_pickup_zone"
 special_pickup_zone = a

@@ -158,7 +158,7 @@ eval _ state =
 rideHistoryListTransformer :: Array RidesInfo -> String -> Array ItemState
 rideHistoryListTransformer list categoryAction =
   ( map (\ (RidesInfo ride) ->
-    let specialLocationConfig = HU.getRideLabelData ride.specialLocationTag
+    let specialLocationConfig = HU.getRideLabelData ride.specialLocationTag false
     in
     { id     : toPropValue ride.id
     , date   : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM")
@@ -188,7 +188,7 @@ rideHistoryListTransformer list categoryAction =
     , shimmer_visibility : toPropValue "gone"
     , driverSelectedFare : toPropValue ride.driverSelectedFare
     , riderName : toPropValue $ fromMaybe "" ride.riderName
-    , spLocTagVisibility : toPropValue if isJust ride.specialLocationTag && isJust (HU.getRequiredTag ride.specialLocationTag) then "visible" else "gone"
+    , spLocTagVisibility : toPropValue if isJust ride.specialLocationTag && isJust (HU.getRequiredTag ride.specialLocationTag false) then "visible" else "gone"
     , specialZoneText : toPropValue $ specialLocationConfig.text
     , specialZoneImage : toPropValue $ specialLocationConfig.imageUrl
     , specialZoneLayoutBackground : toPropValue $ specialLocationConfig.backgroundColor
@@ -204,6 +204,7 @@ rideListResponseTransformer :: Array RidesInfo -> String -> Array IndividualRide
 rideListResponseTransformer list categoryAction =
   (map (\ (RidesInfo ride) ->
     { id   : ride.id
+    , rideId : ride.id
     , date : (convertUTCtoISC (ride.createdAt) "D MMM")
     , time : (convertUTCtoISC (ride.createdAt )"h:mm A")
     , source : (decodeAddress (ride.fromLocation) false)
@@ -244,6 +245,7 @@ rideListResponseTransformer list categoryAction =
     , acRide : ride.isVehicleAirConditioned
     , vehicleServiceTier : ride.vehicleServiceTier
     , parkingCharge : fromMaybe 0.0 ride.parkingCharge
+    , isInsured : fromMaybe false ride.isInsured
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 
