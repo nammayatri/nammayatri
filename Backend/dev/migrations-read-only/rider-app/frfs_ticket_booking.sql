@@ -214,3 +214,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN booking_auth_code text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN child_ticket_quantity integer ;
+
+
+------- SQL updates -------
+

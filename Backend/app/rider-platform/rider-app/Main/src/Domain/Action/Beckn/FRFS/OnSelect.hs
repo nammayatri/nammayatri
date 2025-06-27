@@ -17,6 +17,7 @@ import API.Types.UI.FRFSTicketService
 import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSQuote as DQuote
+import qualified Domain.Types.FRFSQuoteBreakUp as DQBU
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Beam.Functions
@@ -26,6 +27,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JMT
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CallFRFSBPP
 import Storage.Beam.Payment ()
@@ -61,6 +63,10 @@ onSelect onSelectReq merchant quote = do
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
   QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)
+  let adultPrice = quote.price
+      childPrice = fromMaybe (mkPrice (Just quote.price.currency) 0) quote.childPrice
+  void $ JMT.insertFRFSQuoteFareBreakUp quote.id DQBU.PreBookingAdultFare adultPrice (Just quote.merchantId) (Just quote.merchantOperatingCityId)
+  void $ JMT.insertFRFSQuoteFareBreakUp quote.id DQBU.PreBookingChildFare childPrice (Just quote.merchantId) (Just quote.merchantOperatingCityId)
   platformType <- case quote.integratedBppConfigId of
     Just integratedBppConfigId' -> do
       ibppConfig <- QIBC.findById integratedBppConfigId' >>= fromMaybeM (IntegratedBPPConfigNotFound integratedBppConfigId'.getId)
