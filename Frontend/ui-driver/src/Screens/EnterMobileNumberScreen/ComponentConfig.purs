@@ -58,7 +58,7 @@ mobileNumberButtonConfig state = let
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
-      , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , enableLoader = state.props.btnLoader
       , enableRipple = true
       , rippleColor = Color.rippleShade
       }

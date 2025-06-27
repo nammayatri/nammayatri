@@ -286,7 +286,7 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
         margin = MarginTop 6
       },
       bodyTextConfig {
-        text = getStringV2 LT2.enter_the_six_digit_code_shared_with_you,
+        text = getStringV2 LT2.enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding,
         visibility = VISIBLE,
         gravity = CENTER,
         margin = Margin 12 8 12 8,

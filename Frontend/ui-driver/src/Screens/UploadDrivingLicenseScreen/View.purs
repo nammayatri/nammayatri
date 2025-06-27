@@ -53,7 +53,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongView)
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongItemView)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
@@ -657,3 +657,26 @@ dummyLinearLayout =
     [ width WRAP_CONTENT
     , height $ V 0
     ][]
+
+rightWrongView :: Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView isRight = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , margin $ MarginBottom 16
+  ][ imageView
+    [ width $ V 120
+    , height $ V if isRight then 80 else 100
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 0 0
+    , gravity CENTER
+    ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+     , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+    ]
+  ]

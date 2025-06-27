@@ -28,6 +28,7 @@ initData =  {
   props: {
     btnActive :false,
     isValid : false,
-    mobileNumberEditFocused : false
+    mobileNumberEditFocused : false,
+    btnLoader : false
     }
 }
