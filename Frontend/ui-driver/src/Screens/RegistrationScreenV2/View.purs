@@ -677,6 +677,7 @@ refreshView push state =
       , alignParentBottom "true,-1"
       , onClick push $ const Refresh
       , margin $ Margin 16 0 16 16
+      , gravity CENTER_VERTICAL
       , visibility $ boolToVisibility $ showRefresh
       ][ textView $
           [ text $ getString LAST_UPDATED
@@ -694,8 +695,8 @@ refreshView push state =
         , PrestoAnim.animationSet [Anim.rotateAnim (AnimConf.rotateAnimConfig state.props.refreshAnimation)] $
           imageView
           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_refresh"
-          , height $ V 16
-          , width $ V 16
+          , height $ V 20
+          , width $ V 20
           ]
         , textView $ 
           [ text $ getString REFRESH_STRING

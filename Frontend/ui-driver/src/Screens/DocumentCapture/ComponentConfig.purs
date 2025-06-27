@@ -44,7 +44,7 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       {   textConfig
-        { text = getString UPLOAD_PHOTO } 
+        { text = getString if state.data.docType == ST.VEHICLE_PHOTOS then TAKE_PHOTO else TAKE_SLASH_UPLOAD_PHOTO } 
         , margin = Margin 16 16 16 16
         , id = "DocCaptureButton"
       }

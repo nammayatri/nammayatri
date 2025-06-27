@@ -200,6 +200,7 @@ triggerOTPBT payload = do
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
             pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_RESENDING_OTP
             else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+        modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { props {btnLoader = false} })
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreen -> chooseLanguageScreen { props {btnActive = false} })
         BackT $ pure GoBack
 

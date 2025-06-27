@@ -493,19 +493,3 @@ getDefaultAlpha2LanguageCode _ = do
     "TE_IN" -> "te"
     "FR_FR" -> "fr"
     _ -> "en"
-
--- getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
--- getStatus step state = 
---   case step of
---     ST.GRANT_PERMISSION -> state.data.permissionsStatus
---     -- ST.SUBSCRIPTION_PLAN -> state.data.subscriptionStatus  //don't check from frontend
---     _ -> do
---           let documentStatusArr = state.data.documentStatusList
---               vehicleDoc = [ ST.VEHICLE_PERMIT, ST.FITNESS_CERTIFICATE, ST.VEHICLE_INSURANCE, ST.VEHICLE_PUC, ST.VEHICLE_DETAILS_OPTION]
---               findStatus = if step `DA.elem` vehicleDoc 
---                           then DA.find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
---                           else DA.find (\docStatus -> docStatus.docType == step) documentStatusArr
---           case findStatus of
---             Mb.Nothing -> ST.NOT_STARTED
---             Mb.Just docStatus -> docStatus.status
---   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) || (Mb.isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)

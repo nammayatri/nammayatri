@@ -425,6 +425,7 @@ loginFlow mbEvent = do
       liftFlowBT $ logEvent logField_ "ny_driver_otp_trigger"
       latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber latLong)
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { props {btnLoader = false} })
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow mbEvent
 
@@ -1036,6 +1037,7 @@ onBoardingFlowV2 _ = do
       referralCodeAdded = getValueToLocalStore REFERRAL_CODE_ADDED == "true"
       manageVehicle = registrationState.props.manageVehicle
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
+      _ = spy "printing registerationStepsCabs -> " registerationStepsCabs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
       registerationStepsAmbulance = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.ambulances) updatedGs.globalProps.onBoardingDocs
@@ -1055,7 +1057,7 @@ onBoardingFlowV2 _ = do
                           else RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
-      documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
+      documentStatusList = mkStatusList1 (DriverRegistrationStatusResp driverRegistrationResp)
       vehiclePhotosStatus = getVehiclePhotoStatus (DriverRegistrationStatusResp driverRegistrationResp)
       verifiedRC = find (\docStatus -> docStatus.status == ST.COMPLETED && docStatus.docType == ST.VEHICLE_DETAILS_OPTION && docStatus.verifiedVehicleCategory == uiCurrentCategory) documentStatusList
       onboardingRC = case verifiedRC of
@@ -1064,8 +1066,7 @@ onBoardingFlowV2 _ = do
       localStoreRC = getValueToLocalStore ENTERED_RC
       enteredRC = if localStoreRC == "__failed" then Nothing else Just localStoreRC
       rcNo = if manageVehicle then enteredRC else onboardingRC
-      filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList -- handled for the cases when more than one rc are there
-      -- filteredVehicleDocs = filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList
+      filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else mkStatusList2 (DriverRegistrationStatusResp driverRegistrationResp) rcNo
   if isJust rcNo then do
     (API.OperationHubRequestsResp resp) <- Remote.getOperationHubRequestBT (fromMaybe "" rcNo) "2025-01-01T14:30Z"
     let requestsArr = resp.requests
@@ -1258,8 +1259,8 @@ onBoardingFlowV2 _ = do
       benefitsScreenFlow
     GO_TO_FAQS_SCREEN state -> onboardingFaqScreenFlow
   where 
-    mkStatusList :: DriverRegistrationStatusResp -> Array ST.DocumentStatus
-    mkStatusList (DriverRegistrationStatusResp driverRegistrationStatusResp) = 
+    mkStatusList1 :: DriverRegistrationStatusResp -> Array ST.DocumentStatus
+    mkStatusList1 (DriverRegistrationStatusResp driverRegistrationStatusResp) = 
       let driversDocument = driverRegistrationStatusResp.driverDocuments
           vehicleDoc = driverRegistrationStatusResp.vehicleDocuments
           vehiclePhotoTypes = Const.vehiclePhotoTypes
@@ -1277,6 +1278,32 @@ onBoardingFlowV2 _ = do
                                               documents : photoDocs
                                             }
                                           ) vehicleDoc
+          vehicleDoc' = DA.foldl (\acc (API.VehicleDocumentItem vDoc) -> acc <> transfromDocumentStatusItem vDoc.documents vDoc.userSelectedVehicleCategory vDoc.verifiedVehicleCategory (Just vDoc.registrationNo)) [] vehicleDocsWithoutPhotoStatus
+          driversDocument' = transfromDocumentStatusItem driversDocument "" Nothing Nothing
+      in driversDocument' <> vehicleDoc'
+
+    mkStatusList2 :: DriverRegistrationStatusResp -> Maybe String -> Array ST.DocumentStatus
+    mkStatusList2 (DriverRegistrationStatusResp driverRegistrationStatusResp) rcNo = 
+      let driversDocument = driverRegistrationStatusResp.driverDocuments
+          vehicleDoc = driverRegistrationStatusResp.vehicleDocuments
+          vehiclePhotoTypes = Const.vehiclePhotoTypes
+          filteredVehicleDoc = case rcNo of
+            Just rc -> DA.filter (\(API.VehicleDocumentItem vDoc) -> vDoc.registrationNo == rc) vehicleDoc
+            Nothing -> vehicleDoc
+          vehicleDocsWithoutPhotoStatus = map (\(API.VehicleDocumentItem vDoc) -> 
+                                            let docs = vDoc.documents
+                                                photoDocs = DA.filter (\(API.DocumentStatusItem doc) -> not $ elem doc.documentType vehiclePhotoTypes) docs
+                                            in
+                                            API.VehicleDocumentItem {
+                                              registrationNo : vDoc.registrationNo,
+                                              userSelectedVehicleCategory : vDoc.userSelectedVehicleCategory,
+                                              verifiedVehicleCategory : vDoc.verifiedVehicleCategory,
+                                              isVerified : vDoc.isVerified,
+                                              vehicleModel : vDoc.vehicleModel,
+                                              isActive : vDoc.isActive,
+                                              documents : photoDocs
+                                            }
+                                          ) filteredVehicleDoc
           vehicleDoc' = DA.foldl (\acc (API.VehicleDocumentItem vDoc) -> acc <> transfromDocumentStatusItem vDoc.documents vDoc.userSelectedVehicleCategory vDoc.verifiedVehicleCategory (Just vDoc.registrationNo)) [] vehicleDocsWithoutPhotoStatus
           driversDocument' = transfromDocumentStatusItem driversDocument "" Nothing Nothing
       in driversDocument' <> vehicleDoc'

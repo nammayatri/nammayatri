@@ -672,7 +672,8 @@ type EnterMobileNumberScreenStateData = {
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
-  mobileNumberEditFocused :: Boolean
+  mobileNumberEditFocused :: Boolean,
+  btnLoader :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------

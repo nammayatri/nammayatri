@@ -269,7 +269,7 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
   ]
-eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
+eval (TutorialModalAction (TutorialModalController.Logout)) state = continue state{props{logoutPopupModal = true}}
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
