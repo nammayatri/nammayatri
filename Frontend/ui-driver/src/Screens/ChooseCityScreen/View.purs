@@ -28,6 +28,7 @@ import Data.Function.Uncurried (runFn2)
 import Data.Maybe as Mb
 import Debug (spy)
 import DecodeUtil as DU
+import Data.String as DS
 import Data.Function.Uncurried (runFn3)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -195,7 +196,7 @@ currentLocationView state push =
         , margin $ MarginTop 16
         , onClick push $ const $ ChangeStage SELECT_CITY
         , visibility $ boolToVisibility selectCityConfig.enableChangeCity
-        ] <> FontStyle.tags TypoGraphy
+        ] <> FontStyle.body26 TypoGraphy
     ]
 
 currentLanguageViewV2 :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -304,7 +305,7 @@ languageRadioButtonView state push =
           (\ index language ->  
           PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
-          ] $ MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig index language state.props.radioMenuFocusedLang state)) items
+          ] $ MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig index language (if DS.null state.props.radioMenuFocusedLang then "EN_US" else state.props.radioMenuFocusedLang) state)) items
       )
   ]
 
@@ -378,7 +379,7 @@ enableLocationPermission state push =
           ]
         ]
       , textView $
-        [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> appName <> " from your device settings to start riding\n\n" <> "Background location access is used to get you ride requests even when your app is closed and not in use."
+        [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> appName <> " from your device settings to start riding\n\n" <> "Background location access is used to get you ride requests even when your app is minimised."
         , gravity CENTER
         , color Color.black700
         , margin $ MarginTop 4

@@ -59,7 +59,7 @@ primaryButtonConfig state = let
                 -- (state.data.dateOfRegistration /= Just "") && 
                 (state.data.vehicleCategory /= Just ST.AmbulanceCategory || state.props.isvariant /= "") &&
                 state.data.vehicle_registration_number /= "" &&
-                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex || (JB.getAppName unit) == "ONDC FleetX") &&
+                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex || (JB.getAppName unit) == "FleetX") &&
                 ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
@@ -214,7 +214,7 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_whatsapp_black", title : getString WHATSAPP, desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
   ]
 }

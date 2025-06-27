@@ -43,9 +43,9 @@ view push state =
         , background state.data.config.themeColors.welcomeScreenBackground
         , padding $ PaddingBottom 24
         ][  imageView
-            [ height $ V 100
-            , width $ V 210
-            , margin $ MarginTop 50
+            [ height $ V 26
+            , width WRAP_CONTENT
+            , margin $ MarginTop 60
             , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ic_namma_yatri_logo"
             ]
             , carouselView state push

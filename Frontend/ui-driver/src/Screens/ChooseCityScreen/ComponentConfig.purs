@@ -56,7 +56,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString case state.props.currentStage of
                                         SELECT_LANG ->  CONFIRM_LANGUAGE
-                                        SELECT_CITY ->  CONFIRM_LOCATION_STR
+                                        SELECT_CITY ->  CONFIRM
                                         ENABLE_PERMISSION -> ENABLE_LOCATION
                                         _ -> CONFIRM
 

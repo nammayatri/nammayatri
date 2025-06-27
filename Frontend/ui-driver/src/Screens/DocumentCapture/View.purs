@@ -392,7 +392,7 @@ vehicleImageRowView push state index item =
   where getText text = 
           case text of
             Just API.VehicleFront -> getString FRONT_STR
-            Just API.VehicleBack -> getString BACK
+            Just API.VehicleBack -> getString BACK_STR
             Just API.VehicleLeft -> getString LEFT_STR
             Just API.VehicleRight -> getString RIGHT_STR
             Just API.VehicleFrontInterior -> getString FRONT_INTERIOR

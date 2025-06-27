@@ -22,7 +22,7 @@
             android:gravity="center">
             <ImageView
                 android:layout_width="wrap_content"
-                android:layout_height="100dp"
+                android:layout_height="30dp"
                 android:layout_margin="40dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ny_ic_namma_yatri_driver_logo" />
@@ -37,7 +37,6 @@
             android:layout_height="58dp"
             android:layout_margin="40dp"
             android:layout_gravity="center"
-            android:visibility="gone"
             android:src="@drawable/ic_powered_by" />
         </LinearLayout>
         <com.airbnb.lottie.LottieAnimationView

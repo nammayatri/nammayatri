@@ -14,8 +14,8 @@
 -}
 
 module Screens.EnterMobileNumberScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>), (<))
-import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>), (<), void)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (EnterMobileNumberScreenState)
 import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -32,6 +32,7 @@ import Screens (ScreenName(..), getScreen)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
+import JBridge (toggleBtnLoader)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -74,7 +75,7 @@ eval AfterRender state = continue state
 eval BackPressed state = do
         pure $ hideKeyboardOnNavigation true
         exit GoBack
-eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = updateAndExit state {props{btnLoader = true}} $ GoToNextScreen state{props{btnLoader = true}}
 eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 

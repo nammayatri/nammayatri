@@ -233,7 +233,45 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_whatsapp_black", title : getString WHATSAPP, desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
   ]
 }
+
+logoutPopUp :: ST.UploadDrivingLicenseState -> PopUpModal.Config
+logoutPopUp  state = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    buttonLayoutMargin = (MarginBottom 40),
+    padding = (Padding 16 16 16 0),
+    backgroundClickable = true,
+    dismissPopup = true,
+    option1 {
+      text = (getString LOGOUT),
+      color = Color.white900,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = state.data.config.primaryButtonBackground,
+      width = MATCH_PARENT,
+      height = WRAP_CONTENT,
+      background = state.data.config.primaryButtonBackground,
+      margin = (MarginBottom 12),
+      padding = (PaddingVertical 16 16),
+      enableRipple = true
+      },
+    option2 {
+      text = (getString CANCEL),
+      color = Color.blue900,
+      textStyle = FontStyle.SubHeading1,
+      height = WRAP_CONTENT,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      padding = PaddingVertical 16 16,
+      margin = (MarginBottom 0),
+      background = Color.white900,
+      enableRipple = true
+      },
+    optionButtonOrientation = "VERTICAL"
+  }
+  in popUpConfig'
