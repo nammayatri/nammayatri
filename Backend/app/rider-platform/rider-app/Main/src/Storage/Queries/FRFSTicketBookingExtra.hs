@@ -79,3 +79,10 @@ findAllByJourneyIdAndRiderId riderId journeyId limit = do
     (Se.Desc Beam.createdAt)
     (Just limit)
     Nothing
+
+updateTicketAndChildTicketQuantityById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FRFSTicketBooking -> Maybe Int -> Maybe Int -> m ()
+updateTicketAndChildTicketQuantityById id quantity childTicketQuantity = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity (fromJust quantity) | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
