@@ -1222,7 +1222,14 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
                           vehicleFitness = Nothing,
                           vehiclePermit = Nothing,
                           vehiclePUC = Nothing,
-                          vehicleInsurance = Nothing
+                          vehicleInsurance = Nothing,
+                          vehicleLeft = Nothing,
+                          vehicleRight = Nothing,
+                          vehicleFront = Nothing,
+                          vehicleBack = Nothing,
+                          vehicleFrontInterior = Nothing,
+                          vehicleBackInterior = Nothing,
+                          odometer = Nothing
                         },
                   ..
                 }
@@ -1287,6 +1294,13 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
                   vehicleInsurance = Just $ if any (\img -> img.imageType == DDoc.VehicleInsurance && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   vehicleFitness = Just $ if any (\img -> img.imageType == DDoc.VehicleFitnessCertificate && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   vehiclePUC = Just $ if any (\img -> img.imageType == DDoc.VehiclePUC && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleFront = Just $ if any (\img -> img.imageType == DDoc.VehicleFront && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleBack = Just $ if any (\img -> img.imageType == DDoc.VehicleBack && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleFrontInterior = Just $ if any (\img -> img.imageType == DDoc.VehicleFrontInterior && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleBackInterior = Just $ if any (\img -> img.imageType == DDoc.VehicleBackInterior && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleLeft = Just $ if any (\img -> img.imageType == DDoc.VehicleLeft && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehicleRight = Just $ if any (\img -> img.imageType == DDoc.VehicleRight && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  odometer = Just $ if any (\img -> img.imageType == DDoc.Odometer && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   driverLicense = Nothing,
                   panCard = Nothing,
                   aadhaarCard = Nothing

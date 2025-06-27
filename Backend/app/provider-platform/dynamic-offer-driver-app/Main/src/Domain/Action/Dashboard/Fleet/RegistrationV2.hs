@@ -159,20 +159,23 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     enableFleetIfPossible fleetOwnerId = do
       if (req.adminApprovalRequired /= Just True)
         then do
+          aadhaarCard <- QAadhaarCard.findByPrimaryKey fleetOwnerId -- TODO: Take from DVC
           panCard <- QPanCard.findByDriverId fleetOwnerId
           gstIn <- QGST.findByDriverId fleetOwnerId
           case castFleetType <$> req.fleetType of
             Just FOI.NORMAL_FLEET ->
-              case panCard of
-                Just pan | pan.verificationStatus == Documents.VALID -> do
+              case (panCard, aadhaarCard) of
+                (Just pan, Just aadhaar) | pan.verificationStatus == Documents.VALID
+                                             && aadhaar.verificationStatus == Documents.VALID -> do
                   void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
                   pure True
                 _ -> pure False
             Just FOI.BUSINESS_FLEET ->
-              case (panCard, gstIn) of
-                (Just pan, Just gst)
+              case (aadhaarCard, panCard, gstIn) of
+                (Just aadhaar, Just pan, Just gst)
                   | pan.verificationStatus == Documents.VALID
-                      && gst.verificationStatus == Documents.VALID -> do
+                      && gst.verificationStatus == Documents.VALID
+                      && aadhaar.verificationStatus == Documents.VALID -> do
                     void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
                     pure True
                 _ -> pure False
