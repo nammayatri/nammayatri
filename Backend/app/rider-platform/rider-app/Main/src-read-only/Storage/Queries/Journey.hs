@@ -59,6 +59,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.hasPreferredTransitModes hasPreferredTransitModes,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.isPublicTransportIncluded isPublicTransportIncluded,
+      Se.Set Beam.journeyExpiryTime journeyExpiryTime,
       Se.Set Beam.modes modes,
       Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId),
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),

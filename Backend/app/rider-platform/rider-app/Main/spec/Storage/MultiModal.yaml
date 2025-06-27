@@ -27,7 +27,7 @@ Journey:
 
   types:
     JourneyStatus:
-      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED"
+      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED, EXPIRED"
       derive: "ToParamSchema"
 
   fields:
@@ -51,6 +51,7 @@ Journey:
     toLocationAddress: Maybe Text
     isPublicTransportIncluded: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
+    journeyExpiryTime: Maybe UTCTime
 
   beamType:
     status: Maybe JourneyStatus

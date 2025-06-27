@@ -68,6 +68,7 @@ import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPa
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.IntegratedBPPConfig as QIBP
+import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
@@ -118,6 +119,9 @@ onConfirm merchant booking' dOrder = do
   let discountedTickets = fromMaybe 0 booking.discountedTickets
   tickets <- createTickets booking dOrder.tickets discountedTickets
   void $ QTicket.createMany tickets
+  -- Update journey expiry time based on ticket validity using the created tickets
+  whenJust booking.journeyId $ \journeyId -> do
+    QJourneyExtra.updateShortestJourneyExpiryTimeWithTickets journeyId tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber

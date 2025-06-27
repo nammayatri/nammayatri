@@ -1051,6 +1051,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,
         fromLocationAddress = Just fromLocationAddress,
         paymentOrderShortId = Nothing,
+        journeyExpiryTime = Nothing,
         ..
       }
   where
@@ -1107,6 +1108,9 @@ sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney
 
 completedStatus :: [JourneyLegStatus]
 completedStatus = [Completed, Cancelled]
+
+allCompletedStatus :: [JourneyLegStatus]
+allCompletedStatus = [Completed, Cancelled, Skipped]
 
 cannotCancelStatus :: [JourneyLegStatus]
 cannotCancelStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled]

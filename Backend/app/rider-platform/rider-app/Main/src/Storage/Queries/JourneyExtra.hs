@@ -3,7 +3,10 @@
 
 module Storage.Queries.JourneyExtra where
 
+import Data.List (minimumBy, sortBy)
+import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
@@ -15,6 +18,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Journey as Beam
+import qualified Storage.Queries.FRFSTicket as QTicket
+import qualified Storage.Queries.FRFSTicketBooking as QTicketBooking
 import Storage.Queries.OrphanInstances.Journey
 
 -- Extra code goes here --
@@ -64,3 +69,37 @@ findAllByRiderIdAndStatusAndMOCId (Kernel.Types.Id.Id personId) status (Kernel.T
     (Se.Desc Beam.createdAt)
     (Just 10)
     Nothing
+
+updateJourneyExpiryTime :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id DJ.Journey -> UTCTime -> m ()
+updateJourneyExpiryTime journeyId expiryTime = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.journeyExpiryTime $ Just expiryTime, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+
+minimumByMay' :: (a -> a -> Ordering) -> [a] -> Maybe a
+minimumByMay' _ [] = Nothing
+minimumByMay' cmp xs = Just (minimumBy cmp xs)
+
+-- Update journey expiry time with provided tickets (avoids additional DB queries)
+updateShortestJourneyExpiryTimeWithTickets ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id DJ.Journey ->
+  [DTicket.FRFSTicket] ->
+  m ()
+updateShortestJourneyExpiryTimeWithTickets journeyId tickets =
+  forM_ (minimumByMay' (comparing (.validTill)) tickets) $ \ticket -> do
+    updateJourneyExpiryTime journeyId ticket.validTill
+
+-- Update journey expiry time to the next valid ticket expiry when a leg is completed
+updateJourneyToNextTicketExpiryTime ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id DJ.Journey ->
+  Int ->
+  m ()
+updateJourneyToNextTicketExpiryTime journeyId nextLegSequence = do
+  -- Get all bookings for the journey and filter upcoming ones
+  bookings <- QTicketBooking.findAllByJourneyId (Just journeyId)
+  let upcomingBookingIds = mapMaybe (\b -> b.journeyLegOrder >>= \o -> if o >= nextLegSequence then Just b.id else Nothing) bookings
+  -- Fetch all tickets from those bookings
+  tickets <- fmap concat $ mapM QTicket.findAllByTicketBookingId upcomingBookingIds
+  -- Find the earliest ticket expiry
+  updateShortestJourneyExpiryTimeWithTickets journeyId tickets
