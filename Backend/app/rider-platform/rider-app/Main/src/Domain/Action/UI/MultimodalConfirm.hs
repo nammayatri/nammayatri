@@ -244,9 +244,10 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
       frfsBookingsArr
   frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
   let paymentType = TPayment.FRFSMultiModalBooking
-  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType
-  isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
-  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
+  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty merchantId person.merchantOperatingCityId paymentType
+  isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType
+  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+  logInfo $ "update order split details: " <> show splitDetails
   let flattenedPayments = concat frfsBookingsPaymentArr
   let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
   case mbPaymentOrderId of
