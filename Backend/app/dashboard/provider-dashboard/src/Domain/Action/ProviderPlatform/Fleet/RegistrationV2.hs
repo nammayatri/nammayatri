@@ -42,7 +42,7 @@ postRegistrationV2LoginOtp ::
 postRegistrationV2LoginOtp merchantShortId opCity req = do
   runRequestValidation Common.validateInitiateLoginReqV2 req
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  let enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
+  let enabled = fromMaybe False merchant.verifyFleetWhileLogin
       checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   merchantServerAccessCheck merchant
@@ -79,7 +79,7 @@ postRegistrationV2VerifyOtp merchantShortId opCity req = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
   token <- DDR.generateToken person.id merchant.id opCity
-  when (person.verified /= Just True && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
+  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
   pure $ Common.FleetOwnerVerifyResV2 {authToken = token}
 
 type RegisterClientCall = CheckedShortId DM.Merchant -> City.City -> Text -> Common.FleetOwnerRegisterReqV2 -> Flow Common.FleetOwnerRegisterResV2
