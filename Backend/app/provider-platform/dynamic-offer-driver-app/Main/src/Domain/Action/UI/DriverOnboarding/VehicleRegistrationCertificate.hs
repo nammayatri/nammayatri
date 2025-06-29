@@ -243,7 +243,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction)
   Redis.whenWithLockRedis (rcVerificationLockKey req.vehicleRegistrationCertNumber) 60 $ do
     whenJust mVehicleRC $ \vehicleRC -> do
-      when (isNothing req.multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
+      when (isNothing req.multipleRC || req.multipleRC == Just False) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
         vehicleDetails <-
@@ -554,12 +554,14 @@ verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipl
       Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId}
   case verifyRes.verifyRCResp of
     Verification.AsyncResp res -> do
+      logDebug $ "Got Async Response in VerifyRCFlow"
       case res.requestor of
         VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
         VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
         _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
       CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
     Verification.SyncResp res -> do
+      logDebug $ "Got Sync Response in VerifyRCFlow - proceeding to onVerifyRC"
       void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing Nothing
 
 mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
@@ -817,7 +819,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
                   VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
-        Nothing -> pure ()
+        Nothing -> do
+          logDebug $ "No RC Information in onVerifyRCHandler"
+          pure ()
 
 validateRCResponse :: MonadFlow m => RCValidationReq -> RCValidationRules -> m [Text]
 validateRCResponse rc rule = do
