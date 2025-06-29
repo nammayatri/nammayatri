@@ -45,6 +45,8 @@ data DriverCoinsFunctionType
   = OneOrTwoStarRating
   | FiveStarRating
   | BookingCancellation
+  | BookingCancellationPenalisaton
+  | BookingCancellationCompensation
   | CustomerReferral
   | DriverReferral
   | PurpleRideCompleted
@@ -68,6 +70,8 @@ instance Show DriverCoinsFunctionType where
   show OneOrTwoStarRating = "OneOrTwoStarRating"
   show FiveStarRating = "FiveStarRating"
   show BookingCancellation = "BookingCancellation"
+  show BookingCancellationPenalisaton = "BookingCancellationPenalisaton"
+  show BookingCancellationCompensation = "BookingCancellationCompensation"
   show CustomerReferral = "CustomerReferral"
   show DriverReferral = "DriverReferral"
   show PurpleRideCompleted = "PurpleRideCompleted"
@@ -116,6 +120,14 @@ instance Read DriverCoinsFunctionType where
                ]
             ++ [ (BookingCancellation, r2)
                  | r1 <- stripPrefix "BookingCancellation" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (BookingCancellationPenalisaton, r2)
+                 | r1 <- stripPrefix "BookingCancellationPenalisaton" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (BookingCancellationCompensation, r2)
+                 | r1 <- stripPrefix "BookingCancellationCompensation" r,
                    ((), r2) <- pure ((), r1)
                ]
             ++ [ (CustomerReferral, r2)
@@ -195,6 +207,8 @@ instance FromJSON DriverCoinsFunctionType where
       "OneOrTwoStarRating" -> pure OneOrTwoStarRating
       "FiveStarRating" -> pure FiveStarRating
       "BookingCancellation" -> pure BookingCancellation
+      "BookingCancellationPenalisaton" -> pure BookingCancellationPenalisaton
+      "BookingCancellationCompensation" -> pure BookingCancellationCompensation
       "CustomerReferral" -> pure CustomerReferral
       "DriverReferral" -> pure DriverReferral
       "PurpleRideCompleted" -> pure PurpleRideCompleted

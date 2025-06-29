@@ -188,6 +188,7 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
 
 data LogicDomain
   = POOLING
+  | CANCELLATION_COIN_POLICY
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
   | FRFS_DISCOUNTS
@@ -204,7 +205,8 @@ instance Enumerable LogicDomain where
     [ POOLING,
       FARE_POLICY,
       DYNAMIC_PRICING_UNIFIED,
-      FRFS_DISCOUNTS
+      FRFS_DISCOUNTS,
+      CANCELLATION_COIN_POLICY
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG [minBound .. maxBound]
@@ -228,6 +230,7 @@ generateLogicDomainShowInstances =
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
     ++ [show (UI_DRIVER a b) | a <- a', b <- b']
     ++ [show (UI_RIDER a b) | a <- a', b <- b']
+    ++ [show CANCELLATION_COIN_POLICY]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
@@ -252,6 +255,7 @@ instance Show LogicDomain where
   show (RIDER_CONFIG_OVERRIDES configType) = "RIDER-CONFIG-OVERRIDES_" ++ show configType
   show (UI_DRIVER a b) = "UI-DRIVER_" ++ show a ++ "_" ++ show b
   show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
+  show CANCELLATION_COIN_POLICY = "CANCELLATION-COIN-POLICY"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -266,6 +270,8 @@ instance Read LogicDomain where
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
           "FRFS-DISCOUNTS" ->
             [(FRFS_DISCOUNTS, drop 1 rest)]
+          "CANCELLATION-COIN-POLICY" ->
+            [(CANCELLATION_COIN_POLICY, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of

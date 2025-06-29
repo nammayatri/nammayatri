@@ -462,6 +462,7 @@ getProxy str = case str of
   FARE_UPDATED -> \a -> a @~ fare_updated
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> \a -> a @~ frequent_cancellations_will_lead_to_less_rides
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> \a -> a @~ frequent_cancellations_will_lead_to_blocking
+  CANCELLATION_AFTER_2_MINUTES_WARNING -> \a -> a @~ cancellation_after_2_minutes_warning
   CONTINUE -> \a -> a @~ continue
   CONFIRM_PASSWORD -> \a -> a @~ confirm_password
   DEMO_MODE -> \a -> a @~ demo_mode

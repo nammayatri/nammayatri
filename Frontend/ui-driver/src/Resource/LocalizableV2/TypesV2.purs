@@ -382,6 +382,7 @@ newtype Keymap = Keymap {
   , fare_updated :: String
   , frequent_cancellations_will_lead_to_less_rides :: String
   , frequent_cancellations_will_lead_to_blocking :: String
+  , cancellation_after_2_minutes_warning :: String
   , continue :: String
   , confirm_password :: String
   , demo_mode :: String
@@ -2956,6 +2957,9 @@ frequent_cancellations_will_lead_to_less_rides = a
 
 frequent_cancellations_will_lead_to_blocking :: Proxy "frequent_cancellations_will_lead_to_blocking"
 frequent_cancellations_will_lead_to_blocking = a
+
+cancellation_after_2_minutes_warning :: Proxy "cancellation_after_2_minutes_warning"
+cancellation_after_2_minutes_warning = a
 
 continue :: Proxy "continue"
 continue = a
