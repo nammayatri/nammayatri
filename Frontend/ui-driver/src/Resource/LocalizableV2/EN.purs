@@ -298,6 +298,7 @@ getEn =
     , fare_updated: "Fare updated"
     , frequent_cancellations_will_lead_to_less_rides: "Frequent cancellations will lead to less rides and lower rating"
     , frequent_cancellations_will_lead_to_blocking: "Frequent cancellations will lead to blocking and lower rating"
+    , cancellation_after_2_minutes_warning: "Cancelling after 2 minutes may result in coin deduction"
     , continue: "Continue"
     , confirm_password: "Confirm Password"
     , demo_mode: "Demo Mode"

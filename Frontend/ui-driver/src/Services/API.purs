@@ -3521,6 +3521,8 @@ data DriverCoinsFunctionType
   | RideCompleted
   | FiveStarRating
   | BookingCancellation
+  | BookingCancellationPenalisaton
+  | BookingCancellationCompensation
   | CustomerReferral
   | DriverReferral
   | TwoRidesCompleted

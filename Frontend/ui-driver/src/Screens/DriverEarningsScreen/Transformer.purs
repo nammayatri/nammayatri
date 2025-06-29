@@ -44,6 +44,8 @@ getEventName state event bulkUploadTitle = do
     API.RideCompleted -> getString RIDE_COMPLETED
     API.FiveStarRating -> getString GOOD_RATING_BY_CUSTOMER
     API.BookingCancellation -> getString RIDE_CANCELLATION
+    API.BookingCancellationPenalisaton -> getString RIDE_CANCELLATION
+    API.BookingCancellationCompensation -> getString RIDE_CANCELLATION
     API.CustomerReferral -> getString CUSTOMER_REFERRAL
     API.DriverReferral -> getString DRIVER_REFERRAL
     API.TwoRidesCompleted -> coinsConfig.twoRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY

@@ -297,6 +297,7 @@ getHi =
     , fare_updated: "किराया अपडेट किया"
     , frequent_cancellations_will_lead_to_less_rides: "बार-बार रद्द करने से सवारी कम होगी और रेटिंग कम होगी"
     , frequent_cancellations_will_lead_to_blocking: "बार-बार रद्द करने से ब्लॉकिंग और रेटिंग कम हो जाएगी"
+    , cancellation_after_2_minutes_warning: "2 मिनट के बाद रद्द करने से सिक्के काटे जा सकते हैं"
     , continue: "जारी रखें"
     , confirm_password: "पासवर्ड की पुष्टि कीजिये"
     , demo_mode: "डेमो मोड"
