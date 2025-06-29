@@ -20,19 +20,26 @@ module Lib.DriverCoins.Types
     DCoins.CoinStatus (..),
     DCoins.MetroRideType (..),
     DCoins.isMetroRideType,
+    CancellationType (..),
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
+import Domain.Types.CancellationReason
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
 import qualified Text.Show (show)
 
+data CancellationType
+  = CancellationByCustomer
+  | CancellationByDriver
+  deriving (Generic, ToJSON, FromJSON)
+
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
   | EndRide {isDisabled :: Bool, coinsRewardedOnGoldTierRide :: Maybe Int, ride :: Ride, metroRideType :: DCoins.MetroRideType}
-  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
+  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters, cancelledBy :: CancellationType, cancellationReason :: CancellationReasonCode}
   | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
   | LeaderBoard
@@ -54,6 +61,10 @@ driverCoinsEventTypeToString = \case
   BulkUploadEvent -> "BulkUploadEvent"
   LMS -> "LMS"
   LMSBonus -> "LMSBonus"
+
+instance Show CancellationType where
+  show CancellationByCustomer = "CancellationByCustomer"
+  show CancellationByDriver = "CancellationByDriver"
 
 instance Show DriverCoinsEventType where
   show = driverCoinsEventTypeToString
