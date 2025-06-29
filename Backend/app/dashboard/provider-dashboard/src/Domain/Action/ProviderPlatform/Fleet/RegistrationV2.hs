@@ -31,7 +31,7 @@ postRegistrationV2LoginOtp ::
   Flow APISuccess
 postRegistrationV2LoginOtp merchantShortId opCity req = do
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  let enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
+  let enabled = fromMaybe False merchant.verifyFleetWhileLogin
       checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
@@ -67,7 +67,7 @@ postRegistrationV2VerifyOtp merchantShortId opCity req = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
   token <- DR.generateToken person.id merchant.id opCity
-  when (person.verified /= Just True && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
+  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
   pure $ Common.FleetOwnerVerifyResV2 {authToken = token}
 
 postRegistrationV2Register ::
