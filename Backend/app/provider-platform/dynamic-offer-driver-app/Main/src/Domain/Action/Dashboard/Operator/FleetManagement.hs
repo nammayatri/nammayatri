@@ -85,7 +85,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
       let driverImagesInfo = IQuery.DriverImagesInfo {driverId = person.id, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True)
+          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) Nothing
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,

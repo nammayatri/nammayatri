@@ -80,14 +80,14 @@ import qualified Tools.Ticket as TT
 import qualified Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
-driverDocumentTypes :: [DVC.DocumentType]
-driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense]
+defaultDriverDocumentTypes :: [DVC.DocumentType]
+defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense]
 
-fleetDocumentTypes :: [DVC.DocumentType]
-fleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
+defaultFleetDocumentTypes :: [DVC.DocumentType]
+defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
 
-vehicleDocumentTypes :: [DVC.DocumentType]
-vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
+defaultVehicleDocumentTypes :: [DVC.DocumentType]
+defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
 
 notifyErrorToSupport ::
   Person ->
@@ -596,7 +596,7 @@ toMaybe xs = Kernel.Prelude.Just xs
 filterVehicleDocuments :: [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> Maybe Bool -> [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]
 filterVehicleDocuments docs onlyVehicle =
   if onlyVehicle == Just True
-    then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
+    then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` defaultVehicleDocumentTypes) docs
     else docs
 
 filterInCompatibleFlows ::

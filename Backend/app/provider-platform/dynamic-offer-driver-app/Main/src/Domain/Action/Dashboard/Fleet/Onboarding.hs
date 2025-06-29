@@ -106,8 +106,9 @@ getOnboardingRegisterStatus ::
   Maybe Bool ->
   Maybe DVC.VehicleCategory ->
   Maybe Bool ->
+  Maybe Bool ->
   Environment.Flow CommonOnboarding.StatusRes
-getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData = do
+getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs = do
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -117,7 +118,7 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   driverImages <- IQuery.findAllByPersonId transporterConfig (Id personId)
   now <- getCurrentTime
   let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
-  castStatusRes <$> SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True)
+  castStatusRes <$> SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True) onlyMandatoryDocs
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->
