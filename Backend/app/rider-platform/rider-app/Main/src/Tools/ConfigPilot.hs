@@ -58,8 +58,8 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
-      (mbUiConfig, _) <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
-      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
+      mbUiConfigInfo <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList (fst <$> mbUiConfigInfo))}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYTU.MerchantOperatingCity -> LYTU.ConcludeReq -> [A.Value] -> Maybe (Id LYTU.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()

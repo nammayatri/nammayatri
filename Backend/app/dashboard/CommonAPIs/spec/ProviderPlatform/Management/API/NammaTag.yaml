@@ -31,7 +31,9 @@ imports:
   TableDataResp: Lib.Yudhishthira.Types
   ActionChangeRequest: Lib.Yudhishthira.Types
   UiDevicePlatformReq: Lib.Yudhishthira.Types
-
+  GetPatchedElementReq: Lib.Yudhishthira.Types
+  GetPatchedElementResp: Lib.Yudhishthira.Types
+  UiConfigGetVersionResponse: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -211,7 +213,7 @@ apis:
       request:
         type: UiConfigRequest
       response:
-        type: Text
+        type: UiConfigGetVersionResponse
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION
   - POST:
@@ -295,4 +297,13 @@ apis:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - POST:
+      endpoint: /configPilot/getPatchedElement
+      auth: ApiAuthV2
+      request:
+        type: GetPatchedElementReq
+      response:
+        type: GetPatchedElementResp
+      migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY

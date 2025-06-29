@@ -15,6 +15,7 @@
 module Environment where
 
 import AWS.S3
+import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -155,7 +156,8 @@ data AppCfg = AppCfg
     vocalyticsCnfg :: VocalyticsCnfg,
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
-    minDistanceBetweenTwoPoints :: Int
+    minDistanceBetweenTwoPoints :: Int,
+    tsServiceConfig :: CPT.TSServiceConfig
   }
   deriving (Generic, FromDhall)
 
@@ -262,7 +264,8 @@ data AppEnv = AppEnv
     vocalyticsCnfg :: VocalyticsCnfg,
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
-    minDistanceBetweenTwoPoints :: Int
+    minDistanceBetweenTwoPoints :: Int,
+    tsServiceConfig :: CPT.TSServiceConfig
   }
   deriving (Generic)
 

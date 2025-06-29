@@ -274,7 +274,7 @@ deleteConfigHashKey :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -
 deleteConfigHashKey merchantOpCityId configDomain = do
   Hedis.withCrossAppRedis $ Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
 
-findOneUiConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r, HasField "config" a Value) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Bool -> m (Maybe a, Maybe Int)
+findOneUiConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r, HasField "config" a Value) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> m (Maybe a) -> Bool -> m (Maybe (a, Int))
 findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc isBaseLogic = do
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
@@ -285,9 +285,10 @@ findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDim
         return $ Just mbBaseRollout.version
       else getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
   cachedConfig :: Maybe a <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
-  case cachedConfig of
-    Just cfg -> return (Just cfg, mbVersion)
-    Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
+  case (cachedConfig, mbVersion) of
+    (Just cfg, Just version) -> return $ Just (cfg, version)
+    (Nothing, Just _) -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
+    _ -> return Nothing
   where
     fetchAndCacheConfig mbVersion extraDimensionsWithTime = do
       allLogics <-
@@ -303,4 +304,4 @@ findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDim
           return $ Just $ setField @"config" oldCfg newValue
         _ -> return Nothing
       cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) finalConfig
-      return (finalConfig, mbVersion)
+      return $ (,) <$> finalConfig <*> mbVersion

@@ -33,7 +33,7 @@ import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Queries.UiDriverConfig as Queries
 import qualified Tools.DynamicLogic as TDL
 
-findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe UiDriverConfig, Maybe Int)
+findUIConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe (UiDriverConfig, Int))
 findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC

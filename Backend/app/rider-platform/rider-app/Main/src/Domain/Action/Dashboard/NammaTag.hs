@@ -260,23 +260,23 @@ postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Mercha
 postNammaTagConfigPilotGetVersion _ _type uicr = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
   let merchantOpCityId = merchantOperatingCity.id
-  (_, version) <- UIRC.findUiConfig uicr merchantOpCityId False
+  configInfo <- UIRC.findUiConfig uicr merchantOpCityId False -- TODO: put the latest version of config in redis and fetch from there
   baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform) >>= fromMaybeM (InvalidRequest "Base Rollout not found")
-  let baseVersion = Just baseRollout.version
-  case version of
-    Just _ -> pure $ LYTU.UiConfigGetVersionResponse (Text.pack . show <$> version) (Text.pack . show <$> baseVersion)
+  let baseVersion = baseRollout.version
+  case configInfo of
+    Just (_, version) -> pure $ LYTU.UiConfigGetVersionResponse (Text.pack $ show version) (Text.pack $ show baseVersion)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
 postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow LYTU.UiConfigResponse
 postNammaTagConfigPilotGetConfig _ _ uicr = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
   let merchantOpCityId = merchantOperatingCity.id
-  (config, version) <- UIRC.findUiConfig uicr merchantOpCityId False
+  configInfo <- UIRC.findUiConfig uicr merchantOpCityId False
   isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform)
   baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform) >>= fromMaybeM (InvalidRequest "Base Rollout not found")
-  let baseVersion = Just baseRollout.version
-  case config of
-    Just cfg -> pure (LYTU.UiConfigResponse cfg.config (Text.pack . show <$> version) (Text.pack . show <$> baseVersion) isExp)
+  let baseVersion = baseRollout.version
+  case configInfo of
+    Just (cfg, version) -> pure (LYTU.UiConfigResponse cfg.config (Text.pack $ show version) (Text.pack $ show baseVersion) isExp)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -293,8 +293,8 @@ postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
   now <- getCurrentTime
   id' <- generateGUID
   let uicr = LYTU.UiConfigRequest {merchantId = ccr.merchantId, city = ccr.city, os = ccr.os, platform = ccr.platform, bundle = ccr.bundle, language = Nothing, toss = Nothing}
-  (config, _) <- UIRC.findUiConfig uicr merchantOpCityId False
-  when (isJust config) $ do
+  configInfo <- UIRC.findUiConfig uicr merchantOpCityId False
+  when (isJust configInfo) $ do
     throwError $ InvalidRequest "Config already exists"
   UIRC.create $ cfg now merchantOpCityId id'
   return Kernel.Types.APISuccess.Success

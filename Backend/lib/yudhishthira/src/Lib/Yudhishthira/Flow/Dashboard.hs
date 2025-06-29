@@ -367,6 +367,7 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
               updatedAt = now,
               description = req.description,
               merchantId = mbMerchantId,
+              patchedElement = Nothing,
               ..
             }
     verifyOutput :: Value -> [String]
@@ -651,6 +652,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
           merchantId = mbMerchantId,
           domain = domain',
           description = Nothing,
+          patchedElement = Nothing,
           ..
         }
     mkBaseAppDynamicLogicRollout :: Int -> UTCTime -> Lib.Yudhishthira.Types.LogicDomain -> Int -> AppDynamicLogicRollout
@@ -880,6 +882,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
           merchantId = mbMerchantId,
           domain = domain,
           description = Nothing,
+          patchedElement = Nothing,
           ..
         }
     mkBaseAppDynamicLogicRollout :: Int -> AppDynamicLogicRollout -> UTCTime -> LYT.LogicDomain -> AppDynamicLogicRollout
@@ -957,3 +960,8 @@ pushConfigHistory domain version merchantOpCityId configsJson = do
           throwError (InternalError $ "Error in push config history for domain: " <> show domain <> " and version: " <> show version <> " and error: " <> show e)
         Right resp -> do
           return resp.result
+
+postNammaTagConfigPilotGetPatchedElement :: BeamFlow m r => Id LYT.MerchantOperatingCity -> LYT.GetPatchedElementReq -> m Lib.Yudhishthira.Types.GetPatchedElementResp
+postNammaTagConfigPilotGetPatchedElement _ req = do
+  appDynamicLogicElement <- QADLE.findByPrimaryKey req.domain 0 req.version >>= fromMaybeM (InvalidRequest $ "No AppDynamicLogicElement found for domain " <> show req.domain <> " and version " <> show req.version)
+  return $ Lib.Yudhishthira.Types.GetPatchedElementResp $ appDynamicLogicElement.patchedElement
