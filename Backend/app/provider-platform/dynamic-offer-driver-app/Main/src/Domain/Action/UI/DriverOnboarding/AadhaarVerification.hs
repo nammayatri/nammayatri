@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE ApplicativeDo #-}
 
 module Domain.Action.UI.DriverOnboarding.AadhaarVerification where
 
@@ -145,7 +144,8 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               aadhaarEntity <- mkAadhaar person.merchantId person.merchantOperatingCityId personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
               QAadhaarCard.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
-              Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing Nothing (Just False)
+              let onlyMandatoryDocs = Just True
+              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing Nothing (Just False) onlyMandatoryDocs
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res

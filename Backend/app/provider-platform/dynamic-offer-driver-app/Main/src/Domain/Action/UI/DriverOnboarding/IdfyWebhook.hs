@@ -145,7 +145,8 @@ onVerify rsp respDump = do
       mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
       ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
       -- running statusHandler to enable Driver
-      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing (Just False)
+      let onlyMandatoryDocs = Just True
+      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing (Just False) onlyMandatoryDocs
       return ack_
   where
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))

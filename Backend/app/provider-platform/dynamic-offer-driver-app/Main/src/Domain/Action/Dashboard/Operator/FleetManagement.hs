@@ -87,7 +87,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
       let shouldActivateRc = False
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc
+          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,

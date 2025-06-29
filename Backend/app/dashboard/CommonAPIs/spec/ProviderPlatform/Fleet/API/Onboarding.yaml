@@ -39,6 +39,7 @@ apis:
         - makeSelfieAadhaarPanMandatory: Bool
         - onboardingVehicleCategory: VehicleCategory
         - providePrefillDetails: Bool
+        - onlyMandatoryDocs: Bool
       response:
         type: StatusRes
       helperApi:
@@ -52,6 +53,7 @@ apis:
               - makeSelfieAadhaarPanMandatory: Bool
               - onboardingVehicleCategory: VehicleCategory
               - providePrefillDetails: Bool
+              - onlyMandatoryDocs: Bool
             response:
               type: StatusRes
   - POST:

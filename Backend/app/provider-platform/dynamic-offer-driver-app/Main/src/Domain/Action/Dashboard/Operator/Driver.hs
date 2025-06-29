@@ -143,14 +143,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let language = fromMaybe merchantOpCity.language person.language
       fork "enable driver after inspection" $ do
-        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments person merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
-        vehicleDoc <-
-          find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
-            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
-        let makeSelfieAadhaarPanMandatory = Nothing
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
-        allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
-        let allDriverVehicleDocsVerified = allVehicleDocsVerified && allDriverDocsVerified
+        allDriverVehicleDocsVerified <- SStatus.checkAllDriverVehicleDocsVerified person merchantOpCity transporterConfig language opHubReq.registrationNo
         when allDriverVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           void $ postDriverEnable merchantShortId opCity $ cast @DP.Person @Common.Driver personId
@@ -158,7 +151,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
         mbVehicle <- QVehicle.findById personId
         when (isNothing mbVehicle && allDriverVehicleDocsVerified) $
-          void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
+          void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity opHubReq.registrationNo)
   pure Success
 
 opsHubRequestLockKey :: Text -> Text
@@ -224,9 +217,10 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString onlyMandatoryDocs requestorId = do
   requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (requestor.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
@@ -293,7 +287,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       let shouldActivateRc = False
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc -- FIXME: Need to change
+          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,
