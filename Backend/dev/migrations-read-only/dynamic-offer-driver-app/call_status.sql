@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN call_attempt text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN ai_call_analyzed boolean ;

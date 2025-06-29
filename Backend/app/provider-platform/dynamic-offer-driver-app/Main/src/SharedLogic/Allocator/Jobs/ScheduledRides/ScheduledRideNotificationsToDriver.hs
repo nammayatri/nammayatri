@@ -193,5 +193,6 @@ sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
             callService = Just Exotel,
             callAttempt = Just SCS.Resolved,
             callError = Nothing,
-            createdAt = now
+            createdAt = now,
+            aiCallAnalyzed = Nothing
           }

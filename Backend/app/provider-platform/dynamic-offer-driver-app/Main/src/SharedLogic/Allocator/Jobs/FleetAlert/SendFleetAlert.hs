@@ -88,5 +88,6 @@ sendFleetAlert Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             callService = Just Exotel,
             callAttempt = Just SCS.Resolved,
             callError = Nothing,
-            createdAt = now
+            createdAt = now,
+            aiCallAnalyzed = Nothing
           }

@@ -27,6 +27,9 @@ findByCallId callId = do findOneWithKV [Se.Is Beam.callId $ Se.Eq callId]
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m (Maybe Domain.Types.CallStatus.CallStatus))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateAiCallAnalyzed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> m ())
+updateAiCallAnalyzed aiCallAnalyzed callId = do updateWithKV [Se.Set Beam.aiCallAnalyzed aiCallAnalyzed] [Se.Is Beam.callId $ Se.Eq callId]
+
 updateCallError ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
@@ -70,7 +73,8 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CallStatus.CallStatus -> m ())
 updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
   updateWithKV
-    [ Se.Set Beam.callAttempt callAttempt,
+    [ Se.Set Beam.aiCallAnalyzed aiCallAnalyzed,
+      Se.Set Beam.callAttempt callAttempt,
       Se.Set Beam.callError callError,
       Se.Set Beam.callId callId,
       Se.Set Beam.callService callService,

@@ -42,7 +42,7 @@ postDriverCallFeedback (_, merchantId, merchantOperatingCityId) APITCallFeedback
   logDebug $ "callStatus: " <> show callStatus
   mapM_
     ( \optionId -> do
-        option <- QCallFeedbackOptions.findById (ID.Id optionId) >>= fromMaybeM (CallFeedbackOptionsDoesNotExist $ optionId)
+        option <- QCallFeedbackOptions.findByMessageKey optionId (Just merchantId) (Just merchantOperatingCityId) >>= fromMaybeM (CallFeedbackOptionsDoesNotExist $ optionId)
         logDebug $ "option: " <> show option
     )
     optionIds
