@@ -492,7 +492,7 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
     Just VI.Idfy -> do
       void $ callIdfy person mdriverGstInformation
     _ -> do
-      gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+      gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
       DGQuery.create $ gstCardDetails
 
   case person.role of
@@ -511,8 +511,8 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
         throwError (ImageInvalidType (show ODC.GSTCertificate) (show imageMetadata.imageType))
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
-    buildGstinCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DGst.DriverGstin
-    buildGstinCard person address constitution_of_business date_of_liability is_provisional legal_name trade_name type_of_registration valid_from valid_upto = do
+    buildGstinCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DGst.DriverGstin
+    buildGstinCard person address constitution_of_business date_of_liability is_provisional legal_name trade_name type_of_registration valid_from valid_upto pan_number = do
       gstinEnc <- encrypt req.gstin
       now <- getCurrentTime
       uuid <- generateGUID
@@ -533,6 +533,7 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
             driverName = Just person.firstName,
             gstin = gstinEnc,
             isProvisional = is_provisional,
+            panNumber = pan_number,
             legalName = legal_name,
             tradeName = trade_name,
             typeOfRegistration = type_of_registration,
@@ -575,7 +576,7 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto
+          gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number
           DGQuery.create $ gstCardDetails
       pure Success
 
