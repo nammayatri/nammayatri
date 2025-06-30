@@ -52,7 +52,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, null, sum, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -851,34 +851,43 @@ postMultimodalTicketVerify ::
   API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
   Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
 postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  let verifyTicketsAndBuildResponse provider tickets = do
-        legInfoList <- forM tickets $ \ticketQR -> do
-          ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
-          booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
-          JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
-        return $
-          API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
-            { provider = provider,
-              legInfo = legInfoList
-            }
 
-  case req of
-    ApiTypes.IntegratedQR integratedQRData -> do
-      case integratedQRData.provider of
-        JMTypes.MTC -> do
-          let allTickets = concatMap (.ticketData) integratedQRData.integratedQR.mtc
-          verifyTicketsAndBuildResponse integratedQRData.provider allTickets
-        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
-        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
-        _ -> throwError $ InvalidRequest "Invalid provider"
+  let verifyProvider provider tickets vehicleCategory = do
+        bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= fromMaybeM (InternalError "Beckn Config not found")
+        legInfoList <- forM tickets $ \ticketQR -> do
+          try @_ @SomeException
+            ( do
+                ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory ticketQR DIBC.MULTIMODAL
+                booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
+                JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
+            )
+            >>= \case
+              Left err -> do
+                logError $ "Ticket Verification Failed: " <> show err
+                return Nothing
+              Right legInfo -> return $ Just legInfo
+        return $ ApiTypes.MultimodalTicketVerifyProviderAPIEntity {provider = provider, legInfo = catMaybes legInfoList}
+  providerResponses <- case req of
+    ApiTypes.IntegratedQR unifiedQRV2 -> do
+      let mtcTickets = concatMap (.ticketData) unifiedQRV2.mtc
+          cmrlTickets = concatMap (.ticketData) unifiedQRV2.cmrl
+      responses <-
+        sequence $
+          catMaybes
+            [ if null mtcTickets then Nothing else Just (verifyProvider JMTypes.MTC mtcTickets BUS),
+              if null cmrlTickets then Nothing else Just (verifyProvider JMTypes.CMRL cmrlTickets METRO)
+            ]
+      when (null responses) $ throwError $ InvalidRequest "No valid ticket data found"
+      return responses
     ApiTypes.SingleQR singleQRData -> do
       case singleQRData.provider of
-        JMTypes.MTC -> verifyTicketsAndBuildResponse singleQRData.provider singleQRData.tickets
-        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
-        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
-        _ -> throwError $ InvalidRequest "Invalid provider"
+        JMTypes.MTC -> (: []) <$> verifyProvider JMTypes.MTC singleQRData.tickets BUS
+        JMTypes.CMRL -> (: []) <$> verifyProvider JMTypes.CMRL singleQRData.tickets METRO
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not yet supported for ticket verification"
+        JMTypes.DIRECT -> throwError $ InvalidRequest "DIRECT provider not supported for ticket verification"
+
+  return $ ApiTypes.MultimodalTicketVerifyResp {tickets = providerResponses}
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -92,17 +92,16 @@ types:
     destLatLong: LatLong
 
   MultimodalTicketVerifyReq:
-    enum: "IntegratedQR IntegratedQRReq, SingleQR SingleQRReq"
-
-  IntegratedQRReq:
-    provider: Provider
-    integratedQR: UnifiedTicketQRV2
+    enum: "IntegratedQR UnifiedTicketQRV2, SingleQR SingleQRReq"
 
   SingleQRReq:
     provider: Provider
     tickets: "[Text]"
 
   MultimodalTicketVerifyResp:
+    tickets: "[MultimodalTicketVerifyProviderAPIEntity]"
+
+  MultimodalTicketVerifyProviderAPIEntity:
     provider: Provider
     legInfo: "[LegInfo]"
 
