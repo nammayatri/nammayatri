@@ -74,6 +74,7 @@ import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBRe
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
+import qualified Domain.Action.UI.OperationHub as DOH
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types.Alert as DTA
@@ -92,6 +93,8 @@ import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHub as DOH
+import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
@@ -196,25 +199,55 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
+
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
       whenJust rc $ \rcert -> void $ checkRCAssociationForDriver getEntityData.id rcert True
+      whenJust req.operationHubId $ \operationHubId -> do
+        tryToCreateOperationHubRequest merchantId merchantOpCityId getEntityData operationHubId rc
       void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
-      pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
       Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
+      whenJust req.operationHubId $ \operationHubId -> do
+        tryToCreateOperationHubRequest merchantId merchantOpCityId getEntityData operationHubId rc
       void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
             _ -> "dashboard -> addVehicleUnderUnknown"
       logTagInfo logTag (show getEntityData.id)
-      pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
+  pure Success
+  where
+    tryToCreateOperationHubRequest merchantId merchantOpCityId getEntityData operationHubId = \case
+      Just vehicleRC | vehicleRC.verificationStatus == Documents.VALID -> do
+        let createOperationHubRequestParams =
+              DOH.CreateOperationHubRequestParams
+                { creatorId = Id @DP.Person requestorId,
+                  driverId = if getEntityData.role == DP.DRIVER then Just getEntityData.id else Nothing,
+                  operationHubId = cast @Common.OperationHub @DOH.OperationHub operationHubId,
+                  vehicleRC,
+                  requestType = DOHR.ONBOARDING_INSPECTION,
+                  merchantId,
+                  merchantOperatingCityId = merchantOpCityId
+                }
+        try @_ @SomeException (DOH.createOperationHubRequest createOperationHubRequestParams) >>= \case
+          Right () -> pure ()
+          Left err -> do
+            logWarning $ "Unable to create operation hub request: rcId:" <> vehicleRC.id.getId <> "; error: " <> show err
+      _ -> do
+        -- save data to create hub request in webhook
+        let opHubReqkey = DOH.mkCreateOperationHubRequestKey req.registrationNo
+        let createOperationHubRequestData =
+              DOH.CreateOperationHubRequestData
+                { operationHubId = cast @Common.OperationHub @DOH.OperationHub operationHubId,
+                  creatorId = Id @DP.Person requestorId
+                }
+        Redis.setExp opHubReqkey createOperationHubRequestData 86400
 
 checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Bool -> Flow Bool
 checkRCAssociationForDriver driverId vehicleRC checkFleet = do
@@ -2501,7 +2534,8 @@ convertToAddVehicleReq rcReq =
       mYManufacturing = Nothing,
       vehicleModelYear = Nothing,
       vehicleTags = Nothing,
-      fuelType = Nothing
+      fuelType = Nothing,
+      operationHubId = Nothing
     }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)

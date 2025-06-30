@@ -64,7 +64,14 @@ OperationHubRequests:
       params: [requestStatus, remarks, fulfilledAt, operatorId]
       where: id
 
-    findByCreatorStatusAndType:
+    findByRcOrCreatorAndStatusAndType:
       kvFunction: findOneWithKV
       where:
-        and: [creatorId, requestStatus, requestType]
+        and:
+          - or: [registrationNo, creatorId]
+          - requestStatus
+          - requestType
+    findByRcAndStatusAndType:
+      kvFunction: findOneWithKV
+      where:
+        and: [registrationNo, requestStatus, requestType]

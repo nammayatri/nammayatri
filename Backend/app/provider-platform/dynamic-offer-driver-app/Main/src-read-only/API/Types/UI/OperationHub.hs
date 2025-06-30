@@ -12,8 +12,7 @@ import Servant
 import Tools.Auth
 
 data DriverOperationHubRequest = DriverOperationHubRequest
-  { creatorId :: Kernel.Prelude.Text,
-    operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
+  { operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
     registrationNo :: Kernel.Prelude.Text,
     requestType :: Domain.Types.OperationHubRequests.RequestType
   }

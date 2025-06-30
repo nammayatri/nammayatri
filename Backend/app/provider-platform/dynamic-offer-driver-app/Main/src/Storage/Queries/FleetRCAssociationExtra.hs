@@ -19,6 +19,10 @@ findLatestByRCIdAndFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =
 findLatestByRCIdAndFleetOwnerId (Id rcId) (Id fleetOwnerId) =
   findAllWithOptionsKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]] (Se.Desc Beam.associatedTill) (Just 1) Nothing <&> listToMaybe
 
+findLatestLinkedByRCId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe FleetRCAssociation)
+findLatestLinkedByRCId (Id rcId) now =
+  findAllWithOptionsKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]] (Se.Desc Beam.associatedOn) (Just 1) Nothing <&> listToMaybe
+
 endAssociationForRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m ()
 endAssociationForRC (Id fleetOwnerId) (Id rcId) = do
   now <- getCurrentTime

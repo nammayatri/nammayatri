@@ -11,8 +11,8 @@ module SharedLogic.DriverOnboarding.Status
     getAadhaarStatus,
     mapStatus,
     fetchDriverVehicleDocuments,
-    checkAllVehicleDocsVerified,
-    checkAllDriverDocsVerified,
+    checkVehicleDocsVerified,
+    checkDriverDocsVerified,
     activateRCAutomatically,
   )
 where
@@ -488,6 +488,16 @@ checkAllVehicleDocsVerified ::
 checkAllVehicleDocsVerified merchantOpCityId vehicleDoc makeSelfieAadhaarPanMandatory = do
   Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
 
+checkVehicleDocsVerified ::
+  Id DMOC.MerchantOperatingCity ->
+  VehicleDocumentItem ->
+  Maybe Bool ->
+  Flow [(DDVC.DocumentType, Bool)]
+checkVehicleDocsVerified merchantOpCityId vehicleDoc makeSelfieAadhaarPanMandatory = do
+  forM vehicleDoc.documents $ \doc -> do
+    isValid <- checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory
+    pure (doc.documentType, isValid)
+
 checkAllDriverDocsVerified ::
   Id DMOC.MerchantOperatingCity ->
   [DocumentStatusItem] ->
@@ -496,6 +506,17 @@ checkAllDriverDocsVerified ::
   Flow Bool
 checkAllDriverDocsVerified merchantOpCityId driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory = do
   Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+
+checkDriverDocsVerified ::
+  Id DMOC.MerchantOperatingCity ->
+  [DocumentStatusItem] ->
+  VehicleDocumentItem ->
+  Maybe Bool ->
+  Flow [(DDVC.DocumentType, Bool)]
+checkDriverDocsVerified merchantOpCityId driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory = do
+  forM driverDocuments $ \doc -> do
+    isValid <- checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory
+    pure (doc.documentType, isValid)
 
 enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing = return ()
