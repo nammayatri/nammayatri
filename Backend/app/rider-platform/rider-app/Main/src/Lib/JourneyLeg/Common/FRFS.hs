@@ -676,6 +676,15 @@ topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> 
 resultKeyFRFS :: Text -> Text
 resultKeyFRFS journeyLegId = "journeyLegResult:" <> journeyLegId
 
+isYetToReachStop :: Text -> BusData -> Bool
+isYetToReachStop stopCode bus =
+  case bus.eta_data of
+    Just etaList ->
+      case find (\eta -> eta.stopCode == stopCode) etaList of
+        Just _ -> True
+        Nothing -> False
+    Nothing -> False
+
 processBusLegState ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
   UTCTime ->
@@ -706,6 +715,9 @@ processBusLegState
   updateStatusFn =
     if (isLastCompleted || isOngoingJourneyLeg newStatus) && movementDetected
       then do
+        let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
+              (_, Just destStation) -> filter (isYetToReachStop destStation.code) allBusDataForRoute
+              _ -> allBusDataForRoute
         case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, listToMaybe riderLastPoints) of
           (Just legDetails, Just rc, Just userPos) -> do
             riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
@@ -722,7 +734,7 @@ processBusLegState
 
             case mbTopCandidateId of
               Just topCandVehId -> do
-                let mbBestBusData = find (\bd -> bd.vehicle_number == Just topCandVehId) allBusDataForRoute
+                let mbBestBusData = find (\bd -> bd.vehicle_number == Just topCandVehId) filteredBusData
                 case mbBestBusData of
                   Just bestBusData -> do
                     let upcomingStops =
@@ -743,7 +755,7 @@ processBusLegState
               Nothing -> pure []
           _ -> pure []
       else
-        if newStatus == JPT.Ongoing && not movementDetected
+        if isOngoingJourneyLeg newStatus && not movementDetected
           then case mbCurrentLegDetails of
             Just legDetails -> do
               let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
@@ -752,6 +764,9 @@ processBusLegState
           else
             if newStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving]
               then do
+                let filteredBusData = case mbUserBoardingStation of
+                      Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusDataForRoute
+                      Nothing -> allBusDataForRoute
                 pure $
                   map
                     ( \bd ->
@@ -761,7 +776,7 @@ processBusLegState
                             upcomingStops = getUpcomingStopsForBus now mbUserBoardingStation bd False
                           }
                     )
-                    allBusDataForRoute
+                    filteredBusData
               else pure []
     where
       findVehiclePositionFromSequence :: (MonadFlow m) => [Text] -> m [JT.VehiclePosition]
