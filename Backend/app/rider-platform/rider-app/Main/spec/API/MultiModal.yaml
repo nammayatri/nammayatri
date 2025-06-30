@@ -411,8 +411,6 @@ apis:
       endpoint: /multimodal/ticket/verify
       mandatoryQuery:
         city: City
-      query:
-        platformType: PlatformType
       auth: TokenAuth
       request:
         type: MultimodalTicketVerifyReq

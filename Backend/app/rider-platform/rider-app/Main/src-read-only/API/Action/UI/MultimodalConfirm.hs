@@ -10,7 +10,6 @@ where
 import qualified API.Types.UI.MultimodalConfirm
 import qualified Control.Lens
 import qualified Domain.Action.UI.MultimodalConfirm as Domain.Action.UI.MultimodalConfirm
-import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -313,9 +312,6 @@ type API =
       :> "multimodal"
       :> "ticket"
       :> "verify"
-      :> QueryParam
-           "platformType"
-           Domain.Types.IntegratedBPPConfig.PlatformType
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
@@ -567,9 +563,8 @@ postMultimodalTicketVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Types.Beckn.Context.City ->
     API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
   )
-postMultimodalTicketVerify a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalTicketVerify a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

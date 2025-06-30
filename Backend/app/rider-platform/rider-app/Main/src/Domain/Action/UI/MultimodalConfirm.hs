@@ -847,17 +847,15 @@ postMultimodalTicketVerify ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Maybe DIBC.PlatformType ->
   Kernel.Types.Beckn.Context.City ->
   API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
   Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
-postMultimodalTicketVerify (_mbPersonId, merchantId) _platformType opCity req = do
+postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   let verifyTicketsAndBuildResponse provider tickets = do
         legInfoList <- forM tickets $ \ticketQR -> do
-          ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR platformType
+          ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
           booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
           JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
         return $
