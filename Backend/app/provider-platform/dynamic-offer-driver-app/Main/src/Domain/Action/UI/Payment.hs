@@ -293,7 +293,8 @@ processPayment ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EventStreamFlow m r
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -313,21 +314,29 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
     Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $
       QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
-    updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
+    updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName orderId
     when (sendNotification && subsConfig.sendInAppFcmNotifications) $ notifyPaymentSuccessIfNotNotified driver orderId
 
 updatePaymentStatus ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   DP.ServiceNames ->
+  Id DOrder.PaymentOrder ->
   m ()
-updatePaymentStatus driverId merchantOpCityId serviceName = do
+updatePaymentStatus driverId merchantOpCityId serviceName orderId = do
   dueInvoices <- runInMasterDb $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
   let totalDue = sum $ calcDueAmount dueInvoices
+
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
+  fork "track payment status and remaining dues" $
+    SEVT.trackDriverDuesAndPlanLimit
+      orderId
+      (show totalDue)
+      (show serviceName)
+
   case plan of
     Nothing -> QDI.updateSubscription True (cast driverId)
     Just plan_ -> when (totalDue < plan_.maxCreditLimit && plan_.subscribedFlagToggleAllowed) $ QDI.updateSubscription True (cast driverId)
