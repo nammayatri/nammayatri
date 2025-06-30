@@ -60,20 +60,6 @@ getTransformedRouteDetails routeDetails = do
           toDepartureTime = RD.toDepartureTime rd
         }
 
-getAgencyDetails :: [RD.RouteDetails] -> Maybe MultiModalAgency
-getAgencyDetails routeDetails =
-  case routeDetails of
-    [] -> Nothing
-    (rd : _) ->
-      case RD.routeLongName rd of
-        Nothing -> Nothing
-        Just longName ->
-          Just $
-            MultiModalAgency
-              { gtfsId = RD.routeGtfsId rd,
-                name = longName
-              }
-
 getTransformedJourneyRouteDetails :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
 getTransformedJourneyRouteDetails routeDetails = do
   let sortedRouteDetails = sortOn (\rd -> rd.subLegOrder) routeDetails

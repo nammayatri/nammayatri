@@ -364,6 +364,7 @@ library
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.Insurance
+      SharedLogic.IntegratedBPPConfig
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
@@ -414,7 +415,6 @@ library
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
-      Storage.CachedQueries.GTFSFeedInfo
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -480,6 +480,7 @@ library
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
+      Storage.Queries.IntegratedBPPConfigExtra
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
       Storage.Queries.JourneyLegExtra
@@ -734,7 +735,6 @@ library
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
-      Domain.Types.GTFSFeedInfo
       Domain.Types.HotSpotConfig
       Domain.Types.Insurance
       Domain.Types.InsuranceConfig
@@ -872,7 +872,6 @@ library
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
-      Storage.Beam.GTFSFeedInfo
       Storage.Beam.HotSpotConfig
       Storage.Beam.Insurance
       Storage.Beam.InsuranceConfig
@@ -1012,7 +1011,6 @@ library
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier
-      Storage.Queries.GTFSFeedInfo
       Storage.Queries.HotSpotConfig
       Storage.Queries.Insurance
       Storage.Queries.InsuranceConfig
@@ -1056,9 +1054,11 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.FeedbackForm
+      Storage.Queries.OrphanInstances.FRFSConfig
       Storage.Queries.OrphanInstances.FRFSQuote
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
+      Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.Journey
       Storage.Queries.OrphanInstances.JourneyLeg

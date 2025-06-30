@@ -30,6 +30,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -463,20 +464,26 @@ findUpcomingTrips ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
-  [Text] ->
+  Text ->
   Text ->
   Maybe Spec.ServiceTierType ->
   UTCTime ->
-  DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   m UpcomingTripInfo
-findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppConfig mid mocid vc = do
+findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig mocid vc DIntegratedBPPConfig.MULTIMODAL
+
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings <- fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc
+  routeStopTimings <-
+    SIBC.fetchFirstIntegratedBPPConfigResult
+      integratedBPPConfigs
+      ( \integratedBPPConfig ->
+          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc
+      )
   logDebug $ "routeStopTimings: " <> show routeStopTimings
 
   let filteredByService = case mbServiceType of

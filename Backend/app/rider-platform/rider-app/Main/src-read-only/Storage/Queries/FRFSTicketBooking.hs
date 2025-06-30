@@ -182,7 +182,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
-      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId <$> integratedBppConfigId),
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.isFareChanged isFareChanged,

@@ -12,14 +12,12 @@ where
 
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
-import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import qualified Dashboard.Common as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import Data.List (groupBy)
-import Data.Maybe (listToMaybe)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Vector as V
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -28,18 +26,18 @@ import Domain.Types.Route
 import Domain.Types.Station
 import qualified Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (groupBy, id)
-import qualified Kernel.Prelude
+import EulerHS.Prelude hiding (find, groupBy, id, length, map, null)
+import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
+import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Kernel.Utils.Logging (logInfo)
-import Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -50,42 +48,41 @@ import Storage.Queries.RouteExtra as RE
 import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
 import Storage.Queries.StopFare as QRSF
-import Tools.Error
 
-getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
+getFRFSTicketFrfsRoutes :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
-  routes <- case searchStr of
-    Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
-    Nothing -> QRoute.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
 
-  frfsRoutes <- forM routes $ \rte -> do
-    pure $
-      API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI
-        { code = rte.code,
-          shortName = rte.shortName,
-          longName = rte.longName,
-          startPoint = rte.startPoint,
-          endPoint = rte.startPoint
-        }
-  pure frfsRoutes
+  SIBC.fetchAllIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+    routes <- case searchStr of
+      Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
+      Nothing -> QRoute.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
 
-postFRFSTicketFrfsRouteAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
+    frfsRoutes <- forM routes $ \rte -> do
+      pure $
+        API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI
+          { code = rte.code,
+            shortName = rte.shortName,
+            longName = rte.longName,
+            startPoint = rte.startPoint,
+            endPoint = rte.startPoint,
+            integratedBppConfigId = cast integratedBPPConfig.id
+          }
+    pure frfsRoutes
+
+postFRFSTicketFrfsRouteAdd :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Id Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsRouteAdd merchantShortId opCity code integratedBPPConfigId vehicleType req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
+
   existingRoute <- QRoute.findByRouteCode code integratedBPPConfig.id
   case existingRoute of
     Just _ -> throwError $ InvalidRequest "Route code already exists"
@@ -116,17 +113,16 @@ postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
       QRoute.create newRoute
       pure Success
 
-postFRFSTicketFrfsRouteDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code _vehicleType = do
+postFRFSTicketFrfsRouteDelete :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Id Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code integratedBPPConfigId _vehicleType = do
   merchant <- QM.findByShortId _merchantShortId >>= fromMaybeM (MerchantDoesNotExist _merchantShortId.getShortId)
 
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id _opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show _opCity)
 
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
+
   _ <- QRoute.findByRouteCode code integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "This route code can't be deleted")
   routeMappings <-
     try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode code integratedBPPConfig) >>= \case
@@ -136,17 +132,15 @@ postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code _vehicleType = do
   QRoute.deleteByRouteCode code integratedBPPConfig.id
   pure Success
 
-getFRFSTicketFrfsRouteFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI)
-getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode vehicleType = do
+getFRFSTicketFrfsRouteFareList :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Id Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI)
+getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode integratedBPPConfigId vehicleType = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
   fetchedRoute <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "Invalid route code")
 
   -- TODO :: To be fixed properly to handle multi-dimensional Fare Product
@@ -217,8 +211,8 @@ data UpsertRouteFareResp = UpsertRouteFareResp {unprocessedRouteFares :: [Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-putFRFSTicketFrfsRouteFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp)
-putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode vehicleType req = do
+putFRFSTicketFrfsRouteFareUpsert :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Id Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp)
+putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode integratedBPPConfigId vehicleType req = do
   fareUpdates <- readCsv req.file
 
   unprocessedFares <- forM fareUpdates $ \row -> do
@@ -234,9 +228,7 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode vehicleType r
           CQMOC.findByMerchantIdAndCity merchant.id opCity
             >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-        integratedBPPConfig <-
-          QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-            >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+        integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
         -- TODO :: To be fixed properly to handle multi-dimensional Fare Product
         fareProducts <- QFRFSRouteFareProduct.findByRouteCode row.routeCode integratedBPPConfig.id
         fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
@@ -284,38 +276,37 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode vehicleType r
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> return $ V.toList v
 
-getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])
+getFRFSTicketFrfsRouteStations :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])
 getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset vehicleType = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
-  stations <- case searchStr of
-    Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
-    Nothing -> QStation.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
 
-  frfsStations <- forM stations $ \station -> do
-    pure $
-      API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI
-        { name = station.name,
-          code = station.code,
-          lat = station.lat,
-          lon = station.lon,
-          address = station.address,
-          regionalName = station.regionalName,
-          hindiName = station.hindiName
-        }
+  SIBC.fetchAllIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+    stations <- case searchStr of
+      Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
+      Nothing -> QStation.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
 
-  pure frfsStations
+    frfsStations <- forM stations $ \station -> do
+      pure $
+        API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI
+          { name = station.name,
+            code = station.code,
+            lat = station.lat,
+            lon = station.lon,
+            address = station.address,
+            regionalName = station.regionalName,
+            hindiName = station.hindiName,
+            integratedBppConfigId = cast integratedBPPConfig.id
+          }
 
-postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
+    pure frfsStations
+
+postFRFSTicketFrfsStationAdd :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Id Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStationAdd merchantShortId opCity code integratedBPPConfigId vehicleType req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
   stationExists <- QStation.findByStationCode code integratedBPPConfig.id
   newId <- generateGUID
   now <- getCurrentTime
@@ -345,13 +336,11 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
       QStation.create newStation
       pure Success
 
-postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationDelete merchantShortId opCity code _vehicleType = do
+postFRFSTicketFrfsStationDelete :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Id Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStationDelete merchantShortId opCity code integratedBPPConfigId vehicleType = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
   _ <- QStation.findByStationCode code integratedBPPConfig.id >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
   stopMappings <-
     try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode code integratedBPPConfig) >>= \case

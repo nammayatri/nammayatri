@@ -17,7 +17,6 @@ import API.Types.UI.FRFSTicketService
 import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSQuote as DQuote
-import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Types (ServiceFlow)
@@ -32,9 +31,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as Qquote
 import qualified Storage.Queries.FRFSSearch as QSearch
-import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import Tools.Error
 import qualified Tools.Metrics as Metrics
 
 type FRFSConfirmFlow m r =
@@ -61,10 +58,4 @@ onSelect onSelectReq merchant quote = do
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
   QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)
-  platformType <- case quote.integratedBppConfigId of
-    Just integratedBppConfigId' -> do
-      ibppConfig <- QIBC.findById integratedBppConfigId' >>= fromMaybeM (IntegratedBPPConfigNotFound integratedBppConfigId'.getId)
-      return $ DIBC.platformType ibppConfig
-    Nothing -> return DIBC.APPLICATION
-  let req = FRFSQuoteConfirmReq {discounts = []}
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id req platformType Nothing
+  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {discounts = []}) Nothing

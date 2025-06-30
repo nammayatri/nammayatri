@@ -36,4 +36,4 @@ data FRFSTicket = FRFSTicket
 
 data FRFSTicketStatus = ACTIVE | EXPIRED | USED | CANCELLED | COUNTER_CANCELLED | CANCEL_INITIATED | TECHNICAL_CANCEL_REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketStatus))

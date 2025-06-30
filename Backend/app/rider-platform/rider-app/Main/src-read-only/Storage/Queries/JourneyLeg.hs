@@ -103,7 +103,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.changedBusesInSequence changedBusesInSequence,
+    [ Se.Set Beam.agencyGtfsId (agency >>= (.gtfsId)),
+      Se.Set Beam.agencyName (agency <&> (.name)),
+      Se.Set Beam.changedBusesInSequence changedBusesInSequence,
       Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
       Se.Set Beam.duration duration,

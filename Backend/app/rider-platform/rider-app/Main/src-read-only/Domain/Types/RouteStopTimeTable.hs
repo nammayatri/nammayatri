@@ -34,4 +34,4 @@ data RouteStopTimeTable = RouteStopTimeTable
 
 data SourceType = LIVE | GTFS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SourceType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SourceType))

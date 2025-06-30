@@ -77,6 +77,7 @@ data MetroLegRequest
 data MetroLegRequestGetFareData = MetroLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
+    agencyGtfsId :: Maybe Text,
     routeDetails :: [FRFSRouteDetails],
     fromArrivalTime :: Maybe UTCTime,
     merchant :: DMerchant.Merchant,

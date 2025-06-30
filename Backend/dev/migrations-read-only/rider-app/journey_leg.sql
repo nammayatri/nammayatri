@@ -73,3 +73,4 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN changed_buses_in_sequence text[] ;
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN exit json ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN entrance json ;
+

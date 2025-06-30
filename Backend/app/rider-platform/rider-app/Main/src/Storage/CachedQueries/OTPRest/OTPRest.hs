@@ -4,7 +4,6 @@ import BecknV2.FRFS.Enums
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy)
 import Data.Text (splitOn)
-import qualified Domain.Types.GTFSFeedInfo as GTFSFeedInfo
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -21,8 +20,6 @@ import Kernel.Types.TimeBound (TimeBound (..))
 import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.Flow as Flow
 import SharedLogic.External.Nandi.Types
-import Storage.CachedQueries.GTFSFeedInfo (findByVehicleTypeAndCity)
-import Storage.CachedQueries.RouteStopTimeTable (castVehicleType)
 import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RoutePolylines as QRoutePolylines
@@ -39,8 +36,8 @@ getRouteByRouteId ::
   Text ->
   m (Maybe Route.Route)
 getRouteByRouteId integratedBPPConfig routeId = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  route <- Flow.getRouteByRouteId baseUrl feedInfo.feedId.getId routeId
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  route <- Flow.getRouteByRouteId baseUrl integratedBPPConfig.feedKey routeId
   case route of
     Just route' -> Just <$> parseRouteFromInMemoryServer route' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
     Nothing -> do
@@ -53,8 +50,8 @@ getRouteByFuzzySearch ::
   Text ->
   m [Route.Route]
 getRouteByFuzzySearch integratedBPPConfig query = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  routes <- Flow.getRouteByFuzzySearch baseUrl feedInfo.feedId.getId query
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routes <- Flow.getRouteByFuzzySearch baseUrl integratedBPPConfig.feedKey query
   parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
 
 getRoutesByGtfsId ::
@@ -62,8 +59,8 @@ getRoutesByGtfsId ::
   IntegratedBPPConfig ->
   m [Route.Route]
 getRoutesByGtfsId integratedBPPConfig = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  routes <- Flow.getRoutesByGtfsId baseUrl feedInfo.feedId.getId
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routes <- Flow.getRoutesByGtfsId baseUrl integratedBPPConfig.feedKey
   parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
 
 getRoutesByVehicleType ::
@@ -75,16 +72,6 @@ getRoutesByVehicleType integratedBPPConfig vehicleType = do
   routes <- getRoutesByGtfsId integratedBPPConfig
   return $ filter (\route -> route.vehicleType == vehicleType) routes
 
-getFeedInfoVehicleTypeAndBaseUrl ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
-  IntegratedBPPConfig ->
-  m (GTFSFeedInfo.GTFSFeedInfo, BaseUrl)
-getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig = do
-  vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
-  feedInfo <- findByVehicleTypeAndCity vehicleType integratedBPPConfig.merchantOperatingCityId integratedBPPConfig.merchantId
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  return (feedInfo, baseUrl)
-
 -- Route Stop Mapping Queries
 
 getRouteStopMappingByRouteCode ::
@@ -93,8 +80,8 @@ getRouteStopMappingByRouteCode ::
   IntegratedBPPConfig ->
   m [RouteStopMapping]
 getRouteStopMappingByRouteCode routeCode integratedBPPConfig = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl feedInfo.feedId.getId (Just routeCode) Nothing
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
@@ -106,8 +93,8 @@ getRouteStopMappingByStopCode ::
   IntegratedBPPConfig ->
   m [RouteStopMapping]
 getRouteStopMappingByStopCode stopCode integratedBPPConfig = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl feedInfo.feedId.getId Nothing (Just stopCode)
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey Nothing (Just stopCode)
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
@@ -120,8 +107,8 @@ getRouteStopMappingByStopCodeAndRouteCode ::
   IntegratedBPPConfig ->
   m [RouteStopMapping]
 getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl feedInfo.feedId.getId (Just routeCode) (Just stopCode)
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) (Just stopCode)
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
@@ -137,8 +124,8 @@ getStationsByGtfsId ::
   IntegratedBPPConfig ->
   m [Station.Station]
 getStationsByGtfsId integratedBPPConfig = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  stations <- Flow.getStationsByGtfsId baseUrl feedInfo.feedId.getId
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey
   parseStationsFromInMemoryServer stations integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
 
 getStationsByGtfsIdAndStopCode ::
@@ -147,8 +134,8 @@ getStationsByGtfsIdAndStopCode ::
   Text ->
   m (Maybe Station.Station)
 getStationsByGtfsIdAndStopCode integratedBPPConfig stopCode = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  stations <- try @_ @SomeException (Flow.getStationsByGtfsIdAndStopCode baseUrl feedInfo.feedId.getId stopCode)
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  stations <- try @_ @SomeException (Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode)
   case stations of
     Right stations' -> do
       listToMaybe <$> parseStationsFromInMemoryServer [stations'] integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
@@ -186,8 +173,8 @@ findAllMatchingStations mbSearchStr mbLimit mbOffset merchantOperatingCityId veh
   if isNothing mbSearchStr
     then return []
     else do
-      (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-      stations <- try @_ @SomeException (Flow.getStationsByGtfsIdFuzzySearch baseUrl feedInfo.feedId.getId (fromMaybe "" mbSearchStr))
+      baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      stations <- try @_ @SomeException (Flow.getStationsByGtfsIdFuzzySearch baseUrl integratedBPPConfig.feedKey (fromMaybe "" mbSearchStr))
       case stations of
         Right stations' -> do
           parsedStations <- parseStationsFromInMemoryServer stations' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
@@ -198,8 +185,8 @@ findAllMatchingStations mbSearchStr mbLimit mbOffset merchantOperatingCityId veh
 
 getChildrenStationsCodes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> Text -> m [Text]
 getChildrenStationsCodes integratedBPPConfig stopCode = do
-  (feedInfo, baseUrl) <- getFeedInfoVehicleTypeAndBaseUrl integratedBPPConfig
-  Flow.getStopChildren baseUrl feedInfo.feedId.getId stopCode
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getStopChildren baseUrl integratedBPPConfig.feedKey stopCode
 
 -- Parse Queries
 
@@ -214,7 +201,6 @@ parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchant
   now <- getCurrentTime
   stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) merchantOperatingCityId
   let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, info.address)) stationsExtraInformation
-
   mapM
     ( \station -> do
         return $
@@ -276,7 +262,7 @@ parseRoutesFromInMemoryServer ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   m [Route.Route]
-parseRoutesFromInMemoryServer routes integratedBppConfig merchantId merchantOperatingCityId = do
+parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOperatingCityId = do
   let routeIds = map (.id) routes
   routePolylines <- QRoutePolylines.getByRouteIdsAndCity routeIds merchantOperatingCityId
   let polylineMap = HM.fromList $ map (\polyline -> (polyline.routeId, polyline.polyline)) routePolylines
@@ -291,7 +277,7 @@ parseRoutesFromInMemoryServer routes integratedBppConfig merchantId merchantOper
               endPoint = route.endPoint,
               startPoint = route.startPoint,
               id = Id $ route.id,
-              integratedBppConfigId = integratedBppConfig,
+              integratedBppConfigId = integratedBppConfigId,
               merchantId = merchantId,
               merchantOperatingCityId = merchantOperatingCityId,
               polyline = join $ HM.lookup route.id polylineMap,
@@ -313,8 +299,8 @@ parseRouteFromInMemoryServer ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   m Route.Route
-parseRouteFromInMemoryServer routeInfoNandi integratedBppConfig merchantId merchantOperatingCityId = do
-  routes <- parseRoutesFromInMemoryServer [routeInfoNandi] integratedBppConfig merchantId merchantOperatingCityId
+parseRouteFromInMemoryServer routeInfoNandi integratedBppConfigId merchantId merchantOperatingCityId = do
+  routes <- parseRoutesFromInMemoryServer [routeInfoNandi] integratedBppConfigId merchantId merchantOperatingCityId
   case routes of
     (route : _) -> pure route
     _ -> throwError $ InternalError "Failed to parse route"
@@ -326,14 +312,14 @@ parseRouteStopMappingInMemoryServer ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   m [RouteStopMapping]
-parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBppConfig merchantId merchantOperatingCityId = do
+parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBppConfigId merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   return $
     map
       ( \mapping ->
           RouteStopMapping
             { estimatedTravelTimeFromPreviousStop = mapping.estimatedTravelTimeFromPreviousStop,
-              integratedBppConfigId = integratedBppConfig,
+              integratedBppConfigId = integratedBppConfigId,
               merchantId,
               merchantOperatingCityId,
               Domain.Types.RouteStopMapping.providerCode = "NANDI", -- Hardcoding provider code as NANDI since it's not in RouteStopMappingNandi
@@ -354,7 +340,6 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBpp
 cacheAllRouteStopMapping :: (CacheFlow m r) => [RouteStopMapping] -> m ()
 cacheAllRouteStopMapping routeStopMapping = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-
   Hedis.setExp allRouteStopMappingKey routeStopMapping expTime
   let routeStopMappingByRouteId = groupBy (\a b -> a.routeCode == b.routeCode) routeStopMapping
   forM_ routeStopMappingByRouteId $ \mappings -> do

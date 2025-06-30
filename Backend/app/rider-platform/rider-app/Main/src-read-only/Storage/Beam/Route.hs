@@ -13,25 +13,25 @@ import qualified Kernel.Types.TimeBound
 import Tools.Beam.UtilsTH
 
 data RouteT f = RouteT
-  { code :: B.C f Kernel.Prelude.Text,
-    color :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    dailyTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    endLat :: B.C f Kernel.Prelude.Double,
-    endLon :: B.C f Kernel.Prelude.Double,
-    id :: B.C f Kernel.Prelude.Text,
-    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
-    longName :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    polyline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    shortName :: B.C f Kernel.Prelude.Text,
-    startLat :: B.C f Kernel.Prelude.Double,
-    startLon :: B.C f Kernel.Prelude.Double,
-    stopCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,
-    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { code :: (B.C f Kernel.Prelude.Text),
+    color :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    dailyTripCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    endLat :: (B.C f Kernel.Prelude.Double),
+    endLon :: (B.C f Kernel.Prelude.Double),
+    id :: (B.C f Kernel.Prelude.Text),
+    integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
+    longName :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    polyline :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    shortName :: (B.C f Kernel.Prelude.Text),
+    startLat :: (B.C f Kernel.Prelude.Double),
+    startLon :: (B.C f Kernel.Prelude.Double),
+    stopCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    timeBounds :: (B.C f Kernel.Types.TimeBound.TimeBound),
+    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +41,6 @@ instance B.Table RouteT where
 
 type Route = RouteT Identity
 
-$(enableKVPG ''RouteT ['id] [['code]])
+$(enableKVPG (''RouteT) [('id)] [[('code)]])
 
-$(mkTableInstances ''RouteT "route")
+$(mkTableInstances (''RouteT) "route")

@@ -52,7 +52,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId <$> integratedBppConfigId),
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),

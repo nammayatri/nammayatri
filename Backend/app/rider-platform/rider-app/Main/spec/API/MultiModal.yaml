@@ -9,6 +9,7 @@ imports:
   LocationAPIEntity: Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
   JourneyLeg: Domain.Types.JourneyLeg
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   LatLong: Kernel.External.Maps.Types
   LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   Price: Kernel.Types.Common
@@ -186,6 +187,7 @@ types:
     stC: Maybe Int
     vt: Text
     clr: Maybe Text
+    ibc: Id IntegratedBPPConfig
 
   TransportStation:
     cd: Text
@@ -197,11 +199,13 @@ types:
     rgn: Maybe Text
     hin: Maybe Text
     sgstdDest: Maybe [SuggestedStations]
+    ibc: Id IntegratedBPPConfig
 
   TransportRouteStopMapping:
     rc: Text
     sc: Text
     sn: Int
+    ibc: Id IntegratedBPPConfig
 
   PublicTransportData:
     rs: [TransportRoute]

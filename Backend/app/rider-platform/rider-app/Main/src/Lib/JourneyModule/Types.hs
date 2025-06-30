@@ -57,9 +57,9 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 -- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -828,7 +828,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
 
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in mkLegExtraInfo: " <> show fromStationId')
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in mkLegExtraInfo: " <> show toStationId')
-          integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+          integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity fromStation
           route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
           mbQuote <- QFRFSQuote.findById booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
@@ -889,7 +889,7 @@ getMetroLegRouteInfo journeyRouteDetails = do
 
       fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in getMetroLegRouteInfo: " <> show fromStationId')
       toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in getMetroLegRouteInfo: " <> show toStationId')
-      integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity fromStation
       route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
 
       return
@@ -917,7 +917,7 @@ getSubwayLegRouteInfo journeyRouteDetails = do
 
       fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in getSubwayLegRouteInfo: " <> show fromStationId')
       toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in getSubwayLegRouteInfo: " <> show toStationId')
-      integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity fromStation
       route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
 
       return
@@ -1015,7 +1015,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
 
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError $ "From Station not found in mkLegExtraInfo: " <> show fromStationId')
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError $ "To Station not found in mkLegExtraInfo: " <> show toStationId')
-          integratedBPPConfig <- QIBC.findById fromStation.integratedBppConfigId >>= fromMaybeM (InternalError "IntegratedBPPConfig not found")
+          integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity fromStation
           route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeId'
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
@@ -1083,7 +1083,8 @@ stationToStationAPI station =
       lon = station.lon,
       address = station.address,
       regionalName = station.regionalName,
-      hindiName = station.hindiName
+      hindiName = station.hindiName,
+      integratedBppConfigId = cast station.integratedBppConfigId
     }
 
 mkSearchReqLocation :: LocationAddress -> Maps.LatLngV2 -> SearchReqLocation

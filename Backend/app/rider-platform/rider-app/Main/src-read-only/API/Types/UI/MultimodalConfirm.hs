@@ -8,6 +8,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
@@ -205,6 +206,7 @@ data TransportRoute = TransportRoute
   { cd :: Kernel.Prelude.Text,
     clr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dTC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     lN :: Kernel.Prelude.Text,
     sN :: Kernel.Prelude.Text,
     stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -213,7 +215,7 @@ data TransportRoute = TransportRoute
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TransportRouteStopMapping = TransportRouteStopMapping {rc :: Kernel.Prelude.Text, sc :: Kernel.Prelude.Text, sn :: Kernel.Prelude.Int}
+data TransportRouteStopMapping = TransportRouteStopMapping {ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig, rc :: Kernel.Prelude.Text, sc :: Kernel.Prelude.Text, sn :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -221,6 +223,7 @@ data TransportStation = TransportStation
   { ad :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cd :: Kernel.Prelude.Text,
     hin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     ln :: Kernel.Prelude.Double,
     lt :: Kernel.Prelude.Double,
     nm :: Kernel.Prelude.Text,

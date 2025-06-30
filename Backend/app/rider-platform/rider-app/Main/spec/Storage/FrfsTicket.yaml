@@ -57,7 +57,7 @@ FRFSSearch:
     journeyLegStatus: Maybe JourneyLegStatus
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
-    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
 
   beamFields:
@@ -247,7 +247,7 @@ FRFSQuote:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
-    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    integratedBppConfigId: Id IntegratedBPPConfig
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
@@ -381,7 +381,7 @@ FRFSTicketBooking:
     isFareChanged: Maybe Bool
     isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
-    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     bookingAuthCode: Maybe Text
     osType: Maybe Text
@@ -1037,21 +1037,6 @@ FRFSGtfsStageFare:
       kvFunction: findAllWithKV
       where:
         and: [vehicleType, stage, merchantOperatingCityId]
-
-GTFSFeedInfo:
-  tableName: gtfs_feed_info
-  fields:
-    feedId: Id GTFSFeedInfo
-    vehicleType: VehicleCategory
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-  constraints:
-    feedId: PrimaryKey
-  queries:
-    findByVehicleTypeAndCity:
-      kvFunction: findOneWithKV
-      where:
-        and: [vehicleType, merchantId, merchantOperatingCityId]
 
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare

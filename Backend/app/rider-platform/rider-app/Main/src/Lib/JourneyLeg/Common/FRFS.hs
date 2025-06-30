@@ -28,7 +28,7 @@ import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
 import Domain.Utils (safeLast)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (comparing, (+||), (||+))
+import EulerHS.Prelude (comparing)
 import ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Maps.Types
@@ -53,8 +53,8 @@ import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithoutETA (..))
@@ -158,7 +158,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
             let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing || currstatus == JPT.Finishing) routeStatuses
             case findOngoingMetroOrSubway of
               Just (_, _, currstatus) -> do
-                getVehiclePosition booking.riderId booking.merchantId booking.merchantOperatingCityId currstatus userPosition booking.vehicleType (decodeFromText =<< booking.routeStationsJson)
+                getVehiclePosition booking.riderId booking.merchantId booking.merchantOperatingCityId currstatus userPosition booking.vehicleType booking.integratedBppConfigId (decodeFromText =<< booking.routeStationsJson)
               Nothing -> pure []
           let vehiclePositions =
                 map
@@ -276,7 +276,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
                     mbQuote <- QFRFSQuote.findById (Id quoteId)
                     case mbQuote of
                       Just quote -> do
-                        getVehiclePosition quote.riderId quote.merchantId quote.merchantOperatingCityId currstatus userPosition quote.vehicleType (decodeFromText =<< quote.routeStationsJson)
+                        getVehiclePosition quote.riderId quote.merchantId quote.merchantOperatingCityId currstatus userPosition quote.vehicleType quote.integratedBppConfigId (decodeFromText =<< quote.routeStationsJson)
                       Nothing -> do
                         logDebug $ "mbQuote not found."
                         pure []
@@ -318,9 +318,9 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
                 ]
           return $ JT.Transit journeyLegStates
   where
-    getVehiclePosition :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DPerson.Person -> Id DMerchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> JPT.JourneyLegStatus -> Maybe LatLong -> Spec.VehicleCategory -> Maybe [API.FRFSRouteStationsAPI] -> m [(VehicleTracking, LatLong)]
-    getVehiclePosition riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType mbRouteStations = do
-      vehiclePositionResp <- try @_ @SomeException (getVehiclePosition' riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType mbRouteStations)
+    getVehiclePosition :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DPerson.Person -> Id DMerchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> JPT.JourneyLegStatus -> Maybe LatLong -> Spec.VehicleCategory -> Id DIBC.IntegratedBPPConfig -> Maybe [API.FRFSRouteStationsAPI] -> m [(VehicleTracking, LatLong)]
+    getVehiclePosition riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType integratedBppConfigId mbRouteStations = do
+      vehiclePositionResp <- try @_ @SomeException (getVehiclePosition' riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType integratedBppConfigId mbRouteStations)
       case vehiclePositionResp of
         Left err -> do
           logError $ "Error in getVehiclePosition: " <> show err
@@ -328,14 +328,14 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
         Right vehiclePosition -> do
           return vehiclePosition
 
-    getVehiclePosition' :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DPerson.Person -> Id DMerchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> JPT.JourneyLegStatus -> Maybe LatLong -> Spec.VehicleCategory -> Maybe [API.FRFSRouteStationsAPI] -> m [(VehicleTracking, LatLong)]
-    getVehiclePosition' riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType = \case
+    getVehiclePosition' :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DPerson.Person -> Id DMerchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> JPT.JourneyLegStatus -> Maybe LatLong -> Spec.VehicleCategory -> Id DIBC.IntegratedBPPConfig -> Maybe [API.FRFSRouteStationsAPI] -> m [(VehicleTracking, LatLong)]
+    getVehiclePosition' riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType integratedBppConfigId = \case
       Just routesStations ->
         case listToMaybe routesStations of
           Just routeStations -> do
             case vehicleType of
               Spec.BUS -> do
-                vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL Nothing
+                vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL Nothing (Just integratedBppConfigId)
                 if isUpcomingJourneyLeg journeyStatus
                   then do
                     let vehicleTrackingWithLatLong :: [(VehicleTracking, Double, Double)] =
@@ -375,7 +375,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
                 case riderPosition of
                   Just riderLocation -> do
                     logDebug $ "Rider Location: " <> show riderLocation
-                    vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL riderPosition
+                    vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL Nothing (Just integratedBppConfigId)
                     pure ((\vehicleTrack -> (vehicleTrack, riderLocation)) <$> vehicleTracking)
                   Nothing -> do
                     logDebug $ "Rider Location not found."
@@ -419,10 +419,10 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
           QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
       pure newStatuses
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> m (Maybe JT.GetFareResponse)
-getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFromArrivalTime = do
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> m (Maybe JT.GetFareResponse)
+getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFromArrivalTime agencyGtfsId = do
   let mbRouteDetail = mergeFFRFSRouteDetails routeDetails
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency agencyGtfsId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   case (mbRouteDetail >>= (.routeCode), mbRouteDetail <&> (.startStationCode), mbRouteDetail <&> (.endStationCode)) of
     (Just routeCode, Just startStationCode, Just endStationCode) -> do
       QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
@@ -506,13 +506,11 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
             onSearchFailed = Nothing
           }
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency journeySearchData.agency merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData) merchantOpCity integratedBPPConfig
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails merchantOpCity integratedBPPConfig
-  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails DIBC.MULTIMODAL
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData merchantOpCity integratedBPPConfig = do
@@ -613,8 +611,8 @@ confirm personId merchantId searchId mbQuoteId ticketQuantity childTicketQuantit
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote DIBC.MULTIMODAL vehicleType
-      else void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId DIBC.MULTIMODAL crisSdkResponse
+        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote
+      else void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {discounts = []}) crisSdkResponse
   where
     processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> m ()
     processOnSelect onSelectReq = do
@@ -629,7 +627,7 @@ cancel searchId cancellationType isSkipped = do
       merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
       merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
       bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-      CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking DIBC.MULTIMODAL
+      CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
       if isSkipped then QTBooking.updateIsSkipped metroBooking.id (Just True) else QTBooking.updateIsCancelled metroBooking.id (Just True)
     Nothing -> do
       if isSkipped then QFRFSSearch.updateSkipBooking searchId (Just True) else QFRFSSearch.updateIsCancelled searchId (Just True)

@@ -91,6 +91,8 @@ IntegratedBPPConfig:
 
   fields:
     id: Id IntegratedBPPConfig
+    agencyKey: Text
+    feedKey: Text
     domain: Text
     providerConfig: ProviderConfig
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -125,13 +127,16 @@ IntegratedBPPConfig:
     platformType: text
 
   constraints:
-    merchantId: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-    vehicleCategory: PrimaryKey
-    domain: PrimaryKey
+    id: PrimaryKey
+    agencyKey: SecondaryKey
+
+  extraIndexes:
+    - columns: [agencyKey]
+      unique: true
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
 
   derives: "Generic,FromJSON,ToJSON"
 
@@ -143,14 +148,14 @@ IntegratedBPPConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findByDomainAndCityAndVehicleCategory:
+    findByAgencyId:
       kvFunction: findOneWithKV
       where:
-        and: [domain, merchantOperatingCityId, vehicleCategory, platformType]
+        and: [agencyKey]
 
   cachedQueries:
-    findByDomainAndCityAndVehicleCategory:
+    findAllByDomainAndCityAndVehicleCategory:
       keyParams: [domain, merchantOperatingCityId, vehicleCategory, platformType]
-      dbQuery: findByDomainAndCityAndVehicleCategory
+      dbQuery: findAllByDomainAndCityAndVehicleCategory
       dbQueryParams: [domain, merchantOperatingCityId, vehicleCategory, platformType]
       queryType: FindAndCache
