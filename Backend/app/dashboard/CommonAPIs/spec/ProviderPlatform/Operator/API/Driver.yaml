@@ -59,6 +59,7 @@ apis:
         - offset: Int
         - vehicleNo: Text
         - mbSearchString: Text
+        - onlyMandatoryDocs: Bool
       response:
         type: DriverInfoResp
       helperApi:
@@ -71,6 +72,7 @@ apis:
               - offset: Int
               - vehicleNo: Text
               - mbSearchString: Text
+              - onlyMandatoryDocs: Bool
             mandatoryQuery:
               - requestorId: Text
             response:
