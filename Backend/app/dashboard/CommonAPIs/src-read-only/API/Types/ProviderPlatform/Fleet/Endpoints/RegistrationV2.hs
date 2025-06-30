@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 where
 
+import qualified AWS.S3
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -35,6 +36,8 @@ data FleetOwnerRegisterReqV2 = FleetOwnerRegisterReqV2
     fleetType :: Kernel.Prelude.Maybe FleetType,
     businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     businessLicenseImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fileType :: Kernel.Prelude.Maybe AWS.S3.FileType,
+    reqContentType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }

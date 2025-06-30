@@ -91,6 +91,7 @@ Merchant:
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
+    fileExtensionCheck: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -117,6 +118,7 @@ Merchant:
     gatewayAndRegistryPriorityList: '''{"NY"}'''
     fleetOwnerEnabledCheck: "false"
     overwriteAssociation: "false"
+    fileExtensionCheck: "false"
 
   excludedFields:
     - merchantId
