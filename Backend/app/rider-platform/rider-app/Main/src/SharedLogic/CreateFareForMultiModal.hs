@@ -14,7 +14,6 @@
 
 module SharedLogic.CreateFareForMultiModal where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified Data.Map as Map
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
@@ -22,7 +21,6 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
-import EulerHS.Prelude ((+||), (||+))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -31,10 +29,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
-import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
-import Tools.Error
 import qualified Tools.Payment as Payment
 
 fareProcessingLockKey :: Text -> Text
@@ -87,23 +84,10 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
         then do
           integratedBPPConfigList <-
             mapM
-              ( \vehicleType ->
-                  QIBP.findByDomainAndCityAndVehicleCategory
-                    (show Spec.FRFS)
-                    booking'.merchantOperatingCityId
-                    (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
-                    DIBC.MULTIMODAL
-                    >>= fromMaybeM
-                      ( IntegratedBPPConfigNotFound $
-                          "MerchantOperatingCityId:" +|| booking'.merchantOperatingCityId
-                            ||+ "Domain:" +|| Spec.FRFS
-                            ||+ "Vehicle:" +|| (frfsVehicleCategoryToBecknVehicleCategory vehicleType)
-                            ||+ "Platform Type:" +|| DIBC.MULTIMODAL
-                            ||+ ""
-                      )
+              ( \vehicleType -> SIBC.findAllIntegratedBPPConfig booking'.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.MULTIMODAL
               )
               vehicleTypeList
-          vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) integratedBPPConfigList
+          vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) (concat integratedBPPConfigList)
           vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList) allJourneyBookings
           return (vendorSplitDetails, amount)
         else return ([], amount)
@@ -125,11 +109,8 @@ convertVendorDetails vendorDetails bookings = do
   return validVendorSplitDetails
   where
     createVendorSplitForBooking vendorDetailsMap booking = do
-      case booking.integratedBppConfigId of
-        Just integratedBppConfigId -> do
-          case Map.lookup integratedBppConfigId vendorDetailsMap of
-            Just vd -> Just $ toPaymentVendorDetails vd booking
-            Nothing -> Nothing
+      case Map.lookup booking.integratedBppConfigId vendorDetailsMap of
+        Just vd -> Just $ toPaymentVendorDetails vd booking
         Nothing -> Nothing
 
     toPaymentVendorDetails vd booking =

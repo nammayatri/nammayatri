@@ -23,11 +23,10 @@ import qualified Storage.Queries.Transformers.RouteDetails
 instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   fromTType' (Beam.JourneyLegT {..}) = do
     routeDetailsList <- Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)
-    let agencyDetails = Storage.Queries.Transformers.RouteDetails.getAgencyDetails routeDetailsList
     pure $
       Just
         Domain.Types.JourneyLeg.JourneyLeg
-          { agency = agencyDetails,
+          { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName,
             changedBusesInSequence = changedBusesInSequence,
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
@@ -62,7 +61,9 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
 instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   toTType' (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
     Beam.JourneyLegT
-      { Beam.changedBusesInSequence = changedBusesInSequence,
+      { Beam.agencyGtfsId = agency >>= (.gtfsId),
+        Beam.agencyName = agency <&> (.name),
+        Beam.changedBusesInSequence = changedBusesInSequence,
         Beam.distance = (.value) <$> distance,
         Beam.distanceUnit = (.unit) <$> distance,
         Beam.duration = duration,

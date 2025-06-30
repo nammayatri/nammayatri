@@ -19,21 +19,22 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
-import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.Queries.Person as QP
 
 postCrisGetSDKData ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
     API.Types.UI.CRIS.GetSDKDataRequest ->
     Environment.Flow API.Types.UI.CRIS.GetSDKDataResponse
   )
-postCrisGetSDKData (mbPersonId, _) request = do
+postCrisGetSDKData (mbPersonId, _) mbIntegratedBPPConfigId request = do
   case mbPersonId of
     Just personId -> do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
       case integratedBPPConfig.providerConfig of
         DIBC.CRIS config' -> do
           resp <- try @_ @SomeException $ GetSDKData.getSDKData config' request
@@ -50,12 +51,13 @@ getCrisOtpGeneration ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-getCrisOtpGeneration (mbPersonId, _) = do
+getCrisOtpGeneration (mbPersonId, _) mbIntegratedBPPConfigId = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person Id not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
   case integratedBPPConfig.providerConfig of
     DIBC.CRIS config' -> do
       mobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "mobile no. not found")
@@ -83,13 +85,14 @@ postCrisChangeDevice ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
     API.Types.UI.CRIS.CrisChangeDeviceRequest ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postCrisChangeDevice (mbPersonId, _) req = do
+postCrisChangeDevice (mbPersonId, _) mbIntegratedBPPConfigId req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person Id not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
   case integratedBPPConfig.providerConfig of
     DIBC.CRIS config' -> do
       mobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "mobile no. not found")

@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopTimeTable.RouteStopTimeTable])
+  ([Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.RouteStopTimeTable.RouteStopTimeTable]))
 findByRouteCode routeCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -36,7 +36,7 @@ findByRouteCode routeCode integratedBppConfigId = do
 
 findByRouteCodeAndStopCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Prelude.Text] -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopTimeTable.RouteStopTimeTable])
+  ([Kernel.Prelude.Text] -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.RouteStopTimeTable.RouteStopTimeTable]))
 findByRouteCodeAndStopCode routeCode stopCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And

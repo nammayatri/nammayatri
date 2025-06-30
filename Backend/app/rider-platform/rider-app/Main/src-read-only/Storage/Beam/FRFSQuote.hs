@@ -34,7 +34,7 @@ data FRFSQuoteT f = FRFSQuoteT
     via :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
-    integratedBppConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     oldCacheDump :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

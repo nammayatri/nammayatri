@@ -74,7 +74,7 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.BecknConfig as QBC
@@ -95,6 +95,7 @@ import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
+import Tools.MultiModal as MM
 import qualified Tools.Payment as TPayment
 
 postMultimodalInitiate ::
@@ -697,12 +698,11 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
-    catMaybes
-      <$> forM
-        vehicleTypes
-        ( \vType ->
-            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vType DIBC.MULTIMODAL
-        )
+    forM
+      vehicleTypes
+      ( \vType ->
+          SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
+      )
 
   let mkResponse stations routes bppConfig =
         pure
@@ -721,7 +721,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                               vt = show s.vehicleType,
                               rgn = s.regionalName,
                               sgstdDest = s.suggestedDestinations,
-                              hin = s.hindiName
+                              hin = s.hindiName,
+                              ibc = bppConfig.id
                             }
                       _ -> Nothing
                   )
@@ -736,12 +737,13 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                           dTC = r.dailyTripCount,
                           stC = r.stopCount,
                           vt = show r.vehicleType,
-                          clr = r.color
+                          clr = r.color,
+                          ibc = bppConfig.id
                         }
                   )
                   routes,
               rsm = [],
-              ptcv = bppConfig.id.getId
+              ptcv = bppConfig.feedKey
             }
 
   let fetchData bppConfig = do
@@ -758,23 +760,23 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
     try @_ @SomeException
       ( mapM
           ( \config -> do
-              (feedInfo, baseUrl) <- OTPRest.getFeedInfoVehicleTypeAndBaseUrl config
-              return (config, (feedInfo, baseUrl))
+              baseUrl <- MM.getOTPRestServiceReq config.merchantId config.merchantOperatingCityId
+              return (config, (config.feedKey, baseUrl))
           )
-          integratedBPPConfigs
+          (concat integratedBPPConfigs)
       )
       >>= \case
-        Left _ -> mapM fetchData integratedBPPConfigs
+        Left _ -> mapM fetchData (concat integratedBPPConfigs)
         Right configsWithFeedInfo -> do
           -- Group configs by feed_id and take first config for each feed_id
-          let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedInfo, _)) -> (feedInfo.feedId.getId, [config])) configsWithFeedInfo
+          let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
 
           -- Process only unique configs
           try @_ @SomeException (mapM fetchData uniqueConfigs) >>= \case
             Left error' -> do
               logError $ "Error fetching data from OTPRest all public transport data: " <> show error'
-              mapM fetchDataDb integratedBPPConfigs
+              mapM fetchDataDb (concat integratedBPPConfigs)
             Right dataList -> pure dataList
 
   let transportData =
@@ -782,7 +784,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs
+            ptcv = T.intercalate (T.pack "#") $ map (.feedKey) (concat integratedBPPConfigs)
           }
   return transportData
 
@@ -799,13 +801,14 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   legs <- JM.getJourneyLegs journeyId
   now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  let mbAgencyId = journeyLegInfo.agency >>= (.gtfsId)
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
   let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
-  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId

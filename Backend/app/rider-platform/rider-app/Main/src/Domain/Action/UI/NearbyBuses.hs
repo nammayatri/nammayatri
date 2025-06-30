@@ -21,12 +21,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyModule.Utils as JourneyUtils
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.BecknConfig as QBecknConfig
-import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.Person as QP
@@ -121,22 +121,26 @@ getRecentRides person req = do
     case (recentLoc.fromStopCode, recentLoc.toStopCode, recentLoc.routeCode) of
       (Just fromStopCode, Just toStopCode, Just routeCode) -> do
         let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
-        mbIntegratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleCategory req.platformType
-        case mbIntegratedBPPConfig of
-          Just integratedBPPConfig -> do
-            merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
-            becknConfig <- QBecknConfig.findByMerchantIdDomainAndVehicle (Just merchant.id) "FRFS" vehicleCategory >>= fromMaybeM (InternalError "No beckn config found")
-            merchantOperatingCity <- QMerchantOperatingCity.findById person.merchantOperatingCityId >>= fromMaybeM (InternalError "No merchant operating city found")
-            mbFare <- Kernel.Prelude.listToMaybe <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig routeCode fromStopCode toStopCode req.vehicleType
-            return $
-              mbFare <&> \fare -> do
-                API.Types.UI.NearbyBuses.RecentRide
-                  { fare = fare.price,
-                    fromStopCode = fromStopCode,
-                    routeCode = Just routeCode,
-                    toStopCode = toStopCode
-                  }
-          Nothing -> return Nothing
+        SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory req.platformType
+          >>= \case
+            [] -> return Nothing
+            integratedBPPConfigs@(_ : _) -> do
+              merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
+              becknConfig <- QBecknConfig.findByMerchantIdDomainAndVehicle (Just merchant.id) "FRFS" vehicleCategory >>= fromMaybeM (InternalError "No beckn config found")
+              merchantOperatingCity <- QMerchantOperatingCity.findById person.merchantOperatingCityId >>= fromMaybeM (InternalError "No merchant operating city found")
+              mbFare <-
+                Kernel.Prelude.listToMaybe
+                  <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+                          Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig routeCode fromStopCode toStopCode req.vehicleType
+                      )
+              return $
+                mbFare <&> \fare -> do
+                  API.Types.UI.NearbyBuses.RecentRide
+                    { fare = fare.price,
+                      fromStopCode = fromStopCode,
+                      routeCode = Just routeCode,
+                      toStopCode = toStopCode
+                    }
       _ -> return Nothing
 
 getNextVehicleDetails ::
@@ -153,8 +157,7 @@ getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   now <- getCurrentTime
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
-  JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig mid person.merchantOperatingCityId vehicleType
+  JourneyUtils.findUpcomingTrips routeCode stopCode Nothing now mid person.merchantOperatingCityId vehicleType
 
 getTimetableStop ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -169,15 +172,17 @@ getTimetableStop (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
-  case vehicleType of
-    BecknV2.OnDemand.Enums.METRO -> do
-      stopCodes <- OTPRest.getChildrenStationsCodes integratedBPPConfig stopCode
-      routeStopTimeTables <- concatMapM (GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode]) stopCodes
-      return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
-    _ -> do
-      routeStopTimeTables <- GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode] stopCode
-      return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+  stopCodes <-
+    case vehicleType of
+      BecknV2.OnDemand.Enums.METRO ->
+        SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+          OTPRest.getChildrenStationsCodes integratedBPPConfig stopCode
+      _ -> return [stopCode]
+  routeStopTimeTables <-
+    SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+      concatMapM (GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode]) stopCodes
+  return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
   where
     convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
     convertToTimetableEntry routeStopTimeTable = do

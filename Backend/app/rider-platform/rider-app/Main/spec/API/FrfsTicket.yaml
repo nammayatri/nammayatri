@@ -25,6 +25,7 @@ imports:
   JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
   PlatformType: Domain.Types.IntegratedBPPConfig
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
 
 module: FRFSTicketService
@@ -56,6 +57,7 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
   FRFSDiscountRes:
@@ -95,6 +97,7 @@ types:
     eventDiscountAmount: Maybe HighPrecMoney
     isFareChanged: Maybe Bool
     googleWalletJWTUrl: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
   FRFSVehicleServiceTierAPI:
@@ -150,6 +153,7 @@ types:
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
   FRFSCanCancelStatus:
@@ -187,6 +191,7 @@ types:
     stops: Maybe [FRFSStationAPI]
     waypoints: Maybe [LatLong]
     timeBounds: Maybe TimeBound
+    integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
   AutocompleteRes:
@@ -203,16 +208,30 @@ types:
     enum: "BookingFareAccepted BookingFareAcceptedReq"
 
 apis:
-  # Booking Fare Accepted
-  - POST:
-      endpoint: /frfs/booking/{bookingId}/feedback
-      params:
-        bookingId: Id FRFSTicketBooking
+  # Get FRFS Config
+  - GET:
+      endpoint: /frfs/config
+      mandatoryQuery:
+        city: City
       auth: TokenAuth
-      request:
-        type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+
+  # Get Start stop or Routes suggestions based on User's input or nearby stops if user input is unknown
+  - GET:
+      endpoint: /frfs/autocomplete
+      auth: TokenAuth
+      mandatoryQuery:
+        city: City
+        location: LatLong
+        vehicleType: VehicleCategory
+      query:
+        input: Text
+        limit: Int
+        offset: Int
+        platformType: PlatformType
+      response:
+        type: "API.Types.UI.FRFSTicketService.AutocompleteRes"
 
   # GET metro/bus routes for the merchant city
   - GET:
@@ -256,6 +275,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         platformType: PlatformType
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         routeCode: Text
       response:
@@ -269,6 +289,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         city: City
+        integratedBppConfigId: Id IntegratedBPPConfig
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
@@ -278,6 +299,8 @@ apis:
   - POST:
       endpoint: /frfs/discovery/search
       auth: TokenAuth
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
       request:
         type: API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
       response:
@@ -391,27 +414,13 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  # Get FRFS Config
-  - GET:
-      endpoint: /frfs/config
-      mandatoryQuery:
-        city: City
+  # Booking Fare Accepted
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/feedback
+      params:
+        bookingId: Id FRFSTicketBooking
       auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
-        type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
-
-  # Get Start stop or Routes suggestions based on User's input or nearby stops if user input is unknown
-  - GET:
-      endpoint: /frfs/autocomplete
-      auth: TokenAuth
-      mandatoryQuery:
-        city: City
-        location: LatLong
-        vehicleType: VehicleCategory
-      query:
-        input: Text
-        limit: Int
-        offset: Int
-        platformType: PlatformType
-      response:
-        type: "API.Types.UI.FRFSTicketService.AutocompleteRes"
+        type: Kernel.Types.APISuccess.APISuccess

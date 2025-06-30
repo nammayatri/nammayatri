@@ -6,6 +6,7 @@ imports:
   FilePath: EulerHS.Prelude
   TimeBound: Kernel.Types.TimeBound
   StationType: Domain.Types.StationType
+  IntegratedBPPConfig: Dashboard.Common
 
 module: FRFSTicket
 types:
@@ -15,6 +16,7 @@ types:
     longName: Text
     startPoint: LatLong
     endPoint: LatLong
+    integratedBppConfigId: Id IntegratedBPPConfig
 
   FRFSRouteReq:
     shortName: Text
@@ -58,6 +60,7 @@ types:
     address: Maybe Text
     regionalName: Maybe Text
     hindiName: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
   FRFSStationReq:
@@ -95,6 +98,7 @@ apis:
       endpoint: /frfs/route/{code}/add
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         code: Text
       request:
@@ -108,6 +112,7 @@ apis:
       endpoint: /frfs/route/{code}/delete
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         code: Text
       auth: ApiAuthV2
@@ -119,6 +124,7 @@ apis:
       endpoint: /frfs/route/fare/{routeCode}/list
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         routeCode: Text
       auth: ApiAuthV2
@@ -130,6 +136,7 @@ apis:
       endpoint: /frfs/route/fare/{routeCode}/upsert
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         routeCode: Text
       multipart:
@@ -156,6 +163,7 @@ apis:
       endpoint: /frfs/station/{code}/add
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         code: Text
       request:
@@ -169,6 +177,7 @@ apis:
       endpoint: /frfs/station/{code}/delete
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         code: Text
       auth: ApiAuthV2

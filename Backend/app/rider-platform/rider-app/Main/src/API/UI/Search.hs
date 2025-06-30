@@ -81,9 +81,9 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
@@ -234,7 +234,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
-  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
   mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
   logDebug $ "mbSingleModeRouteDetails: " <> show mbSingleModeRouteDetails
   (singleModeWarningType, otpResponse) <- case mbSingleModeRouteDetails of
@@ -529,63 +529,62 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
     getCrisSdkToken _ Nothing = return Nothing
     getCrisSdkToken merchantOperatingCityId (Just journeys) = do
       person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      mbIntegratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
-
-      case mbIntegratedBPPConfig of
-        Just integratedBPPConfig -> do
-          let subwayJourneys = filter (\j -> any (\leg -> leg.journeyMode == DTrip.Subway) j.journeyLegs) journeys
-          if null subwayJourneys
-            then return Nothing
-            else do
-              mbMobileNumber <- mapM decrypt person.mobileNumber
-              mbImeiNumber <- mapM decrypt person.imeiNumber
-              sessionId <- getRandomInRange (1, 1000000 :: Int)
-              findValidSdkToken subwayJourneys integratedBPPConfig mbMobileNumber mbImeiNumber sessionId
-        Nothing -> return Nothing
+      let subwayJourneys = filter (\j -> any (\leg -> leg.journeyMode == DTrip.Subway) j.journeyLegs) journeys
+      if null subwayJourneys
+        then return Nothing
+        else do
+          mbMobileNumber <- mapM decrypt person.mobileNumber
+          mbImeiNumber <- mapM decrypt person.imeiNumber
+          sessionId <- getRandomInRange (1, 1000000 :: Int)
+          findValidSdkToken subwayJourneys mbMobileNumber mbImeiNumber sessionId
       where
-        findValidSdkToken :: [DQuote.JourneyData] -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
-        findValidSdkToken [] _ _ _ _ = return Nothing
-        findValidSdkToken (journey : restJourneys) integratedBPPConfig mbMobileNumber mbImeiNumber sessionId = do
+        findValidSdkToken :: [DQuote.JourneyData] -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
+        findValidSdkToken [] _ _ _ = return Nothing
+        findValidSdkToken (journey : restJourneys) mbMobileNumber mbImeiNumber sessionId = do
           let subwayLegs = filter (\leg -> leg.journeyMode == DTrip.Subway) journey.journeyLegs
-          mbSdkToken <- findValidSdkTokenFromLegs subwayLegs integratedBPPConfig mbMobileNumber mbImeiNumber sessionId
+          mbSdkToken <- findValidSdkTokenFromLegs subwayLegs mbMobileNumber mbImeiNumber sessionId
           case mbSdkToken of
             Just token -> return $ Just token
-            Nothing -> findValidSdkToken restJourneys integratedBPPConfig mbMobileNumber mbImeiNumber sessionId
+            Nothing -> findValidSdkToken restJourneys mbMobileNumber mbImeiNumber sessionId
 
-        findValidSdkTokenFromLegs :: [DQuote.JourneyLeg] -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
-        findValidSdkTokenFromLegs [] _ _ _ _ = return Nothing
-        findValidSdkTokenFromLegs (leg : restLegs) integratedBPPConfig mbMobileNumber mbImeiNumber sessionId = do
-          mbSdkToken <- tryGetSdkTokenFromLeg leg integratedBPPConfig mbMobileNumber mbImeiNumber sessionId
+        findValidSdkTokenFromLegs :: [DQuote.JourneyLeg] -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
+        findValidSdkTokenFromLegs [] _ _ _ = return Nothing
+        findValidSdkTokenFromLegs (leg : restLegs) mbMobileNumber mbImeiNumber sessionId = do
+          mbSdkToken <- tryGetSdkTokenFromLeg leg mbMobileNumber mbImeiNumber sessionId
           case mbSdkToken of
             Just token -> return $ Just token
-            Nothing -> findValidSdkTokenFromLegs restLegs integratedBPPConfig mbMobileNumber mbImeiNumber sessionId
+            Nothing -> findValidSdkTokenFromLegs restLegs mbMobileNumber mbImeiNumber sessionId
 
-        tryGetSdkTokenFromLeg :: DQuote.JourneyLeg -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
-        tryGetSdkTokenFromLeg leg integratedBPPConfig mbMobileNumber mbImeiNumber sessionId = do
+        tryGetSdkTokenFromLeg :: DQuote.JourneyLeg -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
+        tryGetSdkTokenFromLeg leg mbMobileNumber mbImeiNumber sessionId = do
           let mbRouteCode = listToMaybe leg.routeDetails >>= (.routeCode)
           case (leg.fromStationCode, leg.toStationCode, mbRouteCode) of
             (Just fromCode, Just toCode, Just routeCode) -> do
-              case integratedBPPConfig.providerConfig of
-                DIBC.CRIS config' -> do
-                  intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig Station.START Station.END
+              SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
+                >>= \case
+                  Just integratedBPPConfig -> do
+                    case integratedBPPConfig.providerConfig of
+                      DIBC.CRIS config' -> do
+                        intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig Station.START Station.END
 
-                  let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
-                      viaPoints = if T.null viaStations then " " else viaStations
+                        let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
+                            viaPoints = if T.null viaStations then " " else viaStations
 
-                  let routeFareReq =
-                        CRISRouteFare.CRISFareRequest
-                          { mobileNo = mbMobileNumber,
-                            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-                            appSession = sessionId,
-                            sourceCode = fromCode,
-                            changeOver = " ",
-                            destCode = toCode,
-                            via = viaPoints
-                          }
+                        let routeFareReq =
+                              CRISRouteFare.CRISFareRequest
+                                { mobileNo = mbMobileNumber,
+                                  imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+                                  appSession = sessionId,
+                                  sourceCode = fromCode,
+                                  changeOver = " ",
+                                  destCode = toCode,
+                                  via = viaPoints
+                                }
 
-                  fares <- CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq <&> listToMaybe
-                  return $ fares >>= (.fareDetails) >>= Just . (.sdkToken)
-                _ -> return Nothing
+                        fares <- CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq <&> listToMaybe
+                        return $ fares >>= (.fareDetails) >>= Just . (.sdkToken)
+                      _ -> return Nothing
+                  Nothing -> return Nothing
             _ -> return Nothing
 
 checkSearchRateLimit ::

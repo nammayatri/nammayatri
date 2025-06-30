@@ -6,6 +6,7 @@ imports:
   Double: Kernel.Prelude
   VehicleCategory: BecknV2.FRFS.Enums
   PlatformType: Domain.Types.IntegratedBPPConfig
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
 
 module: TrackRoute
 
@@ -40,6 +41,7 @@ apis:
       query:
         vehicleType: VehicleCategory
         platformType: PlatformType
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         routeCode: Text
       response:

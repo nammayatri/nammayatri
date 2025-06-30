@@ -48,6 +48,6 @@ data Journey = Journey
 
 data JourneyStatus = NEW | INITIATED | CONFIRMED | INPROGRESS | CANCELLED | FEEDBACK_PENDING | COMPLETED | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JourneyStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''JourneyStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''JourneyStatus))

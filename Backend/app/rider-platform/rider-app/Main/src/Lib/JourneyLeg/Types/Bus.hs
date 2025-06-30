@@ -69,6 +69,7 @@ data BusLegRequestGetStateData = BusLegRequestGetStateData
 data BusLegRequestGetFareData = BusLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
+    agencyGtfsId :: Maybe Text,
     routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
     riderId :: Id DPerson.Person,

@@ -16,7 +16,6 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
-import BecknV2.FRFS.Utils
 import Data.Aeson
 import Data.List (sortBy)
 import Data.Ord (Down (..))
@@ -32,7 +31,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.StopFare as StopFare
-import EulerHS.Prelude (comparing, toStrict, (+||), (||+))
+import EulerHS.Prelude (comparing, toStrict)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -45,8 +44,8 @@ import qualified Lib.JourneyLeg.Types as JourneyLegTypes
 import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
@@ -54,7 +53,6 @@ import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFP
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSVehicleServiceTier as QVSR
-import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.StopFare as QRSF
@@ -160,7 +158,7 @@ onSearch ::
   m ()
 onSearch onSearchReq validatedReq = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) validatedReq.search.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType) DIBC.MULTIMODAL >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| validatedReq.search.merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory validatedReq.search.vehicleType ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity validatedReq.search
   filteredQuotes <-
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
@@ -267,17 +265,11 @@ mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDuratio
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
-  let merchantOperatingCityId = search.merchantOperatingCityId
-  integratedBPPConfig <- case (search.integratedBppConfigId) of
-    Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
-    Nothing -> do
-      QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-        >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity search
   startStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId dStartStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   endStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  let stationsJSON = stations & map castStationToAPI & encodeToText
-  let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
+  let stationsJSON = stations & map (castStationToAPI integratedBPPConfig.id) & encodeToText
+  let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
   uid <- generateGUID
   now <- getCurrentTime
@@ -325,8 +317,8 @@ getStartStation = find (\station -> station.stationType == Station.START)
 getEndStation :: [DStation] -> Maybe DStation
 getEndStation = find (\station -> station.stationType == Station.END)
 
-castStationToAPI :: DStation -> API.FRFSStationAPI
-castStationToAPI DStation {..} =
+castStationToAPI :: Id DIBC.IntegratedBPPConfig -> DStation -> API.FRFSStationAPI
+castStationToAPI integratedBppConfigId DStation {..} =
   API.FRFSStationAPI
     { API.address = Nothing,
       API.code = stationCode,
@@ -338,11 +330,12 @@ castStationToAPI DStation {..} =
       API.stationType = Just stationType,
       API.sequenceNum = stopSequence,
       API.distance = Nothing,
-      API.towards = Nothing
+      API.towards = Nothing,
+      API.integratedBppConfigId = integratedBppConfigId
     }
 
-castRouteStationToAPI :: DRouteStation -> API.FRFSRouteStationsAPI
-castRouteStationToAPI DRouteStation {..} =
+castRouteStationToAPI :: Id DIBC.IntegratedBPPConfig -> DRouteStation -> API.FRFSRouteStationsAPI
+castRouteStationToAPI integratedBppConfigId DRouteStation {..} =
   API.FRFSRouteStationsAPI
     { API.code = routeCode,
       API.color = routeColor,
@@ -354,7 +347,7 @@ castRouteStationToAPI DRouteStation {..} =
       API.travelTime = routeTravelTime,
       API.vehicleServiceTier = castVehicleServiceTierAPI <$> routeServiceTier,
       API.priceWithCurrency = mkPriceAPIEntity routePrice,
-      API.stations = map castStationToAPI routeStations
+      API.stations = map (castStationToAPI integratedBppConfigId) routeStations
     }
 
 castVehicleServiceTierAPI :: DVehicleServiceTier -> API.FRFSVehicleServiceTierAPI

@@ -84,6 +84,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                 BusLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    agencyGtfsId = leg.agency >>= (.gtfsId),
                     ..
                   }
 
@@ -103,6 +104,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                 MetroLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    agencyGtfsId = leg.agency >>= (.gtfsId),
                     ..
                   }
 
@@ -122,6 +124,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                 SubwayLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    agencyGtfsId = leg.agency >>= (.gtfsId),
                     ..
                   }
 

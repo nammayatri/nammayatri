@@ -14,21 +14,21 @@ import qualified Kernel.Types.TimeBound
 import Tools.Beam.UtilsTH
 
 data RouteStopMappingT f = RouteStopMappingT
-  { estimatedTravelTimeFromPreviousStop :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
-    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    providerCode :: B.C f Kernel.Prelude.Text,
-    routeCode :: B.C f Kernel.Prelude.Text,
-    sequenceNum :: B.C f Kernel.Prelude.Int,
-    stopCode :: B.C f Kernel.Prelude.Text,
-    stopName :: B.C f Kernel.Prelude.Text,
-    stopLat :: B.C f Kernel.Prelude.Double,
-    stopLon :: B.C f Kernel.Prelude.Double,
-    timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,
-    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { estimatedTravelTimeFromPreviousStop :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds)),
+    integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    providerCode :: (B.C f Kernel.Prelude.Text),
+    routeCode :: (B.C f Kernel.Prelude.Text),
+    sequenceNum :: (B.C f Kernel.Prelude.Int),
+    stopCode :: (B.C f Kernel.Prelude.Text),
+    stopName :: (B.C f Kernel.Prelude.Text),
+    stopLat :: (B.C f Kernel.Prelude.Double),
+    stopLon :: (B.C f Kernel.Prelude.Double),
+    timeBounds :: (B.C f Kernel.Types.TimeBound.TimeBound),
+    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +40,6 @@ instance B.Table RouteStopMappingT where
 
 type RouteStopMapping = RouteStopMappingT Identity
 
-$(enableKVPG ''RouteStopMappingT ['integratedBppConfigId, 'routeCode, 'sequenceNum, 'stopCode] [])
+$(enableKVPG (''RouteStopMappingT) [('integratedBppConfigId), ('routeCode), ('sequenceNum), ('stopCode)] [])
 
-$(mkTableInstances ''RouteStopMappingT "route_stop_mapping")
+$(mkTableInstances (''RouteStopMappingT) "route_stop_mapping")

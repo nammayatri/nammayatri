@@ -22,7 +22,7 @@ instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLe
     pure $
       Just
         Domain.Types.WalkLegMultimodal.WalkLegMultimodal
-          { estimatedDistance = Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit,
+          { estimatedDistance = (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit),
             estimatedDuration = estimatedDuration,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
@@ -43,22 +43,22 @@ instance ToTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLegM
       { Beam.distanceUnit = (.unit) <$> estimatedDistance,
         Beam.estimatedDistance = (.value) <$> estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
-        Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.fromLocationId = (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.agency = journeyLegInfo >>= (.agency),
+        Beam.agency = (journeyLegInfo >>= (.agency)),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
-        Beam.isDeleted = journeyLegInfo >>= (.isDeleted),
+        Beam.isDeleted = (journeyLegInfo >>= (.isDeleted)),
         Beam.journeyId = Kernel.Prelude.fmap (.journeyId) journeyLegInfo,
         Beam.journeyLegOrder = Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo,
-        Beam.onSearchFailed = journeyLegInfo >>= (.onSearchFailed),
-        Beam.pricingId = journeyLegInfo >>= (.pricingId),
+        Beam.onSearchFailed = (journeyLegInfo >>= (.onSearchFailed)),
+        Beam.pricingId = (journeyLegInfo >>= (.pricingId)),
         Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.startTime = startTime,
         Beam.status = status,
-        Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
+        Beam.toLocationId = (Kernel.Types.Id.getId <$> (toLocation <&> (.id))),
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
