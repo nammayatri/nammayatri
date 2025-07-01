@@ -96,7 +96,12 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf pendingFees.currency (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
-  splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails vendorFees amount else pure Nothing
+  let driverFeeIds = map (.id) driverFees
+  let currentVendorFees =
+        if splitEnabled -- Filter vendor fees only for the driver fees that are being settled right now
+          then filter (\vf -> vf.driverFeeId `elem` driverFeeIds) vendorFees
+          else vendorFees
+  splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails currentVendorFees amount else pure Nothing
   logInfo $ "split details: " <> show splitSettlementDetails
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
