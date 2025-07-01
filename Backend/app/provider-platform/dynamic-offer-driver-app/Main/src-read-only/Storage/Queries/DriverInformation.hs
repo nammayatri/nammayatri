@@ -368,6 +368,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.onRide onRide,
       Se.Set Beam.onRideTripCategory onRideTripCategory,
       Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory,
+      Se.Set Beam.onlineDurationRefreshedAt onlineDurationRefreshedAt,
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentPending paymentPending,
       Se.Set Beam.payoutRegAmountRefunded payoutRegAmountRefunded,

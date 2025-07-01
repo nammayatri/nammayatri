@@ -145,6 +145,7 @@ library
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
+      Domain.Action.Dashboard.Fleet.LiveMap
       Domain.Action.Dashboard.Fleet.Onboarding
       Domain.Action.Dashboard.Fleet.Referral
       Domain.Action.Dashboard.Fleet.Registration
@@ -233,6 +234,7 @@ library
       Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
+      Domain.Action.UI.LiveMap
       Domain.Action.UI.LmsModule
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
@@ -705,6 +707,7 @@ library
       API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Fleet.LiveMap
       API.Action.Dashboard.Fleet.Onboarding
       API.Action.Dashboard.Fleet.RegistrationV2
       API.Action.Dashboard.IssueManagement
@@ -748,6 +751,7 @@ library
       API.Action.UI.FareCalculator
       API.Action.UI.Insurance
       API.Action.UI.Invoice
+      API.Action.UI.LiveMap
       API.Action.UI.LmsModule
       API.Action.UI.Merchant
       API.Action.UI.MeterRide
@@ -795,6 +799,7 @@ library
       API.Types.UI.FareCalculator
       API.Types.UI.Insurance
       API.Types.UI.Invoice
+      API.Types.UI.LiveMap
       API.Types.UI.LmsModule
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
