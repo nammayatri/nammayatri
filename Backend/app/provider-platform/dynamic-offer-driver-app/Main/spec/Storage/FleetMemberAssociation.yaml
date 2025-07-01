@@ -49,6 +49,9 @@ FleetMemberAssociation:
         and:
           - eq: [fleetMemberId, groupCode]
 
+    create:
+      kvFunction: createWithKV
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
