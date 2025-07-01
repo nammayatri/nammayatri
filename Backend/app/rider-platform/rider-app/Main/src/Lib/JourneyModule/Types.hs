@@ -4,6 +4,7 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2)
+import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -313,7 +314,9 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
-    providerName :: Maybe Text
+    providerName :: Maybe Text,
+    adultTicketQuantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -343,7 +346,9 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     providerRouteId :: Maybe Text,
     deviceId :: Maybe Text,
     ticketTypeCode :: Maybe Text,
-    selectedServiceTier :: Maybe LegServiceTier
+    selectedServiceTier :: Maybe LegServiceTier,
+    adultTicketQuantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -374,7 +379,9 @@ data BusLegExtraInfo = BusLegExtraInfo
     providerName :: Maybe Text,
     selectedServiceTier :: Maybe LegServiceTier,
     frequency :: Maybe Seconds,
-    alternateShortNames :: [Text]
+    alternateShortNames :: [Text],
+    adultTicketQuantity :: Maybe Int,
+    childTicketQuantity :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -412,10 +419,73 @@ instance ToJSON UnifiedTicketQR where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON UnifiedTicketQR where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = withObject "UnifiedTicketQR" $ \o -> do
+    version <- o .: "version"
+    _type <- o .: "type"
+    txnId <- o .: "txnId"
+    createdAt <- o .: "createdAt"
+    cmrl <- o .: "CMRL"
+    mtc <- o .: "MTC"
+    cris <- o .: "CRIS"
+    return $ UnifiedTicketQR version _type txnId createdAt cmrl mtc cris
 
 data Provider = CMRL | MTC | DIRECT | CRIS
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data BookingDataV2 = BookingDataV2
+  { bookingId :: Text,
+    isRoundTrip :: Bool,
+    ticketData :: [Text]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance FromJSON BookingDataV2 where
+  parseJSON = withObject "BookingDataV2" $ \o -> do
+    bookingId <- o .: "BookingId"
+    isRoundTrip <- o .: "isRoundTrip"
+    ticketData <- o .: "data"
+    return $ BookingDataV2 bookingId isRoundTrip ticketData
+
+instance ToJSON BookingDataV2 where
+  toJSON (BookingDataV2 bookingId isRoundTrip ticketData) =
+    object
+      [ "BookingId" .= bookingId,
+        "isRoundTrip" .= isRoundTrip,
+        "data" .= ticketData
+      ]
+
+data UnifiedTicketQRV2 = UnifiedTicketQRV2
+  { version :: Text,
+    _type :: Text,
+    txnId :: Text,
+    createdAt :: UTCTime,
+    cmrl :: [BookingDataV2],
+    mtc :: [BookingDataV2]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance FromJSON UnifiedTicketQRV2 where
+  parseJSON = withObject "UnifiedTicketQRV2" $ \o -> do
+    version <- o .: "version"
+    _type <- o .: "type"
+    txnId <- o .: "txnId"
+    createdAt <- o .: "createdAt"
+    cmrl <- o .: "CMRL"
+    mtc <- o .: "MTC"
+    return $ UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc
+
+instance ToJSON UnifiedTicketQRV2 where
+  toJSON (UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc) =
+    object
+      [ "version" .= version,
+        "type" .= _type,
+        "txnId" .= txnId,
+        "createdAt" .= createdAt,
+        "CMRL" .= cmrl,
+        "MTC" .= mtc
+      ]
 
 data IsCancellableResponse = IsCancellableResponse
   { canCancel :: Bool
@@ -735,7 +805,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
-                  providerName = Just booking.providerName
+                  providerName = Just booking.providerName,
+                  adultTicketQuantity = Just booking.quantity,
+                  childTicketQuantity = booking.childTicketQuantity
                 }
         Spec.BUS -> do
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
@@ -763,7 +835,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
                   alternateShortNames = journeyRouteDetail.alternateShortNames,
-                  selectedServiceTier = mbSelectedServiceTier
+                  selectedServiceTier = mbSelectedServiceTier,
+                  adultTicketQuantity = Just booking.quantity,
+                  childTicketQuantity = booking.childTicketQuantity
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -783,8 +857,10 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
-                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for show cris ticket but still sending for future use
-                  selectedServiceTier = mbSelectedServiceTier
+                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for cris sdk initiation
+                  selectedServiceTier = mbSelectedServiceTier,
+                  adultTicketQuantity = Just booking.quantity,
+                  childTicketQuantity = booking.childTicketQuantity
                 }
 
 getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
@@ -911,7 +987,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
-                  providerName = Nothing
+                  providerName = Nothing,
+                  adultTicketQuantity = mbQuote <&> (.quantity),
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
         Spec.BUS -> do
           journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
@@ -937,7 +1015,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   selectedServiceTier = mbSelectedServiceTier,
                   alternateShortNames = journeyRouteDetail.alternateShortNames,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails,
-                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
+                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails,
+                  adultTicketQuantity = mbQuote <&> (.quantity),
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
@@ -954,7 +1034,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   deviceId = Nothing, -- not required for cris sdk initiation
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- required for cris sdk initiation
                   ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- required for cris sdk initiation
-                  selectedServiceTier = mbSelectedServiceTier
+                  selectedServiceTier = mbSelectedServiceTier,
+                  adultTicketQuantity = mbQuote <&> (.quantity),
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
 
 getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
