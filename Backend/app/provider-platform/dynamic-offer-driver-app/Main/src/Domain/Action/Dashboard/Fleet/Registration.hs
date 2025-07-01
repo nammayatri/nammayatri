@@ -42,6 +42,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
+import GHC.Records.Extra
 import Kernel.External.Encryption (encrypt, getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -104,7 +105,9 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     directlyStartFirstTripAssignment :: Maybe Bool,
     endRideDistanceThreshold :: Maybe Int,
     rideEndApproval :: Maybe Bool,
-    unlinkDriverAndVehicleOnTripTermination :: Maybe Bool
+    unlinkDriverAndVehicleOnTripTermination :: Maybe Bool,
+    fleetVehicleVerificationSkippable :: Maybe Bool,
+    driverVehicleVerificationSkippable :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -138,18 +141,20 @@ fleetOwnerRegister req mbEnabled = do
       now <- getCurrentTime
       let fleetConfig =
             DFC.FleetConfig
-              { allowAutomaticRoundTripAssignment = fromMaybe True req.allowAutomaticRoundTripAssignment,
-                allowEndingMidRoute = fromMaybe False req.allowEndingMidRoute,
-                allowStartRideFromQR = fromMaybe True req.allowStartRideFromQR,
-                directlyStartFirstTripAssignment = fromMaybe True req.directlyStartFirstTripAssignment,
-                endRideDistanceThreshold = metersToHighPrecMeters (Meters (fromMaybe 100 req.endRideDistanceThreshold)),
-                fleetOwnerId = person.id,
-                rideEndApproval = fromMaybe False req.rideEndApproval,
-                unlinkDriverAndVehicleOnTripTermination = fromMaybe True req.unlinkDriverAndVehicleOnTripTermination,
-                merchantId = Just merchant.id,
+              { allowAutomaticRoundTripAssignment = fromMaybe True (getField @"allowAutomaticRoundTripAssignment" req),
+                allowEndingMidRoute = fromMaybe False (getField @"allowEndingMidRoute" req),
+                allowStartRideFromQR = fromMaybe True (getField @"allowStartRideFromQR" req),
+                directlyStartFirstTripAssignment = fromMaybe True (getField @"directlyStartFirstTripAssignment" req),
+                endRideDistanceThreshold = metersToHighPrecMeters (Meters (fromMaybe 100 (getField @"endRideDistanceThreshold" req))),
+                fleetOwnerId = (getField @"id" person),
+                rideEndApproval = fromMaybe False (getField @"rideEndApproval" req),
+                unlinkDriverAndVehicleOnTripTermination = fromMaybe True (getField @"unlinkDriverAndVehicleOnTripTermination" req),
+                merchantId = Just (getField @"id" merchant),
                 merchantOperatingCityId = Just merchantOpCityId,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                fleetVehicleVerificationSkippable = fromMaybe False (getField @"fleetVehicleVerificationSkippable" req),
+                driverVehicleVerificationSkippable = fromMaybe False (getField @"driverVehicleVerificationSkippable" req)
               }
       mbExisting <- QFC.findByPrimaryKey person.id
       case mbExisting of

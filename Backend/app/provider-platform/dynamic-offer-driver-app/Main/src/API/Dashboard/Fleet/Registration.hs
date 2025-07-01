@@ -14,23 +14,31 @@
 
 module API.Dashboard.Fleet.Registration
   ( FleetOwnerLoginAPI,
+    FleetOwnerVerifyAPI,
+    FleetOwnerRegisterAPI,
+    FleetOwnerRegisterHelperAPI,
+    AddFleetMemberAssociationAPI,
     fleetOwnerLogin,
     fleetOwnerVerify,
-    FleetOwnerRegisterAPI,
-    AddFleetMemberAssociationAPI,
+    fleetOwnerRegister,
+    addFleetMemberAssociation,
     handler,
     API,
+    FleetRegistrationReq,
   )
 where
 
+import Data.Aeson ()
+import Data.OpenApi ()
 import qualified Domain.Action.Dashboard.Fleet.Registration as DFleet
 import qualified Domain.Types.FleetMemberAssociation as FMA
 import qualified Domain.Types.Merchant as DM
 import Environment
-import Kernel.Prelude
+import GHC.Generics (Generic)
+import Kernel.Prelude hiding (Generic)
 import qualified Kernel.Prelude as KP
 import Kernel.Types.APISuccess
-import Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -111,3 +119,29 @@ addFleetMemberAssociation assoc = withDashboardFlowHandlerAPI $ do
         Left err -> do
           Logger.logError $ "[FleetMemberAssociation] Failed to add: " <> KP.show assoc <> ", error: " <> KP.show err
           throwError $ InternalError (show err)
+
+data FleetRegistrationReq = FleetRegistrationReq
+  { firstName :: Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Maybe Text,
+    email :: Maybe Text,
+    operatingCity :: Text,
+    fleetType :: Text,
+    gstNumber :: Maybe Text,
+    gstImageId :: Maybe Text,
+    panNumber :: Maybe Text,
+    aadhaarNumber :: Maybe Text,
+    businessLicenseNumber :: Maybe Text,
+    operatingRouteCodes :: [Text],
+    allowAutomaticRoundTripAssignment :: Maybe Bool,
+    allowEndingMidRoute :: Maybe Bool,
+    allowStartRideFromQR :: Maybe Bool,
+    directlyStartFirstTripAssignment :: Maybe Bool,
+    endRideDistanceThreshold :: Maybe Int,
+    rideEndApproval :: Maybe Bool,
+    unlinkDriverAndVehicleOnTripTermination :: Maybe Bool,
+    fleetVehicleVerificationSkippable :: Maybe Bool,
+    driverVehicleVerificationSkippable :: Maybe Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

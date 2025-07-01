@@ -14,6 +14,7 @@
 
 module API.Dashboard.Fleet where
 
+import qualified API.Dashboard.Fleet.BulkAssociation as BulkAssociation
 import qualified API.Dashboard.Fleet.Registration as Registration
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -24,8 +25,7 @@ import Tools.Auth
 
 type API =
   DashboardTokenAuth
-    :> Registration.API
+    :> (Registration.API :<|> "fleet" :> BulkAssociation.API)
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
-handler merchantId city _ = do
-  Registration.handler merchantId city
+handler merchantId city _ = Registration.handler merchantId city :<|> BulkAssociation.handler merchantId city

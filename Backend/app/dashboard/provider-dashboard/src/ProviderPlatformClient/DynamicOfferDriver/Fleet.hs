@@ -19,6 +19,7 @@ module ProviderPlatformClient.DynamicOfferDriver.Fleet
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.BulkAssociation as BulkAssoc
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import Domain.Types.FleetMemberAssociation
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -29,6 +30,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Utils.Common
 import Servant
+import Servant.Multipart
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
@@ -40,22 +42,26 @@ data FleetRegistrationAPIs = FleetRegistrationAPIs
     addFleetMemberAssociation :: Domain.Types.FleetMemberAssociation.FleetMemberAssociation -> Euler.EulerClient APISuccess
   }
 
-newtype FleetAPIs = FleetAPIs
-  { registration :: FleetRegistrationAPIs
+data FleetBulkAPIs = FleetBulkAPIs
+  { bulkAssociate :: MultipartData Mem -> Euler.EulerClient [BulkAssoc.BulkFleetAssociationResult]
+  }
+
+data FleetAPIs = FleetAPIs
+  { registration :: FleetRegistrationAPIs,
+    bulk :: FleetBulkAPIs
   }
 
 mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
-  let registration = FleetRegistrationAPIs {..}
+  let client = clientWithMerchantAndCity (Proxy :: Proxy BPP.API)
+      (regClient :<|> bulkClient) = client merchantId city token
+
+      (fleetOwnerLogin :<|> fleetOwnerVerify :<|> fleetOwnerRegister :<|> addFleetMemberAssociation) = regClient
+
+      registration = FleetRegistrationAPIs {..}
+      bulk = FleetBulkAPIs {bulkAssociate = \multipartData -> bulkClient ("", multipartData)}
 
   FleetAPIs {..}
-  where
-    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API)
-
-    fleetOwnerLogin
-      :<|> fleetOwnerVerify
-      :<|> fleetOwnerRegister
-      :<|> addFleetMemberAssociation = fleetRegisterationClient merchantId city token
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.
