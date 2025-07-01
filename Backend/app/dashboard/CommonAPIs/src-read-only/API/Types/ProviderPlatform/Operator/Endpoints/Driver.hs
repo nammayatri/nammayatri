@@ -65,7 +65,8 @@ data OperationHub = OperationHub
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OperationHubDriverRequest = OperationHubDriverRequest
-  { driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { creatorPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
     operationHubId :: Kernel.Types.Id.Id OperationHub,
     operationHubName :: Kernel.Prelude.Text,
