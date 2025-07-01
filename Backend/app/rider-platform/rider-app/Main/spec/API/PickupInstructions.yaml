@@ -1,0 +1,31 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  PickupInstructions: Domain.Types.PickupInstructions
+  APISuccess: Kernel.Types.APISuccess
+
+module: PickupInstructions
+
+types:
+  PickupInstructionsReq:
+    pickupInstructions: [Text]
+
+  PickupInstructionsResp:
+    pickupInstructions: [Text]
+
+apis:
+  # POST /pickup-instructions - Save pickup instructions
+  - POST:
+      endpoint: /pickupinstructions
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.PickupInstructions.PickupInstructionsReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /pickup-instructions - Get user's pickup instructions
+  - GET:
+      endpoint: /pickupinstructions
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.PickupInstructions.PickupInstructionsResp

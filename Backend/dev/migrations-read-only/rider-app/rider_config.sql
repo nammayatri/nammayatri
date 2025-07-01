@@ -292,4 +292,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_config json  default 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_instructions_threshold integer ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_multi_modal_for_all_users boolean  default false;

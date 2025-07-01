@@ -79,6 +79,7 @@ data RiderConfig = RiderConfig
     payoutReferralThresholdPerDay :: Kernel.Prelude.Int,
     payoutReferralThresholdPerMonth :: Kernel.Prelude.Int,
     permissibleModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
+    pickupInstructionsThreshold :: Kernel.Prelude.Int,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
@@ -106,7 +107,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, Eq)
+  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
 
 data BusTrackingConfig = BusTrackingConfig
   { fairScore :: Kernel.Prelude.Double,
