@@ -272,6 +272,8 @@ executable provider-dashboard-exe
     , record-hasfield
     , sequelize
     , servant-client
+    , servant-multipart
+    , servant-multipart-api
     , servant-openapi3
     , servant-server
     , shared-services

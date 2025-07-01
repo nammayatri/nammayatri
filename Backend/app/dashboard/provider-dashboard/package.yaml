@@ -69,6 +69,8 @@ dependencies:
   - text
   - time
   - servant-server
+  - servant-multipart
+  - servant-multipart-api
   - servant-client
   - persistent
   - persistent-postgresql
