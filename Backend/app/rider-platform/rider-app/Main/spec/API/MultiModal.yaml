@@ -173,6 +173,7 @@ types:
     osType: Text
     osBuildVersion: Text
     bookAuthCode: Text
+    derive: "Show"
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
