@@ -57,6 +57,10 @@ data ExtendLegReq = ExtendLegReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.UnifiedTicketQRV2, provider :: Lib.JourneyModule.Types.Provider}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
   { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
@@ -126,6 +130,16 @@ data LegStatus = LegStatus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MultimodalTicketVerifyReq
+  = IntegratedQR IntegratedQRReq
+  | SingleQR SingleQRReq
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalTicketVerifyResp = MultimodalTicketVerifyResp {legInfo :: [Lib.JourneyModule.Types.LegInfo], provider :: Lib.JourneyModule.Types.Provider}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MultimodalTransitOptionData = MultimodalTransitOptionData {duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds, travelModes :: [Domain.Types.Trip.MultimodalTravelMode]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -164,6 +178,10 @@ data RateMultiModelTravelModes = RateMultiModelTravelModes {isExperienceGood :: 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, latLong :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SingleQRReq = SingleQRReq {provider :: Lib.JourneyModule.Types.Provider, tickets :: [Kernel.Prelude.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

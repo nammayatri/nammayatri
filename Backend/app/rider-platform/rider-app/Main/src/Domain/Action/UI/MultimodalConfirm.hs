@@ -23,6 +23,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSetStatus,
+    postMultimodalTicketVerify,
   )
 where
 
@@ -30,7 +31,9 @@ import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.Select as Select
+import BecknV2.FRFS.Enums
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
@@ -49,6 +52,7 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Payment.Interface.Types as KT
@@ -72,6 +76,7 @@ import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -875,3 +880,40 @@ postMultimodalOrderSetStatus (_mbPersonId, _merchantId) journeyId legOrder newSt
     updateJourneyLegInTicketBooking mbTicketBookingId = do
       ticketBookingId <- mbTicketBookingId & fromMaybeM (InvalidRequest $ "BookingId for given journeyId: " <> journeyId.getId <> ", legOrder: " <> show legOrder <> " not found")
       QTBooking.updateJourneyLegStatus (Just newStatus) ticketBookingId
+
+postMultimodalTicketVerify ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Beckn.Context.City ->
+  API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
+  Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
+postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
+  let verifyTicketsAndBuildResponse provider tickets = do
+        legInfoList <- forM tickets $ \ticketQR -> do
+          ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
+          booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
+          JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
+        return $
+          API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
+            { provider = provider,
+              legInfo = legInfoList
+            }
+
+  case req of
+    ApiTypes.IntegratedQR integratedQRData -> do
+      case integratedQRData.provider of
+        JMTypes.MTC -> do
+          let allTickets = concatMap (.ticketData) integratedQRData.integratedQR.mtc
+          verifyTicketsAndBuildResponse integratedQRData.provider allTickets
+        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
+        _ -> throwError $ InvalidRequest "Invalid provider"
+    ApiTypes.SingleQR singleQRData -> do
+      case singleQRData.provider of
+        JMTypes.MTC -> verifyTicketsAndBuildResponse singleQRData.provider singleQRData.tickets
+        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
+        _ -> throwError $ InvalidRequest "Invalid provider"

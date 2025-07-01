@@ -42,6 +42,8 @@ import qualified Utils.Common.JWT.TransitClaim as TC
 
 data DOnStatus = Booking DOrder | TicketVerification DTicketPayload
 
+data DOnStatusResp = Async | TicketVerificationSync Ticket.FRFSTicket
+
 validateRequest :: DOnStatus -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest (Booking DOrder {..}) = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
@@ -56,7 +58,7 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 
-onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow ()
+onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
   statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
   let googleWalletStates = map (\(ticketNumber, status, _vehicleNumber) -> (ticketNumber, GWSA.mapToGoogleTicketStatus status)) statuses
@@ -73,6 +75,7 @@ onStatus _merchant booking (Booking dOrder) = do
     let mbClassName = HashMap.lookup booking.merchantOperatingCityId.getId walletPOCfg.className
     whenJust mbClassName $ \_ -> fork ("updating status of tickets in google wallet for bookingId " <> booking.id.getId) $ traverse_ updateStatesForGoogleWallet googleWalletStates
   traverse_ refreshTicket dOrder.tickets
+  return Async
   where
     updateTicket (ticketNumber, status, vehicleNumber) =
       void $ QTicket.updateStatusByTBookingIdAndTicketNumber status vehicleNumber booking.id ticketNumber
@@ -96,5 +99,7 @@ onStatus _merchant booking (Booking dOrder) = do
         void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticket.qrData (Just qrRefreshAt) booking.id ticket.ticketNumber
 onStatus _merchant booking (TicketVerification ticketPayload) = do
   ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketPayload.ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
-  unless (ticket.status == Ticket.ACTIVE) $ throwError (InvalidRequest "Ticket is not in Active state")
-  void $ QTicket.updateStatusByTBookingIdAndTicketNumber Ticket.USED Nothing booking.id ticket.ticketNumber
+  let terminalTicketStates = [Ticket.USED, Ticket.EXPIRED, Ticket.CANCELLED]
+  unless (ticket.status `elem` terminalTicketStates) $
+    void $ QTicket.updateStatusByTBookingIdAndTicketNumber Ticket.USED Nothing booking.id ticket.ticketNumber
+  return $ TicketVerificationSync ticket
