@@ -87,7 +87,8 @@ parseToRouteStopTimeTable integratedBPPConfig mid mocid vehicleCategory entry =
             updatedAt = entry.updatedAt,
             delay = Nothing,
             source = GTFS,
-            stage = entry.stage
+            stage = entry.stage,
+            platformCode = entry.platformCode
           },
         RouteStopTimeTable
           { integratedBppConfigId = integratedBPPConfig,
@@ -103,7 +104,8 @@ parseToRouteStopTimeTable integratedBPPConfig mid mocid vehicleCategory entry =
             updatedAt = entry.updatedAt,
             delay = Nothing,
             source = GTFS,
-            stage = entry.stage
+            stage = entry.stage,
+            platformCode = entry.platformCode
           }
       ]
     _ ->
@@ -121,6 +123,7 @@ parseToRouteStopTimeTable integratedBPPConfig mid mocid vehicleCategory entry =
             updatedAt = entry.updatedAt,
             delay = Nothing,
             source = GTFS,
-            stage = entry.stage
+            stage = entry.stage,
+            platformCode = entry.platformCode
           }
       ]

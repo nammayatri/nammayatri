@@ -137,7 +137,8 @@ transformEntry stopData timestamp entry = do
       timeOfDeparture = secondsToTime entry.scheduledDeparture,
       tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
       createdAt = timestamp,
-      updatedAt = timestamp
+      updatedAt = timestamp,
+      platformCode = stopData.stop >>= (.platformCode)
     }
 
 -- Convert seconds from midnight to HH:MM:SS format

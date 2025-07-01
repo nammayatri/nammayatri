@@ -241,14 +241,14 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
       let fromStopDetails =
             MultiModalTypes.MultiModalStopDetails
               { stopCode = Just singleModeRouteDetails.fromStop.stopCode,
-                platformCode = Nothing,
+                platformCode = singleModeRouteDetails.fromStop.platformNumber,
                 name = Just singleModeRouteDetails.fromStop.stopName,
                 gtfsId = Just singleModeRouteDetails.fromStop.stopCode
               }
       let toStopDetails =
             MultiModalTypes.MultiModalStopDetails
               { stopCode = Just singleModeRouteDetails.toStop.stopCode,
-                platformCode = Nothing,
+                platformCode = singleModeRouteDetails.toStop.platformNumber,
                 name = Just singleModeRouteDetails.toStop.stopName,
                 gtfsId = Just singleModeRouteDetails.toStop.stopCode
               }

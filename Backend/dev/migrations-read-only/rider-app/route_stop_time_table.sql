@@ -40,3 +40,8 @@ ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN source text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN stage integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN platform_code text ;

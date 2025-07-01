@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 data RouteStopTimeTableT f = RouteStopTimeTableT
   { delay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
+    platformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeCode :: B.C f Kernel.Prelude.Text,
     serviceTierType :: B.C f BecknV2.FRFS.Enums.ServiceTierType,
     source :: B.C f (Kernel.Prelude.Maybe Domain.Types.RouteStopTimeTable.SourceType),

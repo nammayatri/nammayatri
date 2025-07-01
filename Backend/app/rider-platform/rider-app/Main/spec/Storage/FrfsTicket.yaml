@@ -1156,6 +1156,7 @@ RouteStopTimeTable:
     delay: Maybe Seconds
     source: SourceType
     stage: Maybe Int
+    platformCode: Maybe Text
   beamType:
     source: Maybe SourceType
   types:
