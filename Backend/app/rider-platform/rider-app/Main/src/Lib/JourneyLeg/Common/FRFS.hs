@@ -44,7 +44,6 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.TimeBound
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
@@ -68,7 +67,6 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyRouteDetails as QJRD
-import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
 -- getState and other functions from the original file...
@@ -80,9 +78,10 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
   let userPosition = (.latLong) <$> listToMaybe riderLastPoints
   case mbBooking of
     Just booking -> do
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
       case mode of
         DTrip.Bus -> do
-          (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationId isLastCompleted
+          (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationCode integratedBppConfig isLastCompleted
           when statusChanged $ QTBooking.updateJourneyLegStatus (Just newStatus) booking.id
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
 
@@ -96,8 +95,8 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
             Nothing -> pure []
 
           -- Fetch user's boarding station and leg's end station details
-          mbUserBoardingStation <- QStation.findById booking.fromStationId
-          mbLegEndStation <- QStation.findById booking.toStationId
+          mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBppConfig
+          mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBppConfig
 
           let baseStateData =
                 JT.JourneyLegStateData
@@ -148,7 +147,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
         _ -> do
           -- Other modes (Metro, Subway, etc.)
           -- Note: The old getVehiclePosition is still used here.
-          routeStatuses <- getStatusForMetroAndSubway booking.journeyRouteDetails booking.searchId isLastCompleted
+          routeStatuses <- getStatusForMetroAndSubway booking.journeyRouteDetails booking.searchId integratedBppConfig isLastCompleted
           lastSubRoute <- safeLast routeStatuses & fromMaybeM (InternalError "New Status Not Found")
           let (_, lastStatusChanged, lastNewStatusFromSubway) = lastSubRoute
           when lastStatusChanged $ do
@@ -194,10 +193,11 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
                 ]
           return $ JT.Transit journeyLegStates
     Nothing -> do
+      searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity searchReq
       case mode of
         DTrip.Bus -> do
-          searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          (statusChanged, newStatus) <- processOldStatus searchReq.journeyLegStatus searchReq.toStationId isLastCompleted
+          (statusChanged, newStatus) <- processOldStatus searchReq.journeyLegStatus searchReq.toStationCode integratedBppConfig isLastCompleted
           when statusChanged $ QFRFSSearch.updateJourneyLegStatus (Just newStatus) searchReq.id
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
@@ -210,8 +210,8 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
             Nothing -> pure []
 
           -- Fetch user's boarding station and leg's end station details
-          mbUserBoardingStation <- QStation.findById searchReq.fromStationId
-          mbLegEndStation <- QStation.findById searchReq.toStationId
+          mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBppConfig
+          mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBppConfig
 
           let baseStateData =
                 JT.JourneyLegStateData
@@ -261,8 +261,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
           return $ JT.Single finalStateData
         _ -> do
           -- Other modes (Metro, Subway, etc.)
-          searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          routeStatuses <- getStatusForMetroAndSubway searchReq.journeyRouteDetails searchReq.id isLastCompleted
+          routeStatuses <- getStatusForMetroAndSubway searchReq.journeyRouteDetails searchReq.id integratedBppConfig isLastCompleted
           lastSubRoute <- safeLast routeStatuses & fromMaybeM (InternalError "New Status Not Found")
           let (_, lastStatusChanged, lastNewStatus) = lastSubRoute
           when lastStatusChanged $ QFRFSSearch.updateJourneyLegStatus (Just lastNewStatus) searchReq.id
@@ -390,22 +389,22 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
     isUpcomingJourneyLeg :: JPT.JourneyLegStatus -> Bool
     isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.Booked, JPT.InPlan, JPT.OnTheWay, JPT.Arriving, JPT.Arrived]
 
-    processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JPT.JourneyLegStatus -> Id Station -> Bool -> m (Bool, JPT.JourneyLegStatus)
-    processOldStatus mbOldStatus toStationId isLastCompleted' = do
-      mbToStation <- QStation.findById toStationId
+    processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Maybe JPT.JourneyLegStatus -> Text -> DIBC.IntegratedBPPConfig -> Bool -> m (Bool, JPT.JourneyLegStatus)
+    processOldStatus mbOldStatus toStationCode integratedBppConfig isLastCompleted' = do
+      mbToStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBppConfig
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
       let oldStatus = fromMaybe (if isLastCompleted' then JPT.OnTheWay else JPT.InPlan) mbOldStatus
       return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted') mbToLatLong
 
-    getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [JPT.MultiModalJourneyRouteDetails] -> Id Domain.Types.FRFSSearch.FRFSSearch -> Bool -> m [(JPT.MultiModalJourneyRouteDetails, Bool, JPT.JourneyLegStatus)]
-    getStatusForMetroAndSubway journeyRouteDetails searchId' isLastCompleted' = do
+    getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [JPT.MultiModalJourneyRouteDetails] -> Id Domain.Types.FRFSSearch.FRFSSearch -> DIBC.IntegratedBPPConfig -> Bool -> m [(JPT.MultiModalJourneyRouteDetails, Bool, JPT.JourneyLegStatus)]
+    getStatusForMetroAndSubway journeyRouteDetails searchId' integratedBppConfig isLastCompleted' = do
       let sortedSubRoutes = sortOn (.subLegOrder) journeyRouteDetails
       (_, (_, processedStatuses)) <-
         foldM
           ( \(isFirst, (prevStatus, acc)) subRoute -> do
-              toStationId <- subRoute.toStationId & fromMaybeM (InternalError "Missing toStationId")
+              toStationCode <- subRoute.toStationCode & fromMaybeM (InternalError "Missing toStationCode")
               let newIsLastCompleted = if isFirst then prevStatus else False
-              newStatus <- processOldStatus subRoute.journeyStatus toStationId newIsLastCompleted
+              newStatus <- processOldStatus subRoute.journeyStatus toStationCode integratedBppConfig newIsLastCompleted
               if snd newStatus == JPT.Completed
                 then pure (True, (newIsLastCompleted, newStatus : acc))
                 else pure (False, (newIsLastCompleted, newStatus : acc))
@@ -507,59 +506,20 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           }
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency journeySearchData.agency merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
-  frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData) merchantOpCity integratedBPPConfig
+  frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
-  journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails merchantOpCity integratedBPPConfig
+  journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails integratedBPPConfig
   res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
-    buildFRFSSearchReq journeySearchData merchantOpCity integratedBPPConfig = do
+    buildFRFSSearchReq journeySearchData = do
       fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
       toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
-      _ <- createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude merchantOpCity integratedBPPConfig
-      _ <- createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude merchantOpCity integratedBPPConfig
       let routeCode = Nothing
       return $ API.FRFSSearchAPIReq {..}
 
-    createStationIfRequired :: JT.SearchRequestFlow m r c => Maybe Text -> Text -> Double -> Double -> MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> m (Maybe Station)
-    createStationIfRequired name code lat lon merchantOpCity integratedBPPConfig = do
-      mbStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId code integratedBPPConfig
-      case mbStation of
-        Just station -> return (Just station)
-        Nothing -> do
-          mbNewStation <- createStation name code lat lon merchantOpCity.id integratedBPPConfig
-          whenJust mbNewStation $ \station -> QStation.create station
-          return mbNewStation
-
-    createStation :: JT.SearchRequestFlow m r c => Maybe Text -> Text -> Double -> Double -> Id MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> m (Maybe Station)
-    createStation Nothing _ _ _ _ _ = return Nothing
-    createStation (Just name) code lat lon merchantOpCityId integratedBPPConfig = do
-      newId <- generateGUID
-      now <- getCurrentTime
-      return $
-        Just $
-          Station
-            { id = newId,
-              vehicleType = vehicleCategory,
-              name = name,
-              possibleTypes = Nothing,
-              code = code,
-              lat = Just lat,
-              lon = Just lon,
-              address = Nothing,
-              merchantId = merchantId,
-              timeBounds = Kernel.Types.TimeBound.Unbounded,
-              merchantOperatingCityId = merchantOpCityId,
-              integratedBppConfigId = integratedBPPConfig.id,
-              suggestedDestinations = Nothing,
-              regionalName = Nothing,
-              hindiName = Nothing,
-              createdAt = now,
-              updatedAt = now
-            }
-
-    getJourneyRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> m [JPT.MultiModalJourneyRouteDetails]
-    getJourneyRouteDetails routeDetails merchantOpCity integratedBPPConfig = do
+    getJourneyRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> DIBC.IntegratedBPPConfig -> m [JPT.MultiModalJourneyRouteDetails]
+    getJourneyRouteDetails routeDetails integratedBPPConfig = do
       mapM transformJourneyRouteDetails routeDetails
       where
         transformJourneyRouteDetails :: JT.SearchRequestFlow m r c => EMTypes.MultiModalRouteDetails -> m JPT.MultiModalJourneyRouteDetails
@@ -567,9 +527,9 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           fromStationCode <- ((rd.fromStopDetails >>= (.stopCode)) <|> ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
           toStationCode <- ((rd.toStopDetails >>= (.stopCode)) <|> ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
           routeCode <- (rd.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
-          fromStation <- createStationIfRequired (rd.fromStopDetails >>= (.name)) fromStationCode rd.startLocation.latLng.latitude rd.startLocation.latLng.longitude merchantOpCity integratedBPPConfig
-          toStation <- createStationIfRequired (rd.toStopDetails >>= (.name)) toStationCode rd.endLocation.latLng.latitude rd.endLocation.latLng.longitude merchantOpCity integratedBPPConfig
-          route <- fmap Just $ OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode
+          fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig
+          toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig
+          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
           return
             JPT.MultiModalJourneyRouteDetails
               { platformNumber = rd.fromStopDetails >>= (.platformCode),
@@ -580,9 +540,9 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
                 subLegOrder = Just (EMTypes.subLegOrder rd),
                 journeyStatus = Nothing,
                 routeLongName = EMTypes.longName rd,
-                fromStationId = fmap (.id) fromStation,
-                toStationId = fmap (.id) toStation,
-                routeId = fmap (.code) route
+                fromStationCode = fmap (.code) fromStation,
+                toStationCode = fmap (.code) toStation,
+                routeCode = fmap (.code) route
               }
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> m [FRFSRouteDetails]

@@ -34,6 +34,7 @@ import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
@@ -49,15 +50,16 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QRecon
@@ -69,7 +71,6 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
-import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
@@ -116,7 +117,8 @@ onConfirm merchant booking' dOrder = do
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
-  buildReconTable merchant booking dOrder tickets mRiderNumber
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  buildReconTable merchant booking dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
   void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
   void $ CQP.clearPSCache booking.riderId
@@ -131,7 +133,7 @@ onConfirm merchant booking' dOrder = do
         let mId = booking'.merchantId
         let mocId' = booking'.merchantOperatingCityId
         serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-        transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className
+        transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
         url <- mkGoogleWalletLink serviceAccount transitObjects'
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
@@ -160,12 +162,12 @@ onConfirm merchant booking' dOrder = do
               )
               mbBuildSmsReq
 
-buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> Flow ()
-buildReconTable merchant booking _dOrder tickets mRiderNumber = do
+buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> DIBC.IntegratedBPPConfig -> Flow ()
+buildReconTable merchant booking _dOrder tickets mRiderNumber integratedBPPConfig = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   quote <- runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-  fromStation <- runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "Station not found")
-  toStation <- runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (InternalError "Station not found")
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
   txn <- runInReplica $ QPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
   paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -287,10 +289,10 @@ scanQRFromBase64 txt = do
         Nothing -> pure $ Left "No QR code found in image"
         Just text -> pure $ Right text
 
-mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Int -> Flow TC.TransitObject
-mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex = do
-  toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
-  fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
+mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Int -> DIBC.IntegratedBPPConfig -> Flow TC.TransitObject
+mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex integratedBPPConfig = do
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
   let fromStaionNameLV = TC.LanguageValue {TC.language = "en-US", TC._value = fromStation.name}
   let toStaionNameLV = TC.LanguageValue {TC.language = "en-US", TC._value = toStation.name}
@@ -311,9 +313,9 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
   let nowText = GWSA.utcTimeToText now
   let validTillText = GWSA.utcTimeToText ticket.validTill
   let timeInterval = TC.TimeInterval {TC.start = TC.DateTime {TC.date = nowText}, TC.end = TC.DateTime {TC.date = validTillText}}
-  mbFromStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId fromStation.id pOrgId
+  mbFromStationPartnerOrg <- CQPOS.findByStationCodeAndPOrgId fromStation.code pOrgId |<|>| CQPOS.findByStationCodeAndPOrgId fromStation.id.getId pOrgId
   let fromStationGMMLocationId = maybe (fromStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbFromStationPartnerOrg
-  mbToStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId toStation.id pOrgId
+  mbToStationPartnerOrg <- CQPOS.findByStationCodeAndPOrgId toStation.code pOrgId |<|>| CQPOS.findByStationCodeAndPOrgId toStation.id.getId pOrgId
   let toStationGMMLocationId = maybe (toStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbToStationPartnerOrg
   let groupingInfo = TC.GroupingInfo {TC.groupingId = "Group." <> booking.id.getId, TC.sortIndex = sortIndex}
   let customCardTitleValue = GWSA.getCustomCardTitleValueByTripType tripType'
@@ -363,12 +365,12 @@ createTickets booking dTickets discountedTickets = go dTickets discountedTickets
       let newFreeTickets = if isTicketFree then freeTicketsLeft - 1 else freeTicketsLeft
       go ds newFreeTickets (ticket : acc)
 
-createTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
-createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets 1 []
+createTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> DIBC.IntegratedBPPConfig -> Flow [TC.TransitObject]
+createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig = go tickets 1 []
   where
     go [] _ acc = return (Prelude.reverse acc)
     go (x : xs) sortIndex acc = do
-      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className sortIndex
+      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className sortIndex integratedBPPConfig
       go xs (sortIndex + 1) (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon

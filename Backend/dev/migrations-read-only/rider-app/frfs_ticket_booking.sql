@@ -61,3 +61,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_type text NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN to_station_id TYPE text;
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN from_station_id TYPE text;

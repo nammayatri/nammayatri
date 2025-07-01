@@ -163,7 +163,7 @@ onSearch onSearchReq validatedReq = do
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
       else do
-        routeCodes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) (catMaybes ((map (.routeId) validatedReq.search.journeyRouteDetails) <> [validatedReq.search.routeId]))
+        routeCodes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)) (catMaybes ((map (.routeCode) validatedReq.search.journeyRouteDetails) <> [validatedReq.search.routeCode]))
         pure $ case routeCodes of
           [] -> onSearchReq.quotes
           routesCodes' -> filter (\quote -> quote.routeCode `elem` map (.code) routesCodes') onSearchReq.quotes
@@ -227,8 +227,8 @@ onSearch onSearchReq validatedReq = do
     cacheQuote quote = do
       let key =
             CachedQuote.FRFSCachedQuoteKey
-              { CachedQuote.fromStationId = quote.fromStationId,
-                CachedQuote.toStationId = quote.toStationId,
+              { CachedQuote.fromStationId = quote.fromStationCode,
+                CachedQuote.toStationId = quote.toStationCode,
                 CachedQuote.providerId = quote.providerId,
                 CachedQuote.quoteType = quote._type
               }
@@ -266,8 +266,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity search
-  startStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId dStartStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  endStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  startStation <- OTPRest.getStationByGtfsIdAndStopCode dStartStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  endStation <- OTPRest.getStationByGtfsIdAndStopCode dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let stationsJSON = stations & map (castStationToAPI integratedBPPConfig.id) & encodeToText
   let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
@@ -281,7 +281,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.bppItemId,
         Quote.bppSubscriberId = dOnSearch.bppSubscriberId,
         Quote.bppSubscriberUrl = dOnSearch.bppSubscriberUrl,
-        Quote.fromStationId = startStation.id,
+        Quote.fromStationCode = startStation.code,
+        Quote.toStationCode = endStation.code,
         Quote.id = uid,
         Quote.price,
         Quote.childPrice,
@@ -295,7 +296,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.stationsJson = stationsJSON,
         Quote.routeStationsJson = Just routeStationsJSON,
         Quote.discountsJson = Just discountsJSON,
-        Quote.toStationId = endStation.id,
         Quote.validTill,
         Quote.vehicleType,
         Quote.merchantId = search.merchantId,
@@ -386,7 +386,7 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.bppItemId = quotesFromOnSearch.bppItemId,
       Quote.bppSubscriberId = quotesFromOnSearch.bppSubscriberId,
       Quote.bppSubscriberUrl = quotesFromOnSearch.bppSubscriberUrl,
-      Quote.fromStationId = quotesFromCache.fromStationId,
+      Quote.fromStationCode = quotesFromCache.fromStationCode,
       Quote.id = quotesFromCache.id,
       Quote.price = quotesFromOnSearch.price,
       Quote.childPrice = quotesFromOnSearch.childPrice,
@@ -400,7 +400,7 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.stationsJson = quotesFromCache.stationsJson,
       Quote.routeStationsJson = quotesFromOnSearch.routeStationsJson,
       Quote.discountsJson = quotesFromOnSearch.discountsJson,
-      Quote.toStationId = quotesFromCache.toStationId,
+      Quote.toStationCode = quotesFromCache.toStationCode,
       Quote.validTill = quotesFromOnSearch.validTill,
       Quote.vehicleType = quotesFromCache.vehicleType,
       Quote.merchantId = quotesFromCache.merchantId,

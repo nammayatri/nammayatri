@@ -14,12 +14,13 @@
 
 module Storage.CachedQueries.PartnerOrgStation
   ( findByPOrgIdAndPOrgStationId,
-    findByStationIdAndPOrgId,
+    findByStationCodeAndPOrgId,
     findStationWithPOrgName,
     findStationWithPOrgIdAndStationId,
   )
 where
 
+import Domain.Types.IntegratedBPPConfig
 import Domain.Types.PartnerOrgStation
 import Domain.Types.PartnerOrganization
 import Domain.Types.Station as DStation
@@ -28,7 +29,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Station as CQS
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.PartnerOrgStation as Queries
 import Tools.Error
 
@@ -50,36 +51,35 @@ cacheByPOrgIdAndPOrgStationId pOrgStation = do
   let key = makePOrgIdAndPOrgStationIdKey pOrgStation.partnerOrgId pOrgStation.partnerOrgStationId
   Hedis.setExp key pOrgStation expTime
 
-findByStationIdAndPOrgId :: (CacheFlow m r, EsqDBFlow m r) => Id Station -> Id PartnerOrganization -> m (Maybe PartnerOrgStation)
-findByStationIdAndPOrgId stationId partnerOrgId = do
-  let key = makeStationIdAndPOrgIdKey stationId partnerOrgId
+findByStationCodeAndPOrgId :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id PartnerOrganization -> m (Maybe PartnerOrgStation)
+findByStationCodeAndPOrgId stationCode partnerOrgId = do
+  let key = makeStationCodeAndPOrgIdKey stationCode partnerOrgId
   Hedis.safeGet key >>= \case
     Just a -> return $ Just a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheByStationIdAndPOrgId /=<< Queries.findByStationIdAndPOrgId stationId partnerOrgId
+    findAndCache = flip whenJust cacheByStationIdAndPOrgId /=<< Queries.findByStationCodeAndPOrgId stationCode partnerOrgId
 
-makeStationIdAndPOrgIdKey :: Id Station -> Id PartnerOrganization -> Text
-makeStationIdAndPOrgIdKey stationId partnerOrgId = "CachedQueries:PartnerOrgStation:StationId:" <> stationId.getId <> ":POrgId:" <> partnerOrgId.getId
+makeStationCodeAndPOrgIdKey :: Text -> Id PartnerOrganization -> Text
+makeStationCodeAndPOrgIdKey stationCode partnerOrgId = "CachedQueries:PartnerOrgStation:StationCode:" <> stationCode <> ":POrgId:" <> partnerOrgId.getId
 
 cacheByStationIdAndPOrgId :: (CacheFlow m r) => PartnerOrgStation -> m ()
 cacheByStationIdAndPOrgId partnerOrgStation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeStationIdAndPOrgIdKey partnerOrgStation.stationId partnerOrgStation.partnerOrgId
+  let key = makeStationCodeAndPOrgIdKey partnerOrgStation.stationCode partnerOrgStation.partnerOrgId
   Hedis.setExp key partnerOrgStation expTime
 
-findStationWithPOrgName :: (CacheFlow m r, EsqDBFlow m r) => Id PartnerOrganization -> Id PartnerOrgStation -> m Station
-findStationWithPOrgName partnerOrgId partnerOrgStationId = do
+findStationWithPOrgName :: (CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Id PartnerOrganization -> Id PartnerOrgStation -> IntegratedBPPConfig -> m Station
+findStationWithPOrgName partnerOrgId partnerOrgStationId integratedBPPConfig = do
   partnerOrgStation <- findByPOrgIdAndPOrgStationId partnerOrgId partnerOrgStationId >>= fromMaybeM (PartnerOrgStationDoesNotExist partnerOrgId.getId partnerOrgStationId.getId)
-  let stationId = partnerOrgStation.stationId
-  station <- CQS.findById stationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| stationId.getId ||+ "")
+  station <- OTPRest.getStationByGtfsIdAndStopCode partnerOrgStation.stationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "StationCode:" +|| partnerOrgStation.stationCode ||+ "")
   let stationWithPOrgName = station {DStation.name = partnerOrgStation.name}
   return stationWithPOrgName
 
-findStationWithPOrgIdAndStationId :: (CacheFlow m r, EsqDBFlow m r) => Id Station -> Id PartnerOrganization -> m Station
-findStationWithPOrgIdAndStationId stationId' partnerOrgId = do
-  partnerOrgStation <- findByStationIdAndPOrgId stationId' partnerOrgId
+findStationWithPOrgIdAndStationId :: (CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Text -> Id PartnerOrganization -> IntegratedBPPConfig -> m Station
+findStationWithPOrgIdAndStationId stationCode partnerOrgId integratedBPPConfig = do
+  partnerOrgStation <- findByStationCodeAndPOrgId stationCode partnerOrgId
   let pOrgName = partnerOrgStation <&> (.name)
-  station <- CQS.findById stationId' >>= fromMaybeM (StationNotFound $ "StationId:" +|| stationId'.getId ||+ "")
+  station <- OTPRest.getStationByGtfsIdAndStopCode stationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "StationCode:" +|| stationCode ||+ "")
   let stationWithPOrgName = station {DStation.name = fromMaybe station.name pOrgName}
   return stationWithPOrgName

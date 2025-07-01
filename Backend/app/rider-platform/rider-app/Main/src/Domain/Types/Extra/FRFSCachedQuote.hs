@@ -22,14 +22,14 @@ data FRFSCachedQuote = FRFSCachedQuote
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data FRFSCachedQuoteKey = FRFSCachedQuoteKey
-  { fromStationId :: Id Station,
-    toStationId :: Id Station,
+  { fromStationId :: Text,
+    toStationId :: Text,
     providerId :: Text,
     quoteType :: Quote.FRFSQuoteType
   }
 
 makeFRFSCachedQuoteKey :: FRFSCachedQuoteKey -> Text
-makeFRFSCachedQuoteKey frfsCachedQuoteKey = "FRFSCachedQuote:FromStationId:" <> frfsCachedQuoteKey.fromStationId.getId <> ":ToStationId:" <> frfsCachedQuoteKey.toStationId.getId <> ":ProviderId:" <> frfsCachedQuoteKey.providerId <> ":QuoteType:" <> show frfsCachedQuoteKey.quoteType
+makeFRFSCachedQuoteKey frfsCachedQuoteKey = "FRFSCachedQuote:FromStationId:" <> frfsCachedQuoteKey.fromStationId <> ":ToStationId:" <> frfsCachedQuoteKey.toStationId <> ":ProviderId:" <> frfsCachedQuoteKey.providerId <> ":QuoteType:" <> show frfsCachedQuoteKey.quoteType
 
 findByFRFSCachedQuoteKey :: (CacheFlow m r, EsqDBFlow m r) => FRFSCachedQuoteKey -> m (Maybe FRFSCachedQuote)
 findByFRFSCachedQuoteKey frfsCachedQuoteKey = do

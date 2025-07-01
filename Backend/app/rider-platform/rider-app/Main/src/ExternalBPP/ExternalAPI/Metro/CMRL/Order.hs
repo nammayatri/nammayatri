@@ -17,17 +17,17 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Utils.Common
 import Servant hiding (throwError)
-import qualified Storage.Queries.Station as QStation
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => CMRLConfig -> FRFSTicketBooking -> Maybe Text -> m ProviderOrder
-createOrder config booking mRiderNumber = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CMRLConfig -> IntegratedBPPConfig -> FRFSTicketBooking -> Maybe Text -> m ProviderOrder
+createOrder config integratedBPPConfig booking mRiderNumber = do
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
-  fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
-  toStation <- QStation.findById booking.toStationId >>= fromMaybeM (StationNotFound booking.toStationId.getId)
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   ticketsData <-
     generateQRTickets config $
       GenerateQRReq

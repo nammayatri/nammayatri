@@ -76,9 +76,9 @@ getTransformedJourneyRouteDetails routeDetails = do
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,
           routeLongName = JRD.routeLongName rd,
-          fromStationId = JRD.fromStationId rd,
-          toStationId = JRD.toStationId rd,
-          routeId = JRD.routeId rd
+          fromStationCode = JRD.fromStationCode rd,
+          toStationCode = JRD.toStationCode rd,
+          routeCode = JRD.routeCode rd
         }
 
 getTransformedJourneyRouteDetailsT :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
@@ -97,7 +97,7 @@ getTransformedJourneyRouteDetailsT routeDetails = do
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,
           routeLongName = JRD.routeLongName rd,
-          fromStationId = JRD.fromStationId rd,
-          toStationId = JRD.toStationId rd,
-          routeId = JRD.routeId rd
+          fromStationCode = JRD.fromStationCode rd,
+          toStationCode = JRD.toStationCode rd,
+          routeCode = JRD.routeCode rd
         }
