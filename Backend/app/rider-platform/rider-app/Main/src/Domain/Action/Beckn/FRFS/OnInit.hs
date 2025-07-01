@@ -16,6 +16,7 @@ module Domain.Action.Beckn.FRFS.OnInit where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
+import qualified Domain.Types.FRFSBookingFareBreakUp as DBBU
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Merchant as Merchant
@@ -31,6 +32,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JMT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
@@ -38,6 +40,7 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -83,6 +86,12 @@ onInit onInitReq merchant booking_ = do
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
+  when (booking.vehicleType `elem` [Spec.METRO, Spec.BUS, Spec.SUBWAY]) $ do
+    quote <- runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+    let adultPrice = quote.price
+        childPrice = fromMaybe (mkPrice (Just quote.price.currency) 0) quote.childPrice
+    void $ JMT.insertFRFSBookingFareBreakUp booking.id DBBU.FinalAdultFare adultPrice (Just quote.merchantId) (Just quote.merchantOperatingCityId)
+    void $ JMT.insertFRFSBookingFareBreakUp booking.id DBBU.FinalChildFare childPrice (Just quote.merchantId) (Just quote.merchantOperatingCityId)
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   case booking.journeyId of
     Just journeyId -> do

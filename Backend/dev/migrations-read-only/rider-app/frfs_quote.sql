@@ -119,3 +119,7 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN integrated_bpp_config_id character v
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN child_ticket_quantity integer ;
+
+
+------- SQL updates -------
+

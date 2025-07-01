@@ -716,10 +716,12 @@ library
       Domain.Types.Exophone
       Domain.Types.FareBreakup
       Domain.Types.FeedbackForm
+      Domain.Types.FRFSBookingFareBreakUp
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
       Domain.Types.FRFSQuote
+      Domain.Types.FRFSQuoteBreakUp
       Domain.Types.FRFSRecon
       Domain.Types.FRFSRouteFareProduct
       Domain.Types.FRFSRouteStopStageFare
@@ -853,10 +855,12 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
       Storage.Beam.FeedbackForm
+      Storage.Beam.FRFSBookingFareBreakUp
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
       Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSQuoteBreakUp
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSRouteFareProduct
       Storage.Beam.FRFSRouteStopStageFare
@@ -992,10 +996,12 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
+      Storage.Queries.FRFSBookingFareBreakUp
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare
       Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSQuoteBreakUp
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSRouteFareProduct
       Storage.Queries.FRFSRouteStopStageFare

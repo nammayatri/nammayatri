@@ -1232,3 +1232,87 @@ FRFSTicketBookingFeedback:
       params: [isFareAccepted, updatedAt]
       where:
         and: [bookingId]
+
+FRFSQuoteBreakUp:
+  derives: "Show"
+
+  types:
+    QuoteBreakupDescription:
+      enum: "EstimatedChildFare, EstimatedAdultFare, PreBookingAdultFare, PreBookingChildFare"
+
+  fields:
+    id: Id FRFSQuoteBreakUp
+    quoteId: Id FRFSQuote
+    description: QuoteBreakupDescription
+    amount: Price
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+
+  beamFields:
+    amount:
+      amount: HighPrecMoney
+      currency: Maybe Currency
+
+  toTType:
+    amount: ((.amount) amount)|E
+    currency: (Just $ (.currency) amount)|E
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findAllByQuoteId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where:
+        and: [quoteId]
+    deleteByQuoteId:
+      kvFunction: deleteWithKV
+      where:
+        and: [quoteId]
+
+FRFSBookingFareBreakUp:
+  derives: "Show"
+
+  types:
+    BookingBreakupDescription:
+      enum: "FinalAdultFare, FinalChildFare"
+
+  fields:
+    id: Id FRFSBookingFareBreakUp
+    bookingId: Id FRFSTicketBooking
+    description: BookingBreakupDescription
+    amount: Price
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+
+  beamFields:
+    amount:
+      amount: HighPrecMoney
+      currency: Maybe Currency
+
+  toTType:
+    amount: ((.amount) amount)|E
+    currency: (Just $ (.currency) amount)|E
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findAllByBookingId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where:
+        and: [bookingId]
+    deleteByBookingId:
+      kvFunction: deleteWithKV
+      where:
+        and: [bookingId]

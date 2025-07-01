@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
+import qualified Domain.Types.FRFSQuoteBreakUp as DQBU
 import qualified Domain.Types.FRFSRouteFareProduct as FRFSRouteFareProduct
 import qualified Domain.Types.FRFSSearch as Search
 import qualified Domain.Types.FRFSVehicleServiceTier as FRFSVehicleServiceTier
@@ -42,6 +43,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JourneyLegTypes
+import qualified Lib.JourneyModule.Types as JMT
 import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
@@ -182,8 +184,11 @@ onSearch onSearchReq validatedReq = do
   case mbRequiredQuote of
     Just requiredQuote -> do
       void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
-      whenJust search.journeyLegInfo $ \journeyLegInfo -> do
-        QJourneyLeg.updateEstimatedFaresByJourneyIdAndSequenceNumber (Just requiredQuote.price.amount) (Just requiredQuote.price.amount) (Id journeyLegInfo.journeyId) journeyLegInfo.journeyLegOrder
+      when (search.vehicleType `elem` [Spec.METRO, Spec.BUS, Spec.SUBWAY]) $ do
+        let adultPrice = requiredQuote.price
+            childPrice = fromMaybe (mkPrice (Just requiredQuote.price.currency) 0) requiredQuote.childPrice
+        void $ JMT.insertFRFSQuoteFareBreakUp requiredQuote.id DQBU.EstimatedAdultFare adultPrice (Just requiredQuote.merchantId) (Just requiredQuote.merchantOperatingCityId)
+        void $ JMT.insertFRFSQuoteFareBreakUp requiredQuote.id DQBU.EstimatedChildFare childPrice (Just requiredQuote.merchantId) (Just requiredQuote.merchantOperatingCityId)
     Nothing -> do
       whenJust validatedReq.search.journeyLegInfo $ \_journeyLegInfo -> do
         QSearch.updateOnSearchFailed validatedReq.search.id (Just True)

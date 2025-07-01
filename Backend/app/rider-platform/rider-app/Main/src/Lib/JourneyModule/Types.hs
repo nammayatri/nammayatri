@@ -9,7 +9,9 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.FRFSBookingFareBreakUp as DBBU
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteBreakUp as DQBU
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
@@ -64,7 +66,9 @@ import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSBookingFareBreakUp as QFRFSBookingFareBreakUp
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteBreakUp as QFRFSQuoteBreakUp
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Person as QPerson
@@ -767,12 +771,16 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
   now <- getCurrentTime
   legOrder <- fromMaybeM (InternalError "Leg Order is Nothing") (booking.journeyLegOrder)
   let startTime = fromMaybe now booking.startTime
-  let legStatus =
+      legStatus =
         case booking.journeyLegStatus of
           Nothing -> getFRFSLegStatusFromBooking booking
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
-  let skipBooking = fromMaybe False booking.isSkipped
+      skipBooking = fromMaybe False booking.isSkipped
+  mbEstimatedChildFare <- do
+    fareBreakups <- QFRFSBookingFareBreakUp.findAllByBookingId booking.id
+    let childFareBreakup = find (\fb -> fb.description == DBBU.FinalChildFare) fareBreakups
+    return $ mkPriceAPIEntity . (.amount) <$> childFareBreakup
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' ticketNo
   return $
     LegInfo
@@ -785,7 +793,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         order = legOrder,
         estimatedDuration = duration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
-        estimatedChildFare = Nothing,
+        estimatedChildFare = mbEstimatedChildFare,
         estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
         estimatedTotalFare = Nothing,
         estimatedDistance = distance,
@@ -1200,3 +1208,51 @@ data StartLocationType = StartLocationType
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+insertFRFSQuoteFareBreakUp ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DFRFSQuote.FRFSQuote ->
+  DQBU.QuoteBreakupDescription ->
+  Price ->
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  m ()
+insertFRFSQuoteFareBreakUp quoteId description price merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  guid <- generateGUID
+  let entry =
+        DQBU.FRFSQuoteBreakUp
+          { id = Id guid,
+            quoteId = quoteId,
+            description = description,
+            amount = price,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QFRFSQuoteBreakUp.create entry
+
+insertFRFSBookingFareBreakUp ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DFRFSBooking.FRFSTicketBooking ->
+  DBBU.BookingBreakupDescription ->
+  Price ->
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  m ()
+insertFRFSBookingFareBreakUp bookingId description price merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  guid <- generateGUID
+  let entry =
+        DBBU.FRFSBookingFareBreakUp
+          { id = Id guid,
+            bookingId = bookingId,
+            description = description,
+            amount = price,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QFRFSBookingFareBreakUp.create entry
