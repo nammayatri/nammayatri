@@ -127,21 +127,21 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
       void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
+      creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
+      rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
+      personId <- case creator.role of
+        DP.DRIVER -> pure creator.id
+        _ -> do
+          drc <- SQDRA.findAllActiveAssociationByRCId rc.id
+          case drc of
+            [] -> throwError (InvalidRequest "No driver exist with this RC")
+            (assoc : _) -> pure assoc.driverId
+      merchant <- findMerchantByShortId merchantShortId
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
+      person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      let language = fromMaybe merchantOpCity.language person.language
       fork "enable driver after inspection" $ do
-        creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
-        rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
-        personId <- case creator.role of
-          DP.DRIVER -> pure creator.id
-          _ -> do
-            drc <- SQDRA.findAllActiveAssociationByRCId rc.id
-            case drc of
-              [] -> throwError (InvalidRequest "No driver exist with this RC")
-              (assoc : _) -> pure assoc.driverId
-        merchant <- findMerchantByShortId merchantShortId
-        merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-        transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
-        person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-        let language = fromMaybe merchantOpCity.language person.language
         (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments person merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
         vehicleDoc <-
           find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
@@ -164,14 +164,24 @@ opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 
 castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-castHubRequests (hubReq, person, hub) = do
-  driverPhoneNo <- mapM decrypt person.mobileNumber
+castHubRequests (hubReq, creator, hub) = do
+  creatorPhoneNo <- mapM decrypt creator.mobileNumber
+  rc <- QVRCE.findLastVehicleRCWrapper hubReq.registrationNo >>= fromMaybeM (RCNotFound hubReq.registrationNo)
+  drc <- SQDRA.findAllActiveAssociationByRCId rc.id
+  let mbDriverId = (.driverId) <$> listToMaybe drc
+  driverPhoneNo <- case mbDriverId of
+    Just driverId -> do
+      QPerson.findById driverId >>= \case
+        Just person -> mapM decrypt person.mobileNumber
+        Nothing -> pure Nothing
+    Nothing -> pure Nothing
   pure $
     API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
       { id = hubReq.id.getId,
         operationHubId = cast @DOH.OperationHub @CommonDriver.OperationHub hubReq.operationHubId,
         operationHubName = hub.name,
         registrationNo = hubReq.registrationNo,
+        creatorPhoneNo,
         driverPhoneNo,
         requestStatus = castReqStatus hubReq.requestStatus,
         requestTime = hubReq.createdAt,
