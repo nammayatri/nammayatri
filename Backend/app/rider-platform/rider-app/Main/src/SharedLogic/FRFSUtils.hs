@@ -21,6 +21,7 @@ import Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Time as Time
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
@@ -510,10 +511,10 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                         { latitude = Just busData.latitude,
                           longitude = Just busData.longitude,
                           scheduleRelationship = Nothing,
-                          speed = Nothing,
+                          speed = Just busData.speed,
                           startDate = Nothing,
                           startTime = Nothing,
-                          timestamp = Nothing,
+                          timestamp = Just . show $ epochToUTCTime busData.timestamp,
                           tripId = Nothing,
                           upcomingStops = Nothing
                         },
@@ -573,6 +574,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
       forM stopPairs $ \(currStop, nextStop) -> do
         let waypointsBetweenStops = fromMaybe [] (getWaypointsBetweenStops currStop.stopPoint nextStop.stopPoint waypoints)
         pure ((currStop, nextStop), (waypointsBetweenStops, Nothing :: Maybe Seconds))
+
+    epochToUTCTime epoch = posixSecondsToUTCTime (fromIntegral epoch)
 
     getWaypointsBetweenStops curStopPoint nextStopPoint waypoints = do
       let nearestToCurStop = findNearestWaypoint curStopPoint waypoints
