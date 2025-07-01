@@ -398,10 +398,10 @@ trackBuses (Just userPos) journey journeyStates = do
     getNearbyBuses :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => LatLong -> Domain.Types.RiderConfig.RiderConfig -> m [BusDataWithoutETA]
     getNearbyBuses userPos' riderConfig = do
       let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
-      vehicleData :: [BusDataWithoutETA] <-
+      vehicleNumbers :: [Text] <-
         CQMMB.withCrossAppRedisNew $
           Hedis.geoSearchDecoded nearbyBusKey (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
-      pure vehicleData
+      catMaybes <$> Hedis.hmGet vehicleMetaKey vehicleNumbers
 
     scoreByDistance :: Double -> Domain.Types.RiderConfig.BusTrackingConfig -> Double
     scoreByDistance distance busTrackingConfig
@@ -433,7 +433,10 @@ trackBuses (Just userPos) journey journeyStates = do
     isWorseThanThreshold candidateScore bestScore worseThreshold = candidateScore < (worseThreshold * bestScore)
 
     nearbyBusKey :: Text
-    nearbyBusKey = "bus_locations_metadata"
+    nearbyBusKey = "bus_locations"
+
+    vehicleMetaKey :: Text
+    vehicleMetaKey = "bus_metadata"
 
     topVehicleCandidatesKey :: Text -> Text
     topVehicleCandidatesKey journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
