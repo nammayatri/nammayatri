@@ -288,3 +288,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_config json  default '{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_multi_modal_for_all_users boolean  default false;

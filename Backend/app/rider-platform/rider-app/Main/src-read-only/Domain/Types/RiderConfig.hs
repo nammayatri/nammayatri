@@ -41,6 +41,7 @@ data RiderConfig = RiderConfig
     enableBusFiltering :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
+    enableMultiModalForAllUsers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
     excludedVehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
     executePaymentDelay :: Kernel.Prelude.NominalDiffTime,
