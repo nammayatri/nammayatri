@@ -6,9 +6,6 @@ author: "nammayatri"
 maintainer: "nammayatri"
 copyright: "2023 Juspay Technologies Private Limited"
 
-data-files:
-  - spec/**/*.yaml
-
 flags:
   Local:
     description: Enable this flag for faster compile times
@@ -181,8 +178,6 @@ library:
     - utils
     - external
     - dashcam
-    - servant-multipart
-    - servant-multipart-api
   extra-libraries:
     - cac_client
 
