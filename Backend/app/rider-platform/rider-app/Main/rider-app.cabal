@@ -240,6 +240,7 @@ library
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
       Domain.Action.UI.PersonStats
+      Domain.Action.UI.PickupInstructions
       Domain.Action.UI.Places
       Domain.Action.UI.PriceBreakup
       Domain.Action.UI.Profile
@@ -617,6 +618,7 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
+      API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -677,6 +679,7 @@ library
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
+      API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
@@ -773,6 +776,7 @@ library
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonStats
+      Domain.Types.PickupInstructions
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
@@ -909,6 +913,7 @@ library
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
+      Storage.Beam.PickupInstructions
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
@@ -1103,6 +1108,7 @@ library
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
+      Storage.Queries.PickupInstructions
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation

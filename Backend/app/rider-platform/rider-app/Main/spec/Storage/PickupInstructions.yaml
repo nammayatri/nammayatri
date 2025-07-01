@@ -1,0 +1,41 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+PickupInstructions:
+  tableName: pickup_instructions
+  derives: Generic,Show,FromJSON,ToJSON
+  fields:
+    id: Id PickupInstructions
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    pickupInstructions: "[Text]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    id: character(36)
+    personId: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+    pickupInstructions: text[]
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    updatePickupInstructionsByPersonId:
+      kvFunction: updateWithKV
+      params: [pickupInstructions]
+      where: personId

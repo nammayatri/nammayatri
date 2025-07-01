@@ -34,6 +34,7 @@ import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.NearbyBuses as NearbyBuses
 import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
+import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
@@ -139,6 +140,7 @@ type API =
            :<|> CRIS.API
            :<|> TicketKapture.API
            :<|> Insurance.API
+           :<|> PickupInstructions.API
        )
 
 handler :: FlowServer API
@@ -201,3 +203,4 @@ handler =
     :<|> CRIS.handler
     :<|> TicketKapture.handler
     :<|> Insurance.handler
+    :<|> PickupInstructions.handler
