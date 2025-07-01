@@ -422,7 +422,6 @@ changeMobileNumberByAdmin _ personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   encMobileNum <- encrypt req.newMobileNumber
   QP.updatePersonMobile personId encMobileNum
-  QPerson.updatePersonMobileByFleetRole personId.getId encMobileNum
   pure Success
 
 changeEnabledStatus ::
