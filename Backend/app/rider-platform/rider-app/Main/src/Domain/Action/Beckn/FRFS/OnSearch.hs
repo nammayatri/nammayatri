@@ -202,9 +202,12 @@ onSearch onSearchReq validatedReq = do
                   let farePolicyIds = map (.farePolicyId) routeStopFares
                   traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp dStartStation.stationCode dEndStation.stationCode) farePolicyIds
                 [] -> do
-                  fareProducts <- QFRFP.findAllByIntegratedBPPConfigId integratedBPPConfig.id
-                  let farePolicyIds = map (.farePolicyId) fareProducts
-                  traverse_ (\farePolicyId -> createStopFare farePolicyId dStartStation.stationCode dEndStation.stationCode quote search.merchantId search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
+                  QFRFP.findAllByIntegratedBPPConfigId integratedBPPConfig.id >>= \case
+                    fareProducts@(_ : _) -> do
+                      let farePolicyIds = map (.farePolicyId) fareProducts
+                      traverse_ (\farePolicyId -> createStopFare farePolicyId dStartStation.stationCode dEndStation.stationCode quote search.merchantId search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
+                    [] -> do
+                      createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
             else do
               QFRFP.findByRouteCode quote.routeCode integratedBPPConfig.id >>= \case
                 fareProducts@(_ : _) -> do
@@ -481,12 +484,14 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
             createdAt = now,
             updatedAt = now
           }
-  vehicleServiceTierId <- do
+  (vehicleServiceTierId, vehicleServiceTier) <- do
     QVSR.findByServiceTierAndMerchantOperatingCityId Spec.ORDINARY merchantOperatingCityId >>= \case
-      Just vsc -> return vsc.id
+      Just vsc -> return (vsc.id, Nothing)
       Nothing -> do
         id <- generateGUID
-        let vehicleServiceTier =
+        return
+          ( id,
+            Just $
               FRFSVehicleServiceTier.FRFSVehicleServiceTier
                 { id,
                   _type = Spec.ORDINARY,
@@ -499,8 +504,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
                   createdAt = now,
                   updatedAt = now
                 }
-        QVSR.create vehicleServiceTier
-        return id
+          )
 
   let frfsRouteFareProduct =
         FRFSRouteFareProduct.FRFSRouteFareProduct
@@ -516,6 +520,8 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
             createdAt = now,
             updatedAt = now
           }
+  whenJust vehicleServiceTier $ \vsc -> do
+    QVSR.create vsc
   QFRFP.create frfsRouteFareProduct
   QFFP.create farePolicy
   QRSF.create routeStopFare

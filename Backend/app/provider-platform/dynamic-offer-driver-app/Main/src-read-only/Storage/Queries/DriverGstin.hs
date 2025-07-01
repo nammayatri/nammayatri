@@ -65,6 +65,7 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.isProvisional isProvisional,
       Se.Set Beam.legalName legalName,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.panNumber panNumber,
       Se.Set Beam.tradeName tradeName,
       Se.Set Beam.typeOfRegistration typeOfRegistration,
       Se.Set Beam.validFrom validFrom,

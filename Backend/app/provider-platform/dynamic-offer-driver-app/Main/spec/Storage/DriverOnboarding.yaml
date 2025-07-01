@@ -720,6 +720,7 @@ DriverGstin:
     gstin: EncryptedHashedField e Text
     verificationStatus: VerificationStatus
     address: Maybe Text
+    panNumber: Maybe Text
     constitutionOfBusiness: Maybe Text
     isProvisional: Maybe Bool
     legalName: Maybe Text

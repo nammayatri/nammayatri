@@ -80,8 +80,8 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
-import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -192,7 +192,7 @@ init journeyReq userPreferences = do
       return (all (\leg -> leg.mode `elem` userPrefs.allowedTransitModes) legs)
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
-getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
+getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
 
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs journeyId = do
@@ -275,8 +275,8 @@ checkAndMarkJourneyAsFeedbackPending journey allLegsState = do
   when
     ( all
         ( \st -> case st of
-            JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
-            JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
+            JL.Single legState -> legState.status `elem` JL.allCompletedStatus
+            JL.Transit legStates -> all (\legState -> legState.status `elem` JL.allCompletedStatus) legStates
         )
         allLegsState
         && journey.status /= DJourney.CANCELLED
@@ -295,9 +295,28 @@ getAllLegsStatus journey = do
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
   (_, _, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (True, Nothing, []) allLegsRawData
   let allLegsState = map snd legPairs
+  -- Update journey expiry time to the next valid ticket expiry when a leg is completed
+  whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
+    QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id nextLegOrder
   checkAndMarkJourneyAsFeedbackPending journey allLegsState
   return allLegsState
   where
+    minimumTicketLegOrder = foldl' go Nothing
+      where
+        go acc (leg, legState)
+          | leg.mode `elem` [DTrip.Walk, DTrip.Taxi] = acc -- Skip non-ticket modes
+          | isIncomplete legState =
+            case acc of
+              Nothing -> Just (leg.sequenceNumber)
+              Just minS -> Just (min minS leg.sequenceNumber)
+          | otherwise = acc
+
+        isIncomplete :: JL.JourneyLegState -> Bool
+        isIncomplete (JL.Single legData) =
+          legData.status `notElem` JL.allCompletedStatus
+        isIncomplete (JL.Transit legDataList) =
+          any (\legData -> legData.status `notElem` JL.allCompletedStatus) legDataList
+
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
     getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((gtfsId :: KEMIT.MultiModalRouteDetails -> Maybe Text) >=> (pure . gtfsIdtoDomainCode))
 

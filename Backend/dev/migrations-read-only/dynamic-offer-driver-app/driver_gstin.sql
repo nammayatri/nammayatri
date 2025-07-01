@@ -23,3 +23,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN merchant_id character
 ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN pan_number text ;
