@@ -166,13 +166,15 @@ opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
 castHubRequests (hubReq, creator, hub) = do
   creatorPhoneNo <- mapM decrypt creator.mobileNumber
-  rc <- QVRCE.findLastVehicleRCWrapper hubReq.registrationNo >>= fromMaybeM (RCNotFound hubReq.registrationNo)
-  drc <- SQDRA.findAllActiveAssociationByRCId rc.id
-  let mbDriverId = (.driverId) <$> listToMaybe drc
-  driverPhoneNo <- case mbDriverId of
-    Just driverId -> do
-      QPerson.findById driverId >>= \case
-        Just person -> mapM decrypt person.mobileNumber
+  mbRc <- QVRCE.findLastVehicleRCWrapper hubReq.registrationNo
+  driverPhoneNo <- case mbRc of
+    Just rc -> do
+      drc <- SQDRA.findAllActiveAssociationByRCId rc.id
+      case listToMaybe drc of
+        Just assoc -> do
+          QPerson.findById assoc.driverId >>= \case
+            Just person -> mapM decrypt person.mobileNumber
+            Nothing -> pure Nothing
         Nothing -> pure Nothing
     Nothing -> pure Nothing
   pure $
