@@ -20,6 +20,7 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
@@ -38,6 +39,8 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Station as QStation
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -174,11 +177,18 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
-        frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
-            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
-        onConfirmHandler onConfirmReq
+        result <- try @_ @SomeException $ do
+          frfsConfig <-
+            CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+              >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
+          onConfirmHandler onConfirmReq
+        case result of
+          Left err -> do
+            void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
+            void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+            throwM err
+          Right _ -> return ()
 
 status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
 status merchantId merchantOperatingCity bapConfig booking platformType = do

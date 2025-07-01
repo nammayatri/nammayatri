@@ -105,6 +105,14 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
     CRIS config' -> CRISBookJourney.createOrder config' booking
     _ -> throwError $ InternalError "Unimplemented!"
 
+getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
+getBppOrderId integratedBPPConfig booking = do
+  case integratedBPPConfig.providerConfig of
+    CMRL _ -> Just <$> CMRLOrder.getBppOrderId booking
+    EBIX _ -> Just <$> EBIXOrder.getBppOrderId booking
+    DIRECT _ -> Just <$> DIRECTOrder.getBppOrderId booking
+    _ -> return Nothing
+
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus integrationBPPConfig booking = do
   case integrationBPPConfig.providerConfig of

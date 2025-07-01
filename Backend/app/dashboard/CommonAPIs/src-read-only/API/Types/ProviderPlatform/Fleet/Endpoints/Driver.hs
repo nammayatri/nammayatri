@@ -583,6 +583,13 @@ data VerificationDocsStatus = VerificationDocsStatus
     vehicleFitness :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     vehicleInsurance :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     vehiclePUC :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehicleLeft :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehicleRight :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehicleFront :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehicleFrontInterior :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehicleBackInterior :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    vehicleBack :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    odometer :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     driverLicense :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     panCard :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     aadhaarCard :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus

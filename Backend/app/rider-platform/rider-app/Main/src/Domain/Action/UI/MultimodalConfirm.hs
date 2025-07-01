@@ -832,9 +832,10 @@ postMultimodalOrderSetStatus ::
 postMultimodalOrderSetStatus (mbPersonId, merchantId) journeyId legOrder newStatus = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId False
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
-  markLegStatus newStatus journeyLegInfo.legExtraInfo
+  unless (newStatus `elem` [JL.Completed, JL.Cancelled]) $ do
+    legs <- JM.getAllLegsInfo journeyId False
+    journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
+    markLegStatus newStatus journeyLegInfo.legExtraInfo
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -846,19 +847,38 @@ postMultimodalTicketVerify ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Maybe DIBC.PlatformType ->
   Kernel.Types.Beckn.Context.City ->
-  BecknV2.FRFS.Enums.VehicleCategory ->
   API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
   Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
-postMultimodalTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicleCategory req = do
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= fromMaybeM (InternalError "Beckn Config not found")
+postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
-  ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData platformType
-  booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
-  legInfo <- JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
-  return $ API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp {legInfo = legInfo}
+  let verifyTicketsAndBuildResponse provider tickets = do
+        legInfoList <- forM tickets $ \ticketQR -> do
+          ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
+          booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
+          JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
+        return $
+          API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
+            { provider = provider,
+              legInfo = legInfoList
+            }
+
+  case req of
+    ApiTypes.IntegratedQR integratedQRData -> do
+      case integratedQRData.provider of
+        JMTypes.MTC -> do
+          let allTickets = concatMap (.ticketData) integratedQRData.integratedQR.mtc
+          verifyTicketsAndBuildResponse integratedQRData.provider allTickets
+        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
+        _ -> throwError $ InvalidRequest "Invalid provider"
+    ApiTypes.SingleQR singleQRData -> do
+      case singleQRData.provider of
+        JMTypes.MTC -> verifyTicketsAndBuildResponse singleQRData.provider singleQRData.tickets
+        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
+        _ -> throwError $ InvalidRequest "Invalid provider"
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

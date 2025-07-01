@@ -1,4 +1,4 @@
-module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails, utcToIST) where
+module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails, utcToIST, getTimetableStop) where
 
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
@@ -9,6 +9,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.VehicleRouteMapping as DTVRM
 import qualified Environment
 import EulerHS.Prelude hiding (decodeUtf8, id)
@@ -22,6 +23,8 @@ import Kernel.Utils.Common
 import Lib.JourneyModule.Utils as JourneyUtils
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.BecknConfig as QBecknConfig
 import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.Queries.Merchant as QMerchant
@@ -152,3 +155,34 @@ getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
   JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig mid person.merchantOperatingCityId vehicleType
+
+getTimetableStop ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Text ->
+    Text ->
+    Kernel.Prelude.Maybe (Spe.VehicleCategory) ->
+    Environment.Flow API.Types.UI.NearbyBuses.TimetableResponse
+  )
+getTimetableStop (mbPersonId, mid) routeCode stopCode mbVehicleType = do
+  riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
+  person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+  let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
+  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+  case vehicleType of
+    BecknV2.OnDemand.Enums.METRO -> do
+      stopCodes <- OTPRest.getChildrenStationsCodes integratedBPPConfig stopCode
+      routeStopTimeTables <- concatMapM (GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode]) stopCodes
+      return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
+    _ -> do
+      routeStopTimeTables <- GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode] stopCode
+      return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
+  where
+    convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
+    convertToTimetableEntry routeStopTimeTable = do
+      API.Types.UI.NearbyBuses.TimetableEntry
+        { timeOfArrival = routeStopTimeTable.timeOfArrival,
+          timeOfDeparture = routeStopTimeTable.timeOfDeparture,
+          serviceTierType = routeStopTimeTable.serviceTierType
+        }

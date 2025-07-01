@@ -80,8 +80,8 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
-import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -192,7 +192,7 @@ init journeyReq userPreferences = do
       return (all (\leg -> leg.mode `elem` userPrefs.allowedTransitModes) legs)
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
-getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
+getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
 
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs journeyId = do
@@ -233,10 +233,10 @@ getAllLegsInfo journeyId skipAddLegFallback = do
       let legSearchId = Id legSearchIdText
       case leg.mode of
         DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
-        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg}
-        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
-        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
-        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg}
+        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
 
 hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool
 hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
@@ -275,8 +275,8 @@ checkAndMarkJourneyAsFeedbackPending journey allLegsState = do
   when
     ( all
         ( \st -> case st of
-            JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
-            JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
+            JL.Single legState -> legState.status `elem` JL.allCompletedStatus
+            JL.Transit legStates -> all (\legState -> legState.status `elem` JL.allCompletedStatus) legStates
         )
         allLegsState
         && journey.status /= DJourney.CANCELLED
@@ -295,9 +295,28 @@ getAllLegsStatus journey = do
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
   (_, _, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (True, Nothing, []) allLegsRawData
   let allLegsState = map snd legPairs
+  -- Update journey expiry time to the next valid ticket expiry when a leg is completed
+  whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
+    QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id nextLegOrder
   checkAndMarkJourneyAsFeedbackPending journey allLegsState
   return allLegsState
   where
+    minimumTicketLegOrder = foldl' go Nothing
+      where
+        go acc (leg, legState)
+          | leg.mode `elem` [DTrip.Walk, DTrip.Taxi] = acc -- Skip non-ticket modes
+          | isIncomplete legState =
+            case acc of
+              Nothing -> Just (leg.sequenceNumber)
+              Just minS -> Just (min minS leg.sequenceNumber)
+          | otherwise = acc
+
+        isIncomplete :: JL.JourneyLegState -> Bool
+        isIncomplete (JL.Single legData) =
+          legData.status `notElem` JL.allCompletedStatus
+        isIncomplete (JL.Transit legDataList) =
+          any (\legData -> legData.status `notElem` JL.allCompletedStatus) legDataList
+
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
     getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((gtfsId :: KEMIT.MultiModalRouteDetails -> Maybe Text) >=> (pure . gtfsIdtoDomainCode))
 
@@ -1498,6 +1517,7 @@ generateJourneyInfoResponse journey legs = do
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- maybe (pure Nothing) QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
+  let unifiedQRV2 = getUnifiedQRV2 unifiedQR
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
@@ -1512,8 +1532,32 @@ generateJourneyInfoResponse journey legs = do
         endTime = journey.endTime,
         merchantOperatingCityName,
         crisSdkToken = Nothing,
-        paymentOrderShortId = journey.paymentOrderShortId
+        paymentOrderShortId = journey.paymentOrderShortId,
+        unifiedQRV2
       }
+  where
+    getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2
+    getUnifiedQRV2 mbUnifiedQR =
+      mbUnifiedQR <&> convertUnifiedQRToV2
+
+    convertUnifiedQRToV2 :: JL.UnifiedTicketQR -> JL.UnifiedTicketQRV2
+    convertUnifiedQRToV2 unifiedQR =
+      JL.UnifiedTicketQRV2
+        { version = unifiedQR.version,
+          _type = unifiedQR._type,
+          txnId = unifiedQR.txnId,
+          createdAt = unifiedQR.createdAt,
+          cmrl = map convertBookingDataToV2 unifiedQR.cmrl,
+          mtc = map convertBookingDataToV2 unifiedQR.mtc
+        }
+
+    convertBookingDataToV2 :: JL.BookingData -> JL.BookingDataV2
+    convertBookingDataToV2 booking =
+      JL.BookingDataV2
+        { bookingId = booking.bookingId,
+          isRoundTrip = booking.isRoundTrip,
+          ticketData = booking.ticketData
+        }
 
 generateJourneyStatusResponse ::
   Id DPerson.Person ->

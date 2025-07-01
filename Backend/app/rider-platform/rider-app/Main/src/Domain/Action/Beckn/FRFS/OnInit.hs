@@ -53,7 +53,8 @@ data DOnInit = DOnInit
     transactionId :: Text,
     messageId :: Text,
     bankAccNum :: Text,
-    bankCode :: Text
+    bankCode :: Text,
+    bppOrderId :: Maybe Text
   }
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant.Merchant, FTBooking.FRFSTicketBooking)
@@ -80,6 +81,7 @@ onInit onInitReq merchant booking_ = do
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
   void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
+  whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   case booking.journeyId of

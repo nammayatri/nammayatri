@@ -4,6 +4,7 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2)
+import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -422,10 +423,73 @@ instance ToJSON UnifiedTicketQR where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON UnifiedTicketQR where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = withObject "UnifiedTicketQR" $ \o -> do
+    version <- o .: "version"
+    _type <- o .: "type"
+    txnId <- o .: "txnId"
+    createdAt <- o .: "createdAt"
+    cmrl <- o .: "CMRL"
+    mtc <- o .: "MTC"
+    cris <- o .: "CRIS"
+    return $ UnifiedTicketQR version _type txnId createdAt cmrl mtc cris
 
 data Provider = CMRL | MTC | DIRECT | CRIS
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data BookingDataV2 = BookingDataV2
+  { bookingId :: Text,
+    isRoundTrip :: Bool,
+    ticketData :: [Text]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance FromJSON BookingDataV2 where
+  parseJSON = withObject "BookingDataV2" $ \o -> do
+    bookingId <- o .: "BookingId"
+    isRoundTrip <- o .: "isRoundTrip"
+    ticketData <- o .: "data"
+    return $ BookingDataV2 bookingId isRoundTrip ticketData
+
+instance ToJSON BookingDataV2 where
+  toJSON (BookingDataV2 bookingId isRoundTrip ticketData) =
+    object
+      [ "BookingId" .= bookingId,
+        "isRoundTrip" .= isRoundTrip,
+        "data" .= ticketData
+      ]
+
+data UnifiedTicketQRV2 = UnifiedTicketQRV2
+  { version :: Text,
+    _type :: Text,
+    txnId :: Text,
+    createdAt :: UTCTime,
+    cmrl :: [BookingDataV2],
+    mtc :: [BookingDataV2]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance FromJSON UnifiedTicketQRV2 where
+  parseJSON = withObject "UnifiedTicketQRV2" $ \o -> do
+    version <- o .: "version"
+    _type <- o .: "type"
+    txnId <- o .: "txnId"
+    createdAt <- o .: "createdAt"
+    cmrl <- o .: "CMRL"
+    mtc <- o .: "MTC"
+    return $ UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc
+
+instance ToJSON UnifiedTicketQRV2 where
+  toJSON (UnifiedTicketQRV2 version _type txnId createdAt cmrl mtc) =
+    object
+      [ "version" .= version,
+        "type" .= _type,
+        "txnId" .= txnId,
+        "createdAt" .= createdAt,
+        "CMRL" .= cmrl,
+        "MTC" .= mtc
+      ]
 
 data IsCancellableResponse = IsCancellableResponse
   { canCancel :: Bool
@@ -1051,6 +1115,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,
         fromLocationAddress = Just fromLocationAddress,
         paymentOrderShortId = Nothing,
+        journeyExpiryTime = Nothing,
         ..
       }
   where
@@ -1107,6 +1172,9 @@ sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney
 
 completedStatus :: [JourneyLegStatus]
 completedStatus = [Completed, Cancelled]
+
+allCompletedStatus :: [JourneyLegStatus]
+allCompletedStatus = [Completed, Cancelled, Skipped]
 
 cannotCancelStatus :: [JourneyLegStatus]
 cannotCancelStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled]

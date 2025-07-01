@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import qualified Data.UUID as UU
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
-import EulerHS.Types as ET
+import EulerHS.Types as ET hiding (Log)
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
@@ -22,9 +22,9 @@ import Tools.Error
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => CMRLConfig -> FRFSTicketBooking -> Maybe Text -> m ProviderOrder
 createOrder config booking mRiderNumber = do
-  when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
-  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
-  let orderId = T.pack $ "CUM" ++ show ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) -- This should be max 20 characters UUID (Using Transaction UUID)
+  orderId <- case booking.bppOrderId of
+    Just oid -> return oid
+    Nothing -> getBppOrderId booking
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
   fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
   toStation <- QStation.findById booking.toStationId >>= fromMaybeM (StationNotFound booking.toStationId.getId)
@@ -57,6 +57,12 @@ createOrder config booking mRiderNumber = do
             qrRefreshAt = Nothing
           }
   return ProviderOrder {..}
+
+getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
+getBppOrderId booking = do
+  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  let orderId = T.pack $ "CUM" ++ show ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) -- This should be max 20 characters UUID (Using Transaction UUID)
+  return orderId
 
 data GenerateQRReq = GenerateQRReq
   { origin :: T.Text,

@@ -1201,6 +1201,13 @@ types:
     - vehicleFitness: Maybe VerificationStatus
     - vehicleInsurance: Maybe VerificationStatus
     - vehiclePUC: Maybe VerificationStatus
+    - vehicleLeft: Maybe VerificationStatus
+    - vehicleRight: Maybe VerificationStatus
+    - vehicleFront: Maybe VerificationStatus
+    - vehicleFrontInterior: Maybe VerificationStatus
+    - vehicleBackInterior: Maybe VerificationStatus
+    - vehicleBack: Maybe VerificationStatus
+    - odometer: Maybe VerificationStatus
     - driverLicense: Maybe VerificationStatus
     - panCard: Maybe VerificationStatus
     - aadhaarCard: Maybe VerificationStatus

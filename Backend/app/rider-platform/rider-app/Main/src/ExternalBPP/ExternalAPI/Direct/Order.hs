@@ -21,13 +21,19 @@ import Tools.Error
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
 createOrder config integratedBPPConfig qrTtl booking = do
-  when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
-  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
-  let orderId = show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) :: Integer) -- This should be max 20 characters UUID (Using Transaction UUID)
-      mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+  orderId <- case booking.bppOrderId of
+    Just oid -> return oid
+    Nothing -> getBppOrderId booking
+  let mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
   routeStations <- mbRouteStations & fromMaybeM (InternalError "Route Stations Not Found.")
   tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking) routeStations
   return ProviderOrder {..}
+
+getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
+getBppOrderId booking = do
+  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  let orderId = show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) :: Integer) -- This should be max 20 characters UUID (Using Transaction UUID)
+  return orderId
 
 getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do

@@ -30,7 +30,10 @@ import qualified Storage.Queries.RouteStopMapping as QRSM
 import Tools.Error
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
-getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory
+getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = do
+  try @_ @SomeException (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory) >>= \case
+    Left _ -> return []
+    Right fares -> return fares
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
 search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails = do
@@ -177,12 +180,13 @@ select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote = 
         messageId = quote.id.getId
       }
 
-init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
+init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
   bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
   bankCode <- paymentDetails.bankCode & fromMaybeM (InternalError "Bank Code Not Found")
+  bppOrderId <- CallAPI.getBppOrderId integratedBPPConfig booking
   return $
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
@@ -193,7 +197,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         transactionId = booking.searchId.getId,
         messageId = booking.id.getId,
         bankAccNum = bankAccountNumber,
-        bankCode = bankCode
+        bankCode = bankCode,
+        bppOrderId = bppOrderId
       }
   where
     mkPaymentDetails = \case

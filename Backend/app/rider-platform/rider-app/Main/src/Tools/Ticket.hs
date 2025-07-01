@@ -17,6 +17,7 @@ module Tools.Ticket
     updateTicket,
     addAndUpdateKaptureCustomer,
     kaptureEncryption,
+    kapturePullTicket,
   )
 where
 
@@ -44,6 +45,9 @@ addAndUpdateKaptureCustomer = runWithServiceConfig TI.addAndUpdateKaptureCustome
 
 kaptureEncryption :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureEncryptionReq -> m Ticket.KaptureEncryptionResp
 kaptureEncryption = runWithServiceConfig TI.kaptureEncryption
+
+kapturePullTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KapturePullTicketReq -> m Ticket.KapturePullTicketResp
+kapturePullTicket = runWithServiceConfig TI.kapturePullTicket
 
 runWithServiceConfig ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
