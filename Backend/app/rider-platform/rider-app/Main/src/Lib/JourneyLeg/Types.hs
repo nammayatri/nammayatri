@@ -1,9 +1,7 @@
 module Lib.JourneyLeg.Types where
 
-import Domain.Types.Station
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Id
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import qualified Tools.Beam.UtilsTH
 
@@ -54,9 +52,9 @@ data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
     subLegOrder :: Kernel.Prelude.Maybe Int,
     platformNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeId :: Kernel.Prelude.Maybe Text,
-    fromStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station),
-    toStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station)
+    routeCode :: Kernel.Prelude.Maybe Text,
+    fromStationCode :: Kernel.Prelude.Maybe Text,
+    toStationCode :: Kernel.Prelude.Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

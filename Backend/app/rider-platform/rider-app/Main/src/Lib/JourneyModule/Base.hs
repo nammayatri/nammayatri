@@ -70,12 +70,14 @@ import Lib.JourneyModule.Utils
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as GD
 import qualified Sequelize as Se
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -86,7 +88,6 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import Tools.Maps as Maps
@@ -1147,7 +1148,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           JL.Taxi taxiLegExtraInfo -> return taxiLegExtraInfo.origin.address
           _ -> do
             frfsSearchReq <- QFRFSSearch.findById (Id currentLeg.searchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> currentLeg.searchId)
-            fromStation <- QStation.findById frfsSearchReq.fromStationId >>= fromMaybeM (InvalidRequest $ "from station not found in extendLeg: " <> show frfsSearchReq.fromStationId)
+            integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearchReq
+            fromStation <- OTPRest.getStationByGtfsIdAndStopCode frfsSearchReq.fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "from station not found in extendLeg: " <> show frfsSearchReq.fromStationCode)
             return $ mkAddressFromStation fromStation.name
       withJourneyUpdateInProgress journeyId $ do
         forM_ legsToCancel $ \currLeg -> do

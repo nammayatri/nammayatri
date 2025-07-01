@@ -83,7 +83,7 @@ mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
 
 mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Maybe (Id DPO.PartnerOrganization) -> m APITypes.FRFSStationAPI
 mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do
-  pOrgStation <- maybe (pure Nothing) (B.runInReplica . CQPOS.findByStationIdAndPOrgId id) mbPOrgId
+  pOrgStation <- maybe (pure Nothing) (\pOrgId -> CQPOS.findByStationCodeAndPOrgId code pOrgId |<|>| CQPOS.findByStationCodeAndPOrgId id.getId pOrgId) mbPOrgId
   let pOrgStationName = pOrgStation <&> (.name)
   pure $ APITypes.FRFSStationAPI {name = Just $ fromMaybe name pOrgStationName, routeCodes = Nothing, stationType = Nothing, color = Nothing, sequenceNum = Nothing, distance = Nothing, towards = Nothing, ..}
 
@@ -101,7 +101,7 @@ mkFRFSConfigAPI Config.FRFSConfig {..} = do
 
 mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Maybe (Id DPO.PartnerOrganization) -> DIBC.IntegratedBPPConfig -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
 mkPOrgStationAPI mbPOrgId integratedBPPConfig stationAPI = do
-  station <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId stationAPI.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")
+  station <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode stationAPI.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")
   mkPOrgStationAPIRes station mbPOrgId
 
 data FRFSTicketDiscountDynamic = FRFSTicketDiscountDynamic
@@ -214,7 +214,7 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
               )
               groupedStops
   let mappedRouteCodes = map (\(routeCode, _, _, _) -> routeCode) possibleRoutes
-  routes <- mapM (OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig) mappedRouteCodes
+  routes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound $ "RouteCode:" +|| routeCode ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")) mappedRouteCodes
 
   return $
     map
@@ -516,12 +516,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                   delay = Nothing
                 }
     _ -> do
-      route <-
-        OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode
-      routeStops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-          Right stops -> pure stops
+      route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
+      routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
 
       let waypointsForRoute' = case route.polyline of
             Just polyline -> Just $ KEPP.decode polyline

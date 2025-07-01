@@ -51,7 +51,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+    [ Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
@@ -70,8 +70,8 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.quantity quantity,
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.routeId routeId,
-      Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
+      Se.Set Beam.routeId routeCode,
+      Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

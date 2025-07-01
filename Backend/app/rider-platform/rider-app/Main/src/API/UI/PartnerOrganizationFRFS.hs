@@ -33,6 +33,7 @@ import EulerHS.Prelude hiding (map)
 import Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
@@ -61,6 +62,7 @@ type API =
                            :> Capture "fromGMMStationId" Text
                            :> "toStation"
                            :> Capture "toGMMStationId" Text
+                           :> QueryParam "integratedBppConfigId" (Id DIBC.IntegratedBPPConfig)
                            :> Get '[JSON] DPOFRFS.GetConfigResp
                        )
                   :<|> "getFareV2"
@@ -102,18 +104,15 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
   let vehicleType = fromMaybe Spec.METRO req.vehicleType
   merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
-  fromStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
-  toStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
   route <-
     maybe
       (pure Nothing)
-      ( \routeCode' -> do
-          route' <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
-          return $ Just route'
-      )
+      (OTPRest.getRouteByRouteId integratedBPPConfig)
       req.routeCode
   pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrg.orgId.getId $ show DPOC.REGISTRATION)
   regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
@@ -142,11 +141,21 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
     buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, ..}
 
-getConfigByStationIds :: PartnerOrganization -> Text -> Text -> FlowHandler DPOFRFS.GetConfigResp
-getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = withFlowHandlerAPI . withLogTag $ do
-  void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
+getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Maybe (Id DIBC.IntegratedBPPConfig) -> FlowHandler DPOFRFS.GetConfigResp
+getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPPConfigId =
+  withFlowHandlerAPI . withLogTag $
+    do
+      void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
 
-  DPOFRFS.getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId
+      merchantOperatingCities <- catMaybes <$> mapM (CQMOC.findByMerchantIdAndCity (Id "4b17bd06-ae7e-48e9-85bf-282fb310209c")) [Bangalore, Delhi, Kochi, Chennai]
+      integratedBPPConfigs <-
+        case mbIntegratedBPPConfigId of
+          Just integratedBPPConfigId -> (: []) <$> SIBC.findIntegratedBPPConfigById integratedBPPConfigId
+          Nothing -> catMaybes <$> mapM (\merchantOperatingCity -> SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.PARTNERORG) merchantOperatingCities
+
+      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \integratedBPPConfig ->
+        DPOFRFS.getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPConfig
+      >>= fromMaybeM (InvalidRequest "No Config Found for the given station ids")
   where
     withLogTag = Log.withLogTag ("FRFS:GetConfig:PartnerOrgId:" <> getId partnerOrg.orgId)
 
@@ -180,8 +189,8 @@ getFareV2 partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogT
   let vehicleType = fromMaybe Spec.METRO req.vehicleType
   merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
-  fromStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
-  toStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""

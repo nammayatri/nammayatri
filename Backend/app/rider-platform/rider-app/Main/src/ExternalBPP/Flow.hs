@@ -63,7 +63,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     buildSingleTransitRouteQuote FRFSRouteDetails {..} = do
       case routeCode of
         Just routeCode' -> do
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
+          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
           let routeInfo =
                 RouteStopInfo
                   { route,
@@ -104,7 +104,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
       let routeDetail = mergeFFRFSRouteDetails routesDetails
       case (routeDetail, routeDetail >>= (.routeCode)) of
         (Just routeDetail', Just routeCode') -> do
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
+          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
           let routeInfo =
                 RouteStopInfo
                   { route,
@@ -119,8 +119,8 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
 
     buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> StationType -> StationType -> m [DStation]
     buildStations routeCode startStationCode endStationCode startStopType endStopType = do
-      fromStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-      toStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
       stops <-
         try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
           Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id

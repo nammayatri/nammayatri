@@ -43,9 +43,9 @@ FRFSSearch:
 
   fields:
     id: Id FRFSSearch
-    fromStationId: Id Station
-    toStationId: Id Station
-    routeId: Maybe Text
+    fromStationCode: Text
+    toStationCode: Text
+    routeCode: Maybe Text
     quantity: Int
     vehicleType: VehicleCategory
     riderId: Id Person
@@ -61,6 +61,12 @@ FRFSSearch:
     recentLocationId: Maybe (Id RecentLocation)
 
   beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
+    routeCode:
+      routeId: Maybe Text
     journeyLegInfo:
       journeyLegOrder: Maybe Int
       journeyId: Maybe Text
@@ -129,10 +135,18 @@ JourneyRouteDetails:
     frequency: Maybe Seconds
     routeLongName: Maybe Text
     alternateShortNames: Maybe [Text]
-    fromStationId: Maybe (Id Station)
-    toStationId: Maybe (Id Station)
-    routeId: Maybe Text
+    fromStationCode: Maybe Text
+    toStationCode: Maybe Text
+    routeCode: Maybe Text
     journeyStatus: Maybe JourneyLegStatus
+
+  beamFields:
+    fromStationCode:
+      fromStationId: Maybe Text
+    toStationCode:
+      toStationId: Maybe Text
+    routeCode:
+      routeId: Maybe Text
 
   queries:
     findAllBySearchId:
@@ -226,8 +240,8 @@ FRFSQuote:
     bppItemId: Text
     searchId: Id FRFSSearch
     _type: FRFSQuoteType
-    fromStationId: Id Station
-    toStationId: Id Station
+    fromStationCode: Text
+    toStationCode: Text
     quantity: Int
     stationsJson: Text
     routeStationsJson: Maybe Text
@@ -255,6 +269,10 @@ FRFSQuote:
     oldCacheDump: Maybe Text
     childTicketQuantity: Maybe Int
   beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
     price:
       currency: Maybe Currency
       price: HighPrecMoney
@@ -340,8 +358,8 @@ FRFSTicketBooking:
     discountsJson: Maybe Text
     bppItemId: Text
     _type: FRFSQuoteType
-    fromStationId: Id Station
-    toStationId: Id Station
+    fromStationCode: Text
+    toStationCode: Text
     quantity: Int
     childTicketQuantity: Maybe Int
     vehicleType: VehicleCategory
@@ -391,6 +409,10 @@ FRFSTicketBooking:
     customerCancelled: "false"
 
   beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
     price:
       currency: Maybe Currency
       price: HighPrecMoney

@@ -43,6 +43,12 @@ findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleC
   let fallback = QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
    in maybe fallback (\agencyId' -> QIBC.findByAgencyId agencyId' |<|>| fallback) agencyId
 
+findIntegratedBPPConfigById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id IntegratedBPPConfig ->
+  m IntegratedBPPConfig
+findIntegratedBPPConfigById integratedBPPConfigId = QIBC.findById integratedBPPConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
+
 findIntegratedBPPConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe (Id IntegratedBPPConfig) ->
@@ -80,6 +86,24 @@ findAllIntegratedBPPConfig ::
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
   QIBC.findAllByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+
+fetchFirstIntegratedBPPConfigRightResult ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [IntegratedBPPConfig] ->
+  (IntegratedBPPConfig -> m a) ->
+  m (Maybe a)
+fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs handler =
+  foldrM
+    ( \integratedBPPConfig result ->
+        if isNothing result
+          then do
+            try @_ @SomeException (handler integratedBPPConfig) >>= \case
+              Left _ -> return Nothing
+              Right res' -> return (Just res')
+          else return result
+    )
+    Nothing
+    integratedBPPConfigs
 
 fetchFirstIntegratedBPPConfigResult ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

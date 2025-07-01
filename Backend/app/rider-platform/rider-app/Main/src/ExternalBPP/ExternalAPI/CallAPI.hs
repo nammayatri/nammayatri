@@ -41,7 +41,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Tools.Error
 
 getProviderName :: IntegratedBPPConfig -> Text
@@ -99,10 +98,10 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
   case integrationBPPConfig.providerConfig of
-    CMRL config' -> CMRLOrder.createOrder config' booking mRiderNumber
+    CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking mRiderNumber
     EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
     DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
-    CRIS config' -> CRISBookJourney.createOrder config' booking
+    CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking
     _ -> throwError $ InternalError "Unimplemented!"
 
 getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
@@ -163,9 +162,9 @@ getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRi
 
 buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
 buildStations routeCode startStationCode endStationCode integratedBPPConfig startStopType endStopType = do
-  fromStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-  toStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
-  stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+  stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
   mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
 
 mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]

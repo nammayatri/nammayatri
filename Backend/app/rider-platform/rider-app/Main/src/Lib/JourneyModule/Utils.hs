@@ -3,7 +3,6 @@ module Lib.JourneyModule.Utils where
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Monad.Extra (maybeM)
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
@@ -20,7 +19,6 @@ import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
-import Domain.Utils (utctTimeToDayOfWeek)
 import EulerHS.Prelude (concatMapM)
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
 import Kernel.Prelude
@@ -39,9 +37,6 @@ import Storage.GraphqlQueries.Client (mapToServiceTierType)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
-import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
-import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
 import Tools.Maps (LatLong (..))
@@ -156,24 +151,6 @@ getISTTimeInfo currentTime =
   let istOffset :: Double = 5.5 * 3600
       currentTimeIST = addUTCTime (secondsToNominalDiffTime $ round istOffset) currentTime
    in (istOffset, currentTimeIST)
-
--- | Helper function to check which trips are serviceable on the current day
-filterServiceableTrips ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    Monad m
-  ) =>
-  [Id RouteStopTimeTable] -> -- List of trip IDs to check
-  UTCTime -> -- Current time
-  Id DIntegratedBPPConfig.IntegratedBPPConfig ->
-  m [Id RouteStopTimeTable] -- List of serviceable trip IDs
-filterServiceableTrips tripIds currentTime integratedBppConfigId = do
-  routeCalendars <- QRouteCalendar.findByTripIds tripIds integratedBppConfigId
-  let (_, currentTimeIST) = getISTTimeInfo currentTime
-      today = fromEnum $ utctTimeToDayOfWeek currentTimeIST
-      serviceableTrips = filter (\rc -> if length rc.serviceability > today then (rc.serviceability !! today) > 0 else False) routeCalendars
-  return $ map (.tripId) serviceableTrips
 
 fetchLiveBusTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
@@ -348,16 +325,10 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) >>= \case
-      Left _ -> QRSM.findByStopCode fromStopCode integratedBppConfig.id
-      Right stops -> pure stops
+  fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig
 
   -- Get route mappings that contain the destination stop
-  toRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) >>= \case
-      Left _ -> QRSM.findByStopCode toStopCode integratedBppConfig.id
-      Right stops -> pure stops
+  toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig
 
   -- Find common routes that have both the origin and destination stops
   -- and ensure that from-stop comes before to-stop in the route sequence
@@ -398,8 +369,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     -- Get route details to include the short name
     routeDetails <-
       mapM
-        ( \routeCode ->
-            fmap Just $ OTPRest.getRouteByRouteCodeWithFallback integratedBppConfig routeCode
+        ( \routeCode -> OTPRest.getRouteByRouteId integratedBppConfig routeCode
         )
         routeCodesForTier
     let validRouteDetails = catMaybes routeDetails
@@ -585,8 +555,8 @@ getSingleModeRouteDetails ::
   Enums.VehicleCategory ->
   m (Maybe SingleModeRouteDetails)
 getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfig mid mocid vc = do
-  mbFromStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId originStopCode integratedBppConfig
-  mbToStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId destinationStopCode integratedBppConfig
+  mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
+  mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
@@ -600,11 +570,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
           mbRoute <-
             maybe
               (return Nothing)
-              ( \rc ->
-                  try @_ @SomeException (OTPRest.getRouteByRouteId integratedBppConfig rc) >>= \case
-                    Left _ -> QRoute.findByRouteCode rc integratedBppConfig.id
-                    Right route -> maybeM (QRoute.findByRouteCode rc integratedBppConfig.id) (pure . Just) (pure route)
-              )
+              (\rc -> OTPRest.getRouteByRouteId integratedBppConfig rc)
               routeCode
           case mbRoute of
             Just route -> do

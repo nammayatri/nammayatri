@@ -39,7 +39,6 @@ import Domain.Types.StationType
 import qualified Environment
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, fromList, groupBy, id, length, map, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
-import GHC.Num (integerToInt)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
@@ -82,8 +81,6 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopMapping as QRSM
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
@@ -140,10 +137,7 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
             )
             routesInfo
       _ -> do
-        routes <-
-          try @_ @SomeException (OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType) >>= \case
-            Left _ -> B.runInReplica $ QRoute.findAllByVehicleType Nothing Nothing _vehicleType integratedBPPConfig.id
-            Right routes -> pure routes
+        routes <- OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType
         return $
           map
             ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}
@@ -180,11 +174,8 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _mbCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _mbCity)
   let platformType = fromMaybe DIBC.APPLICATION _platformType
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
-  route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode
-  routeStops <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-      Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-      Right stops -> pure stops
+  route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
+  routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
@@ -250,18 +241,11 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       -- Return possible Start stops, when End Stop is Known
       (Nothing, Nothing, Just endStationCode) -> do
         currentTime <- getCurrentTime
-        routesWithStop <-
-          try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode endStationCode integratedBPPConfig) >>= \case
-            Left _ -> QRSM.findByStopCode endStationCode integratedBPPConfig.id
-            Right stops -> pure stops
+        routesWithStop <- OTPRest.getRouteStopMappingByStopCode endStationCode integratedBPPConfig
         let routeCodes = nub $ map (.routeCode) routesWithStop
         routeStops <-
           EulerHS.Prelude.concatMapM
-            ( \routeCode ->
-                try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-                  Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-                  Right stops -> pure stops
-            )
+            (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig)
             routeCodes
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
             groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
@@ -295,10 +279,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
         mkStationsAPIWithDistance merchantOpCity integratedBPPConfig startStops mbOrigin
       -- Return possible End stops, when Route & Start Stop is Known
       (Just routeCode, Just startStationCode, Nothing) -> do
-        routeStops <-
-          try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-            Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-            Right stops -> pure stops
+        routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
         currentTime <- getCurrentTime
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
             startSeqNum = fromMaybe 0 ((.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) serviceableStops)
@@ -326,10 +307,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       -- Return all Stops, when only the Route is Known
       (Just routeCode, Nothing, Nothing) -> do
         currentTime <- getCurrentTime
-        routeStops <-
-          try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-            Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-            Right stops -> pure stops
+        routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
             stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
         let stops =
@@ -355,19 +333,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       -- Return all possible End Stops across all the Routes, when only the Start Stop is Known
       (Nothing, Just startStationCode, Nothing) -> do
         currentTime <- getCurrentTime
-        routesWithStop <-
-          try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig) >>= \case
-            Left _ -> QRSM.findByStopCode startStationCode integratedBPPConfig.id
-            Right stops -> pure stops
+        routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
         let routeCodes = nub $ map (.routeCode) routesWithStop
-        routeStops <-
-          EulerHS.Prelude.concatMapM
-            ( \routeCode ->
-                try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-                  Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-                  Right stops -> pure stops
-            )
-            routeCodes
+        routeStops <- EulerHS.Prelude.concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) routeCodes
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
             groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
             possibleEndStops =
@@ -406,7 +374,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
         mkStationsAPIWithDistance merchantOpCity integratedBPPConfig endStops mbOrigin
       -- Return all the Stops
       _ -> do
-        stations <- B.runInReplica $ OTPRest.findAllByVehicleType Nothing Nothing vehicleType_ integratedBPPConfig
+        stations <- OTPRest.findAllStationsByVehicleType Nothing Nothing vehicleType_ integratedBPPConfig
         let stops =
               map
                 ( \Station {..} ->
@@ -479,22 +447,18 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
   (fromStation, toStation) <- do
-    fromStationInfo <- OTPRest.findByStationCodeAndIntegratedBPPConfigId fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    toStationInfo <- OTPRest.findByStationCodeAndIntegratedBPPConfigId toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+    fromStationInfo <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+    toStationInfo <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
     return (fromStationInfo, toStationInfo)
   route <-
     maybe
       (pure Nothing)
-      ( \routeCode' -> do
-          route' <-
-            OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
-          return $ Just route'
-      )
+      (\routeCode' -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode')
       routeCode
 
   searchReqId <- generateGUID
   now <- getCurrentTime
-  let updatedJourneyRouteDetails = map (\JLT.MultiModalJourneyRouteDetails {..} -> JLT.MultiModalJourneyRouteDetails {journeyStatus = Just JLT.InPlan, ..}) mbJourneyRouteDetails
+  let updatedJourneyRouteDetails = map (\multiModalJourneyRouteDetails -> multiModalJourneyRouteDetails {JLT.journeyStatus = Just JLT.InPlan}) mbJourneyRouteDetails
   let searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
@@ -503,9 +467,9 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             merchantOperatingCityId = fromStation.merchantOperatingCityId,
             createdAt = now,
             updatedAt = now,
-            fromStationId = fromStation.id,
-            toStationId = toStation.id,
-            routeId = route <&> (.code),
+            fromStationCode = fromStation.code,
+            toStationCode = toStation.code,
+            routeCode = route <&> (.code),
             riderId = personId,
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
@@ -1097,7 +1061,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
     SIBC.fetchAllIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig ->
       case mbInput of
         Nothing -> do
-          allStops <- OTPRest.findAllByVehicleType Nothing Nothing vehicle integratedBPPConfig
+          allStops <- OTPRest.findAllStationsByVehicleType Nothing Nothing vehicle integratedBPPConfig
           currentTime <- getCurrentTime
           let serviceableStops = DTB.findBoundedDomain allStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) allStops
               stopsWithinRadius =
@@ -1112,7 +1076,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
           let stopsWithinActualRadius = filter (\stop -> maybe True (\distance -> distance <= frfsConfig.radius) stop.distance) stopsWithDistance
           return stopsWithinActualRadius
         Just userInput -> do
-          matchingStops <- OTPRest.findAllMatchingStations (Just userInput) mbLimit mbOffset merchantOpCity.id vehicle integratedBPPConfig
+          matchingStops <- OTPRest.findAllMatchingStations (Just userInput) mbLimit mbOffset vehicle integratedBPPConfig
           currentTime <- getCurrentTime
           let serviceableStops = DTB.findBoundedDomain matchingStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) matchingStops
           stopsWithDistance <- tryStationsAPIWithOSRMDistances mId merchantOpCity origin (mkStationsAPI integratedBPPConfig (filter (\stop -> maybe True (any (`elem` [END, INTERMEDIATE])) stop.possibleTypes) serviceableStops)) integratedBPPConfig
@@ -1122,12 +1086,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
       case mbInput of
         Nothing -> return []
         Just userInput -> do
-          let mbLimitInteger = fmap toInteger mbLimit
-              mbOffsetInteger = fmap toInteger mbOffset
-          matchingRoutes <-
-            try @_ @SomeException (OTPRest.getRouteByFuzzySearch integratedBPPConfig userInput) >>= \case
-              Left _ -> QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
-              Right routes -> bool (pure $ take (integerToInt $ fromMaybe 0 mbOffsetInteger) $ drop (integerToInt $ fromMaybe 0 mbOffsetInteger) routes) (QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id) (null routes)
+          matchingRoutes <- OTPRest.findAllMatchingRoutes (Just userInput) mbLimit mbOffset vehicle integratedBPPConfig
           currentTime <- getCurrentTime
           let serviceableRoutes = DTB.findBoundedDomain matchingRoutes currentTime ++ filter (\route -> route.timeBounds == DTB.Unbounded) matchingRoutes
 

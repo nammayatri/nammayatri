@@ -91,9 +91,7 @@ import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
-import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
-import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.MultiModal as MM
 import qualified Tools.Payment as TPayment
@@ -751,11 +749,6 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
         routes <- OTPRest.getRoutesByGtfsId bppConfig
         mkResponse stations routes bppConfig
 
-  let fetchDataDb bppConfig = do
-        routes <- QRoute.findAllByBppConfigId bppConfig.id
-        stations <- QStation.findAllByBppConfigId bppConfig.id
-        mkResponse stations routes bppConfig
-
   transportDataList <-
     try @_ @SomeException
       ( mapM
@@ -771,14 +764,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-
-          -- Process only unique configs
-          try @_ @SomeException (mapM fetchData uniqueConfigs) >>= \case
-            Left error' -> do
-              logError $ "Error fetching data from OTPRest all public transport data: " <> show error'
-              mapM fetchDataDb (concat integratedBPPConfigs)
-            Right dataList -> pure dataList
-
+          mapM fetchData uniqueConfigs
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
