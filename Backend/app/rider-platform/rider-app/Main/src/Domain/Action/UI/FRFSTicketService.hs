@@ -582,16 +582,20 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req platformType cr
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
       let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
+      logInfo $ "CRIS: mBookAuthCode: " <> show mBookAuthCode
       maybeM
         (buildAndCreateBooking rider quote selectedDiscounts)
         ( \booking -> do
             let needsAuthCodeUpdate = isJust mBookAuthCode && booking.bookingAuthCode /= mBookAuthCode
+            logInfo $ "CRIS: booking.bookingAuthCode: " <> show booking.bookingAuthCode
             updatedBooking <-
               if needsAuthCodeUpdate
                 then do
+                  logInfo $ "CRIS: updating booking auth code"
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
                   pure booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode}
                 else pure booking
+            logInfo $ "CRIS: updatedBooking: " <> show updatedBooking
             pure (rider, updatedBooking)
         )
         (QFRFSTicketBooking.findByQuoteId quoteId)
