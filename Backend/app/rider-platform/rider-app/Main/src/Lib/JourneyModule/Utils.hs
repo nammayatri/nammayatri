@@ -241,7 +241,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               serviceTierType = serviceTierType,
               delay = Nothing,
               source = LIVE,
-              stage = Nothing
+              stage = Nothing,
+              platformCode = Nothing
             }
 
 fetchLiveSubwayTimings ::
@@ -287,7 +288,8 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           serviceTierType = Spec.SECOND_CLASS,
           delay = Just $ Seconds train.delayArrival,
           source = LIVE,
-          stage = Nothing
+          stage = Nothing,
+          platformCode = Nothing
         }
 
 fetchLiveTimings ::
@@ -533,7 +535,8 @@ data StopDetails = StopDetails
     stopName :: Text,
     stopLat :: Double,
     stopLon :: Double,
-    stopArrivalTime :: UTCTime
+    stopArrivalTime :: UTCTime,
+    platformNumber :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -617,8 +620,10 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
 
               let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
                   mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
-                  fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
-                  toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
+                  mbOriginPlatformCode = (.platformCode) =<< mbEarliestOriginTiming
+                  mbDestinationPlatformCode = (.platformCode) =<< mbDestinationTiming
+                  fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
+                  toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime) mbDestinationPlatformCode
 
               return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
             Nothing -> return Nothing

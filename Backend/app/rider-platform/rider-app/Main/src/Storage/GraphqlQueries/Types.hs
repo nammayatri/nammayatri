@@ -40,10 +40,20 @@ instance FromJSON OTPResponse where
     dataObj <- obj .: "data"
     OTPResponse <$> dataObj .: "stop"
 
+newtype PlatformCode = PlatformCode
+  { platformCode :: Maybe Text
+  }
+  deriving (Show, Generic)
+
+instance FromJSON PlatformCode where
+  parseJSON = withObject "PlatformCode" $ \obj -> do
+    PlatformCode <$> obj .: "platformCode"
+
 data StopData = StopData
   { gtfsId :: Text,
     name :: Text,
-    stoptimesWithoutPatterns :: [RouteStopTimeTableEntry]
+    stoptimesWithoutPatterns :: [RouteStopTimeTableEntry],
+    stop :: Maybe PlatformCode
   }
   deriving (Show, Generic)
 
@@ -53,6 +63,7 @@ instance FromJSON StopData where
       <$> obj .: "gtfsId"
       <*> obj .: "name"
       <*> obj .: "stoptimesWithoutPatterns"
+      <*> obj .:? "stop"
 
 data RouteStopTimeTableEntry = RouteStopTimeTableEntry
   { scheduledArrival :: Int,
@@ -115,7 +126,8 @@ data TimetableEntry = TimetableEntry
     tripId :: Text,
     stage :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    platformCode :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -140,6 +152,9 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "        route {\n"
       ++ "          gtfsId\n"
       ++ "        }\n"
+      ++ "      }\n"
+      ++ "      stop {\n"
+      ++ "        platformCode\n"
       ++ "      }\n"
       ++ "    }\n"
       ++ "  }\n"

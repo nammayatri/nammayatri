@@ -65,6 +65,7 @@ updateByPrimaryKey (Domain.Types.RouteStopTimeTable.RouteStopTimeTable {..}) = d
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.delay delay,
+      Se.Set Beam.platformCode platformCode,
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.source (Kernel.Prelude.Just source),
       Se.Set Beam.stage stage,
@@ -90,6 +91,7 @@ instance FromTType' Beam.RouteStopTimeTable Domain.Types.RouteStopTimeTable.Rout
         Domain.Types.RouteStopTimeTable.RouteStopTimeTable
           { delay = delay,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
+            platformCode = platformCode,
             routeCode = routeCode,
             serviceTierType = serviceTierType,
             source = Kernel.Prelude.fromMaybe Domain.Types.RouteStopTimeTable.GTFS source,
@@ -109,6 +111,7 @@ instance ToTType' Beam.RouteStopTimeTable Domain.Types.RouteStopTimeTable.RouteS
     Beam.RouteStopTimeTableT
       { Beam.delay = delay,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
+        Beam.platformCode = platformCode,
         Beam.routeCode = routeCode,
         Beam.serviceTierType = serviceTierType,
         Beam.source = Kernel.Prelude.Just source,
