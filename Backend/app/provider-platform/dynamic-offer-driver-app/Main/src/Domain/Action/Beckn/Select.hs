@@ -108,7 +108,8 @@ handler merchant sReq searchReq estimates = do
     mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then (Just DRD.MultipleDeviceIdExists) else Nothing) isMultipleOrNoDeviceIdExist
     filterChargesByApplicability conditionalCharges = do
       let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
-      catMaybes $ [safetyCharges]
+          nyregularCharges = if fromMaybe False searchReq.isReserveRide then find (\ac -> (ac.chargeCategory) == DAC.NYREGULAR_SUBSCRIPTION_CHARGE) conditionalCharges else Nothing
+      catMaybes $ [safetyCharges, nyregularCharges]
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
 validateRequest merchantId sReq = do

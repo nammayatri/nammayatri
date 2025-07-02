@@ -460,6 +460,7 @@ data BecknTag
   | PREFER_SAFETY_PLUS
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
+  | NYREGULAR_SUBSCRIPTION_CHARGE
   | IS_SAFETY_PLUS
   | IS_MULTIMODAL_SEARCH
   | RESERVED_RIDE_TAG
@@ -511,6 +512,7 @@ instance CompleteTag BecknTag where
     SAFETY_PLUS_CHARGES -> (Just "safety plus charges", Nothing)
     IS_SAFETY_PLUS -> (Just "is safety plus", Nothing)
     NO_CHARGES -> (Just "no conditional charges", Nothing)
+    NYREGULAR_SUBSCRIPTION_CHARGE -> (Just "NYRegular subscription charge", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -557,6 +559,7 @@ instance CompleteTag BecknTag where
     PARCEL_QUANTITY -> DELIVERY
     IS_SAFETY_PLUS -> GENERAL_INFO
     SAFETY_PLUS_CHARGES -> GENERAL_INFO
+    NYREGULAR_SUBSCRIPTION_CHARGE -> GENERAL_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

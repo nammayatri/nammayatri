@@ -93,6 +93,7 @@ buildSearchReq messageId subscriber req context = do
         transactionId = transactionId_,
         stops,
         isReserveRide = isReserveRide,
+        mbAdditonalChargeCategories = Nothing,
         ..
       }
 

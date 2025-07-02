@@ -210,9 +210,71 @@ postNyRegularSubscriptionsConfirm (mPersonId, _) req = do
   -- Update status
   QNyRegularSubscription.updateStatusById Domain.Types.NyRegularSubscription.ACTIVE subscriptionId
 
-  -- Fetch and return updated subscription
-  QNyRegularSubscription.findById subscriptionId
-    >>= fromMaybeM (InvalidRequest "Failed to fetch subscription after status update") -- Corrected error
+  -- Fetch updated subscription
+  updatedSubscription <- do
+    QNyRegularSubscription.findById subscriptionId
+      >>= fromMaybeM (InvalidRequest "Failed to fetch subscription after status update") -- Corrected error
+
+  -- Schedule the next instance job
+  case updatedSubscription.merchantOperatingCityId of
+    Nothing -> do
+      logInfo $ "Subscription " <> updatedSubscription.id.getId <> " is missing merchantOperatingCityId, skipping job scheduling"
+    Just opCityId -> do
+      -- Fetch RiderConfig to get the correct timeDiffFromUtc and execution time offset
+      riderConfig <-
+        QRC.findByMerchantOperatingCityId opCityId Nothing
+          >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
+
+      -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
+      currentTime <- getCurrentTime
+
+      -- Get the next scheduled instance time
+      -- Calculate the difference between current time and the next scheduled time
+      let today = Time.utctDay currentTime
+          naiveUTCTime = Time.UTCTime today (Time.timeOfDayToTime updatedSubscription.scheduledTimeOfDay)
+          nextScheduledTime = Time.addUTCTime (KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc) naiveUTCTime
+          timeDiff = Time.diffUTCTime nextScheduledTime currentTime
+      nextInstanceTimes <- getNextScheduledInstanceTimes (min timeDiff (KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc)) updatedSubscription currentTime 1
+
+      for_ nextInstanceTimes $ \nextInstanceScheduledTime -> do
+        let jobScheduledTime = nextInstanceScheduledTime
+            executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
+            jobExecutionBuffer = fromIntegral (- executionTimeOffsetMinutes) * 60 -- Configurable minutes before scheduled time
+        let jobExecutionTime = Time.addUTCTime jobExecutionBuffer jobScheduledTime
+
+        jobCreationTime <- getCurrentTime -- current time for scheduleAfter calculation
+        when (jobExecutionTime <= jobCreationTime) $ do
+          throwM (InvalidRequest $ "Job execution time " <> show jobExecutionTime <> " is not in the future. Current time: " <> show jobCreationTime)
+        -- Ensure job is scheduled for the future
+        let scheduleAfter = Time.diffUTCTime jobExecutionTime jobCreationTime
+        -- Calculate the current scheduling hash
+        currentHash <- calculateSubscriptionSchedulingHash updatedSubscription
+        let jobData =
+              NyRegularInstanceJobData
+                { nyRegularSubscriptionId = updatedSubscription.id,
+                  userId = updatedSubscription.userId,
+                  scheduledTime = jobScheduledTime,
+                  expectedSchedulingHash = currentHash
+                }
+
+        -- Log before creating job
+        logInfo $
+          "Creating NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId
+            <> " at "
+            <> show jobScheduledTime
+            <> " to run in "
+            <> show scheduleAfter
+            <> " seconds."
+
+        void $
+          createJobIn @_ @'NyRegularInstance -- Explicit type application for the job kind
+            updatedSubscription.merchantId
+            updatedSubscription.merchantOperatingCityId
+            scheduleAfter
+            jobData
+        logInfo $ "Created NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId <> " at " <> show jobScheduledTime
+
+  pure updatedSubscription
 
 -- Helper to check if a UTCTime falls within a pause period [start, end)
 isTimestampInPausePeriod :: Time.UTCTime -> Maybe Time.UTCTime -> Maybe Time.UTCTime -> Bool
