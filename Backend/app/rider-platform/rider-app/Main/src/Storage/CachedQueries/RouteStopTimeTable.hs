@@ -66,10 +66,15 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
   let routeCodes = P.map (modifyCodesToGTFS gtfsFeedInfo) routeCodes'
       stopCode = modifyCodesToGTFS gtfsFeedInfo stopCode'
   allTrips <-
-    Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
-      Just a -> pure a
-      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig.id merchantId merchantOpId routeCodes' stopCode vehicleType
-  logDebug $ "Fetched route stop time table cached: " <> show allTrips <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+    Hedis.get (routeTimeTableKey stopCode) >>= \case
+      Just a -> do
+        logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+        pure a
+      Nothing -> do
+        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig.id merchantId merchantOpId routeCodes' stopCode vehicleType
+        logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+        void $ cacheRouteStopTimeInfo stopCode allTrips
+        pure allTrips
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips
 

@@ -624,7 +624,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                   mbDestinationPlatformCode = (.platformCode) =<< mbDestinationTiming
                   fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
                   toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime) mbDestinationPlatformCode
-
+              logDebug $ "fromStopDetails: " <> show fromStopDetails <> " toStopDetails: " <> show toStopDetails <> " route: " <> show route <> " possibleRoutes: " <> show possibleRoutes <> " mbEarliestOriginTiming: " <> show mbEarliestOriginTiming <> " mbDestinationTiming: " <> show mbDestinationTiming
               return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
             Nothing -> return Nothing
         _ -> return Nothing
