@@ -19,6 +19,7 @@ module API.Fleet.Registration
 where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Registration as DReg
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.BulkAssociation as BulkAssoc
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as DP
 import qualified Domain.Action.Dashboard.Registration as DashboardReg
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
@@ -27,11 +28,13 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver.Fleet as Client
 import Servant hiding (throwError)
+import Servant.Multipart
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
@@ -42,6 +45,7 @@ type API =
     :> ( DReg.FleetOwnerLoginAPI
            :<|> FleetOwnerVerifyAPI
            :<|> FleetOwnerRegisterAPI
+           :<|> BulkFleetAssociationAPI
        )
 
 type FleetOwnerRegisterAPI =
@@ -55,6 +59,13 @@ type FleetOwnerVerifyAPI =
     :> ReqBody '[JSON] DP.FleetOwnerLoginReq
     :> Post '[JSON] DP.FleetOwnerVerifyRes
 
+type BulkFleetAssociationAPI =
+  Capture "merchantId" (ShortId DM.Merchant)
+    :> Capture "city" City.City
+    :> "bulk-associate"
+    :> MultipartForm Mem (MultipartData Mem)
+    :> Post '[JSON] [BulkAssoc.BulkFleetAssociationResult]
+
 data FleetOwnerRegisterResp = FleetOwnerRegisterResp
   { result :: Text,
     authToken :: Maybe Text
@@ -66,6 +77,7 @@ handler =
   fleetOwnerLogin
     :<|> fleetOwnerVerfiy
     :<|> fleetOwnerRegister
+    :<|> bulkFleetAssociation
 
 fleetOwnerLogin :: DP.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerLogin req = withFlowHandlerAPI' $ do
@@ -115,3 +127,10 @@ castFleetType req = case req of
   Just FOI.NORMAL_FLEET -> Just DashboardReg.NORMAL_FLEET
   Just FOI.BUSINESS_FLEET -> Just DashboardReg.BUSINESS_FLEET
   _ -> Nothing
+
+bulkFleetAssociation :: ShortId DM.Merchant -> City.City -> MultipartData Mem -> FlowHandler [BulkAssoc.BulkFleetAssociationResult]
+bulkFleetAssociation merchantId city multipartData = withFlowHandlerAPI' $ do
+  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  unless (city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantId
+  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId city (.bulk.bulkAssociate) multipartData

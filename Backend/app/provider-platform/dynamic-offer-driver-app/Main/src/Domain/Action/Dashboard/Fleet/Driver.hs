@@ -196,18 +196,29 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
+  mbFleetConfig <- case (getEntityData.role, getMbFleetOwnerId) of
+    (DP.DRIVER, Just fleetOwnerId) -> do
+      logTagInfo "dashboard -> looking up fleet config for driver" $ "fleetOwnerId: " <> fleetOwnerId
+      QFC.findByPrimaryKey (Id fleetOwnerId)
+    _ -> do
+      logTagInfo "dashboard -> looking up fleet config for entity" $ "entityId: " <> getEntityData.id.getId
+      QFC.findByPrimaryKey getEntityData.id
+  let fleetSkip = maybe False DFC.fleetVehicleVerificationSkippable mbFleetConfig
+      driverSkip = maybe False DFC.driverVehicleVerificationSkippable mbFleetConfig
+  logTagInfo "dashboard -> fleet config found" $ "fleetSkip: " <> show fleetSkip <> ", driverSkip: " <> show driverSkip
+  logTagInfo "dashboard -> entity info" $ "role: " <> show getEntityData.role <> ", fleetOwnerId: " <> maybe "None" identity getMbFleetOwnerId
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
       whenJust rc $ \rcert -> void $ checkRCAssociationForDriver getEntityData.id rcert True
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      unless driverSkip $ void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-      Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId
+      unless fleetSkip $ void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
@@ -1054,12 +1065,13 @@ getDriverFleetDriverVehicleAssociation ::
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
-  (listOfAllDrivers, _, _) <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
+  let driverMode = Nothing :: Maybe Common.DriverMode
+  (listOfAllDrivers, _, _) <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset driverMode Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
   let summary = Common.Summary {totalCount = 10000, count = length filteredItems}
-  pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = filteredItems, summary = summary}
+  pure $ Common.DrivertoVehicleAssociationRes {summary, listItem = filteredItems, fleetOwnerId}
   where
     createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createDriverVehicleAssociationListItem fdaList vrcaList = do

@@ -38,7 +38,9 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.fleetVehicleVerificationSkippable fleetVehicleVerificationSkippable,
+      Se.Set Beam.driverVehicleVerificationSkippable driverVehicleVerificationSkippable
     ]
     [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId)]]
 
@@ -58,7 +60,9 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            fleetVehicleVerificationSkippable = fleetVehicleVerificationSkippable,
+            driverVehicleVerificationSkippable = driverVehicleVerificationSkippable
           }
 
 instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
@@ -75,5 +79,7 @@ instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.fleetVehicleVerificationSkippable = fleetVehicleVerificationSkippable,
+        Beam.driverVehicleVerificationSkippable = driverVehicleVerificationSkippable
       }
