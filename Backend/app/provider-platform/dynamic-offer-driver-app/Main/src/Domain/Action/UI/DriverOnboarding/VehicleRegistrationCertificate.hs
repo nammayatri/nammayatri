@@ -215,8 +215,9 @@ verifyRC ::
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverRCReq ->
+  Bool ->
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyRCHitsCountKey req.vehicleRegistrationCertNumber) externalServiceRateLimitOptions
 
@@ -244,6 +245,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   when
     ( isNothing req.vehicleDetails && isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
+        && (not bulkUpload)
     )
     $ do
       image <- getImage req.imageId
