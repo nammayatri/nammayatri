@@ -83,6 +83,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
@@ -1599,11 +1600,30 @@ generateJourneyStatusResponse personId merchantId journey legs = do
               mode = legData.mode
             }
 
-markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegExtraInfo -> m ()
-markLegStatus status journeyLegExtraInfo = do
+-- Helper function for FRFS (Metro/Subway) status updates with sub-leg support
+updateFRFSLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> Maybe (Id DFRFSBooking.FRFSTicketBooking) -> Maybe Int -> m ()
+updateFRFSLegStatus status mbBookingId mbSubLegOrder = do
+  case mbSubLegOrder of
+    Just subLegOrder ->
+      whenJust mbBookingId $ \bookingId -> do
+        mbBooking <- QTBooking.findById bookingId
+        whenJust mbBooking $ \booking -> do
+          -- Update the specific sub-leg in journey route details
+          QJourneyRouteDetails.updateJourneyStatus (Just status) booking.searchId (Just subLegOrder)
+          -- Check if this is the last sub-leg and update main booking if so
+          allRouteDetails <- QJourneyRouteDetails.findAllBySearchId booking.searchId
+          let subLegOrders = mapMaybe (.subLegOrder) allRouteDetails
+          when (not (null subLegOrders)) $ do
+            let maxSubLegOrder = maximum subLegOrders
+            when (subLegOrder == maxSubLegOrder) $ do
+              QTBooking.updateJourneyLegStatus (Just status) bookingId
+    Nothing -> whenJust mbBookingId $ QTBooking.updateJourneyLegStatus (Just status)
+
+markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegExtraInfo -> Maybe Int -> m ()
+markLegStatus status journeyLegExtraInfo mbSubLegOrder = do
   case journeyLegExtraInfo of
-    JL.Taxi legExtraInfo -> whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
-    JL.Metro legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
+    JL.Metro legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
+    JL.Subway legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
     JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
-    JL.Subway legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
     JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
+    JL.Taxi legExtraInfo -> whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
