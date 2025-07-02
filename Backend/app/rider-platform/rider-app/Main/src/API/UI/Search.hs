@@ -236,6 +236,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
   mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
+  logDebug $ "mbSingleModeRouteDetails: " <> show mbSingleModeRouteDetails
   (singleModeWarningType, otpResponse) <- case mbSingleModeRouteDetails of
     Just singleModeRouteDetails -> do
       let fromStopDetails =
