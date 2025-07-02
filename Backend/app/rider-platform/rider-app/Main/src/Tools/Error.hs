@@ -807,8 +807,8 @@ instance IsBaseError JourneyLegError where
   toMessage = \case
     JourneyLegCannotBeSwitched journeyLegId -> Just ("JourneyLeg with id: " <> journeyLegId <> " can not be switched.")
     JourneyLegCannotBeCancelled journeyLegId -> Just ("Request data for journey leg number: " <> journeyLegId <> " can not be cancelled!")
-    JourneyLegCannotBeSkippedForMode journeyLegMode -> Just ("JourneyLeg csnnot be switched for mode: " <> journeyLegMode)
-    JourneyLegCannotBeSkippedForStatus journeyLegStatus -> Just ("JourneyLeg csnnot be switched for status: " <> journeyLegStatus)
+    JourneyLegCannotBeSkippedForMode journeyLegMode -> Just ("JourneyLeg cannot be switched for mode: " <> journeyLegMode)
+    JourneyLegCannotBeSkippedForStatus journeyLegStatus -> Just ("JourneyLeg cannot be switched for status: " <> journeyLegStatus)
 
 instance IsHTTPError JourneyLegError where
   toErrorCode = \case

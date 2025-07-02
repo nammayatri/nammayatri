@@ -759,10 +759,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
       when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+      when (paymentBookingStatus == FRFSTicketService.PENDING) do
+        void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
+        void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.PENDING booking.id
       let paymentStatusAPI =
             case paymentBookingStatus of
               FRFSTicketService.FAILURE -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
               FRFSTicketService.SUCCESS -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
+              FRFSTicketService.PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.PENDING
               _ -> Nothing
       logInfo $ "payment status api: " <> show paymentStatusAPI
       let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
