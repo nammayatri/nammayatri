@@ -619,11 +619,15 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
               let mbDestinationTiming = do
                     originTiming <- mbEarliestOriginTiming
                     find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
+                  mbFirstOriginTiming = listToMaybe originStopTimings
+                  mbFirstDestinationTiming = do
+                    originTiming <- mbFirstOriginTiming
+                    find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
 
               let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
                   mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
-                  mbOriginPlatformCode = (.platformCode) =<< mbEarliestOriginTiming
-                  mbDestinationPlatformCode = (.platformCode) =<< mbDestinationTiming
+                  mbOriginPlatformCode = ((.platformCode) =<< mbEarliestOriginTiming) <|> ((.platformCode) =<< mbFirstOriginTiming) -- (.platformCode) =<< mbEarliestOriginTiming
+                  mbDestinationPlatformCode = ((.platformCode) =<< mbDestinationTiming) <|> ((.platformCode) =<< mbFirstDestinationTiming)
                   fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
                   toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime) mbDestinationPlatformCode
               logDebug $ "fromStopDetails: " <> show fromStopDetails <> " toStopDetails: " <> show toStopDetails <> " route: " <> show route <> " possibleRoutes: " <> show possibleRoutes <> " mbEarliestOriginTiming: " <> show mbEarliestOriginTiming <> " mbDestinationTiming: " <> show mbDestinationTiming
