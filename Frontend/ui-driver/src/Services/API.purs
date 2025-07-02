@@ -3492,6 +3492,7 @@ newtype CoinTransactionRes = CoinTransactionRes
     coinExpired :: Int,
     todayCoinSummary :: Int,
     coinsEarnedPreviousDay :: Int,
+    coinsExpiredOnThatDay :: Int,
     expiringCoins :: Int,
     expiringDays :: Int,
     coinTransactionHistory :: Array CoinTransactionHistoryItem
@@ -3535,6 +3536,8 @@ data DriverCoinsFunctionType
   | BulkUploadFunctionV2
   | RidesCompleted Int
   | MetroRideCompleted MetroRideType (Maybe Int)
+  | BookingCancellationPenalisaton
+  | BookingCancellationCompensation
 
 data MetroRideType
   = ToMetro

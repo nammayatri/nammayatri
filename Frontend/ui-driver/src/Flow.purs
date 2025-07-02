@@ -4184,6 +4184,7 @@ updateBannerAndPopupFlags = do
                 , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup
+                , coinWaitingThreshold = getCoinCancellationTimeThresholdConfig.cancellationTimeThresholdInSeconds
                 }
               }
         )

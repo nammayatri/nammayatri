@@ -1857,4 +1857,7 @@ getMl =
     , pet_rides : "പെറ്റ് റൈഡ്സ്"
     , please_resume_ride_to_continue : "യാത്ര പുനരാരംഭിക്കുക"
     , you_are_too_far_from_the_stop : "നിങ്ങളുടെ സ്ടോപ്പ് മുകളിൽ അത್യംത ദೂരത്തിൽ ഉണ്ട്. അടുത്ത സ്ടോപ്പ് പോകുക"
+    , you_may_lose_some_coins_if_you_cancel_this_ride : "നിങ്ങളുടെ യാത്ര രദ്ദു ചെയ്യുന്നതുമായി, കೆലവೊം കാലി ഹೋഗ് ബഹುദു"
+    , cancellation_compensation : "റദ്ദുചെയ്യുന്ന സ്കോർ"
+    , cancellation_penalisaton : "റദ്ദുചെയ്യുന്ന സ്കോർ"
     }

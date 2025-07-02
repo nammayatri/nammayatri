@@ -694,6 +694,11 @@ offerConfigParams state = PromotionPopupConfig $ {
 ------------------------------------ cancelConfirmationConfig -----------------------------
 cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
 cancelConfirmationConfig state = let
+  coinText = (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus && state.data.activeRide.waitTimeSeconds == -1) 
+  currentTime = EHC.getCurrentUTC ""
+  rideStartTime = state.data.activeRide.rideCreatedAt
+  timeDifference = runFn2 JB.differenceBetweenTwoUTC currentTime rideStartTime
+  coinTextCondition = coinText && timeDifference > state.props.coinWaitingThreshold
   config' = PopUpModal.config
   popUpConfig' = config'{
     gravity = CENTER,
@@ -711,9 +716,10 @@ cancelConfirmationConfig state = let
           if isAmbulance then ambulanceText else nonAmbulanceText
     , margin = Margin 16 24 16 0 },
     secondaryText {
-      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") || RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory then VISIBLE else GONE,
-      text = if state.data.activeRide.specialLocationTag == (Just "GOTO") then getString GO_TO_CANCELLATION_DESC else  StringsV2.getStringV2 LT2.drivers_are_permitted_to_cancel_ambulance_bookings,
-      margin = MarginTop 6
+      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") || RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory || coinTextCondition then VISIBLE else GONE,
+      text = if coinTextCondition then StringsV2.getStringV2 LT2.you_may_lose_some_coins_if_you_cancel_this_ride else if state.data.activeRide.specialLocationTag == (Just "GOTO") then getString GO_TO_CANCELLATION_DESC else  StringsV2.getStringV2 LT2.drivers_are_permitted_to_cancel_ambulance_bookings,
+      margin = MarginTop 6,
+      color = Color.red900
       },
     option1 {
       text = (getString CONTINUE)

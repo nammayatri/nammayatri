@@ -82,6 +82,8 @@ import Timers (startTimer)
 import Locale.Utils
 import Effect.Uncurried (runEffectFn3)
 import Types.App (defaultGlobalState, GlobalState(..))
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
 
 screen :: ST.DriverEarningsScreenState -> LoggableScreen Action ST.DriverEarningsScreenState ScreenOutput
 screen initialState =
@@ -939,6 +941,10 @@ tableView state  =
 
 tableItemView :: forall w. API.CoinInfo -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 tableItemView (API.CoinInfo item) index state =
+  let
+    isBookingCancellationPenalisaton = item.key == "Cancellation_BookingCancellationPenalisaton"
+    isBookingCancellationCompensation = item.key == "Cancellation_BookingCancellationCompensation"
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -956,7 +962,7 @@ tableItemView (API.CoinInfo item) index state =
             [ textView
               ( [ height WRAP_CONTENT
                 , width $ V (((screenWidth unit - 10) * 55) / 100)
-                , text item.title
+                , text $ if isBookingCancellationCompensation then getStringV2 cancellation_compensation   else if isBookingCancellationPenalisaton then getStringV2 cancellation_penalisaton else item.title
                 , color Color.black900
                 , padding $ if index == 0 then Padding 16 12 16 12 else Padding 16 8 16 8
                 ]
@@ -988,7 +994,7 @@ tableItemView (API.CoinInfo item) index state =
               [ textView
                   ( [ height WRAP_CONTENT
                     , width WRAP_CONTENT
-                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "-") <> (show item.coins) else getString YATRI_POINTS_STR
+                    , text $ if index /= 0 then (if isBookingCancellationCompensation then "Up to " else "") <> (if item.coins > 0 then "+" else "") <> (show item.coins) else getString YATRI_POINTS_STR
                     , color Color.black900
                     ]
                       <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy

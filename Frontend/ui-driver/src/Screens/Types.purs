@@ -1465,7 +1465,8 @@ type HomeScreenProps =  {
   bus_input_data :: String,
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean,
-  showBlockerPopup :: Boolean
+  showBlockerPopup :: Boolean,
+  coinWaitingThreshold :: Int
  }
 
 type RideRequestPill = {

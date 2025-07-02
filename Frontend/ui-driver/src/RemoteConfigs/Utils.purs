@@ -599,3 +599,14 @@ defaultStopValidationDistanceThreshold = {
     distance : 200.0 -- in meters
   , enableStopValidation : true
 }
+
+defaultCancellationTimeThresholdConfig :: CancellationTimeThresholdConfig
+defaultCancellationTimeThresholdConfig = {
+  cancellationTimeThresholdInSeconds : 120
+}
+
+getCoinCancellationTimeThresholdConfig :: CancellationTimeThresholdConfig
+getCoinCancellationTimeThresholdConfig  =
+  let config = fetchRemoteConfigString "coin_cancellation_time_threshold_config"
+      value = decodeForeignObject (parseJSON config) defaultCancellationTimeThresholdConfig
+  in value

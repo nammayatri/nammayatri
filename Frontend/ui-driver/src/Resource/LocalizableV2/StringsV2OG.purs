@@ -462,6 +462,7 @@ getProxy str = case str of
   FARE_UPDATED -> \a -> a @~ fare_updated
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> \a -> a @~ frequent_cancellations_will_lead_to_less_rides
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> \a -> a @~ frequent_cancellations_will_lead_to_blocking
+  YOU_MAY_LOSE_SOME_COINS_IF_YOU_CANCEL_THIS_RIDE -> \a -> a @~ you_may_lose_some_coins_if_you_cancel_this_ride
   CONTINUE -> \a -> a @~ continue
   CONFIRM_PASSWORD -> \a -> a @~ confirm_password
   DEMO_MODE -> \a -> a @~ demo_mode
@@ -1887,4 +1888,6 @@ getProxy str = case str of
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1
+  CANCELLATION_COMPENSATION -> \a -> a @~ cancellation_compensation
+  CANCELLATION_PENALISATON -> \a -> a @~ cancellation_penalisaton
 

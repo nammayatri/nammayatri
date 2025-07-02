@@ -1857,4 +1857,7 @@ getBn =
     , pet_rides : "পেট রাইডস"
     , you_are_too_far_from_the_stop : "আপনি স্টপ থেকে অনেক দূরে রয়েছেন। স্টপে আসুন"
     , please_resume_ride_to_continue : "যাত্রা পুনরায় শুরু করুন যাত্রা পুনরায় শুরু করুন"
+    , you_may_lose_some_coins_if_you_cancel_this_ride : "আপনি যাত্রা বাতিল করলে কিছু কালি হতে পারে"
+    , cancellation_compensation : "রদ্দু মাড়ালু স্কোর"
+    , cancellation_penalisaton : "রদ্দু মাড়ালু স্কোর"
     }

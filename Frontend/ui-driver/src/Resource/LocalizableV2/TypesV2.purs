@@ -1871,6 +1871,9 @@ newtype Keymap = Keymap {
     , pet_rides :: String
     , please_resume_ride_to_continue :: String
     , you_are_too_far_from_the_stop :: String
+    , you_may_lose_some_coins_if_you_cancel_this_ride :: String
+    , cancellation_compensation :: String
+    , cancellation_penalisaton :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7426,3 +7429,12 @@ please_resume_ride_to_continue = a
 
 you_are_too_far_from_the_stop :: Proxy "you_are_too_far_from_the_stop"
 you_are_too_far_from_the_stop = a
+
+you_may_lose_some_coins_if_you_cancel_this_ride :: Proxy "you_may_lose_some_coins_if_you_cancel_this_ride"
+you_may_lose_some_coins_if_you_cancel_this_ride = a
+
+cancellation_compensation :: Proxy "cancellation_compensation"
+cancellation_compensation = a
+
+cancellation_penalisaton :: Proxy "cancellation_penalisaton"
+cancellation_penalisaton = a
