@@ -346,7 +346,8 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
 
         when shouldCreateJob $ do
           let jobScheduledTime = nextInstanceScheduledTime
-          let jobExecutionBuffer = -15 * 60 -- 15 minutes before scheduled time
+              executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
+              jobExecutionBuffer = fromIntegral (- executionTimeOffsetMinutes) * 60 -- Configurable minutes before scheduled time
           let jobExecutionTime = Time.addUTCTime jobExecutionBuffer jobScheduledTime
 
           jobCreationTime <- getCurrentTime -- current time for scheduleAfter calculation

@@ -69,11 +69,12 @@ data RiderConfig = RiderConfig
     multimodalTesting :: Kernel.Prelude.Bool,
     nearByDriverRingBucketCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.RingBucketCfg],
     nearbyDriverSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    nyRegularExecutionTimeOffsetMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,
-    payoutReferralStartDate :: Kernel.Prelude.UTCTime,
+    payoutReferralStartDate :: Data.Time.UTCTime,
     payoutReferralThresholdPerDay :: Kernel.Prelude.Int,
     payoutReferralThresholdPerMonth :: Kernel.Prelude.Int,
     permissibleModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
@@ -102,8 +103,8 @@ data RiderConfig = RiderConfig
     variantListForNearByReq :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     videoFileSizeUpperLimit :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    createdAt :: Data.Time.UTCTime,
+    updatedAt :: Data.Time.UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, Eq)
 

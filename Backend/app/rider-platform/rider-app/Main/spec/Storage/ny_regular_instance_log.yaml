@@ -9,7 +9,7 @@ NyRegularInstanceLog:
   derives: "Generic, Eq, Show, ToJSON, FromJSON" # Common derives for the main record
   types:
     NyRegularInstanceAutomationStatus:
-      enum: "PENDING,SEARCH_SENT,BOOKING_INITIATED,CONFIRMED,FAILED_NO_OFFER,FAILED_BPP_ERROR,FAILED_CONFIRMATION"
+      enum: "PENDING,SEARCH_SENT,AUTO_SELECTED,BOOKING_INITIATED,CONFIRMED,FAILED_NO_OFFER,FAILED_BPP_ERROR,FAILED_CONFIRMATION"
 
   fields:
     instanceTransactionId: Text # This will be the Primary Key
@@ -44,11 +44,11 @@ NyRegularInstanceLog:
       kvFunction: findOneWithKV
       where:
         and:
-          - nyRegularSubscriptionId
-          - scheduledPickupTime
+        - nyRegularSubscriptionId
+        - scheduledPickupTime
     updateStatusByInstanceTransactionId:
       kvFunction: updateWithKV
-      params: [automationStatus]
+      params: [ automationStatus ]
       where: instanceTransactionId
     # Potentially a query to get all pending or failed instances for retry logic, if needed later.
     # findByStatus:
