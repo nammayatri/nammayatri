@@ -55,3 +55,15 @@ $(mkHttpInstancesForEnum ''DriverMode)
 
 $(mkBeamInstancesForEnumAndList ''DriverMode)
 $(mkBeamInstancesForEnum ''DayOfWeek)
+
+data MediaFileDocumentType = VehicleVideo deriving (Eq, Ord, Show, Read, Generic, ToSchema)
+
+-- Type with single constructor will be serialized as empty list by default, that's why manual instances required
+instance ToJSON MediaFileDocumentType where
+  toJSON VehicleVideo = String "VehicleVideo"
+
+instance FromJSON MediaFileDocumentType where
+  parseJSON (String "VehicleVideo") = pure VehicleVideo
+  parseJSON _ = fail "VehicleVideo expected"
+
+$(mkBeamInstancesForEnumAndList ''MediaFileDocumentType)

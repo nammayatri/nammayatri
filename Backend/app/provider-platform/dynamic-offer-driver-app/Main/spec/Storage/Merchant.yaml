@@ -91,6 +91,7 @@ Merchant:
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
+    mediaFileDocumentLinkExpires: Seconds
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -117,6 +118,7 @@ Merchant:
     gatewayAndRegistryPriorityList: '''{"NY"}'''
     fleetOwnerEnabledCheck: "false"
     overwriteAssociation: "false"
+    mediaFileDocumentLinkExpires: 3600
 
   excludedFields:
     - merchantId
@@ -128,6 +130,7 @@ Merchant:
   beamType:
     registryUrl: Text
     gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
+    mediaFileDocumentLinkExpires: Maybe Seconds
 
   constraints:
     subscriberId: SecondaryKey
@@ -138,11 +141,13 @@ Merchant:
     originRestriction: Kernel.Types.Geofencing.origin|I
     destinationRestriction: Kernel.Types.Geofencing.destination|I
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
+    mediaFileDocumentLinkExpires: Kernel.Prelude.Just|I
 
   fromTType:
     geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction destinationRestriction|E
     registryUrl: Kernel.Prelude.parseBaseUrl|IM
     gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
+    mediaFileDocumentLinkExpires: Kernel.Prelude.fromMaybe 3600|I
 
   queries:
     findById:

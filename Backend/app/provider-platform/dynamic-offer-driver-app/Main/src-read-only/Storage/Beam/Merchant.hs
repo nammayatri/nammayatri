@@ -11,6 +11,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
 import Tools.Beam.UtilsTH
 
@@ -31,6 +32,7 @@ data MerchantT f = MerchantT
     id :: B.C f Kernel.Prelude.Text,
     info :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     internalApiKey :: B.C f Kernel.Prelude.Text,
+    mediaFileDocumentLinkExpires :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     minimumDriverRatesCount :: B.C f Kernel.Prelude.Int,
     mobileCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -12,21 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module AWS.S3.Flow (get', put', get'', put'', delete', delete'', mockGet, mockPut, mockDelete, putRaw'', mockPutRaw) where
+module AWS.S3.Flow (get', put', get'', put'', delete', delete'', mockGet, mockPut, mockDelete, putRaw'', mockPutRaw, generateUploadUrl', generateDownloadUrl') where
 
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
+import qualified Amazonka
+import qualified Amazonka.S3 as Amazonka
 import qualified Data.ByteString as BS
 import qualified Data.List as DL (last)
 import Data.String.Conversions
 import qualified Data.Text as T
+import Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 import EulerHS.Prelude hiding (decodeUtf8, get, put, show)
 import qualified EulerHS.Types as ET
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.Error
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (GET, PUT, throwError)
 import Servant.Client
 import System.Directory (removeFile)
 import qualified System.Directory as Dir
@@ -243,3 +247,44 @@ mockDelete baseDirectory bucketName path =
 
 getFullPathMock :: String -> Text -> String -> String
 getFullPathMock baseDirectory bucketName path = baseDirectory <> "/" <> cs bucketName <> "/" <> path
+
+-- | Generate a pre-signed URL for uploading a video
+generateUploadUrl' ::
+  ( MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  Seconds ->
+  m Text
+generateUploadUrl' = generateUrl' PUT
+
+-- | Generate a pre-signed URL for downloading a video
+generateDownloadUrl' ::
+  ( MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  Seconds ->
+  m Text
+generateDownloadUrl' = generateUrl' GET
+
+data Method = GET | PUT
+
+generateUrl' ::
+  ( MonadFlow m
+  ) =>
+  Method ->
+  Text ->
+  String ->
+  Seconds ->
+  m Text
+generateUrl' method bucketName path expires = withLogTag "S3" $ do
+  env <- Amazonka.newEnv Amazonka.discover
+  now <- getCurrentTime
+  let bucketName' = Amazonka.BucketName bucketName
+      path' = Amazonka.ObjectKey $ T.pack path
+      expires' = fromInteger $ toInteger expires
+  bsUrl <- case method of
+    GET -> Amazonka.presignURL env now expires' $ Amazonka.newGetObject bucketName' path'
+    PUT -> Amazonka.presignURL env now expires' $ Amazonka.newPutObject bucketName' path' ""
+  T.decodeUtf8' bsUrl & fromEitherM (\err -> InternalError $ "Unable to decode url: " <> show bsUrl <> "error: " <> show err)
