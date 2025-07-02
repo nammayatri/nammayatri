@@ -66,7 +66,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
   let routeCodes = P.map (modifyCodesToGTFS gtfsFeedInfo) routeCodes'
       stopCode = modifyCodesToGTFS gtfsFeedInfo stopCode'
   allTrips <-
-    Hedis.get (routeTimeTableKey stopCode) >>= \case
+    Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
       Just a -> do
         logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         pure a
