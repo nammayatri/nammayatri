@@ -301,6 +301,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
+      searchMode = extractSearchMode req
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -365,6 +366,19 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         ..
       }
   where
+    extractSearchMode :: SearchReq -> Maybe SearchRequest.SearchMode
+    extractSearchMode rqst = case rqst of
+      OneWaySearch reqData -> case reqData.isReserveRide of
+        Just True -> Just SearchRequest.RESERVE
+        _ -> Just SearchRequest.NORMAL
+      AmbulanceSearch reqData -> case reqData.isReserveRide of
+        Just True -> Just SearchRequest.RESERVE
+        _ -> Just SearchRequest.NORMAL
+      DeliverySearch reqData -> case reqData.isReserveRide of
+        Just True -> Just SearchRequest.RESERVE
+        _ -> Just SearchRequest.NORMAL
+      _ -> Just SearchRequest.NORMAL
+
     getIsMeterRideSearch rqst = case rqst of
       OneWaySearch reqData -> reqData.isMeterRideSearch
       _ -> Just False

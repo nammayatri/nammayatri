@@ -70,10 +70,20 @@ Processing and summarizing the provided NammaDSL documentation to create a dedic
 -   Added `memory-bank/shared_kernel_memory_map.md` which contains context of all functions coming from shared-kernel. This file can be used as a lookup for shared-kernel functions.
 
 ---
-## Current Work Focus (NYRegular Feature Planning - June 20, 2025)
-Planning the implementation of the "NYRegular" (recurring/scheduled rides) feature. This involves defining new data models, API endpoints, scheduler logic, and modifications to existing Beckn flows to support automated booking of pre-scheduled rides at a fixed price.
+## Current Work Focus (NYRegular Feature Implementation - July 2, 2025)
+Implementing the "NYRegular" (recurring/scheduled rides) feature. This involves defining new data models, API endpoints, scheduler logic, and modifications to existing Beckn flows to support automated booking of pre-scheduled rides at a fixed price.
 
-## Recent Changes & Learnings (NYRegular Feature Planning - June 20, 2025)
+**Latest Update (Commit: b3cdd872997abf40f5e9e457bb6d02136d6fff5c)**: Added backend internal API for estimates and enhanced search functionality with reserve ride support.
+
+## Recent Changes & Learnings (NYRegular Feature Implementation - July 2, 2025)
+
+### Latest Implementation (Commit: b3cdd872997abf40f5e9e457bb6d02136d6fff5c)
+-   **Backend Internal API for Estimates**: Added new `/internal/estimates/{estimateId}` endpoint in BPP to allow direct access to estimate details
+-   **Reserve Ride Support**: Enhanced search functionality throughout the Beckn pipeline to support `isReserveRide` flag
+-   **Schema Updates**: Added `ToSchema` derivations to various FarePolicy types for better API documentation
+-   **Cross-Platform Integration**: Rider app can now call BPP internal APIs to retrieve estimate details for NYRegular subscriptions
+
+### Previous Implementation
 -   **Feature Goal:** Allow users to subscribe to recurring rides with fixed pricing, automated by the system.
 -   **Core Principle:** Minimize changes to existing Beckn flows; leverage them via automation.
 -   **Proposed Data Models (`rider-app`):**
@@ -100,10 +110,13 @@ Planning the implementation of the "NYRegular" (recurring/scheduled rides) featu
 -   **Clarified Pricing Mechanism for Fixed Price:** The "fixed price" stored in an `NyRegularSubscription` is established based on an initial, comprehensive estimate from the target BPP. This BPP estimate explicitly includes any conditional charges the BPP applies for regular, scheduled services. This BPP-originated total price is then persisted by the BAP and used as the benchmark for automated booking of all subsequent instances of that subscription.
 
 ## Next Steps (NYRegular Feature)
+-   ✅ **Backend Internal API for Estimates** - Completed with commit b3cdd872997abf40f5e9e457bb6d02136d6fff5c
 -   Finalize the NammaDSL schemas for `NyRegularSubscription` and `NyRegularInstanceLog` based on the peer's provided context.
 -   Detail the API contracts for NYRegular management.
 -   Elaborate on the error handling and notification strategy for the scheduler jobs.
 -   Consider edge cases (e.g., payment failure for automated bookings, user pausing a subscription close to trigger time).
+-   Test the enhanced search functionality with reserve ride support.
+-   Validate the internal estimate API integration for NYRegular subscriptions.
 
 # Active Context
 

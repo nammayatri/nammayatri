@@ -21,11 +21,12 @@ data NyRegularInstanceLog = NyRegularInstanceLog
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, (Eq), (Show), (ToJSON), (FromJSON))
+  deriving (Generic, Eq, Show, ToJSON, FromJSON)
 
 data NyRegularInstanceAutomationStatus
   = PENDING
   | SEARCH_SENT
+  | AUTO_SELECTED
   | BOOKING_INITIATED
   | CONFIRMED
   | FAILED_NO_OFFER
@@ -33,4 +34,4 @@ data NyRegularInstanceAutomationStatus
   | FAILED_CONFIRMATION
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NyRegularInstanceAutomationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NyRegularInstanceAutomationStatus)

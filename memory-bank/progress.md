@@ -76,6 +76,10 @@ The `NyRegularSubscription` feature is now significantly more robust, responsive
 -   Implementing the scheduler job for `NyRegularSubscription`.
 
 ## Next Up
+-   ✅ **Backend Internal API for Estimates** (Commit: b3cdd872997abf40f5e9e457bb6d02136d6fff5c)
+    - Added `/internal/estimates/{estimateId}` endpoint in BPP
+    - Enhanced search functionality with `isReserveRide` support
+    - Updated schema and type definitions for API documentation
 -   Modifying the BPP to handle the tagged `/search` requests from the new scheduler.
 -   Enhancing the BAP's `on_search` handler to automatically trigger the `/select` flow.
 
@@ -89,3 +93,8 @@ The `NyRegularSubscription` feature is now significantly more robust, responsive
     -   Implemented the `NyRegularInstance` job to initiate the Beckn `/search` for each ride.
 -   Defined the data models (`NyRegularSubscription`, `NyRegularInstanceLog`).
 -   Created the initial API endpoints for managing subscriptions.
+-   **Backend Internal API for Estimates** (Commit: b3cdd872997abf40f5e9e457bb6d02136d6fff5c):
+    -   Added new internal API endpoint `/internal/estimates/{estimateId}` in BPP for retrieving estimate details
+    -   Enhanced search functionality with `isReserveRide` flag support throughout the Beckn pipeline
+    -   Updated domain types and schemas for better API documentation
+    -   Added cross-platform integration capabilities for NYRegular feature

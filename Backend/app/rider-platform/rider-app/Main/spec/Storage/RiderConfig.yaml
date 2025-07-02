@@ -108,6 +108,7 @@ RiderConfig:
     showDropLocationSuggestion: Maybe Bool
     updateUpiMaxAmountForPoc: Maybe Bool
     nyRegularSubscriptionBatchSize: Maybe Int
+    nyRegularExecutionTimeOffsetMinutes: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

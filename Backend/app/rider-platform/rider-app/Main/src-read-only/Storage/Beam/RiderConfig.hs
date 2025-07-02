@@ -68,11 +68,12 @@ data RiderConfigT f = RiderConfigT
     multimodalTesting :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     nearByDriverRingBucketCfg :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     nearbyDriverSearchRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    nyRegularExecutionTimeOffsetMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     nyRegularSubscriptionBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutReferralProgram :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    payoutReferralStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    payoutReferralStartDate :: B.C f (Kernel.Prelude.Maybe Data.Time.UTCTime),
     payoutReferralThresholdPerDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutReferralThresholdPerMonth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     permissibleModes :: B.C f (Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType]),
@@ -101,8 +102,8 @@ data RiderConfigT f = RiderConfigT
     variantListForNearByReq :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    createdAt :: B.C f Data.Time.UTCTime,
+    updatedAt :: B.C f Data.Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

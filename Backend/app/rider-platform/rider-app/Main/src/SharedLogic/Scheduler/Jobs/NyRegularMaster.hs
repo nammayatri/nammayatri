@@ -31,12 +31,13 @@ runNyRegularMasterJob Job {merchantOperatingCityId} = do
   cityId <- merchantOperatingCityId & fromMaybeM (Tools.InternalError "Job is missing merchantOperatingCityId")
   riderConfig <- RiderConfig.findByMerchantOperatingCityId cityId Nothing
   let batchSize = fromMaybe 10 (riderConfig >>= (.nyRegularSubscriptionBatchSize))
+      executionTimeOffsetMinutes = fromMaybe 15 (riderConfig >>= (.nyRegularExecutionTimeOffsetMinutes))
 
   now <- getCurrentTime
   let today = Time.utctDay now
   subscriptions <- NyRegularSubscription.findAllActiveAt cityId today (Just batchSize)
   logInfo $ "Found " <> show (length subscriptions) <> " active subscriptions to process for city " <> cityId.getId
-  traverse_ (processSubscription now) subscriptions
+  traverse_ (processSubscription now executionTimeOffsetMinutes) subscriptions
 
   -- If we processed a full batch, there might be more for this city.
   -- Reschedule the same job to run again after a delay.
@@ -55,13 +56,14 @@ processSubscription ::
     EncFlow m r
   ) =>
   Time.UTCTime ->
+  Int ->
   NyRegularSubscription.NyRegularSubscription ->
   m ()
-processSubscription now subscription = do
+processSubscription now executionTimeOffsetMinutes subscription = do
   let today = Time.utctDay now
   when (isValid today subscription) $ do
     logInfo $ "Processing subscription: " <> show subscription.id
-    createNyRegularInstanceJob subscription
+    createNyRegularInstanceJob executionTimeOffsetMinutes subscription
     -- Mark as processed for today
     void $ NyRegularSubscription.updateLastProcessedAtById (Just now) subscription.id
   where
@@ -88,16 +90,17 @@ createNyRegularInstanceJob ::
     CacheFlow m r,
     EncFlow m r
   ) =>
+  Int ->
   NyRegularSubscription.NyRegularSubscription ->
   m ()
-createNyRegularInstanceJob subscription = do
+createNyRegularInstanceJob executionTimeOffsetMinutes subscription = do
   now <- getCurrentTime
   let today = Time.utctDay now
       scheduledTime =
         Time.LocalTime today subscription.scheduledTimeOfDay
           & Time.localTimeToUTC Time.utc
-  -- Schedule the job 15 minutes before the pickup time
-  let executionTime = Time.addUTCTime (-15 * 60) scheduledTime
+  -- Schedule the job X minutes before the pickup time (configurable)
+  let executionTime = Time.addUTCTime (fromIntegral (- executionTimeOffsetMinutes) * 60) scheduledTime
   when (executionTime > now) $ do
     let scheduleAfter = Time.diffUTCTime executionTime now
     currentHash <- calculateSubscriptionSchedulingHash subscription
