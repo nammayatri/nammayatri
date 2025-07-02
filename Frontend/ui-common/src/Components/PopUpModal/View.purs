@@ -401,6 +401,7 @@ view push state =
         , deliveryView push state
         , upiView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
+        , if (null state.listViewArrayWithImage) then textView[height $ V 0] else listViewWithImage push state  
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT
@@ -589,6 +590,57 @@ tipsView push state =
   , width MATCH_PARENT
   , visibility $ boolToVisibility state.isTipPopup
   ][ TipsView.view (push <<< TipsViewActionController) $ tipsViewConfig state ]
+
+listViewWithImage :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+listViewWithImage push state = 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL 
+    , margin $ Margin 16 0 16 0
+    ](mapWithIndex (\index item-> 
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginTop 12
+        , orientation HORIZONTAL
+        , background item.background
+        , cornerRadius 8.0
+        , stroke item.componentStroke
+        , gravity CENTER_VERTICAL
+        , onClick push $ const $ ListViewItemAction index
+        ][  imageView
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.prefixImageConfig.imageUrl
+            , height item.prefixImageConfig.height
+            , width item.prefixImageConfig.width
+            , margin $ item.prefixImageConfig.margin
+            , padding $ item.prefixImageConfig.padding
+            , visibility item.prefixImageConfig.visibility
+            , gravity CENTER
+            ]
+          , textView $
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , margin $ MarginLeft 8
+            , text item.text
+            , accessibility ENABLE
+            , accessibilityHint item.text
+            , color item.textColor
+            , weight 1.0
+            , gravity LEFT
+            ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
+           , imageView
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.suffixImageConfig.imageUrl
+            , height item.suffixImageConfig.height
+            , width item.suffixImageConfig.width
+            , margin $ item.suffixImageConfig.margin
+            , padding $ item.suffixImageConfig.padding  
+            , visibility item.suffixImageConfig.visibility  
+            , gravity CENTER
+            ]
+
+        ]
+        ) state.listViewArrayWithImage)
 
 listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 listView push state = 
