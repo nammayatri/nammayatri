@@ -27,7 +27,7 @@ import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), FareData (..), GetFareResponse (..), getFare)
 import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking

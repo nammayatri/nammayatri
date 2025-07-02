@@ -16,10 +16,14 @@ module Beckn.OnDemand.Transformer.Search where
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
+-- import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Common
+import qualified BecknV2.Utils as Utils
 import qualified Data.Text
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps
@@ -53,6 +57,7 @@ buildSearchReq messageId subscriber req context = do
       driverIdentifier = Beckn.OnDemand.Utils.Search.getDriverIdentifier req
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
+      isReserveRide = getIsReserveRide req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
@@ -87,6 +92,7 @@ buildSearchReq messageId subscriber req context = do
         routePoints = routePoints_,
         transactionId = transactionId_,
         stops,
+        isReserveRide = isReserveRide,
         ..
       }
 
@@ -117,3 +123,10 @@ buildLocation location = do
       { address,
         gps = latLong
       }
+
+getIsReserveRide :: Spec.SearchReqMessage -> Maybe Bool
+getIsReserveRide req = do
+  intent <- req.searchReqMessageIntent
+  fulfillment <- intent.intentFulfillment
+  tags <- fulfillment.fulfillmentTags
+  readMaybe . T.unpack =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_RIDE_TAG (Just tags)

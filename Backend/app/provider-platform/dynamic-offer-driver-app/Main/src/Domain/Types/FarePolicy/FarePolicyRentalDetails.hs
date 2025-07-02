@@ -38,7 +38,7 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
     nightShiftCharge :: Maybe DFPC.NightShiftCharge,
     waitingChargeInfo :: Maybe DFPC.WaitingChargeInfo
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 type FPRentalDetails = FPRentalDetailsD 'Safe
 

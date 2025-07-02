@@ -25,7 +25,7 @@ data FPProgressiveDetailsPerExtraKmRateSectionD (s :: UsageSafety) = FPProgressi
     perExtraKmRate :: HighPrecMoney,
     baseFareDepreciation :: HighPrecMoney
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 type FPProgressiveDetailsPerExtraKmRateSection = FPProgressiveDetailsPerExtraKmRateSectionD 'Safe
 

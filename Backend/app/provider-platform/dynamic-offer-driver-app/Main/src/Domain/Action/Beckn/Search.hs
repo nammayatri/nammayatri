@@ -141,8 +141,21 @@ data DSearchReq = DSearchReq
     isDashboardRequest :: Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     driverIdentifier :: Maybe DRL.DriverIdentifier,
-    isMultimodalSearch :: Maybe Bool
+    isMultimodalSearch :: Maybe Bool,
+    isReserveRide :: Maybe Bool
   }
+
+-- data EstimateExtraInfo = EstimateExtraInfo
+--   { congestionMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+--     currency :: Kernel.Types.Common.Currency,
+--     dpVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+--     eligibleForUpgrade :: Kernel.Prelude.Bool,
+--     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
+--     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
+--     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+--     isScheduled :: Kernel.Prelude.Bool,
+--     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+--   }
 
 data DSearchReqLocation = DSearchReqLocation
   { address :: Maybe BA.Address,
@@ -158,7 +171,8 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     merchant :: DM.Merchant,
     isValueAddNP :: Bool,
     driverIdForSearch :: Maybe (Id DP.Person),
-    isMeterRideSearch :: Maybe Bool
+    isMeterRideSearch :: Maybe Bool,
+    isReserveRide :: Maybe Bool
   }
 
 data DSearchRes = DSearchRes
@@ -758,6 +772,7 @@ validateRequest merchant sReq = do
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
   let isMeterRideSearch = sReq.isMeterRideSearch
+  let isReserveRide = sReq.isReserveRide
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
 

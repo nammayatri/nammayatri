@@ -34,7 +34,7 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     nightShiftCharge :: Maybe Domain.NightShiftCharge,
     waitingChargeInfo :: Maybe Domain.WaitingChargeInfo
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 type FPInterCityDetails = FPInterCityDetailsD 'Safe
 
