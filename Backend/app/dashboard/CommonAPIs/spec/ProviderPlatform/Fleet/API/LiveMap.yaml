@@ -36,7 +36,6 @@ types:
   FleetMapDriverInfoRes:
     - driverName: Text
     - driverStatus: Status
-    - todaySummary: TodaySummary
     - position: LatLong
     - source: Text
     - destination: Text
@@ -53,16 +52,6 @@ types:
     - destination: Text
   Status:
     - enum: TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE
-  TodaySummary:
-    - tripStatus: Status
-    - tripsCompletedCount: Int
-    - earnings: HighPrecMoney
-    - totalDistance: Meters
-    - tripBalanceLeft: Int
-    - tripsCancelled: Int
-    - tripsPassed: Int
-    - tripsScheduled: Int
-    - onlineDuration: Seconds
   NearbyDriverReq:
     - point: LatLong
     - radius: Int

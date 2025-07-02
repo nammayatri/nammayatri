@@ -13,7 +13,6 @@ import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
-import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
@@ -22,7 +21,6 @@ import Servant.Client
 data FleetMapDriverInfoRes = FleetMapDriverInfoRes
   { driverName :: Kernel.Prelude.Text,
     driverStatus :: Status,
-    todaySummary :: TodaySummary,
     position :: Kernel.External.Maps.Types.LatLong,
     source :: Kernel.Prelude.Text,
     destination :: Kernel.Prelude.Text,
@@ -65,20 +63,6 @@ data Status
   | SILENT
   | OFFLINE
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data TodaySummary = TodaySummary
-  { tripStatus :: Status,
-    tripsCompletedCount :: Kernel.Prelude.Int,
-    earnings :: Kernel.Types.Common.HighPrecMoney,
-    totalDistance :: Kernel.Types.Common.Meters,
-    tripBalanceLeft :: Kernel.Prelude.Int,
-    tripsCancelled :: Kernel.Prelude.Int,
-    tripsPassed :: Kernel.Prelude.Int,
-    tripsScheduled :: Kernel.Prelude.Int,
-    onlineDuration :: Kernel.Types.Common.Seconds
-  }
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type API = ("liveMap" :> GetLiveMapDriversHelper)

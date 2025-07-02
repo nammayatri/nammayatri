@@ -825,7 +825,7 @@ processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc 
     addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDuration
     QDIE.updateOnlineDurationRefreshedAt driverId now
 
-    lastOnlineFrom <- fromMaybeM (InternalError "OnlineDurationRefreshedAt is Nothing") mbLastOnlineFrom
+    lastOnlineFrom <- fromMaybeM (InternalError $ "OnlineDurationRefreshedAt is Nothing DriverId: " <> driverId.getId) mbLastOnlineFrom
     when (lastOnlineFrom < startDayTime) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFrom
 
   when (mode == Just DriverInfo.ONLINE) $ QDIE.updateOnlineDurationRefreshedAt driverId now
