@@ -455,7 +455,6 @@ startJourney confirmElements forcedBookedLegOrder journeyId = do
             childTicketQuantity = mElement >>= (.childTicketQuantity)
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
-        when (isJust crisSdkResponse) $ logInfo $ "CRIS: crisSdkResponse startJourney: " <> show crisSdkResponse
         when (leg.status /= JL.Skipped) $ do
           JLI.confirm forcedBooking ticketQuantity childTicketQuantity leg crisSdkResponse
     )
