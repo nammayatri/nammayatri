@@ -52,8 +52,7 @@ instance FromJSON PlatformCode where
 data StopData = StopData
   { gtfsId :: Text,
     name :: Text,
-    stoptimesWithoutPatterns :: [RouteStopTimeTableEntry],
-    stop :: Maybe PlatformCode
+    stoptimesWithoutPatterns :: [RouteStopTimeTableEntry]
   }
   deriving (Show, Generic)
 
@@ -63,7 +62,6 @@ instance FromJSON StopData where
       <$> obj .: "gtfsId"
       <*> obj .: "name"
       <*> obj .: "stoptimesWithoutPatterns"
-      <*> obj .:? "stop"
 
 data RouteStopTimeTableEntry = RouteStopTimeTableEntry
   { scheduledArrival :: Int,
@@ -71,7 +69,8 @@ data RouteStopTimeTableEntry = RouteStopTimeTableEntry
     arrivalDelay :: Int,
     scheduledDeparture :: Int,
     headsign :: Maybe Text,
-    trip :: TripData
+    trip :: TripData,
+    stop :: Maybe PlatformCode
   }
   deriving (Show, Generic)
 
@@ -84,6 +83,7 @@ instance FromJSON RouteStopTimeTableEntry where
       <*> obj .: "scheduledDeparture"
       <*> obj .:? "headsign"
       <*> obj .: "trip"
+      <*> obj .:? "stop"
 
 data TripData = TripData
   { serviceId :: Text,
