@@ -393,10 +393,11 @@ apis:
         type: LegServiceTierOptionsResp
 
   - POST:
-      endpoint: /multimodal/{journeyId}/order/{legOrder}/setStatus/{status}
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatus/{status}
       params:
         journeyId: Id Journey
         legOrder: Int
+        subLegOrder: Int
         status: JourneyLegStatus
       response:
         type: JourneyStatusResp

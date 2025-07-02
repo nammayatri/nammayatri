@@ -22,7 +22,7 @@ module Domain.Action.UI.MultimodalConfirm
     getPublicTransportData,
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
-    postMultimodalOrderSetStatus,
+    postMultimodalOrderSublegSetStatus,
     postMultimodalTicketVerify,
     postMultimodalComplete,
   )
@@ -821,21 +821,23 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
     castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
     castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY
 
-postMultimodalOrderSetStatus ::
+postMultimodalOrderSublegSetStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
+  Kernel.Prelude.Int ->
   JL.JourneyLegStatus ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSetStatus (mbPersonId, merchantId) journeyId legOrder newStatus = do
+postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder subLegOrder newStatus = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   unless (newStatus `elem` [JL.Completed, JL.Cancelled]) $ do
     legs <- JM.getAllLegsInfo journeyId False
     journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
-    markLegStatus newStatus journeyLegInfo.legExtraInfo
+
+    markLegStatus newStatus journeyLegInfo.legExtraInfo (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -880,6 +882,22 @@ postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
         JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
         _ -> throwError $ InvalidRequest "Invalid provider"
 
+-- Helper function to get sub-leg orders from Metro/Subway leg extra info
+getSubLegOrders :: JMTypes.LegExtraInfo -> [Int]
+getSubLegOrders legExtraInfo =
+  case legExtraInfo of
+    JMTypes.Metro metroInfo -> mapMaybe (.subOrder) metroInfo.routeInfo
+    JMTypes.Subway subwayInfo -> mapMaybe (.subOrder) subwayInfo.routeInfo
+    _ -> []
+
+-- Helper function to mark all sub-legs as completed for FRFS legs
+markAllSubLegsCompleted :: JMTypes.LegExtraInfo -> Environment.Flow ()
+markAllSubLegsCompleted legExtraInfo = do
+  let subLegOrders = getSubLegOrders legExtraInfo
+  case subLegOrders of
+    [] -> markLegStatus JL.Completed legExtraInfo Nothing
+    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legExtraInfo (Just subOrder)) orders
+
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -890,7 +908,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  mapM_ (markLegStatus JL.Completed . (.legExtraInfo)) legs
+  mapM_ (markAllSubLegsCompleted . (.legExtraInfo)) legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
