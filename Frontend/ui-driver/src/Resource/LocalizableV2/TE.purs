@@ -1857,4 +1857,7 @@ getTe =
     , pet_rides : "పెట్ రైడ్స్"
     , please_resume_ride_to_continue: "ప్రయాణం తిరిగి ప్రారంభించండి"
     , you_are_too_far_from_the_stop: "మీరు స్టాప్ కి అతికించినారు. ముందుకు వెళ్ళండి"
+    , you_may_lose_some_coins_if_you_cancel_this_ride: "మీరు ఈ రైడ్‌ను రద్దు చేస్తే, కೆలవೊంటు కాలి ఉండవు"
+    , cancellation_compensation: "రద్దు స్కోర్"
+    , cancellation_penalisaton: "రద్దు స్కోర్"
     }

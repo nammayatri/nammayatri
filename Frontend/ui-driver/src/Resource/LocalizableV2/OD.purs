@@ -1857,4 +1857,7 @@ getOd =
     , pet_rides : "ପେଟ ରାଇଡସ"
     , please_resume_ride_to_continue : "ଯାତ୍ରା ପୁନରାରମ୍ଭ କରନ୍ତୁ"
     , you_are_too_far_from_the_stop : "ଆପଣଙ୍କର ସ୍ଟପ୍ ମୁକଳାରେ ଅତିରିକ୍ତ ଦୂରତା ଅଛି। ଅଟନ୍ତୁ ଅଟନ୍ତୁ"
+    , you_may_lose_some_coins_if_you_cancel_this_ride : "ଆପଣଙ୍କର ଯାତ୍ରା ରଦ୍ଦୁ କରିବାରୁ, କିଛି କାଲି ହୋଇପାରିବ"
+    , cancellation_compensation : "ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର"
+    , cancellation_penalisaton : "ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର"
   }

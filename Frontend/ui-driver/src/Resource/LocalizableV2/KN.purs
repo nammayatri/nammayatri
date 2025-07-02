@@ -1857,4 +1857,7 @@ getKn =
     , pet_rides : "ಪೆಟ್ ರೈಡ್ಸ್"
     , please_resume_ride_to_continue : "ಪ್ರಯಾಣವನ್ನು ಪುನರಾರಂಭಿಸಿ"
     , you_are_too_far_from_the_stop : "ನೀವು ನಿಲ್ದಾಣದಿಂದ ಅತ್ಯಂತ ದೂರದಲ್ಲಿದ್ದೀರಿ. ಮುಂದಿನ ನಿಲ್ದಾಣಕ್ಕೆ ಜಾರಿಗೆ"
+    , you_may_lose_some_coins_if_you_cancel_this_ride : "ನೀವು ಈ ಸವಾರಿಯನ್ನು ರದ್ದು ಮಾಡಿದರೆ, ಕೆಲವೊಂದು ಕಾಲಿ ಹೋಗಬಹುದು"
+    , cancellation_compensation : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
+    , cancellation_penalisaton : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
     }

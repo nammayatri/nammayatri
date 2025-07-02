@@ -1857,4 +1857,7 @@ getTa =
     , pet_rides : "பெட் ரைட்ஸ்"
     , please_resume_ride_to_continue: "பயணத்தை மீண்டும் தொடங்கவும்"
     , you_are_too_far_from_the_stop: "நிறுத்தத்திற்கு அதிகமான தூரத்தில் உள்ளீர்கள். அடுத்த நிறுத்தத்திற்கு செல்லவும்"
+    , you_may_lose_some_coins_if_you_cancel_this_ride: "நீங்கள் இந்த சவாரியை ரத்து செய்தால், குறைந்த காலி இருக்கலாம்"
+    , cancellation_compensation: "ரத்து செய்யும் மதிப்பெண்"
+    , cancellation_penalisaton: "ரத்து செய்யும் மதிப்பெண்"
     }

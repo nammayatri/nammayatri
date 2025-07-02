@@ -1857,4 +1857,7 @@ getHi =
     , pet_rides : "पेट राइड्स"
     , please_resume_ride_to_continue : "यात्रा पुनः शुरू करें"
     , you_are_too_far_from_the_stop : "आप स्टॉप से बहुत दूर हैं। अगले स्टॉप पर जाएं"
+    , you_may_lose_some_coins_if_you_cancel_this_ride : "यदि आप इस सवारी को रद्द करते हैं, तो आपको कुछ कॉइंस खो सकते हैं"
+    , cancellation_compensation : "रद्दीकरण क्षतिपूर्ति"
+    , cancellation_penalisaton : "रद्दीकरण दंड"
     }

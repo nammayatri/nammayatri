@@ -1857,4 +1857,7 @@ getEn =
     , pet_rides : "Pet Rides"
     , please_resume_ride_to_continue : "Please resume ride to continue"
     , you_are_too_far_from_the_stop : "You are too far from the stop. Please reach the next Stop"
+    , you_may_lose_some_coins_if_you_cancel_this_ride : "You may lose some coins if you cancel this ride"
+    , cancellation_compensation : "Cancellation Compensation"
+    , cancellation_penalisaton : "Cancellation Penalisaton"
     }

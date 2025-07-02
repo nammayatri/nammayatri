@@ -231,3 +231,7 @@ type PetRidesFeatureConfig = {
   optOutPetRidesPopupConfig :: PetRidesPopupConfig,
   petRidesPopupDismissableUntil :: String
 }
+
+type CancellationTimeThresholdConfig = {
+  cancellationTimeThresholdInSeconds :: Int
+}
