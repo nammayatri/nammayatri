@@ -46,3 +46,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN overwrite_association boo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN fleet_owner_enabled_check boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN media_file_document_link_expires integer ;

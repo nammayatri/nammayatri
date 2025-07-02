@@ -7,6 +7,7 @@ imports:
   Document: Dashboard.Common
   VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
+  FileType: AWS.S3
 
 module: DriverRegistration
 apiPrefix: driver
@@ -46,6 +47,41 @@ apis:
         endpoint: DriverRegistrationAPI UploadDocumentEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPLOAD_DOCUMENT
+  - POST:
+      endpoint: /mediaFileDocument/uploadLink
+      auth: ApiAuthV2
+      request:
+        type: UploadMediaFileDocumentReq
+      response:
+        type: MediaFileDocumentResp
+      helperApi:
+        - POST:
+            endpoint: /mediaFileDocument/uploadLink
+            auth: ApiAuthV2
+            request:
+              type: UploadMediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: MediaFileDocumentResp
+  - GET:
+      endpoint: /mediaFileDocument/downloadLink
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - mediaFileDocumentType: MediaFileDocumentType
+        - rcNumber: Text
+      response:
+        type: MediaFileDocumentResp
+      helperApi:
+        - GET:
+            endpoint: /mediaFileDocument/downloadLink
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - mediaFileDocumentType: MediaFileDocumentType
+              - rcNumber: Text
+              - requestorId: Text
+            response:
+              type: MediaFileDocumentResp
   - POST: # RegisterDLAPI
       endpoint: /{driverId}/register/dl
       auth: ApiAuthV2
@@ -213,6 +249,23 @@ types:
     - recordType: NewType
     - imageId: Id Image
     - derive: "'HideSecrets"
+  UploadMediaFileDocumentReq:
+    - mediaFileDocumentType: MediaFileDocumentType
+    - fileType: FileType
+    - reqContentType: Text
+    - rcNumber: Text
+    - derive': "Show, Generic, ToSchema"
+  UploadMediaFileDocumentTReq:
+    - mediaFileDocumentType: MediaFileDocumentType
+    - fileType: FileType
+    - reqContentType: Text
+    - derive': "Show, Generic, ToSchema"
+  MediaFileDocumentResp:
+    - recordType: NewType
+    - mediaFileLink: Text
+  MediaFileDocumentType:
+    - enum: "VehicleVideo"
+    - derive': "Show, Generic, ToSchema, Kernel.Prelude.ToParamSchema"
   RegisterDLReq:
     - driverLicenseNumber: Text
     - operatingCity: Text

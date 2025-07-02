@@ -887,6 +887,7 @@ library
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Mandate
+      Domain.Types.MediaFileDocument
       Domain.Types.Merchant
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
@@ -1034,6 +1035,7 @@ library
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
+      Storage.Beam.MediaFileDocument
       Storage.Beam.Merchant
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
@@ -1184,6 +1186,7 @@ library
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate
+      Storage.Queries.MediaFileDocument
       Storage.Queries.Merchant
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity

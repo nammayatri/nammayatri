@@ -89,7 +89,9 @@ data S3Env m = S3Env
     getH :: String -> m Text,
     putH :: String -> Text -> m (),
     putRawH :: String -> BS.ByteString -> String -> m (),
-    deleteH :: String -> m ()
+    deleteH :: String -> m (),
+    generateUploadUrlH :: String -> Seconds -> m Text,
+    generateDownloadUrlH :: String -> Seconds -> m Text
   }
 
 createFilePath ::
@@ -143,6 +145,16 @@ put :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Text -> m ()
 put path file_ = do
   s3env <- asks (.s3Env)
   putH s3env path file_
+
+generateUploadUrl :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Seconds -> m Text
+generateUploadUrl path expires = do
+  s3env <- asks (.s3Env)
+  generateUploadUrlH s3env path expires
+
+generateDownloadUrl :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Seconds -> m Text
+generateDownloadUrl path expires = do
+  s3env <- asks (.s3Env)
+  generateDownloadUrlH s3env path expires
 
 getPublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> m Text
 getPublic path = do
