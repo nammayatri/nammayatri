@@ -48,7 +48,8 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("DIST_BASED_FARE", "Distance Based Fare"),
                   ("EXTRA_DISTANCE_FARE", "Extra Distance Fare"),
                   ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
-                  ("PARKING_CHARGE", "Parking Charge")
+                  ("PARKING_CHARGE", "Parking Charge"),
+                  ("RIDE_STOP_CHARGES", "Ride Stop Charges")
                 ]
           fareBreakups <- mapM (getFareBreakup booking) breakupItems
           mbSource <- case booking.fromLocationId of

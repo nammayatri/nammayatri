@@ -178,6 +178,7 @@ data QuoteBreakupTitle
   | CARD_CHARGES_FIXED
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
+  | RIDE_STOP_CHARGES
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId
