@@ -177,6 +177,7 @@ data QuoteBreakupTitle
   | CARD_CHARGES_FIXED
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
+  | NYREGULAR_SUBSCRIPTION_CHARGE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

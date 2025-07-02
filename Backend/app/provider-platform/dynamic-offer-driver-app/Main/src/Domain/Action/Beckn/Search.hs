@@ -42,6 +42,7 @@ import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types
 import Domain.Types.BapMetadata
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Extra.ConditionalCharges as DAC
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -142,7 +143,8 @@ data DSearchReq = DSearchReq
     multipleRoutes :: Maybe [Maps.RouteInfo],
     driverIdentifier :: Maybe DRL.DriverIdentifier,
     isMultimodalSearch :: Maybe Bool,
-    isReserveRide :: Maybe Bool
+    isReserveRide :: Maybe Bool,
+    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories]
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
