@@ -10,6 +10,7 @@ import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import Domain.Types.Merchant
@@ -34,6 +35,7 @@ import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModal
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Route as QRoute
@@ -693,3 +695,11 @@ createRecentLocationForMultimodal journey = do
                   }
           SQRL.create recentLocation
     _ -> return ()
+
+updateCRISBookingAuthCode :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text -> m Bool
+updateCRISBookingAuthCode booking mbBookAuthCode =
+  if booking.bookingAuthCode == mbBookAuthCode
+    then return False
+    else do
+      void $ QFRFSTicketBooking.updateBookingAuthCodeById mbBookAuthCode booking.id
+      return True

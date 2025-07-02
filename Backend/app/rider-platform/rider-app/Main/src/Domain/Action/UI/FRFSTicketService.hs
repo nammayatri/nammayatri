@@ -57,6 +57,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import qualified Lib.JourneyLeg.Types as JLT
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -581,21 +582,12 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req platformType cr
 
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
-      let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
-      logInfo $ "CRIS: mBookAuthCode: " <> show mBookAuthCode
       maybeM
         (buildAndCreateBooking rider quote selectedDiscounts)
         ( \booking -> do
-            let needsAuthCodeUpdate = isJust mBookAuthCode && booking.bookingAuthCode /= mBookAuthCode
-            logInfo $ "CRIS: booking.bookingAuthCode: " <> show booking.bookingAuthCode
-            updatedBooking <-
-              if needsAuthCodeUpdate
-                then do
-                  logInfo $ "CRIS: updating booking auth code"
-                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-                  pure booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode}
-                else pure booking
-            logInfo $ "CRIS: updatedBooking: " <> show updatedBooking
+            let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
+            isBookingUpdated <- JMU.updateCRISBookingAuthCode booking mBookAuthCode
+            updatedBooking <- if isBookingUpdated then pure booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode} else pure booking
             pure (rider, updatedBooking)
         )
         (QFRFSTicketBooking.findByQuoteId quoteId)
