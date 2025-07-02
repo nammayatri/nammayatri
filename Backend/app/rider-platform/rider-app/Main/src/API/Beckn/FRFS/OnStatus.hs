@@ -46,7 +46,7 @@ onStatus _ req = withFlowHandlerAPI $ do
       (merchant, booking) <- DOnStatus.validateRequest (DOnStatus.Booking dOnStatusReq)
       fork "onStatus request processing" $
         Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnStatusReq.bppOrderId) 60 $
-          DOnStatus.onStatus merchant booking (DOnStatus.Booking dOnStatusReq)
+          void $ DOnStatus.onStatus merchant booking (DOnStatus.Booking dOnStatusReq)
       fork "FRFS onStatus received pushing ondc logs" do
         void $ pushLogs "on_status" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack
