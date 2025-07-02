@@ -109,6 +109,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       cardChargesFixedCaption = show Enums.CARD_CHARGES_FIXED
       mbCardChargesFixedItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFixedCaption . mkPrice <$> cardCharge.fixed
 
+      rideStopChargeCaption = show Enums.RIDE_STOP_CHARGES
+      mbRideStopChargeItem = mkBreakupItem rideStopChargeCaption . mkPrice <$> fareParams.stopCharges
+
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
@@ -127,7 +130,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
-      mbCardChargesFixedItem
+      mbCardChargesFixedItem,
+      mbRideStopChargeItem
     ]
     <> detailsBreakups
     <> additionalChargesBreakup
