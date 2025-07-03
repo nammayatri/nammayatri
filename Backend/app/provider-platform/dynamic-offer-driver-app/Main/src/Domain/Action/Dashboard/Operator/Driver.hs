@@ -167,22 +167,25 @@ castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Enviro
 castHubRequests (hubReq, creator, hub) = do
   creatorPhoneNo <- mapM decrypt creator.mobileNumber
   mbRc <- QVRCE.findLastVehicleRCWrapper hubReq.registrationNo
-  driverPhoneNo <- case mbRc of
+  (driverPhoneNo, rcId) <- case mbRc of
     Just rc -> do
       drc <- SQDRA.findAllActiveAssociationByRCId rc.id
       case listToMaybe drc of
         Just assoc -> do
           QPerson.findById assoc.driverId >>= \case
-            Just person -> mapM decrypt person.mobileNumber
-            Nothing -> pure Nothing
-        Nothing -> pure Nothing
-    Nothing -> pure Nothing
+            Just person -> do
+              number <- mapM decrypt person.mobileNumber
+              pure (number, Just rc.id.getId)
+            Nothing -> pure (Nothing, Just rc.id.getId)
+        Nothing -> pure (Nothing, Just rc.id.getId)
+    Nothing -> pure (Nothing, Nothing)
   pure $
     API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
       { id = hubReq.id.getId,
         operationHubId = cast @DOH.OperationHub @CommonDriver.OperationHub hubReq.operationHubId,
         operationHubName = hub.name,
         registrationNo = hubReq.registrationNo,
+        rcId,
         creatorPhoneNo,
         driverPhoneNo,
         requestStatus = castReqStatus hubReq.requestStatus,
