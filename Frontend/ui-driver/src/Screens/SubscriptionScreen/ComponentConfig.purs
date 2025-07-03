@@ -443,9 +443,9 @@ clearManualDuesBtn state = let
 getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
 getHeaderConfig subView isManualPayDue isMultiDueType = 
   case subView of
-    ST.JoinPlan    -> {title : (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"), actionText : getString SUPPORT, backbutton : false}
+    ST.JoinPlan    -> {title : (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"), actionText : getString SUPPORT, backbutton : true}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
-    ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
+    ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : true}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
     ST.FindHelpCentre -> {title : (getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE")), actionText : "", backbutton : true}
     ST.DuesView -> {title : (getString DUE_OVERVIEW), actionText : "", backbutton : true}
@@ -453,7 +453,7 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
                                           true, false -> AUTOPAY_DUE_DETAILS
                                           true, true -> MANUAL_DUE_DETAILS
                                           _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
-    _           -> {title : (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"), actionText : "", backbutton : false}
+    _           -> {title : (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"), actionText : "", backbutton : true}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 
