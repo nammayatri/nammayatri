@@ -162,68 +162,11 @@ public class MobilityAppBridge extends HyperBridge {
         remoteConfigs = new MobilityRemoteConfigs(false, false);
         registerCallBacks();
         createVPAdapter(bridgeComponents.getContext());
-        initNotificationChannel(bridgeComponents.getContext());
+        Utils.initNotificationChannel(bridgeComponents.getContext());
         String mapConfig = remoteConfigs.getString("map_config");
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "APP_CACHING_CONFIG", remoteConfigs.getString("enable_app_caching"));
     }
-
-    private void initNotificationChannel(Context context) {
-        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                notificationManager.deleteNotificationChannel("RINGING_ALERT");
-                notificationManager.deleteNotificationChannel("TRIP_STARTED");
-                notificationManager.deleteNotificationChannel("General");
-                notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
-                notificationManager.deleteNotificationChannel("DRIVER_QUOTE_INCOMING");
-                notificationManager.deleteNotificationChannel("DRIVER_ASSIGNMENT");
-                notificationManager.deleteNotificationChannel("REALLOCATE_PRODUCT");
-                notificationManager.deleteNotificationChannel("GENERAL_NOTIFICATION");
-                notificationManager.deleteNotificationChannel("RIDE_STARTED");
-                notificationManager.deleteNotificationChannel("CANCELLED_PRODUCT");
-                notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
-                notificationManager.deleteNotificationChannel("TRIP_FINISHED");
-                notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
-                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
-            } catch(Exception e) {
-                System.out.println("Notification Channel doesn't exists");
-            }
-        }
-
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
-            NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
-            NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
-            NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
-
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
-                safetyGroup.setDescription("Notifications related to Safety");
-                rideRelatedGroup.setDescription("Notifications related to ride starts, end");
-                serviceGroup.setDescription("Notifications related to Services");
-                promotionalGroup.setDescription("Notifications related to promotional");
-            }
-
-            notificationManager.createNotificationChannelGroup(safetyGroup);
-            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
-            notificationManager.createNotificationChannelGroup(serviceGroup);
-            notificationManager.createNotificationChannelGroup(promotionalGroup);
-        }
-
-
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.DRIVER_QUOTE_INCOMING);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.DRIVER_ASSIGNMENT);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.REALLOCATE_PRODUCT);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.GENERAL_NOTIFICATION);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.RIDE_STARTED);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.CANCELLED_PRODUCT);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.DRIVER_HAS_REACHED);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.SOS_TRIGGERED);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.SOS_RESOLVED);
-        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.NOSOUND_NOTIFICATION);
-    }
-
     private void createVPAdapter(Context context) {
         vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
 
