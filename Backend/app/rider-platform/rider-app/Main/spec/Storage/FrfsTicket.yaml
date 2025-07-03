@@ -726,6 +726,7 @@ FRFSConfig:
     providerId: Maybe Text
     providerName: Maybe Text
     validTillSeconds: Seconds
+    isFRFSTestingEnabled: Bool
 
   beamType:
     isCancellationAllowed: Maybe Bool
@@ -733,6 +734,7 @@ FRFSConfig:
     straightLineDistance: Maybe Meters
     radius: Maybe Meters
     validTillSeconds: Maybe Seconds
+    isFRFSTestingEnabled: Maybe Bool
 
   queries:
     findByMerchantOperatingCityId:
@@ -751,6 +753,7 @@ FRFSConfig:
     straightLineDistance: "5000"
     radius: "3000"
     validTillSeconds: "300"
+    isFRFSTestingEnabled : "false"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
@@ -758,6 +761,7 @@ FRFSConfig:
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
     validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
+    isFRFSTestingEnabled: Kernel.Prelude.fromMaybe False|I
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
@@ -765,6 +769,7 @@ FRFSConfig:
     straightLineDistance: Kernel.Prelude.Just|I
     radius: Kernel.Prelude.Just|I
     validTillSeconds: Kernel.Prelude.Just|I
+    isFRFSTestingEnabled: Kernel.Prelude.Just|I
 
 Route:
   tableName: route
