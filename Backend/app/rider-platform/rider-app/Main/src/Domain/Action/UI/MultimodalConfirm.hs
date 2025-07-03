@@ -833,11 +833,12 @@ postMultimodalOrderSublegSetStatus ::
 postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder subLegOrder newStatus = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
-  unless (newStatus `elem` [JL.Completed, JL.Cancelled]) $ do
-    legs <- JM.getAllLegsInfo journeyId False
-    journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
 
-    markLegStatus newStatus journeyLegInfo.legExtraInfo (Just subLegOrder)
+  -- Removed the 'unless' condition to allow updates for JL.Completed and JL.Cancelled statuses
+  legs <- JM.getAllLegsInfo journeyId False
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
+
+  markLegStatus newStatus journeyLegInfo.legExtraInfo (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
