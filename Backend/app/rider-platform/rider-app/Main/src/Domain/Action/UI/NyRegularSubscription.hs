@@ -220,8 +220,8 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
   estimateDetails <- getEstimateDetails estimateId.getId merchant.driverOfferBaseUrl merchant.driverOfferApiKey
 
   -- Update the subscription's metadata field with the BppEstimate as JSON
-  let updatedSubscription = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails)}
-  QNyRegularSubscription.updateByPrimaryKey updatedSubscription
+  let updatedSubscription' = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails)}
+  QNyRegularSubscription.updateByPrimaryKey updatedSubscription'
 
   -- Fetch updated subscription
   updatedSubscription <- do

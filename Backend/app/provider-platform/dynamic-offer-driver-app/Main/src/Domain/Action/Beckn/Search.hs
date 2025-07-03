@@ -92,6 +92,7 @@ import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
+import qualified Storage.Cac.FarePolicy as QFPolicy
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
@@ -103,6 +104,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
@@ -176,7 +178,8 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     isValueAddNP :: Bool,
     driverIdForSearch :: Maybe (Id DP.Person),
     isMeterRideSearch :: Maybe Bool,
-    isReserveRide :: Maybe Bool
+    isReserveRide :: Maybe Bool,
+    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
   }
 
 data DSearchRes = DSearchRes
@@ -313,7 +316,13 @@ handler ValidatedDSearchReq {..} sReq = do
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
-  let estimates = maybe estimates' (\_ -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
+  estimates <-
+    if isNothing reserveRideEstimate
+      then do
+        return $ maybe estimates' (\_ -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
+      else do
+        est <- transformReserveRideEsttoEst (fromJust reserveRideEstimate)
+        return [est]
 
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -777,6 +786,7 @@ validateRequest merchant sReq = do
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
   let isMeterRideSearch = sReq.isMeterRideSearch
   let isReserveRide = sReq.isReserveRide
+  let reserveRideEstimate = sReq.reserveRideEstimate
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
 
@@ -995,3 +1005,9 @@ decodeAddress BA.Address {..} = do
 
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
+
+transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => DBppEstimate.BppEstimate -> m DEst.Estimate
+transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
+  farePolicy <- QFPolicy.findById Nothing (fromMaybe "" farePolicyId)
+  fareParams <- QFP.findById (fromMaybe "" fareParamsId)
+  return DEst.Estimate {..}
