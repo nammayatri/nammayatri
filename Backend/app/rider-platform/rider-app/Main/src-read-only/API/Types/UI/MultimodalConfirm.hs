@@ -56,10 +56,6 @@ data ExtendLegReq = ExtendLegReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.UnifiedTicketQRV2, provider :: Lib.JourneyModule.Types.Provider}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
   { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
@@ -129,13 +125,17 @@ data LegStatus = LegStatus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MultimodalTicketVerifyProviderAPIEntity = MultimodalTicketVerifyProviderAPIEntity {legInfo :: [Lib.JourneyModule.Types.LegInfo], provider :: Lib.JourneyModule.Types.Provider}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MultimodalTicketVerifyReq
-  = IntegratedQR IntegratedQRReq
+  = IntegratedQR Lib.JourneyModule.Types.UnifiedTicketQRV2
   | SingleQR SingleQRReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MultimodalTicketVerifyResp = MultimodalTicketVerifyResp {legInfo :: [Lib.JourneyModule.Types.LegInfo], provider :: Lib.JourneyModule.Types.Provider}
+data MultimodalTicketVerifyResp = MultimodalTicketVerifyResp {tickets :: [MultimodalTicketVerifyProviderAPIEntity]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
