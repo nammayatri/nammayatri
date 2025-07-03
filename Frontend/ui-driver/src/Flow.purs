@@ -1894,7 +1894,9 @@ bookingOptionsFlow = do
       canSwitchToRental' = resp.canSwitchToRental
       canSwitchToIntraCity' = resp.canSwitchToIntraCity
       filterForAmbulance = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> (show item.serviceTierType) == (getValueToLocalStore VEHICLE_VARIANT)) ridePreferences'
-      defaultRide = if isAmbulance (getValueToLocalStore VEHICLE_VARIANT) then filterForAmbulance else  fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
+      defaultRide = if isAmbulance (getValueToLocalStore VEHICLE_VARIANT) then filterForAmbulance else  fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'    
+  (GlobalState globalState) <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalState) false
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
    { data { airConditioned = resp.airConditioned
@@ -1906,7 +1908,8 @@ bookingOptionsFlow = do
      props {
              canSwitchToRental = canSwitchToRental',
              canSwitchToInterCity = canSwitchToInterCity',
-             canSwitchToIntraCity = canSwitchToIntraCity'
+             canSwitchToIntraCity = canSwitchToIntraCity',
+             isPetModeEnabled = getDriverInfoResp.isPetModeEnabled
            }
     })
 
@@ -1948,6 +1951,7 @@ bookingOptionsFlow = do
           requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity, isPetModeEnabled = state.props.isPetModeEnabled}
       (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity, canSwitchToIntraCity = updateDriverResp.canSwitchToIntraCity} })
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ GetDriverInfoResp updateDriverResp}
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
