@@ -14,7 +14,7 @@ where
 import qualified API.Types.UI.NyRegularSubscription -- For request/response types
 import qualified Beckn.ACL.Search as TaxiACL
 import Control.Monad (join, when)
-import Data.Aeson (encode)
+import Data.Aeson (encode, toJSON)
 import qualified Data.List as List
 import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.OpenApi (ToSchema)
@@ -55,11 +55,13 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Scheduler.Types as Scheduler
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import SharedLogic.CallBPPInternal
 import SharedLogic.JobScheduler (NyRegularInstanceJobData (..), RiderJobType (NyRegularInstance))
 import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingHash)
 import qualified SharedLogic.Search as Search
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.NyRegularSubscriptionExtra as NyRegularSubscriptionExtra
@@ -107,7 +109,7 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
             lastProcessedAt = Nothing,
             createdAt = now,
             updatedAt = now,
-            metadata = req.metadata,
+            metadata = Nothing,
             merchantId = Just merchantId,
             merchantOperatingCityId = Nothing,
             schedulingHash = Nothing -- Initialize with Nothing
@@ -116,7 +118,7 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
   let subscriptionWithHash = newSubscription {NySub.schedulingHash = Just initialHash}
   void $ QNyRegularSubscription.create subscriptionWithHash
 
-  let searchReq = transformToSearchReq req
+  let searchReq = transformToSearchReq req subscriptionId
   searchRes <-
     Search.search
       personId
@@ -143,8 +145,8 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
         searchRequestId = searchRes.searchRequest.id.getId
       }
 
-transformToSearchReq :: API.Types.UI.NyRegularSubscription.CreateSubscriptionReq -> Search.SearchReq
-transformToSearchReq req =
+transformToSearchReq :: API.Types.UI.NyRegularSubscription.CreateSubscriptionReq -> Id NySub.NyRegularSubscription -> Search.SearchReq
+transformToSearchReq req subscriptionId =
   let details = req.oneWaySearchReqDetails
    in Search.OneWaySearch
         Search.OneWaySearchReq
@@ -164,7 +166,8 @@ transformToSearchReq req =
             recentLocationId = details.recentLocationId,
             isSpecialLocation = Nothing,
             placeNameSource = Nothing,
-            isReserveRide = Just True
+            isReserveRide = Just True,
+            subscriptionId = Just subscriptionId
           }
   where
     transformLocation :: Location.Location -> Search.SearchReqLocation
@@ -196,19 +199,29 @@ postNyRegularSubscriptionsConfirm ::
     API.Types.UI.NyRegularSubscription.ConfirmSubscriptionReq ->
     Environment.Flow Domain.Types.NyRegularSubscription.NyRegularSubscription
   )
-postNyRegularSubscriptionsConfirm (mPersonId, _) req = do
+postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
   personId <- mPersonId & fromMaybeM (PersonNotFound "Person not found in token")
   let subscriptionId = req.subscriptionId
+      estimateId = req.estimateId
 
   -- Fetch to verify ownership and existence
   subscription <-
     QNyRegularSubscription.findById subscriptionId
-      >>= fromMaybeM (InvalidRequest "Subscription not found") -- Corrected error
+      >>= fromMaybeM (InvalidRequest "Subscription not found")
   unless (subscription.userId == personId) $
-    throwM (InvalidRequest "User does not own this subscription") -- Corrected error
+    throwM (InvalidRequest "User does not own this subscription")
 
   -- Update status
   QNyRegularSubscription.updateStatusById Domain.Types.NyRegularSubscription.ACTIVE subscriptionId
+
+  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  -- Call BPP internal API to get the estimate
+  estimateDetails <- getEstimateDetails estimateId.getId merchant.driverOfferBaseUrl merchant.driverOfferApiKey
+
+  -- Update the subscription's metadata field with the BppEstimate as JSON
+  let updatedSubscription = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails)}
+  QNyRegularSubscription.updateByPrimaryKey updatedSubscription
 
   -- Fetch updated subscription
   updatedSubscription <- do

@@ -17,13 +17,14 @@ module API.Internal.Estimate (API, handler) where
 import Domain.Action.Internal.Estimate as Estimate
 import Domain.Types.Estimate as Estimate
 import Environment
--- import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Servant
 
 type API =
   "estimates"
     :> Capture "estimateId" (Id Estimate)
+    :> Header "token" Text
     :> Get '[JSON] Estimate.BppEstimate
 
 handler :: FlowServer API

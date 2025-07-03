@@ -25,12 +25,13 @@ import qualified BecknV2.Utils as Utils
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search
+import qualified Domain.Action.Internal.Estimate as DBppEstimate
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Registry.Subscriber
-import Kernel.Utils.Common (fromMaybeM, type (:::))
+import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
 import Tools.Error
 
 buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
@@ -58,6 +59,7 @@ buildSearchReq messageId subscriber req context = do
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
       isReserveRide = getIsReserveRide req
+      reserveRideEstimate = getReserveRideEstimate req isReserveRide
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
@@ -131,3 +133,13 @@ getIsReserveRide req = do
   fulfillment <- intent.intentFulfillment
   tags <- fulfillment.fulfillmentTags
   readMaybe . T.unpack =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_RIDE_TAG (Just tags)
+
+getReserveRideEstimate :: Spec.SearchReqMessage -> Maybe Bool -> Maybe DBppEstimate.BppEstimate
+getReserveRideEstimate req isReserveRide = do
+  if isReserveRide == Just True
+    then do
+      intent <- req.searchReqMessageIntent
+      fulfillment <- intent.intentFulfillment
+      tags <- fulfillment.fulfillmentTags
+      decodeFromText =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_PRICING_TAG (Just tags)
+    else Nothing

@@ -37,6 +37,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
+import qualified Domain.Action.Internal.Estimate as DBppEstimate
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types
@@ -144,7 +145,8 @@ data DSearchReq = DSearchReq
     driverIdentifier :: Maybe DRL.DriverIdentifier,
     isMultimodalSearch :: Maybe Bool,
     isReserveRide :: Maybe Bool,
-    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories]
+    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
+    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo

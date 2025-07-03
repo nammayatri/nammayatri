@@ -464,6 +464,7 @@ data BecknTag
   | IS_SAFETY_PLUS
   | IS_MULTIMODAL_SEARCH
   | RESERVED_RIDE_TAG
+  | RESERVED_PRICING_TAG
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -494,6 +495,7 @@ instance CompleteTag BecknTag where
     IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
     IS_MULTIMODAL_SEARCH -> (Just "Is Multimodal Search", Nothing)
     RESERVED_RIDE_TAG -> (Just "Reserved Ride Tag", Nothing)
+    RESERVED_PRICING_TAG -> (Just "Reserved Pricing Tag", Nothing)
     FARE_PARAMETERS_IN_RATECARD -> (Just "Fare Parametes in RateCard information", Nothing)
     SENDER_NUMBER -> (Just "Delivery Sender Number", Nothing)
     SENDER_NAME -> (Just "Delivery Sender Name", Nothing)
@@ -538,6 +540,7 @@ instance CompleteTag BecknTag where
     IS_METER_RIDE_SEARCH -> SEARCH_REQUEST_INFO
     IS_MULTIMODAL_SEARCH -> SEARCH_REQUEST_INFO
     RESERVED_RIDE_TAG -> SEARCH_REQUEST_INFO
+    RESERVED_PRICING_TAG -> SEARCH_REQUEST_INFO
     FARE_PARAMETERS_IN_RATECARD -> FARE_PARAMETERS_IN_RATECARD_INFO
     CUSTOMER_LANGUAGE -> CUSTOMER_INFO
     DASHBOARD_USER -> CUSTOMER_INFO

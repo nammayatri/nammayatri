@@ -81,6 +81,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -90,6 +91,8 @@ import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Metrics.BAPMetrics.Types
+
+-- import Kernel.Utils.Common (encodeToText)
 
 type SearchRequestFlow m r =
   ( MonadFlow m,
@@ -291,12 +294,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         )
   let merchantOperatingCityId = merchantOperatingCity.id
   let isMeterRide = getIsMeterRideSearch req
-
+  searchRequestId <- generateGUID
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
-  searchRequestId <- generateGUID
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
@@ -346,9 +348,20 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   QSearchRequest.createDSReq searchRequest
   QPFS.clearCache person.id
-
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
+  reservePricingTag <-
+    if isReservedRideSearch
+      then do
+        case req of
+          OneWaySearch OneWaySearchReq {subscriptionId} -> do
+            nyRegularSubscription <- QNyRegularSubscription.findById (fromMaybe "" subscriptionId)
+            let metadata = (.metadata) <$> nyRegularSubscription
+            if isJust metadata
+              then return [(Beckn.RESERVED_PRICING_TAG, Just (encodeToText (fromJust metadata)))]
+              else return []
+          _ -> return []
+      else return []
   gatewayUrl <-
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
@@ -361,7 +374,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
         ..
       }
   where
@@ -386,7 +399,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let isMultimodalSearch = case journeySearchData of
@@ -397,7 +410,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             _ -> []
       Just $
         def{Beckn.fulfillmentTags =
-              reserveTag -- Add the reserve tag here
+              reserveTag
+                ++ reservePricingTag -- Add the reserve tag here
                 ++ [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
                      (Beckn.DURATION_INFO_IN_S, show . (.getSeconds) <$> duration),
                      (Beckn.RETURN_TIME, show <$> returnTime),

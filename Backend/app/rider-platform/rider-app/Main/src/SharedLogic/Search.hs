@@ -10,6 +10,7 @@ import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.NyRegularSubscription as DNyRegularSubscription
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -107,7 +108,8 @@ data OneWaySearchReq = OneWaySearchReq
     isMeterRideSearch :: Maybe Bool,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     platformType :: Maybe DIBPC.PlatformType,
-    isReserveRide :: Maybe Bool
+    isReserveRide :: Maybe Bool,
+    subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

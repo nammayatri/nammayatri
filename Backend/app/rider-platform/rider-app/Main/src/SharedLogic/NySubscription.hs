@@ -53,7 +53,8 @@ triggerSubscriptionSearch subscription = do
             isMeterRideSearch = Nothing,
             recentLocationId = Nothing,
             platformType = Nothing,
-            isReserveRide = Just True
+            isReserveRide = Just True,
+            subscriptionId = Nothing
           }
 
   searchResp <-

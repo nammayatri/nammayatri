@@ -27,6 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Merchant as QM
 import Tools.Error
 
 data BppEstimate = BppEstimate
@@ -76,11 +77,16 @@ data BppEstimate = BppEstimate
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-getEstimateDetails :: Id Estimate -> FlowHandler BppEstimate
-getEstimateDetails estimateId = withFlowHandlerAPI $ do
+getEstimateDetails :: Id Estimate -> Maybe Text -> FlowHandler BppEstimate
+getEstimateDetails estimateId apiKey = withFlowHandlerAPI $ do
   Estimate {..} <-
     QEstimate.findById estimateId
       >>= fromMaybeM (EstimateNotFound estimateId.getId)
+  merchant <- case merchantId of
+    Just mid -> QM.findById mid >>= fromMaybeM (MerchantDoesNotExist mid.getId)
+    Nothing -> throwError $ MerchantDoesNotExist "MISSING_MERCHANT_ID"
+  unless (Just merchant.internalApiKey == apiKey) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
   pure $
     BppEstimate
       { fareParamsId = (.id) <$> fareParams,
