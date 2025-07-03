@@ -345,6 +345,7 @@ buildMediaFileDocument merchantOpCity creatorId s3Path rcId Common.UploadMediaFi
         merchantOperatingCityId = merchantOpCity.id,
         rcId,
         s3Path,
+        status = DMFD.CONFIRMED,
         createdAt = now,
         updatedAt = now
       }

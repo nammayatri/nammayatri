@@ -7,6 +7,7 @@ ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN merchant_id ch
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN rc_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN s3_path text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD PRIMARY KEY ( id);

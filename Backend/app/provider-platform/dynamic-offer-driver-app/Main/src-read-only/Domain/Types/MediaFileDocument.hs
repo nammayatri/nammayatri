@@ -21,7 +21,12 @@ data MediaFileDocument = MediaFileDocument
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
     s3Path :: Kernel.Prelude.Text,
+    status :: Domain.Types.MediaFileDocument.MediaFileDocumentStatus,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data MediaFileDocumentStatus = PENDING | DELETED | CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaFileDocumentStatus)

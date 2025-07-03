@@ -361,6 +361,9 @@ Image:
 
 MediaFileDocument:
   tableName: media_file_document
+  types:
+    MediaFileDocumentStatus:
+      enum: "PENDING, DELETED, CONFIRMED"
   fields:
     id: Id MediaFileDocument
     merchantId: Id Merchant
@@ -369,6 +372,7 @@ MediaFileDocument:
     mediaFileDocumentType: MediaFileDocumentType
     rcId: Id VehicleRegistrationCertificate
     creatorId: Id Person
+    status: MediaFileDocumentStatus
 
   queries:
     findOneByMerchantOpCityIdAndRcIdAndType:
