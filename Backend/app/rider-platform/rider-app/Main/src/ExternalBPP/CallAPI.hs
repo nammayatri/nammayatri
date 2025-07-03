@@ -39,6 +39,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
@@ -139,6 +140,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
+        void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
         bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq

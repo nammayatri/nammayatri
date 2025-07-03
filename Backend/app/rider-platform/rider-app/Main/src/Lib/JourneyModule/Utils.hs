@@ -10,16 +10,21 @@ import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import Domain.Types.FRFSTicketBookingPayment (FRFSTicketBookingPayment (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
+import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
+import qualified Kernel.External.Payment.Interface.Types as KT
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -27,17 +32,27 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
+import qualified Storage.Queries.FRFSQuote as QQuote
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
+import Tools.Error
 import Tools.Maps (LatLong (..))
+import qualified Tools.Payment as TPayment
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
 mapWithIndex f = go 0
@@ -684,3 +699,65 @@ createRecentLocationForMultimodal journey = do
                   }
           SQRL.create recentLocation
     _ -> return ()
+
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => Id Person -> Id Merchant -> Maybe (Id Journey) -> Int -> Int -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil personId _merchantId mbJourneyId quantity childTicketQuantity = do
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond mbJourneyId
+  frfsBookingWithUpdatedPriceAndQty <-
+    mapM
+      ( \ticketBooking -> do
+          quote <- QQuote.findById ticketBooking.quoteId >>= fromMaybeM (FRFSQuoteNotFound $ show ticketBooking.quoteId)
+          let quantityRational = fromIntegral quantity :: Rational
+          let oldQuantityRational = fromIntegral ticketBooking.quantity :: Rational
+          let childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+          let childPrice = maybe (getHighPrecMoney quote.price.amount) (\p -> getHighPrecMoney p.amount) quote.childPrice
+          let amountToBeUpdated = ((safeDiv (getHighPrecMoney ticketBooking.price.amount) oldQuantityRational) * quantityRational) + (childPrice * childTicketQuantityRational)
+          let totalPrice =
+                Price
+                  { amount = HighPrecMoney amountToBeUpdated,
+                    amountInt = Money $ roundToIntegral amountToBeUpdated,
+                    currency = ticketBooking.price.currency
+                  }
+          let fRFSTicketBooking =
+                ticketBooking
+                  { DFRFSTicketBooking.quantity = quantity,
+                    DFRFSTicketBooking.childTicketQuantity = Just childTicketQuantity,
+                    DFRFSTicketBooking.finalPrice = Just totalPrice,
+                    DFRFSTicketBooking.estimatedPrice = totalPrice,
+                    DFRFSTicketBooking.price = totalPrice
+                  }
+          QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
+          pure $ ticketBooking{price = totalPrice, quantity = quantity}
+      )
+      frfsBookingsArr
+  frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
+  let paymentType = TPayment.FRFSMultiModalBooking
+  frfsConfig <-
+    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
+      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
+  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
+  isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
+  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
+  let flattenedPayments = concat frfsBookingsPaymentArr
+  let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
+  case mbPaymentOrderId of
+    Nothing ->
+      return Nothing
+    Just paymentOrderId -> do
+      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
+      let updateReq =
+            KT.OrderUpdateReq
+              { amount = amountUpdated,
+                orderShortId = order.shortId.getShortId,
+                splitSettlementDetails = splitDetails
+              }
+      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
+      QOrder.updateAmount order.id amountUpdated
+      let updatedOrder :: DOrder.PaymentOrder
+          updatedOrder = order {DOrder.amount = amountUpdated}
+      return $ Just updatedOrder
+  where
+    safeDiv :: (Eq a, Fractional a) => a -> a -> a
+    safeDiv x 0 = x
+    safeDiv x y = x / y

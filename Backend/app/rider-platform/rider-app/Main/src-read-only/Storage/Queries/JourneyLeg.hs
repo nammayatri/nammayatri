@@ -19,6 +19,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.JourneyLeg.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLeg as Beam
 import Storage.Queries.JourneyLegExtra as ReExport
@@ -96,6 +97,13 @@ updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [S
 updateMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Common.MultimodalTravelMode -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateMode mode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.mode mode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateStatusByJourneyIdAndSequenceNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m ())
+updateStatusByJourneyIdAndSequenceNumber status journeyId sequenceNumber = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -131,6 +139,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.serviceTypes serviceTypes,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),
+      Se.Set Beam.status status,
       Se.Set Beam.toArrivalTime toArrivalTime,
       Se.Set Beam.toDepartureTime toDepartureTime,
       Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),

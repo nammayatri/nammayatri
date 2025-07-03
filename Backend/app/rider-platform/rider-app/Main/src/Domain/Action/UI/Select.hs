@@ -483,7 +483,8 @@ mkJourneyForSearch searchRequest estimate personId = do
                 changedBusesInSequence = Nothing,
                 finalBoardedBusNumber = Nothing,
                 entrance = Nothing,
-                exit = Nothing
+                exit = Nothing,
+                status = Nothing
               }
 
       let journeySearchData =

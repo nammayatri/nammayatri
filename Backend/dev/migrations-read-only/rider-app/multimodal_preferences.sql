@@ -18,4 +18,4 @@ ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN bus_transit_types text[]
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.multimodal_preferences aDD COLUMN allowed_transit_modes text[];
+ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN allowed_transit_modes text[] NOT NULL;

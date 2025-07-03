@@ -518,35 +518,41 @@ mapTaxiBookingStatusToJourneyLegStatus status = case status of
   DBooking.CANCELLED -> Cancelled
   DBooking.TRIP_ASSIGNED -> Booked
 
-getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m (JourneyLegStatus, Maybe LatLong)
-getTaxiLegStatusFromBooking booking mRide = do
-  if (fromMaybe False booking.isSkipped)
-    then return (Skipped, Nothing)
-    else case mRide of
-      Just ride -> do
-        driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
-        case driverLocationResp of
-          Left err -> do
-            logError $ "location fetch failed: " <> show err
-            return $ (mapTaxiRideStatusToJourneyLegStatus ride.status, Nothing)
-          Right driverLocation -> do
-            let journeyStatus =
-                  case (ride.status, driverLocation.pickupStage) of
-                    (DRide.NEW, Just stage) -> stage
-                    _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
-            return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
-      Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)
+getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe JourneyLegStatus -> m (JourneyLegStatus, Maybe LatLong)
+getTaxiLegStatusFromBooking booking mRide journeyLegStatus = do
+  case journeyLegStatus of
+    Just Completed -> return (Completed, Nothing)
+    _ -> do
+      if (fromMaybe False booking.isSkipped)
+        then return (Skipped, Nothing)
+        else case mRide of
+          Just ride -> do
+            driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
+            case driverLocationResp of
+              Left err -> do
+                logError $ "location fetch failed: " <> show err
+                return $ (mapTaxiRideStatusToJourneyLegStatus ride.status, Nothing)
+              Right driverLocation -> do
+                let journeyStatus =
+                      case (ride.status, driverLocation.pickupStage) of
+                        (DRide.NEW, Just stage) -> stage
+                        _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
+                return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
+          Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)
 
-getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> JourneyLegStatus
-getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
-  if journeyLegInfo.skipBooking
-    then Skipped
-    else case mbEstimateStatus of
-      Nothing -> InPlan
-      Just DEstimate.NEW -> InPlan
-      Just DEstimate.COMPLETED -> Booked
-      Just DEstimate.CANCELLED -> Cancelled
-      _ -> Assigning
+getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> Maybe JourneyLegStatus -> JourneyLegStatus
+getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus journeyLegStatus =
+  case journeyLegStatus of
+    Just Completed -> Completed
+    _ -> do
+      if journeyLegInfo.skipBooking
+        then Skipped
+        else case mbEstimateStatus of
+          Nothing -> InPlan
+          Just DEstimate.NEW -> InPlan
+          Just DEstimate.COMPLETED -> Booked
+          Just DEstimate.CANCELLED -> Cancelled
+          _ -> Assigning
 
 getTollDifference :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => [DFareBreakup.FareBreakup] -> [DFareBreakup.FareBreakup] -> m Kernel.Types.Common.Price
 getTollDifference fareBreakups estimatedFareBreakups = do
@@ -566,11 +572,11 @@ getDistance = \case
   DBooking.MeterRideDetails _ -> 0
   DBooking.RentalDetails _ -> 0
 
-mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromBookingAndRide booking mRide entrance exit = do
+mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> Maybe JourneyLegStatus -> m LegInfo
+mkLegInfoFromBookingAndRide booking mRide entrance exit journeyStatus = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
   let skipBooking = fromMaybe False booking.isSkipped
-  (status, _) <- getTaxiLegStatusFromBooking booking mRide
+  (status, _) <- getTaxiLegStatusFromBooking booking mRide journeyStatus
   (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
   tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
@@ -635,8 +641,8 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit = do
     getBookingDetailsConstructor (DBooking.DeliveryDetails _) = "DeliveryDetails"
     getBookingDetailsConstructor (DBooking.MeterRideDetails _) = "MeterRideDetails"
 
-mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit = do
+mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> Maybe JourneyLegStatus -> m LegInfo
+mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit journeyLegStatus = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   (mbFareRange, mbEstimateStatus, mbEstimate) <-
     case journeyLegInfo'.pricingId of
@@ -664,7 +670,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit = do
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
-        status = getTaxiLegStatusFromSearch journeyLegInfo' mbEstimateStatus,
+        status = getTaxiLegStatusFromSearch journeyLegInfo' mbEstimateStatus journeyLegStatus,
         legExtraInfo =
           Taxi $
             TaxiLegExtraInfo
@@ -1182,7 +1188,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = Nothing,
         entrance = leg.entrance,
-        exit = leg.exit
+        exit = leg.exit,
+        status = Nothing
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

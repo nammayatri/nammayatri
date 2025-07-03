@@ -31,6 +31,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
@@ -39,6 +40,7 @@ import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -137,7 +139,11 @@ onInit onInitReq merchant booking_ = do
       return (orderId, updatedOrderShortId)
     markBookingApproved (ticketBookingPayment, booking) = do
       let price = if booking.id == booking_.id then onInitReq.totalPrice else booking.price
-      void $ QFRFSTicketBookingPayment.create ticketBookingPayment
+      QFRFSTicketBookingPayment.findById ticketBookingPayment.id >>= \case
+        Nothing -> void $ QFRFSTicketBookingPayment.create ticketBookingPayment
+        Just _ -> do
+          quote <- QQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+          void $ JourneyUtils.postMultimodalPaymentUpdateOrderUtil booking.riderId booking.merchantId booking.journeyId quote.quantity (fromMaybe 0 quote.childTicketQuantity)
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       void $ QFRFSTicketBooking.updateFinalPriceById (Just price) booking.id
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

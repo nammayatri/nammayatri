@@ -73,15 +73,12 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSQuote as QQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -221,72 +218,19 @@ postMultimodalPaymentUpdateOrder ::
   )
 postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-  frfsBookingWithUpdatedPriceAndQty <-
-    mapM
-      ( \ticketBooking -> do
-          quote <- QQuote.findById ticketBooking.quoteId >>= fromMaybeM (FRFSQuoteNotFound $ show ticketBooking.quoteId)
-          let quantityRational = fromIntegral req.quantity :: Rational
-          let oldQuantityRational = fromIntegral ticketBooking.quantity :: Rational
-          let childTicketQuantityRational = fromIntegral req.childTicketQuantity :: Rational
-          let childPrice = maybe (getHighPrecMoney quote.price.amount) (\p -> getHighPrecMoney p.amount) quote.childPrice
-          let amountToBeUpdated = ((safeDiv (getHighPrecMoney ticketBooking.price.amount) oldQuantityRational) * quantityRational) + (childPrice * childTicketQuantityRational)
-          let totalPrice =
-                Price
-                  { amount = HighPrecMoney $ amountToBeUpdated,
-                    amountInt = Money $ roundToIntegral amountToBeUpdated,
-                    currency = ticketBooking.price.currency
-                  }
-          let fRFSTicketBooking =
-                ticketBooking
-                  { DFRFSB.quantity = req.quantity,
-                    DFRFSB.childTicketQuantity = Just req.childTicketQuantity,
-                    DFRFSB.finalPrice = Just totalPrice,
-                    DFRFSB.estimatedPrice = totalPrice,
-                    DFRFSB.price = totalPrice
-                  }
-          QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
-          pure $ ticketBooking{price = totalPrice, quantity = req.quantity}
-      )
-      frfsBookingsArr
-  frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
-  let paymentType = TPayment.FRFSMultiModalBooking
-  frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
-      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
-  isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
-  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
-  let flattenedPayments = concat frfsBookingsPaymentArr
-  let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
-  case mbPaymentOrderId of
+  mbUpdatedOrder <- JLU.postMultimodalPaymentUpdateOrderUtil personId _merchantId (Just journeyId) req.quantity req.childTicketQuantity
+  case mbUpdatedOrder of
     Nothing ->
       return $
         ApiTypes.UpdatePaymentOrderResp
           { sdkPayload = Nothing
           }
-    Just paymentOrderId -> do
-      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
-      let updateReq =
-            KT.OrderUpdateReq
-              { amount = amountUpdated,
-                orderShortId = order.shortId.getShortId,
-                splitSettlementDetails = splitDetails
-              }
-      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
-      QOrder.updateAmount order.id amountUpdated
-      let updatedOrder :: DOrder.PaymentOrder
-          updatedOrder = order {DOrder.amount = amountUpdated}
-      sdkPayload <- buildUpdateOrderSDKPayload amountUpdated updatedOrder
+    Just updatedOrder -> do
+      sdkPayload <- buildUpdateOrderSDKPayload updatedOrder.amount updatedOrder
       return $
         ApiTypes.UpdatePaymentOrderResp
           { sdkPayload = sdkPayload
           }
-  where
-    safeDiv :: (Eq a, Fractional a) => a -> a -> a
-    safeDiv x 0 = x
-    safeDiv x y = x / y
 
 buildUpdateOrderSDKPayload :: EncFlow m r => HighPrecMoney -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayloadDetails)
 buildUpdateOrderSDKPayload amount order = do
@@ -838,10 +782,12 @@ postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder s
   journey <- JM.getJourney journeyId
 
   -- Removed the 'unless' condition to allow updates for JL.Completed and JL.Cancelled statuses
-  legs <- JM.getAllLegsInfo journeyId False
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
 
-  markLegStatus newStatus journeyLegInfo.legExtraInfo (Just subLegOrder)
+  legs <- JM.getAllLegsInfo journeyId False
+
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+
+  markLegStatus newStatus journeyLegInfo.legExtraInfo journeyId legOrder (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -895,12 +841,12 @@ getSubLegOrders legExtraInfo =
     _ -> []
 
 -- Helper function to mark all sub-legs as completed for FRFS legs
-markAllSubLegsCompleted :: JMTypes.LegExtraInfo -> Environment.Flow ()
-markAllSubLegsCompleted legExtraInfo = do
+markAllSubLegsCompleted :: JMTypes.LegExtraInfo -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Int -> Environment.Flow ()
+markAllSubLegsCompleted legExtraInfo journeyId legOrder = do
   let subLegOrders = getSubLegOrders legExtraInfo
   case subLegOrders of
-    [] -> markLegStatus JL.Completed legExtraInfo Nothing
-    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legExtraInfo (Just subOrder)) orders
+    [] -> markLegStatus JL.Completed legExtraInfo journeyId legOrder Nothing
+    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legExtraInfo journeyId legOrder (Just subOrder)) orders
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -912,7 +858,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  mapM_ (markAllSubLegsCompleted . (.legExtraInfo)) legs
+  mapM_ (\leg -> markAllSubLegsCompleted leg.legExtraInfo journeyId leg.order) legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus

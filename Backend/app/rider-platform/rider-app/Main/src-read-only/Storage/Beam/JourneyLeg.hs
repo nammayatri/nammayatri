@@ -12,48 +12,50 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data JourneyLegT f = JourneyLegT
-  { agencyGtfsId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    agencyName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    changedBusesInSequence :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    distance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
-    distanceUnit :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit)),
-    duration :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
-    endLocationLat :: (B.C f Kernel.Prelude.Double),
-    endLocationLon :: (B.C f Kernel.Prelude.Double),
-    entrance :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    estimatedMaxFare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    estimatedMinFare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    exit :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    finalBoardedBusNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    fromArrivalTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    fromDepartureTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    fromStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    fromStopGtfsId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    fromStopName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    fromStopPlatformCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isDeleted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isSkipped :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    journeyId :: (B.C f Kernel.Prelude.Text),
-    legId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    mode :: (B.C f Domain.Types.Common.MultimodalTravelMode),
-    sequenceNumber :: (B.C f Kernel.Prelude.Int),
-    serviceTypes :: (B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType])),
-    startLocationLat :: (B.C f Kernel.Prelude.Double),
-    startLocationLon :: (B.C f Kernel.Prelude.Double),
-    toArrivalTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    toDepartureTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    toStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    toStopGtfsId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    toStopName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    toStopPlatformCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    endLocationLat :: B.C f Kernel.Prelude.Double,
+    endLocationLon :: B.C f Kernel.Prelude.Double,
+    entrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    exit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStopGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyId :: B.C f Kernel.Prelude.Text,
+    legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
+    sequenceNumber :: B.C f Kernel.Prelude.Int,
+    serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
+    startLocationLat :: B.C f Kernel.Prelude.Double,
+    startLocationLon :: B.C f Kernel.Prelude.Double,
+    status :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
+    toArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    toDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    toStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toStopGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -63,6 +65,6 @@ instance B.Table JourneyLegT where
 
 type JourneyLeg = JourneyLegT Identity
 
-$(enableKVPG (''JourneyLegT) [('id)] [[('journeyId)], [('legId)]])
+$(enableKVPG ''JourneyLegT ['id] [['journeyId], ['legId]])
 
-$(mkTableInstances (''JourneyLegT) "journey_leg")
+$(mkTableInstances ''JourneyLegT "journey_leg")

@@ -577,7 +577,15 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< dConfirmRes.discountsJson
   now <- getCurrentTime
-  when (dConfirmRes.status == DFRFSTicketBooking.NEW && dConfirmRes.validTill > now) $ do
+  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity dConfirmRes
+  let multiInitAllowedOrNotAllowed = case integratedBppConfig.providerConfig of
+        DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
+          ( multiInitAllowed == Just True
+              && (dConfirmRes.status == DFRFSTicketBooking.NEW || dConfirmRes.status == DFRFSTicketBooking.APPROVED || dConfirmRes.status == DFRFSTicketBooking.PAYMENT_PENDING)
+          )
+            || (multiInitAllowed /= Just True && dConfirmRes.status == DFRFSTicketBooking.NEW)
+        _ -> dConfirmRes.status == DFRFSTicketBooking.NEW
+  when (multiInitAllowedOrNotAllowed && dConfirmRes.validTill > now) $ do
     bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
@@ -612,7 +620,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
         ( \booking -> do
             let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
             void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-            void $ QFRFSTicketBooking.updateTicketAndChildTicketQuantityById booking.id (Just ticketQuantity) childTicketQuantity
             let updatedBooking = booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
             pure (rider, updatedBooking)
         )
