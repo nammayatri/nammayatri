@@ -213,3 +213,13 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN drunk_and_drive
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_pet_mode_enabled boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN pan_number_hash text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN pan_number_encrypted text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN dl_number_hash text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN dl_number_encrypted text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_hash text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_encrypted text ;

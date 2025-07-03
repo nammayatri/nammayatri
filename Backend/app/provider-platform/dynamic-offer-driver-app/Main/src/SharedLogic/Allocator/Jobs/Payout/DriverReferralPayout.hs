@@ -57,7 +57,7 @@ data DailyStatsWithVpa = DailyStatsWithVpa
     payoutVpa :: Maybe Text,
     dInfo :: DI.DriverInformation
   }
-  deriving (Generic, Show)
+  deriving (Generic)
 
 sendDriverReferralPayoutJobData ::
   ( EncFlow m r,
@@ -88,7 +88,6 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
   let dailyStatsWithVpaList = filter (\dsv -> (isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) && (dsv.dInfo.isBlockedForReferralPayout /= Just True)) statsWithVpaList -- filter blocked drivers
-  logDebug $ "DriverStatsWithVpaList: " <> show dailyStatsWithVpaList
   if null dailyStatsForEveryDriverList
     then do
       when toScheduleNextPayout $ do

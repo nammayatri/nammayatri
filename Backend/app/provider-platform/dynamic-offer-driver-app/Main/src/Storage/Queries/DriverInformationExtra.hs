@@ -28,6 +28,7 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.PersonExtra ()
+import qualified Storage.Queries.Transformers.FleetOwnerInformation as Transformers
 import Tools.Error
 
 -- Extra code goes here --
@@ -400,3 +401,33 @@ findByIdAndVerified (Id driverInformationId) mbVerified =
         [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
           <> [Se.Is BeamDI.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
     ]
+
+updateAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()
+updateAadhaarNumber aadhaarNumber driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.aadhaarNumberEncrypted (Transformers.mkFieldEncrypted aadhaarNumber),
+      Se.Set BeamDI.aadhaarNumberHash (Transformers.mkFieldHash aadhaarNumber),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+updatePanNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()
+updatePanNumber panNumber driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.panNumberEncrypted (Transformers.mkFieldEncrypted panNumber),
+      Se.Set BeamDI.panNumberHash (Transformers.mkFieldHash panNumber),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+updateDlNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()
+updateDlNumber dlNumber driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.dlNumberEncrypted (Transformers.mkFieldEncrypted dlNumber),
+      Se.Set BeamDI.dlNumberHash (Transformers.mkFieldHash dlNumber),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
