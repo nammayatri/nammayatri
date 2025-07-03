@@ -1466,7 +1466,8 @@ type HomeScreenProps =  {
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean,
   showBlockerPopup :: Boolean,
-  coinWaitingThreshold :: Int
+  coinWaitingThreshold :: Int,
+  showDriverConsentPopup :: Maybe Boolean
  }
 
 type RideRequestPill = {

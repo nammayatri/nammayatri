@@ -313,7 +313,8 @@ initData =
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
       , showBlockerPopup : false
-      , coinWaitingThreshold : 0
+      , coinWaitingThreshold : 0,
+      , showDriverConsentPopup : Nothing
       }
   }
 

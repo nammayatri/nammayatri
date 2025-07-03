@@ -326,6 +326,7 @@ instance showAction :: Show Action where
   show (RideEndWithStopsPopupAction _) = "RideEndWithStopsPopupAction"
   show (UpdateRouteInState _) = "UpdateRouteInState"
   show (DriverBlockedPopUp _) = "DriverBlockedPopUp"
+  show (DriverConsentPopupAC _) = "DriverConsentPopupAC"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -515,6 +516,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateStopsStatus ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
                     | EnablePetRides ST.HomeScreenState
+                    | DriverConsentAgree ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -535,6 +537,7 @@ data Action = NoAction
             | ActiveRideAPIResponseAction (Array RidesInfo)
             | PopUpModalAction PopUpModal.Action
             | PopUpModalCancelConfirmationAction PopUpModal.Action
+            | DriverConsentPopupAC PopUpModal.Action
             | CancelRideModalAction SelectListModal.Action
             | Cancel
             | SetToken String
@@ -1521,6 +1524,9 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status ti
     _ <- pure $ TF.clearTimerWithId timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
+
+eval (DriverConsentPopupAC (PopUpModal.OnButton1Click)) state = -- continue state -- {props {showDriverConsentPopup = false}}
+  exit $ DriverConsentAgree state
 
 eval (CancelRideModalAction SelectListModal.NoAction) state = do
   _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions

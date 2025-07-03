@@ -4481,6 +4481,10 @@ data UpdateDriverVehicleServiceTierReq = UpdateDriverVehicleServiceTierReq {
   airConditioned :: Maybe AirConditionedTier
 }
 
+data DriverConsentReq = DriverConsentReq {
+  consent :: Boolean
+}
+
 data UpdateDriverVehicleServiceTierResp = UpdateDriverVehicleServiceTierResp String
 
 newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
@@ -4607,6 +4611,12 @@ instance showDriverVehicleServiceTierResponse :: Show DriverVehicleServiceTierRe
 instance decodeDriverVehicleServiceTierResponse :: Decode DriverVehicleServiceTierResponse where decode = defaultDecode
 instance encodeDriverVehicleServiceTierResponse  :: Encode DriverVehicleServiceTierResponse where encode = defaultEncode
 
+derive instance genericDriverConsentReq :: Generic DriverConsentReq _
+instance standardEncodeDriverConsentReq :: StandardEncode DriverConsentReq where standardEncode (DriverConsentReq res) = standardEncode res
+instance showDriverConsentReq :: Show DriverConsentReq where show = genericShow
+instance decodeDriverConsentReq :: Decode DriverConsentReq where decode = defaultDecode
+instance encodeDriverConsentReq  :: Encode DriverConsentReq where encode = defaultEncode
+
 derive instance genericUpdateDriverVehicleServiceTierReq :: Generic UpdateDriverVehicleServiceTierReq _
 instance standardEncodeUpdateDriverVehicleServiceTierReq :: StandardEncode UpdateDriverVehicleServiceTierReq where standardEncode (UpdateDriverVehicleServiceTierReq res) = standardEncode res
 instance showUpdateDriverVehicleServiceTierReq :: Show UpdateDriverVehicleServiceTierReq where show = genericShow
@@ -4618,6 +4628,16 @@ instance standardEncodeUpdateDriverVehicleServiceTierResp :: StandardEncode Upda
 instance showUpdateDriverVehicleServiceTierResp :: Show UpdateDriverVehicleServiceTierResp where show = genericShow
 instance decodeUpdateDriverVehicleServiceTierResp :: Decode UpdateDriverVehicleServiceTierResp where decode = defaultDecode
 instance encodeUpdateDriverVehicleServiceTierResp  :: Encode UpdateDriverVehicleServiceTierResp where encode = defaultEncode
+
+derive instance genericDriverConsentResp :: Generic DriverConsentResp _
+instance standardEncodeDriverConsentResp :: StandardEncode DriverConsentResp where standardEncode (DriverConsentResp res) = standardEncode res
+instance showDriverConsentResp :: Show DriverConsentResp where show = genericShow
+instance decodeDriverConsentResp :: Decode DriverConsentResp where decode = defaultDecode
+instance encodeDriverConsentResp  :: Encode DriverConsentResp where encode = defaultEncode
+
+instance makeDriverConsentReq :: RestEndpoint DriverConsentReq where
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.driverConsent "") headers reqBody Nothing
+  encodeRequest req = standardEncode req
 
 instance makeUpdateDriverVehicleServiceTierReq :: RestEndpoint UpdateDriverVehicleServiceTierReq where
  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.updateDriverVehicleServiceTier "") headers reqBody Nothing
@@ -4907,6 +4927,8 @@ newtype PanCardReq = PanCardReq
     transactionId :: Maybe String,
     nameOnGovtDB :: Maybe String
   }
+
+newtype DriverConsentResp = DriverConsentResp ApiSuccessResult
 
 newtype DriverPANResp = DriverPANResp ApiSuccessResult
 

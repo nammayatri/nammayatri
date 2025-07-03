@@ -3090,6 +3090,17 @@ homeScreenFlow = do
       (GlobalState globalState) <- getState
       void $ getDriverInfoDataFromCache (GlobalState globalState) true
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props { isPetModeEnabled = Just false } })
+    DRIVER_CONSENT_AGREED updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      response <- lift $ lift $ HelpersAPI.callApi $ API.DriverConsentReq $ {consent : true}
+      case response of
+        Right (API.DriverConsentResp _) -> do
+          -- change driver mascot 
+          -- update profile
+          homeScreenFlow
+        Left _ -> do
+          pure unit
+      homeScreenFlow
   homeScreenFlow
 
 handleFcm :: String -> HomeScreenState -> NotificationBody -> FlowBT String Unit

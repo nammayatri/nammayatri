@@ -3339,3 +3339,43 @@ rideEndStopsWarningPopup state = PopUpModal.config {
     , height = V 190
     }
   }
+
+driverConsentPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+driverConsentPopupConfig state = PopUpModal.config {
+  buttonLayoutMargin = Margin 16 24 16 20 ,
+  padding = PaddingTop 24,
+  backgroundClickable = true,
+  dismissPopup = true,
+  primaryText {
+      text = "Become Namma Kutumba Member",
+      textStyle = Heading2,
+      margin = Margin 16 0 16 10},
+  secondaryText{
+        text = "I Agree to:"
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 },
+  coverImageConfig {
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_more_stops_left"
+    , visibility = VISIBLE
+    , margin = MarginVertical 20 24
+    , width = MATCH_PARENT
+    , height = V 190
+    },
+  option1 {
+    text = getString ACCEPT
+  , background = Color.black900
+  , color = Color.yellow900
+  },
+  option2 {
+    visibility = false
+  },
+  listViewArray = [
+    "Ensure participation and cooperation in the Trust initiatives" , 
+    "Not promote any saying or act which is against the Namma Driver Welfare Trust and Namma Yatri",
+    "Display professional behaviour with the customers and fellow Trust Members",
+    "Maintain Punctuality and Reliability",
+    "Keep up the safety and the driving standards",
+    "Offer fair pricing as displayed in the app and not overcharge"
+    ]
+}
+

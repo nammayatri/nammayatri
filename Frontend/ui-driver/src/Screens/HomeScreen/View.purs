@@ -544,6 +544,8 @@ view push state =
       --   else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
       , if state.props.showEndRideWithStopPopup then endRideWithStopPopup push state else dummyTextView
+      -- , if state.props.showDriverConsentPopup == Just true then driverConsentPopup push state else dummyTextView
+      , if state.props.showDriverConsentPopup == Nothing then driverConsentPopup push state else dummyTextView
   ]
   where
     currentDate = HU.getCurrentUTC ""
@@ -1120,6 +1122,12 @@ otpButtonView state push =
         ] <> FontStyle.subHeading2 TypoGraphy
     ]
 
+driverConsentPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverConsentPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< DriverConsentPopupAC) (driverConsentPopupConfig state)]
 
 cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelConfirmation push state =
