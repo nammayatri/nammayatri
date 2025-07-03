@@ -37,6 +37,7 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   DayOfWeek: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
+  RouteStopTimeTable: Domain.Types.RouteStopTimeTable
 
 FRFSSearch:
   tableName: frfs_search
@@ -362,7 +363,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
@@ -514,7 +515,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, FAILED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey
@@ -754,6 +755,10 @@ FRFSRouteFareProduct:
       kvFunction: findAllWithKV
       where:
         and: [integratedBppConfigId]
+    findAllByFarePoliyIdAndIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [farePolicyId, integratedBppConfigId]
 
 FRFSFarePolicy:
   tableName: frfs_fare_policy
@@ -810,6 +815,10 @@ StopFare:
       kvFunction: findOneWithKV
       where:
         and: [farePolicyId, startStopCode, endStopCode]
+    findByStartAndEndStopCodeAndIntegratedBPPConfigId:
+      kvFunction: findOneWithKV
+      where:
+        and: [startStopCode, endStopCode, integratedBppConfigId]
     findAllByStartStopAndIntegratedBPPConfigId:
       kvFunction: findAllWithKV
       where:

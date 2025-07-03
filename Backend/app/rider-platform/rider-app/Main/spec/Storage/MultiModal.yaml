@@ -20,6 +20,7 @@ imports:
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
   Value: Data.Aeson
+  JourneyLegStatus: Lib.JourneyLeg.Types
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -299,6 +300,7 @@ JourneyLeg:
     isSkipped: Maybe Bool
     entrance: Maybe MultiModalLegGate
     exit: Maybe MultiModalLegGate
+    status: Maybe JourneyLegStatus
 
   sqlType:
     serviceTypes: text[]
@@ -380,6 +382,11 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [estimatedMinFare, estimatedMaxFare]
       where: legSearchId
+    updateStatusByJourneyIdAndSequenceNumber:
+      kvFunction: updateWithKV
+      params: [status]
+      where:
+        and: [journeyId, sequenceNumber]
 
   intermediateTransformers:
     fromTType:

@@ -15,6 +15,7 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Types
 import SharedLogic.Search
 
 data TaxiLegRequestSearchData = TaxiLegRequestSearchData
@@ -73,7 +74,8 @@ data TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
 data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
   { searchId :: Id DSR.SearchRequest,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool
+    isLastCompleted :: Bool,
+    journeyLegStatus :: Maybe JourneyLegStatus
   }
 
 data TaxiLegRequestGetFareData = TaxiLegRequestGetFareData

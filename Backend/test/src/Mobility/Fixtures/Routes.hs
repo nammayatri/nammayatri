@@ -114,7 +114,8 @@ searchReqFromUpdatesList updList =
               recentLocationId = Nothing,
               platformType = Nothing,
               subscriptionId = Nothing,
-              isReserveRide = Nothing
+              isReserveRide = Nothing,
+              verifyBeforeCancellingOldBooking = Just True
             }
    in (origin, destination, req)
 
@@ -140,7 +141,8 @@ mkSearchReqFromLocations origin destination =
               recentLocationId = Nothing,
               platformType = Nothing,
               subscriptionId = Nothing,
-              isReserveRide = Nothing
+              isReserveRide = Nothing,
+              verifyBeforeCancellingOldBooking = Just True
             }
    in (origin, destination, req)
 

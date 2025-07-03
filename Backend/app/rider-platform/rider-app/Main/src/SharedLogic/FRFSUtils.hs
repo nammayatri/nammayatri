@@ -27,6 +27,7 @@ import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSRouteDetails
+import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
@@ -262,56 +263,67 @@ data FRFSFare = FRFSFare
 
 getFare :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFare riderId vehicleType integratedBPPConfigId merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  currentTime <- getCurrentTime
+  now <- getCurrentTime
   fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfigId
-  let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
-  mapM
-    ( \fareProduct -> do
-        vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
-        farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
-        let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
-        price <-
-          case farePolicy._type of
-            DFRFSFarePolicy.MatrixBased -> do
-              routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
-              return $
-                Price
-                  { amountInt = round routeStopFare.amount,
-                    amount = routeStopFare.amount,
-                    currency = routeStopFare.currency
-                  }
-            DFRFSFarePolicy.StageBased -> do
-              stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
-              startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
-              endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
-              let stage = max 1 (abs $ endStageFare.stage - startStageFare.stage) -- if stage is 0, then it is the same stage so we take 1 as the stage
-              stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
-              let amount = stageFare.amount + cessCharge
-              return $
-                Price
-                  { amountInt = round amount,
-                    amount = amount,
-                    currency = stageFare.currency
-                  }
-        discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
+  let serviceableFareProducts = DTB.findBoundedDomain fareProducts now ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
+  mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode) serviceableFareProducts
+
+buildFRFSFare :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> FRFSRouteFareProduct -> m FRFSFare
+buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode fareProduct = do
+  vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
+  farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+  let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
+  price <-
+    case farePolicy._type of
+      DFRFSFarePolicy.MatrixBased -> do
+        routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
         return $
-          FRFSFare
-            { farePolicyId = Just farePolicy.id,
-              price = price,
-              childPrice = Nothing,
-              discounts = map (mkDiscount price) discountsWithEligibility,
-              fareDetails = Nothing,
-              vehicleServiceTier =
-                FRFSVehicleServiceTier
-                  { serviceTierType = vehicleServiceTier._type,
-                    serviceTierProviderCode = vehicleServiceTier.providerCode,
-                    serviceTierShortName = vehicleServiceTier.shortName,
-                    serviceTierDescription = vehicleServiceTier.description,
-                    serviceTierLongName = vehicleServiceTier.longName
-                  }
+          Price
+            { amountInt = round routeStopFare.amount,
+              amount = routeStopFare.amount,
+              currency = routeStopFare.currency
             }
-    )
-    serviceableFareProducts
+      DFRFSFarePolicy.StageBased -> do
+        stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
+        startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+        endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+        let stage = max 1 (abs $ endStageFare.stage - startStageFare.stage) -- if stage is 0, then it is the same stage so we take 1 as the stage
+        stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
+        let amount = stageFare.amount + cessCharge
+        return $
+          Price
+            { amountInt = round amount,
+              amount = amount,
+              currency = stageFare.currency
+            }
+  discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
+  return $
+    FRFSFare
+      { farePolicyId = Just farePolicy.id,
+        price = price,
+        childPrice = Nothing,
+        discounts = map (mkDiscount price) discountsWithEligibility,
+        fareDetails = Nothing,
+        vehicleServiceTier =
+          FRFSVehicleServiceTier
+            { serviceTierType = vehicleServiceTier._type,
+              serviceTierProviderCode = vehicleServiceTier.providerCode,
+              serviceTierShortName = vehicleServiceTier.shortName,
+              serviceTierDescription = vehicleServiceTier.description,
+              serviceTierLongName = vehicleServiceTier.longName
+            }
+      }
+
+getCachedRouteStopFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
+getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+  routeStopFare <- QRouteStopFare.findByStartAndEndStopCodeAndIntegratedBPPConfigId startStopCode endStopCode integratedBPPConfig.id
+  case routeStopFare of
+    Just fare -> do
+      currentTime <- getCurrentTime
+      fareProducts <- QFRFSRouteFareProduct.findAllByFarePoliyIdAndIntegratedBPPConfigId fare.farePolicyId integratedBPPConfig.id
+      let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
+      mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode) serviceableFareProducts
+    Nothing -> return []
 
 mkDiscount :: Price -> (FRFSTicketDiscount, Bool) -> FRFSDiscount
 mkDiscount price (discount, eligibility) =
@@ -383,7 +395,19 @@ getFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCit
           Left err -> do
             logError $ "Error in getFare: " <> show err
             return []
-          Right fares' -> return fares'
+          Right fares' ->
+            case integratedBPPConfig.providerConfig of
+              DIBC.ONDC DIBC.ONDCBecknConfig {fareCachingAllowed} -> do
+                if null fares' && (fareCachingAllowed == Just True)
+                  then do
+                    try @_ @SomeException (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+                      >>= \case
+                        Left err -> do
+                          logError $ "Error in getCachedRouteStopFares: " <> show err
+                          return fares'
+                        Right cachedFares -> return cachedFares
+                  else return fares'
+              _ -> return fares'
     else return fares
 
 data VehicleTracking = VehicleTracking
