@@ -294,6 +294,9 @@ library
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
       Domain.Types.RentalsIntercityCache
+      Domain.Types.Route
+      Domain.Types.RouteStopMapping
+      Domain.Types.Station
       Domain.Types.TicketDashboard
       Domain.Types.UtilsTH
       Environment
@@ -442,7 +445,6 @@ library
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
-      Storage.CachedQueries.Station
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
@@ -502,14 +504,12 @@ library
       Storage.Queries.RecentLocationExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
-      Storage.Queries.RouteExtra
       Storage.Queries.RoutePolylinesExtra
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
-      Storage.Queries.StationExtra
       Storage.Queries.StationsExtraInformationExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
@@ -789,11 +789,9 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
-      Domain.Types.Route
       Domain.Types.RouteDetails
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
-      Domain.Types.RouteStopMapping
       Domain.Types.RouteStopTimeTable
       Domain.Types.RouteTripMapping
       Domain.Types.SafetySettings
@@ -807,7 +805,6 @@ library
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
-      Domain.Types.Station
       Domain.Types.StationsExtraInformation
       Domain.Types.StopFare
       Domain.Types.StopInformation
@@ -925,11 +922,9 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
-      Storage.Beam.Route
       Storage.Beam.RouteDetails
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
-      Storage.Beam.RouteStopMapping
       Storage.Beam.RouteStopTimeTable
       Storage.Beam.RouteTripMapping
       Storage.Beam.SafetySettings
@@ -943,7 +938,6 @@ library
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
-      Storage.Beam.Station
       Storage.Beam.StationsExtraInformation
       Storage.Beam.StopFare
       Storage.Beam.StopInformation
@@ -1054,7 +1048,6 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.FeedbackForm
-      Storage.Queries.OrphanInstances.FRFSConfig
       Storage.Queries.OrphanInstances.FRFSQuote
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
@@ -1079,14 +1072,12 @@ library
       Storage.Queries.OrphanInstances.RecentLocation
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
-      Storage.Queries.OrphanInstances.Route
       Storage.Queries.OrphanInstances.RoutePolylines
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
-      Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StationsExtraInformation
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
@@ -1121,11 +1112,9 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
-      Storage.Queries.Route
       Storage.Queries.RouteDetails
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
-      Storage.Queries.RouteStopMapping
       Storage.Queries.RouteStopTimeTable
       Storage.Queries.RouteTripMapping
       Storage.Queries.SafetySettings
@@ -1139,7 +1128,6 @@ library
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
-      Storage.Queries.Station
       Storage.Queries.StationsExtraInformation
       Storage.Queries.StopFare
       Storage.Queries.StopInformation

@@ -303,7 +303,7 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBpp
               integratedBppConfigId = integratedBppConfigId,
               merchantId,
               merchantOperatingCityId,
-              Domain.Types.RouteStopMapping.providerCode = "NANDI", -- Hardcoding provider code as NANDI since it's not in RouteStopMappingNandi
+              Domain.Types.RouteStopMapping.providerCode = mapping.providerCode, -- Hardcoding provider code as NANDI since it's not in RouteStopMappingNandi
               routeCode = last $ splitOn ":" mapping.routeCode,
               sequenceNum = mapping.sequenceNum,
               stopCode = last $ splitOn ":" mapping.stopCode,

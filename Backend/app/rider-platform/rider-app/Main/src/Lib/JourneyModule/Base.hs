@@ -156,8 +156,8 @@ init journeyReq userPreferences = do
       )
       journeyReq.legs
 
-  let (mbTotalFares, mbJourneyLegs) = unzip legsAndFares
-  logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
+  let journeyFareLegs@(mbTotalFares, mbJourneyLegs) = unzip legsAndFares
+  logDebug $ "[Multimodal - Legs] : Is Multimodal Testing => " <> show riderConfig.multimodalTesting <> ", " <> show journeyFareLegs
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do

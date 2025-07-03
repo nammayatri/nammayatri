@@ -143,6 +143,8 @@ IntegratedBPPConfig:
   default:
     vehicleCategory: "'BUS'"
     platformType: "'APPLICATION'"
+    feedKey: "'UNKNOWN'"
+    agencyKey: "'UNKNOWN'"
 
   queries:
     findById:
