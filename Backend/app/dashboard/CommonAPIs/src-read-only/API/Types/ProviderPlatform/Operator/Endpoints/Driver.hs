@@ -70,6 +70,7 @@ data OperationHubDriverRequest = OperationHubDriverRequest
     id :: Kernel.Prelude.Text,
     operationHubId :: Kernel.Types.Id.Id OperationHub,
     operationHubName :: Kernel.Prelude.Text,
+    rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registrationNo :: Kernel.Prelude.Text,
     requestStatus :: RequestStatus,
     requestTime :: Kernel.Prelude.UTCTime,
