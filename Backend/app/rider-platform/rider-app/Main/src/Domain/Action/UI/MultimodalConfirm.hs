@@ -85,6 +85,7 @@ import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPa
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
