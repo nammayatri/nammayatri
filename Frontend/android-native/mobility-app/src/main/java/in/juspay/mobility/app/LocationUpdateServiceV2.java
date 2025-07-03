@@ -46,6 +46,12 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.location.LocationManagerCompat;
 
+import com.facebook.react.ReactApplication;
+import com.facebook.react.ReactHost;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.ReadableMap;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -70,6 +76,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1062,7 +1069,9 @@ public class LocationUpdateServiceV2 extends Service {
             headers.put("dm", drMode);
         } else {
             // Fetch profile info and set headers
-            fetchProfileAndSetHeaders(headers);
+            if (messageQueue != null) {
+                messageQueue.getApiCall().execute(() -> fetchProfileAndSetHeaders(headers));
+            }
         }
         Log.d(TAG_API, "setVehicleAndMerchantHeaders() complete");
     }
@@ -1074,6 +1083,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param headers Map of headers to be populated with profile information
      */
     private void fetchProfileAndSetHeaders(Map<String, String> headers) {
+
         Log.d(TAG_API, "fetchProfileAndSetHeaders() called");
         try {
             MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
@@ -1089,6 +1099,7 @@ public class LocationUpdateServiceV2 extends Service {
             if (resp.has("mode")) {
                 drMode = resp.get("mode").toString().toUpperCase();
                 headers.put("dm", drMode);
+                updateStorage("DRIVER_STATUS_N", merchantID);
             }
 
             JSONObject org = resp.optJSONObject("organization");
@@ -1193,9 +1204,6 @@ public class LocationUpdateServiceV2 extends Service {
      */
     private void notifyLocationUpdateSuccess() {
         Log.d(TAG, "notifyLocationUpdateSuccess() called");
-        if (updateTimeCallbacks.isEmpty()) {
-            return;
-        }
 
         // Create formatted timestamp
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
@@ -1215,8 +1223,19 @@ public class LocationUpdateServiceV2 extends Service {
                         "SUCCESS"
                 );
             }
+            Log.d(TAG, "onLocationUpdateSuccess Triggered with " + lastLatitudeValue + " "+ lastLongitudeValue + " " + timestamp) ;
         }
+        Map<String,Object> payload = new HashMap<>();
+        payload.put("lat",lastLatitudeValue);
+        payload.put("lon",lastLongitudeValue);
+        payload.put("timestamp",timestamp);
+        notifyReact("onLocationUpdateSuccess", Arguments.makeNativeMap(payload));
         Log.d(TAG, "notifyLocationUpdateSuccess() complete");
+    }
+
+
+    public void notifyReact(String event, Object payload) {
+        ReactUtils.emitReactEvent(context,event,payload);
     }
 
     /**
@@ -2312,6 +2331,26 @@ public class LocationUpdateServiceV2 extends Service {
 
             return locationObject;
         }
+
+        Map<String, Object> toMap () {
+            Map<String, Object> locationObject = new HashMap<>();
+            Map<String, Object> point = new HashMap<>();
+            point.put("lat", latitude);
+            point.put("lon", longitude);
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            String formattedTime = sdf.format(new Date(timestamp));
+
+            locationObject.put("pt", point);
+            locationObject.put("ts", formattedTime);
+            locationObject.put("acc", accuracy);
+            locationObject.put("bear", bearing);
+            locationObject.put("source", source);
+            locationObject.put("v", speed);
+            return locationObject;
+        }
+
     }
 
     /**
@@ -2322,6 +2361,7 @@ public class LocationUpdateServiceV2 extends Service {
         private final Queue<LocationData> queue = new ConcurrentLinkedQueue<>();
         private final Handler handler;
         private final ExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        private final ExecutorService apiCall = Executors.newSingleThreadScheduledExecutor();
         private final ExecutorService flushBatchExecutor = Executors.newSingleThreadScheduledExecutor();
 
         /**
@@ -2344,10 +2384,10 @@ public class LocationUpdateServiceV2 extends Service {
                             // Emit the location object to react application
                             if (locationEmitter != null) {
                                 String locationEmitterPayload = buildLocationEmitterPayload(locationData);
-
                                 emitReactEvent(locationEmitterPayload);
                                 Log.i(TAG_LOCATION, "Emitted locationPayload " + locationEmitterPayload);
                             }
+                            notifyReact("onLocationFetch", Arguments.makeNativeMap(locationData.toMap()));
                             boolean sendDueToTime = shouldSendBatchDueToTime();
 
 
@@ -2496,6 +2536,9 @@ public class LocationUpdateServiceV2 extends Service {
             }
         }
 
+        public ExecutorService getApiCall() {
+            return apiCall;
+        }
 
         /**
          * Flushes the given number of location to backend in batches without any delay.
@@ -2667,7 +2710,7 @@ public class LocationUpdateServiceV2 extends Service {
                         if (!batch.isEmpty()) {
                             // Update the last sent time
                             updateStorage(LAST_BATCH_SENT_TIME, String.valueOf(System.currentTimeMillis()));
-                            sendBatchToServer(batch);
+                            apiCall.execute(() -> sendBatchToServer(batch));
                         } else {
                             isBatchProcessing.set(false);
                         }

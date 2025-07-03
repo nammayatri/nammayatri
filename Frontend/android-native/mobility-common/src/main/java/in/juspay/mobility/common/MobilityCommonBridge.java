@@ -338,7 +338,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected BridgeComponents bridgeComponents;
 
     @SuppressLint("MissingPermission")
-    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
+    public MobilityCommonBridge(BridgeComponents bridgeComponents)  {
         super(bridgeComponents);
         this.bridgeComponents = bridgeComponents;
         sharedPref = bridgeComponents.getContext().getApplicationContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
