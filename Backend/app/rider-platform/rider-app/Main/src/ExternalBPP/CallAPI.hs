@@ -25,6 +25,7 @@ import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Station as DStation
 import Environment
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (ServiceFlow)
@@ -85,14 +86,19 @@ discoverySearch merchant bapConfig _integratedBPPConfigId req = do
 search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
 search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig = do
   case integratedBPPConfig.providerConfig of
-    ONDC _ -> do
+    ONDC ONDCBecknConfig {networkHostUrl} -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
+        let providerUrl = fromMaybe bapConfig.gatewayUrl networkHostUrl
         fromStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.fromStationCode)
         toStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.toStationCode)
-        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just fromStation) (Just toStation) merchantOperatingCity.city
+        routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode searchReq.fromStationCode integratedBPPConfig
+        routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode searchReq.toStationCode integratedBPPConfig
+        let fromStationProviderCode = fromMaybe searchReq.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
+            toStationProviderCode = fromMaybe searchReq.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
+        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = bool searchReq.fromStationCode fromStationProviderCode (fromStationProviderCode /= "GTFS")}) (Just $ toStation {DStation.code = bool searchReq.toStationCode toStationProviderCode (toStationProviderCode /= "GTFS")}) merchantOperatingCity.city
         logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
         Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
-        void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
+        void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id
     _ -> do
       fork "FRFS External SearchReq" $ do
         onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails

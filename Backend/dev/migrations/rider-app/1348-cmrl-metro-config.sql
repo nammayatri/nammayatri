@@ -96,6 +96,8 @@ INSERT INTO
   atlas_app.integrated_bpp_config(
     id,
     domain,
+    feed_key,
+    agency_key,
     merchant_id,
     merchant_operating_city_id,
     vehicle_category,
@@ -108,6 +110,8 @@ VALUES
   (
     'abce23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'FRFS',
+    'chennai_metro',
+    'chennai_metro:CMRL',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'METRO',
@@ -225,6 +229,8 @@ INSERT INTO
   atlas_app.integrated_bpp_config(
     id,
     domain,
+    feed_key,
+    agency_key,
     merchant_id,
     merchant_operating_city_id,
     vehicle_category,
@@ -237,6 +243,8 @@ VALUES
   (
     'abce23a5-3ce6-4c37-8b9b-41377c3c1a53',
     'FRFS',
+    'chennai_metro',
+    'chennai_metro:CMRL',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'METRO',
@@ -297,6 +305,8 @@ INSERT INTO
   atlas_app.integrated_bpp_config(
     id,
     domain,
+    feed_key,
+    agency_key,
     merchant_id,
     merchant_operating_city_id,
     vehicle_category,
@@ -309,6 +319,8 @@ VALUES
   (
     'abce23a5-3ce6-4c37-8b9b-41377c3c1a54',
     'FRFS',
+    'chennai_metro',
+    'chennai_metro:CMRL',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'METRO',

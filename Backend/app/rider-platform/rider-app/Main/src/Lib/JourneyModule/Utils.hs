@@ -19,7 +19,6 @@ import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
-import EulerHS.Prelude (concatMapM)
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -232,7 +231,8 @@ fetchLiveSubwayTimings ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   [Text] ->
   Text ->
@@ -293,13 +293,6 @@ fetchLiveTimings ::
 fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc = case vc of
   Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
-  Enums.METRO -> do
-    logDebug $ "timetable for metro here for routeCodes: " <> show routeCodes <> " stopCode: " <> show stopCode
-    stopCodes <- OTPRest.getChildrenStationsCodes integratedBppConfig stopCode
-    logDebug $ "stopCodes for metro here: " <> show stopCodes
-    routeStopTimeTables <- measureLatency (concatMapM (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes) stopCodes) "fetch route stop timing through graphql for metro"
-    logDebug $ "routeStopTimeTables: " <> show routeStopTimeTables
-    return routeStopTimeTables
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
 -- | Find all possible routes from originStop to destinationStop with trips in the next hour

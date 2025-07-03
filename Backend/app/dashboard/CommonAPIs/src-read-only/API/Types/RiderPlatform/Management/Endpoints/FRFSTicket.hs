@@ -164,12 +164,12 @@ data FRFSTicketAPIs = FRFSTicketAPIs
     getFRFSTicketFrfsRouteFareList :: Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSRouteFareAPI,
     putFRFSTicketFrfsRouteFareUpsert ::
       Data.Text.Text ->
-        Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig ->
-        BecknV2.FRFS.Enums.VehicleCategory ->
-        ( Data.ByteString.Lazy.ByteString,
-          UpsertRouteFareReq
-        ) ->
-        EulerHS.Types.EulerClient UpsertRouteFareResp,
+      Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig ->
+      BecknV2.FRFS.Enums.VehicleCategory ->
+      ( Data.ByteString.Lazy.ByteString,
+        UpsertRouteFareReq
+      ) ->
+      EulerHS.Types.EulerClient UpsertRouteFareResp,
     getFRFSTicketFrfsRouteStations :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSStationAPI]
   }
 

@@ -50,7 +50,8 @@ castVehicleType vehicleType = do
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   IntegratedBPPConfig ->
   Id Merchant ->
@@ -68,7 +69,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
         logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         pure a
       Nothing -> do
-        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig.id merchantId merchantOpId routeCodes' stopCode vehicleType
+        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode vehicleType
         logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         void $ cacheRouteStopTimeInfo stopCode allTrips
         pure allTrips

@@ -26,7 +26,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.RouteStopMapping as QRSM
 import Tools.Error
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
@@ -121,10 +120,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     buildStations routeCode startStationCode endStationCode startStopType endStopType = do
       fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
       toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
-      stops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-          Right stops' -> pure stops'
+      stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
       CallAPI.mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
 
     mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Spec.VehicleCategory -> RouteStopInfo -> [DStation] -> m [DQuote]
