@@ -378,6 +378,7 @@ createOrderService ::
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
 createOrderService merchantId mbMerchantOpCityId personId createOrderReq createOrderCall = do
+  logInfo $ "CreateOrderService: "
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
