@@ -128,6 +128,7 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFee as DDF
@@ -258,12 +259,14 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DailyStats as CHDS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DailyStats as SQDS
+import qualified Storage.Queries.DailyStatsExtra as SQDSE
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -764,9 +767,10 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    -- transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     mbVehicle <- QVehicle.findById personId
     DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
     let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
@@ -796,8 +800,107 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
             else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-  when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
+  when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
+    QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
+    processingChangeOnline (driverId, merchantId, merchantOpCityId) transporterConfig.timeDiffFromUtc driverInfo mode
   pure APISuccess.Success
+
+processingChangeOnline ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Seconds ->
+  DriverInfo.DriverInformation ->
+  Maybe DriverInfo.DriverMode ->
+  m ()
+processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc driverInfo mode = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  let previousMode = driverInfo.mode
+      merchantLocalDate = utctDay localTime
+  now <- getCurrentTime
+  mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
+  when (previousMode == Just DriverInfo.ONLINE) $ do
+    let mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
+        newOnlineDuration = calcOnlineDuration localTime mbDailyStats mbLastOnlineFrom
+        startDayTime = UTCTime (utctDay localTime) 0
+    addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDuration
+    QDIE.updateOnlineDurationRefreshedAt driverId now
+
+    lastOnlineFrom <- fromMaybeM (InternalError $ "OnlineDurationRefreshedAt is Nothing DriverId: " <> driverId.getId) mbLastOnlineFrom
+    when (lastOnlineFrom < startDayTime) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFrom
+
+  when (mode == Just DriverInfo.ONLINE) $ QDIE.updateOnlineDurationRefreshedAt driverId now
+  where
+    setOnlineDurationInDailyStatsForPrevDays todayMerchantLocalDate lastOnlineFrom = do
+      let lastOnlineFromMerchantLocalDate = utctDay lastOnlineFrom
+      mbPrevDayDailyStats <- SQDS.findByDriverIdAndDate driverId lastOnlineFromMerchantLocalDate
+      let endDayTime = UTCTime lastOnlineFromMerchantLocalDate 86399 --  == 24*60*60 - 1
+          newPrevDayOnlineDuration = calcPreviousDayOnlineDuration endDayTime lastOnlineFrom mbPrevDayDailyStats
+          succLastOnlineFromMerchantLocalDate = succ lastOnlineFromMerchantLocalDate
+      addDataToDailyStats mbPrevDayDailyStats lastOnlineFromMerchantLocalDate newPrevDayOnlineDuration
+      when (todayMerchantLocalDate > succLastOnlineFromMerchantLocalDate)
+        . setOnlineDurationInDailyStatsForPrevDays todayMerchantLocalDate
+        $ UTCTime succLastOnlineFromMerchantLocalDate 0
+
+    addDataToDailyStats mbDailyStats =
+      if isJust mbDailyStats
+        then SQDSE.updateOnlineDurationByDriverId driverId
+        else createNewDailyStats
+
+    createNewDailyStats merchantLocalDate onlineDuration = do
+      id <- generateGUIDText
+      now <- getCurrentTime
+      merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      SQDS.create $
+        DDS.DailyStats
+          { id = id,
+            driverId = driverId,
+            totalEarnings = 0.0,
+            numRides = 0,
+            totalDistance = 0,
+            tollCharges = 0.0,
+            bonusEarnings = 0.0,
+            merchantLocalDate = merchantLocalDate,
+            currency = merchantOpCity.currency,
+            distanceUnit = merchantOpCity.distanceUnit,
+            activatedValidRides = 0,
+            referralEarnings = 0,
+            referralCounts = 0,
+            payoutStatus = DDS.Initialized,
+            payoutOrderId = Nothing,
+            payoutOrderStatus = Nothing,
+            createdAt = now,
+            updatedAt = now,
+            cancellationCharges = 0.0,
+            tipAmount = 0.0,
+            totalRideTime = 0,
+            numDriversOnboarded = 0,
+            numFleetsOnboarded = 0,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            onlineDuration = Just onlineDuration
+          }
+
+calcOnlineDuration ::
+  UTCTime ->
+  Maybe DDS.DailyStats ->
+  Maybe UTCTime ->
+  Seconds
+calcOnlineDuration localTime mbDailyStats mbLastOnlineFrom =
+  let lastOnlineTo = localTime
+      startDayTime = UTCTime (utctDay localTime) 0
+      lastOnlineFrom = maybe startDayTime (max startDayTime) mbLastOnlineFrom
+      mbLastOnlineDuration = mbDailyStats >>= (.onlineDuration)
+      onlineDuration = if mbLastOnlineFrom < Just startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbLastOnlineDuration
+   in onlineDuration + Seconds (floor $ diffUTCTime lastOnlineTo lastOnlineFrom)
+
+calcPreviousDayOnlineDuration ::
+  UTCTime ->
+  UTCTime ->
+  Maybe DDS.DailyStats ->
+  Seconds
+calcPreviousDayOnlineDuration endDayTime lastOnlineFrom mbPrevDayDailyStats =
+  let prevDayOnlineDuration = fromMaybe (Seconds 0) $ mbPrevDayDailyStats >>= (.onlineDuration)
+   in prevDayOnlineDuration + Seconds (floor $ diffUTCTime endDayTime lastOnlineFrom)
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
 activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocationId driverLocation = do

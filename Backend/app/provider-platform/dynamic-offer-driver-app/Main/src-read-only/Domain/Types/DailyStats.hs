@@ -29,6 +29,7 @@ data DailyStats = DailyStats
     numDriversOnboarded :: Kernel.Prelude.Int,
     numFleetsOnboarded :: Kernel.Prelude.Int,
     numRides :: Kernel.Prelude.Int,
+    onlineDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     payoutOrderId :: Kernel.Prelude.Maybe Data.Text.Text,
     payoutOrderStatus :: Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     payoutStatus :: Domain.Types.DailyStats.PayoutStatus,

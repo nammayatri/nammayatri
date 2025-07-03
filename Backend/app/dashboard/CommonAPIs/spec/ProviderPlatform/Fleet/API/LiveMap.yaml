@@ -1,0 +1,58 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  Driver: Dashboard.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+
+module: LiveMap
+
+apis:
+  - GET:
+      endpoint: /drivers
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+        - driverIdForRadius: Id Driver
+      request:
+        type: NearbyDriverReq
+      response:
+        type: "[MapDriverInfoRes]"
+      helperApi:
+        - GET:
+            endpoint: /drivers/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+              - driverIdForRadius: Id Driver
+            request:
+              type: NearbyDriverReq
+            response:
+              type: "[MapDriverInfoRes]"
+
+types:
+  MapDriverInfoRes:
+    - enum: FleetMapDriverInfo FleetMapDriverInfoRes, OperatorMapDriverInfo OperatorMapDriverInfoRes
+  FleetMapDriverInfoRes:
+    - driverName: Text
+    - driverStatus: Status
+    - position: LatLong
+    - source: Text
+    - destination: Text
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+  OperatorMapDriverInfoRes:
+    - driverName: Text
+    - driverStatus: Status
+    - vehicleNumber: Text
+    - vehicleVariant: VehicleVariant
+    - vehicleStatus: Status
+    - position: LatLong
+    - source: Text
+    - destination: Text
+  Status:
+    - enum: TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE
+  NearbyDriverReq:
+    - point: LatLong
+    - radius: Int
+    - derive: "'HideSecrets"

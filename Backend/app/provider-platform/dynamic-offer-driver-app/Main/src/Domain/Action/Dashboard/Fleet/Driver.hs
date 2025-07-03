@@ -52,6 +52,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    validateOperatorToFleetAssoc,
+    validateRequestorRoleAndGetEntityId,
   )
 where
 
