@@ -14,10 +14,12 @@ import qualified Tools.Beam.UtilsTH
 data PickupInstructions = PickupInstructions
   { createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions,
+    instruction :: Kernel.Prelude.Text,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    pickupInstructions :: [Kernel.Prelude.Text],
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)

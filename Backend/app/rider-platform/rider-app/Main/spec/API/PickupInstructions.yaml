@@ -8,13 +8,15 @@ module: PickupInstructions
 
 types:
   PickupInstructionsReq:
-    pickupInstructions: [Text]
+    lat: Double
+    lon: Double
+    instruction: Text
 
-  PickupInstructionsResp:
-    pickupInstructions: [Text]
+  ClosestPickupInstructionResp:
+    instruction: "Maybe Text"
 
 apis:
-  # POST /pickup-instructions - Save pickup instructions
+  # POST /pickupinstructions - Save pickup instructions
   - POST:
       endpoint: /pickupinstructions
       auth: TokenAuth
@@ -23,9 +25,12 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  # GET /pickup-instructions - Get user's pickup instructions
+  # GET /pickupinstructions/closest - Get closest pickup instruction for location
   - GET:
-      endpoint: /pickupinstructions
+      endpoint: /pickupinstructions/closest
       auth: TokenAuth
+      query:
+        lat: Double
+        lon: Double
       response:
-        type: API.Types.UI.PickupInstructions.PickupInstructionsResp
+        type: API.Types.UI.PickupInstructions.ClosestPickupInstructionResp

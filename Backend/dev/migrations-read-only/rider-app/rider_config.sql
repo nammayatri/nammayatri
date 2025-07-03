@@ -298,3 +298,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_instructions_threshold inte
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_multi_modal_for_all_users boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_instructions_proximity_meters double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN pickup_instructions_proximity_meters TYPE integer;

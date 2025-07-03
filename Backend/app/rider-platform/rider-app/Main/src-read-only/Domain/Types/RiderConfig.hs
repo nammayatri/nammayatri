@@ -79,6 +79,7 @@ data RiderConfig = RiderConfig
     payoutReferralThresholdPerDay :: Kernel.Prelude.Int,
     payoutReferralThresholdPerMonth :: Kernel.Prelude.Int,
     permissibleModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
+    pickupInstructionsProximityMeters :: Kernel.Prelude.Int,
     pickupInstructionsThreshold :: Kernel.Prelude.Int,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,

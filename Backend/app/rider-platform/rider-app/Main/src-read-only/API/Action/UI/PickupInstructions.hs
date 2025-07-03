@@ -29,11 +29,18 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "pickupinstructions"
-      :> Get ('[JSON]) API.Types.UI.PickupInstructions.PickupInstructionsResp
+      :> "closest"
+      :> QueryParam "lat" Kernel.Prelude.Double
+      :> QueryParam
+           "lon"
+           Kernel.Prelude.Double
+      :> Get
+           ('[JSON])
+           API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
   )
 
 handler :: Environment.FlowServer API
-handler = postPickupinstructions :<|> getPickupinstructions
+handler = postPickupinstructions :<|> getPickupinstructionsClosest
 
 postPickupinstructions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -44,10 +51,12 @@ postPickupinstructions ::
   )
 postPickupinstructions a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.postPickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getPickupinstructions ::
+getPickupinstructionsClosest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Environment.FlowHandler API.Types.UI.PickupInstructions.PickupInstructionsResp
+    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Environment.FlowHandler API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
   )
-getPickupinstructions a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.getPickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getPickupinstructionsClosest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.getPickupinstructionsClosest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

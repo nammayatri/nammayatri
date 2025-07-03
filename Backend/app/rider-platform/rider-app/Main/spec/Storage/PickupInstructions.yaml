@@ -11,7 +11,9 @@ PickupInstructions:
     personId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    pickupInstructions: "[Text]"
+    lat: Double
+    lon: Double
+    instruction: Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -20,7 +22,7 @@ PickupInstructions:
     personId: character(36)
     merchantId: character(36)
     merchantOperatingCityId: character(36)
-    pickupInstructions: text[]
+    instruction: character(150)
 
   constraints:
     id: PrimaryKey
@@ -32,10 +34,28 @@ PickupInstructions:
 
   queries:
     findByPersonId:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where: personId
 
-    updatePickupInstructionsByPersonId:
+    updateByPersonIdAndLocation:
       kvFunction: updateWithKV
-      params: [pickupInstructions]
+      params: [lat, lon, instruction]
+      where:
+        and: [personId, lat, lon]
+
+    deleteByPersonIdAndLocation:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, lat, lon]
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    findOldestByPersonId:
+      kvFunction: findAllWithKV
       where: personId
+      orderBy:
+        field: updatedAt
+        order: asc
+      limit: 1
