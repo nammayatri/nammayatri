@@ -87,8 +87,10 @@ onInit onInitReq merchant booking_ = do
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  logInfo $ "onInit journeyId" <> show booking.journeyId
   case booking.journeyId of
     Just journeyId -> do
+      logInfo $ "Booking with journeyId" <> show journeyId
       QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
       allJourneyBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
       let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
@@ -100,6 +102,7 @@ onInit onInitReq merchant booking_ = do
           (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType
           let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else amount
           mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
+          logInfo $ "Order created in onInit for journeyId" <> show journeyId <> show mCreateOrderRes
           case mCreateOrderRes of
             Just _ -> do
               let bookingAndPayments = zip ticketBookingPayments allJourneyBookings
@@ -108,11 +111,13 @@ onInit onInitReq merchant booking_ = do
               markBookingFailed `mapM_` allJourneyBookings
               throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
     Nothing -> do
+      logInfo $ "Booking with journeyId" <> show booking
       (orderId, orderShortId) <- getPaymentIds
       ticketBookingPayment <- processPayments orderId booking
       let paymentType = getPaymentType booking.vehicleType
       let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else booking.price.amount
       mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType []
+      logInfo $ "Order created in onInit" <> show mCreateOrderRes
       case mCreateOrderRes of
         Just _ -> do
           markBookingApproved (ticketBookingPayment, booking)
@@ -179,6 +184,7 @@ createPayments ::
   [Payment.VendorSplitDetails] ->
   m (Maybe Payment.CreateOrderResp)
 createPayments merchantOperatingCityId merchantId orderId orderShortId amount person paymentType vendorSplitArr = do
+  logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
