@@ -37,11 +37,13 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QP
+import Tools.Error
 import qualified Tools.Payment as Payment
 
 data DOnInit = DOnInit
@@ -81,6 +83,7 @@ onInit onInitReq merchant booking_ = do
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
   void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId booking_.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound booking_.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
@@ -95,7 +98,8 @@ onInit onInitReq merchant booking_ = do
           ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
           let paymentType = Payment.FRFSMultiModalBooking
           (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType
-          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
+          let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else amount
+          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
           case mCreateOrderRes of
             Just _ -> do
               let bookingAndPayments = zip ticketBookingPayments allJourneyBookings
@@ -107,7 +111,7 @@ onInit onInitReq merchant booking_ = do
       (orderId, orderShortId) <- getPaymentIds
       ticketBookingPayment <- processPayments orderId booking
       let paymentType = getPaymentType booking.vehicleType
-      let amt :: HighPrecMoney = if isMetroTestTransaction then 1 else booking.price.amount
+      let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else booking.price.amount
       mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType []
       case mCreateOrderRes of
         Just _ -> do

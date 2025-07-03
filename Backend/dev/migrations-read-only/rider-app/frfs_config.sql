@@ -45,3 +45,8 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN radius integer  default 3000;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN valid_till_seconds integer  default 300;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_name text ;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN is_frfs_testing_enabled boolean  default false;
