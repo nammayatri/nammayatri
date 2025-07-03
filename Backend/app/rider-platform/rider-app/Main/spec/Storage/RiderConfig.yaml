@@ -121,6 +121,7 @@ RiderConfig:
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
     pickupInstructionsThreshold: Int
+    pickupInstructionsProximityMeters: Int
     enableMultiModalForAllUsers: Maybe Bool
 
   beamType:
@@ -157,6 +158,7 @@ RiderConfig:
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
     pickupInstructionsThreshold: Maybe Int
+    pickupInstructionsProximityMeters: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -199,6 +201,7 @@ RiderConfig:
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
+    pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -234,6 +237,7 @@ RiderConfig:
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
+    pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
 
   default:
     enableLocalPoliceSupport: "false"

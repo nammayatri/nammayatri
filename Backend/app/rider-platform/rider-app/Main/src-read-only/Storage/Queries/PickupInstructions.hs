@@ -22,13 +22,31 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PickupInstructions.PickupInstructions] -> m ())
 createMany = traverse_ create
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PickupInstructions.PickupInstructions))
-findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions -> m ())
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updatePickupInstructionsByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updatePickupInstructionsByPersonId pickupInstructions personId = do
+deleteByPersonIdAndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> m ())
+deleteByPersonIdAndLocation personId lat lon = do deleteWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.lat $ Se.Eq lat, Se.Is Beam.lon $ Se.Eq lon]]
+
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.PickupInstructions.PickupInstructions]))
+findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+findOldestByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.PickupInstructions.PickupInstructions]))
+findOldestByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+updateByPersonIdAndLocation ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateByPersonIdAndLocation lat lon instruction personId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.pickupInstructions pickupInstructions, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+  updateWithKV
+    [Se.Set Beam.lat lat, Se.Set Beam.lon lon, Se.Set Beam.instruction instruction, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.lat $ Se.Eq lat,
+          Se.Is Beam.lon $ Se.Eq lon
+        ]
+    ]
 
 instance FromTType' Beam.PickupInstructions Domain.Types.PickupInstructions.PickupInstructions where
   fromTType' (Beam.PickupInstructionsT {..}) = do
@@ -37,10 +55,12 @@ instance FromTType' Beam.PickupInstructions Domain.Types.PickupInstructions.Pick
         Domain.Types.PickupInstructions.PickupInstructions
           { createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
+            instruction = instruction,
+            lat = lat,
+            lon = lon,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
-            pickupInstructions = pickupInstructions,
             updatedAt = updatedAt
           }
 
@@ -49,9 +69,11 @@ instance ToTType' Beam.PickupInstructions Domain.Types.PickupInstructions.Pickup
     Beam.PickupInstructionsT
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.instruction = instruction,
+        Beam.lat = lat,
+        Beam.lon = lon,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.pickupInstructions = pickupInstructions,
         Beam.updatedAt = updatedAt
       }
