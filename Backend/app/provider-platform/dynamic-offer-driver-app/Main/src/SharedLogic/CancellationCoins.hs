@@ -18,8 +18,8 @@ data CancellationCoinData = CancellationCoinData
     isArrivedAtPickup :: Bool,
     driverWaitingTime :: Maybe Int,
     callAttemptByDriver :: Bool,
-    cancellationDisToPickup :: Maybe Meters,
-    initialDisToPickup :: Maybe Meters
+    actualCoveredDistance :: Maybe Meters,
+    expectedCoveredDistance :: Maybe Meters
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -36,6 +36,6 @@ instance Default CancellationCoinData where
         isArrivedAtPickup = False,
         driverWaitingTime = Nothing,
         callAttemptByDriver = False,
-        cancellationDisToPickup = Just 0,
-        initialDisToPickup = Just 0
+        actualCoveredDistance = Nothing,
+        expectedCoveredDistance = Nothing
       }

@@ -57,8 +57,10 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
+import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Translations as MTQuery
@@ -203,18 +205,32 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
     Nothing -> throwError $ (RideNotFound "RideId is not present")
     Just rideIdText -> do
       ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
+      let bookingId = ride.bookingId.getId
+      booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+      let quoteId = booking.quoteId
+      driverQuote <- QDQ.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
+      let estimatedTimeToPickup = secondsToNominalDiffTime driverQuote.durationToPickup
       mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
       let callAttemptByDriver = isJust mbCallStatus
       let isArrivedAtPickup = case cancellationDisToPickup of
             Just disToPickup -> disToPickup < highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
             Nothing -> False
+      pure (ride, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup)
 
-      pure (ride, callAttemptByDriver, isArrivedAtPickup)
-
-  let (ride, callAttemptByDriver, isArrivedAtPickup) = rideInfo
-
-  let timeOfCancellation = round $ diffUTCTime now rideStartTime
-  let driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
+  let (ride, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup) = rideInfo
+      timeOfCancellation = round $ diffUTCTime now rideStartTime
+      actualCoveredDistance = case (initialDisToPickup, cancellationDisToPickup) of
+        (Just initial, Just cancellation) -> Just (initial - cancellation)
+        _ -> Nothing
+      expectedCoveredDistance =
+        if isJust initialDisToPickup
+          then
+            let initialDistance = fromJust initialDisToPickup
+                progressRatio = fromIntegral timeOfCancellation / estimatedTimeToPickup
+                expectedDistance = round $ fromIntegral initialDistance * progressRatio
+             in Just expectedDistance
+          else Nothing
+      driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
 
   let logicInput =
         CancellationCoins.CancellationCoinData
@@ -224,8 +240,8 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
             isArrivedAtPickup = isArrivedAtPickup,
             driverWaitingTime = driverWaitingTime,
             callAttemptByDriver = callAttemptByDriver,
-            cancellationDisToPickup = cancellationDisToPickup,
-            initialDisToPickup = initialDisToPickup
+            actualCoveredDistance = actualCoveredDistance,
+            expectedCoveredDistance = expectedCoveredDistance
           }
 
   runCancellationLogic ride.merchantOperatingCityId logicInput
@@ -300,13 +316,18 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             vehicleCategory = Just vehCategory
           }
   CHistory.updateCoinEvent driverCoinEvent
-  when (numCoins > 0) $ do
-    case eventFunction of
-      DCT.MetroRideCompleted _ _ -> do
-        -- case match to be removed after next deployment
-        logDebug "metro notification case for coins"
-        sendCoinsNotificationV3 merchantOpCityId driverId numCoins eventFunction
-      _ -> sendCoinsNotification merchantOpCityId driverId numCoins eventFunction
+
+  case eventFunction of
+    DCT.BookingCancellationPenalisaton -> do
+      sendCoinsNotification merchantOpCityId driverId numCoins eventFunction
+    _ -> do
+      when (numCoins > 0) $ do
+        case eventFunction of
+          DCT.MetroRideCompleted _ _ -> do
+            -- case match to be removed after next deployment
+            logDebug "metro notification case for coins"
+            sendCoinsNotificationV3 merchantOpCityId driverId numCoins eventFunction
+          _ -> sendCoinsNotification merchantOpCityId driverId numCoins eventFunction
   pure numCoins
 
 -- This function is to be removed after next apk deployment
