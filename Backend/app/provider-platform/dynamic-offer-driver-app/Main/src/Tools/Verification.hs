@@ -25,6 +25,7 @@ module Tools.Verification
     validateFaceImage,
     verifySdkResp,
     getTask,
+    nameCompare,
   )
 where
 
@@ -41,6 +42,7 @@ import Kernel.External.Verification as Reexport hiding
     extractPanImage,
     extractRCImage,
     getTask,
+    nameCompare,
     searchAgent,
     validateFaceImage,
     validateImage,
@@ -140,6 +142,14 @@ extractAadhaarImage ::
   ExtractAadhaarImageReq ->
   m ExtractAadhaarImageRes
 extractAadhaarImage = runWithServiceConfig Verification.extractAadhaarImage (.verificationService)
+
+nameCompare ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  NameCompareReq ->
+  m NameCompareResp
+nameCompare = runWithServiceConfig Verification.nameCompare (.verificationService)
 
 extractDLImage ::
   ServiceFlow m r =>

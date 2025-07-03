@@ -702,6 +702,9 @@ DriverPanCard:
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId1
+    findByEncryptedPanNumber:
+      kvFunction: findOneWithKV
+      where: panCardNumberHash|B
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -752,6 +755,9 @@ DriverGstin:
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId1
+    findByEncryptedGstin:
+      kvFunction: findOneWithKV
+      where: gstinHash|B
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]

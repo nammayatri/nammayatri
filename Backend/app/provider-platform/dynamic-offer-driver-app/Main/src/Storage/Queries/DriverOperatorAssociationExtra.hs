@@ -111,13 +111,6 @@ createDriverOperatorAssociationIfNotExists moc driverId operatorId onboardingVeh
             ..
           }
 
-checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
-checkDriverOperatorAssociation driverId operatorId = do
-  mbDriverOperatorAssociation <- findByDriverIdAndOperatorId driverId operatorId True
-  case mbDriverOperatorAssociation of
-    Nothing -> return False
-    Just driverOperatorAssociation -> return (isJust driverOperatorAssociation.onboardingVehicleCategory)
-
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->

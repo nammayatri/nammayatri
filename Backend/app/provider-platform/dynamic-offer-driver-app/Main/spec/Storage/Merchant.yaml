@@ -1034,6 +1034,10 @@ TransporterConfig:
     aaEnabledClientSdkVersion : Text
     isAAEnabledForRecurring : Maybe Bool
     disableDriverWhenUnlinkingVehicle : Maybe Bool
+    validNameComparePercentage : Maybe Int
+    allowDuplicatePan : Maybe Bool
+    allowDuplicateGst: Maybe Bool
+    allowDuplicateAadhaar : Maybe Bool
 
   beamType:
     currency: Maybe Currency

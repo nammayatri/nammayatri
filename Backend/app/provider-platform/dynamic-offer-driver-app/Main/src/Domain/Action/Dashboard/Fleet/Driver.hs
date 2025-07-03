@@ -2270,7 +2270,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToFleetOwner merchant moc fleetOwner mbOperatorId req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
-      (if isNew then pure False else WMB.checkFleetDriverAssociation person.id fleetOwner.id)
+      (if isNew then pure False else DDriver.checkFleetDriverAssociation fleetOwner.id person.id)
         >>= \isAssociated -> unless isAssociated $ do
           unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
           fork "Sending Fleet Consent SMS to Driver" $ do
@@ -2370,7 +2370,7 @@ postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
   void $
     mapM
       ( \driverId ->
-          WMB.checkFleetDriverAssociation (cast driverId) (Id fleetOwnerId) >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet driverId.getId)
+          WMB.checkOnboardingCategoryForFleetDriverAssociation (Id fleetOwnerId) (cast driverId) >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet driverId.getId)
       )
       req.driverIds
   driverLocations <- LF.driversLocation (map (cast @Common.Driver @DP.Person) req.driverIds)

@@ -9,6 +9,7 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
 import Kernel.Types.Error
@@ -29,6 +30,9 @@ deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel
 
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverGstin.DriverGstin))
 findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+findByEncryptedGstin :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.DriverGstin.DriverGstin))
+findByEncryptedGstin gstinHashBeam = do findOneWithKV [Se.Is Beam.gstinHash $ Se.Eq gstinHashBeam]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverGstin.DriverGstin -> m (Maybe Domain.Types.DriverGstin.DriverGstin))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
