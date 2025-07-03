@@ -48,6 +48,7 @@ updateByPrimaryKey (Domain.Types.MediaFileDocument.MediaFileDocument {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.s3Path s3Path,
+      Se.Set Beam.status status,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -65,6 +66,7 @@ instance FromTType' Beam.MediaFileDocument Domain.Types.MediaFileDocument.MediaF
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             rcId = Kernel.Types.Id.Id rcId,
             s3Path = s3Path,
+            status = status,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -79,6 +81,7 @@ instance ToTType' Beam.MediaFileDocument Domain.Types.MediaFileDocument.MediaFil
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.s3Path = s3Path,
+        Beam.status = status,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
