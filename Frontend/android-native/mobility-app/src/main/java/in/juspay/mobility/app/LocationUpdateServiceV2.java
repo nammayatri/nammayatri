@@ -1069,7 +1069,9 @@ public class LocationUpdateServiceV2 extends Service {
             headers.put("dm", drMode);
         } else {
             // Fetch profile info and set headers
-            fetchProfileAndSetHeaders(headers);
+            if (messageQueue != null) {
+                messageQueue.getApiCall().execute(() -> fetchProfileAndSetHeaders(headers));
+            }
         }
         Log.d(TAG_API, "setVehicleAndMerchantHeaders() complete");
     }
@@ -1081,6 +1083,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param headers Map of headers to be populated with profile information
      */
     private void fetchProfileAndSetHeaders(Map<String, String> headers) {
+
         Log.d(TAG_API, "fetchProfileAndSetHeaders() called");
         try {
             MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
@@ -1096,6 +1099,7 @@ public class LocationUpdateServiceV2 extends Service {
             if (resp.has("mode")) {
                 drMode = resp.get("mode").toString().toUpperCase();
                 headers.put("dm", drMode);
+                updateStorage("DRIVER_STATUS_N", merchantID);
             }
 
             JSONObject org = resp.optJSONObject("organization");
@@ -2357,6 +2361,7 @@ public class LocationUpdateServiceV2 extends Service {
         private final Queue<LocationData> queue = new ConcurrentLinkedQueue<>();
         private final Handler handler;
         private final ExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        private final ExecutorService apiCall = Executors.newSingleThreadScheduledExecutor();
         private final ExecutorService flushBatchExecutor = Executors.newSingleThreadScheduledExecutor();
 
         /**
@@ -2531,6 +2536,9 @@ public class LocationUpdateServiceV2 extends Service {
             }
         }
 
+        public ExecutorService getApiCall() {
+            return apiCall;
+        }
 
         /**
          * Flushes the given number of location to backend in batches without any delay.
@@ -2702,7 +2710,7 @@ public class LocationUpdateServiceV2 extends Service {
                         if (!batch.isEmpty()) {
                             // Update the last sent time
                             updateStorage(LAST_BATCH_SENT_TIME, String.valueOf(System.currentTimeMillis()));
-                            sendBatchToServer(batch);
+                            apiCall.execute(() -> sendBatchToServer(batch));
                         } else {
                             isBatchProcessing.set(false);
                         }
