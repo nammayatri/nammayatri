@@ -297,20 +297,3 @@ getAllCompletedRidesByDriverId driverId from to =
               CH.&&. ride.driverId CH.==. Just (cast driverId)
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
-
-getAllRidesByDriverId ::
-  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Id DP.Person ->
-  UTCTime ->
-  UTCTime ->
-  m [Ride]
-getAllRidesByDriverId driverId from to =
-  CH.findAll $
-    CH.select_ (\rd -> CH.notGrouped rd) $
-      CH.filter_
-        ( \ride _ ->
-            ride.createdAt >=. from
-              CH.&&. ride.createdAt <=. to
-              CH.&&. ride.driverId CH.==. Just (cast driverId)
-        )
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
