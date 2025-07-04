@@ -16,9 +16,7 @@ module AWS.S3.Init where
 
 import AWS.S3.Flow
 import AWS.S3.Types
-import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildS3Env :: (MonadFlow m, CoreMetrics m) => S3Config -> S3Env m
@@ -31,8 +29,9 @@ buildS3Env (S3MockConf m) = do
       putH = mockPut baseDir bucketName,
       putRawH = mockPutRaw baseDir bucketName,
       deleteH = mockDelete baseDir bucketName,
-      generateUploadUrlH = \_ _ -> throwError (InternalError $ "mockGenerateUploadUrl is not implemented"),
-      generateDownloadUrlH = \_ _ -> throwError (InternalError $ "mockGenerateDownloadUrl is not implemented")
+      generateUploadUrlH = mockGenerateUploadUrl baseDir bucketName,
+      generateDownloadUrlH = mockGenerateDownloadUrl baseDir bucketName,
+      headRequestH = mockHeadRequest baseDir bucketName
     }
 buildS3Env (S3AwsConf a) = do
   S3Env
@@ -42,5 +41,6 @@ buildS3Env (S3AwsConf a) = do
       putRawH = putRaw'' a.bucketName,
       deleteH = delete'' a.bucketName,
       generateUploadUrlH = generateUploadUrl' a.bucketName,
-      generateDownloadUrlH = generateDownloadUrl' a.bucketName
+      generateDownloadUrlH = generateDownloadUrl' a.bucketName,
+      headRequestH = headRequest' a.bucketName
     }

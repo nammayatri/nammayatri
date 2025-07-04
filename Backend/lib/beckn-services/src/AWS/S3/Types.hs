@@ -56,6 +56,10 @@ instance MimeRender S3ImageData Text where
 instance MimeUnrender S3ImageData Text where
   mimeUnrender _ = pure . DTE.decodeUtf8 . BSL.toStrict
 
+newtype ObjectStatus = ObjectStatus
+  { fileSizeInBytes :: Integer
+  }
+
 data S3Config = S3AwsConf S3AwsConfig | S3MockConf S3MockConfig
   deriving (Generic, FromDhall)
 
@@ -91,7 +95,8 @@ data S3Env m = S3Env
     putRawH :: String -> BS.ByteString -> String -> m (),
     deleteH :: String -> m (),
     generateUploadUrlH :: String -> Seconds -> m Text,
-    generateDownloadUrlH :: String -> Seconds -> m Text
+    generateDownloadUrlH :: String -> Seconds -> m Text,
+    headRequestH :: String -> m ObjectStatus
   }
 
 createFilePath ::
