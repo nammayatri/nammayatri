@@ -224,9 +224,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
   QNyRegularSubscription.updateByPrimaryKey updatedSubscription'
 
   -- Fetch updated subscription
-  updatedSubscription <- do
-    QNyRegularSubscription.findById subscriptionId
-      >>= fromMaybeM (InvalidRequest "Failed to fetch subscription after status update") -- Corrected error
+  let updatedSubscription = updatedSubscription'
 
   -- Schedule the next instance job
   case updatedSubscription.merchantOperatingCityId of
