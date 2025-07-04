@@ -7,7 +7,7 @@ import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Logging (logInfo)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -96,9 +96,19 @@ createNyRegularInstanceJob ::
 createNyRegularInstanceJob executionTimeOffsetMinutes subscription = do
   now <- getCurrentTime
   let today = Time.utctDay now
-      scheduledTime =
-        Time.LocalTime today subscription.scheduledTimeOfDay
-          & Time.localTimeToUTC Time.utc
+
+  -- Get rider config to access timeDiffFromUtc
+  riderConfig <- case subscription.merchantOperatingCityId of
+    Nothing -> throwM $ Tools.InternalError "Subscription is missing merchantOperatingCityId, cannot determine local time."
+    Just opCityId ->
+      RiderConfig.findByMerchantOperatingCityId opCityId Nothing
+        >>= fromMaybeM (Tools.InternalError $ "RiderConfig not found for merchantOperatingCityId: " <> opCityId.getId)
+
+  let timeDiffFromUtc = riderConfig.timeDiffFromUtc
+      -- Calculate scheduled time using timeDiffFromUtc instead of localTimeToUTC
+      naiveUTCTime = Time.UTCTime today (Time.timeOfDayToTime subscription.scheduledTimeOfDay)
+      scheduledTime = Time.addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) naiveUTCTime
+
   -- Schedule the job X minutes before the pickup time (configurable)
   let executionTime = Time.addUTCTime (fromIntegral (- executionTimeOffsetMinutes) * 60) scheduledTime
   when (executionTime > now) $ do
