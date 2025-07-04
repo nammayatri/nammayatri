@@ -256,6 +256,7 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
       Domain.Action.UI.Ride.CancelRide.Internal
+      Domain.Action.UI.Ride.Common
       Domain.Action.UI.Ride.EndRide
       Domain.Action.UI.Ride.EndRide.Internal
       Domain.Action.UI.Ride.StartRide

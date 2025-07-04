@@ -32,6 +32,7 @@ import Data.Either.Extra (eitherToMaybe)
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
+import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types as DTC
@@ -53,6 +54,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Beam.Lib.Utils (pushToKafka)
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -88,6 +90,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
@@ -105,7 +108,8 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 
 data EndRideResp = EndRideResp
   { result :: Text,
-    homeLocationReached :: Maybe Bool
+    homeLocationReached :: Maybe Bool,
+    driverRideRes :: Maybe DUIRideCommon.DriverRideRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -155,7 +159,7 @@ data ServiceHandle m = ServiceHandle
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe CacKey -> m (Maybe DTConf.TransporterConfig),
-    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
+    whenWithLocationUpdatesLock :: forall a. Id DP.Person -> m a -> m a,
     getRouteAndDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
@@ -187,6 +191,23 @@ buildEndRideHandle merchantId merchantOpCityId = do
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation
       }
+
+-- Helper function to get driver number from Person record
+getDriverNumberFromPerson :: EncFlow m r => DP.Person -> m (Maybe Text)
+getDriverNumberFromPerson person = do
+  decMobileNumber <- mapM decrypt person.mobileNumber
+  return $ person.mobileCountryCode <> decMobileNumber
+
+-- Helper function to get driver number either from request or by fetching Person record
+getDriverNumberFromRequest :: (EsqDBFlow m r, CacheFlow m r, EncFlow m r) => EndRideReq -> Id DP.Person -> m (Maybe Text)
+getDriverNumberFromRequest req driverId =
+  case req of
+    DriverReq driverReq -> getDriverNumberFromPerson driverReq.requestor
+    CallBasedReq callBasedReq -> getDriverNumberFromPerson callBasedReq.requestor
+    _ -> do
+      -- For dashboard and cron job requests, we need to fetch the driver's Person record
+      driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      getDriverNumberFromPerson driver
 
 type EndRideFlow m r =
   ( MonadFlow m,
@@ -354,7 +375,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               Nothing -> return Nothing
       else return Nothing
 
-  whenWithLocationUpdatesLock driverId $ do
+  finalUpdatedRide <- whenWithLocationUpdatesLock driverId $ do
     now <- getCurrentTime
     thresholdConfig <- findConfig (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (InternalError "TransportConfigNotFound")
     let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
@@ -455,7 +476,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                tollCharges = mbUpdatedFareParams >>= (.tollCharges),
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-               endOdometerReading = mbOdometer
+               endOdometerReading = mbOdometer,
+               driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
+               hasStops = Just (not $ null ride.stops)
               }
     newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
@@ -492,7 +515,28 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         _ -> pure ()
 
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork]
-  return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
+
+    return updRide
+  driverRideRes <- do
+    mbRideDetail <- QRD.findById finalUpdatedRide.id
+    case mbRideDetail of
+      Nothing -> return Nothing
+      Just rideDetail -> do
+        driverNumber <- getDriverNumberFromRequest req finalUpdatedRide.driverId
+        let rideRating = Nothing
+            mbExophone = Nothing
+            bapMetadata = Nothing
+        isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+        stopsInfo <- if (fromMaybe False finalUpdatedRide.hasStops) then QSI.findAllByRideId finalUpdatedRide.id else return []
+        let goHomeReqId = finalUpdatedRide.driverGoHomeRequestId
+        Just <$> DUIRideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo
+
+  return $
+    EndRideResp
+      { result = "Success",
+        homeLocationReached = homeLocationReached',
+        driverRideRes = driverRideRes
+      }
   where
     clearEditDestinationWayAndSnappedPoints driverId = LocUpdInternal.deleteEditDestinationSnappedWaypoints driverId >> LocUpdInternal.deleteEditDestinationWaypoints driverId
     awaitAll = mapM_ (L.await Nothing)

@@ -278,7 +278,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize 
       resp <- TMaps.snapToRoad merchantId merchantOpCityId Nothing req
       return ([Google], Right resp)
 
-whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
+whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m a -> m a
 whenWithLocationUpdatesLock driverId f = do
   redisLockDriverId <- Redis.tryLockRedis lockKey 60
   if redisLockDriverId
