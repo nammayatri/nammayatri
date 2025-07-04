@@ -18,6 +18,7 @@ module Tools.Payment
     createOrder,
     updateOrder,
     orderStatus,
+    autoRefund,
     refundOrder,
     PaymentServiceType (..),
     createCustomer,
@@ -69,6 +70,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     getPaymentIntent,
     isSplitEnabled,
     orderStatus,
+    refundOrder,
     updateAmountInPaymentIntent,
     updateOrder,
     updatePaymentMethodInIntent,
@@ -96,8 +98,11 @@ updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
-refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
-refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds
+autoRefund :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
+autoRefund = runWithServiceConfigAndServiceName Payment.autoRefunds
+
+refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.RefundOrderReq -> m Payment.RefundOrderResp
+refundOrder = runWithServiceConfigAndServiceName Payment.refundOrder
 
 verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA

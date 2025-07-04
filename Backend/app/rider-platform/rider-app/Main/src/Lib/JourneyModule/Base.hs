@@ -18,6 +18,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.Extra.Ride as DRide
 import Domain.Types.FRFSRouteDetails
+import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -28,6 +29,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
+import Domain.Types.Person as Person
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -40,6 +42,8 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.MultiModal.Interface.Types as KEMIT
+import qualified Kernel.External.Payment.Interface.Types as KT
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -67,9 +71,11 @@ import Lib.JourneyLeg.Walk ()
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as GD
 import qualified Sequelize as Se
+import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
@@ -79,11 +85,14 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicket as QTicket
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
@@ -91,6 +100,7 @@ import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
+import qualified Tools.Payment as TPayment
 
 filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> m [MultiModalRoute]
 filterTransitRoutes routes mocid = do
@@ -1626,3 +1636,41 @@ markLegStatus status journeyLegExtraInfo mbSubLegOrder = do
     JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
     JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
     JL.Taxi legExtraInfo -> whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
+
+markAllBookingsFailed ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r
+  ) =>
+  [DFRFSBooking.FRFSTicketBooking] ->
+  Id Person.Person ->
+  Id DJourney.Journey ->
+  m ()
+markAllBookingsFailed allJourneyFrfsBookings personId journeyId = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  payments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) allJourneyFrfsBookings
+  orderShortId <- case listToMaybe payments of
+    Just payment -> do
+      order <- QOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
+      pure order.shortId.getShortId
+    Nothing -> throwError (InvalidRequest "orderShortId not found in markAllBookingsFailed")
+  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings allJourneyFrfsBookings person.merchantId person.merchantOperatingCityId TPayment.FRFSMultiModalBooking -- no need to pass isMetroTestTransaction if not required
+  isSplitEnabled <- TPayment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking
+  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+  let lockKey = "markAllBookingsFailed:" <> journeyId.getId
+  Redis.withLockRedis lockKey 5 $ do
+    forM_ allJourneyFrfsBookings $ \frfsBooking -> do
+      void $ QTBooking.updateStatusById DFRFSBooking.FAILED frfsBooking.id
+      QTicket.updateAllStatusByBookingId DFRFSTicket.FAILED frfsBooking.id
+    QJourney.updateStatus DJourney.FAILED journeyId
+    let refundReq =
+          KT.RefundOrderReq
+            { orderId = orderShortId,
+              uniqueRequestId = orderShortId,
+              amount = amountUpdated,
+              splitSettlementDetails = splitDetails
+            }
+    _ <- TPayment.refundOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq
+    pure ()

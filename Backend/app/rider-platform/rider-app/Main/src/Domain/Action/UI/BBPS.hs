@@ -319,7 +319,7 @@ txnStatusToBBPSStatus = \case
 --             requestId = refundId
 --           }
 --       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
---       createRefundCall = Payment.refundOrder personMerchantId merchantOperatingCityId Nothing Payment.BBPS
+--       createRefundCall = Payment.autoRefund personMerchantId merchantOperatingCityId Nothing Payment.BBPS
 --   _ <- DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id refundId) commonMerchantId createRefundCall
 --   QBBPS.updateStatusByRefId DBBPS.REFUND_PENDING orderRefId
 

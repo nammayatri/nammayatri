@@ -27,7 +27,7 @@ Journey:
 
   types:
     JourneyStatus:
-      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED, EXPIRED"
+      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED, FAILED, EXPIRED"
       derive: "ToParamSchema"
 
   fields:
@@ -377,7 +377,6 @@ JourneyLeg:
     updateEstimatedFaresBySearchId:
       kvFunction: updateWithKV
       params: [estimatedMinFare, estimatedMaxFare]
-      where: searchRequestId
       where: legSearchId
 
   intermediateTransformers:

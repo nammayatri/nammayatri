@@ -1097,7 +1097,7 @@ intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personM
             requestId = refundId
           }
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
-      createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion
+      createRefundCall = Payment.autoRefund personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion
   void $ try @_ @SomeException $ DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) commonMerchantId createRefundCall
 
 tryUserTicketCancellationLock :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow () -> Environment.Flow ()

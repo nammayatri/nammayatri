@@ -63,9 +63,12 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
+import SharedLogic.JobScheduler as JobScheduler
 import Storage.Beam.Payment ()
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -845,6 +848,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                   whenJust booking.journeyId $ \journeyId -> do
                     void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) journeyId
                   void $ CallExternalBPP.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
+                  when isMultiModalBooking do
+                    let scheduleAfter = secondsToNominalDiffTime (2 * 60) -- schedule job 2 mins after calling confirm
+                        jobData = JobScheduler.CheckMultimodalConfirmFailJobData {JobScheduler.bookingId = bookingId}
+                    createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
                   paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id booking
