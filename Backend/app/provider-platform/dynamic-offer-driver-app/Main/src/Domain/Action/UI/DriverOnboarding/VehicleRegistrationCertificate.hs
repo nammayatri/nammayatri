@@ -1213,7 +1213,7 @@ checkPan merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValu
   case mdriverPanInformation of
     Just panData -> do
       if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.DriverLicense]
-        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue panData.driverName mbDateOfBirthValue panData.driverDob personId
+        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue panData.driverNameOnGovtDB mbDateOfBirthValue panData.driverDob personId
         else return False
     Nothing -> return False
 
