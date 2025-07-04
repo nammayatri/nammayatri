@@ -88,6 +88,7 @@ dependencies:
   - unordered-containers
   - amazonka
   - amazonka-s3
+  - lens
 
 ghc-options:
   - -fwrite-ide-info

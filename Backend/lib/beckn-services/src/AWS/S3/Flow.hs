@@ -12,20 +12,41 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module AWS.S3.Flow (get', put', get'', put'', delete', delete'', mockGet, mockPut, mockDelete, putRaw'', mockPutRaw, generateUploadUrl', generateDownloadUrl') where
+module AWS.S3.Flow
+  ( get',
+    put',
+    get'',
+    put'',
+    delete',
+    delete'',
+    mockGet,
+    mockPut,
+    mockDelete,
+    putRaw'',
+    mockPutRaw,
+    generateUploadUrl',
+    generateDownloadUrl',
+    mockGenerateUploadUrl,
+    mockGenerateDownloadUrl,
+    headRequest',
+    mockHeadRequest,
+  )
+where
 
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
 import qualified Amazonka
 import qualified Amazonka.S3 as Amazonka
+import qualified Amazonka.S3.HeadObject as Amazonka
+import Control.Lens.Getter ((^.))
 import qualified Data.ByteString as BS
 import qualified Data.List as DL (last)
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Text.Encoding as T
 import qualified Data.Text.IO as T
-import EulerHS.Prelude hiding (decodeUtf8, get, put, show)
+import EulerHS.Prelude hiding (decodeUtf8, get, put, show, (^.))
 import qualified EulerHS.Types as ET
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
@@ -35,6 +56,7 @@ import Servant.Client
 import System.Directory (removeFile)
 import qualified System.Directory as Dir
 import System.FilePath.Posix as Path
+import System.IO (hFileSize)
 import qualified System.Posix.Files as Posix
 import qualified System.Posix.IO as Posix
 import System.Process
@@ -288,3 +310,54 @@ generateUrl' method bucketName path expires = withLogTag "S3" $ do
     GET -> Amazonka.presignURL env now expires' $ Amazonka.newGetObject bucketName' path'
     PUT -> Amazonka.presignURL env now expires' $ Amazonka.newPutObject bucketName' path' ""
   T.decodeUtf8' bsUrl & fromEitherM (\err -> InternalError $ "Unable to decode url: " <> show bsUrl <> "error: " <> show err)
+
+mockGenerateUploadUrl ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  Seconds ->
+  m Text
+mockGenerateUploadUrl baseDirectory bucketName path _expires = withLogTag "S3" $ do
+  let fullPath = getFullPathMock baseDirectory bucketName path
+  pure $ "file://" <> T.pack fullPath
+
+mockGenerateDownloadUrl ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  Seconds ->
+  m Text
+mockGenerateDownloadUrl baseDirectory bucketName path _expires = withLogTag "S3" $ do
+  let fullPath = getFullPathMock baseDirectory bucketName path
+  pure $ "file://" <> T.pack fullPath
+
+headRequest' ::
+  ( MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  m ObjectStatus
+headRequest' bucketName path = withLogTag "S3" $ do
+  env <- Amazonka.newEnv Amazonka.discover
+  let bucketName' = Amazonka.BucketName bucketName
+      path' = Amazonka.ObjectKey $ T.pack path
+  res <- liftIO . Amazonka.runResourceT $ Amazonka.send env (Amazonka.newHeadObject bucketName' path')
+  fileSizeInBytes <- case res ^. Amazonka.headObjectResponse_contentLength of
+    Just size -> pure size
+    Nothing -> throwError (InvalidRequest $ "Content length was not found")
+  pure $ ObjectStatus {fileSizeInBytes}
+
+mockHeadRequest ::
+  (MonadIO m, Log m, MonadThrow m) =>
+  String ->
+  Text ->
+  String ->
+  m ObjectStatus
+mockHeadRequest baseDirectory bucketName path = withLogTag "S3" $ do
+  let fullPath'Name = getFullPathMock baseDirectory bucketName path
+  fileExists <- liftIO $ Dir.doesFileExist fullPath'Name
+  unless fileExists $ throwError (InvalidRequest $ "File does not exist: " <> T.pack fullPath'Name)
+  fileSize <- liftIO $ withFile fullPath'Name ReadMode hFileSize
+  pure $ ObjectStatus {fileSizeInBytes = fileSize}
