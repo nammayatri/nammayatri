@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   VehicleCategory: BecknV2.FRFS.Enums
+  SuggestedStations: Domain.Types.StationType
 
 RoutePolylines:
   tableName: route_polylines
@@ -38,6 +39,7 @@ StationsExtraInformation:
     id: Id StationsExtraInformation
     stationId: Text
     address: Maybe Text
+    suggestedDestinations: Maybe [SuggestedStations]
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime

@@ -23,6 +23,7 @@ instance FromTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInfo
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             stationId = stationId,
+            suggestedDestinations = suggestedDestinations,
             updatedAt = updatedAt
           }
 
@@ -35,5 +36,6 @@ instance ToTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInform
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.stationId = stationId,
+        Beam.suggestedDestinations = suggestedDestinations,
         Beam.updatedAt = updatedAt
       }
