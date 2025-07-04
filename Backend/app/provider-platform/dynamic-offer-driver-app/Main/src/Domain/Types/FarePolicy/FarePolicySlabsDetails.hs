@@ -29,7 +29,7 @@ import Kernel.Types.Common
 newtype FPSlabsDetailsD (s :: UsageSafety) = FPSlabsDetails
   { slabs :: NonEmpty (FPSlabsDetailsSlabD s)
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 type FPSlabsDetails = FPSlabsDetailsD 'Safe
 

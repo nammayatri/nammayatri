@@ -28,20 +28,20 @@ data NightShiftCharge
   = ProgressiveNightShiftCharge Float
   | ConstantNightShiftCharge HighPrecMoney
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
     waitingCharge :: WaitingCharge
   }
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data WaitingCharge
   = PerMinuteWaitingCharge HighPrecMoney
   | ConstantWaitingCharge HighPrecMoney
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForJSON ''NightShiftCharge)
 $(mkBeamInstancesForJSON ''WaitingCharge)

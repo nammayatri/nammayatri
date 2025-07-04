@@ -30,7 +30,7 @@ data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
     nightShiftCharge :: Maybe DFPC.NightShiftCharge,
     currency :: Currency
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 

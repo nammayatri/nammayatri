@@ -110,3 +110,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN parcel_quantity int
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN prefer_safety_plus boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_reserve_ride boolean ;

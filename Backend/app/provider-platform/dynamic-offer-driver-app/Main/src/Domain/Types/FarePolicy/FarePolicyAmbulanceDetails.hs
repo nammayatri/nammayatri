@@ -21,7 +21,7 @@ import Kernel.Types.Common
 newtype FPAmbulanceDetailsD (s :: UsageSafety) = FPAmbulanceDetails
   { slabs :: NonEmpty (FPAmbulanceDetailsSlabD s)
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 data FPAmbulanceDetailsSlabD (s :: UsageSafety) = FPAmbulanceDetailsSlab
   { id :: Int,
@@ -34,7 +34,7 @@ data FPAmbulanceDetailsSlabD (s :: UsageSafety) = FPAmbulanceDetailsSlab
     platformFeeInfo :: Maybe Domain.PlatformFeeInfo,
     nightShiftCharge :: Maybe Domain.NightShiftCharge
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 findFPAmbulanceDetailsSlabByAge :: Months -> NonEmpty (FPAmbulanceDetailsSlabD s) -> FPAmbulanceDetailsSlabD s
 findFPAmbulanceDetailsSlabByAge age slabList = do
