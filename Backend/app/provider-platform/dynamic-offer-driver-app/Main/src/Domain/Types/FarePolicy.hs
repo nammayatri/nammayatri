@@ -69,14 +69,14 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DTAC.ConditionalCharges]
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   { maxAllowedTripDistance :: Meters,
     minAllowedTripDistance :: Meters,
     distanceUnit :: DistanceUnit
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 mkAllowedTripDistanceBounds :: DistanceUnit -> DPM.AllowedTripDistanceBoundsAPIEntity -> AllowedTripDistanceBounds
 mkAllowedTripDistanceBounds distanceUnit DPM.AllowedTripDistanceBoundsAPIEntity {..} =
@@ -99,7 +99,7 @@ instance FromJSON (FarePolicyD 'DTC.Safe)
 instance ToJSON (FarePolicyD 'DTC.Safe)
 
 data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s) | InterCityDetails (FPInterCityDetailsD s) | AmbulanceDetails (FPAmbulanceDetailsD s)
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 type FarePolicyDetails = FarePolicyDetailsD 'DTC.Safe
 
@@ -115,13 +115,13 @@ data CardCharge = CardCharge
   { perDistanceUnitMultiplier :: Maybe Double,
     fixed :: Maybe HighPrecMoney
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CongestionChargeMultiplier
   = BaseFareAndExtraDistanceFare Centesimal
   | ExtraDistanceFare Centesimal
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased | NoCharge
   deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)

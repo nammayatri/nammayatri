@@ -78,6 +78,7 @@ library
     , either
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , hspec
@@ -163,6 +164,7 @@ executable rider-app-scheduler-exe
     , either
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , hspec

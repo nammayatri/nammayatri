@@ -24,10 +24,12 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -59,6 +61,8 @@ data RiderJobType
   | PostRideSafetyNotification
   | UpdateCrisUtsData
   | MetroBusinessHour
+  | NyRegularMaster
+  | NyRegularInstance
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -91,6 +95,8 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
   restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
+  restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
+  restoreAnyJobInfo SNyRegularInstance jobData = AnyJobInfo <$> restoreJobInfo SNyRegularInstance jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -302,3 +308,19 @@ data MetroBusinessHourJobData = MetroBusinessHourJobData
 instance JobInfoProcessor 'MetroBusinessHour
 
 type instance JobContent 'MetroBusinessHour = MetroBusinessHourJobData
+
+data NyRegularInstanceJobData = NyRegularInstanceJobData
+  { nyRegularSubscriptionId :: Id NyRegularSubscription.NyRegularSubscription,
+    userId :: Id Person,
+    scheduledTime :: UTCTime,
+    expectedSchedulingHash :: DbHash
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'NyRegularInstance
+
+type instance JobContent 'NyRegularInstance = NyRegularInstanceJobData
+
+instance JobInfoProcessor 'NyRegularMaster
+
+type instance JobContent 'NyRegularMaster = ()

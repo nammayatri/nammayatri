@@ -277,6 +277,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_subscription_batch_size integer ;
 
 
 ------- SQL updates -------
@@ -308,3 +309,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_instructions_proximity_mete
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ALTER COLUMN pickup_instructions_proximity_meters TYPE integer;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_execution_time_offset_minutes integer ;

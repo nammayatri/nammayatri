@@ -48,6 +48,7 @@ data SearchRequestT f = SearchRequestT
     isCustomerPrefferedSearchRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReallocationEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isReserveRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
