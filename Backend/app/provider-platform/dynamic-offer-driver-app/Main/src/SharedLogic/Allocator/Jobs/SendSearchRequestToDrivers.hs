@@ -144,7 +144,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
       SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges estimate.eligibleForUpgrade ((.congestionCharge) =<< estimate.fareParams) searchTry.petCharges
     filterChargesByApplicability conditionalCharges sReq = do
       let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
-      catMaybes $ [safetyCharges]
+          nyregularCharges = if fromMaybe False sReq.isReserveRide then find (\ac -> (ac.chargeCategory) == DAC.NYREGULAR_SUBSCRIPTION_CHARGE) conditionalCharges else Nothing
+      catMaybes $ [safetyCharges, nyregularCharges]
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,

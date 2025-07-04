@@ -235,6 +235,7 @@ library
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
+      Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -280,6 +281,7 @@ library
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
@@ -371,6 +373,8 @@ library
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.NyRegularSubscriptionHasher
+      SharedLogic.NySubscription
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
@@ -384,6 +388,8 @@ library
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
+      SharedLogic.Scheduler.Jobs.NyRegularInstance
+      SharedLogic.Scheduler.Jobs.NyRegularMaster
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
@@ -488,6 +494,7 @@ library
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.NyRegularSubscriptionExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
@@ -618,6 +625,7 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
+      API.Action.UI.NyRegularSubscription
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
@@ -679,6 +687,7 @@ library
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
+      API.Types.UI.NyRegularSubscription
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
@@ -763,6 +772,8 @@ library
       Domain.Types.MerchantState
       Domain.Types.MultimodalPreferences
       Domain.Types.NotificationSoundsConfig
+      Domain.Types.NyRegularInstanceLog
+      Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
       Domain.Types.PartnerOrganization
@@ -901,6 +912,8 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.MultimodalPreferences
       Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.NyRegularInstanceLog
+      Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
       Storage.Beam.PartnerOrganization
@@ -1041,6 +1054,8 @@ library
       Storage.Queries.MerchantState
       Storage.Queries.MultimodalPreferences
       Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.NyRegularInstanceLog
+      Storage.Queries.NyRegularSubscription
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
@@ -1067,6 +1082,7 @@ library
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Person

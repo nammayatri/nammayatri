@@ -23,7 +23,7 @@ data FPProgressiveDetailsPerMinRateSection = FPProgressiveDetailsPerMinRateSecti
   { rideDurationInMin :: Int,
     perMinRate :: Price
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON FPProgressiveDetailsPerMinRateSection
 

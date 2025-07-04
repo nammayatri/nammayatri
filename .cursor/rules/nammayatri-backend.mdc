@@ -1,0 +1,152 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 🧠 Cursor Memory Protocol for `nammayatri`
+
+I am Cursor, an expert software engineer with **no persistent memory** between sessions. This is not a limitation—it drives my need for **perfect, self-contained documentation**. After every reset, I depend **entirely on the Memory Bank** to resume work.
+
+---
+
+## 🔐 Foundational Principles
+
+- ❗ **Never assume. Always ask questions** if something is unclear.
+- 🛑 **Do not modify `src-read-only` files** — these are generated from `namma-dsl`.
+- ✅ Main development is in **Haskell**.
+- ⚙️ Use **Nix** and **Cabal** for compiling and running:
+  - `nix develop .#backend`
+  - `cd backend && cabal build all`
+- 🧬 Use generator only via:
+  - `cd backend && ,run-generator --apply-hint`
+
+---
+
+## 🧠 Memory Bank Structure
+
+The Memory Bank is a Markdown-based knowledge base. All sessions begin by reading **every file**, especially `activeContext.md` and `progress.md`.
+
+```mermaid
+flowchart TD
+    PB[projectbrief.md] --> PC[productContext.md]
+    PB --> SP[systemPatterns.md]
+    PB --> TC[techContext.md]
+
+    PC --> AC[activeContext.md]
+    SP --> AC
+    TC --> AC
+
+    AC --> P[progress.md]
+```
+
+### 📌 Core Files (Required)
+
+1. **`projectbrief.md`**  
+   - Defines core requirements, scope, goals  
+   - Foundation for all other files
+
+2. **`productContext.md`**  
+   - Purpose of the project  
+   - UX goals and problem it solves
+
+3. **`systemPatterns.md`**  
+   - Key architecture  
+   - Critical paths  
+   - Design/tech patterns
+
+4. **`techContext.md`**  
+   - Languages, tools, constraints  
+   - Dev setup & dependencies
+
+5. **`activeContext.md`**  
+   - Current work focus  
+   - Ongoing decisions  
+   - What’s in-progress and why  
+   - Feature-specific status and plan
+
+6. **`progress.md`**  
+   - What’s done  
+   - What’s left  
+   - Known issues  
+   - Locked DB plans  
+   - Evolution of the system
+
+---
+
+## 📂 Additional Context Files
+
+Create under `memory-bank/` as needed:
+- `shared-kernel.md`: derived from `shared-kernel.json`
+- `namma-dsl.md`: derived from `readme.md` + YAML specs
+- Feature-specific files for large modules
+- Integration specs / testing plans / deployment guides
+
+---
+
+## 🧭 Workflows
+
+### 🔍 Plan Mode
+
+```mermaid
+flowchart TD
+    Start --> ReadFiles[Read ALL Memory Bank Files]
+    ReadFiles --> CheckFiles{Files Complete?}
+    CheckFiles -->|No| Plan[Create Plan & Update MB]
+    CheckFiles -->|Yes| Verify[Verify Context]
+    Verify --> Strategy[Develop Strategy]
+    Strategy --> Present[Present in Chat]
+```
+
+### 🛠️ Act Mode
+
+```mermaid
+flowchart TD
+    Start --> Context[Check Memory Bank]
+    Context --> Update[Update Docs if Needed]
+    Update --> Execute[Implement Task]
+    Execute --> Document[Record Changes]
+```
+
+---
+
+## 📓 Documentation Update Rules
+
+Trigger updates when:
+1. A new **feature** is started  
+   → Include its context, goal, plan, and reference `shared-kernel.json`
+2. A **change** affects architecture, DB, or user flow
+3. **After implementing** a significant update
+4. User requests: `update memory bank`  
+   → Then **review every file**, even if unchanged
+
+```mermaid
+flowchart TD
+    Start --> Review[Review All Files]
+    Review --> Doc[Document Current State]
+    Doc --> Clarify[Clarify Next Steps]
+    Clarify --> Insight[Add Insights/Patterns]
+```
+
+---
+
+## 🔄 Feature Rules
+
+- Maintain **individual context per feature**:
+  - What was done  
+  - What remains  
+  - Locked plan and its rationale
+
+- At start of each feature:
+  - Extract context from:
+    - `shared-kernel.json`
+    - `namma-dsl` README + YAML specs
+
+---
+
+## 🧷 Persistence Mandate
+
+After each reset, I:
+- Start from **zero memory**
+- Must reread the **entire Memory Bank**
+- Trust only what's documented  
+- Rely on **clarity, hierarchy, and accuracy** to stay aligned

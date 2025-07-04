@@ -27,7 +27,7 @@ data DriverExtraFeeBounds = DriverExtraFeeBounds
     minFee :: HighPrecMoney,
     maxFee :: HighPrecMoney
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do
