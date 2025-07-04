@@ -12,6 +12,7 @@ import qualified Control.Lens
 import qualified Domain.Action.UI.TicketKapture as Domain.Action.UI.TicketKapture
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface.Types
@@ -30,11 +31,21 @@ type API =
            API.Types.UI.TicketKapture.TicketKaptureResp
       :<|> TokenAuth
       :> "kaptureCloseTicket"
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> QueryParam
+           "rideId"
+           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "getAllActiveTickets"
+      :> Get
+           '[JSON]
+           API.Types.UI.TicketKapture.GetAllActiveTicketsRes
   )
 
 handler :: Environment.FlowServer API
-handler = postKaptureCustomerLogin :<|> postKaptureCloseTicket
+handler = postKaptureCustomerLogin :<|> postKaptureCloseTicket :<|> getGetAllActiveTickets
 
 postKaptureCustomerLogin ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -45,5 +56,19 @@ postKaptureCustomerLogin ::
   )
 postKaptureCustomerLogin a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.postKaptureCustomerLogin (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postKaptureCloseTicket :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postKaptureCloseTicket a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.postKaptureCloseTicket (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postKaptureCloseTicket ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postKaptureCloseTicket a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.postKaptureCloseTicket (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getGetAllActiveTickets ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.FlowHandler API.Types.UI.TicketKapture.GetAllActiveTicketsRes
+  )
+getGetAllActiveTickets a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.getGetAllActiveTickets (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
