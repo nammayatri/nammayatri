@@ -17,7 +17,6 @@ module API.UI.Ride
     EndRideReq (..),
     CancelRideReq (..),
     DRide.DriverRideListRes (..),
-    DRide.DriverRideRes (..),
     DRide.OTPRideReq (..),
     API,
     handler,
@@ -32,6 +31,7 @@ import Data.Text as Text
 import Data.Time (Day)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
+import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
@@ -68,7 +68,7 @@ type API =
     :> Header "x-package" Text
     :> "start"
     :> ReqBody '[JSON] DRide.OTPRideReq
-    :> Post '[JSON] DRide.DriverRideRes
+    :> Post '[JSON] RideCommon.DriverRideRes
     :<|> "driver"
       :> ( "ride"
              :> ( "list"
@@ -189,7 +189,7 @@ startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} 
   shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId merchantOpCityId
   withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
-otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
+otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DRide.OTPRideReq -> FlowHandler RideCommon.DriverRideRes
 otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   now <- getCurrentTime
