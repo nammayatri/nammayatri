@@ -602,8 +602,8 @@ confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant ->
 confirm personId merchantId searchId mbQuoteId ticketQuantity childTicketQuantity skipBooking bookingAllowed crisSdkResponse vehicleType = do
   mbBooking <- QTBooking.findBySearchId searchId -- if booking already there no need to confirm again
   whenJust mbBooking $ \booking -> do
-    void $ QTBooking.updateTicketAndChildTicketQuantityById booking.id ticketQuantity childTicketQuantity
     void $ JMU.updateCRISBookingAuthCode booking (crisSdkResponse <&> (.bookAuthCode))
+    void $ JMU.postMultimodalPaymentUpdateOrderUtil personId merchantId booking.journeyId (fromMaybe 0 ticketQuantity) (fromMaybe 0 childTicketQuantity)
   when (not skipBooking && bookingAllowed && isNothing mbBooking) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
