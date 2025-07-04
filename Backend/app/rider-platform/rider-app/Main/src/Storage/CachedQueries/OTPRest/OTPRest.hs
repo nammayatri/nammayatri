@@ -181,12 +181,12 @@ parseStationsFromInMemoryServer ::
 parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) merchantOperatingCityId
-  let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, info.address)) stationsExtraInformation
+  let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
   mapM
     ( \station -> do
         return $
           Station.Station
-            { address = join $ HM.lookup station.stopCode stationAddressMap,
+            { address = join (fst <$> HM.lookup station.stopCode stationAddressMap),
               code = station.stopCode,
               hindiName = Nothing,
               id = Id station.stopCode,
@@ -198,7 +198,7 @@ parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchant
               name = station.stopName,
               possibleTypes = Nothing,
               regionalName = Nothing,
-              suggestedDestinations = Nothing,
+              suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
               timeBounds = Unbounded,
               vehicleType = station.vehicleType,
               createdAt = now,
