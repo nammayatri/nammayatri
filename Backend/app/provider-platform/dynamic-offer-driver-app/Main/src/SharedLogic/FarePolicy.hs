@@ -388,6 +388,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
     castAdditionalChargeCategoriesToTag = \case
       DAC.SAFETY_PLUS_CHARGES -> Tags.SAFETY_PLUS_CHARGES
       DAC.NO_CHARGES -> Tags.NO_CHARGES
+      DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Tags.NYREGULAR_SUBSCRIPTION_CHARGE
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs

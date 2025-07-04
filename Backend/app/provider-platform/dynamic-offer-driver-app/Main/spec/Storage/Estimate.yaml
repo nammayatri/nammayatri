@@ -13,7 +13,7 @@ imports:
 Estimate:
     tableName: estimate
 
-    derives: "Generic,Show,FromJSON,ToJSON"
+    derives: "Generic,Show,ToJSON,FromJSON,ToSchema"
 
     beamInstance: MakeTableInstancesWithTModifier []
 

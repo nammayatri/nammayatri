@@ -42,7 +42,7 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
     nightShiftCharge :: Maybe NightShiftCharge,
     currency :: Currency
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 type FPProgressiveDetails = FPProgressiveDetailsD 'Safe
 

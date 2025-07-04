@@ -126,6 +126,7 @@ library:
     - mobility-core
     - beckn-spec
     - sessionizer-metrics
+    - external
 
 executables:
   rider-app-scheduler-exe:
@@ -152,3 +153,4 @@ executables:
     dependencies:
       - rider-app-scheduler
       - mobility-core
+      - external

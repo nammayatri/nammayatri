@@ -23,6 +23,7 @@ module Environment
 where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "rider-app" Environment (AppCfg (..))
@@ -36,6 +37,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
@@ -49,6 +51,8 @@ import Passetto.Client
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
+import Tools.Metrics.BAPMetrics.Types
+import TransactionLogs.Types
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
@@ -97,7 +101,24 @@ data HandlerEnv = HandlerEnv
     passettoContext :: PassettoContext,
     serviceClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
-    selfBaseUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl,
+    bapMetrics :: BAPMetricsContainer,
+    ondcGatewayUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    nwAddress :: BaseUrl,
+    selfUIUrl :: BaseUrl,
+    apiRateLimitOptions :: APIRateLimitOptions,
+    searchRateLimitOptions :: APIRateLimitOptions,
+    disableSignatureAuth :: Bool,
+    authTokenCacheExpiry :: Seconds,
+    collectRouteData :: Bool,
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
+    searchRequestExpiry :: Maybe Seconds,
+    dashboardClickhouseCfg :: ClickhouseCfg,
+    hotSpotExpiry :: Seconds,
+    dashboardClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic)
 
@@ -129,6 +150,10 @@ buildHandlerEnv HandlerCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer
   serviceClickhouseEnv <- createConn riderClickhouseCfg
+  bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
+  let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   return HandlerEnv {..}
 
