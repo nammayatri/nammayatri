@@ -48,6 +48,7 @@ updateByPrimaryKey (Domain.Types.StationsExtraInformation.StationsExtraInformati
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.stationId stationId,
+      Se.Set Beam.suggestedDestinations suggestedDestinations,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

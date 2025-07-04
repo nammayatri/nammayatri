@@ -8,11 +8,13 @@ where
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Domain.Types
+import qualified Domain.Types.StationType as DTS
 import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
 import Tools.Beam.UtilsTH
 
 $(mkBeamInstancesForEnumAndList ''MultimodalTravelMode)
+$(mkBeamInstancesForEnumAndList ''DTS.SuggestedStations)
 $(mkBeamInstancesForEnum ''FareProductType)
 $(mkBeamInstancesForEnumAndList ''ServiceTierType)
 $(mkBeamInstancesForEnumAndList ''DTVV.VehicleVariant)
