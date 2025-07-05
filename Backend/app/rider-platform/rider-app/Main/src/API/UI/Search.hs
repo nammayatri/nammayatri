@@ -234,8 +234,12 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
-  mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
+  mbSingleModeRouteDetails <-
+    case mbIntegratedBPPConfig of
+      Just config ->
+        JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode config searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
+      Nothing -> return Nothing
   logDebug $ "mbSingleModeRouteDetails: " <> show mbSingleModeRouteDetails
   (singleModeWarningType, otpResponse) <- case mbSingleModeRouteDetails of
     Just singleModeRouteDetails -> do
