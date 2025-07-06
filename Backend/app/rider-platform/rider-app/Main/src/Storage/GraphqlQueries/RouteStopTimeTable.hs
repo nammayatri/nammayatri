@@ -23,15 +23,12 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopTimeTable
 import EulerHS.Prelude (concatMapM)
-import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.GraphqlQueries.Client as Client
-import Tools.MultiModal
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
@@ -59,14 +56,10 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
     ( \stopCode -> do
         let variables =
               Client.RouteStopTimeTableQueryVars
-                { Client.routeCode = routeCodes,
-                  Client.stopCode = stopCode
+                { Client.routeIds = routeCodes,
+                  Client.stopId = stopCode
                 }
-        transitreq <- getTransitServiceReq merchantId merchantOpId
-        baseUrl <- case transitreq of
-          MultiModalTypes.OTPTransitConfig cfg -> return cfg.baseUrl
-          _ -> throwError $ InternalError "Transit service request is not OTPTransitConfig"
-        result <- Client.executeRouteStopTimeTableQuery baseUrl variables
+        result <- Client.executeRouteStopTimeTableQuery integratedBPPConfig variables
         logDebug $ "GraphQL query result: " <> show result
 
         case result of
