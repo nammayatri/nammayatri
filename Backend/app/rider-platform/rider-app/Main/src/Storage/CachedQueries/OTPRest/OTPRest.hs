@@ -133,7 +133,7 @@ getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig
   return routeStopMapping
 
 fromMaybe' :: Int -> Maybe Int -> Integer
-fromMaybe' a b = fromMaybe (integerFromInt a) (integerFromInt <$> b)
+fromMaybe' a = maybe (integerFromInt a) integerFromInt
 
 -- Station Queries
 

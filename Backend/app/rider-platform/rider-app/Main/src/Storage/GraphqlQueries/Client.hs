@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Storage.GraphqlQueries.Client
   ( RouteStopTimeTableQueryVars (..),
@@ -26,41 +27,25 @@ module Storage.GraphqlQueries.Client
 where
 
 import qualified BecknV2.FRFS.Enums
-import Data.Aeson (eitherDecode, encode, object)
+import qualified Data.Aeson
 import Data.List (isInfixOf)
 import Data.Morpheus.Client
 import Data.Morpheus.Client.CodeGen.Internal
+import Data.Proxy
+import Data.Text (pack)
 import qualified Data.Text as Text
 import qualified Data.Time.LocalTime as LocalTime
-import qualified EulerHS.Language as L
+import Domain.Types.IntegratedBPPConfig
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Servant.Client as KSC
-import Network.HTTP.Client
-import Network.HTTP.Types (statusCode)
+import SharedLogic.External.Nandi.Flow (postGtfsGraphQL)
+import SharedLogic.External.Nandi.Types (GtfsGraphQLRequest (..))
 import Storage.GraphqlQueries.Types
+import Tools.MultiModal as MM
 
-getOrCreateManager :: MonadFlow m => m Manager
-getOrCreateManager = do
-  manager <- L.getOption HttpManager
-  case manager of
-    Just m -> return m
-    Nothing -> do
-      logError "Manager not found in default creating a new one"
-      manager' <- liftIO $ newManager defaultManagerSettings
-      L.setOption HttpManager manager'
-      return manager'
-
-fromMaybeM' :: MonadFlow m => m a -> m (Maybe a) -> m a
-fromMaybeM' defaultValue maybeValue = do
-  value <- maybeValue
-  maybe defaultValue return value
-
--- Execute the query and transform the response
 executeRouteStopTimeTableQuery ::
-  MonadFlow m =>
-  BaseUrl ->
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
   RouteStopTimeTableQueryVars ->
   m (Either String RouteStopTimeTableResponse)
 executeRouteStopTimeTableQuery integratedBPPConfig vars = do
