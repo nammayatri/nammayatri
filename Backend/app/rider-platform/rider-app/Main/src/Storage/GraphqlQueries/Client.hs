@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Storage.GraphqlQueries.Client
   ( RouteStopTimeTableQueryVars (..),
@@ -26,98 +27,40 @@ module Storage.GraphqlQueries.Client
 where
 
 import qualified BecknV2.FRFS.Enums
-import Data.Aeson (eitherDecode, encode, object)
+import qualified Data.Aeson
 import Data.List (isInfixOf)
 import Data.Morpheus.Client
 import Data.Morpheus.Client.CodeGen.Internal
+import Data.Proxy
+import Data.Text (pack)
 import qualified Data.Text as Text
 import qualified Data.Time.LocalTime as LocalTime
-import qualified EulerHS.Language as L
+import Domain.Types.IntegratedBPPConfig
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Servant.Client as KSC
-import Network.HTTP.Client
-import Network.HTTP.Types (statusCode)
+import SharedLogic.External.Nandi.Flow (postGtfsGraphQL)
+import SharedLogic.External.Nandi.Types (GtfsGraphQLRequest (..))
 import Storage.GraphqlQueries.Types
+import Tools.MultiModal as MM
 
-getOrCreateManager :: MonadFlow m => m Manager
-getOrCreateManager = do
-  manager <- L.getOption HttpManager
-  case manager of
-    Just m -> return m
-    Nothing -> do
-      logError "Manager not found in default creating a new one"
-      manager' <- liftIO $ newManager defaultManagerSettings
-      L.setOption HttpManager manager'
-      return manager'
-
-fromMaybeM' :: MonadFlow m => m a -> m (Maybe a) -> m a
-fromMaybeM' defaultValue maybeValue = do
-  value <- maybeValue
-  maybe defaultValue return value
-
--- Execute the query and transform the response
 executeRouteStopTimeTableQuery ::
-  MonadFlow m =>
-  BaseUrl ->
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
   RouteStopTimeTableQueryVars ->
   m (Either String RouteStopTimeTableResponse)
-executeRouteStopTimeTableQuery baseUrl vars = do
-  let graphqlUrl = showBaseUrl baseUrl
-
-  logInfo $ "Executing RouteStopTimeTable GraphQL query to " <> graphqlUrl
-
-  manager <- fromMaybeM' getOrCreateManager (L.lookupHTTPManager (Just KSC.defaultHttpManager))
-  initialRequest <-
-    try (parseRequest (toString graphqlUrl))
-      >>= \case
-        Left (err :: SomeException) -> do
-          logError $ "Failed to parse request URL: " <> show err
-          throwError $ InternalError $ "Failed to parse request URL: " <> show err
-        Right req -> pure req
-
-  -- Create the request body manually instead of using Morpheus Client's request function
-  let reqBody =
-        encode $
-          object
-            [ "query" .= __query (Kernel.Prelude.Proxy @RouteStopTimeTableQuery),
-              "variables"
-                .= object
-                  [ "stopId" .= vars.stopCode
-                  ]
-            ]
-  logDebug $ "Request body for GTFS: " <> show reqBody
-  let req =
-        initialRequest
-          { method = "POST",
-            requestHeaders = [("Content-Type", "application/json")],
-            requestBody = RequestBodyLBS reqBody
+executeRouteStopTimeTableQuery integratedBPPConfig vars = do
+  let query = (Data.Proxy.Proxy :: Data.Proxy.Proxy RouteStopTimeTableQuery)
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  let request' =
+        GtfsGraphQLRequest
+          { query = pack (__query query),
+            variables = Just (toJSON vars),
+            operation_name = Just (pack (show (__name query)))
           }
-
-  response <- liftIO $ try $ httpLbs req manager
-  logDebug $ "Response from grfs server: " <> show response
-
-  case response of
-    Left (err :: SomeException) -> do
-      logError $ "HTTP request failed: " <> show err
-      pure $ Left $ "HTTP request error: " <> show err
-    Right res -> do
-      let status = statusCode (responseStatus res)
-      let respBody = responseBody res
-
-      if status >= 200 && status < 300
-        then case eitherDecode respBody of
-          Left decodeErr -> do
-            logError $ "Failed to parse GraphQL response: " <> show decodeErr
-            logError $ "Response body: " <> show respBody
-            pure $ Left $ "JSON parse error: " <> decodeErr
-          Right (otpResponse :: OTPResponse) -> do
-            -- Transform OTP response to our domain model
-            entries <- transformToTimeTableEntries otpResponse
-            logDebug $ "Transformed entries graphql: " <> show entries
-            pure $ Right $ RouteStopTimeTableResponse entries
-        else pure $ Left $ "HTTP error: " <> show status
+  result <- postGtfsGraphQL baseUrl request'
+  case Data.Aeson.fromJSON result of
+    Data.Aeson.Error err -> return $ Left err
+    Data.Aeson.Success (response :: OTPResponse) -> Right . RouteStopTimeTableResponse <$> transformToTimeTableEntries response
 
 -- Helper function to convert OTP response to our domain model
 transformToTimeTableEntries :: MonadFlow m => OTPResponse -> m [TimetableEntry]
