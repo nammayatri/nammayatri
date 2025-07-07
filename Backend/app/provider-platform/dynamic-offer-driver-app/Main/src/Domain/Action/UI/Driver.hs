@@ -36,6 +36,7 @@ module Domain.Action.UI.Driver
     HistoryEntryDetailsEntityV2 (..),
     ClearDuesRes (..),
     GetCityReq (..),
+    GetConsentReq (..),
     GetCityResp (..),
     DriverFeeResp (..),
     UpdateProfileInfoPoints (..),
@@ -82,6 +83,7 @@ module Domain.Action.UI.Driver
     getSecurityDepositDfStatus,
     refundByPayoutDriverFee,
     mkPayoutLockKeyByDriverAndService,
+    consentResponse,
   )
 where
 
@@ -375,7 +377,9 @@ data DriverInformationRes = DriverInformationRes
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
-    qrUrl :: Maybe Text
+    qrUrl :: Maybe Text,
+    driverTags :: Maybe DA.Value,
+    nyClubConsent :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -443,7 +447,9 @@ data DriverEntityRes = DriverEntityRes
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
-    qrUrl :: Maybe Text
+    qrUrl :: Maybe Text,
+    driverTags :: Maybe DA.Value,
+    nyClubConsent :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -676,6 +682,11 @@ data GetCityReq = GetCityReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Maybe (Id DM.Merchant)
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data GetConsentReq = GetConsentReq
+  { consent :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1034,6 +1045,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         softBlockReasonFlag = driverInfo.softBlockReasonFlag,
         onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
         qrUrl,
+        driverTags = Just driverTags,
+        nyClubConsent = person.nyClubConsent,
         ..
       }
   where
@@ -2912,3 +2925,9 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
   return $ DriverSpecificSubscriptionData {..}
   where
     isFreeTrialEnabled subscriptionConfig = (subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True
+
+consentResponse :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> GetConsentReq -> Flow APISuccess
+consentResponse (personId, _, _) req = do
+  logInfo $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
+  QPerson.updateNyClubConsent (Just req.consent) personId
+  pure APISuccess.Success
